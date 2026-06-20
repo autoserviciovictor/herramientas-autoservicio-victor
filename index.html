@@ -1,15 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Stock Autoservicio</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Autoservicio Victor</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>Stock Autoservicio Victor</h1>
+    <h1>📦 Stock Autoservicio Victor</h1>
 
-<p>Versión 1 funcionando</p>
+    <div>
+        <h3>1. Cargar Excel</h3>
+        <input type="file" id="excelFile">
+    </div>
 
-<input type="file" />
+    <hr>
+
+    <div>
+        <h3>2. Seleccionar modo</h3>
+
+        <label>
+            <input type="radio" name="modo" value="salon" checked>
+            Salón
+        </label>
+
+        <label>
+            <input type="radio" name="modo" value="deposito">
+            Depósito
+        </label>
+    </div>
+
+    <hr>
+
+    <div>
+        <h3>3. Buscar producto</h3>
+
+        <input
+            type="text"
+            id="codigo"
+            placeholder="Código de barras"
+        >
+
+        <button>
+            Buscar
+        </button>
+    </div>
+
+    <hr>
+
+    <div>
+        <h3>Producto encontrado</h3>
+
+        <p id="producto">
+            Ningún producto seleccionado
+        </p>
+    </div>
+
+    <hr>
+
+    <div>
+        <h3>4. Cantidad</h3>
+
+        <input
+            type="number"
+            id="cantidad"
+            placeholder="Cantidad"
+        >
+
+        <button>
+            Guardar
+        </button>
+    </div>
+
+    <hr>
+
+    <div>
+        <button>
+            Descargar Excel Actualizado
+        </button>
+    </div>
 
 </body>
 </html>
