@@ -6,6 +6,8 @@
     <title>Stock Autoservicio Victor</title>
 
     <link rel="stylesheet" href="style.css">
+
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -13,7 +15,7 @@
 
     <div>
         <h3>1. Cargar Excel</h3>
-        <input type="file" id="excelFile">
+        <input type="file" id="excelFile" accept=".xlsx,.xls">
     </div>
 
     <hr>
@@ -37,25 +39,16 @@
     <div>
         <h3>3. Buscar producto</h3>
 
-        <input
-            type="text"
-            id="codigo"
-            placeholder="Código de barras"
-        >
+        <input type="text" id="codigo" placeholder="Código de barras">
 
-        <button>
-            Buscar
-        </button>
+        <button id="buscarBtn">Buscar</button>
     </div>
 
     <hr>
 
     <div>
         <h3>Producto encontrado</h3>
-
-        <p id="producto">
-            Ningún producto seleccionado
-        </p>
+        <p id="producto">Ningún producto seleccionado</p>
     </div>
 
     <hr>
@@ -63,24 +56,17 @@
     <div>
         <h3>4. Cantidad</h3>
 
-        <input
-            type="number"
-            id="cantidad"
-            placeholder="Cantidad"
-        >
+        <input type="number" id="cantidad" placeholder="Cantidad">
 
-        <button>
-            Guardar
-        </button>
+        <button id="guardarBtn">Guardar</button>
     </div>
 
     <hr>
 
     <div>
-        <button>
-            Descargar Excel Actualizado
-        </button>
+        <button id="descargarBtn">Descargar Excel Actualizado</button>
     </div>
+
     <script src="app.js"></script>
 
 </body>
