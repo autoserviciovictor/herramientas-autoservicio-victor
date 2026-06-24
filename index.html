@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
+
 <body>
 
     <h1>📦 Stock Autoservicio Victor</h1>
@@ -22,14 +23,14 @@
     <hr>
 
     <div>
-        <h3>2. Seleccionar modo</h3>
+        <h3>2. Ubicación del stock</h3>
 
         <label>
             <input type="radio" name="modo" value="salon" checked>
             Salón
         </label>
 
-        <label>
+        <label style="margin-left:20px;">
             <input type="radio" name="modo" value="deposito">
             Depósito
         </label>
@@ -38,46 +39,77 @@
     <hr>
 
     <div>
-        <h3>3. Escanear o buscar producto</h3>
+        <h3>3. Escanear producto</h3>
 
-        <button id="iniciarCamaraBtn">📷 Iniciar cámara</button>
-        <button id="detenerCamaraBtn">❌ Detener cámara</button>
+        <button id="iniciarCamaraBtn">
+            📷 Iniciar Cámara
+        </button>
+
+        <button id="detenerCamaraBtn">
+            ❌ Detener Cámara
+        </button>
 
         <br><br>
 
-        <video id="video" width="100%" style="max-width:420px; border:1px solid #ccc;"></video>
+        <video
+            id="video"
+            width="100%"
+            style="
+                max-width:450px;
+                border:2px solid #ccc;
+                border-radius:10px;
+            ">
+        </video>
 
         <br><br>
 
-        <input type="text" id="codigo" placeholder="Código de barras">
+        <input
+            type="text"
+            id="codigo"
+            placeholder="Código de barras"
+            style="width:250px;"
+        >
 
-        <button id="buscarBtn">Buscar</button>
+        <button id="buscarBtn">
+            Buscar Manualmente
+        </button>
     </div>
 
     <hr>
 
     <div>
         <h3>Producto encontrado</h3>
-        <p id="producto">Ningún producto seleccionado</p>
+
+        <p id="producto">
+            Esperando escaneo...
+        </p>
     </div>
 
     <hr>
 
     <div>
-        <h3>4. Cantidad</h3>
+        <h3>Cantidad</h3>
 
-        <input type="number" id="cantidad" placeholder="Cantidad">
+        <input
+            type="number"
+            id="cantidad"
+            placeholder="Cantidad"
+        >
 
-        <button id="guardarBtn">Guardar</button>
+        <button id="guardarBtn">
+            Guardar
+        </button>
     </div>
 
     <hr>
 
     <div>
-        <button id="descargarBtn">Descargar Excel Actualizado</button>
+        <button id="descargarBtn">
+            📥 Descargar Excel Actualizado
+        </button>
     </div>
 
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=30"></script>
 
 </body>
 </html>
