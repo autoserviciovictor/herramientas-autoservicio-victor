@@ -70,6 +70,7 @@ function buscarProducto() {
     }
 
     productoActual = datos[indiceProductoActual];
+
     document.getElementById("producto").innerText = productoActual["articulo"];
     document.getElementById("cantidad").focus();
 }
@@ -145,11 +146,12 @@ function iniciarCamara() {
     scanner.start(
         { facingMode: "environment" },
         {
-            fps: 10,
+            fps: 15,
             qrbox: {
-                width: 250,
-                height: 150
-            }
+                width: 320,
+                height: 180
+            },
+            aspectRatio: 1.777
         },
         codigoDetectado => {
             document.getElementById("codigo").value = codigoDetectado;
