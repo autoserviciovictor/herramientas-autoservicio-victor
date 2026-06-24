@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("buscarBtn").addEventListener("click", buscarProductoManual);
     document.getElementById("guardarBtn").addEventListener("click", guardarStock);
     document.getElementById("descargarBtn").addEventListener("click", descargarExcel);
+    document.getElementById("cargarCamarasBtn").addEventListener("click", cargarCamaras);
     document.getElementById("iniciarCamaraBtn").addEventListener("click", iniciarCamara);
     document.getElementById("detenerCamaraBtn").addEventListener("click", detenerCamara);
 });
@@ -175,7 +176,48 @@ function descargarExcel() {
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
 }
 
-function iniciarCamara() {
+async function cargarCamaras() {
+    try {
+        lectorCodigo = new ZXing.BrowserMultiFormatReader();
+
+        const dispositivos = await lectorCodigo.listVideoInputDevices();
+        const lista = document.getElementById("listaCamaras");
+
+        lista.innerHTML = "";
+
+        if (dispositivos.length === 0) {
+            lista.innerHTML = '<option value="">No se encontraron cámaras</option>';
+            alert("No se encontraron cámaras");
+            return;
+        }
+
+        dispositivos.forEach((camara, index) => {
+            const opcion = document.createElement("option");
+            opcion.value = camara.deviceId;
+            opcion.text = camara.label || "Cámara " + (index + 1);
+
+            const nombre = opcion.text.toLowerCase();
+
+            if (
+                nombre.includes("back") ||
+                nombre.includes("rear") ||
+                nombre.includes("environment") ||
+                nombre.includes("trasera")
+            ) {
+                opcion.selected = true;
+            }
+
+            lista.appendChild(opcion);
+        });
+
+        alert("Cámaras cargadas. Probá seleccionar la cámara trasera o macro si aparece.");
+    } catch (error) {
+        alert("No se pudieron cargar las cámaras. Permití el acceso a la cámara.");
+        console.error(error);
+    }
+}
+
+async function iniciarCamara() {
     if (camaraActiva) {
         alert("La cámara ya está activa");
         return;
@@ -186,39 +228,42 @@ function iniciarCamara() {
         return;
     }
 
+    const lista = document.getElementById("listaCamaras");
+    const deviceId = lista.value;
+
+    if (!deviceId) {
+        alert("Primero tocá 'Cargar cámaras' y elegí una cámara");
+        return;
+    }
+
     lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
-    lectorCodigo.decodeFromConstraints(
-        {
-            video: {
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                focusMode: "continuous"
-            }
-        },
-        "video",
-        (resultado, error) => {
-            if (resultado) {
-                const codigo = resultado.text;
-                const ahora = Date.now();
+    try {
+        await lectorCodigo.decodeFromVideoDevice(
+            deviceId,
+            "video",
+            (resultado, error) => {
+                if (resultado) {
+                    const codigo = resultado.text;
+                    const ahora = Date.now();
 
-                if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 2500) {
-                    return;
+                    if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 2500) {
+                        return;
+                    }
+
+                    ultimoCodigoLeido = codigo;
+                    tiempoUltimaLectura = ahora;
+
+                    buscarProductoPorCodigo(codigo, true);
                 }
-
-                ultimoCodigoLeido = codigo;
-                tiempoUltimaLectura = ahora;
-
-                buscarProductoPorCodigo(codigo, true);
             }
-        }
-    ).then(() => {
+        );
+
         camaraActiva = true;
-    }).catch(error => {
-        alert("No se pudo iniciar la cámara. Aceptá el permiso o probá con otro navegador.");
+    } catch (error) {
+        alert("No se pudo iniciar la cámara. Probá elegir otra cámara.");
         console.error(error);
-    });
+    }
 }
 
 function detenerCamara() {
