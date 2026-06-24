@@ -1,8 +1,11 @@
 let datos = [];
 let productoActual = null;
 let indiceProductoActual = -1;
-let scanner = null;
+
+let lectorCodigo = null;
 let camaraActiva = false;
+let ultimoCodigoLeido = "";
+let tiempoUltimaLectura = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("excelFile").addEventListener("change", cargarExcel);
@@ -65,12 +68,11 @@ function buscarProducto() {
     if (indiceProductoActual === -1) {
         productoActual = null;
         document.getElementById("producto").innerText = "Producto no encontrado";
-        alert("Producto no encontrado");
+        alert("Producto no encontrado: " + codigoBuscado);
         return;
     }
 
     productoActual = datos[indiceProductoActual];
-
     document.getElementById("producto").innerText = productoActual["articulo"];
     document.getElementById("cantidad").focus();
 }
@@ -141,41 +143,48 @@ function iniciarCamara() {
         return;
     }
 
-    scanner = new Html5Qrcode("reader");
+    lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
-    scanner.start(
-        { facingMode: "environment" },
+    lectorCodigo.decodeFromConstraints(
         {
-            fps: 15,
-            qrbox: {
-                width: 320,
-                height: 180
-            },
-            aspectRatio: 1.777
+            video: {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                focusMode: "continuous"
+            }
         },
-        codigoDetectado => {
-            document.getElementById("codigo").value = codigoDetectado;
-            buscarProducto();
-        },
-        error => {}
+        "video",
+        (resultado, error) => {
+            if (resultado) {
+                const codigo = resultado.text;
+                const ahora = Date.now();
+
+                if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 3000) {
+                    return;
+                }
+
+                ultimoCodigoLeido = codigo;
+                tiempoUltimaLectura = ahora;
+
+                document.getElementById("codigo").value = codigo;
+                buscarProducto();
+            }
+        }
     ).then(() => {
         camaraActiva = true;
     }).catch(error => {
-        alert("No se pudo iniciar la cámara. Probá desde el celular y aceptá el permiso.");
+        alert("No se pudo iniciar la cámara. Aceptá el permiso o probá con otro navegador.");
         console.error(error);
     });
 }
 
 function detenerCamara() {
-    if (!scanner || !camaraActiva) {
+    if (!lectorCodigo || !camaraActiva) {
         alert("La cámara no está activa");
         return;
     }
 
-    scanner.stop().then(() => {
-        scanner.clear();
-        camaraActiva = false;
-    }).catch(error => {
-        console.error(error);
-    });
+    lectorCodigo.reset();
+    camaraActiva = false;
 }
