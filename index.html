@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
 
@@ -40,39 +40,25 @@
     <div>
         <h3>3. Escanear o buscar producto</h3>
 
-        <button id="iniciarCamaraBtn">
-            📷 Iniciar cámara
-        </button>
-
-        <button id="detenerCamaraBtn">
-            ❌ Detener cámara
-        </button>
+        <button id="iniciarCamaraBtn">📷 Iniciar cámara</button>
+        <button id="detenerCamaraBtn">❌ Detener cámara</button>
 
         <br><br>
 
-        <div id="reader" style="width:350px;"></div>
+        <video id="video" width="100%" style="max-width:420px; border:1px solid #ccc;"></video>
 
-        <br>
+        <br><br>
 
-        <input
-            type="text"
-            id="codigo"
-            placeholder="Código de barras"
-        >
+        <input type="text" id="codigo" placeholder="Código de barras">
 
-        <button id="buscarBtn">
-            Buscar
-        </button>
+        <button id="buscarBtn">Buscar</button>
     </div>
 
     <hr>
 
     <div>
         <h3>Producto encontrado</h3>
-
-        <p id="producto">
-            Ningún producto seleccionado
-        </p>
+        <p id="producto">Ningún producto seleccionado</p>
     </div>
 
     <hr>
@@ -80,26 +66,18 @@
     <div>
         <h3>4. Cantidad</h3>
 
-        <input
-            type="number"
-            id="cantidad"
-            placeholder="Cantidad"
-        >
+        <input type="number" id="cantidad" placeholder="Cantidad">
 
-        <button id="guardarBtn">
-            Guardar
-        </button>
+        <button id="guardarBtn">Guardar</button>
     </div>
 
     <hr>
 
     <div>
-        <button id="descargarBtn">
-            Descargar Excel Actualizado
-        </button>
+        <button id="descargarBtn">Descargar Excel Actualizado</button>
     </div>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=20"></script>
 
 </body>
 </html>
