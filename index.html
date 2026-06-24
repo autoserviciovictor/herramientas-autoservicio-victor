@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
 
@@ -37,18 +38,41 @@
     <hr>
 
     <div>
-        <h3>3. Buscar producto</h3>
+        <h3>3. Escanear o buscar producto</h3>
 
-        <input type="text" id="codigo" placeholder="Código de barras">
+        <button id="iniciarCamaraBtn">
+            📷 Iniciar cámara
+        </button>
 
-        <button id="buscarBtn">Buscar</button>
+        <button id="detenerCamaraBtn">
+            ❌ Detener cámara
+        </button>
+
+        <br><br>
+
+        <div id="reader" style="width:350px;"></div>
+
+        <br>
+
+        <input
+            type="text"
+            id="codigo"
+            placeholder="Código de barras"
+        >
+
+        <button id="buscarBtn">
+            Buscar
+        </button>
     </div>
 
     <hr>
 
     <div>
         <h3>Producto encontrado</h3>
-        <p id="producto">Ningún producto seleccionado</p>
+
+        <p id="producto">
+            Ningún producto seleccionado
+        </p>
     </div>
 
     <hr>
@@ -56,18 +80,26 @@
     <div>
         <h3>4. Cantidad</h3>
 
-        <input type="number" id="cantidad" placeholder="Cantidad">
+        <input
+            type="number"
+            id="cantidad"
+            placeholder="Cantidad"
+        >
 
-        <button id="guardarBtn">Guardar</button>
+        <button id="guardarBtn">
+            Guardar
+        </button>
     </div>
 
     <hr>
 
     <div>
-        <button id="descargarBtn">Descargar Excel Actualizado</button>
+        <button id="descargarBtn">
+            Descargar Excel Actualizado
+        </button>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=10"></script>
 
 </body>
 </html>
