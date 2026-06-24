@@ -4,12 +4,16 @@ let datos = [];
 let productoActual = null;
 let indiceProductoActual = -1;
 
-document.getElementById("excelFile").addEventListener("change", cargarExcel);
-document.getElementById("buscarBtn").addEventListener("click", buscarProducto);
-document.getElementById("guardarBtn").addEventListener("click", guardarStock);
-document.getElementById("descargarBtn").addEventListener("click", descargarExcel);
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("excelFile").addEventListener("change", cargarExcel);
+    document.getElementById("buscarBtn").addEventListener("click", buscarProducto);
+    document.getElementById("guardarBtn").addEventListener("click", guardarStock);
+    document.getElementById("descargarBtn").addEventListener("click", descargarExcel);
+});
 
 function cargarExcel(e) {
+    alert("Cargando Excel...");
+
     const archivo = e.target.files[0];
 
     if (!archivo) {
@@ -19,9 +23,8 @@ function cargarExcel(e) {
 
     const lector = new FileReader();
 
-    lector.onload = function(evento) {
+    lector.onload = function (evento) {
         const data = new Uint8Array(evento.target.result);
-
         workbook = XLSX.read(data, { type: "array" });
 
         const primeraHoja = workbook.SheetNames[0];
@@ -31,7 +34,7 @@ function cargarExcel(e) {
 
         prepararColumnas();
 
-        alert("Excel cargado correctamente.");
+        alert("Excel cargado correctamente. Productos cargados: " + datos.length);
         console.log(datos);
     };
 
@@ -47,6 +50,8 @@ function prepararColumnas() {
 }
 
 function buscarProducto() {
+    alert("Botón buscar funcionando");
+
     if (datos.length === 0) {
         alert("Primero cargá el Excel.");
         return;
