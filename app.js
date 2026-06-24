@@ -30,17 +30,27 @@ function cargarExcel(e) {
             raw: false
         });
 
-        alert("Excel cargado. Filas encontradas: " + datos.length);
-        console.log(datos);
-        console.log("Columnas:", Object.keys(datos[0] || {}));
+        datos.forEach(fila => {
+            if (fila["salon"] === undefined || fila["salon"] === "") {
+                fila["salon"] = 0;
+            }
+
+            if (fila["deposito"] === undefined || fila["deposito"] === "") {
+                fila["deposito"] = 0;
+            }
+
+            if (fila["stock"] === undefined || fila["stock"] === "") {
+                fila["stock"] = 0;
+            }
+        });
+
+        alert("Excel cargado correctamente. Productos cargados: " + datos.length);
     };
 
     lector.readAsArrayBuffer(archivo);
 }
 
 function buscarProducto() {
-    alert("Buscando producto...");
-
     const codigoBuscado = document.getElementById("codigo").value.trim();
 
     if (datos.length === 0) {
@@ -54,8 +64,7 @@ function buscarProducto() {
     }
 
     indiceProductoActual = datos.findIndex(fila => {
-        const valoresFila = Object.values(fila).map(v => String(v).trim());
-        return valoresFila.includes(codigoBuscado);
+        return String(fila["codigo"]).trim() === codigoBuscado;
     });
 
     if (indiceProductoActual === -1) {
@@ -67,21 +76,8 @@ function buscarProducto() {
 
     productoActual = datos[indiceProductoActual];
 
-    const columnas = Object.keys(productoActual);
-
-    let nombreProducto =
-        productoActual["Producto"] ||
-        productoActual["producto"] ||
-        productoActual["Artículo"] ||
-        productoActual["Articulo"] ||
-        productoActual["articulo"] ||
-        productoActual["ARTICULO"] ||
-        productoActual[columnas[1]] ||
-        "Producto encontrado";
-
-    document.getElementById("producto").innerText = nombreProducto;
-
-    alert("Producto encontrado: " + nombreProducto);
+    document.getElementById("producto").innerText = productoActual["articulo"];
+    document.getElementById("cantidad").focus();
 }
 
 function guardarStock() {
@@ -99,27 +95,21 @@ function guardarStock() {
 
     const modo = document.querySelector('input[name="modo"]:checked').value;
 
-    if (!datos[indiceProductoActual]["Salon"]) {
-        datos[indiceProductoActual]["Salon"] = 0;
-    }
-
-    if (!datos[indiceProductoActual]["Deposito"]) {
-        datos[indiceProductoActual]["Deposito"] = 0;
-    }
-
     if (modo === "salon") {
-        datos[indiceProductoActual]["Salon"] =
-            Number(datos[indiceProductoActual]["Salon"]) + cantidad;
-    } else {
-        datos[indiceProductoActual]["Deposito"] =
-            Number(datos[indiceProductoActual]["Deposito"]) + cantidad;
+        datos[indiceProductoActual]["salon"] =
+            Number(datos[indiceProductoActual]["salon"] || 0) + cantidad;
     }
 
-    datos[indiceProductoActual]["Stock Total"] =
-        Number(datos[indiceProductoActual]["Salon"]) +
-        Number(datos[indiceProductoActual]["Deposito"]);
+    if (modo === "deposito") {
+        datos[indiceProductoActual]["deposito"] =
+            Number(datos[indiceProductoActual]["deposito"] || 0) + cantidad;
+    }
 
-    alert("Stock guardado");
+    datos[indiceProductoActual]["stock"] =
+        Number(datos[indiceProductoActual]["salon"] || 0) +
+        Number(datos[indiceProductoActual]["deposito"] || 0);
+
+    alert("Stock guardado correctamente");
 
     document.getElementById("codigo").value = "";
     document.getElementById("cantidad").value = "";
@@ -127,6 +117,8 @@ function guardarStock() {
 
     productoActual = null;
     indiceProductoActual = -1;
+
+    document.getElementById("codigo").focus();
 }
 
 function descargarExcel() {
