@@ -1,12 +1,16 @@
 let datos = [];
 let productoActual = null;
 let indiceProductoActual = -1;
+let scanner = null;
+let camaraActiva = false;
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("excelFile").addEventListener("change", cargarExcel);
     document.getElementById("buscarBtn").addEventListener("click", buscarProducto);
     document.getElementById("guardarBtn").addEventListener("click", guardarStock);
     document.getElementById("descargarBtn").addEventListener("click", descargarExcel);
+    document.getElementById("iniciarCamaraBtn").addEventListener("click", iniciarCamara);
+    document.getElementById("detenerCamaraBtn").addEventListener("click", detenerCamara);
 });
 
 function cargarExcel(e) {
@@ -22,7 +26,6 @@ function cargarExcel(e) {
     lector.onload = function (evento) {
         const data = new Uint8Array(evento.target.result);
         const workbook = XLSX.read(data, { type: "array" });
-
         const hoja = workbook.Sheets[workbook.SheetNames[0]];
 
         datos = XLSX.utils.sheet_to_json(hoja, {
@@ -31,17 +34,9 @@ function cargarExcel(e) {
         });
 
         datos.forEach(fila => {
-            if (fila["salon"] === undefined || fila["salon"] === "") {
-                fila["salon"] = 0;
-            }
-
-            if (fila["deposito"] === undefined || fila["deposito"] === "") {
-                fila["deposito"] = 0;
-            }
-
-            if (fila["stock"] === undefined || fila["stock"] === "") {
-                fila["stock"] = 0;
-            }
+            if (fila["salon"] === undefined || fila["salon"] === "") fila["salon"] = 0;
+            if (fila["deposito"] === undefined || fila["deposito"] === "") fila["deposito"] = 0;
+            if (fila["stock"] === undefined || fila["stock"] === "") fila["stock"] = 0;
         });
 
         alert("Excel cargado correctamente. Productos cargados: " + datos.length);
@@ -75,7 +70,6 @@ function buscarProducto() {
     }
 
     productoActual = datos[indiceProductoActual];
-
     document.getElementById("producto").innerText = productoActual["articulo"];
     document.getElementById("cantidad").focus();
 }
@@ -133,4 +127,53 @@ function descargarExcel() {
     XLSX.utils.book_append_sheet(libroNuevo, hojaNueva, "Stock");
 
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
+}
+
+function iniciarCamara() {
+    if (camaraActiva) {
+        alert("La cámara ya está activa");
+        return;
+    }
+
+    if (datos.length === 0) {
+        alert("Primero cargá el Excel");
+        return;
+    }
+
+    scanner = new Html5Qrcode("reader");
+
+    scanner.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: {
+                width: 250,
+                height: 150
+            }
+        },
+        codigoDetectado => {
+            document.getElementById("codigo").value = codigoDetectado;
+            buscarProducto();
+        },
+        error => {}
+    ).then(() => {
+        camaraActiva = true;
+    }).catch(error => {
+        alert("No se pudo iniciar la cámara. Probá desde el celular y aceptá el permiso.");
+        console.error(error);
+    });
+}
+
+function detenerCamara() {
+    if (!scanner || !camaraActiva) {
+        alert("La cámara no está activa");
+        return;
+    }
+
+    scanner.stop().then(() => {
+        scanner.clear();
+        camaraActiva = false;
+    }).catch(error => {
+        console.error(error);
+    });
 }
