@@ -9,10 +9,7 @@ let tiempoUltimaLectura = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("excelFile").addEventListener("change", cargarExcel);
-    document.getElementById("buscarBtn").addEventListener("click", buscarProductoManual);
-    document.getElementById("guardarBtn").addEventListener("click", guardarStock);
     document.getElementById("descargarBtn").addEventListener("click", descargarExcel);
-    document.getElementById("cargarCamarasBtn").addEventListener("click", cargarCamaras);
     document.getElementById("iniciarCamaraBtn").addEventListener("click", iniciarCamara);
     document.getElementById("detenerCamaraBtn").addEventListener("click", detenerCamara);
 });
@@ -49,19 +46,13 @@ function cargarExcel(e) {
     lector.readAsArrayBuffer(archivo);
 }
 
-function buscarProductoManual() {
-    const codigo = document.getElementById("codigo").value.trim();
-    buscarProductoPorCodigo(codigo, false);
-}
-
-function buscarProductoPorCodigo(codigoBuscado, pedirCantidadAutomatico = true) {
+function buscarProductoPorCodigo(codigoBuscado) {
     if (datos.length === 0) {
         alert("Primero cargá el Excel");
         return;
     }
 
-    if (codigoBuscado === "") {
-        alert("Ingresá un código");
+    if (!codigoBuscado || codigoBuscado.trim() === "") {
         return;
     }
 
@@ -71,7 +62,7 @@ function buscarProductoPorCodigo(codigoBuscado, pedirCantidadAutomatico = true) 
 
     if (indiceProductoActual === -1) {
         productoActual = null;
-        document.getElementById("producto").innerText = "Producto no encontrado";
+        document.getElementById("producto").innerText = "Producto no encontrado: " + codigoBuscado;
         alert("Producto no encontrado: " + codigoBuscado);
         return;
     }
@@ -80,16 +71,9 @@ function buscarProductoPorCodigo(codigoBuscado, pedirCantidadAutomatico = true) 
 
     const nombreProducto = productoActual["articulo"] || "Producto sin nombre";
 
-    document.getElementById("codigo").value = codigoBuscado;
     document.getElementById("producto").innerText = nombreProducto;
 
-    if (pedirCantidadAutomatico) {
-        setTimeout(() => {
-            pedirCantidadYGuardar(nombreProducto);
-        }, 300);
-    } else {
-        document.getElementById("cantidad").focus();
-    }
+    pedirCantidadYGuardar(nombreProducto);
 }
 
 function pedirCantidadYGuardar(nombreProducto) {
@@ -115,20 +99,12 @@ function pedirCantidadYGuardar(nombreProducto) {
         return;
     }
 
-    document.getElementById("cantidad").value = cantidad;
-    guardarStock();
+    guardarStock(cantidad);
 }
 
-function guardarStock() {
+function guardarStock(cantidad) {
     if (!productoActual || indiceProductoActual === -1) {
-        alert("Primero buscá un producto");
-        return;
-    }
-
-    const cantidad = Number(document.getElementById("cantidad").value);
-
-    if (!cantidad || cantidad <= 0) {
-        alert("Ingresá una cantidad válida");
+        alert("Primero escaneá un producto");
         return;
     }
 
@@ -148,18 +124,19 @@ function guardarStock() {
         Number(datos[indiceProductoActual]["salon"] || 0) +
         Number(datos[indiceProductoActual]["deposito"] || 0);
 
-    alert("Guardado: " + cantidad + " unidades");
+    document.getElementById("producto").innerText =
+        "Guardado: " + productoActual["articulo"] + " - " + cantidad + " unidades. Listo para escanear otro.";
 
-    limpiarProductoActual();
+    limpiarProductoActual(false);
 }
 
-function limpiarProductoActual() {
-    document.getElementById("codigo").value = "";
-    document.getElementById("cantidad").value = "";
-    document.getElementById("producto").innerText = "Listo para escanear otro producto";
-
+function limpiarProductoActual(limpiarTexto = true) {
     productoActual = null;
     indiceProductoActual = -1;
+
+    if (limpiarTexto) {
+        document.getElementById("producto").innerText = "Listo para escanear otro producto";
+    }
 }
 
 function descargarExcel() {
@@ -176,47 +153,6 @@ function descargarExcel() {
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
 }
 
-async function cargarCamaras() {
-    try {
-        lectorCodigo = new ZXing.BrowserMultiFormatReader();
-
-        const dispositivos = await lectorCodigo.listVideoInputDevices();
-        const lista = document.getElementById("listaCamaras");
-
-        lista.innerHTML = "";
-
-        if (dispositivos.length === 0) {
-            lista.innerHTML = '<option value="">No se encontraron cámaras</option>';
-            alert("No se encontraron cámaras");
-            return;
-        }
-
-        dispositivos.forEach((camara, index) => {
-            const opcion = document.createElement("option");
-            opcion.value = camara.deviceId;
-            opcion.text = camara.label || "Cámara " + (index + 1);
-
-            const nombre = opcion.text.toLowerCase();
-
-            if (
-                nombre.includes("back") ||
-                nombre.includes("rear") ||
-                nombre.includes("environment") ||
-                nombre.includes("trasera")
-            ) {
-                opcion.selected = true;
-            }
-
-            lista.appendChild(opcion);
-        });
-
-        alert("Cámaras cargadas. Probá seleccionar la cámara trasera o macro si aparece.");
-    } catch (error) {
-        alert("No se pudieron cargar las cámaras. Permití el acceso a la cámara.");
-        console.error(error);
-    }
-}
-
 async function iniciarCamara() {
     if (camaraActiva) {
         alert("La cámara ya está activa");
@@ -228,40 +164,40 @@ async function iniciarCamara() {
         return;
     }
 
-    const lista = document.getElementById("listaCamaras");
-    const deviceId = lista.value;
-
-    if (!deviceId) {
-        alert("Primero tocá 'Cargar cámaras' y elegí una cámara");
-        return;
-    }
-
     lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
     try {
-        await lectorCodigo.decodeFromVideoDevice(
-            deviceId,
+        await lectorCodigo.decodeFromConstraints(
+            {
+                video: {
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    focusMode: "continuous"
+                }
+            },
             "video",
             (resultado, error) => {
                 if (resultado) {
                     const codigo = resultado.text;
                     const ahora = Date.now();
 
-                    if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 2500) {
+                    if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 3000) {
                         return;
                     }
 
                     ultimoCodigoLeido = codigo;
                     tiempoUltimaLectura = ahora;
 
-                    buscarProductoPorCodigo(codigo, true);
+                    buscarProductoPorCodigo(codigo);
                 }
             }
         );
 
         camaraActiva = true;
+
     } catch (error) {
-        alert("No se pudo iniciar la cámara. Probá elegir otra cámara.");
+        alert("No se pudo iniciar la cámara. Probá desde Chrome y aceptá el permiso.");
         console.error(error);
     }
 }
@@ -274,4 +210,5 @@ function detenerCamara() {
 
     lectorCodigo.reset();
     camaraActiva = false;
+    document.getElementById("producto").innerText = "Cámara detenida";
 }
