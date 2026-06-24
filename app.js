@@ -9,7 +9,7 @@ let tiempoUltimaLectura = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("excelFile").addEventListener("change", cargarExcel);
-    document.getElementById("buscarBtn").addEventListener("click", buscarProducto);
+    document.getElementById("buscarBtn").addEventListener("click", buscarProductoManual);
     document.getElementById("guardarBtn").addEventListener("click", guardarStock);
     document.getElementById("descargarBtn").addEventListener("click", descargarExcel);
     document.getElementById("iniciarCamaraBtn").addEventListener("click", iniciarCamara);
@@ -48,9 +48,12 @@ function cargarExcel(e) {
     lector.readAsArrayBuffer(archivo);
 }
 
-function buscarProducto() {
-    const codigoBuscado = document.getElementById("codigo").value.trim();
+function buscarProductoManual() {
+    const codigo = document.getElementById("codigo").value.trim();
+    buscarProductoPorCodigo(codigo, false);
+}
 
+function buscarProductoPorCodigo(codigoBuscado, pedirCantidadAutomatico = true) {
     if (datos.length === 0) {
         alert("Primero cargá el Excel");
         return;
@@ -62,7 +65,7 @@ function buscarProducto() {
     }
 
     indiceProductoActual = datos.findIndex(fila => {
-        return String(fila["codigo"]).trim() === codigoBuscado;
+        return String(fila["codigo"]).trim() === String(codigoBuscado).trim();
     });
 
     if (indiceProductoActual === -1) {
@@ -73,8 +76,46 @@ function buscarProducto() {
     }
 
     productoActual = datos[indiceProductoActual];
-    document.getElementById("producto").innerText = productoActual["articulo"];
-    document.getElementById("cantidad").focus();
+
+    const nombreProducto = productoActual["articulo"] || "Producto sin nombre";
+
+    document.getElementById("codigo").value = codigoBuscado;
+    document.getElementById("producto").innerText = nombreProducto;
+
+    if (pedirCantidadAutomatico) {
+        setTimeout(() => {
+            pedirCantidadYGuardar(nombreProducto);
+        }, 300);
+    } else {
+        document.getElementById("cantidad").focus();
+    }
+}
+
+function pedirCantidadYGuardar(nombreProducto) {
+    const modo = document.querySelector('input[name="modo"]:checked').value;
+    const ubicacion = modo === "salon" ? "Salón" : "Depósito";
+
+    const cantidadTexto = prompt(
+        "Producto: " + nombreProducto + "\n" +
+        "Ubicación: " + ubicacion + "\n\n" +
+        "Ingresá la cantidad:"
+    );
+
+    if (cantidadTexto === null) {
+        limpiarProductoActual();
+        return;
+    }
+
+    const cantidad = Number(cantidadTexto);
+
+    if (!cantidad || cantidad <= 0) {
+        alert("Cantidad inválida");
+        limpiarProductoActual();
+        return;
+    }
+
+    document.getElementById("cantidad").value = cantidad;
+    guardarStock();
 }
 
 function guardarStock() {
@@ -106,16 +147,18 @@ function guardarStock() {
         Number(datos[indiceProductoActual]["salon"] || 0) +
         Number(datos[indiceProductoActual]["deposito"] || 0);
 
-    alert("Stock guardado correctamente");
+    alert("Guardado: " + cantidad + " unidades");
 
+    limpiarProductoActual();
+}
+
+function limpiarProductoActual() {
     document.getElementById("codigo").value = "";
     document.getElementById("cantidad").value = "";
-    document.getElementById("producto").innerText = "Ningún producto seleccionado";
+    document.getElementById("producto").innerText = "Listo para escanear otro producto";
 
     productoActual = null;
     indiceProductoActual = -1;
-
-    document.getElementById("codigo").focus();
 }
 
 function descargarExcel() {
@@ -160,15 +203,14 @@ function iniciarCamara() {
                 const codigo = resultado.text;
                 const ahora = Date.now();
 
-                if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 3000) {
+                if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 2500) {
                     return;
                 }
 
                 ultimoCodigoLeido = codigo;
                 tiempoUltimaLectura = ahora;
 
-                document.getElementById("codigo").value = codigo;
-                buscarProducto();
+                buscarProductoPorCodigo(codigo, true);
             }
         }
     ).then(() => {
