@@ -1,3 +1,18 @@
-alert("APP JS CARGADO");
+document.addEventListener("DOMContentLoaded", () => {
 
-console.log("APP JS CARGADO");
+    alert("JS funcionando");
+
+    const buscarBtn = document.getElementById("buscarBtn");
+
+    if (buscarBtn) {
+        alert("Botón encontrado");
+
+        buscarBtn.addEventListener("click", () => {
+            alert("CLICK FUNCIONA");
+        });
+
+    } else {
+        alert("No encontró buscarBtn");
+    }
+
+});
