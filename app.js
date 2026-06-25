@@ -18,7 +18,7 @@ function cargarExcel(e) {
     const archivo = e.target.files[0];
 
     if (!archivo) {
-        alert("Seleccioná un Excel");
+        mostrarMensaje("Seleccioná un Excel");
         return;
     }
 
@@ -40,7 +40,8 @@ function cargarExcel(e) {
             if (fila["stock"] === undefined || fila["stock"] === "") fila["stock"] = 0;
         });
 
-        alert("Excel cargado correctamente. Productos cargados: " + datos.length);
+        mostrarMensaje("Excel cargado correctamente. Productos: " + datos.length);
+        document.getElementById("producto").innerText = "Listo para iniciar cámara";
     };
 
     lector.readAsArrayBuffer(archivo);
@@ -48,7 +49,7 @@ function cargarExcel(e) {
 
 function buscarProductoPorCodigo(codigoBuscado) {
     if (datos.length === 0) {
-        alert("Primero cargá el Excel");
+        mostrarMensaje("Primero cargá el Excel");
         return;
     }
 
@@ -62,8 +63,10 @@ function buscarProductoPorCodigo(codigoBuscado) {
 
     if (indiceProductoActual === -1) {
         productoActual = null;
-        document.getElementById("producto").innerText = "Producto no encontrado: " + codigoBuscado;
-        alert("Producto no encontrado: " + codigoBuscado);
+        document.getElementById("producto").innerText =
+            "Producto no encontrado: " + codigoBuscado;
+
+        mostrarMensaje("Producto no encontrado");
         return;
     }
 
@@ -71,7 +74,13 @@ function buscarProductoPorCodigo(codigoBuscado) {
 
     const nombreProducto = productoActual["articulo"] || "Producto sin nombre";
 
-    document.getElementById("producto").innerText = nombreProducto;
+    const salonActual = Number(productoActual["salon"] || 0);
+    const depositoActual = Number(productoActual["deposito"] || 0);
+    const stockActual = Number(productoActual["stock"] || 0);
+
+    document.getElementById("producto").innerText =
+        nombreProducto + "\n" +
+        "Salón: " + salonActual + " | Depósito: " + depositoActual + " | Stock: " + stockActual;
 
     pedirCantidadYGuardar(nombreProducto);
 }
@@ -87,15 +96,15 @@ function pedirCantidadYGuardar(nombreProducto) {
     );
 
     if (cantidadTexto === null) {
-        limpiarProductoActual();
+        limpiarProductoActual("Listo para escanear otro producto");
         return;
     }
 
     const cantidad = Number(cantidadTexto);
 
     if (!cantidad || cantidad <= 0) {
-        alert("Cantidad inválida");
-        limpiarProductoActual();
+        mostrarMensaje("Cantidad inválida");
+        limpiarProductoActual("Listo para escanear otro producto");
         return;
     }
 
@@ -104,7 +113,7 @@ function pedirCantidadYGuardar(nombreProducto) {
 
 function guardarStock(cantidad) {
     if (!productoActual || indiceProductoActual === -1) {
-        alert("Primero escaneá un producto");
+        mostrarMensaje("Primero escaneá un producto");
         return;
     }
 
@@ -124,24 +133,31 @@ function guardarStock(cantidad) {
         Number(datos[indiceProductoActual]["salon"] || 0) +
         Number(datos[indiceProductoActual]["deposito"] || 0);
 
+    const nombre = productoActual["articulo"] || "Producto";
+    const salon = datos[indiceProductoActual]["salon"];
+    const deposito = datos[indiceProductoActual]["deposito"];
+    const stock = datos[indiceProductoActual]["stock"];
+
     document.getElementById("producto").innerText =
-        "Guardado: " + productoActual["articulo"] + " - " + cantidad + " unidades. Listo para escanear otro.";
+        "✅ Guardado correctamente\n\n" +
+        nombre + "\n" +
+        "Cantidad cargada: " + cantidad + "\n" +
+        "Salón: " + salon + " | Depósito: " + deposito + " | Stock: " + stock + "\n\n" +
+        "Listo para escanear otro producto";
 
-    limpiarProductoActual(false);
-}
-
-function limpiarProductoActual(limpiarTexto = true) {
     productoActual = null;
     indiceProductoActual = -1;
+}
 
-    if (limpiarTexto) {
-        document.getElementById("producto").innerText = "Listo para escanear otro producto";
-    }
+function limpiarProductoActual(texto) {
+    productoActual = null;
+    indiceProductoActual = -1;
+    document.getElementById("producto").innerText = texto;
 }
 
 function descargarExcel() {
     if (datos.length === 0) {
-        alert("Primero cargá el Excel");
+        mostrarMensaje("Primero cargá el Excel");
         return;
     }
 
@@ -151,16 +167,18 @@ function descargarExcel() {
     XLSX.utils.book_append_sheet(libroNuevo, hojaNueva, "Stock");
 
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
+
+    mostrarMensaje("Excel actualizado descargado");
 }
 
 async function iniciarCamara() {
     if (camaraActiva) {
-        alert("La cámara ya está activa");
+        mostrarMensaje("La cámara ya está activa");
         return;
     }
 
     if (datos.length === 0) {
-        alert("Primero cargá el Excel");
+        mostrarMensaje("Primero cargá el Excel");
         return;
     }
 
@@ -195,20 +213,25 @@ async function iniciarCamara() {
         );
 
         camaraActiva = true;
+        mostrarMensaje("Cámara activa");
 
     } catch (error) {
-        alert("No se pudo iniciar la cámara. Probá desde Chrome y aceptá el permiso.");
+        mostrarMensaje("No se pudo iniciar la cámara");
         console.error(error);
     }
 }
 
 function detenerCamara() {
     if (!lectorCodigo || !camaraActiva) {
-        alert("La cámara no está activa");
+        mostrarMensaje("La cámara no está activa");
         return;
     }
 
     lectorCodigo.reset();
     camaraActiva = false;
     document.getElementById("producto").innerText = "Cámara detenida";
+}
+
+function mostrarMensaje(texto) {
+    console.log(texto);
 }
