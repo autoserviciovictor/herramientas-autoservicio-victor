@@ -47,7 +47,7 @@ function normalizarDatos() {
 
         fila["salon"] = Number(fila["salon"] || 0);
         fila["deposito"] = Number(fila["deposito"] || 0);
-        fila["stock"] = Number(fila["salon"]) + Number(fila["deposito"]);
+        fila["stock"] = fila["salon"] + fila["deposito"];
     });
 }
 
@@ -56,22 +56,14 @@ export function obtenerCantidadProductos() {
 }
 
 export function buscarProductoPorCodigo(codigoBuscado) {
-    if (datos.length === 0) {
-        return {
-            encontrado: false
-        };
-    }
-
     const codigoLimpio = String(codigoBuscado).trim();
 
-    const indice = datos.findIndex(fila => {
-        return String(fila["codigo"]).trim() === codigoLimpio;
-    });
+    const indice = datos.findIndex(fila =>
+        String(fila["codigo"]).trim() === codigoLimpio
+    );
 
     if (indice === -1) {
-        return {
-            encontrado: false
-        };
+        return { encontrado: false };
     }
 
     const fila = datos[indice];
@@ -94,24 +86,18 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
 
     const anterior = {
         indice,
-        codigo: fila["codigo"],
-        articulo: fila["articulo"],
         salon: Number(fila["salon"] || 0),
         deposito: Number(fila["deposito"] || 0),
-        stock: Number(fila["stock"] || 0),
-        ubicacion,
-        cantidad
+        stock: Number(fila["stock"] || 0)
     };
 
     if (ubicacion === "salon") {
-        fila["salon"] = Number(fila["salon"] || 0) + cantidad;
+        fila["salon"] += cantidad;
+    } else {
+        fila["deposito"] += cantidad;
     }
 
-    if (ubicacion === "deposito") {
-        fila["deposito"] = Number(fila["deposito"] || 0) + cantidad;
-    }
-
-    fila["stock"] = Number(fila["salon"] || 0) + Number(fila["deposito"] || 0);
+    fila["stock"] = fila["salon"] + fila["deposito"];
 
     contador++;
 
@@ -122,14 +108,11 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
         ubicacion,
         salon: fila["salon"],
         deposito: fila["deposito"],
-        stock: fila["stock"]
+        stock: fila["stock"],
+        anterior
     });
 
-    if (historial.length > 10) {
-        historial.pop();
-    }
-
-    historial[0].anterior = anterior;
+    if (historial.length > 5) historial.pop();
 
     return {
         producto: {
@@ -146,9 +129,7 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
 }
 
 export function deshacerUltimoMovimiento() {
-    if (historial.length === 0) {
-        return null;
-    }
+    if (historial.length === 0) return null;
 
     const ultimo = historial.shift();
     const anterior = ultimo.anterior;
@@ -159,10 +140,7 @@ export function deshacerUltimoMovimiento() {
 
     if (contador > 0) contador--;
 
-    return {
-        contador,
-        historial
-    };
+    return { contador, historial };
 }
 
 export function descargarExcel() {
@@ -174,6 +152,5 @@ export function descargarExcel() {
     const libroNuevo = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(libroNuevo, hojaNueva, "Stock");
-
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
 }
