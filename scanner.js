@@ -18,7 +18,7 @@ export async function iniciarScanner(videoId, callbackCodigo) {
             }
         },
         videoId,
-        (resultado, error) => {
+        (resultado) => {
             if (!resultado) return;
 
             const codigo = resultado.text;
