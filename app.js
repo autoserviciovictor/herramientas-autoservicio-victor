@@ -7,10 +7,7 @@ import {
     obtenerCantidadProductos
 } from "./excel.js";
 
-import {
-    iniciarScanner,
-    detenerScanner
-} from "./scanner.js";
+import { iniciarScanner, detenerScanner } from "./scanner.js";
 
 import {
     mostrarMensaje,
@@ -44,10 +41,10 @@ excelFile.addEventListener("change", async (e) => {
     try {
         const cantidad = await cargarExcel(e.target.files[0]);
 
-        actualizarEstadoExcel(`Excel cargado correctamente. Productos: ${cantidad}`);
+        actualizarEstadoExcel(`✅ Excel cargado. Productos: ${cantidad}`);
         activarBotonDescargar(true);
-        mostrarMensaje("Excel listo para usar", "ok");
         limpiarProducto("Listo para iniciar cámara");
+        mostrarMensaje("Excel listo para usar", "ok");
     } catch (error) {
         mostrarMensaje(error.message, "error");
     }
@@ -73,7 +70,6 @@ btnIniciarCamara.addEventListener("click", async () => {
 
     try {
         await iniciarScanner("video", manejarCodigoEscaneado);
-
         scannerActivo = true;
         cambiarEstadoCamara(true);
         mostrarMensaje("Cámara activa", "ok");
@@ -85,21 +81,15 @@ btnIniciarCamara.addEventListener("click", async () => {
 
 btnDetenerCamara.addEventListener("click", () => {
     detenerScanner();
-
     scannerActivo = false;
     cambiarEstadoCamara(false);
     limpiarProducto("Cámara detenida");
-    mostrarMensaje("Cámara detenida", "ok");
 });
 
-btnGuardarCantidad.addEventListener("click", () => {
-    guardarCantidad();
-});
+btnGuardarCantidad.addEventListener("click", guardarCantidad);
 
 cantidadInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-        guardarCantidad();
-    }
+    if (e.key === "Enter") guardarCantidad();
 });
 
 btnDescargar.addEventListener("click", () => {
@@ -122,9 +112,7 @@ btnDeshacer.addEventListener("click", () => {
     actualizarContador(resultado.contador);
     actualizarHistorial(resultado.historial);
     activarBotonDeshacer(resultado.historial.length > 0);
-
     limpiarProducto("Último movimiento deshecho");
-    mostrarMensaje("Se deshizo el último movimiento", "ok");
 });
 
 function manejarCodigoEscaneado(codigo) {
@@ -139,7 +127,6 @@ function manejarCodigoEscaneado(codigo) {
     }
 
     productoActual = resultado.producto;
-
     mostrarProducto(productoActual);
     activarBotonGuardar(true);
 
@@ -163,7 +150,11 @@ function guardarCantidad() {
         return;
     }
 
-    const resultado = guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
+    const resultado = guardarCantidadEnProducto(
+        productoActual.indice,
+        cantidad,
+        ubicacionActual
+    );
 
     mostrarProducto(resultado.producto);
     actualizarContador(resultado.contador);
