@@ -3,73 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Autoservicio Victor</title>
+    <title>Inventario Autoservicio Victor</title>
 
     <link rel="stylesheet" href="style.css">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
-
 <body>
 
-    <h1>📦 Stock Autoservicio Victor</h1>
+    <header>
+        <h1>📦 Inventario</h1>
+        <p>Autoservicio Victor</p>
+    </header>
 
-    <div>
-        <h3>1. Cargar Excel</h3>
-        <input type="file" id="excelFile" accept=".xlsx,.xls">
-    </div>
+    <main>
 
-    <hr>
+        <section class="card">
+            <h2>1. Cargar Excel</h2>
+            <input type="file" id="excelFile" accept=".xlsx,.xls">
+            <p id="estadoExcel">No hay Excel cargado</p>
+        </section>
 
-    <div>
-        <h3>2. Ubicación del stock</h3>
+        <section class="card">
+            <h2>2. Elegir ubicación</h2>
 
-        <label>
-            <input type="radio" name="modo" value="salon" checked>
-            Salón
-        </label>
+            <div class="botones">
+                <button id="btnSalon" class="activo">Salón</button>
+                <button id="btnDeposito">Depósito</button>
+            </div>
 
-        <label style="margin-left:20px;">
-            <input type="radio" name="modo" value="deposito">
-            Depósito
-        </label>
-    </div>
+            <p id="estadoUbicacion">Ubicación seleccionada: Salón</p>
+        </section>
 
-    <hr>
+        <section class="card">
+            <h2>3. Cámara</h2>
 
-    <div>
-        <h3>3. Escanear producto</h3>
+            <video id="video" autoplay muted playsinline></video>
 
-        <button id="iniciarCamaraBtn">📷 Iniciar cámara</button>
-        <button id="detenerCamaraBtn">❌ Detener cámara</button>
+            <div class="botones">
+                <button id="btnIniciarCamara">📷 Iniciar cámara</button>
+                <button id="btnDetenerCamara" disabled>❌ Detener cámara</button>
+            </div>
+        </section>
 
-        <br><br>
+        <section class="card producto">
+            <h2>Producto encontrado</h2>
 
-        <video
-            id="video"
-            width="100%"
-            autoplay
-            muted
-            playsinline
-            style="max-width:450px; border:2px solid #ccc; border-radius:10px;">
-        </video>
-    </div>
+            <p class="label">Código</p>
+            <p id="codigoProducto" class="dato">-</p>
 
-    <hr>
+            <p class="label">Artículo</p>
+            <p id="nombreProducto" class="dato grande">Esperando escaneo...</p>
 
-    <div>
-        <h3>Producto encontrado</h3>
-        <p id="producto">Esperando escaneo...</p>
-    </div>
+            <p class="label">Stock actual</p>
+            <p id="stockProducto" class="dato">-</p>
 
-    <hr>
+            <label for="cantidadInput">Cantidad</label>
+            <input type="number" id="cantidadInput" min="1" step="1" placeholder="Ingresar cantidad">
 
-    <div>
-        <button id="descargarBtn">📥 Descargar Excel Actualizado</button>
-    </div>
+            <button id="btnGuardarCantidad" disabled>Guardar cantidad</button>
+        </section>
 
-    <script src="app.js?v=60"></script>
+        <section class="card resumen">
+            <h2>Resumen</h2>
 
+            <p>Productos cargados: <strong id="contador">0</strong></p>
+
+            <div class="botones">
+                <button id="btnDeshacer" disabled>↩️ Deshacer último</button>
+                <button id="btnDescargar" disabled>📥 Descargar Excel</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Últimos cargados</h2>
+            <ul id="historial"></ul>
+        </section>
+
+        <p id="mensaje"></p>
+
+    </main>
+
+    <script type="module" src="app.js?v=1"></script>
 </body>
 </html>
