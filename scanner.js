@@ -4,7 +4,9 @@ let ultimoCodigoLeido = "";
 let tiempoUltimaLectura = 0;
 
 export async function iniciarScanner(videoId, callbackCodigo) {
-    if (camaraActiva) return;
+    if (camaraActiva) {
+        return;
+    }
 
     lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
@@ -19,7 +21,9 @@ export async function iniciarScanner(videoId, callbackCodigo) {
         },
         videoId,
         (resultado) => {
-            if (!resultado) return;
+            if (!resultado) {
+                return;
+            }
 
             const codigo = resultado.text;
             const ahora = Date.now();
@@ -39,7 +43,9 @@ export async function iniciarScanner(videoId, callbackCodigo) {
 }
 
 export function detenerScanner() {
-    if (!lectorCodigo) return;
+    if (!lectorCodigo) {
+        return;
+    }
 
     lectorCodigo.reset();
     lectorCodigo = null;
