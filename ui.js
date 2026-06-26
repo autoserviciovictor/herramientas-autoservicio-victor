@@ -1,5 +1,5 @@
 const estadoExcel = document.getElementById("estadoExcel");
-const contador = document.getElementById("contador");
+const estadoExcelNumero = document.getElementById("estadoExcelNumero");
 
 const btnSalon = document.getElementById("btnSalon");
 const btnDeposito = document.getElementById("btnDeposito");
@@ -7,157 +7,201 @@ const ubicacionTexto = document.getElementById("ubicacionTexto");
 
 const btnIniciarCamara = document.getElementById("btnIniciarCamara");
 const btnDetenerCamara = document.getElementById("btnDetenerCamara");
-const cameraBox = document.querySelector(".camera-box");
+const estadoCamaraTexto = document.getElementById("estadoCamaraTexto");
 
 const productoCard = document.getElementById("productoCard");
-const tituloProducto = document.getElementById("tituloProducto");
+const estadoProducto = document.getElementById("estadoProducto");
+
 const codigoProducto = document.getElementById("codigoProducto");
 const nombreProducto = document.getElementById("nombreProducto");
+
 const stockSalon = document.getElementById("stockSalon");
 const stockDeposito = document.getElementById("stockDeposito");
 const stockTotal = document.getElementById("stockTotal");
 
 const cantidadInput = document.getElementById("cantidadInput");
+
 const btnGuardarCantidad = document.getElementById("btnGuardarCantidad");
 const btnDescargar = document.getElementById("btnDescargar");
 const btnDeshacer = document.getElementById("btnDeshacer");
 
+const contadorTop = document.getElementById("contadorTop");
 const historial = document.getElementById("historial");
+
 const mensaje = document.getElementById("mensaje");
 
 export function mostrarMensaje(texto, tipo = "") {
+
     mensaje.textContent = texto;
     mensaje.className = tipo;
-    console.log(texto);
+
 }
 
-export function actualizarEstadoExcel(texto) {
-    estadoExcel.textContent = texto;
+export function actualizarEstadoExcel(cantidad) {
+
+    estadoExcel.textContent =
+        `Excel cargado correctamente (${cantidad} productos)`;
+
+    estadoExcelNumero.textContent = cantidad;
+
 }
 
 export function actualizarUbicacion(ubicacion) {
+
     if (ubicacion === "salon") {
-        btnSalon.classList.add("activo");
-        btnDeposito.classList.remove("activo");
+
+        btnSalon.classList.add("active");
+        btnDeposito.classList.remove("active");
+
         ubicacionTexto.textContent = "SALÓN";
+
     } else {
-        btnDeposito.classList.add("activo");
-        btnSalon.classList.remove("activo");
+
+        btnDeposito.classList.add("active");
+        btnSalon.classList.remove("active");
+
         ubicacionTexto.textContent = "DEPÓSITO";
+
     }
+
 }
 
 export function mostrarProducto(producto) {
-    productoCard.classList.remove("no-encontrado");
-    productoCard.classList.remove("encontrado");
 
-    void productoCard.offsetWidth;
+    productoCard.classList.remove("idle");
+    productoCard.classList.remove("not-found");
+    productoCard.classList.add("found");
 
-    productoCard.classList.add("encontrado");
+    estadoProducto.textContent = "Encontrado";
 
-    tituloProducto.textContent = "PRODUCTO ENCONTRADO";
     codigoProducto.textContent = producto.codigo;
     nombreProducto.textContent = producto.articulo;
+
     stockSalon.textContent = producto.salon;
     stockDeposito.textContent = producto.deposito;
     stockTotal.textContent = producto.stock;
+
+    setTimeout(() => {
+        productoCard.classList.remove("found");
+    }, 500);
+
 }
 
 export function mostrarProductoNoEncontrado(codigo) {
-    productoCard.classList.remove("encontrado");
-    productoCard.classList.add("no-encontrado");
 
-    tituloProducto.textContent = "PRODUCTO NO ENCONTRADO";
+    productoCard.classList.remove("found");
+    productoCard.classList.add("not-found");
+
+    estadoProducto.textContent = "No encontrado";
+
     codigoProducto.textContent = codigo;
-    nombreProducto.textContent = "No está en el Excel";
-    stockSalon.textContent = "0";
-    stockDeposito.textContent = "0";
-    stockTotal.textContent = "0";
+    nombreProducto.textContent = "Producto inexistente";
 
-    cantidadInput.value = "";
+    stockSalon.textContent = "-";
+    stockDeposito.textContent = "-";
+    stockTotal.textContent = "-";
+
 }
 
 export function limpiarProducto(texto = "Esperando escaneo...") {
-    productoCard.classList.remove("encontrado");
-    productoCard.classList.remove("no-encontrado");
 
-    tituloProducto.textContent = "PRODUCTO ENCONTRADO";
+    productoCard.classList.remove("found");
+    productoCard.classList.remove("not-found");
+
+    estadoProducto.textContent = "Esperando";
+
     codigoProducto.textContent = "-";
     nombreProducto.textContent = texto;
+
     stockSalon.textContent = "0";
     stockDeposito.textContent = "0";
     stockTotal.textContent = "0";
 
     cantidadInput.value = "";
+
 }
 
 export function actualizarContador(numero) {
-    contador.textContent = numero;
+
+    contadorTop.textContent = numero;
+
 }
 
 export function actualizarHistorial(lista) {
+
     historial.innerHTML = "";
 
     lista.forEach(item => {
+
         const li = document.createElement("li");
-        const ubicacionTexto = item.ubicacion === "salon" ? "Salón" : "Depósito";
-        const clase = item.ubicacion === "salon" ? "historial-salon" : "historial-deposito";
+
+        const ubicacion =
+            item.ubicacion === "salon"
+                ? "Salón"
+                : "Depósito";
 
         li.innerHTML = `
-            <div class="historial-nombre">${item.articulo}</div>
-            <div class="historial-detalle">
+            <strong>${item.articulo}</strong>
+
+            <div class="historial-linea">
                 <span>${item.codigo}</span>
-                <span class="${clase}">${ubicacionTexto} +${item.cantidad}</span>
+
+                <span class="historial-ubicacion ${item.ubicacion}">
+                    ${ubicacion} +${item.cantidad}
+                </span>
             </div>
         `;
 
         historial.appendChild(li);
+
     });
+
 }
 
 export function activarBotonGuardar(estado) {
+
     btnGuardarCantidad.disabled = !estado;
+
 }
 
 export function activarBotonDescargar(estado) {
+
     btnDescargar.disabled = !estado;
+
 }
 
 export function activarBotonDeshacer(estado) {
+
     btnDeshacer.disabled = !estado;
+
 }
 
 export function cambiarEstadoCamara(activa) {
+
     btnIniciarCamara.disabled = activa;
     btnDetenerCamara.disabled = !activa;
+
+    estadoCamaraTexto.textContent =
+        activa ? "Activa" : "Detenida";
+
 }
 
-export function marcarCamaraActiva(activa) {
-    if (activa) {
-        cameraBox.classList.add("activa");
-    } else {
-        cameraBox.classList.remove("activa");
+export function reproducirConfirmacion(tipo = "ok") {
+
+    if ("vibrate" in navigator) {
+
+        navigator.vibrate(40);
+
     }
-}
 
-export function enfocarCantidad() {
-    setTimeout(() => {
-        cantidadInput.focus();
-    }, 200);
-}
+    const audio = new Audio(
+        tipo === "guardado"
+            ? "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
+            : "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
+    );
 
-export function avisarEscaneo() {
-    try {
-        if (navigator.vibrate) {
-            navigator.vibrate(120);
-        }
+    audio.volume = 0.35;
 
-        const audio = new Audio(
-            "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="
-        );
+    audio.play().catch(() => {});
 
-        audio.play().catch(() => {});
-    } catch (error) {
-        console.log("Aviso de escaneo no disponible");
-    }
 }
