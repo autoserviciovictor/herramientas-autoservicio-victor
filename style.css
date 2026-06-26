@@ -5,43 +5,43 @@
 body {
     margin: 0;
     font-family: Arial, Helvetica, sans-serif;
-    background: #e7e7e7;
+    background: #eef0f3;
     color: #222;
 }
 
 .app {
     max-width: 520px;
-    margin: auto;
     min-height: 100vh;
-    background: #fafafa;
+    margin: auto;
+    background: #f7f7f7;
 }
 
-.header {
-    background: linear-gradient(135deg, #b00000, #d40000);
+.topbar {
+    background: linear-gradient(135deg, #b60000, #e00000);
     color: white;
-    padding: 20px 18px;
+    padding: 22px 16px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
 }
 
-.header-title {
+.brand {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
 .logo {
-    font-size: 32px;
+    font-size: 30px;
 }
 
-.header h1 {
+.brand h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 26px;
     letter-spacing: 0.5px;
 }
 
-.header p {
+.brand p {
     margin: 3px 0 0;
     font-size: 13px;
     font-weight: bold;
@@ -50,63 +50,86 @@ body {
 .excel-btn {
     background: white;
     color: #333;
-    padding: 13px 15px;
     border-radius: 14px;
+    padding: 13px 15px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
 }
 
 .excel-btn input {
     display: none;
 }
 
-.main {
+.screen {
     padding: 14px;
 }
 
-.top-status {
+.top-cards {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
-.top-status div {
+.top-card {
     background: white;
     border-radius: 14px;
     padding: 14px;
     text-align: center;
-    box-shadow: 0 1px 7px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
-.top-status span {
+.top-card span {
     display: block;
-    color: #777;
+    color: #666;
     font-size: 13px;
     font-weight: bold;
 }
 
-.top-status strong {
+.top-card strong {
     display: block;
-    margin-top: 5px;
-    font-size: 20px;
-    color: #b00000;
+    color: #c90000;
+    font-size: 24px;
+    margin-top: 4px;
+}
+
+.estado-excel {
+    background: white;
+    padding: 10px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: bold;
+    margin: 0 0 14px;
 }
 
 .section {
-    margin-bottom: 16px;
+    margin-bottom: 15px;
 }
 
 .section h2,
-.cantidad-card h2,
-.historial-card h2 {
+.quantity-card h2,
+.history-section h2 {
     color: #777;
     font-size: 14px;
     margin: 0 0 9px;
 }
 
-.selector {
+.section-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-title-row span {
+    color: #777;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.location-grid,
+.camera-actions,
+.action-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
@@ -115,17 +138,10 @@ body {
 button {
     border: none;
     border-radius: 14px;
-    padding: 15px 10px;
+    padding: 15px 12px;
     font-size: 15px;
     font-weight: bold;
-    background: #eeeeee;
-    color: #444;
     cursor: pointer;
-}
-
-button.activo {
-    background: #c40000;
-    color: white;
 }
 
 button:disabled {
@@ -133,55 +149,242 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.location-btn {
+    background: #eeeeee;
+    color: #333;
+}
+
+.location-btn.active {
+    background: #d00000;
+    color: white;
+}
+
 .camera-box {
-    position: relative;
     width: 100%;
-    height: 175px;
+    height: 165px;
     background: black;
     border-radius: 16px;
     overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
     margin-bottom: 12px;
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08);
 }
 
 video {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    background: black;
 }
 
 .scan-line {
     position: absolute;
-    left: 8%;
-    right: 8%;
+    left: 9%;
+    right: 9%;
     top: 50%;
     height: 3px;
-    background: rgba(0, 255, 0, 0.7);
-    box-shadow: 0 0 10px rgba(0,255,0,0.8);
-    display: none;
+    background: #28ff45;
+    box-shadow: 0 0 10px #28ff45;
+    border-radius: 99px;
 }
 
-.camera-box.activa .scan-line {
-    display: block;
+.camera-btn {
+    background: white;
+    color: #333;
+    box-shadow: 0 2px 7px rgba(0,0,0,0.08);
 }
 
-.producto-card {
-    background: #f1ffe9;
-    border: 1px solid #bde7b7;
+.product-card {
+    background: #efffe9;
+    border: 1px solid #bfe7b8;
     border-radius: 18px;
-    padding: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 7px rgba(0,0,0,0.08);
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: 0.25s;
 }
 
-.producto-card.encontrado {
+.product-card.found {
     animation: flashGreen 0.45s ease;
 }
 
-.producto-card.no-encontrado {
+.product-card.not-found {
     background: #fff0f0;
     border-color: #ffb5b5;
+}
+
+.product-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.product-header h2 {
+    margin: 0;
+    color: #168000;
+    font-size: 16px;
+}
+
+.product-header span {
+    font-size: 12px;
+    color: #168000;
+    font-weight: bold;
+}
+
+.small-label {
+    color: #666;
+    margin: 12px 0 3px;
+    font-size: 14px;
+}
+
+.product-code {
+    color: #c90000;
+    font-size: 17px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.product-name {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1.15;
+}
+
+.stock-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid #d5edcf;
+    margin-top: 14px;
+    padding-top: 12px;
+    text-align: center;
+}
+
+.stock-grid div:not(:last-child) {
+    border-right: 1px solid #d5edcf;
+}
+
+.stock-grid span {
+    display: block;
+    color: #555;
+    font-size: 13px;
+}
+
+.stock-grid strong {
+    font-size: 24px;
+    color: #222;
+}
+
+#stockSalon {
+    color: #c90000;
+}
+
+#stockDeposito {
+    color: #005bea;
+}
+
+#stockTotal {
+    color: #078000;
+}
+
+.quantity-card {
+    background: white;
+    border-radius: 18px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 9px rgba(0,0,0,0.12);
+}
+
+.quantity-card span {
+    color: #c90000;
+}
+
+#cantidadInput {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 22px;
+    margin-bottom: 13px;
+}
+
+#btnGuardarCantidad {
+    width: 100%;
+    background: #078000;
+    color: white;
+    font-size: 18px;
+    padding: 17px;
+}
+
+#btnGuardarCantidad:disabled {
+    background: #80bd7c;
+    color: white;
+}
+
+.undo-btn {
+    background: white;
+    color: #c90000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.download-btn {
+    background: #005bea;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.history-section {
+    margin-top: 15px;
+}
+
+#historial {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+#historial li {
+    padding: 11px 13px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+#historial li strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.historial-linea {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.historial-ubicacion.salon {
+    color: #c90000;
+    font-weight: bold;
+}
+
+.historial-ubicacion.deposito {
+    color: #005bea;
+    font-weight: bold;
+}
+
+#mensaje {
+    text-align: center;
+    min-height: 22px;
+    font-weight: bold;
+}
+
+.ok {
+    color: green;
+}
+
+.error {
+    color: #c90000;
 }
 
 @keyframes flashGreen {
@@ -197,185 +400,6 @@ video {
 
     100% {
         transform: scale(1);
-        box-shadow: 0 1px 7px rgba(0,0,0,0.08);
+        box-shadow: 0 0 0 rgba(0,128,0,0);
     }
-}
-
-.producto-card h2 {
-    color: #168000;
-    font-size: 16px;
-    margin: 0 0 14px;
-}
-
-.producto-card.no-encontrado h2 {
-    color: #c40000;
-}
-
-.label {
-    color: #666;
-    font-size: 14px;
-    margin: 8px 0 3px;
-}
-
-.codigo {
-    color: #c40000;
-    font-size: 19px;
-    font-weight: bold;
-    margin: 0;
-}
-
-.articulo {
-    font-size: 25px;
-    font-weight: 900;
-    margin: 0 0 12px;
-    line-height: 1.15;
-}
-
-.stock-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    text-align: center;
-    border-top: 1px solid #cdecc8;
-    padding-top: 12px;
-}
-
-.stock-grid div {
-    border-right: 1px solid #d6ead0;
-}
-
-.stock-grid div:last-child {
-    border-right: none;
-}
-
-.stock-grid span {
-    display: block;
-    color: #555;
-    font-size: 13px;
-}
-
-.stock-grid strong {
-    display: block;
-    font-size: 25px;
-    margin-top: 4px;
-}
-
-#stockSalon {
-    color: #c40000;
-}
-
-#stockDeposito {
-    color: #005bbb;
-}
-
-#stockTotal {
-    color: #0a8500;
-}
-
-.cantidad-card {
-    background: white;
-    border-radius: 18px;
-    padding: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 7px rgba(0,0,0,0.13);
-}
-
-.cantidad-card span {
-    color: #c40000;
-}
-
-#cantidadInput {
-    width: 100%;
-    padding: 16px;
-    font-size: 22px;
-    border-radius: 14px;
-    border: 1px solid #ccc;
-    margin-bottom: 12px;
-}
-
-#btnGuardarCantidad {
-    width: 100%;
-    background: #078000;
-    color: white;
-    font-size: 19px;
-    padding: 17px;
-}
-
-.acciones-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-#btnDeshacer {
-    background: white;
-    color: #c40000;
-    box-shadow: 0 1px 7px rgba(0,0,0,0.12);
-}
-
-#btnDescargar {
-    background: #005bea;
-    color: white;
-    box-shadow: 0 1px 7px rgba(0,0,0,0.12);
-}
-
-.historial-card {
-    margin-bottom: 12px;
-}
-
-#historial {
-    background: white;
-    border-radius: 16px;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-    box-shadow: 0 1px 7px rgba(0,0,0,0.11);
-}
-
-#historial li {
-    padding: 13px 14px;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-}
-
-#historial li:last-child {
-    border-bottom: none;
-}
-
-.historial-nombre {
-    font-weight: bold;
-    font-size: 15px;
-}
-
-.historial-detalle {
-    margin-top: 4px;
-    display: flex;
-    justify-content: space-between;
-    color: #555;
-}
-
-.historial-salon {
-    color: #c40000;
-    font-weight: bold;
-}
-
-.historial-deposito {
-    color: #005bbb;
-    font-weight: bold;
-}
-
-#mensaje {
-    text-align: center;
-    font-weight: bold;
-    min-height: 24px;
-    margin-bottom: 20px;
-}
-
-.ok {
-    color: green;
-}
-
-.error {
-    color: #c40000;
 }
