@@ -1,9 +1,11 @@
 let lectorCodigo = null;
 let camaraActiva = false;
+
 let ultimoCodigoLeido = "";
 let tiempoUltimaLectura = 0;
 
 export async function iniciarScanner(videoId, callbackCodigo) {
+
     if (camaraActiva) {
         return;
     }
@@ -20,15 +22,23 @@ export async function iniciarScanner(videoId, callbackCodigo) {
             }
         },
         videoId,
-        (resultado) => {
+        (resultado, error) => {
+
             if (!resultado) {
                 return;
             }
 
-            const codigo = resultado.text;
+            const codigo = String(resultado.text).trim();
             const ahora = Date.now();
 
-            if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 2500) {
+            if (!codigo) {
+                return;
+            }
+
+            if (
+                codigo === ultimoCodigoLeido &&
+                ahora - tiempoUltimaLectura < 2500
+            ) {
                 return;
             }
 
@@ -43,13 +53,16 @@ export async function iniciarScanner(videoId, callbackCodigo) {
 }
 
 export function detenerScanner() {
+
     if (!lectorCodigo) {
         return;
     }
 
     lectorCodigo.reset();
+
     lectorCodigo = null;
     camaraActiva = false;
+
     ultimoCodigoLeido = "";
     tiempoUltimaLectura = 0;
 }
