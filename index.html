@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario Autoservicio Victor</title>
 
-    <link rel="stylesheet" href="./style.css?v=30">
+    <link rel="stylesheet" href="style.css?v=31">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
@@ -14,8 +14,8 @@
 
 <div class="app">
 
-    <header class="header">
-        <div class="header-title">
+    <header class="topbar">
+        <div class="brand">
             <div class="logo">📦</div>
             <div>
                 <h1>INVENTARIO</h1>
@@ -29,63 +29,68 @@
         </label>
     </header>
 
-    <main class="main">
+    <main class="screen">
 
-        <section class="top-status">
-            <div>
+        <section class="top-cards">
+            <div class="top-card">
                 <span>Excel</span>
-                <strong id="estadoExcel">No cargado</strong>
+                <strong id="estadoExcelNumero">-</strong>
             </div>
 
-            <div>
+            <div class="top-card">
                 <span>Escaneados</span>
-                <strong id="contador">0</strong>
+                <strong id="contadorTop">0</strong>
             </div>
         </section>
+
+        <p id="estadoExcel" class="estado-excel">No hay Excel cargado</p>
 
         <section class="section">
             <h2>UBICACIÓN SELECCIONADA</h2>
-
-            <div class="selector">
-                <button id="btnSalon" class="activo">🏪 SALÓN</button>
-                <button id="btnDeposito">📦 DEPÓSITO</button>
+            <div class="location-grid">
+                <button id="btnSalon" class="location-btn active">🏪 SALÓN</button>
+                <button id="btnDeposito" class="location-btn">📦 DEPÓSITO</button>
             </div>
         </section>
 
-        <section class="section">
-            <h2>CÁMARA</h2>
+        <section class="section camera-section">
+            <div class="section-title-row">
+                <h2>CÁMARA</h2>
+                <span id="estadoCamaraTexto">Detenida</span>
+            </div>
 
             <div class="camera-box">
                 <video id="video" autoplay muted playsinline></video>
                 <div class="scan-line"></div>
             </div>
 
-            <div class="selector">
-                <button id="btnIniciarCamara">📷 Iniciar</button>
-                <button id="btnDetenerCamara" disabled>■ Detener</button>
+            <div class="camera-actions">
+                <button id="btnIniciarCamara" class="camera-btn">📷 Iniciar</button>
+                <button id="btnDetenerCamara" class="camera-btn" disabled>■ Detener</button>
             </div>
         </section>
 
-        <section id="productoCard" class="producto-card">
-            <h2 id="tituloProducto">PRODUCTO ENCONTRADO</h2>
+        <section id="productoCard" class="product-card idle">
+            <div class="product-header">
+                <h2 id="tituloProducto">PRODUCTO</h2>
+                <span id="estadoProducto">Esperando</span>
+            </div>
 
-            <p class="label">Código</p>
-            <p id="codigoProducto" class="codigo">-</p>
+            <p class="small-label">Código</p>
+            <p id="codigoProducto" class="product-code">-</p>
 
-            <p class="label">Artículo</p>
-            <p id="nombreProducto" class="articulo">Esperando escaneo...</p>
+            <p class="small-label">Artículo</p>
+            <p id="nombreProducto" class="product-name">Esperando escaneo...</p>
 
             <div class="stock-grid">
                 <div>
                     <span>Salón</span>
                     <strong id="stockSalon">0</strong>
                 </div>
-
                 <div>
                     <span>Depósito</span>
                     <strong id="stockDeposito">0</strong>
                 </div>
-
                 <div>
                     <span>Total</span>
                     <strong id="stockTotal">0</strong>
@@ -93,27 +98,20 @@
             </div>
         </section>
 
-        <section class="cantidad-card">
+        <section class="quantity-card">
             <h2>CANTIDAD A CARGAR EN <span id="ubicacionTexto">SALÓN</span></h2>
 
-            <input
-                type="number"
-                id="cantidadInput"
-                min="1"
-                step="1"
-                inputmode="numeric"
-                placeholder="Ingresar cantidad"
-            >
+            <input type="number" id="cantidadInput" min="1" step="1" placeholder="Ingresar cantidad">
 
             <button id="btnGuardarCantidad" disabled>✔ Guardar cantidad</button>
         </section>
 
-        <section class="acciones-grid">
-            <button id="btnDeshacer" disabled>↩ Deshacer último</button>
-            <button id="btnDescargar" disabled>⬇ Descargar Excel</button>
+        <section class="action-grid">
+            <button id="btnDeshacer" class="undo-btn" disabled>↩ Deshacer último</button>
+            <button id="btnDescargar" class="download-btn" disabled>⬇ Descargar Excel</button>
         </section>
 
-        <section class="historial-card">
+        <section class="history-section">
             <h2>ÚLTIMOS PRODUCTOS CARGADOS</h2>
             <ul id="historial"></ul>
         </section>
@@ -124,6 +122,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=30"></script>
+<script type="module" src="./app.js?v=31"></script>
 </body>
 </html>
