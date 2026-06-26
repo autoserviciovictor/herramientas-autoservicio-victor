@@ -1,4 +1,5 @@
 const estadoExcel = document.getElementById("estadoExcel");
+const contador = document.getElementById("contador");
 
 const btnSalon = document.getElementById("btnSalon");
 const btnDeposito = document.getElementById("btnDeposito");
@@ -6,7 +7,10 @@ const ubicacionTexto = document.getElementById("ubicacionTexto");
 
 const btnIniciarCamara = document.getElementById("btnIniciarCamara");
 const btnDetenerCamara = document.getElementById("btnDetenerCamara");
+const cameraBox = document.querySelector(".camera-box");
 
+const productoCard = document.getElementById("productoCard");
+const tituloProducto = document.getElementById("tituloProducto");
 const codigoProducto = document.getElementById("codigoProducto");
 const nombreProducto = document.getElementById("nombreProducto");
 const stockSalon = document.getElementById("stockSalon");
@@ -18,7 +22,6 @@ const btnGuardarCantidad = document.getElementById("btnGuardarCantidad");
 const btnDescargar = document.getElementById("btnDescargar");
 const btnDeshacer = document.getElementById("btnDeshacer");
 
-const contador = document.getElementById("contador");
 const historial = document.getElementById("historial");
 const mensaje = document.getElementById("mensaje");
 
@@ -45,6 +48,14 @@ export function actualizarUbicacion(ubicacion) {
 }
 
 export function mostrarProducto(producto) {
+    productoCard.classList.remove("no-encontrado");
+    productoCard.classList.remove("encontrado");
+
+    void productoCard.offsetWidth;
+
+    productoCard.classList.add("encontrado");
+
+    tituloProducto.textContent = "PRODUCTO ENCONTRADO";
     codigoProducto.textContent = producto.codigo;
     nombreProducto.textContent = producto.articulo;
     stockSalon.textContent = producto.salon;
@@ -52,12 +63,31 @@ export function mostrarProducto(producto) {
     stockTotal.textContent = producto.stock;
 }
 
+export function mostrarProductoNoEncontrado(codigo) {
+    productoCard.classList.remove("encontrado");
+    productoCard.classList.add("no-encontrado");
+
+    tituloProducto.textContent = "PRODUCTO NO ENCONTRADO";
+    codigoProducto.textContent = codigo;
+    nombreProducto.textContent = "No está en el Excel";
+    stockSalon.textContent = "0";
+    stockDeposito.textContent = "0";
+    stockTotal.textContent = "0";
+
+    cantidadInput.value = "";
+}
+
 export function limpiarProducto(texto = "Esperando escaneo...") {
+    productoCard.classList.remove("encontrado");
+    productoCard.classList.remove("no-encontrado");
+
+    tituloProducto.textContent = "PRODUCTO ENCONTRADO";
     codigoProducto.textContent = "-";
     nombreProducto.textContent = texto;
     stockSalon.textContent = "0";
     stockDeposito.textContent = "0";
     stockTotal.textContent = "0";
+
     cantidadInput.value = "";
 }
 
@@ -70,11 +100,15 @@ export function actualizarHistorial(lista) {
 
     lista.forEach(item => {
         const li = document.createElement("li");
-        const ubicacion = item.ubicacion === "salon" ? "Salón" : "Depósito";
+        const ubicacionTexto = item.ubicacion === "salon" ? "Salón" : "Depósito";
+        const clase = item.ubicacion === "salon" ? "historial-salon" : "historial-deposito";
 
         li.innerHTML = `
-            <strong>${item.articulo}</strong><br>
-            Código: ${item.codigo} — ${ubicacion} +${item.cantidad}
+            <div class="historial-nombre">${item.articulo}</div>
+            <div class="historial-detalle">
+                <span>${item.codigo}</span>
+                <span class="${clase}">${ubicacionTexto} +${item.cantidad}</span>
+            </div>
         `;
 
         historial.appendChild(li);
@@ -96,4 +130,34 @@ export function activarBotonDeshacer(estado) {
 export function cambiarEstadoCamara(activa) {
     btnIniciarCamara.disabled = activa;
     btnDetenerCamara.disabled = !activa;
+}
+
+export function marcarCamaraActiva(activa) {
+    if (activa) {
+        cameraBox.classList.add("activa");
+    } else {
+        cameraBox.classList.remove("activa");
+    }
+}
+
+export function enfocarCantidad() {
+    setTimeout(() => {
+        cantidadInput.focus();
+    }, 200);
+}
+
+export function avisarEscaneo() {
+    try {
+        if (navigator.vibrate) {
+            navigator.vibrate(120);
+        }
+
+        const audio = new Audio(
+            "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="
+        );
+
+        audio.play().catch(() => {});
+    } catch (error) {
+        console.log("Aviso de escaneo no disponible");
+    }
 }
