@@ -5,23 +5,30 @@ import {
     guardarCantidadEnProducto,
     deshacerUltimoMovimiento,
     obtenerCantidadProductos
-} from "./excel.js";
+} from "./excel.js?v=30";
 
-import { iniciarScanner, detenerScanner } from "./scanner.js";
+import {
+    iniciarScanner,
+    detenerScanner
+} from "./scanner.js?v=30";
 
 import {
     mostrarMensaje,
     actualizarEstadoExcel,
     actualizarUbicacion,
     mostrarProducto,
+    mostrarProductoNoEncontrado,
     limpiarProducto,
     actualizarContador,
     actualizarHistorial,
     activarBotonGuardar,
     activarBotonDescargar,
     activarBotonDeshacer,
-    cambiarEstadoCamara
-} from "./ui.js";
+    cambiarEstadoCamara,
+    marcarCamaraActiva,
+    avisarEscaneo,
+    enfocarCantidad
+} from "./ui.js?v=30";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -41,8 +48,12 @@ excelFile.addEventListener("change", async (e) => {
     try {
         const cantidad = await cargarExcel(e.target.files[0]);
 
-        actualizarEstadoExcel(`✅ Excel cargado. Productos: ${cantidad}`);
+        actualizarEstadoExcel(`✅ ${cantidad}`);
         activarBotonDescargar(true);
+        activarBotonDeshacer(false);
+        actualizarContador(0);
+        actualizarHistorial([]);
+
         limpiarProducto("Listo para iniciar cámara");
         mostrarMensaje("Excel listo para usar", "ok");
     } catch (error) {
@@ -70,8 +81,10 @@ btnIniciarCamara.addEventListener("click", async () => {
 
     try {
         await iniciarScanner("video", manejarCodigoEscaneado);
+
         scannerActivo = true;
         cambiarEstadoCamara(true);
+        marcarCamaraActiva(true);
         mostrarMensaje("Cámara activa", "ok");
     } catch (error) {
         mostrarMensaje("No se pudo iniciar la cámara", "error");
@@ -81,15 +94,20 @@ btnIniciarCamara.addEventListener("click", async () => {
 
 btnDetenerCamara.addEventListener("click", () => {
     detenerScanner();
+
     scannerActivo = false;
     cambiarEstadoCamara(false);
+    marcarCamaraActiva(false);
     limpiarProducto("Cámara detenida");
+    mostrarMensaje("Cámara detenida", "ok");
 });
 
 btnGuardarCantidad.addEventListener("click", guardarCantidad);
 
 cantidadInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") guardarCantidad();
+    if (e.key === "Enter") {
+        guardarCantidad();
+    }
 });
 
 btnDescargar.addEventListener("click", () => {
@@ -113,25 +131,33 @@ btnDeshacer.addEventListener("click", () => {
     actualizarHistorial(resultado.historial);
     activarBotonDeshacer(resultado.historial.length > 0);
     limpiarProducto("Último movimiento deshecho");
+
+    productoActual = null;
+    activarBotonGuardar(false);
+
+    mostrarMensaje("Se deshizo el último movimiento", "ok");
 });
 
 function manejarCodigoEscaneado(codigo) {
     const resultado = buscarProductoPorCodigo(codigo);
 
+    avisarEscaneo();
+
     if (!resultado.encontrado) {
         productoActual = null;
-        limpiarProducto(`Producto no encontrado: ${codigo}`);
+        mostrarProductoNoEncontrado(codigo);
         activarBotonGuardar(false);
         mostrarMensaje("Producto no encontrado", "error");
         return;
     }
 
     productoActual = resultado.producto;
+
     mostrarProducto(productoActual);
     activarBotonGuardar(true);
 
     cantidadInput.value = "";
-    cantidadInput.focus();
+    enfocarCantidad();
 
     mostrarMensaje("Producto encontrado", "ok");
 }
@@ -146,7 +172,7 @@ function guardarCantidad() {
 
     if (!cantidad || cantidad <= 0) {
         mostrarMensaje("Ingresá una cantidad válida", "error");
-        cantidadInput.focus();
+        enfocarCantidad();
         return;
     }
 
