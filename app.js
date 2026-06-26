@@ -5,12 +5,12 @@ import {
     guardarCantidadEnProducto,
     deshacerUltimoMovimiento,
     obtenerCantidadProductos
-} from "./excel.js?v=30";
+} from "./excel.js?v=31";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=30";
+} from "./scanner.js?v=31";
 
 import {
     mostrarMensaje,
@@ -25,10 +25,8 @@ import {
     activarBotonDescargar,
     activarBotonDeshacer,
     cambiarEstadoCamara,
-    marcarCamaraActiva,
-    avisarEscaneo,
-    enfocarCantidad
-} from "./ui.js?v=30";
+    reproducirConfirmacion
+} from "./ui.js?v=31";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -44,20 +42,34 @@ const btnDescargar = document.getElementById("btnDescargar");
 const btnDeshacer = document.getElementById("btnDeshacer");
 const cantidadInput = document.getElementById("cantidadInput");
 
+document.addEventListener("DOMContentLoaded", () => {
+    actualizarUbicacion(ubicacionActual);
+    actualizarContador(0);
+    activarBotonGuardar(false);
+    activarBotonDescargar(false);
+    activarBotonDeshacer(false);
+    cambiarEstadoCamara(false);
+});
+
 excelFile.addEventListener("change", async (e) => {
     try {
-        const cantidad = await cargarExcel(e.target.files[0]);
+        const archivo = e.target.files[0];
+        const cantidad = await cargarExcel(archivo);
 
-        actualizarEstadoExcel(`✅ ${cantidad}`);
-        activarBotonDescargar(true);
-        activarBotonDeshacer(false);
+        actualizarEstadoExcel(cantidad);
         actualizarContador(0);
         actualizarHistorial([]);
+        activarBotonDescargar(true);
+        activarBotonDeshacer(false);
+        activarBotonGuardar(false);
 
+        productoActual = null;
         limpiarProducto("Listo para iniciar cámara");
-        mostrarMensaje("Excel listo para usar", "ok");
+
+        mostrarMensaje("Excel cargado correctamente", "ok");
     } catch (error) {
         mostrarMensaje(error.message, "error");
+        console.error(error);
     }
 });
 
@@ -72,7 +84,10 @@ btnDeposito.addEventListener("click", () => {
 });
 
 btnIniciarCamara.addEventListener("click", async () => {
-    if (scannerActivo) return;
+    if (scannerActivo) {
+        mostrarMensaje("La cámara ya está activa", "error");
+        return;
+    }
 
     if (obtenerCantidadProductos() === 0) {
         mostrarMensaje("Primero cargá el Excel", "error");
@@ -84,7 +99,6 @@ btnIniciarCamara.addEventListener("click", async () => {
 
         scannerActivo = true;
         cambiarEstadoCamara(true);
-        marcarCamaraActiva(true);
         mostrarMensaje("Cámara activa", "ok");
     } catch (error) {
         mostrarMensaje("No se pudo iniciar la cámara", "error");
@@ -96,9 +110,12 @@ btnDetenerCamara.addEventListener("click", () => {
     detenerScanner();
 
     scannerActivo = false;
+    productoActual = null;
+
     cambiarEstadoCamara(false);
-    marcarCamaraActiva(false);
+    activarBotonGuardar(false);
     limpiarProducto("Cámara detenida");
+
     mostrarMensaje("Cámara detenida", "ok");
 });
 
@@ -116,6 +133,7 @@ btnDescargar.addEventListener("click", () => {
         mostrarMensaje("Excel actualizado descargado", "ok");
     } catch (error) {
         mostrarMensaje(error.message, "error");
+        console.error(error);
     }
 });
 
@@ -130,23 +148,29 @@ btnDeshacer.addEventListener("click", () => {
     actualizarContador(resultado.contador);
     actualizarHistorial(resultado.historial);
     activarBotonDeshacer(resultado.historial.length > 0);
-    limpiarProducto("Último movimiento deshecho");
 
     productoActual = null;
     activarBotonGuardar(false);
+    limpiarProducto("Último movimiento deshecho");
 
     mostrarMensaje("Se deshizo el último movimiento", "ok");
 });
 
 function manejarCodigoEscaneado(codigo) {
-    const resultado = buscarProductoPorCodigo(codigo);
+    if (obtenerCantidadProductos() === 0) {
+        mostrarMensaje("Primero cargá el Excel", "error");
+        return;
+    }
 
-    avisarEscaneo();
+    const resultado = buscarProductoPorCodigo(codigo);
 
     if (!resultado.encontrado) {
         productoActual = null;
+
         mostrarProductoNoEncontrado(codigo);
         activarBotonGuardar(false);
+
+        reproducirConfirmacion("error");
         mostrarMensaje("Producto no encontrado", "error");
         return;
     }
@@ -157,8 +181,9 @@ function manejarCodigoEscaneado(codigo) {
     activarBotonGuardar(true);
 
     cantidadInput.value = "";
-    enfocarCantidad();
+    cantidadInput.focus();
 
+    reproducirConfirmacion("ok");
     mostrarMensaje("Producto encontrado", "ok");
 }
 
@@ -172,7 +197,7 @@ function guardarCantidad() {
 
     if (!cantidad || cantidad <= 0) {
         mostrarMensaje("Ingresá una cantidad válida", "error");
-        enfocarCantidad();
+        cantidadInput.focus();
         return;
     }
 
@@ -191,5 +216,6 @@ function guardarCantidad() {
     productoActual = null;
     activarBotonGuardar(false);
 
+    reproducirConfirmacion("guardado");
     mostrarMensaje("Cantidad guardada correctamente", "ok");
 }
