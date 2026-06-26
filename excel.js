@@ -12,21 +12,31 @@ export function cargarExcel(archivo) {
         const lector = new FileReader();
 
         lector.onload = function (evento) {
-            const data = new Uint8Array(evento.target.result);
-            const workbook = XLSX.read(data, { type: "array" });
-            const hoja = workbook.Sheets[workbook.SheetNames[0]];
+            try {
+                const data = new Uint8Array(evento.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                const hoja = workbook.Sheets[workbook.SheetNames[0]];
 
-            datos = XLSX.utils.sheet_to_json(hoja, {
-                defval: "",
-                raw: false
-            });
+                datos = XLSX.utils.sheet_to_json(hoja, {
+                    defval: "",
+                    raw: false
+                });
 
-            normalizarDatos();
+                if (!datos || datos.length === 0) {
+                    reject(new Error("El Excel está vacío"));
+                    return;
+                }
 
-            historial = [];
-            contador = 0;
+                normalizarDatos();
 
-            resolve(datos.length);
+                historial = [];
+                contador = 0;
+
+                resolve(datos.length);
+            } catch (error) {
+                console.error(error);
+                reject(new Error("No se pudo procesar el Excel"));
+            }
         };
 
         lector.onerror = function () {
@@ -56,11 +66,15 @@ export function obtenerCantidadProductos() {
 }
 
 export function buscarProductoPorCodigo(codigoBuscado) {
+    if (datos.length === 0) {
+        return { encontrado: false };
+    }
+
     const codigoLimpio = String(codigoBuscado).trim();
 
-    const indice = datos.findIndex(fila =>
-        String(fila["codigo"]).trim() === codigoLimpio
-    );
+    const indice = datos.findIndex(fila => {
+        return String(fila["codigo"]).trim() === codigoLimpio;
+    });
 
     if (indice === -1) {
         return { encontrado: false };
@@ -70,19 +84,16 @@ export function buscarProductoPorCodigo(codigoBuscado) {
 
     return {
         encontrado: true,
-        producto: {
-            indice,
-            codigo: fila["codigo"],
-            articulo: fila["articulo"] || "Producto sin nombre",
-            salon: Number(fila["salon"] || 0),
-            deposito: Number(fila["deposito"] || 0),
-            stock: Number(fila["stock"] || 0)
-        }
+        producto: crearProducto(indice, fila)
     };
 }
 
 export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     const fila = datos[indice];
+
+    if (!fila) {
+        throw new Error("Producto inválido");
+    }
 
     const anterior = {
         indice,
@@ -92,12 +103,12 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     };
 
     if (ubicacion === "salon") {
-        fila["salon"] += cantidad;
+        fila["salon"] = Number(fila["salon"] || 0) + cantidad;
     } else {
-        fila["deposito"] += cantidad;
+        fila["deposito"] = Number(fila["deposito"] || 0) + cantidad;
     }
 
-    fila["stock"] = fila["salon"] + fila["deposito"];
+    fila["stock"] = Number(fila["salon"] || 0) + Number(fila["deposito"] || 0);
 
     contador++;
 
@@ -112,24 +123,21 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
         anterior
     });
 
-    if (historial.length > 5) historial.pop();
+    if (historial.length > 5) {
+        historial.pop();
+    }
 
     return {
-        producto: {
-            indice,
-            codigo: fila["codigo"],
-            articulo: fila["articulo"],
-            salon: fila["salon"],
-            deposito: fila["deposito"],
-            stock: fila["stock"]
-        },
+        producto: crearProducto(indice, fila),
         contador,
         historial
     };
 }
 
 export function deshacerUltimoMovimiento() {
-    if (historial.length === 0) return null;
+    if (historial.length === 0) {
+        return null;
+    }
 
     const ultimo = historial.shift();
     const anterior = ultimo.anterior;
@@ -138,9 +146,14 @@ export function deshacerUltimoMovimiento() {
     datos[anterior.indice]["deposito"] = anterior.deposito;
     datos[anterior.indice]["stock"] = anterior.stock;
 
-    if (contador > 0) contador--;
+    if (contador > 0) {
+        contador--;
+    }
 
-    return { contador, historial };
+    return {
+        contador,
+        historial
+    };
 }
 
 export function descargarExcel() {
@@ -153,4 +166,15 @@ export function descargarExcel() {
 
     XLSX.utils.book_append_sheet(libroNuevo, hojaNueva, "Stock");
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
+}
+
+function crearProducto(indice, fila) {
+    return {
+        indice,
+        codigo: fila["codigo"],
+        articulo: fila["articulo"] || "Producto sin nombre",
+        salon: Number(fila["salon"] || 0),
+        deposito: Number(fila["deposito"] || 0),
+        stock: Number(fila["stock"] || 0)
+    };
 }
