@@ -4,60 +4,62 @@ let contador = 0;
 
 export function cargarExcel(archivo) {
     return new Promise((resolve, reject) => {
+
         if (!archivo) {
-            reject(new Error("Seleccioná un Excel"));
+            reject(new Error("Seleccioná un archivo Excel"));
             return;
         }
 
         const lector = new FileReader();
 
         lector.onload = function (evento) {
-            try {
-                const data = new Uint8Array(evento.target.result);
-                const workbook = XLSX.read(data, { type: "array" });
-                const hoja = workbook.Sheets[workbook.SheetNames[0]];
 
-                datos = XLSX.utils.sheet_to_json(hoja, {
-                    defval: "",
-                    raw: false
-                });
+            const data = new Uint8Array(evento.target.result);
 
-                if (!datos || datos.length === 0) {
-                    reject(new Error("El Excel está vacío"));
-                    return;
-                }
+            const workbook = XLSX.read(data, {
+                type: "array"
+            });
 
-                normalizarDatos();
+            const hoja = workbook.Sheets[workbook.SheetNames[0]];
 
-                historial = [];
-                contador = 0;
+            datos = XLSX.utils.sheet_to_json(hoja, {
+                defval: "",
+                raw: false
+            });
 
-                resolve(datos.length);
-            } catch (error) {
-                console.error(error);
-                reject(new Error("No se pudo procesar el Excel"));
-            }
+            datos.forEach(fila => {
+
+                if (fila["codigo"] === undefined) fila["codigo"] = "";
+                if (fila["articulo"] === undefined) fila["articulo"] = "";
+
+                if (fila["salon"] === undefined || fila["salon"] === "")
+                    fila["salon"] = 0;
+
+                if (fila["deposito"] === undefined || fila["deposito"] === "")
+                    fila["deposito"] = 0;
+
+                if (fila["stock"] === undefined || fila["stock"] === "")
+                    fila["stock"] = 0;
+
+                fila["salon"] = Number(fila["salon"]);
+                fila["deposito"] = Number(fila["deposito"]);
+                fila["stock"] = fila["salon"] + fila["deposito"];
+
+            });
+
+            historial = [];
+            contador = 0;
+
+            resolve(datos.length);
+
         };
 
-        lector.onerror = function () {
-            reject(new Error("No se pudo leer el archivo"));
+        lector.onerror = () => {
+            reject(new Error("No se pudo leer el Excel"));
         };
 
         lector.readAsArrayBuffer(archivo);
-    });
-}
 
-function normalizarDatos() {
-    datos.forEach(fila => {
-        if (fila["codigo"] === undefined) fila["codigo"] = "";
-        if (fila["articulo"] === undefined) fila["articulo"] = "";
-        if (fila["salon"] === undefined || fila["salon"] === "") fila["salon"] = 0;
-        if (fila["deposito"] === undefined || fila["deposito"] === "") fila["deposito"] = 0;
-        if (fila["stock"] === undefined || fila["stock"] === "") fila["stock"] = 0;
-
-        fila["salon"] = Number(fila["salon"] || 0);
-        fila["deposito"] = Number(fila["deposito"] || 0);
-        fila["stock"] = fila["salon"] + fila["deposito"];
     });
 }
 
@@ -66,115 +68,190 @@ export function obtenerCantidadProductos() {
 }
 
 export function buscarProductoPorCodigo(codigoBuscado) {
-    if (datos.length === 0) {
-        return { encontrado: false };
-    }
 
-    const codigoLimpio = String(codigoBuscado).trim();
+    const codigo = String(codigoBuscado).trim();
 
     const indice = datos.findIndex(fila => {
-        return String(fila["codigo"]).trim() === codigoLimpio;
+        return String(fila["codigo"]).trim() === codigo;
     });
 
     if (indice === -1) {
-        return { encontrado: false };
+        return {
+            encontrado: false
+        };
     }
 
     const fila = datos[indice];
 
     return {
+
         encontrado: true,
-        producto: crearProducto(indice, fila)
+
+        producto: {
+
+            indice,
+
+            codigo: fila["codigo"],
+
+            articulo: fila["articulo"] || "Sin descripción",
+
+            salon: Number(fila["salon"]),
+
+            deposito: Number(fila["deposito"]),
+
+            stock: Number(fila["stock"])
+
+        }
+
     };
+
 }
 
 export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
+
     const fila = datos[indice];
 
-    if (!fila) {
-        throw new Error("Producto inválido");
-    }
+    const movimiento = {
 
-    const anterior = {
         indice,
-        salon: Number(fila["salon"] || 0),
-        deposito: Number(fila["deposito"] || 0),
-        stock: Number(fila["stock"] || 0)
+
+        codigo: fila["codigo"],
+
+        articulo: fila["articulo"],
+
+        cantidad,
+
+        ubicacion,
+
+        salonAnterior: Number(fila["salon"]),
+
+        depositoAnterior: Number(fila["deposito"]),
+
+        stockAnterior: Number(fila["stock"])
+
     };
 
     if (ubicacion === "salon") {
-        fila["salon"] = Number(fila["salon"] || 0) + cantidad;
+
+        fila["salon"] =
+            Number(fila["salon"]) + cantidad;
+
     } else {
-        fila["deposito"] = Number(fila["deposito"] || 0) + cantidad;
+
+        fila["deposito"] =
+            Number(fila["deposito"]) + cantidad;
+
     }
 
-    fila["stock"] = Number(fila["salon"] || 0) + Number(fila["deposito"] || 0);
+    fila["stock"] =
+        Number(fila["salon"]) +
+        Number(fila["deposito"]);
 
     contador++;
 
     historial.unshift({
+
         codigo: fila["codigo"],
+
         articulo: fila["articulo"],
+
         cantidad,
+
         ubicacion,
+
         salon: fila["salon"],
+
         deposito: fila["deposito"],
+
         stock: fila["stock"],
-        anterior
+
+        movimiento
+
     });
 
-    if (historial.length > 5) {
+    if (historial.length > 10) {
         historial.pop();
     }
 
     return {
-        producto: crearProducto(indice, fila),
+
+        producto: {
+
+            indice,
+
+            codigo: fila["codigo"],
+
+            articulo: fila["articulo"],
+
+            salon: fila["salon"],
+
+            deposito: fila["deposito"],
+
+            stock: fila["stock"]
+
+        },
+
         contador,
+
         historial
+
     };
+
 }
 
 export function deshacerUltimoMovimiento() {
+
     if (historial.length === 0) {
+
         return null;
+
     }
 
     const ultimo = historial.shift();
-    const anterior = ultimo.anterior;
 
-    datos[anterior.indice]["salon"] = anterior.salon;
-    datos[anterior.indice]["deposito"] = anterior.deposito;
-    datos[anterior.indice]["stock"] = anterior.stock;
+    const m = ultimo.movimiento;
 
-    if (contador > 0) {
-        contador--;
-    }
+    datos[m.indice]["salon"] = m.salonAnterior;
+    datos[m.indice]["deposito"] = m.depositoAnterior;
+    datos[m.indice]["stock"] = m.stockAnterior;
+
+    contador--;
+
+    if (contador < 0) contador = 0;
 
     return {
+
         contador,
+
         historial
+
     };
+
 }
 
 export function descargarExcel() {
+
     if (datos.length === 0) {
-        throw new Error("Primero cargá el Excel");
+
+        throw new Error("Primero cargá un Excel");
+
     }
 
-    const hojaNueva = XLSX.utils.json_to_sheet(datos);
-    const libroNuevo = XLSX.utils.book_new();
+    const hojaNueva =
+        XLSX.utils.json_to_sheet(datos);
 
-    XLSX.utils.book_append_sheet(libroNuevo, hojaNueva, "Stock");
-    XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
-}
+    const libroNuevo =
+        XLSX.utils.book_new();
 
-function crearProducto(indice, fila) {
-    return {
-        indice,
-        codigo: fila["codigo"],
-        articulo: fila["articulo"] || "Producto sin nombre",
-        salon: Number(fila["salon"] || 0),
-        deposito: Number(fila["deposito"] || 0),
-        stock: Number(fila["stock"] || 0)
-    };
+    XLSX.utils.book_append_sheet(
+        libroNuevo,
+        hojaNueva,
+        "Stock"
+    );
+
+    XLSX.writeFile(
+        libroNuevo,
+        "stock_actualizado.xlsx"
+    );
+
 }
