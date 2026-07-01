@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 1.2</title>
+    <title>Inventario Victor 1.3</title>
 
-    <link rel="stylesheet" href="style.css?v=120">
+    <link rel="stylesheet" href="style.css?v=130">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
@@ -15,7 +15,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 1.2</p>
+    <p>Versión 1.3</p>
 </div>
 
 <div class="app">
@@ -29,7 +29,6 @@
                     <span id="estadoConteoTexto">0 / 0</span>
                 </div>
             </div>
-            <button id="btnLinterna" class="icon-btn" disabled title="Linterna">🔦</button>
         </header>
 
         <section class="camera-card" id="cameraCard">
@@ -37,7 +36,6 @@
             <div class="camera-overlay">
                 <span id="estadoCamaraTexto">Cámara detenida</span>
                 <strong id="textoCamara">Apuntá al código de barras</strong>
-                <div class="scan-line"></div>
                 <div class="corner corner-tl"></div>
                 <div class="corner corner-tr"></div>
                 <div class="corner corner-bl"></div>
@@ -174,6 +172,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=120"></script>
+<script type="module" src="./app.js?v=130"></script>
 </body>
 </html>

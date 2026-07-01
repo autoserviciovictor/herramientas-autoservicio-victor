@@ -1,2 +1,1 @@
-Inventario Victor v1.2.0
-Cache: ?v=120
+Inventario Victor v1.3.0

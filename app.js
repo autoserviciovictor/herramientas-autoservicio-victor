@@ -10,14 +10,12 @@ import {
     obtenerCantidadProductos,
     obtenerContador,
     reiniciarContador
-} from "./excel.js?v=120";
+} from "./excel.js?v=130";
 
 import {
     iniciarScanner,
-    detenerScanner,
-    alternarLinterna,
-    linternaDisponible
-} from "./scanner.js?v=120";
+    detenerScanner
+} from "./scanner.js?v=130";
 
 import {
     ocultarSplash,
@@ -32,8 +30,6 @@ import {
     actualizarContador,
     activarBotonGuardar,
     activarBotonDescargar,
-    activarBotonLinterna,
-    actualizarBotonLinterna,
     configurarFeedback,
     reproducirConfirmacion,
     renderResultadosBusqueda,
@@ -43,13 +39,12 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     activarTabProductos
-} from "./ui.js?v=120";
+} from "./ui.js?v=130";
 
 let ubicacionActual = "salon";
 let productoActual = null;
 let productoEditando = null;
 let scannerActivo = false;
-let linternaActiva = false;
 let tabProductosActual = "productos";
 
 const $ = (id) => document.getElementById(id);
@@ -58,7 +53,6 @@ const elementos = {
     excelFile: $("excelFile"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
-    btnLinterna: $("btnLinterna"),
     btnGuardarCantidad: $("btnGuardarCantidad"),
     btnMenosCantidad: $("btnMenosCantidad"),
     btnMasCantidad: $("btnMasCantidad"),
@@ -89,7 +83,6 @@ function inicializar() {
     actualizarContador(0);
     activarBotonGuardar(false);
     activarBotonDescargar(false);
-    activarBotonLinterna(false);
     actualizarEstadoCamara(false);
     limpiarProducto();
     desactivarModoCantidad();
@@ -106,7 +99,6 @@ function inicializar() {
     elementos.excelFile.addEventListener("change", manejarCargaExcel);
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
-    elementos.btnLinterna.addEventListener("click", manejarLinterna);
 
     elementos.btnGuardarCantidad.addEventListener("click", guardarCantidadActual);
     elementos.cantidadInput.addEventListener("keydown", (e) => {
@@ -175,13 +167,11 @@ async function iniciarCamaraSiCorresponde() {
         await iniciarScanner("video", manejarCodigoEscaneado);
         scannerActivo = true;
         actualizarEstadoCamara(true);
-        activarBotonLinterna(linternaDisponible());
         mostrarMensaje("Cámara activa", "ok");
     } catch (error) {
         scannerActivo = false;
         actualizarEstadoCamara(false);
-        activarBotonLinterna(false);
-        mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
+            mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
         console.error(error);
     }
 }
@@ -209,7 +199,6 @@ function manejarCodigoEscaneado(codigo) {
     activarBotonGuardar(true);
     elementos.cantidadInput.value = 1;
     activarModoCantidad();
-    setTimeout(() => elementos.cantidadInput.focus(), 80);
     mostrarMensaje("Producto encontrado", "ok");
     reproducirConfirmacion("ok");
 }
@@ -330,16 +319,6 @@ function manejarDescargaExcel() {
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
-    }
-}
-
-async function manejarLinterna() {
-    try {
-        const estado = await alternarLinterna();
-        linternaActiva = estado;
-        actualizarBotonLinterna(linternaActiva);
-    } catch (error) {
-        mostrarMensaje("La linterna no está disponible en este celular", "error");
     }
 }
 

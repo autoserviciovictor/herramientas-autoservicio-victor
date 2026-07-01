@@ -28,7 +28,6 @@ const elementos = {
     btnSalon: document.getElementById("btnSalon"),
     btnDeposito: document.getElementById("btnDeposito"),
     btnDescargar: document.getElementById("btnDescargar"),
-    btnLinterna: document.getElementById("btnLinterna"),
     resultadoBusqueda: document.getElementById("resultadoBusqueda"),
     resumenProductos: document.getElementById("resumenProductos"),
     tabProductos: document.getElementById("tabProductos"),
@@ -135,13 +134,6 @@ export function activarBotonDescargar(estado) {
     elementos.btnDescargar.disabled = !estado;
 }
 
-export function activarBotonLinterna(estado) {
-    elementos.btnLinterna.disabled = !estado;
-}
-
-export function actualizarBotonLinterna(activa) {
-    elementos.btnLinterna.classList.toggle("activo", activa);
-}
 
 export function configurarFeedback({ sonidos, vibracion }) {
     sonidoHabilitado = sonidos;

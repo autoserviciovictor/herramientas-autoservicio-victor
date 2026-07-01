@@ -2,8 +2,6 @@ let lectorCodigo = null;
 let camaraActiva = false;
 let ultimoCodigoLeido = "";
 let tiempoUltimaLectura = 0;
-let videoTrack = null;
-let linternaActiva = false;
 
 export async function iniciarScanner(videoId, callbackCodigo) {
     if (camaraActiva) return;
@@ -38,12 +36,7 @@ export async function iniciarScanner(videoId, callbackCodigo) {
         }
     );
 
-    const video = document.getElementById(videoId);
-    const stream = video?.srcObject;
-    videoTrack = stream?.getVideoTracks?.()[0] || null;
-
     camaraActiva = true;
-    linternaActiva = false;
 }
 
 export function detenerScanner() {
@@ -55,27 +48,4 @@ export function detenerScanner() {
     camaraActiva = false;
     ultimoCodigoLeido = "";
     tiempoUltimaLectura = 0;
-    videoTrack = null;
-    linternaActiva = false;
-}
-
-export async function alternarLinterna() {
-    if (!videoTrack) {
-        return false;
-    }
-
-    const capacidades = videoTrack.getCapabilities?.();
-
-    if (!capacidades || !capacidades.torch) {
-        return false;
-    }
-
-    linternaActiva = !linternaActiva;
-    await videoTrack.applyConstraints({ advanced: [{ torch: linternaActiva }] });
-    return linternaActiva;
-}
-
-export function linternaDisponible() {
-    const capacidades = videoTrack?.getCapabilities?.();
-    return Boolean(capacidades?.torch);
 }
