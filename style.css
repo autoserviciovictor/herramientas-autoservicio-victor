@@ -617,3 +617,205 @@ video {
     .camera-card { height: 130px; }
     .quantity-control { grid-template-columns: 52px 1fr 52px; }
 }
+
+/* ===== Inventario Victor 1.1 - pulido visual ===== */
+.header-app {
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.header-app h1 {
+    font-size: 28px;
+}
+
+.header-app p {
+    font-size: 15px;
+}
+
+.header-app .sub-info {
+    margin-top: 2px;
+    color: var(--primary-dark);
+    font-size: 13px;
+}
+
+.icon-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    font-size: 25px;
+}
+
+.camera-card {
+    height: 132px;
+    border-radius: 24px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255,255,255,.55);
+    box-shadow: 0 10px 28px rgba(46, 51, 47, .12);
+    transition: opacity .22s ease, transform .22s ease, height .22s ease, margin .22s ease;
+}
+
+.camera-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 35%, rgba(0,0,0,.22) 100%);
+    pointer-events: none;
+}
+
+.camera-overlay span {
+    top: 9px;
+    left: 14px;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+.scan-line {
+    height: 4px;
+    left: 17%;
+    right: 17%;
+    background: linear-gradient(90deg, transparent, #9bd18c, transparent);
+    box-shadow: 0 0 16px #9bd18c;
+}
+
+.corner {
+    width: 34px;
+    height: 34px;
+    border-color: rgba(255,255,255,.78);
+}
+.corner-tl { top: 28px; left: 28px; }
+.corner-tr { top: 28px; right: 28px; }
+.corner-bl { bottom: 24px; left: 28px; }
+.corner-br { bottom: 24px; right: 28px; }
+
+#pantallaInventario.modo-cantidad .camera-card {
+    height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+}
+
+.product-card {
+    min-height: 225px;
+    padding: 20px;
+    border-radius: 26px;
+    margin-bottom: 12px;
+}
+
+.product-card h2 {
+    min-height: 64px;
+    font-size: 29px;
+    line-height: 1.08;
+}
+
+.product-card p {
+    font-size: 15px;
+}
+
+.stock-row {
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.stock-row div {
+    padding: 14px 8px;
+    border-radius: 19px;
+}
+
+.stock-row strong {
+    font-size: 27px;
+}
+
+.quantity-card {
+    padding: 18px;
+    border-radius: 26px;
+    margin-bottom: 12px;
+}
+
+.quantity-control {
+    grid-template-columns: 64px minmax(0, 1fr) 64px;
+    gap: 12px;
+    width: 100%;
+}
+
+.quantity-control input {
+    width: 100%;
+    min-width: 0;
+}
+
+.quantity-control button,
+.quantity-control input {
+    height: 60px;
+    border-radius: 20px;
+}
+
+.quantity-control button {
+    color: var(--primary-dark);
+    background: #edf2ea;
+}
+
+.save-btn {
+    padding: 17px;
+    border-radius: 21px;
+    transition: transform .12s ease, filter .12s ease;
+}
+
+.save-btn:active:not(:disabled) {
+    transform: scale(.985);
+    filter: brightness(.96);
+}
+
+.bottom-info {
+    padding: 12px 14px;
+    border-radius: 24px;
+}
+
+.bottom-info strong {
+    font-size: 20px;
+}
+
+.bottom-nav {
+    padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
+}
+
+.nav-btn {
+    border-radius: 18px;
+    padding: 7px 4px;
+    font-size: 18px;
+}
+
+.nav-btn span {
+    font-size: 11px;
+}
+
+.result-empty {
+    background: var(--card);
+    box-shadow: var(--shadow);
+    border-radius: 22px;
+    padding: 18px;
+    color: var(--text);
+}
+
+.result-empty strong {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+.result-empty span {
+    color: var(--muted);
+    font-weight: bold;
+}
+
+.settings-card {
+    border-radius: 26px;
+}
+
+@media (max-width: 380px) {
+    .header-app h1 { font-size: 25px; }
+    .camera-card { height: 118px; }
+    .product-card { min-height: 210px; padding: 17px; }
+    .product-card h2 { font-size: 25px; min-height: 56px; }
+    .quantity-control { grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 9px; }
+    .quantity-control button, .quantity-control input { height: 56px; }
+}

@@ -9,14 +9,14 @@ import {
     obtenerContador,
     obtenerUltimosEscaneados,
     reiniciarContador
-} from "./excel.js?v=100";
+} from "./excel.js?v=110";
 
 import {
     iniciarScanner,
     detenerScanner,
     alternarLinterna,
     linternaDisponible
-} from "./scanner.js?v=100";
+} from "./scanner.js?v=110";
 
 import {
     ocultarSplash,
@@ -39,8 +39,10 @@ import {
     mostrarEditorStock,
     ocultarEditorStock,
     actualizarTotalEditor,
-    obtenerValoresEditor
-} from "./ui.js?v=100";
+    obtenerValoresEditor,
+    activarModoCantidad,
+    desactivarModoCantidad
+} from "./ui.js?v=110";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -145,7 +147,8 @@ async function manejarCargaExcel(e) {
         activarBotonDescargar(true);
         productoActual = null;
         productoEditando = null;
-        limpiarProducto("Excel cargado. Iniciá la cámara o apuntá al código.");
+        limpiarProducto("Esperando escaneo...");
+        desactivarModoCantidad();
         ocultarEditorStock();
         refrescarBusqueda();
 
@@ -213,6 +216,7 @@ function manejarCodigoEscaneado(codigo) {
     activarBotonGuardar(true);
     elementos.cantidadInput.value = 1;
     elementos.cantidadInput.focus();
+    activarModoCantidad();
     mostrarMensaje("Producto encontrado", "ok");
     reproducirConfirmacion("ok");
 }
@@ -244,6 +248,11 @@ function guardarCantidadActual() {
         refrescarBusqueda();
 
         mostrarMensaje("Cantidad guardada", "ok");
+
+        setTimeout(() => {
+            limpiarProducto("Esperando escaneo...");
+            desactivarModoCantidad();
+        }, 650);
         reproducirConfirmacion("guardado");
     } catch (error) {
         mostrarMensaje(error.message, "error");

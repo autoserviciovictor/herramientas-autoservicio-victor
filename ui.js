@@ -7,6 +7,8 @@ const elementos = {
     },
     navBtns: document.querySelectorAll(".nav-btn"),
     toast: document.getElementById("toast"),
+    pantallaInventario: document.getElementById("pantallaInventario"),
+    estadoConteoTexto: document.getElementById("estadoConteoTexto"),
     estadoExcelTexto: document.getElementById("estadoExcelTexto"),
     estadoCamaraTexto: document.getElementById("estadoCamaraTexto"),
     productoCard: document.getElementById("productoCard"),
@@ -102,7 +104,7 @@ export function mostrarProductoNoEncontrado(codigo) {
     elementos.stockTotal.textContent = "-";
 }
 
-export function limpiarProducto(texto = "Apuntá al código de barras") {
+export function limpiarProducto(texto = "Esperando escaneo...") {
     elementos.productoCard.classList.remove("found", "error");
     elementos.productoCard.classList.add("empty");
 
@@ -116,6 +118,9 @@ export function limpiarProducto(texto = "Apuntá al código de barras") {
 
 export function actualizarContador(numero) {
     elementos.contadorTexto.textContent = numero;
+    if (elementos.estadoConteoTexto) {
+        elementos.estadoConteoTexto.textContent = `Contados ${numero}`;
+    }
 }
 
 export function activarBotonGuardar(estado) {
@@ -174,7 +179,7 @@ export function renderResultadosBusqueda(lista, onSeleccionar) {
     elementos.resultadoBusqueda.innerHTML = "";
 
     if (!lista.length) {
-        elementos.resultadoBusqueda.innerHTML = `<div class="result-item"><strong>No hay resultados</strong><span>Buscá por nombre o código</span></div>`;
+        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>Buscá un producto para modificar su stock.</strong><span>Podés buscar por nombre o código.</span></div>`;
         return;
     }
 
@@ -214,4 +219,13 @@ export function obtenerValoresEditor() {
         salon: Number(elementos.editarSalon.value) || 0,
         deposito: Number(elementos.editarDeposito.value) || 0
     };
+}
+
+
+export function activarModoCantidad() {
+    elementos.pantallaInventario.classList.add("modo-cantidad");
+}
+
+export function desactivarModoCantidad() {
+    elementos.pantallaInventario.classList.remove("modo-cantidad");
 }
