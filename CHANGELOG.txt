@@ -1,0 +1,12 @@
+Versión 1.0.0
+
+- Nuevo diseño con colores suaves.
+- Barra inferior: Inventario, Corregir y Ajustes.
+- Pantalla principal simplificada para conteo rápido.
+- Cámara compacta con línea de escaneo y esquinas.
+- Controles de cantidad con + y -.
+- Pantalla Corregir para buscar productos y modificar salón/depósito directamente.
+- Pantalla Ajustes con carga y descarga de Excel.
+- Sonido y vibración configurables.
+- Sin estadísticas.
+- Sin deshacer último.

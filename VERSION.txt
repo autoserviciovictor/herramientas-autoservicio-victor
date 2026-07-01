@@ -1,0 +1,3 @@
+Inventario Victor
+Versión 1.0.0
+Fecha: 2026-07-01

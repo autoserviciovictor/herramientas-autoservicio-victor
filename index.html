@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Inventario Victor</title>
+
+    <link rel="stylesheet" href="style.css?v=100">
+
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+</head>
+<body>
+
+<div id="splash" class="splash">
+    <div class="splash-logo">📦</div>
+    <h1>Inventario Victor</h1>
+    <p>Versión 1.0</p>
+</div>
+
+<div class="app">
+
+    <main id="pantallaInventario" class="pantalla activa">
+        <header class="header-app">
+            <div>
+                <h1>Inventario Victor</h1>
+                <p id="estadoExcelTexto">Sin Excel cargado</p>
+            </div>
+
+            <button id="btnLinterna" class="icon-btn" disabled title="Linterna">🔦</button>
+        </header>
+
+        <section class="camera-card">
+            <video id="video" autoplay muted playsinline></video>
+
+            <div class="camera-overlay">
+                <span id="estadoCamaraTexto">Cámara detenida</span>
+                <div class="scan-line"></div>
+                <div class="corner corner-tl"></div>
+                <div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div>
+                <div class="corner corner-br"></div>
+            </div>
+        </section>
+
+        <section id="productoCard" class="product-card empty">
+            <div class="product-status" id="estadoProducto">Esperando código</div>
+
+            <h2 id="nombreProducto">Apuntá al código de barras</h2>
+            <p id="codigoProducto">-</p>
+
+            <div class="stock-row">
+                <div>
+                    <span>Salón</span>
+                    <strong id="stockSalon">0</strong>
+                </div>
+
+                <div>
+                    <span>Depósito</span>
+                    <strong id="stockDeposito">0</strong>
+                </div>
+
+                <div>
+                    <span>Total</span>
+                    <strong id="stockTotal">0</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="quantity-card">
+            <p>Cantidad</p>
+
+            <div class="quantity-control">
+                <button id="btnMenosCantidad">−</button>
+                <input type="number" id="cantidadInput" min="1" step="1" value="1" inputmode="numeric">
+                <button id="btnMasCantidad">+</button>
+            </div>
+
+            <button id="btnGuardarCantidad" class="save-btn" disabled>
+                ✔ Guardar
+            </button>
+        </section>
+
+        <section class="bottom-info">
+            <div>
+                <span>Ubicación</span>
+                <strong id="ubicacionActualTexto">Salón</strong>
+            </div>
+
+            <div>
+                <span>Contados</span>
+                <strong id="contadorTexto">0</strong>
+            </div>
+        </section>
+    </main>
+
+    <main id="pantallaCorregir" class="pantalla">
+        <header class="header-simple">
+            <h1>Corregir stock</h1>
+            <p>Buscá un producto y modificá salón o depósito</p>
+        </header>
+
+        <section class="search-card">
+            <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
+        </section>
+
+        <section id="resultadoBusqueda" class="result-list"></section>
+
+        <section id="editorStock" class="edit-card oculto">
+            <div class="edit-title">
+                <h2 id="editarNombreProducto">Producto</h2>
+                <p id="editarCodigoProducto">-</p>
+            </div>
+
+            <div class="edit-row">
+                <label>Salón</label>
+                <div class="quantity-control small">
+                    <button id="btnMenosSalon">−</button>
+                    <input type="number" id="editarSalon" min="0" step="1" value="0" inputmode="numeric">
+                    <button id="btnMasSalon">+</button>
+                </div>
+            </div>
+
+            <div class="edit-row">
+                <label>Depósito</label>
+                <div class="quantity-control small">
+                    <button id="btnMenosDeposito">−</button>
+                    <input type="number" id="editarDeposito" min="0" step="1" value="0" inputmode="numeric">
+                    <button id="btnMasDeposito">+</button>
+                </div>
+            </div>
+
+            <div class="edit-total">
+                <span>Total</span>
+                <strong id="editarTotal">0</strong>
+            </div>
+
+            <button id="btnGuardarCorreccion" class="save-btn">Guardar cambios</button>
+            <button id="btnCancelarCorreccion" class="ghost-btn">Cancelar</button>
+        </section>
+    </main>
+
+    <main id="pantallaAjustes" class="pantalla">
+        <header class="header-simple">
+            <h1>Ajustes</h1>
+            <p>Configuración del inventario</p>
+        </header>
+
+        <section class="settings-card">
+            <label class="setting-file">
+                <span>📄 Cargar Excel</span>
+                <input type="file" id="excelFile" accept=".xlsx,.xls">
+            </label>
+
+            <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel actualizado</button>
+        </section>
+
+        <section class="settings-card">
+            <h2>Ubicación predeterminada</h2>
+            <div class="location-grid">
+                <button id="btnSalon" class="location-btn activo">🏪 Salón</button>
+                <button id="btnDeposito" class="location-btn">📦 Depósito</button>
+            </div>
+        </section>
+
+        <section class="settings-card">
+            <div class="switch-row">
+                <div>
+                    <strong>Sonidos</strong>
+                    <span>Confirmación al escanear y guardar</span>
+                </div>
+                <input type="checkbox" id="checkSonidos" checked>
+            </div>
+
+            <div class="switch-row">
+                <div>
+                    <strong>Vibración</strong>
+                    <span>Vibración corta al confirmar</span>
+                </div>
+                <input type="checkbox" id="checkVibracion" checked>
+            </div>
+        </section>
+
+        <section class="settings-card danger-zone">
+            <button id="btnReiniciar" class="danger-btn">🔄 Reiniciar conteo de la app</button>
+            <p>No borra el Excel original. Solo reinicia el contador de productos contados.</p>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-btn activo" data-pantalla="inventario">🏠<span>Inventario</span></button>
+        <button class="nav-btn" data-pantalla="corregir">✏️<span>Corregir</span></button>
+        <button class="nav-btn" data-pantalla="ajustes">⚙️<span>Ajustes</span></button>
+    </nav>
+
+    <div id="toast" class="toast"></div>
+</div>
+
+<script type="module" src="./app.js?v=100"></script>
+</body>
+</html>
