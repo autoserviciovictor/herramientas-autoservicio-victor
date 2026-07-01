@@ -282,6 +282,19 @@ video { width: 100%; height: 100%; object-fit: cover; }
     background: #f7f7f4; color: var(--text); font-weight: bold; font-size: 16px; cursor: pointer;
 }
 .setting-file input { display: none; }
+.excel-status-card {
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: #f7f7f4;
+    color: var(--muted);
+    font-weight: 900;
+}
+.excel-status-card.cargado {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+}
+
 .setting-btn { margin-top: 10px; }
 .setting-btn:disabled { opacity: .45; cursor: not-allowed; }
 .settings-card h2 { margin: 0 0 12px; font-size: 16px; }

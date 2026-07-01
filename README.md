@@ -1,23 +1,15 @@
-# Inventario Victor v1.3.0
+# Inventario Victor v1.4.0
 
-Versión lista para subir a GitHub Pages.
+Versión con correcciones solicitadas:
 
-## Archivos
-- index.html
-- style.css
-- app.js
-- excel.js
-- scanner.js
-- ui.js
-
-## Cambios principales
-- Sin botón de linterna.
-- Sin línea verde del escáner.
-- Solo quedan los bordes del área de escaneo.
-- El teclado ya no se abre automáticamente al escanear.
-- Para escribir cantidad manualmente, tocá el número.
+- La cabecera muestra solo la cantidad total de productos del Excel.
+- Se eliminó el formato 1 / total en la cabecera.
+- En la pantalla Inventario se muestran contadores separados para Salón y Depósito.
+- Al guardar una corrección manual, el editor se cierra y vuelve a Productos.
+- En Ajustes, cuando hay Excel cargado, se muestra “Excel cargado” y el botón pasa a “Modificar Excel”.
 
 ## Publicación
-Subí todos los archivos a GitHub Pages y abrí la app con:
 
-?v=130
+Subir todos los archivos del ZIP a GitHub Pages y abrir la app con:
+
+?v=140

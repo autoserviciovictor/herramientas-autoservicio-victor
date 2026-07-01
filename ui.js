@@ -23,8 +23,10 @@ const elementos = {
     stockTotal: document.getElementById("stockTotal"),
     cantidadInput: document.getElementById("cantidadInput"),
     btnGuardarCantidad: document.getElementById("btnGuardarCantidad"),
-    contadorTexto: document.getElementById("contadorTexto"),
-    ubicacionActualTexto: document.getElementById("ubicacionActualTexto"),
+    contadorSalonTexto: document.getElementById("contadorSalonTexto"),
+    contadorDepositoTexto: document.getElementById("contadorDepositoTexto"),
+    textoBotonExcel: document.getElementById("textoBotonExcel"),
+    estadoExcelAjustes: document.getElementById("estadoExcelAjustes"),
     btnSalon: document.getElementById("btnSalon"),
     btnDeposito: document.getElementById("btnDeposito"),
     btnDescargar: document.getElementById("btnDescargar"),
@@ -71,8 +73,15 @@ export function mostrarMensaje(texto, tipo = "ok") {
 
 export function actualizarEstadoExcel(cantidad) {
     totalProductos = cantidad;
-    elementos.estadoExcelTexto.textContent = `Excel: ${cantidad ? "Cargado" : "Sin Excel"}`;
-    actualizarContador(Number(elementos.contadorTexto.textContent) || 0);
+    elementos.estadoExcelTexto.textContent = cantidad ? "Excel cargado" : "Sin Excel";
+    elementos.estadoConteoTexto.textContent = cantidad ? `${cantidad} productos` : "0 productos";
+    if (elementos.estadoExcelAjustes) {
+        elementos.estadoExcelAjustes.textContent = cantidad ? `✅ Excel cargado: ${cantidad} productos` : "Sin Excel cargado";
+        elementos.estadoExcelAjustes.classList.toggle("cargado", Boolean(cantidad));
+    }
+    if (elementos.textoBotonExcel) {
+        elementos.textoBotonExcel.textContent = cantidad ? "✏️ Modificar Excel" : "📄 Cargar Excel";
+    }
 }
 
 export function actualizarEstadoCamara(activa) {
@@ -84,7 +93,7 @@ export function actualizarUbicacion(ubicacion) {
     const esSalon = ubicacion === "salon";
     elementos.btnSalon.classList.toggle("activo", esSalon);
     elementos.btnDeposito.classList.toggle("activo", !esSalon);
-    elementos.ubicacionActualTexto.textContent = esSalon ? "Salón" : "Depósito";
+    // La ubicación predeterminada se refleja en los botones de ajustes.
 }
 
 export function mostrarProducto(producto) {
@@ -122,8 +131,14 @@ export function limpiarProducto(texto = "Esperando escaneo...") {
 }
 
 export function actualizarContador(numero) {
-    elementos.contadorTexto.textContent = numero;
-    elementos.estadoConteoTexto.textContent = `${numero} / ${totalProductos || 0}`;
+    // Se mantiene para compatibilidad con la lógica principal.
+    // La cabecera muestra solo la cantidad total de productos del Excel.
+    elementos.estadoConteoTexto.textContent = totalProductos ? `${totalProductos} productos` : "0 productos";
+}
+
+export function actualizarConteosUbicacion(conteos = { salon: 0, deposito: 0 }) {
+    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = conteos.salon || 0;
+    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = conteos.deposito || 0;
 }
 
 export function activarBotonGuardar(estado) {

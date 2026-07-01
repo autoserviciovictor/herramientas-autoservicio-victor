@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 1.3</title>
+    <title>Inventario Victor 1.4</title>
 
-    <link rel="stylesheet" href="style.css?v=130">
+    <link rel="stylesheet" href="style.css?v=140">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
@@ -15,7 +15,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 1.3</p>
+    <p>Versión 1.4</p>
 </div>
 
 <div class="app">
@@ -26,7 +26,7 @@
                 <h1>Inventario Victor</h1>
                 <div class="status-line">
                     <span id="estadoExcelTexto">Sin Excel</span>
-                    <span id="estadoConteoTexto">0 / 0</span>
+                    <span id="estadoConteoTexto">0 productos</span>
                 </div>
             </div>
         </header>
@@ -65,8 +65,8 @@
         </section>
 
         <section class="bottom-info">
-            <div><span>Ubicación actual</span><strong id="ubicacionActualTexto">Salón</strong></div>
-            <div><span>Contados</span><strong id="contadorTexto">0</strong></div>
+            <div><span>Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
+            <div><span>Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
         </section>
     </main>
 
@@ -134,7 +134,8 @@
         </header>
 
         <section class="settings-card">
-            <label class="setting-file"><span>📄 Cargar Excel</span><input type="file" id="excelFile" accept=".xlsx,.xls"></label>
+            <div id="estadoExcelAjustes" class="excel-status-card">Sin Excel cargado</div>
+            <label class="setting-file"><span id="textoBotonExcel">📄 Cargar Excel</span><input type="file" id="excelFile" accept=".xlsx,.xls"></label>
             <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel actualizado</button>
         </section>
 
@@ -172,6 +173,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=130"></script>
+<script type="module" src="./app.js?v=140"></script>
 </body>
 </html>

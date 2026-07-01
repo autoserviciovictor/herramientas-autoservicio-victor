@@ -1,5 +1,7 @@
 let datos = [];
 let contador = 0;
+let contadorSalon = 0;
+let contadorDeposito = 0;
 let ultimosEscaneados = [];
 
 function normalizarNumero(valor) {
@@ -72,6 +74,8 @@ export function cargarExcel(archivo) {
                 });
 
                 contador = 0;
+                contadorSalon = 0;
+                contadorDeposito = 0;
                 ultimosEscaneados = [];
                 resolve(datos.length);
             } catch (error) {
@@ -90,6 +94,10 @@ export function obtenerCantidadProductos() {
 
 export function obtenerContador() {
     return contador;
+}
+
+export function obtenerConteosUbicacion() {
+    return { salon: contadorSalon, deposito: contadorDeposito };
 }
 
 export function obtenerUltimosEscaneados() {
@@ -112,6 +120,8 @@ export function obtenerProductosCargados(limite = 80) {
 
 export function reiniciarContador() {
     contador = 0;
+    contadorSalon = 0;
+    contadorDeposito = 0;
     ultimosEscaneados = [];
     return contador;
 }
@@ -161,6 +171,11 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
 
     const producto = recalcularFila(indice);
     contador++;
+    if (ubicacion === "deposito") {
+        contadorDeposito++;
+    } else {
+        contadorSalon++;
+    }
     registrarUltimo(producto);
 
     return { producto, contador, ultimos: obtenerUltimosEscaneados() };

@@ -9,13 +9,14 @@ import {
     modificarStockProducto,
     obtenerCantidadProductos,
     obtenerContador,
-    reiniciarContador
-} from "./excel.js?v=130";
+    reiniciarContador,
+    obtenerConteosUbicacion
+} from "./excel.js?v=140";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=130";
+} from "./scanner.js?v=140";
 
 import {
     ocultarSplash,
@@ -38,8 +39,9 @@ import {
     obtenerValoresEditor,
     activarModoCantidad,
     desactivarModoCantidad,
-    activarTabProductos
-} from "./ui.js?v=130";
+    activarTabProductos,
+    actualizarConteosUbicacion
+} from "./ui.js?v=140";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -81,6 +83,7 @@ function inicializar() {
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
     actualizarContador(0);
+    actualizarConteosUbicacion({ salon: 0, deposito: 0 });
     activarBotonGuardar(false);
     activarBotonDescargar(false);
     actualizarEstadoCamara(false);
@@ -136,6 +139,7 @@ async function manejarCargaExcel(e) {
 
         actualizarEstadoExcel(cantidad);
         actualizarContador(0);
+        actualizarConteosUbicacion(obtenerConteosUbicacion());
         activarBotonDescargar(true);
         productoActual = null;
         productoEditando = null;
@@ -221,6 +225,7 @@ function guardarCantidadActual() {
 
         const resultado = guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
         actualizarContador(resultado.contador);
+        actualizarConteosUbicacion(obtenerConteosUbicacion());
         refrescarProductos();
         mostrarMensaje(`Guardado: +${cantidad}`, "ok");
         reproducirConfirmacion("guardado");
@@ -294,8 +299,8 @@ function guardarCorreccion() {
 
         const valores = obtenerValoresEditor();
         const producto = modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
-        productoEditando = producto;
-        mostrarEditorStock(producto);
+        productoEditando = null;
+        cambiarPantalla("productos");
         refrescarProductos();
 
         if (productoActual && productoActual.indice === producto.indice) {
@@ -335,6 +340,7 @@ function manejarReinicio() {
 
     const nuevoContador = reiniciarContador();
     actualizarContador(nuevoContador);
+    actualizarConteosUbicacion(obtenerConteosUbicacion());
     refrescarProductos();
     mostrarMensaje("Conteo reiniciado", "ok");
 }

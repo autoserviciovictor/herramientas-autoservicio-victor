@@ -1,9 +1,6 @@
-Inventario Victor v1.3.0
+Inventario Victor v1.4.0
 
-Cambios:
-- Se quitó la linterna de la interfaz.
-- Se quitó la línea verde del escáner.
-- El escáner mantiene solo los bordes de referencia.
-- Al escanear un producto ya no se abre el teclado automáticamente.
-- El teclado numérico se abre únicamente al tocar el número de cantidad.
-- Se mantiene la pantalla Productos con pestañas Productos / Cargados.
+- Cabecera simplificada: muestra “X productos”.
+- Contadores separados por ubicación: Salón y Depósito.
+- El editor de producto se cierra al guardar cambios.
+- Ajustes muestra estado “Excel cargado” y botón “Modificar Excel”.
