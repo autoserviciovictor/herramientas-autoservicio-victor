@@ -37,10 +37,7 @@ function recalcularFila(indice) {
 function registrarUltimo(producto) {
     ultimosEscaneados = ultimosEscaneados.filter(item => item.indice !== producto.indice);
     ultimosEscaneados.unshift(producto);
-
-    if (ultimosEscaneados.length > 10) {
-        ultimosEscaneados.pop();
-    }
+    if (ultimosEscaneados.length > 20) ultimosEscaneados.pop();
 }
 
 export function cargarExcel(archivo) {
@@ -58,10 +55,7 @@ export function cargarExcel(archivo) {
                 const workbook = XLSX.read(data, { type: "array" });
                 const hoja = workbook.Sheets[workbook.SheetNames[0]];
 
-                datos = XLSX.utils.sheet_to_json(hoja, {
-                    defval: "",
-                    raw: false
-                });
+                datos = XLSX.utils.sheet_to_json(hoja, { defval: "", raw: false });
 
                 datos.forEach(fila => {
                     if (fila["codigo"] === undefined) fila["codigo"] = "";
@@ -79,7 +73,6 @@ export function cargarExcel(archivo) {
 
                 contador = 0;
                 ultimosEscaneados = [];
-
                 resolve(datos.length);
             } catch (error) {
                 reject(new Error("No se pudo procesar el Excel"));
@@ -103,6 +96,20 @@ export function obtenerUltimosEscaneados() {
     return [...ultimosEscaneados];
 }
 
+export function obtenerProductos(limite = 40) {
+    return datos.slice(0, limite).map((fila, indice) => armarProducto(fila, indice));
+}
+
+export function obtenerProductosCargados(limite = 80) {
+    const resultados = [];
+    for (let i = 0; i < datos.length; i++) {
+        const producto = armarProducto(datos[i], i);
+        if (producto.stock > 0) resultados.push(producto);
+        if (resultados.length >= limite) break;
+    }
+    return resultados;
+}
+
 export function reiniciarContador() {
     contador = 0;
     ultimosEscaneados = [];
@@ -111,34 +118,25 @@ export function reiniciarContador() {
 
 export function buscarProductoPorCodigo(codigoBuscado) {
     const codigo = normalizarTexto(codigoBuscado);
-
     const indice = datos.findIndex(fila => normalizarTexto(fila["codigo"]) === codigo);
-
-    if (indice === -1) {
-        return { encontrado: false };
-    }
-
-    return {
-        encontrado: true,
-        producto: armarProducto(datos[indice], indice)
-    };
+    if (indice === -1) return { encontrado: false };
+    return { encontrado: true, producto: armarProducto(datos[indice], indice) };
 }
 
-export function buscarProductosPorTexto(texto, limite = 10) {
+export function buscarProductosPorTexto(texto, limite = 40, soloCargados = false) {
     const consulta = normalizarTexto(texto).toLowerCase();
-
-    if (!consulta) {
-        return obtenerUltimosEscaneados();
-    }
-
     const resultados = [];
 
     for (let i = 0; i < datos.length; i++) {
-        const codigo = normalizarTexto(datos[i]["codigo"]).toLowerCase();
-        const articulo = normalizarTexto(datos[i]["articulo"]).toLowerCase();
+        const producto = armarProducto(datos[i], i);
+        if (soloCargados && producto.stock <= 0) continue;
 
-        if (codigo.includes(consulta) || articulo.includes(consulta)) {
-            resultados.push(armarProducto(datos[i], i));
+        if (!consulta) {
+            resultados.push(producto);
+        } else {
+            const codigo = producto.codigo.toLowerCase();
+            const articulo = producto.articulo.toLowerCase();
+            if (codigo.includes(consulta) || articulo.includes(consulta)) resultados.push(producto);
         }
 
         if (resultados.length >= limite) break;
@@ -148,16 +146,12 @@ export function buscarProductosPorTexto(texto, limite = 10) {
 }
 
 export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
-    if (!datos[indice]) {
-        throw new Error("Producto inválido");
-    }
+    if (!datos[indice]) throw new Error("Producto inválido");
 
     const fila = datos[indice];
     const cantidadNumerica = normalizarNumero(cantidad);
 
-    if (cantidadNumerica <= 0) {
-        throw new Error("Ingresá una cantidad válida");
-    }
+    if (cantidadNumerica <= 0) throw new Error("Ingresá una cantidad válida");
 
     if (ubicacion === "deposito") {
         fila["deposito"] = normalizarNumero(fila["deposito"]) + cantidadNumerica;
@@ -169,35 +163,25 @@ export function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     contador++;
     registrarUltimo(producto);
 
-    return {
-        producto,
-        contador,
-        ultimos: obtenerUltimosEscaneados()
-    };
+    return { producto, contador, ultimos: obtenerUltimosEscaneados() };
 }
 
 export function modificarStockProducto(indice, salon, deposito) {
-    if (!datos[indice]) {
-        throw new Error("Producto inválido");
-    }
+    if (!datos[indice]) throw new Error("Producto inválido");
 
     datos[indice]["salon"] = normalizarNumero(salon);
     datos[indice]["deposito"] = normalizarNumero(deposito);
 
     const producto = recalcularFila(indice);
     registrarUltimo(producto);
-
     return producto;
 }
 
 export function descargarExcel() {
-    if (datos.length === 0) {
-        throw new Error("Primero cargá un Excel");
-    }
+    if (datos.length === 0) throw new Error("Primero cargá un Excel");
 
     const hojaNueva = XLSX.utils.json_to_sheet(datos);
     const libroNuevo = XLSX.utils.book_new();
-
     XLSX.utils.book_append_sheet(libroNuevo, hojaNueva, "Stock");
     XLSX.writeFile(libroNuevo, "stock_actualizado.xlsx");
 }

@@ -1,11 +1,10 @@
-Versión 1.1.0
+Versión 1.2.0
 
-✓ Cámara más compacta y con estilo más profesional.
-✓ Se corrigió el control de cantidad para que el botón + no se corte.
-✓ Al escanear un producto, la cámara se oculta momentáneamente y el producto queda como protagonista.
-✓ Después de guardar, la app vuelve automáticamente al modo escaneo.
-✓ Texto inicial más limpio: “Esperando escaneo...”.
-✓ Pantalla Corregir más amigable cuando no hay resultados.
-✓ Barra inferior más compacta.
-✓ Mejoras visuales en tarjetas, botón Guardar y línea láser.
-✓ Se mantiene toda la lógica de Excel, escaneo, salón, depósito, total, corrección y descarga.
+- Se cambió la navegación inferior: Inventario / Productos / Ajustes.
+- Se eliminó la pantalla Corregir como sección principal.
+- Se agregó pantalla Productos con pestañas Productos y Cargados.
+- Se agregó edición manual dedicada para modificar salón y depósito.
+- Se puede escribir manualmente la cantidad además de usar + y -.
+- Se oculta la tarjeta de cantidad hasta encontrar un producto.
+- Se mejoró el contador a formato contados / total.
+- Se quitó la pantalla de confirmación de guardado para mantener el flujo rápido.

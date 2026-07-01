@@ -3,20 +3,21 @@ import {
     descargarExcel,
     buscarProductoPorCodigo,
     buscarProductosPorTexto,
+    obtenerProductos,
+    obtenerProductosCargados,
     guardarCantidadEnProducto,
     modificarStockProducto,
     obtenerCantidadProductos,
     obtenerContador,
-    obtenerUltimosEscaneados,
     reiniciarContador
-} from "./excel.js?v=110";
+} from "./excel.js?v=120";
 
 import {
     iniciarScanner,
     detenerScanner,
     alternarLinterna,
     linternaDisponible
-} from "./scanner.js?v=110";
+} from "./scanner.js?v=120";
 
 import {
     ocultarSplash,
@@ -37,18 +38,19 @@ import {
     reproducirConfirmacion,
     renderResultadosBusqueda,
     mostrarEditorStock,
-    ocultarEditorStock,
     actualizarTotalEditor,
     obtenerValoresEditor,
     activarModoCantidad,
-    desactivarModoCantidad
-} from "./ui.js?v=110";
+    desactivarModoCantidad,
+    activarTabProductos
+} from "./ui.js?v=120";
 
 let ubicacionActual = "salon";
 let productoActual = null;
 let productoEditando = null;
 let scannerActivo = false;
 let linternaActiva = false;
+let tabProductosActual = "productos";
 
 const $ = (id) => document.getElementById(id);
 
@@ -66,14 +68,16 @@ const elementos = {
     checkVibracion: $("checkVibracion"),
     btnReiniciar: $("btnReiniciar"),
     buscadorProducto: $("buscadorProducto"),
+    tabProductos: $("tabProductos"),
+    tabCargados: $("tabCargados"),
+    btnVolverProductos: $("btnVolverProductos"),
     editarSalon: $("editarSalon"),
     editarDeposito: $("editarDeposito"),
     btnMenosSalon: $("btnMenosSalon"),
     btnMasSalon: $("btnMasSalon"),
     btnMenosDeposito: $("btnMenosDeposito"),
     btnMasDeposito: $("btnMasDeposito"),
-    btnGuardarCorreccion: $("btnGuardarCorreccion"),
-    btnCancelarCorreccion: $("btnCancelarCorreccion")
+    btnGuardarCorreccion: $("btnGuardarCorreccion")
 };
 
 inicializar();
@@ -81,22 +85,21 @@ inicializar();
 function inicializar() {
     ocultarSplash();
     actualizarUbicacion(ubicacionActual);
+    actualizarEstadoExcel(0);
     actualizarContador(0);
     activarBotonGuardar(false);
     activarBotonDescargar(false);
     activarBotonLinterna(false);
     actualizarEstadoCamara(false);
     limpiarProducto();
+    desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
 
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const pantalla = btn.dataset.pantalla;
             cambiarPantalla(pantalla);
-
-            if (pantalla === "corregir") {
-                refrescarBusqueda();
-            }
+            if (pantalla === "productos") refrescarProductos();
         });
     });
 
@@ -109,18 +112,21 @@ function inicializar() {
     elementos.cantidadInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") guardarCantidadActual();
     });
-
     elementos.btnMenosCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, -1, 1));
     elementos.btnMasCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, 1, 1));
 
     elementos.btnDescargar.addEventListener("click", manejarDescargaExcel);
-
     elementos.checkSonidos.addEventListener("change", actualizarPreferenciasFeedback);
     elementos.checkVibracion.addEventListener("change", actualizarPreferenciasFeedback);
-
     elementos.btnReiniciar.addEventListener("click", manejarReinicio);
 
-    elementos.buscadorProducto.addEventListener("input", refrescarBusqueda);
+    elementos.buscadorProducto.addEventListener("input", refrescarProductos);
+    elementos.tabProductos.addEventListener("click", () => cambiarTabProductos("productos"));
+    elementos.tabCargados.addEventListener("click", () => cambiarTabProductos("cargados"));
+    elementos.btnVolverProductos.addEventListener("click", () => {
+        cambiarPantalla("productos");
+        refrescarProductos();
+    });
 
     elementos.editarSalon.addEventListener("input", actualizarTotalEditor);
     elementos.editarDeposito.addEventListener("input", actualizarTotalEditor);
@@ -129,12 +135,6 @@ function inicializar() {
     elementos.btnMenosDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, -1, 0, actualizarTotalEditor));
     elementos.btnMasDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, 1, 0, actualizarTotalEditor));
     elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
-    elementos.btnCancelarCorreccion.addEventListener("click", () => {
-        productoEditando = null;
-        ocultarEditorStock();
-    });
-
-    iniciarCamaraAutomaticamenteCuandoSePueda();
 }
 
 async function manejarCargaExcel(e) {
@@ -149,15 +149,12 @@ async function manejarCargaExcel(e) {
         productoEditando = null;
         limpiarProducto("Esperando escaneo...");
         desactivarModoCantidad();
-        ocultarEditorStock();
-        refrescarBusqueda();
+        refrescarProductos();
 
         mostrarMensaje("Excel cargado correctamente", "ok");
         reproducirConfirmacion("guardado");
 
-        if (!scannerActivo) {
-            await iniciarCamaraSiCorresponde();
-        }
+        if (!scannerActivo) await iniciarCamaraSiCorresponde();
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -169,11 +166,6 @@ function cambiarUbicacion(ubicacion) {
     ubicacionActual = ubicacion;
     actualizarUbicacion(ubicacion);
     mostrarMensaje(`Ubicación: ${ubicacion === "salon" ? "Salón" : "Depósito"}`, "ok");
-}
-
-async function iniciarCamaraAutomaticamenteCuandoSePueda() {
-    // No se inicia sola al abrir para evitar bloqueos de permisos del navegador.
-    // Se inicia automáticamente después de cargar Excel si el navegador lo permite.
 }
 
 async function iniciarCamaraSiCorresponde() {
@@ -206,6 +198,7 @@ function manejarCodigoEscaneado(codigo) {
         productoActual = null;
         mostrarProductoNoEncontrado(codigo);
         activarBotonGuardar(false);
+        desactivarModoCantidad();
         mostrarMensaje("Producto no encontrado", "error");
         reproducirConfirmacion("error");
         return;
@@ -215,8 +208,8 @@ function manejarCodigoEscaneado(codigo) {
     mostrarProducto(productoActual);
     activarBotonGuardar(true);
     elementos.cantidadInput.value = 1;
-    elementos.cantidadInput.focus();
     activarModoCantidad();
+    setTimeout(() => elementos.cantidadInput.focus(), 80);
     mostrarMensaje("Producto encontrado", "ok");
     reproducirConfirmacion("ok");
 }
@@ -230,7 +223,6 @@ function guardarCantidadActual() {
         }
 
         const cantidad = Number(elementos.cantidadInput.value);
-
         if (!cantidad || cantidad <= 0) {
             mostrarMensaje("Ingresá una cantidad válida", "error");
             elementos.cantidadInput.focus();
@@ -239,21 +231,19 @@ function guardarCantidadActual() {
         }
 
         const resultado = guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
-
-        mostrarProducto(resultado.producto);
         actualizarContador(resultado.contador);
+        refrescarProductos();
+        mostrarMensaje(`Guardado: +${cantidad}`, "ok");
+        reproducirConfirmacion("guardado");
+
+        productoActual = null;
         activarBotonGuardar(false);
         elementos.cantidadInput.value = 1;
-        productoActual = null;
-        refrescarBusqueda();
-
-        mostrarMensaje("Cantidad guardada", "ok");
 
         setTimeout(() => {
             limpiarProducto("Esperando escaneo...");
             desactivarModoCantidad();
-        }, 650);
-        reproducirConfirmacion("guardado");
+        }, 350);
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -264,22 +254,41 @@ function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {
     const actual = Number(input.value) || 0;
     const nuevo = Math.max(minimo, actual + diferencia);
     input.value = nuevo;
-
     if (callback) callback();
 }
 
-function refrescarBusqueda() {
-    if (obtenerCantidadProductos() === 0) {
-        renderResultadosBusqueda([], seleccionarProductoParaEditar);
+function cambiarTabProductos(tab) {
+    tabProductosActual = tab;
+    activarTabProductos(tab);
+    refrescarProductos();
+}
+
+function refrescarProductos() {
+    const total = obtenerCantidadProductos();
+    const texto = elementos.buscadorProducto.value || "";
+    const consulta = texto.trim();
+
+    if (total === 0) {
+        renderResultadosBusqueda([], seleccionarProductoParaEditar, { tab: tabProductosActual, total: 0, consulta });
         return;
     }
 
-    const texto = elementos.buscadorProducto.value || "";
-    const resultados = texto.trim()
-        ? buscarProductosPorTexto(texto, 12)
-        : obtenerUltimosEscaneados();
+    let resultados;
+    if (tabProductosActual === "cargados") {
+        resultados = consulta
+            ? buscarProductosPorTexto(consulta, 80, true)
+            : obtenerProductosCargados(80);
+    } else {
+        resultados = consulta
+            ? buscarProductosPorTexto(consulta, 80, false)
+            : obtenerProductos(80);
+    }
 
-    renderResultadosBusqueda(resultados, seleccionarProductoParaEditar);
+    renderResultadosBusqueda(resultados, seleccionarProductoParaEditar, {
+        tab: tabProductosActual,
+        total,
+        consulta
+    });
 }
 
 function seleccionarProductoParaEditar(producto) {
@@ -296,10 +305,9 @@ function guardarCorreccion() {
 
         const valores = obtenerValoresEditor();
         const producto = modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
-
         productoEditando = producto;
         mostrarEditorStock(producto);
-        refrescarBusqueda();
+        refrescarProductos();
 
         if (productoActual && productoActual.indice === producto.indice) {
             productoActual = producto;
@@ -344,12 +352,11 @@ function actualizarPreferenciasFeedback() {
 
 function manejarReinicio() {
     const confirmar = confirm("¿Querés reiniciar el contador de productos contados?");
-
     if (!confirmar) return;
 
     const nuevoContador = reiniciarContador();
     actualizarContador(nuevoContador);
-    refrescarBusqueda();
+    refrescarProductos();
     mostrarMensaje("Conteo reiniciado", "ok");
 }
 

@@ -1,29 +1,22 @@
-# Inventario Victor v1.1.0
+# Inventario Victor v1.2.0
 
-Aplicación web para inventario por escaneo de códigos de barras.
+Versión lista para GitHub Pages.
 
-## Archivos
+## Cómo usar
 
-- index.html
-- style.css
-- app.js
-- excel.js
-- scanner.js
-- ui.js
-- README.md
-- VERSION.txt
-- CHANGELOG.txt
-
-## Uso
-
-1. Subir todos los archivos a GitHub Pages.
-2. Abrir la app desde el celular.
-3. Entrar en Ajustes y cargar el Excel.
+1. Subí todos los archivos de esta carpeta al repositorio de GitHub Pages.
+2. Abrí la app agregando `?v=120` al final del link para evitar caché.
+3. Entrá a **Ajustes** y cargá el Excel.
 4. La cámara se inicia automáticamente si el navegador lo permite.
-5. Escanear producto, cargar cantidad y guardar.
-6. Usar Corregir para buscar un producto y modificar directamente salón o depósito.
-7. Descargar el Excel actualizado desde Ajustes.
 
-## Recomendación
+## Novedades v1.2.0
 
-Después de subir esta versión a GitHub, abrir la página agregando `?v=110` al final de la URL para evitar caché del navegador.
+- Pantalla **Corregir** reemplazada por **Productos**.
+- Pantalla Productos con dos pestañas: **Productos** y **Cargados**.
+- Pestaña Productos: muestra/busca productos del Excel.
+- Pestaña Cargados: muestra solo productos con stock mayor a 0.
+- Edición manual de salón y depósito desde una pantalla dedicada.
+- Los campos numéricos se pueden escribir manualmente o ajustar con + y −.
+- La sección cantidad queda oculta hasta escanear un producto.
+- Contador superior en formato `contados / total`.
+- Flujo más rápido después de guardar: confirma, limpia y vuelve al escaneo.

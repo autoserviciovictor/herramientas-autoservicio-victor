@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 1.1</title>
+    <title>Inventario Victor 1.2</title>
 
-    <link rel="stylesheet" href="style.css?v=110">
+    <link rel="stylesheet" href="style.css?v=120">
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
@@ -15,7 +15,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 1.0</p>
+    <p>Versión 1.2</p>
 </div>
 
 <div class="app">
@@ -24,17 +24,19 @@
         <header class="header-app">
             <div>
                 <h1>Inventario Victor</h1>
-                <p id="estadoExcelTexto">Sin Excel cargado</p><p class="sub-info" id="estadoConteoTexto">Contados 0</p>
+                <div class="status-line">
+                    <span id="estadoExcelTexto">Sin Excel</span>
+                    <span id="estadoConteoTexto">0 / 0</span>
+                </div>
             </div>
-
             <button id="btnLinterna" class="icon-btn" disabled title="Linterna">🔦</button>
         </header>
 
-        <section class="camera-card">
+        <section class="camera-card" id="cameraCard">
             <video id="video" autoplay muted playsinline></video>
-
             <div class="camera-overlay">
                 <span id="estadoCamaraTexto">Cámara detenida</span>
+                <strong id="textoCamara">Apuntá al código de barras</strong>
                 <div class="scan-line"></div>
                 <div class="corner corner-tl"></div>
                 <div class="corner corner-tr"></div>
@@ -45,74 +47,66 @@
 
         <section id="productoCard" class="product-card empty">
             <div class="product-status" id="estadoProducto">Esperando código</div>
-
-            <h2 id="nombreProducto">Apuntá al código de barras</h2>
+            <h2 id="nombreProducto">Esperando escaneo...</h2>
             <p id="codigoProducto">-</p>
-
             <div class="stock-row">
-                <div>
-                    <span>Salón</span>
-                    <strong id="stockSalon">0</strong>
-                </div>
-
-                <div>
-                    <span>Depósito</span>
-                    <strong id="stockDeposito">0</strong>
-                </div>
-
-                <div>
-                    <span>Total</span>
-                    <strong id="stockTotal">0</strong>
-                </div>
+                <div><span>Salón</span><strong id="stockSalon">0</strong></div>
+                <div><span>Depósito</span><strong id="stockDeposito">0</strong></div>
+                <div><span>Total</span><strong id="stockTotal">0</strong></div>
             </div>
         </section>
 
-        <section class="quantity-card">
-            <p>Cantidad</p>
-
+        <section id="quantityCard" class="quantity-card oculto">
+            <p>Cantidad a agregar</p>
             <div class="quantity-control">
                 <button id="btnMenosCantidad">−</button>
                 <input type="number" id="cantidadInput" min="1" step="1" value="1" inputmode="numeric">
                 <button id="btnMasCantidad">+</button>
             </div>
-
-            <button id="btnGuardarCantidad" class="save-btn" disabled>
-                ✔ Guardar
-            </button>
+            <button id="btnGuardarCantidad" class="save-btn" disabled>✔ Guardar</button>
         </section>
 
         <section class="bottom-info">
-            <div>
-                <span>Ubicación</span>
-                <strong id="ubicacionActualTexto">Salón</strong>
-            </div>
-
-            <div>
-                <span>Contados</span>
-                <strong id="contadorTexto">0</strong>
-            </div>
+            <div><span>Ubicación actual</span><strong id="ubicacionActualTexto">Salón</strong></div>
+            <div><span>Contados</span><strong id="contadorTexto">0</strong></div>
         </section>
     </main>
 
-    <main id="pantallaCorregir" class="pantalla">
+    <main id="pantallaProductos" class="pantalla">
         <header class="header-simple">
-            <h1>Corregir stock</h1>
-            <p>Buscá un producto y modificá salón o depósito</p>
+            <h1>Productos</h1>
+            <p>Buscá, revisá o modificá el stock</p>
         </header>
+
+        <section class="tabs-card">
+            <button id="tabProductos" class="tab-btn activo">Productos</button>
+            <button id="tabCargados" class="tab-btn">Cargados</button>
+        </section>
 
         <section class="search-card">
             <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
         </section>
 
+        <p id="resumenProductos" class="list-summary">Cargá un Excel para ver productos.</p>
         <section id="resultadoBusqueda" class="result-list"></section>
+    </main>
 
-        <section id="editorStock" class="edit-card oculto">
+    <main id="pantallaEditarProducto" class="pantalla">
+        <header class="header-edit">
+            <button id="btnVolverProductos" class="back-btn">‹</button>
+            <div>
+                <h1>Editar producto</h1>
+                <p>Modificá salón o depósito manualmente</p>
+            </div>
+        </header>
+
+        <section id="editorStock" class="edit-card">
             <div class="edit-title">
                 <h2 id="editarNombreProducto">Producto</h2>
                 <p id="editarCodigoProducto">-</p>
             </div>
 
-            <div class="edit-row">
+            <div class="edit-row salon-row">
                 <label>Salón</label>
                 <div class="quantity-control small">
                     <button id="btnMenosSalon">−</button>
@@ -121,7 +115,7 @@
                 </div>
             </div>
 
-            <div class="edit-row">
+            <div class="edit-row deposito-row">
                 <label>Depósito</label>
                 <div class="quantity-control small">
                     <button id="btnMenosDeposito">−</button>
@@ -130,13 +124,8 @@
                 </div>
             </div>
 
-            <div class="edit-total">
-                <span>Total</span>
-                <strong id="editarTotal">0</strong>
-            </div>
-
-            <button id="btnGuardarCorreccion" class="save-btn">Guardar cambios</button>
-            <button id="btnCancelarCorreccion" class="ghost-btn">Cancelar</button>
+            <div class="edit-total"><span>Total</span><strong id="editarTotal">0</strong></div>
+            <button id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
         </section>
     </main>
 
@@ -147,11 +136,7 @@
         </header>
 
         <section class="settings-card">
-            <label class="setting-file">
-                <span>📄 Cargar Excel</span>
-                <input type="file" id="excelFile" accept=".xlsx,.xls">
-            </label>
-
+            <label class="setting-file"><span>📄 Cargar Excel</span><input type="file" id="excelFile" accept=".xlsx,.xls"></label>
             <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel actualizado</button>
         </section>
 
@@ -165,18 +150,11 @@
 
         <section class="settings-card">
             <div class="switch-row">
-                <div>
-                    <strong>Sonidos</strong>
-                    <span>Confirmación al escanear y guardar</span>
-                </div>
+                <div><strong>Sonidos</strong><span>Confirmación al escanear y guardar</span></div>
                 <input type="checkbox" id="checkSonidos" checked>
             </div>
-
             <div class="switch-row">
-                <div>
-                    <strong>Vibración</strong>
-                    <span>Vibración corta al confirmar</span>
-                </div>
+                <div><strong>Vibración</strong><span>Vibración corta al confirmar</span></div>
                 <input type="checkbox" id="checkVibracion" checked>
             </div>
         </section>
@@ -189,13 +167,13 @@
 
     <nav class="bottom-nav">
         <button class="nav-btn activo" data-pantalla="inventario">🏠<span>Inventario</span></button>
-        <button class="nav-btn" data-pantalla="corregir">✏️<span>Corregir</span></button>
+        <button class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
         <button class="nav-btn" data-pantalla="ajustes">⚙️<span>Ajustes</span></button>
     </nav>
 
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=110"></script>
+<script type="module" src="./app.js?v=120"></script>
 </body>
 </html>

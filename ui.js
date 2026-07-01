@@ -2,7 +2,8 @@ const elementos = {
     splash: document.getElementById("splash"),
     pantallas: {
         inventario: document.getElementById("pantallaInventario"),
-        corregir: document.getElementById("pantallaCorregir"),
+        productos: document.getElementById("pantallaProductos"),
+        editarProducto: document.getElementById("pantallaEditarProducto"),
         ajustes: document.getElementById("pantallaAjustes")
     },
     navBtns: document.querySelectorAll(".nav-btn"),
@@ -11,7 +12,9 @@ const elementos = {
     estadoConteoTexto: document.getElementById("estadoConteoTexto"),
     estadoExcelTexto: document.getElementById("estadoExcelTexto"),
     estadoCamaraTexto: document.getElementById("estadoCamaraTexto"),
+    textoCamara: document.getElementById("textoCamara"),
     productoCard: document.getElementById("productoCard"),
+    quantityCard: document.getElementById("quantityCard"),
     estadoProducto: document.getElementById("estadoProducto"),
     nombreProducto: document.getElementById("nombreProducto"),
     codigoProducto: document.getElementById("codigoProducto"),
@@ -27,7 +30,9 @@ const elementos = {
     btnDescargar: document.getElementById("btnDescargar"),
     btnLinterna: document.getElementById("btnLinterna"),
     resultadoBusqueda: document.getElementById("resultadoBusqueda"),
-    editorStock: document.getElementById("editorStock"),
+    resumenProductos: document.getElementById("resumenProductos"),
+    tabProductos: document.getElementById("tabProductos"),
+    tabCargados: document.getElementById("tabCargados"),
     editarNombreProducto: document.getElementById("editarNombreProducto"),
     editarCodigoProducto: document.getElementById("editarCodigoProducto"),
     editarSalon: document.getElementById("editarSalon"),
@@ -38,6 +43,7 @@ const elementos = {
 let temporizadorToast = null;
 let sonidoHabilitado = true;
 let vibracionHabilitada = true;
+let totalProductos = 0;
 
 export function ocultarSplash() {
     setTimeout(() => elementos.splash.classList.add("oculto"), 650);
@@ -48,28 +54,31 @@ export function cambiarPantalla(nombre) {
         pantalla.classList.toggle("activa", clave === nombre);
     });
 
+    const pantallaNav = nombre === "editarProducto" ? "productos" : nombre;
+
     elementos.navBtns.forEach(btn => {
-        btn.classList.toggle("activo", btn.dataset.pantalla === nombre);
+        btn.classList.toggle("activo", btn.dataset.pantalla === pantallaNav);
     });
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {
     clearTimeout(temporizadorToast);
-
     elementos.toast.textContent = texto;
     elementos.toast.className = `toast mostrar ${tipo}`;
-
     temporizadorToast = setTimeout(() => {
         elementos.toast.className = "toast";
-    }, 2300);
+    }, 1700);
 }
 
 export function actualizarEstadoExcel(cantidad) {
-    elementos.estadoExcelTexto.textContent = `🟢 ${cantidad} productos cargados`;
+    totalProductos = cantidad;
+    elementos.estadoExcelTexto.textContent = `Excel: ${cantidad ? "Cargado" : "Sin Excel"}`;
+    actualizarContador(Number(elementos.contadorTexto.textContent) || 0);
 }
 
 export function actualizarEstadoCamara(activa) {
     elementos.estadoCamaraTexto.textContent = activa ? "Cámara activa" : "Cámara detenida";
+    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "Cargá un Excel para comenzar";
 }
 
 export function actualizarUbicacion(ubicacion) {
@@ -83,7 +92,6 @@ export function mostrarProducto(producto) {
     elementos.productoCard.classList.remove("empty", "error", "found");
     void elementos.productoCard.offsetWidth;
     elementos.productoCard.classList.add("found");
-
     elementos.estadoProducto.textContent = "Producto encontrado";
     elementos.nombreProducto.textContent = producto.articulo;
     elementos.codigoProducto.textContent = producto.codigo || "Sin código";
@@ -95,7 +103,6 @@ export function mostrarProducto(producto) {
 export function mostrarProductoNoEncontrado(codigo) {
     elementos.productoCard.classList.remove("empty", "found");
     elementos.productoCard.classList.add("error");
-
     elementos.estadoProducto.textContent = "No encontrado";
     elementos.nombreProducto.textContent = "Producto inexistente";
     elementos.codigoProducto.textContent = codigo;
@@ -107,7 +114,6 @@ export function mostrarProductoNoEncontrado(codigo) {
 export function limpiarProducto(texto = "Esperando escaneo...") {
     elementos.productoCard.classList.remove("found", "error");
     elementos.productoCard.classList.add("empty");
-
     elementos.estadoProducto.textContent = "Esperando código";
     elementos.nombreProducto.textContent = texto;
     elementos.codigoProducto.textContent = "-";
@@ -118,9 +124,7 @@ export function limpiarProducto(texto = "Esperando escaneo...") {
 
 export function actualizarContador(numero) {
     elementos.contadorTexto.textContent = numero;
-    if (elementos.estadoConteoTexto) {
-        elementos.estadoConteoTexto.textContent = `Contados ${numero}`;
-    }
+    elementos.estadoConteoTexto.textContent = `${numero} / ${totalProductos || 0}`;
 }
 
 export function activarBotonGuardar(estado) {
@@ -156,30 +160,46 @@ export function reproducirConfirmacion(tipo = "ok") {
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
         osc.connect(gain);
         gain.connect(ctx.destination);
-
-        const frecuencia = tipo === "error" ? 180 : tipo === "guardado" ? 740 : 520;
-        osc.frequency.value = frecuencia;
+        osc.frequency.value = tipo === "error" ? 180 : tipo === "guardado" ? 740 : 520;
         osc.type = "sine";
-
         gain.gain.setValueAtTime(0.0001, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
-
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + 0.13);
-    } catch (error) {
-        // Algunos navegadores bloquean audio hasta que el usuario interactúa. No es grave.
-    }
+    } catch (error) {}
 }
 
-export function renderResultadosBusqueda(lista, onSeleccionar) {
+export function activarTabProductos(tab) {
+    const cargados = tab === "cargados";
+    elementos.tabProductos.classList.toggle("activo", !cargados);
+    elementos.tabCargados.classList.toggle("activo", cargados);
+}
+
+export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     elementos.resultadoBusqueda.innerHTML = "";
 
+    const { tab = "productos", total = 0, consulta = "" } = opciones;
+
+    if (!total) {
+        elementos.resumenProductos.textContent = "Cargá un Excel para ver productos.";
+    } else if (tab === "cargados") {
+        elementos.resumenProductos.textContent = consulta
+            ? `Productos cargados que coinciden con “${consulta}”`
+            : "Productos con stock cargado";
+    } else {
+        elementos.resumenProductos.textContent = consulta
+            ? `Resultados para “${consulta}”`
+            : `Mostrando primeros productos de ${total} en total`;
+    }
+
     if (!lista.length) {
-        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>Buscá un producto para modificar su stock.</strong><span>Podés buscar por nombre o código.</span></div>`;
+        const mensaje = tab === "cargados"
+            ? "Todavía no hay productos con stock cargado."
+            : "Buscá o cargá un Excel para ver productos.";
+        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>${mensaje}</strong><span>Tocá un producto para editar salón o depósito.</span></div>`;
         return;
     }
 
@@ -196,16 +216,12 @@ export function renderResultadosBusqueda(lista, onSeleccionar) {
 }
 
 export function mostrarEditorStock(producto) {
-    elementos.editorStock.classList.remove("oculto");
     elementos.editarNombreProducto.textContent = producto.articulo;
     elementos.editarCodigoProducto.textContent = producto.codigo || "Sin código";
     elementos.editarSalon.value = producto.salon;
     elementos.editarDeposito.value = producto.deposito;
     actualizarTotalEditor();
-}
-
-export function ocultarEditorStock() {
-    elementos.editorStock.classList.add("oculto");
+    cambiarPantalla("editarProducto");
 }
 
 export function actualizarTotalEditor() {
@@ -221,11 +237,12 @@ export function obtenerValoresEditor() {
     };
 }
 
-
 export function activarModoCantidad() {
     elementos.pantallaInventario.classList.add("modo-cantidad");
+    elementos.quantityCard.classList.remove("oculto");
 }
 
 export function desactivarModoCantidad() {
     elementos.pantallaInventario.classList.remove("modo-cantidad");
+    elementos.quantityCard.classList.add("oculto");
 }

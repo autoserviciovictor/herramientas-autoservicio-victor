@@ -1,2 +1,2 @@
-Inventario Victor v1.1.0
-Fecha: 2026-07-01
+Inventario Victor v1.2.0
+Cache: ?v=120
