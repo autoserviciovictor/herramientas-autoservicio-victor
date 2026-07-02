@@ -1,17 +1,8 @@
-V2.1.1
-- Preparación para varios celulares trabajando al mismo tiempo.
-- Sincronización automática cada 15 segundos.
-- Refresco de producto por código al escanear.
-- Nueva ruta GET /producto/:codigo.
-- Cola por código en el servidor para evitar escrituras pisadas en /guardar y /corregir.
-- Se mantiene la misma interfaz de la V2.0.
+Inventario Victor V2.1.1 - Cámara Fix
 
-V2.0
-- Migración completa a Google Sheets mediante servidor Node.js en Render.
-- Nueva configuración API_BASE_URL en config.js.
-- GET /productos para cargar productos.
-- POST /guardar para sumar salón o depósito.
-- POST /corregir para editar manualmente salón y depósito.
-- GET /descargar para generar Excel listo para importar.
-- Se mantiene la estructura: codigo, articulo, stock, salon, deposito.
-- Se conserva el diseño actual de la app.
+- Corrige el mensaje incorrecto de "Conectá Google Sheets" cuando la hoja ya está conectada.
+- Agrega botón "Activar cámara" si Chrome/Samsung no inicia la cámara automáticamente.
+- Mejora el inicio del scanner con varios intentos compatibles.
+- Fija la versión de ZXing para evitar problemas por cambios de la librería latest.
+- Aplica autofocus continuo y zoom cuando el celular lo permite, especialmente útil en Samsung S24/S25.
+- Mantiene Google Sheets, guardado automático y soporte para varios celulares.

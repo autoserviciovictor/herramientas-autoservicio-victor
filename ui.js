@@ -30,6 +30,7 @@ const elementos = {
     btnSalon: document.getElementById("btnSalon"),
     btnDeposito: document.getElementById("btnDeposito"),
     btnDescargar: document.getElementById("btnDescargar"),
+    btnActivarCamara: document.getElementById("btnActivarCamara"),
     resultadoBusqueda: document.getElementById("resultadoBusqueda"),
     resumenProductos: document.getElementById("resumenProductos"),
     tabProductos: document.getElementById("tabProductos"),
@@ -75,6 +76,15 @@ export function actualizarEstadoExcel(cantidad) {
     totalProductos = cantidad;
     elementos.estadoExcelTexto.textContent = cantidad ? "Google Sheets" : "Sin conexión";
     elementos.estadoConteoTexto.textContent = cantidad ? `${cantidad} productos` : "0 productos";
+
+    // Si la hoja ya cargó pero la cámara todavía no arrancó, mostramos una acción clara.
+    if (elementos.btnActivarCamara) {
+        const camaraActiva = elementos.estadoCamaraTexto?.textContent === "Cámara activa";
+        elementos.btnActivarCamara.classList.toggle("oculto", !cantidad || camaraActiva);
+    }
+    if (elementos.textoCamara && cantidad && elementos.estadoCamaraTexto?.textContent !== "Cámara activa") {
+        elementos.textoCamara.textContent = "Tocá Activar cámara o revisá permisos";
+    }
     if (elementos.estadoExcelAjustes) {
         elementos.estadoExcelAjustes.textContent = cantidad ? `✅ Google Sheets conectado: ${cantidad} productos` : "Sin conexión con Google Sheets";
         elementos.estadoExcelAjustes.classList.toggle("cargado", Boolean(cantidad));
@@ -86,7 +96,18 @@ export function actualizarEstadoExcel(cantidad) {
 
 export function actualizarEstadoCamara(activa) {
     elementos.estadoCamaraTexto.textContent = activa ? "Cámara activa" : "Cámara detenida";
-    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "Conectá Google Sheets para comenzar";
+
+    if (activa) {
+        elementos.textoCamara.textContent = "Apuntá al código de barras";
+    } else {
+        elementos.textoCamara.textContent = totalProductos
+            ? "Tocá Activar cámara o revisá permisos"
+            : "Conectando con Google Sheets...";
+    }
+
+    if (elementos.btnActivarCamara) {
+        elementos.btnActivarCamara.classList.toggle("oculto", activa || !totalProductos);
+    }
 }
 
 export function actualizarUbicacion(ubicacion) {

@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=211";
+} from "./excel.js?v=2111cam";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=211";
+} from "./scanner.js?v=2111cam";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=211";
+} from "./ui.js?v=2111cam";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -60,6 +60,7 @@ const $ = (id) => document.getElementById(id);
 
 const elementos = {
     btnActualizarProductos: $("btnActualizarProductos"),
+    btnActivarCamara: $("btnActivarCamara"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
     btnGuardarCantidad: $("btnGuardarCantidad"),
@@ -112,6 +113,9 @@ function configurarEventos() {
     });
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
+    if (elementos.btnActivarCamara) {
+        elementos.btnActivarCamara.addEventListener("click", iniciarCamaraSiCorresponde);
+    }
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
 
