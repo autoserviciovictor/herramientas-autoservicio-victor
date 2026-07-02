@@ -17,11 +17,8 @@ import {
 
 import {
     iniciarScanner,
-    detenerScanner,
-    aumentarZoom,
-    disminuirZoom,
-    obtenerInfoZoom
-} from "./scanner.js?v=212";
+    detenerScanner
+} from "./scanner.js?v=213";
 
 import {
     ocultarSplash,
@@ -83,10 +80,7 @@ const elementos = {
     btnMasSalon: $("btnMasSalon"),
     btnMenosDeposito: $("btnMenosDeposito"),
     btnMasDeposito: $("btnMasDeposito"),
-    btnGuardarCorreccion: $("btnGuardarCorreccion"),
-    btnZoomMenos: $("btnZoomMenos"),
-    btnZoomMas: $("btnZoomMas"),
-    zoomTexto: $("zoomTexto")
+    btnGuardarCorreccion: $("btnGuardarCorreccion")
 };
 
 inicializar();
@@ -150,34 +144,6 @@ function configurarEventos() {
     elementos.btnMasDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, 1, 0, actualizarTotalEditor));
     elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
 
-    if (elementos.btnZoomMas) {
-        elementos.btnZoomMas.addEventListener("click", async () => {
-            const zoom = await aumentarZoom();
-            actualizarTextoZoom(zoom);
-        });
-    }
-
-    if (elementos.btnZoomMenos) {
-        elementos.btnZoomMenos.addEventListener("click", async () => {
-            const zoom = await disminuirZoom();
-            actualizarTextoZoom(zoom);
-        });
-    }
-}
-
-function actualizarTextoZoom(valor = null) {
-    if (!elementos.zoomTexto) return;
-
-    const info = obtenerInfoZoom();
-
-    if (!info.soportado && valor === null) {
-        elementos.zoomTexto.textContent = "Zoom auto";
-        return;
-    }
-
-    const zoom = valor || info.zoom || 1;
-    elementos.zoomTexto.textContent = `${zoom.toFixed(1)}x`;
-}
 
 async function cargarProductos() {
     try {
@@ -226,7 +192,6 @@ async function iniciarCamaraSiCorresponde() {
         await iniciarScanner("video", manejarCodigoEscaneado);
         scannerActivo = true;
         actualizarEstadoCamara(true);
-        actualizarTextoZoom();
         mostrarMensaje("Cámara activa", "ok");
     } catch (error) {
         scannerActivo = false;

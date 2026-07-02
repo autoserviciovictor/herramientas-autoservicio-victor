@@ -5,72 +5,82 @@ let tiempoUltimaLectura = 0;
 let streamActual = null;
 let trackActual = null;
 let videoActual = null;
-let zoomActual = null;
-let zoomMin = 1;
-let zoomMax = 1;
-let zoomStep = 0.25;
+let detectorNativo = null;
+let loopDetectorNativo = null;
+let scannerDetenido = true;
 
 function limpiarLecturaDuplicada() {
     ultimoCodigoLeido = "";
     tiempoUltimaLectura = 0;
 }
 
+function detenerLoopNativo() {
+    scannerDetenido = true;
+    if (loopDetectorNativo) {
+        cancelAnimationFrame(loopDetectorNativo);
+        loopDetectorNativo = null;
+    }
+}
+
 function detenerStreamActual() {
+    detenerLoopNativo();
+
     if (streamActual) {
         streamActual.getTracks().forEach(track => track.stop());
     }
+
     streamActual = null;
     trackActual = null;
     videoActual = null;
-    zoomActual = null;
-    zoomMin = 1;
-    zoomMax = 1;
-    zoomStep = 0.25;
+    detectorNativo = null;
+}
+
+function soporta(capacidades, nombre, valor) {
+    return Array.isArray(capacidades?.[nombre]) && capacidades[nombre].includes(valor);
 }
 
 async function aplicarOptimizacionCamara() {
-    if (!trackActual || !trackActual.getCapabilities) return;
+    if (!trackActual || !trackActual.getCapabilities || !trackActual.applyConstraints) return;
 
     const capacidades = trackActual.getCapabilities();
-    const restricciones = { advanced: [] };
+    const advanced = [];
 
-    if (Array.isArray(capacidades.focusMode) && capacidades.focusMode.includes("continuous")) {
-        restricciones.advanced.push({ focusMode: "continuous" });
+    if (soporta(capacidades, "focusMode", "continuous")) {
+        advanced.push({ focusMode: "continuous" });
+    } else if (soporta(capacidades, "focusMode", "single-shot")) {
+        advanced.push({ focusMode: "single-shot" });
     }
 
-    if (Array.isArray(capacidades.exposureMode) && capacidades.exposureMode.includes("continuous")) {
-        restricciones.advanced.push({ exposureMode: "continuous" });
+    if (soporta(capacidades, "exposureMode", "continuous")) {
+        advanced.push({ exposureMode: "continuous" });
     }
 
-    if (Array.isArray(capacidades.whiteBalanceMode) && capacidades.whiteBalanceMode.includes("continuous")) {
-        restricciones.advanced.push({ whiteBalanceMode: "continuous" });
+    if (soporta(capacidades, "whiteBalanceMode", "continuous")) {
+        advanced.push({ whiteBalanceMode: "continuous" });
     }
 
-    if (typeof capacidades.zoom === "object") {
-        zoomMin = capacidades.zoom.min || 1;
-        zoomMax = capacidades.zoom.max || zoomMin;
-        zoomStep = capacidades.zoom.step || 0.25;
-
-        // Samsung S24/S25 suele enfocar mejor si el teléfono queda un poco más lejos.
-        // Por eso iniciamos con zoom digital moderado cuando el navegador lo permite.
-        const zoomInicial = Math.min(Math.max(2.2, zoomMin), zoomMax);
-        zoomActual = zoomInicial;
-        restricciones.advanced.push({ zoom: zoomInicial });
+    // Sin botones ni cartel: usamos zoom interno moderado solo para que el S24/S25 pueda leer
+    // sosteniendo el producto más lejos, donde la cámara sí enfoca mejor.
+    if (capacidades.zoom && typeof capacidades.zoom === "object") {
+        const min = capacidades.zoom.min || 1;
+        const max = capacidades.zoom.max || min;
+        const zoomOculto = Math.min(Math.max(1.7, min), Math.min(max, 2.1));
+        advanced.push({ zoom: zoomOculto });
     }
 
-    if (restricciones.advanced.length > 0) {
-        try {
-            await trackActual.applyConstraints(restricciones);
-        } catch (error) {
-            console.warn("No se pudieron aplicar mejoras de cámara:", error);
-        }
+    if (!advanced.length) return;
+
+    try {
+        await trackActual.applyConstraints({ advanced });
+    } catch (error) {
+        console.warn("No se pudieron aplicar mejoras automáticas de cámara:", error);
     }
 }
 
 function manejarResultado(resultado, callbackCodigo) {
     if (!resultado) return;
 
-    const codigo = String(resultado.text || "").trim();
+    const codigo = String(resultado.text || resultado.rawValue || "").trim();
     const ahora = Date.now();
 
     if (!codigo) return;
@@ -84,17 +94,58 @@ function manejarResultado(resultado, callbackCodigo) {
     callbackCodigo(codigo);
 }
 
+async function iniciarDetectorNativo(callbackCodigo) {
+    if (!("BarcodeDetector" in window) || !videoActual) return;
+
+    try {
+        const formatos = [
+            "ean_13",
+            "ean_8",
+            "upc_a",
+            "upc_e",
+            "code_128",
+            "code_39",
+            "itf"
+        ];
+
+        detectorNativo = new BarcodeDetector({ formats: formatos });
+        scannerDetenido = false;
+
+        const detectar = async () => {
+            if (scannerDetenido || !videoActual || videoActual.readyState < 2) {
+                loopDetectorNativo = requestAnimationFrame(detectar);
+                return;
+            }
+
+            try {
+                const codigos = await detectorNativo.detect(videoActual);
+                if (codigos && codigos.length > 0) {
+                    manejarResultado(codigos[0], callbackCodigo);
+                }
+            } catch (_) {
+                // Algunos Android fallan alguna lectura aislada. Seguimos intentando.
+            }
+
+            loopDetectorNativo = requestAnimationFrame(detectar);
+        };
+
+        detectar();
+    } catch (error) {
+        console.warn("Detector nativo no disponible:", error);
+        detectorNativo = null;
+    }
+}
+
 async function iniciarConStreamManual(videoId, callbackCodigo) {
     const video = document.getElementById(videoId);
     if (!video) throw new Error("No se encontró el elemento de video");
 
-    // Pedimos cámara trasera, resolución alta y dejamos margen para que el celular pueda elegir la mejor cámara.
     const constraints = {
         audio: false,
         video: {
             facingMode: { ideal: "environment" },
-            width: { ideal: 1920, min: 640 },
-            height: { ideal: 1080, min: 480 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
             frameRate: { ideal: 30, max: 60 }
         }
     };
@@ -109,6 +160,10 @@ async function iniciarConStreamManual(videoId, callbackCodigo) {
     await video.play();
 
     await aplicarOptimizacionCamara();
+
+    // En Android moderno, BarcodeDetector suele enfocar/leer mejor que ZXing.
+    // Lo dejamos activo en paralelo como primera opción invisible.
+    await iniciarDetectorNativo(callbackCodigo);
 
     lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
@@ -130,12 +185,13 @@ async function iniciarConFallbackZXing(videoId, callbackCodigo) {
         {
             video: {
                 facingMode: { ideal: "environment" },
-                width: { ideal: 1920, min: 640 },
-                height: { ideal: 1080, min: 480 },
+                width: { ideal: 1920, min: 1280 },
+                height: { ideal: 1080, min: 720 },
                 frameRate: { ideal: 30, max: 60 },
                 advanced: [
                     { focusMode: "continuous" },
-                    { zoom: 2 }
+                    { exposureMode: "continuous" },
+                    { zoom: 1.7 }
                 ]
             }
         },
@@ -161,40 +217,6 @@ export async function iniciarScanner(videoId, callbackCodigo) {
     }
 
     camaraActiva = true;
-}
-
-export async function cambiarZoom(delta) {
-    if (!trackActual || zoomActual === null || !trackActual.applyConstraints) return null;
-
-    const nuevoZoom = Math.min(zoomMax, Math.max(zoomMin, zoomActual + delta));
-    zoomActual = Math.round(nuevoZoom / zoomStep) * zoomStep;
-    zoomActual = Math.min(zoomMax, Math.max(zoomMin, zoomActual));
-
-    try {
-        await trackActual.applyConstraints({ advanced: [{ zoom: zoomActual }] });
-        return zoomActual;
-    } catch (error) {
-        console.warn("No se pudo cambiar el zoom:", error);
-        return null;
-    }
-}
-
-export async function aumentarZoom() {
-    return cambiarZoom(zoomStep || 0.25);
-}
-
-export async function disminuirZoom() {
-    return cambiarZoom(-(zoomStep || 0.25));
-}
-
-export function obtenerInfoZoom() {
-    return {
-        soportado: zoomActual !== null,
-        zoom: zoomActual,
-        min: zoomMin,
-        max: zoomMax,
-        step: zoomStep
-    };
 }
 
 export function detenerScanner() {
