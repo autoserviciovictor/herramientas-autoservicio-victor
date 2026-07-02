@@ -13,12 +13,15 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=2111cam";
+} from "./excel.js?v=211";
 
 import {
     iniciarScanner,
-    detenerScanner
-} from "./scanner.js?v=2111cam";
+    detenerScanner,
+    aumentarZoom,
+    disminuirZoom,
+    obtenerInfoZoom
+} from "./scanner.js?v=212";
 
 import {
     ocultarSplash,
@@ -43,7 +46,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=2111cam";
+} from "./ui.js?v=211";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -60,7 +63,6 @@ const $ = (id) => document.getElementById(id);
 
 const elementos = {
     btnActualizarProductos: $("btnActualizarProductos"),
-    btnActivarCamara: $("btnActivarCamara"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
     btnGuardarCantidad: $("btnGuardarCantidad"),
@@ -81,7 +83,10 @@ const elementos = {
     btnMasSalon: $("btnMasSalon"),
     btnMenosDeposito: $("btnMenosDeposito"),
     btnMasDeposito: $("btnMasDeposito"),
-    btnGuardarCorreccion: $("btnGuardarCorreccion")
+    btnGuardarCorreccion: $("btnGuardarCorreccion"),
+    btnZoomMenos: $("btnZoomMenos"),
+    btnZoomMas: $("btnZoomMas"),
+    zoomTexto: $("zoomTexto")
 };
 
 inicializar();
@@ -113,9 +118,6 @@ function configurarEventos() {
     });
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
-    if (elementos.btnActivarCamara) {
-        elementos.btnActivarCamara.addEventListener("click", iniciarCamaraSiCorresponde);
-    }
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
 
@@ -147,6 +149,34 @@ function configurarEventos() {
     elementos.btnMenosDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, -1, 0, actualizarTotalEditor));
     elementos.btnMasDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, 1, 0, actualizarTotalEditor));
     elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
+
+    if (elementos.btnZoomMas) {
+        elementos.btnZoomMas.addEventListener("click", async () => {
+            const zoom = await aumentarZoom();
+            actualizarTextoZoom(zoom);
+        });
+    }
+
+    if (elementos.btnZoomMenos) {
+        elementos.btnZoomMenos.addEventListener("click", async () => {
+            const zoom = await disminuirZoom();
+            actualizarTextoZoom(zoom);
+        });
+    }
+}
+
+function actualizarTextoZoom(valor = null) {
+    if (!elementos.zoomTexto) return;
+
+    const info = obtenerInfoZoom();
+
+    if (!info.soportado && valor === null) {
+        elementos.zoomTexto.textContent = "Zoom auto";
+        return;
+    }
+
+    const zoom = valor || info.zoom || 1;
+    elementos.zoomTexto.textContent = `${zoom.toFixed(1)}x`;
 }
 
 async function cargarProductos() {
@@ -196,6 +226,7 @@ async function iniciarCamaraSiCorresponde() {
         await iniciarScanner("video", manejarCodigoEscaneado);
         scannerActivo = true;
         actualizarEstadoCamara(true);
+        actualizarTextoZoom();
         mostrarMensaje("Cámara activa", "ok");
     } catch (error) {
         scannerActivo = false;

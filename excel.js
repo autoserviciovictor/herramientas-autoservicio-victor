@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=2111cam";
+import { API_BASE_URL } from "./config.js?v=211";
 
 let datos = [];
 let contador = 0;

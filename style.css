@@ -151,26 +151,6 @@ video { width: 100%; height: 100%; object-fit: cover; }
     text-shadow: 0 2px 6px rgba(0,0,0,.5);
 }
 .modo-cantidad .camera-overlay strong { display: none; }
-
-.camera-start-btn {
-    position: absolute;
-    left: 50%;
-    bottom: 14px;
-    transform: translateX(-50%);
-    border: 0;
-    border-radius: 999px;
-    padding: 9px 16px;
-    background: rgba(255,255,255,.92);
-    color: var(--text);
-    font-weight: 900;
-    font-size: 13px;
-    box-shadow: 0 8px 18px rgba(0,0,0,.25);
-    pointer-events: auto;
-    cursor: pointer;
-}
-.camera-start-btn.oculto { display: none; }
-.modo-cantidad .camera-start-btn { display: none; }
-
 @keyframes scanMove { 0%,100%{ transform: translateY(-24px); opacity:.55;} 50%{ transform: translateY(24px); opacity:1;} }
 .corner { position: absolute; width: 28px; height: 28px; border-color: rgba(255,255,255,.85); }
 .corner-tl { top: 35px; left: 35px; border-top: 3px solid; border-left: 3px solid; }
@@ -362,4 +342,38 @@ video { width: 100%; height: 100%; object-fit: cover; }
     .camera-card { height: 130px; }
     .modo-cantidad .camera-card { height: 86px; }
     .quantity-control { grid-template-columns: 52px 1fr 52px; }
+}
+
+.zoom-controls {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.zoom-controls button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.zoom-controls span {
+    min-width: 58px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text);
 }

@@ -1,1 +1,21 @@
-2.1.1-camara-fix
+Inventario Victor V2.1.1
+
+Base: versión que ya guarda automáticamente en Google Sheets.
+
+Objetivo de esta versión:
+- Preparada para trabajar desde varios celulares.
+- Sincronización automática cada 15 segundos.
+- Al escanear, el producto se refresca desde Google Sheets antes de contar.
+- Después de guardar o corregir, la app sincroniza en segundo plano.
+- Nueva ruta GET /producto/:codigo.
+- Servidor con cola por código para evitar que dos dispositivos pisen el mismo producto al guardar al mismo tiempo.
+
+Servidor Render:
+https://inventario-victor-api.onrender.com
+
+
+V2.1.1 S25 Focus Fix
+- Cámara optimizada para Samsung S24/S25.
+- Autofocus continuo cuando está disponible.
+- Zoom inicial automático y botones de zoom manual.
+- ZXing fijado en versión estable.
