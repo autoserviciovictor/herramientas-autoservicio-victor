@@ -77,3 +77,17 @@ La hoja de Google Sheets debe estar compartida con el email de la cuenta de serv
 - El servidor actualiza salón o depósito.
 - El servidor recalcula stock = salon + deposito.
 - La descarga genera un Excel listo para importar.
+
+
+## V2.0.1
+
+API configurada en config.js:
+https://inventario-victor-api.onrender.com
+
+Antes de usar, cargar en Render las variables:
+- SPREADSHEET_ID
+- GOOGLE_CLIENT_EMAIL
+- GOOGLE_PRIVATE_KEY
+
+Probar primero:
+https://inventario-victor-api.onrender.com/productos

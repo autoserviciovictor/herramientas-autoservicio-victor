@@ -1,6 +1,6 @@
-Inventario Victor V2.0
+Inventario Victor V2.0.1
 
-Cambio principal:
-- Eliminado uso de Excel local.
-- Conexión con servidor Render.
-- Guardado directo en Google Sheets.
+Servidor Render configurado:
+https://inventario-victor-api.onrender.com
+
+La app queda preparada para cargar productos desde Google Sheets con GET /productos.
