@@ -8,6 +8,7 @@ let videoActual = null;
 let detectorNativo = null;
 let loopDetectorNativo = null;
 let scannerDetenido = true;
+let lecturaPausada = false;
 
 function limpiarLecturaDuplicada() {
     ultimoCodigoLeido = "";
@@ -78,6 +79,7 @@ async function aplicarOptimizacionCamara() {
 }
 
 function manejarResultado(resultado, callbackCodigo) {
+    if (lecturaPausada) return;
     if (!resultado) return;
 
     const codigo = String(resultado.text || resultado.rawValue || "").trim();
@@ -91,6 +93,10 @@ function manejarResultado(resultado, callbackCodigo) {
 
     ultimoCodigoLeido = codigo;
     tiempoUltimaLectura = ahora;
+
+    // Pausa inmediata dentro del scanner para evitar doble lectura
+    // antes de que la app muestre la cantidad.
+    lecturaPausada = true;
     callbackCodigo(codigo);
 }
 
@@ -204,6 +210,7 @@ export async function iniciarScanner(videoId, callbackCodigo) {
     if (camaraActiva) return;
 
     limpiarLecturaDuplicada();
+    lecturaPausada = false;
 
     try {
         await iniciarConStreamManual(videoId, callbackCodigo);
@@ -225,5 +232,16 @@ export function detenerScanner() {
     lectorCodigo = null;
     detenerStreamActual();
     camaraActiva = false;
+    lecturaPausada = false;
     limpiarLecturaDuplicada();
 }
+
+export function pausarLecturaScanner() {
+    lecturaPausada = true;
+}
+
+export function reanudarLecturaScanner() {
+    lecturaPausada = false;
+    limpiarLecturaDuplicada();
+}
+

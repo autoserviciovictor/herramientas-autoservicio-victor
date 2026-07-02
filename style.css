@@ -8,6 +8,8 @@
     --primary-soft: #e7f0e6;
     --danger: #c96b5d;
     --danger-soft: #f8e8e5;
+    --brand-red: #d9857c;
+    --brand-red-dark: #7f322d;
     --blue: #6289a7;
     --blue-soft: #e4edf4;
     --border: #e5e1d8;
@@ -64,8 +66,23 @@ button { -webkit-tap-highlight-color: transparent; }
     padding-bottom: 84px;
 }
 
-.pantalla { display: none; padding: 18px 16px 0; }
+.pantalla { display: none; padding: 12px 16px 0; }
 .pantalla.activa { display: block; }
+
+.top-brand {
+    margin: 12px 16px 10px;
+    padding: 13px 16px;
+    border: 2px solid rgba(127, 50, 45, .22);
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f0b0a8, var(--brand-red));
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: .2px;
+    box-shadow: 0 8px 18px rgba(127, 50, 45, .14);
+}
+
 
 .header-app, .header-simple, .header-edit {
     display: flex;
@@ -129,17 +146,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .modo-cantidad .camera-card { height: 92px; }
 video { width: 100%; height: 100%; object-fit: cover; }
 .camera-overlay { position: absolute; inset: 0; pointer-events: none; }
-.camera-overlay span {
-    position: absolute;
-    top: 10px;
-    left: 12px;
-    background: rgba(255,255,255,.88);
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-size: 12px;
-    color: var(--text);
-    font-weight: bold;
-}
+.camera-overlay span { display: none; }
 .camera-overlay strong {
     position: absolute;
     left: 0;
@@ -244,6 +251,19 @@ video { width: 100%; height: 100%; object-fit: cover; }
     box-shadow: 0 8px 18px rgba(109, 143, 114, .26);
 }
 .save-btn:disabled { opacity: .45; cursor: not-allowed; }
+.cancel-btn {
+    width: 100%;
+    border: 0;
+    border-radius: 18px;
+    padding: 14px;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 900;
+    color: #8a3f38;
+    background: var(--danger-soft);
+    cursor: pointer;
+}
+.cancel-btn:active { transform: scale(.99); }
 
 .bottom-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; margin-bottom: 10px; }
 .bottom-info div { text-align: center; }

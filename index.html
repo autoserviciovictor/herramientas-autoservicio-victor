@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 2.1.1 S25 Estable</title>
+    <title>Inventario Victor 2.1.1 S25 Pausa Cancelar</title>
 
-    <link rel="stylesheet" href="style.css?v=215">
+    <link rel="stylesheet" href="style.css?v=217">
 
     <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
 </head>
@@ -14,10 +14,12 @@
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 2.1.1 S25 Estable</p>
+    <p>Versión 2.1.1 S25 Pausa Cancelar</p>
 </div>
 
 <div class="app">
+
+    <div class="top-brand">Autoservicio Victor</div>
 
     <main id="pantallaInventario" class="pantalla activa">
         <header class="header-app">
@@ -33,8 +35,8 @@
         <section class="camera-card" id="cameraCard">
             <video id="video" autoplay muted playsinline></video>
             <div class="camera-overlay">
-                <span id="estadoCamaraTexto">Cámara detenida</span>
-                <strong id="textoCamara">Conectando con Google Sheets...</strong>
+                <span id="estadoCamaraTexto"></span>
+                <strong id="textoCamara"></strong>
                 <div class="corner corner-tl"></div>
                 <div class="corner corner-tr"></div>
                 <div class="corner corner-bl"></div>
@@ -61,6 +63,7 @@
                 <button id="btnMasCantidad">+</button>
             </div>
             <button id="btnGuardarCantidad" class="save-btn" disabled>✔ Guardar</button>
+            <button id="btnCancelarCantidad" class="cancel-btn" type="button">Cancelar</button>
         </section>
 
         <section class="bottom-info">
@@ -172,6 +175,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=215"></script>
+<script type="module" src="./app.js?v=217"></script>
 </body>
 </html>

@@ -1,6 +1,1 @@
-Inventario Victor V2.1.1 S25 Estable
-
-- Corrige pantalla de carga trabada.
-- Mantiene Google Sheets y varios dispositivos.
-- Mejora enfoque Samsung S24/S25 sin botones ni carteles de zoom.
-- Usa ZXing fijo 0.21.3 y detector nativo cuando está disponible.
+Inventario Victor V2.1.1 S25 Pausa + Cancelar + Marco rojo
