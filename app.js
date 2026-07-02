@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=211";
+} from "./excel.js?v=215";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=213";
+} from "./scanner.js?v=215";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=211";
+} from "./ui.js?v=215";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -143,7 +143,7 @@ function configurarEventos() {
     elementos.btnMenosDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, -1, 0, actualizarTotalEditor));
     elementos.btnMasDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, 1, 0, actualizarTotalEditor));
     elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
-
+}
 
 async function cargarProductos() {
     try {

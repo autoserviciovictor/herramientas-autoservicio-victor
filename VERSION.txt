@@ -1,10 +1,6 @@
-Inventario Victor V2.1.1 - S25 Fix Sin Botones
+Inventario Victor V2.1.1 S25 Estable
 
-Cambios:
-- Se eliminaron el botón de zoom y el cartel "Zoom auto".
-- Se quitó el mensaje falso "Conectá Google Sheets" sobre la cámara cuando ya está conectada.
-- Optimización automática e invisible de cámara para Samsung S24/S25.
-- Autofocus continuo cuando el navegador lo permite.
-- Zoom interno moderado sin mostrar controles.
-- Se agregó BarcodeDetector nativo como primera lectura en Android/Chrome, con ZXing como respaldo.
-- Se mantiene Google Sheets, Render y uso multidispositivo.
+- Corrige pantalla de carga trabada.
+- Mantiene Google Sheets y varios dispositivos.
+- Mejora enfoque Samsung S24/S25 sin botones ni carteles de zoom.
+- Usa ZXing fijo 0.21.3 y detector nativo cuando está disponible.

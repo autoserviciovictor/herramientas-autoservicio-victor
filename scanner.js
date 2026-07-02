@@ -59,12 +59,12 @@ async function aplicarOptimizacionCamara() {
         advanced.push({ whiteBalanceMode: "continuous" });
     }
 
-    // Sin botones ni cartel: usamos zoom interno moderado solo para que el S24/S25 pueda leer
-    // sosteniendo el producto más lejos, donde la cámara sí enfoca mejor.
+    // Samsung S24/S25: la cámara principal no enfoca tan cerca.
+    // Se aplica zoom interno sin mostrar botones ni carteles, para leer desde más distancia.
     if (capacidades.zoom && typeof capacidades.zoom === "object") {
         const min = capacidades.zoom.min || 1;
         const max = capacidades.zoom.max || min;
-        const zoomOculto = Math.min(Math.max(1.7, min), Math.min(max, 2.1));
+        const zoomOculto = Math.min(Math.max(1.8, min), Math.min(max, 2.2));
         advanced.push({ zoom: zoomOculto });
     }
 
@@ -98,21 +98,21 @@ async function iniciarDetectorNativo(callbackCodigo) {
     if (!("BarcodeDetector" in window) || !videoActual) return;
 
     try {
-        const formatos = [
-            "ean_13",
-            "ean_8",
-            "upc_a",
-            "upc_e",
-            "code_128",
-            "code_39",
-            "itf"
-        ];
+        let formatos = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf"];
+
+        if (typeof BarcodeDetector.getSupportedFormats === "function") {
+            const soportados = await BarcodeDetector.getSupportedFormats();
+            formatos = formatos.filter(f => soportados.includes(f));
+            if (!formatos.length) return;
+        }
 
         detectorNativo = new BarcodeDetector({ formats: formatos });
         scannerDetenido = false;
 
         const detectar = async () => {
-            if (scannerDetenido || !videoActual || videoActual.readyState < 2) {
+            if (scannerDetenido) return;
+
+            if (!videoActual || videoActual.readyState < 2) {
                 loopDetectorNativo = requestAnimationFrame(detectar);
                 return;
             }
@@ -122,9 +122,7 @@ async function iniciarDetectorNativo(callbackCodigo) {
                 if (codigos && codigos.length > 0) {
                     manejarResultado(codigos[0], callbackCodigo);
                 }
-            } catch (_) {
-                // Algunos Android fallan alguna lectura aislada. Seguimos intentando.
-            }
+            } catch (_) {}
 
             loopDetectorNativo = requestAnimationFrame(detectar);
         };
@@ -161,10 +159,10 @@ async function iniciarConStreamManual(videoId, callbackCodigo) {
 
     await aplicarOptimizacionCamara();
 
-    // En Android moderno, BarcodeDetector suele enfocar/leer mejor que ZXing.
-    // Lo dejamos activo en paralelo como primera opción invisible.
+    // Chrome Android: el detector nativo suele leer mejor en Samsung actuales.
     await iniciarDetectorNativo(callbackCodigo);
 
+    // ZXing queda funcionando en paralelo como respaldo.
     lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
     if (typeof lectorCodigo.decodeFromVideoElement === "function") {
@@ -191,7 +189,7 @@ async function iniciarConFallbackZXing(videoId, callbackCodigo) {
                 advanced: [
                     { focusMode: "continuous" },
                     { exposureMode: "continuous" },
-                    { zoom: 1.7 }
+                    { zoom: 1.8 }
                 ]
             }
         },

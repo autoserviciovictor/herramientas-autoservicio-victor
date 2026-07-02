@@ -343,4 +343,3 @@ video { width: 100%; height: 100%; object-fit: cover; }
     .modo-cantidad .camera-card { height: 86px; }
     .quantity-control { grid-template-columns: 52px 1fr 52px; }
 }
-

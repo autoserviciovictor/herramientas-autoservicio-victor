@@ -86,7 +86,7 @@ export function actualizarEstadoExcel(cantidad) {
 
 export function actualizarEstadoCamara(activa) {
     elementos.estadoCamaraTexto.textContent = activa ? "Cámara activa" : "Cámara detenida";
-    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "Cámara lista";
+    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "Conectá Google Sheets para comenzar";
 }
 
 export function actualizarUbicacion(ubicacion) {
