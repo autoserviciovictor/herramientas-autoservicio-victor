@@ -1,3 +1,11 @@
+V2.1.1
+- Preparación para varios celulares trabajando al mismo tiempo.
+- Sincronización automática cada 15 segundos.
+- Refresco de producto por código al escanear.
+- Nueva ruta GET /producto/:codigo.
+- Cola por código en el servidor para evitar escrituras pisadas en /guardar y /corregir.
+- Se mantiene la misma interfaz de la V2.0.
+
 V2.0
 - Migración completa a Google Sheets mediante servidor Node.js en Render.
 - Nueva configuración API_BASE_URL en config.js.

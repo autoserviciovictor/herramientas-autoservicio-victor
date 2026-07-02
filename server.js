@@ -23,6 +23,34 @@ const auth = new google.auth.JWT(
 
 const sheets = google.sheets({ version: "v4", auth });
 
+// V2.1.1: cola simple por código para soportar varios celulares sin pisar escrituras.
+// Si dos dispositivos guardan el mismo producto al mismo tiempo, el segundo espera
+// a que el primero termine y luego vuelve a leer el valor actualizado.
+const colasPorCodigo = new Map();
+
+async function ejecutarEnCola(codigo, tarea) {
+  const clave = normalizarCodigo(codigo);
+  const colaAnterior = colasPorCodigo.get(clave) || Promise.resolve();
+
+  let liberar;
+  const colaActual = new Promise(resolve => { liberar = resolve; });
+  const colaEncadenada = colaAnterior.catch(() => {}).then(() => colaActual);
+  colasPorCodigo.set(clave, colaEncadenada);
+
+  try {
+    await colaAnterior.catch(() => {});
+    return await tarea();
+  } finally {
+    liberar();
+    setTimeout(() => {
+      if (colasPorCodigo.get(clave) === colaEncadenada) {
+        colasPorCodigo.delete(clave);
+      }
+    }, 100);
+  }
+}
+
+
 function normalizarTexto(valor) {
   return String(valor ?? "").trim();
 }
@@ -107,7 +135,7 @@ async function actualizarProducto(producto) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Inventario Victor V2.0 funcionando");
+  res.send("Servidor Inventario Victor V2.1.1 funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -117,6 +145,21 @@ app.get("/productos", async (req, res) => {
   } catch (error) {
     console.error("Error en /productos:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener productos" });
+  }
+});
+
+app.get("/producto/:codigo", async (req, res) => {
+  try {
+    const producto = await buscarProductoPorCodigo(req.params.codigo);
+
+    if (!producto) {
+      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
+    }
+
+    res.json({ ok: true, producto });
+  } catch (error) {
+    console.error("Error en /producto/:codigo:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener producto" });
   }
 });
 
@@ -138,24 +181,28 @@ app.post("/guardar", async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "La cantidad debe ser mayor a 0" });
     }
 
-    const producto = await buscarProductoPorCodigo(codigoBuscado);
+    const productoActualizado = await ejecutarEnCola(codigoBuscado, async () => {
+      const producto = await buscarProductoPorCodigo(codigoBuscado);
 
-    if (!producto) {
-      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
-    }
+      if (!producto) {
+        const error = new Error("Producto no encontrado");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    if (ubicacion === "deposito") {
-      producto.deposito = numero(producto.deposito) + cantidadNumerica;
-    } else {
-      producto.salon = numero(producto.salon) + cantidadNumerica;
-    }
+      if (ubicacion === "deposito") {
+        producto.deposito = numero(producto.deposito) + cantidadNumerica;
+      } else {
+        producto.salon = numero(producto.salon) + cantidadNumerica;
+      }
 
-    const productoActualizado = await actualizarProducto(producto);
+      return await actualizarProducto(producto);
+    });
 
     res.json({ ok: true, mensaje: "Producto guardado", producto: productoActualizado });
   } catch (error) {
     console.error("Error en /guardar:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al guardar producto" });
+    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al guardar producto" });
   }
 });
 
@@ -168,21 +215,25 @@ app.post("/corregir", async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "Falta el código" });
     }
 
-    const producto = await buscarProductoPorCodigo(codigoBuscado);
+    const productoActualizado = await ejecutarEnCola(codigoBuscado, async () => {
+      const producto = await buscarProductoPorCodigo(codigoBuscado);
 
-    if (!producto) {
-      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
-    }
+      if (!producto) {
+        const error = new Error("Producto no encontrado");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    producto.salon = numero(salon);
-    producto.deposito = numero(deposito);
+      producto.salon = numero(salon);
+      producto.deposito = numero(deposito);
 
-    const productoActualizado = await actualizarProducto(producto);
+      return await actualizarProducto(producto);
+    });
 
     res.json({ ok: true, mensaje: "Producto corregido", producto: productoActualizado });
   } catch (error) {
     console.error("Error en /corregir:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al corregir producto" });
+    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al corregir producto" });
   }
 });
 
@@ -245,5 +296,5 @@ app.post("/reiniciar", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor Inventario Victor V2.0 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Inventario Victor V2.1.1 funcionando en puerto ${PORT}`);
 });

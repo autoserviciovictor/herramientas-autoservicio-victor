@@ -1,5 +1,7 @@
 import {
     cargarProductosDesdeServidor,
+    sincronizarProductosDesdeServidor,
+    obtenerProductoActualizadoPorCodigo,
     descargarExcel,
     buscarProductoPorCodigo,
     buscarProductosPorTexto,
@@ -11,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=200";
+} from "./excel.js?v=211";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=200";
+} from "./scanner.js?v=211";
 
 import {
     ocultarSplash,
@@ -41,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=200";
+} from "./ui.js?v=211";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -50,6 +52,9 @@ let scannerActivo = false;
 let tabProductosActual = "productos";
 let guardando = false;
 let corrigiendo = false;
+let sincronizando = false;
+let sincronizacionAutomatica = null;
+const INTERVALO_SINCRONIZACION = 15000;
 
 const $ = (id) => document.getElementById(id);
 
@@ -128,6 +133,7 @@ function configurarEventos() {
     elementos.btnVolverProductos.addEventListener("click", () => {
         cambiarPantalla("productos");
         refrescarProductos();
+        sincronizarEnSegundoPlano();
     });
 
     elementos.editarSalon.addEventListener("input", actualizarTotalEditor);
@@ -160,6 +166,7 @@ async function cargarProductos() {
 
         mostrarMensaje("Google Sheets conectado", "ok");
         reproducirConfirmacion("guardado");
+        iniciarSincronizacionAutomatica();
 
         if (!scannerActivo) await iniciarCamaraSiCorresponde();
     } catch (error) {
@@ -194,7 +201,7 @@ async function iniciarCamaraSiCorresponde() {
     }
 }
 
-function manejarCodigoEscaneado(codigo) {
+async function manejarCodigoEscaneado(codigo) {
     if (guardando) return;
 
     if (obtenerCantidadProductos() === 0) {
@@ -202,7 +209,16 @@ function manejarCodigoEscaneado(codigo) {
         return;
     }
 
-    const resultado = buscarProductoPorCodigo(codigo);
+    let resultado = buscarProductoPorCodigo(codigo);
+
+    if (resultado.encontrado) {
+        try {
+            // V2.1.1: antes de contar, trae el dato actualizado desde Google Sheets.
+            resultado = await obtenerProductoActualizadoPorCodigo(codigo);
+        } catch (error) {
+            console.warn("No se pudo refrescar el producto antes de contar:", error);
+        }
+    }
 
     if (!resultado.encontrado) {
         productoActual = null;
@@ -250,6 +266,7 @@ async function guardarCantidadActual() {
         actualizarContador(resultado.contador);
         actualizarConteosUbicacion(obtenerConteosUbicacion());
         refrescarProductos();
+        sincronizarEnSegundoPlano();
         mostrarMensaje(`Guardado: +${cantidad}`, "ok");
         reproducirConfirmacion("guardado");
 
@@ -334,6 +351,7 @@ async function guardarCorreccion() {
         productoEditando = null;
         cambiarPantalla("productos");
         refrescarProductos();
+        sincronizarEnSegundoPlano();
 
         if (productoActual && productoActual.codigo === producto.codigo) {
             productoActual = producto;
@@ -378,6 +396,46 @@ function manejarReinicio() {
     actualizarConteosUbicacion(obtenerConteosUbicacion());
     refrescarProductos();
     mostrarMensaje("Contador local reiniciado", "ok");
+}
+
+function iniciarSincronizacionAutomatica() {
+    if (sincronizacionAutomatica) return;
+
+    sincronizacionAutomatica = setInterval(() => {
+        sincronizarEnSegundoPlano();
+    }, INTERVALO_SINCRONIZACION);
+}
+
+async function sincronizarEnSegundoPlano() {
+    if (sincronizando || guardando || corrigiendo || obtenerCantidadProductos() === 0) return;
+
+    try {
+        sincronizando = true;
+        const cantidad = await sincronizarProductosDesdeServidor();
+        actualizarEstadoExcel(cantidad);
+        actualizarConteosUbicacion(obtenerConteosUbicacion());
+
+        if (productoActual) {
+            const actualizado = buscarProductoPorCodigo(productoActual.codigo);
+            if (actualizado.encontrado) {
+                productoActual = actualizado.producto;
+                mostrarProducto(productoActual);
+            }
+        }
+
+        if (productoEditando) {
+            const actualizado = buscarProductoPorCodigo(productoEditando.codigo);
+            if (actualizado.encontrado) {
+                productoEditando = actualizado.producto;
+            }
+        }
+
+        refrescarProductos();
+    } catch (error) {
+        console.warn("No se pudo sincronizar en segundo plano:", error);
+    } finally {
+        sincronizando = false;
+    }
 }
 
 window.addEventListener("beforeunload", () => {

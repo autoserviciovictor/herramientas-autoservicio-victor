@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=200";
+import { API_BASE_URL } from "./config.js?v=211";
 
 let datos = [];
 let contador = 0;
@@ -99,6 +99,21 @@ export async function cargarProductosDesdeServidor() {
     }));
 
     return datos.length;
+}
+
+export async function sincronizarProductosDesdeServidor() {
+    // V2.1.1: refresca la copia local para que varios celulares vean los cambios
+    // hechos por otros dispositivos sin tener que cerrar la app.
+    return await cargarProductosDesdeServidor();
+}
+
+export async function obtenerProductoActualizadoPorCodigo(codigoBuscado) {
+    const codigo = normalizarTexto(codigoBuscado);
+    if (!codigo) return { encontrado: false };
+
+    const data = await pedirJson(`/producto/${encodeURIComponent(codigo)}`);
+    const producto = guardarProductoLocal(data.producto);
+    return { encontrado: true, producto };
 }
 
 export function obtenerCantidadProductos() {
