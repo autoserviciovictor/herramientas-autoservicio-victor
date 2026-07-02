@@ -73,20 +73,20 @@ export function mostrarMensaje(texto, tipo = "ok") {
 
 export function actualizarEstadoExcel(cantidad) {
     totalProductos = cantidad;
-    elementos.estadoExcelTexto.textContent = cantidad ? "Excel cargado" : "Sin Excel";
+    elementos.estadoExcelTexto.textContent = cantidad ? "Google Sheets" : "Sin conexión";
     elementos.estadoConteoTexto.textContent = cantidad ? `${cantidad} productos` : "0 productos";
     if (elementos.estadoExcelAjustes) {
-        elementos.estadoExcelAjustes.textContent = cantidad ? `✅ Excel cargado: ${cantidad} productos` : "Sin Excel cargado";
+        elementos.estadoExcelAjustes.textContent = cantidad ? `✅ Google Sheets conectado: ${cantidad} productos` : "Sin conexión con Google Sheets";
         elementos.estadoExcelAjustes.classList.toggle("cargado", Boolean(cantidad));
     }
     if (elementos.textoBotonExcel) {
-        elementos.textoBotonExcel.textContent = cantidad ? "✏️ Modificar Excel" : "📄 Cargar Excel";
+        elementos.textoBotonExcel.textContent = cantidad ? "✅ Google Sheets conectado" : "Sin conexión";
     }
 }
 
 export function actualizarEstadoCamara(activa) {
     elementos.estadoCamaraTexto.textContent = activa ? "Cámara activa" : "Cámara detenida";
-    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "Cargá un Excel para comenzar";
+    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "Conectá Google Sheets para comenzar";
 }
 
 export function actualizarUbicacion(ubicacion) {
@@ -191,7 +191,7 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     const { tab = "productos", total = 0, consulta = "" } = opciones;
 
     if (!total) {
-        elementos.resumenProductos.textContent = "Cargá un Excel para ver productos.";
+        elementos.resumenProductos.textContent = "Conectá Google Sheets para ver productos.";
     } else if (tab === "cargados") {
         elementos.resumenProductos.textContent = consulta
             ? `Productos cargados que coinciden con “${consulta}”`
@@ -205,7 +205,7 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     if (!lista.length) {
         const mensaje = tab === "cargados"
             ? "Todavía no hay productos con stock cargado."
-            : "Buscá o cargá un Excel para ver productos.";
+            : "Buscá o conectá Google Sheets para ver productos.";
         elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>${mensaje}</strong><span>Tocá un producto para editar salón o depósito.</span></div>`;
         return;
     }

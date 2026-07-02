@@ -1,6 +1,9 @@
-Inventario Victor v1.4.0
-
-- Cabecera simplificada: muestra “X productos”.
-- Contadores separados por ubicación: Salón y Depósito.
-- El editor de producto se cierra al guardar cambios.
-- Ajustes muestra estado “Excel cargado” y botón “Modificar Excel”.
+V2.0
+- Migración completa a Google Sheets mediante servidor Node.js en Render.
+- Nueva configuración API_BASE_URL en config.js.
+- GET /productos para cargar productos.
+- POST /guardar para sumar salón o depósito.
+- POST /corregir para editar manualmente salón y depósito.
+- GET /descargar para generar Excel listo para importar.
+- Se mantiene la estructura: codigo, articulo, stock, salon, deposito.
+- Se conserva el diseño actual de la app.

@@ -1,5 +1,5 @@
 import {
-    cargarExcel,
+    cargarProductosDesdeServidor,
     descargarExcel,
     buscarProductoPorCodigo,
     buscarProductosPorTexto,
@@ -11,12 +11,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=140";
+} from "./excel.js?v=200";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=140";
+} from "./scanner.js?v=200";
 
 import {
     ocultarSplash,
@@ -41,18 +41,20 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=140";
+} from "./ui.js?v=200";
 
 let ubicacionActual = "salon";
 let productoActual = null;
 let productoEditando = null;
 let scannerActivo = false;
 let tabProductosActual = "productos";
+let guardando = false;
+let corrigiendo = false;
 
 const $ = (id) => document.getElementById(id);
 
 const elementos = {
-    excelFile: $("excelFile"),
+    btnActualizarProductos: $("btnActualizarProductos"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
     btnGuardarCantidad: $("btnGuardarCantidad"),
@@ -78,7 +80,7 @@ const elementos = {
 
 inicializar();
 
-function inicializar() {
+async function inicializar() {
     ocultarSplash();
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
@@ -90,7 +92,12 @@ function inicializar() {
     limpiarProducto();
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
+    configurarEventos();
 
+    await cargarProductos();
+}
+
+function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const pantalla = btn.dataset.pantalla;
@@ -99,7 +106,7 @@ function inicializar() {
         });
     });
 
-    elementos.excelFile.addEventListener("change", manejarCargaExcel);
+    elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
 
@@ -132,26 +139,33 @@ function inicializar() {
     elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
 }
 
-async function manejarCargaExcel(e) {
+async function cargarProductos() {
     try {
-        const archivo = e.target.files[0];
-        const cantidad = await cargarExcel(archivo);
-
-        actualizarEstadoExcel(cantidad);
-        actualizarContador(0);
-        actualizarConteosUbicacion(obtenerConteosUbicacion());
-        activarBotonDescargar(true);
+        activarBotonGuardar(false);
+        activarBotonDescargar(false);
         productoActual = null;
         productoEditando = null;
-        limpiarProducto("Esperando escaneo...");
+        limpiarProducto("Conectando con Google Sheets...");
         desactivarModoCantidad();
+        mostrarMensaje("Cargando productos...", "ok");
+
+        const cantidad = await cargarProductosDesdeServidor();
+
+        actualizarEstadoExcel(cantidad);
+        actualizarContador(obtenerContador());
+        actualizarConteosUbicacion(obtenerConteosUbicacion());
+        activarBotonDescargar(cantidad > 0);
+        limpiarProducto("Esperando escaneo...");
         refrescarProductos();
 
-        mostrarMensaje("Excel cargado correctamente", "ok");
+        mostrarMensaje("Google Sheets conectado", "ok");
         reproducirConfirmacion("guardado");
 
         if (!scannerActivo) await iniciarCamaraSiCorresponde();
     } catch (error) {
+        actualizarEstadoExcel(0);
+        activarBotonDescargar(false);
+        limpiarProducto("Error de conexión");
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
         console.error(error);
@@ -175,14 +189,16 @@ async function iniciarCamaraSiCorresponde() {
     } catch (error) {
         scannerActivo = false;
         actualizarEstadoCamara(false);
-            mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
+        mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
         console.error(error);
     }
 }
 
 function manejarCodigoEscaneado(codigo) {
+    if (guardando) return;
+
     if (obtenerCantidadProductos() === 0) {
-        mostrarMensaje("Primero cargá el Excel", "error");
+        mostrarMensaje("Primero conectá Google Sheets", "error");
         return;
     }
 
@@ -207,8 +223,10 @@ function manejarCodigoEscaneado(codigo) {
     reproducirConfirmacion("ok");
 }
 
-function guardarCantidadActual() {
+async function guardarCantidadActual() {
     try {
+        if (guardando) return;
+
         if (!productoActual) {
             mostrarMensaje("Primero escaneá un producto", "error");
             reproducirConfirmacion("error");
@@ -223,7 +241,12 @@ function guardarCantidadActual() {
             return;
         }
 
-        const resultado = guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
+        guardando = true;
+        activarBotonGuardar(false);
+        mostrarMensaje("Guardando en Google Sheets...", "ok");
+
+        const resultado = await guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
+
         actualizarContador(resultado.contador);
         actualizarConteosUbicacion(obtenerConteosUbicacion());
         refrescarProductos();
@@ -231,7 +254,6 @@ function guardarCantidadActual() {
         reproducirConfirmacion("guardado");
 
         productoActual = null;
-        activarBotonGuardar(false);
         elementos.cantidadInput.value = 1;
 
         setTimeout(() => {
@@ -239,8 +261,11 @@ function guardarCantidadActual() {
             desactivarModoCantidad();
         }, 350);
     } catch (error) {
+        activarBotonGuardar(Boolean(productoActual));
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
+    } finally {
+        guardando = false;
     }
 }
 
@@ -290,20 +315,27 @@ function seleccionarProductoParaEditar(producto) {
     mostrarEditorStock(producto);
 }
 
-function guardarCorreccion() {
+async function guardarCorreccion() {
     try {
+        if (corrigiendo) return;
+
         if (!productoEditando) {
             mostrarMensaje("Seleccioná un producto", "error");
             return;
         }
 
+        corrigiendo = true;
+        elementos.btnGuardarCorreccion.disabled = true;
+        mostrarMensaje("Guardando corrección...", "ok");
+
         const valores = obtenerValoresEditor();
-        const producto = modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
+        const producto = await modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
+
         productoEditando = null;
         cambiarPantalla("productos");
         refrescarProductos();
 
-        if (productoActual && productoActual.indice === producto.indice) {
+        if (productoActual && productoActual.codigo === producto.codigo) {
             productoActual = producto;
             mostrarProducto(producto);
         }
@@ -313,13 +345,16 @@ function guardarCorreccion() {
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
+    } finally {
+        corrigiendo = false;
+        elementos.btnGuardarCorreccion.disabled = false;
     }
 }
 
 function manejarDescargaExcel() {
     try {
         descargarExcel();
-        mostrarMensaje("Excel descargado", "ok");
+        mostrarMensaje("Descargando Excel", "ok");
         reproducirConfirmacion("guardado");
     } catch (error) {
         mostrarMensaje(error.message, "error");
@@ -335,14 +370,14 @@ function actualizarPreferenciasFeedback() {
 }
 
 function manejarReinicio() {
-    const confirmar = confirm("¿Querés reiniciar el contador de productos contados?");
+    const confirmar = confirm("¿Querés reiniciar los contadores locales de esta app?");
     if (!confirmar) return;
 
     const nuevoContador = reiniciarContador();
     actualizarContador(nuevoContador);
     actualizarConteosUbicacion(obtenerConteosUbicacion());
     refrescarProductos();
-    mostrarMensaje("Conteo reiniciado", "ok");
+    mostrarMensaje("Contador local reiniciado", "ok");
 }
 
 window.addEventListener("beforeunload", () => {

@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 1.4</title>
+    <title>Inventario Victor 2.0</title>
 
-    <link rel="stylesheet" href="style.css?v=140">
+    <link rel="stylesheet" href="style.css?v=200">
 
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
@@ -15,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 1.4</p>
+    <p>Versión 2.0</p>
 </div>
 
 <div class="app">
@@ -25,7 +24,7 @@
             <div>
                 <h1>Inventario Victor</h1>
                 <div class="status-line">
-                    <span id="estadoExcelTexto">Sin Excel</span>
+                    <span id="estadoExcelTexto">Conectando...</span>
                     <span id="estadoConteoTexto">0 productos</span>
                 </div>
             </div>
@@ -35,7 +34,7 @@
             <video id="video" autoplay muted playsinline></video>
             <div class="camera-overlay">
                 <span id="estadoCamaraTexto">Cámara detenida</span>
-                <strong id="textoCamara">Apuntá al código de barras</strong>
+                <strong id="textoCamara">Conectando con Google Sheets...</strong>
                 <div class="corner corner-tl"></div>
                 <div class="corner corner-tr"></div>
                 <div class="corner corner-bl"></div>
@@ -85,7 +84,7 @@
             <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
         </section>
 
-        <p id="resumenProductos" class="list-summary">Cargá un Excel para ver productos.</p>
+        <p id="resumenProductos" class="list-summary">Conectá Google Sheets para ver productos.</p>
         <section id="resultadoBusqueda" class="result-list"></section>
     </main>
 
@@ -134,9 +133,9 @@
         </header>
 
         <section class="settings-card">
-            <div id="estadoExcelAjustes" class="excel-status-card">Sin Excel cargado</div>
-            <label class="setting-file"><span id="textoBotonExcel">📄 Cargar Excel</span><input type="file" id="excelFile" accept=".xlsx,.xls"></label>
-            <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel actualizado</button>
+            <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
+            <button id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
+            <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel para importar</button>
         </section>
 
         <section class="settings-card">
@@ -159,8 +158,8 @@
         </section>
 
         <section class="settings-card danger-zone">
-            <button id="btnReiniciar" class="danger-btn">🔄 Reiniciar conteo de la app</button>
-            <p>No borra el Excel original. Solo reinicia el contador de productos contados.</p>
+            <button id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
+            <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
         </section>
     </main>
 
@@ -173,6 +172,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=140"></script>
+<script type="module" src="./app.js?v=200"></script>
 </body>
 </html>

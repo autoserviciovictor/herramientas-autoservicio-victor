@@ -1,15 +1,79 @@
-# Inventario Victor v1.4.0
+# Inventario Victor V2.0
 
-Versión con correcciones solicitadas:
+Aplicación web para inventario del Autoservicio Victor usando celular como lector de códigos de barras.
 
-- La cabecera muestra solo la cantidad total de productos del Excel.
-- Se eliminó el formato 1 / total en la cabecera.
-- En la pantalla Inventario se muestran contadores separados para Salón y Depósito.
-- Al guardar una corrección manual, el editor se cierra y vuelve a Productos.
-- En Ajustes, cuando hay Excel cargado, se muestra “Excel cargado” y el botón pasa a “Modificar Excel”.
+## Cambio principal de V2.0
 
-## Publicación
+Esta versión ya no trabaja con Excel local.
 
-Subir todos los archivos del ZIP a GitHub Pages y abrir la app con:
+Ahora funciona así:
 
-?v=140
+Celular → GitHub Pages → Servidor Render → Google Sheets
+
+## Google Sheets
+
+Planilla: Inventario Victor  
+Hoja: Stock
+
+Las columnas deben quedar exactamente así:
+
+codigo | articulo | stock | salon | deposito
+
+No cambiar el orden.
+
+## Frontend
+
+Archivos principales:
+
+- index.html
+- style.css
+- app.js
+- excel.js
+- scanner.js
+- ui.js
+- config.js
+
+Antes de subir a GitHub Pages, abrir `config.js` y cambiar:
+
+```js
+export const API_BASE_URL = "https://TU-SERVIDOR-RENDER.onrender.com";
+```
+
+por la URL real del servidor de Render.
+
+## Servidor Render
+
+La carpeta `servidor-render` contiene el backend Node.js.
+
+Archivos:
+
+- server.js
+- package.json
+- .env.example
+
+Variables de entorno necesarias en Render:
+
+```env
+SPREADSHEET_ID=ID_DE_LA_PLANILLA
+GOOGLE_CLIENT_EMAIL=EMAIL_DE_LA_CUENTA_DE_SERVICIO
+GOOGLE_PRIVATE_KEY=CLAVE_PRIVADA_DE_LA_CUENTA_DE_SERVICIO
+```
+
+La hoja de Google Sheets debe estar compartida con el email de la cuenta de servicio.
+
+## Rutas del servidor
+
+- GET `/productos`
+- POST `/guardar`
+- POST `/corregir`
+- GET `/descargar`
+- POST `/reiniciar`
+
+## Funcionamiento
+
+- La app carga productos desde Google Sheets.
+- Al escanear, busca el código en la lista descargada.
+- Al guardar, envía el dato al servidor.
+- El servidor actualiza salón o depósito.
+- El servidor recalcula stock = salon + deposito.
+- La descarga genera un Excel listo para importar.

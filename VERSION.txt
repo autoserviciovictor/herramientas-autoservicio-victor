@@ -1,1 +1,6 @@
-Inventario Victor v1.4.0
+Inventario Victor V2.0
+
+Cambio principal:
+- Eliminado uso de Excel local.
+- Conexión con servidor Render.
+- Guardado directo en Google Sheets.
