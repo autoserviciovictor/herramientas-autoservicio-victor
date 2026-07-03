@@ -1,3 +1,15 @@
+# Inventario Victor V3.0.2 S25 Camera Fix
+
+Versión basada en la V3 estable.
+
+Cambios principales:
+- Selección automática de cámara trasera principal por deviceId.
+- Mejora interna de autofocus continuo para Samsung S25.
+- Zoom interno suave sin botones ni carteles.
+- Mantiene diseño V3, Google Sheets, carga manual y cierre de escáner.
+
+Abrir con: `?v=302-s25-camera`
+
 # Inventario Victor V3.0 estable
 
 Aplicación web para inventario del Autoservicio Victor con celular como lector de códigos de barras.

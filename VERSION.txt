@@ -1,14 +1,1 @@
-Inventario Victor V3.0 estable
-
-Base: versión que ya guarda automáticamente en Google Sheets.
-
-Objetivo de esta versión:
-- Preparada para trabajar desde varios celulares.
-- Sincronización automática cada 15 segundos.
-- Al escanear, el producto se refresca desde Google Sheets antes de contar.
-- Después de guardar o corregir, la app sincroniza en segundo plano.
-- Nueva ruta GET /producto/:codigo.
-- Servidor con cola por código para evitar que dos dispositivos pisen el mismo producto al guardar al mismo tiempo.
-
-Servidor Render:
-https://inventario-victor-api.onrender.com
+Inventario Victor V3.0.2 S25 Camera Fix

@@ -18,7 +18,7 @@ import {
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=300-estable";
+} from "./scanner.js?v=302-camara-s25";
 
 import {
     ocultarSplash,
