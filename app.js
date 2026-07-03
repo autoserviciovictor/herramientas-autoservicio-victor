@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=301";
+} from "./excel.js?v=302";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=301";
+} from "./scanner.js?v=302";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=301";
+} from "./ui.js?v=302";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -61,6 +61,8 @@ const $ = (id) => document.getElementById(id);
 const elementos = {
     btnActualizarProductos: $("btnActualizarProductos"),
     btnAbrirCamara: $("btnAbrirCamara"),
+    btnCerrarCamara: $("btnCerrarCamara"),
+    btnCodigoManual: $("btnCodigoManual"),
     btnCancelarEscaneo: $("btnCancelarEscaneo"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
@@ -120,6 +122,8 @@ function configurarEventos() {
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
     elementos.btnAbrirCamara.addEventListener("click", iniciarCamaraManual);
+    elementos.btnCerrarCamara.addEventListener("click", cerrarCamaraManual);
+    elementos.btnCodigoManual.addEventListener("click", cargarCodigoManual);
     elementos.btnCancelarEscaneo.addEventListener("click", cancelarEscaneoActual);
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
@@ -207,6 +211,25 @@ async function iniciarCamaraManual() {
         mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
         console.error(error);
     }
+}
+
+function cerrarCamaraManual() {
+    if (scannerActivo) {
+        detenerScanner();
+        scannerActivo = false;
+    }
+
+    actualizarEstadoCamara(false);
+    mostrarMensaje("Escáner cerrado", "ok");
+}
+
+async function cargarCodigoManual() {
+    const codigo = prompt("Ingresá el código de barras:");
+    const codigoLimpio = String(codigo || "").trim();
+
+    if (!codigoLimpio) return;
+
+    await manejarCodigoEscaneado(codigoLimpio);
 }
 
 async function manejarCodigoEscaneado(codigo) {

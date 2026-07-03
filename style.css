@@ -187,3 +187,63 @@ button { cursor: pointer; border: 0; }
     .stock-row { gap: 8px; }
     .quantity-control { grid-template-columns: 56px 1fr 56px; gap: 10px; }
 }
+
+/* V3.0.1 - Escáner con cierre y carga manual */
+.camera-card {
+    height: 235px;
+}
+
+.camera-topbar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: auto;
+}
+
+.camera-topbar span {
+    background: rgba(0, 0, 0, .48);
+    color: #fff;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 900;
+    backdrop-filter: blur(6px);
+}
+
+.camera-topbar button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    color: #222;
+    font-size: 20px;
+    font-weight: 900;
+    box-shadow: 0 5px 14px rgba(0,0,0,.18);
+}
+
+.manual-code-btn {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    z-index: 5;
+    min-height: 44px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .94);
+    color: var(--text);
+    font-weight: 900;
+    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    backdrop-filter: blur(6px);
+}
+
+.camera-overlay strong {
+    margin-top: 18px;
+}
+
+.corner-tl, .corner-tr { top: 66px; }
+.corner-bl, .corner-br { bottom: 66px; }

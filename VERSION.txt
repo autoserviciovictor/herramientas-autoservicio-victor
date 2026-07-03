@@ -1,2 +1,2 @@
-Inventario Victor V3.0 S25
-Base visual V3.0 + scanner estable Samsung S25 de V2.1.1
+Inventario Victor V3.0.1
+Diseño V3.0 + escáner Samsung S25 + cerrar escáner + carga manual

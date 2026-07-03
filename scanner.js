@@ -9,6 +9,7 @@ let detectorNativo = null;
 let loopDetectorNativo = null;
 let scannerDetenido = true;
 let lecturaPausada = false;
+let intervaloEnfoque = null;
 
 function limpiarLecturaDuplicada() {
     ultimoCodigoLeido = "";
@@ -25,6 +26,11 @@ function detenerLoopNativo() {
 
 function detenerStreamActual() {
     detenerLoopNativo();
+
+    if (intervaloEnfoque) {
+        clearInterval(intervaloEnfoque);
+        intervaloEnfoque = null;
+    }
 
     if (streamActual) {
         streamActual.getTracks().forEach(track => track.stop());
@@ -60,12 +66,13 @@ async function aplicarOptimizacionCamara() {
         advanced.push({ whiteBalanceMode: "continuous" });
     }
 
-    // Samsung S24/S25: la cámara principal no enfoca tan cerca.
-    // Se aplica zoom interno sin mostrar botones ni carteles, para leer desde más distancia.
+    // Samsung S24/S25: se usa zoom interno oculto para obligar a leer desde más distancia,
+    // donde la cámara principal enfoca mejor. No se muestra ningún botón ni cartel de zoom.
     if (capacidades.zoom && typeof capacidades.zoom === "object") {
         const min = capacidades.zoom.min || 1;
         const max = capacidades.zoom.max || min;
-        const zoomOculto = Math.min(Math.max(1.8, min), Math.min(max, 2.2));
+        const zoomIdeal = 2.15;
+        const zoomOculto = Math.min(Math.max(zoomIdeal, min), Math.min(max, 2.6));
         advanced.push({ zoom: zoomOculto });
     }
 
@@ -76,6 +83,15 @@ async function aplicarOptimizacionCamara() {
     } catch (error) {
         console.warn("No se pudieron aplicar mejoras automáticas de cámara:", error);
     }
+}
+
+function mantenerEnfoqueActivo() {
+    if (intervaloEnfoque) clearInterval(intervaloEnfoque);
+
+    intervaloEnfoque = setInterval(async () => {
+        if (!camaraActiva || !trackActual || lecturaPausada) return;
+        await aplicarOptimizacionCamara();
+    }, 1400);
 }
 
 function manejarResultado(resultado, callbackCodigo) {
@@ -164,6 +180,7 @@ async function iniciarConStreamManual(videoId, callbackCodigo) {
     await video.play();
 
     await aplicarOptimizacionCamara();
+    mantenerEnfoqueActivo();
 
     // Chrome Android: el detector nativo suele leer mejor en Samsung actuales.
     await iniciarDetectorNativo(callbackCodigo);
@@ -204,6 +221,9 @@ async function iniciarConFallbackZXing(videoId, callbackCodigo) {
             manejarResultado(resultado, callbackCodigo);
         }
     );
+
+    trackActual = document.getElementById(videoId)?.srcObject?.getVideoTracks?.()[0] || trackActual;
+    await aplicarOptimizacionCamara();
 }
 
 export async function iniciarScanner(videoId, callbackCodigo) {
@@ -222,6 +242,7 @@ export async function iniciarScanner(videoId, callbackCodigo) {
     }
 
     camaraActiva = true;
+    mantenerEnfoqueActivo();
 }
 
 export function detenerScanner() {

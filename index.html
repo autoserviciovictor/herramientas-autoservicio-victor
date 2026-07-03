@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 3.0 S25</title>
+    <title>Inventario Victor 3.0.1</title>
 
-    <link rel="stylesheet" href="style.css?v=301">
+    <link rel="stylesheet" href="style.css?v=302">
     <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
 </head>
 <body>
@@ -13,7 +13,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 3.0 S25</p>
+    <p>Versión 3.0.1</p>
 </div>
 
 <div class="app">
@@ -41,6 +41,10 @@
         </section>
 
         <section class="camera-card oculto" id="cameraCard">
+            <div class="camera-topbar">
+                <span>Escáner activo</span>
+                <button id="btnCerrarCamara" type="button" aria-label="Cerrar escáner">✕</button>
+            </div>
             <video id="video" autoplay muted playsinline></video>
             <div class="camera-overlay">
                 <strong id="textoCamara">Apuntá al código de barras</strong>
@@ -49,6 +53,7 @@
                 <div class="corner corner-bl"></div>
                 <div class="corner corner-br"></div>
             </div>
+            <button id="btnCodigoManual" class="manual-code-btn" type="button">Ingresar código manualmente</button>
         </section>
 
         <section id="productoCard" class="product-card empty">
@@ -190,6 +195,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=301"></script>
+<script type="module" src="./app.js?v=302"></script>
 </body>
 </html>
