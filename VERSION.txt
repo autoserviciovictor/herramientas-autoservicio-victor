@@ -1,1 +1,12 @@
-Inventario Victor V2.1.1 S25 Pausa + Cancelar + Marco rojo
+Inventario Victor v3.0
+
+Cambios principales:
+- Rediseño visual completo con estilo oficial elegido.
+- Encabezado rojo suave Autoservicio Victor en toda la app.
+- Botón pequeño para abrir la cámara: Escanear producto.
+- Cámara oculta hasta tocar el botón.
+- Al leer un código, se pausa la cámara para cargar la cantidad.
+- Botón Cancelar para escaneos por error.
+- Nueva paleta de colores: salón naranja, depósito azul, total gris/verde, encontrado verde, no encontrado rojo.
+- Productos y Ajustes rediseñados.
+- Mantiene conexión con Google Sheets, Render y uso en varios dispositivos.

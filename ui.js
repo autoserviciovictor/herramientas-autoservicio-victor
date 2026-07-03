@@ -11,7 +11,8 @@ const elementos = {
     pantallaInventario: document.getElementById("pantallaInventario"),
     estadoConteoTexto: document.getElementById("estadoConteoTexto"),
     estadoExcelTexto: document.getElementById("estadoExcelTexto"),
-    estadoCamaraTexto: document.getElementById("estadoCamaraTexto"),
+    scannerClosedCard: document.getElementById("scannerClosedCard"),
+    cameraCard: document.getElementById("cameraCard"),
     textoCamara: document.getElementById("textoCamara"),
     productoCard: document.getElementById("productoCard"),
     quantityCard: document.getElementById("quantityCard"),
@@ -85,8 +86,9 @@ export function actualizarEstadoExcel(cantidad) {
 }
 
 export function actualizarEstadoCamara(activa) {
-    elementos.estadoCamaraTexto.textContent = "";
-    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "";
+    if (elementos.cameraCard) elementos.cameraCard.classList.toggle("oculto", !activa);
+    if (elementos.scannerClosedCard) elementos.scannerClosedCard.classList.toggle("oculto", activa);
+    if (elementos.textoCamara) elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "";
 }
 
 export function actualizarUbicacion(ubicacion) {
@@ -111,8 +113,8 @@ export function mostrarProducto(producto) {
 export function mostrarProductoNoEncontrado(codigo) {
     elementos.productoCard.classList.remove("empty", "found");
     elementos.productoCard.classList.add("error");
-    elementos.estadoProducto.textContent = "No encontrado";
-    elementos.nombreProducto.textContent = "Producto inexistente";
+    elementos.estadoProducto.textContent = "Código no encontrado";
+    elementos.nombreProducto.textContent = "No encontramos este código en la lista de productos.";
     elementos.codigoProducto.textContent = codigo;
     elementos.stockSalon.textContent = "-";
     elementos.stockDeposito.textContent = "-";
@@ -215,7 +217,12 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
         btn.className = "result-item";
         btn.innerHTML = `
             <strong>${producto.articulo}</strong>
-            <span>Código: ${producto.codigo || "-"} · Salón ${producto.salon} · Depósito ${producto.deposito} · Total ${producto.stock}</span>
+            <span class="result-code">Código: ${producto.codigo || "-"}</span>
+            <div class="result-stocks">
+                <span class="salon">Salón ${producto.salon}</span>
+                <span class="deposito">Depósito ${producto.deposito}</span>
+                <span class="total">Total ${producto.stock}</span>
+            </div>
         `;
         btn.addEventListener("click", () => onSeleccionar(producto));
         elementos.resultadoBusqueda.appendChild(btn);
@@ -247,9 +254,12 @@ export function obtenerValoresEditor() {
 export function activarModoCantidad() {
     elementos.pantallaInventario.classList.add("modo-cantidad");
     elementos.quantityCard.classList.remove("oculto");
+    if (elementos.scannerClosedCard) elementos.scannerClosedCard.classList.add("oculto");
 }
 
 export function desactivarModoCantidad() {
     elementos.pantallaInventario.classList.remove("modo-cantidad");
     elementos.quantityCard.classList.add("oculto");
+    const camaraOculta = !elementos.cameraCard || elementos.cameraCard.classList.contains("oculto");
+    if (elementos.scannerClosedCard && camaraOculta) elementos.scannerClosedCard.classList.remove("oculto");
 }

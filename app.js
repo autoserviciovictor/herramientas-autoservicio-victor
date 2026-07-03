@@ -13,14 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=217";
+} from "./excel.js?v=300";
 
 import {
     iniciarScanner,
-    detenerScanner,
-    pausarLecturaScanner,
-    reanudarLecturaScanner
-} from "./scanner.js?v=217";
+    detenerScanner
+} from "./scanner.js?v=300";
 
 import {
     ocultarSplash,
@@ -45,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=217";
+} from "./ui.js?v=300";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -62,10 +60,11 @@ const $ = (id) => document.getElementById(id);
 
 const elementos = {
     btnActualizarProductos: $("btnActualizarProductos"),
+    btnAbrirCamara: $("btnAbrirCamara"),
+    btnCancelarEscaneo: $("btnCancelarEscaneo"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
     btnGuardarCantidad: $("btnGuardarCantidad"),
-    btnCancelarCantidad: $("btnCancelarCantidad"),
     btnMenosCantidad: $("btnMenosCantidad"),
     btnMasCantidad: $("btnMasCantidad"),
     cantidadInput: $("cantidadInput"),
@@ -97,7 +96,7 @@ async function inicializar() {
     activarBotonGuardar(false);
     activarBotonDescargar(false);
     actualizarEstadoCamara(false);
-    limpiarProducto();
+    limpiarProducto("Tocá Escanear producto para comenzar");
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
     configurarEventos();
@@ -109,17 +108,23 @@ function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const pantalla = btn.dataset.pantalla;
+            if (pantalla !== "inventario" && scannerActivo) {
+                detenerScanner();
+                scannerActivo = false;
+                actualizarEstadoCamara(false);
+            }
             cambiarPantalla(pantalla);
             if (pantalla === "productos") refrescarProductos();
         });
     });
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
+    elementos.btnAbrirCamara.addEventListener("click", iniciarCamaraManual);
+    elementos.btnCancelarEscaneo.addEventListener("click", cancelarEscaneoActual);
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
 
     elementos.btnGuardarCantidad.addEventListener("click", guardarCantidadActual);
-    elementos.btnCancelarCantidad.addEventListener("click", cancelarCantidadActual);
     elementos.cantidadInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") guardarCantidadActual();
     });
@@ -165,14 +170,13 @@ async function cargarProductos() {
         actualizarContador(obtenerContador());
         actualizarConteosUbicacion(obtenerConteosUbicacion());
         activarBotonDescargar(cantidad > 0);
-        limpiarProducto("Esperando escaneo...");
+        limpiarProducto("Tocá Escanear producto para comenzar");
         refrescarProductos();
 
         mostrarMensaje("Google Sheets conectado", "ok");
         reproducirConfirmacion("guardado");
         iniciarSincronizacionAutomatica();
 
-        if (!scannerActivo) await iniciarCamaraSiCorresponde();
     } catch (error) {
         actualizarEstadoExcel(0);
         activarBotonDescargar(false);
@@ -189,7 +193,7 @@ function cambiarUbicacion(ubicacion) {
     mostrarMensaje(`Ubicación: ${ubicacion === "salon" ? "Salón" : "Depósito"}`, "ok");
 }
 
-async function iniciarCamaraSiCorresponde() {
+async function iniciarCamaraManual() {
     if (scannerActivo || obtenerCantidadProductos() === 0) return;
 
     try {
@@ -208,15 +212,12 @@ async function iniciarCamaraSiCorresponde() {
 async function manejarCodigoEscaneado(codigo) {
     if (guardando) return;
 
-    // Pausa la lectura apenas detecta un código para que no lea otro
-    // antes de cargar y guardar la cantidad.
-    pausarLecturaScanner();
-
     if (obtenerCantidadProductos() === 0) {
         mostrarMensaje("Primero conectá Google Sheets", "error");
-        reanudarLecturaScanner();
         return;
     }
+
+    pausarScannerDespuesDeLectura();
 
     let resultado = buscarProductoPorCodigo(codigo);
 
@@ -236,7 +237,6 @@ async function manejarCodigoEscaneado(codigo) {
         desactivarModoCantidad();
         mostrarMensaje("Producto no encontrado", "error");
         reproducirConfirmacion("error");
-        setTimeout(() => reanudarLecturaScanner(), 1200);
         return;
     }
 
@@ -247,16 +247,6 @@ async function manejarCodigoEscaneado(codigo) {
     activarModoCantidad();
     mostrarMensaje("Producto encontrado", "ok");
     reproducirConfirmacion("ok");
-}
-
-function cancelarCantidadActual() {
-    productoActual = null;
-    elementos.cantidadInput.value = 1;
-    activarBotonGuardar(false);
-    limpiarProducto("Esperando escaneo...");
-    desactivarModoCantidad();
-    mostrarMensaje("Producto cancelado", "ok");
-    reanudarLecturaScanner();
 }
 
 async function guardarCantidadActual() {
@@ -294,9 +284,8 @@ async function guardarCantidadActual() {
         elementos.cantidadInput.value = 1;
 
         setTimeout(() => {
-            limpiarProducto("Esperando escaneo...");
+            limpiarProducto("Tocá Escanear producto para comenzar");
             desactivarModoCantidad();
-            reanudarLecturaScanner();
         }, 350);
     } catch (error) {
         activarBotonGuardar(Boolean(productoActual));
@@ -305,6 +294,27 @@ async function guardarCantidadActual() {
     } finally {
         guardando = false;
     }
+}
+
+function pausarScannerDespuesDeLectura() {
+    if (!scannerActivo) return;
+    detenerScanner();
+    scannerActivo = false;
+    actualizarEstadoCamara(false);
+}
+
+function cancelarEscaneoActual() {
+    productoActual = null;
+    elementos.cantidadInput.value = 1;
+    activarBotonGuardar(false);
+    desactivarModoCantidad();
+    limpiarProducto("Tocá Escanear producto para comenzar");
+    actualizarEstadoCamara(false);
+    if (scannerActivo) {
+        detenerScanner();
+        scannerActivo = false;
+    }
+    mostrarMensaje("Escaneo cancelado", "ok");
 }
 
 function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {

@@ -3,28 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 2.1.1 S25 Pausa Cancelar</title>
+    <title>Inventario Victor 3.0</title>
 
-    <link rel="stylesheet" href="style.css?v=217">
-
-    <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
+    <link rel="stylesheet" href="style.css?v=300">
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
 
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 2.1.1 S25 Pausa Cancelar</p>
+    <p>Versión 3.0</p>
 </div>
 
 <div class="app">
-
-    <div class="top-brand">Autoservicio Victor</div>
+    <div class="brand-header">🏪 Autoservicio Victor</div>
 
     <main id="pantallaInventario" class="pantalla activa">
         <header class="header-app">
             <div>
-                <h1>Inventario Victor</h1>
+                <h1>Inventario</h1>
                 <div class="status-line">
                     <span id="estadoExcelTexto">Conectando...</span>
                     <span id="estadoConteoTexto">0 productos</span>
@@ -32,11 +30,20 @@
             </div>
         </header>
 
-        <section class="camera-card" id="cameraCard">
+        <section id="scannerClosedCard" class="scan-open-card">
+            <button id="btnAbrirCamara" class="scan-open-btn">
+                <span class="scan-icon">📷</span>
+                <span>
+                    <strong>Escanear producto</strong>
+                    <small>Abrí el escáner para leer un código</small>
+                </span>
+            </button>
+        </section>
+
+        <section class="camera-card oculto" id="cameraCard">
             <video id="video" autoplay muted playsinline></video>
             <div class="camera-overlay">
-                <span id="estadoCamaraTexto"></span>
-                <strong id="textoCamara"></strong>
+                <strong id="textoCamara">Apuntá al código de barras</strong>
                 <div class="corner corner-tl"></div>
                 <div class="corner corner-tr"></div>
                 <div class="corner corner-bl"></div>
@@ -46,12 +53,12 @@
 
         <section id="productoCard" class="product-card empty">
             <div class="product-status" id="estadoProducto">Esperando código</div>
-            <h2 id="nombreProducto">Esperando escaneo...</h2>
+            <h2 id="nombreProducto">Tocá Escanear producto para comenzar</h2>
             <p id="codigoProducto">-</p>
             <div class="stock-row">
-                <div><span>Salón</span><strong id="stockSalon">0</strong></div>
-                <div><span>Depósito</span><strong id="stockDeposito">0</strong></div>
-                <div><span>Total</span><strong id="stockTotal">0</strong></div>
+                <div class="stock-box stock-salon"><span>Salón</span><strong id="stockSalon">0</strong></div>
+                <div class="stock-box stock-deposito"><span>Depósito</span><strong id="stockDeposito">0</strong></div>
+                <div class="stock-box stock-total"><span>Total</span><strong id="stockTotal">0</strong></div>
             </div>
         </section>
 
@@ -62,13 +69,18 @@
                 <input type="number" id="cantidadInput" min="1" step="1" value="1" inputmode="numeric">
                 <button id="btnMasCantidad">+</button>
             </div>
-            <button id="btnGuardarCantidad" class="save-btn" disabled>✔ Guardar</button>
-            <button id="btnCancelarCantidad" class="cancel-btn" type="button">Cancelar</button>
+            <div class="action-row">
+                <button id="btnCancelarEscaneo" class="cancel-btn">Cancelar ✕</button>
+                <button id="btnGuardarCantidad" class="save-btn" disabled>Guardar ✓</button>
+            </div>
         </section>
 
         <section class="bottom-info">
-            <div><span>Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
-            <div><span>Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
+            <h2>Resumen de conteo</h2>
+            <div class="bottom-info-grid">
+                <div><span>🏪 Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
+                <div><span>📦 Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
+            </div>
         </section>
     </main>
 
@@ -84,6 +96,7 @@
         </section>
 
         <section class="search-card">
+            <span>🔎</span>
             <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
         </section>
 
@@ -125,7 +138,7 @@
             </div>
 
             <div class="edit-total"><span>Total</span><strong id="editarTotal">0</strong></div>
-            <button id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
+            <button id="btnGuardarCorreccion" class="save-btn full">Guardar cambios ✓</button>
         </section>
     </main>
 
@@ -137,8 +150,8 @@
 
         <section class="settings-card">
             <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
-            <button id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
-            <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel para importar</button>
+            <button id="btnActualizarProductos" class="setting-btn"><span>🔄</span><div><strong>Actualizar productos</strong><small>Sincronizar con Google Sheets</small></div></button>
+            <button id="btnDescargar" class="setting-btn" disabled><span>💾</span><div><strong>Descargar Excel</strong><small>Para importar al sistema</small></div></button>
         </section>
 
         <section class="settings-card">
@@ -155,7 +168,7 @@
                 <input type="checkbox" id="checkSonidos" checked>
             </div>
             <div class="switch-row">
-                <div><strong>Vibración</strong><span>Vibración corta al confirmar</span></div>
+                <div><strong>Vibración</strong><span>Confirmación al guardar</span></div>
                 <input type="checkbox" id="checkVibracion" checked>
             </div>
         </section>
@@ -164,6 +177,8 @@
             <button id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
             <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
         </section>
+
+        <p class="about-text">Inventario Victor v3.0<br>Hecho con ❤ para Autoservicio Victor</p>
     </main>
 
     <nav class="bottom-nav">
@@ -175,6 +190,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=217"></script>
+<script type="module" src="./app.js?v=300"></script>
 </body>
 </html>
