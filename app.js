@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=300-estable";
+} from "./excel.js?v=303-real";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=302-camara-s25";
+} from "./scanner.js?v=303-real";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=300-estable";
+} from "./ui.js?v=303-real";
 
 let ubicacionActual = "salon";
 let productoActual = null;

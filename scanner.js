@@ -2,94 +2,104 @@ let lectorCodigo = null;
 let camaraActiva = false;
 let ultimoCodigoLeido = "";
 let tiempoUltimaLectura = 0;
-let dispositivoCamaraActual = null;
+let dispositivoActualId = "";
 
-function dormir(ms) {
+function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function detenerStream(stream) {
-    try {
-        stream?.getTracks?.().forEach(track => track.stop());
-    } catch (error) {
-        // No hacemos nada. Solo intentamos liberar la cámara.
-    }
 }
 
 function normalizarTexto(texto) {
     return String(texto || "").toLowerCase();
 }
 
-function puntuarCamara(device, indice) {
+async function pedirPermisoTemporalCamara() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        });
+
+        stream.getTracks().forEach(track => track.stop());
+        await esperar(120);
+    } catch (error) {
+        // Si falla, el inicio normal del scanner mostrará el error real.
+    }
+}
+
+function puntuarCamara(device, index, total) {
     const label = normalizarTexto(device.label);
     let puntos = 0;
 
-    // Priorizar cámaras traseras.
-    if (label.includes("back") || label.includes("rear") || label.includes("trasera") || label.includes("environment")) puntos += 80;
-    if (label.includes("facing back")) puntos += 90;
+    // Preferimos cámaras traseras.
+    if (label.includes("back") || label.includes("rear") || label.includes("environment") || label.includes("trasera") || label.includes("posterior")) {
+        puntos += 100;
+    }
 
-    // En Android/Samsung la cámara principal trasera suele ser camera2 0.
-    if (/camera2\s*0/i.test(device.label)) puntos += 70;
-    if (/camera\s*0/i.test(device.label)) puntos += 45;
-    if (/\b0\b/.test(label) && label.includes("back")) puntos += 35;
+    // Evitamos frontal.
+    if (label.includes("front") || label.includes("user") || label.includes("frontal") || label.includes("delantera")) {
+        puntos -= 200;
+    }
 
-    // Evitar lentes que suelen enfocar peor códigos de cerca.
-    if (label.includes("front") || label.includes("frontal") || label.includes("user")) puntos -= 200;
-    if (label.includes("ultra") || label.includes("wide") || label.includes("gran angular")) puntos -= 35;
-    if (label.includes("macro")) puntos -= 55;
-    if (label.includes("tele") || label.includes("zoom")) puntos -= 35;
-    if (label.includes("depth") || label.includes("profundidad")) puntos -= 80;
+    // Evitamos lentes que suelen enfocar mal códigos de barras de cerca.
+    if (label.includes("ultra") || label.includes("wide angle") || label.includes("ultrawide") || label.includes("ultra-wide") || label.includes("gran angular")) {
+        puntos -= 35;
+    }
+    if (label.includes("macro") || label.includes("tele") || label.includes("depth") || label.includes("profundidad")) {
+        puntos -= 30;
+    }
 
-    // Si no hay labels útiles, mantener orden estable.
-    puntos -= indice;
+    // En muchos Android, si no hay etiquetas claras, la cámara trasera suele estar después de la frontal.
+    puntos += index * 3;
+    if (index === total - 1) puntos += 8;
+
     return puntos;
 }
 
-async function obtenerDispositivoCamaraPrincipal() {
+async function elegirCamaraTraseraPrincipal() {
     if (!navigator.mediaDevices?.enumerateDevices) return null;
 
     let dispositivos = await navigator.mediaDevices.enumerateDevices();
     let camaras = dispositivos.filter(d => d.kind === "videoinput");
 
-    const hayLabels = camaras.some(c => c.label);
-
-    // En Android los nombres de cámaras aparecen recién después de pedir permiso una vez.
-    if (!hayLabels && navigator.mediaDevices?.getUserMedia) {
-        let streamTemporal = null;
-        try {
-            streamTemporal = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { ideal: "environment" },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                },
-                audio: false
-            });
-            await dormir(150);
-        } catch (error) {
-            // Si falla, seguimos con la selección normal por facingMode.
-        } finally {
-            detenerStream(streamTemporal);
-        }
-
+    // En Chrome Android las etiquetas pueden venir vacías hasta pedir permiso.
+    if (!camaras.length || camaras.every(c => !c.label)) {
+        await pedirPermisoTemporalCamara();
         dispositivos = await navigator.mediaDevices.enumerateDevices();
         camaras = dispositivos.filter(d => d.kind === "videoinput");
     }
 
     if (!camaras.length) return null;
 
-    const ordenadas = camaras
-        .map((camara, indice) => ({ camara, puntos: puntuarCamara(camara, indice) }))
-        .sort((a, b) => b.puntos - a.puntos);
+    const guardada = localStorage.getItem("inventarioVictorCameraId");
+    if (guardada && camaras.some(c => c.deviceId === guardada)) {
+        return guardada;
+    }
 
-    return ordenadas[0]?.camara || null;
+    const elegida = camaras
+        .map((camara, index) => ({ camara, puntos: puntuarCamara(camara, index, camaras.length) }))
+        .sort((a, b) => b.puntos - a.puntos)[0]?.camara;
+
+    if (elegida?.deviceId) {
+        localStorage.setItem("inventarioVictorCameraId", elegida.deviceId);
+        return elegida.deviceId;
+    }
+
+    return null;
+}
+
+function obtenerTrackVideo(videoId) {
+    const video = document.getElementById(videoId);
+    const stream = video?.srcObject;
+    return stream?.getVideoTracks?.()[0] || null;
 }
 
 async function mejorarEnfoque(videoId) {
     try {
-        const video = document.getElementById(videoId);
-        const stream = video?.srcObject;
-        const track = stream?.getVideoTracks?.()[0];
+        const track = obtenerTrackVideo(videoId);
         if (!track || !track.applyConstraints) return;
 
         const capabilities = track.getCapabilities ? track.getCapabilities() : {};
@@ -107,13 +117,15 @@ async function mejorarEnfoque(videoId) {
             advanced.push({ whiteBalanceMode: "continuous" });
         }
 
-        // Zoom interno muy suave: no muestra botones ni cartel. Ayuda en algunos Samsung
-        // a que el código ocupe más área sin cambiar el flujo de uso.
+        // Zoom interno y discreto: no muestra botones ni carteles.
+        // Ayuda al S24/S25 porque el código ocupa más imagen sin tener que acercar tanto el teléfono.
         if (capabilities.zoom) {
             const min = Number(capabilities.zoom.min ?? 1);
-            const max = Number(capabilities.zoom.max ?? 1);
-            const objetivo = Math.min(max, Math.max(min, 1.25));
-            if (objetivo > min) advanced.push({ zoom: objetivo });
+            const max = Number(capabilities.zoom.max ?? min);
+            if (max > min) {
+                const zoomDeseado = Math.min(max, Math.max(min, 1.45));
+                advanced.push({ zoom: zoomDeseado });
+            }
         }
 
         if (advanced.length) {
@@ -124,84 +136,74 @@ async function mejorarEnfoque(videoId) {
     }
 }
 
-function crearConstraintsVideo(deviceId = null) {
-    const video = {
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        frameRate: { ideal: 30, max: 30 }
-    };
+async function intentarIniciar(videoId, callbackCodigo, constraints) {
+    lectorCodigo = new ZXing.BrowserMultiFormatReader();
 
-    if (deviceId) {
-        video.deviceId = { exact: deviceId };
-    } else {
-        video.facingMode = { ideal: "environment" };
-    }
+    await lectorCodigo.decodeFromConstraints(
+        constraints,
+        videoId,
+        (resultado) => {
+            if (!resultado || !camaraActiva) return;
 
-    return { video };
+            const codigo = String(resultado.text || "").trim();
+            const ahora = Date.now();
+
+            if (!codigo) return;
+
+            if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 2000) {
+                return;
+            }
+
+            ultimoCodigoLeido = codigo;
+            tiempoUltimaLectura = ahora;
+            callbackCodigo(codigo);
+        }
+    );
 }
 
 export async function iniciarScanner(videoId, callbackCodigo) {
     if (camaraActiva) return;
 
-    lectorCodigo = new ZXing.BrowserMultiFormatReader();
+    ultimoCodigoLeido = "";
+    tiempoUltimaLectura = 0;
 
-    const camaraPrincipal = await obtenerDispositivoCamaraPrincipal();
-    dispositivoCamaraActual = camaraPrincipal?.deviceId || null;
+    const deviceId = await elegirCamaraTraseraPrincipal();
+    dispositivoActualId = deviceId || "";
 
-    const constraints = crearConstraintsVideo(dispositivoCamaraActual);
+    const constraintsConDeviceId = {
+        video: {
+            ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } }),
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30, max: 30 }
+        },
+        audio: false
+    };
+
+    const constraintsFallback = {
+        video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30, max: 30 }
+        },
+        audio: false
+    };
 
     try {
-        await lectorCodigo.decodeFromConstraints(
-            constraints,
-            videoId,
-            (resultado) => {
-                if (!resultado || !camaraActiva) return;
-
-                const codigo = String(resultado.text || "").trim();
-                const ahora = Date.now();
-
-                if (!codigo) return;
-
-                if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 1800) {
-                    return;
-                }
-
-                ultimoCodigoLeido = codigo;
-                tiempoUltimaLectura = ahora;
-                callbackCodigo(codigo);
-            }
-        );
+        await intentarIniciar(videoId, callbackCodigo, constraintsConDeviceId);
     } catch (error) {
-        // Si falló abrir por deviceId exacto, probamos el método clásico como respaldo.
-        dispositivoCamaraActual = null;
-        await lectorCodigo.decodeFromConstraints(
-            crearConstraintsVideo(null),
-            videoId,
-            (resultado) => {
-                if (!resultado || !camaraActiva) return;
-
-                const codigo = String(resultado.text || "").trim();
-                const ahora = Date.now();
-
-                if (!codigo) return;
-
-                if (codigo === ultimoCodigoLeido && ahora - tiempoUltimaLectura < 1800) {
-                    return;
-                }
-
-                ultimoCodigoLeido = codigo;
-                tiempoUltimaLectura = ahora;
-                callbackCodigo(codigo);
-            }
-        );
+        if (lectorCodigo) lectorCodigo.reset();
+        lectorCodigo = null;
+        dispositivoActualId = "";
+        await intentarIniciar(videoId, callbackCodigo, constraintsFallback);
     }
 
     camaraActiva = true;
 
-    // Aplicar varias veces ayuda a algunos Samsung a acomodar foco/exposición después de iniciar.
+    // Aplicamos mejoras después de que el video ya tiene stream.
     setTimeout(() => mejorarEnfoque(videoId), 350);
-    setTimeout(() => mejorarEnfoque(videoId), 900);
-    setTimeout(() => mejorarEnfoque(videoId), 1600);
+    setTimeout(() => mejorarEnfoque(videoId), 1100);
 }
 
 export function detenerScanner() {
@@ -209,8 +211,19 @@ export function detenerScanner() {
         lectorCodigo.reset();
     }
 
+    const video = document.getElementById("video");
+    const stream = video?.srcObject;
+    if (stream?.getTracks) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    if (video) video.srcObject = null;
+
     lectorCodigo = null;
     camaraActiva = false;
     ultimoCodigoLeido = "";
     tiempoUltimaLectura = 0;
+}
+
+export function obtenerCamaraActual() {
+    return dispositivoActualId;
 }
