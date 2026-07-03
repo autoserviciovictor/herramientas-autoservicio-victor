@@ -1,29 +1,12 @@
-# Inventario Victor v3.0
+# Inventario Victor V3.0 S25
 
-Aplicación web para inventario de Autoservicio Victor.
+Versión visual V3.0 manteniendo el escáner estable que ya funcionaba en Samsung S25.
 
-## Incluye
-
-- Escaneo de códigos de barras con celular.
-- Conexión con Google Sheets mediante servidor en Render.
-- Conteo separado por Salón y Depósito.
-- Guardado automático en Google Sheets.
-- Edición manual de productos.
-- Descarga de Excel para importar al sistema.
-- Uso desde varios dispositivos.
-- Diseño visual v3.0.
-
-## Archivos principales
-
-- `index.html`
-- `style.css`
-- `app.js`
-- `ui.js`
-- `scanner.js`
-- `excel.js`
-- `server.js`
-- `config.js`
-
-## Nota
-
-Después de subir a GitHub Pages, si el celular sigue mostrando una versión vieja, borrar datos del sitio en Chrome o entrar agregando `?v=300` al final de la URL.
+Cambios principales:
+- Nuevo diseño visual.
+- Botón para abrir escáner.
+- Cámara oculta hasta tocar Escanear producto.
+- Al leer un código se pausa/cierra el escáner para cargar cantidad.
+- Botones Guardar y Cancelar.
+- Se conserva la conexión con Render + Google Sheets.
+- Se conserva la configuración de cámara optimizada para Samsung S25.
