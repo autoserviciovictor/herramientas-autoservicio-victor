@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=211";
+import { API_BASE_URL } from "./config.js?v=300-estable";
 
 let datos = [];
 let contador = 0;
@@ -102,7 +102,7 @@ export async function cargarProductosDesdeServidor() {
 }
 
 export async function sincronizarProductosDesdeServidor() {
-    // V2.1.1: refresca la copia local para que varios celulares vean los cambios
+    // V3.0 estable: refresca la copia local para que varios celulares vean los cambios
     // hechos por otros dispositivos sin tener que cerrar la app.
     return await cargarProductosDesdeServidor();
 }

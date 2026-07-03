@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=302";
+} from "./excel.js?v=300-estable";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=302";
+} from "./scanner.js?v=300-estable";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=302";
+} from "./ui.js?v=300-estable";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -60,15 +60,20 @@ const $ = (id) => document.getElementById(id);
 
 const elementos = {
     btnActualizarProductos: $("btnActualizarProductos"),
-    btnAbrirCamara: $("btnAbrirCamara"),
-    btnCerrarCamara: $("btnCerrarCamara"),
-    btnCodigoManual: $("btnCodigoManual"),
-    btnCancelarEscaneo: $("btnCancelarEscaneo"),
+    btnAbrirScanner: $("btnAbrirScanner"),
+    btnCerrarScanner: $("btnCerrarScanner"),
+    btnCodigoManualToggle: $("btnCodigoManualToggle"),
+    manualPanel: $("manualPanel"),
+    codigoManualInput: $("codigoManualInput"),
+    btnBuscarManual: $("btnBuscarManual"),
+    scanPanel: $("scanPanel"),
+    cameraCard: $("cameraCard"),
     btnSalon: $("btnSalon"),
     btnDeposito: $("btnDeposito"),
     btnGuardarCantidad: $("btnGuardarCantidad"),
     btnMenosCantidad: $("btnMenosCantidad"),
     btnMasCantidad: $("btnMasCantidad"),
+    btnCancelarCantidad: $("btnCancelarCantidad"),
     cantidadInput: $("cantidadInput"),
     btnDescargar: $("btnDescargar"),
     checkSonidos: $("checkSonidos"),
@@ -98,7 +103,8 @@ async function inicializar() {
     activarBotonGuardar(false);
     activarBotonDescargar(false);
     actualizarEstadoCamara(false);
-    limpiarProducto("Tocá Escanear producto para comenzar");
+    mostrarScannerCerrado();
+    limpiarProducto();
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
     configurarEventos();
@@ -110,25 +116,25 @@ function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const pantalla = btn.dataset.pantalla;
-            if (pantalla !== "inventario" && scannerActivo) {
-                detenerScanner();
-                scannerActivo = false;
-                actualizarEstadoCamara(false);
-            }
+            if (pantalla !== "inventario") cerrarScanner(true);
             cambiarPantalla(pantalla);
             if (pantalla === "productos") refrescarProductos();
         });
     });
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
-    elementos.btnAbrirCamara.addEventListener("click", iniciarCamaraManual);
-    elementos.btnCerrarCamara.addEventListener("click", cerrarCamaraManual);
-    elementos.btnCodigoManual.addEventListener("click", cargarCodigoManual);
-    elementos.btnCancelarEscaneo.addEventListener("click", cancelarEscaneoActual);
+    elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
+    elementos.btnCerrarScanner.addEventListener("click", () => cerrarScanner(true));
+    elementos.btnCodigoManualToggle.addEventListener("click", alternarCargaManual);
+    elementos.btnBuscarManual.addEventListener("click", procesarCodigoManual);
+    elementos.codigoManualInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") procesarCodigoManual();
+    });
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
 
     elementos.btnGuardarCantidad.addEventListener("click", guardarCantidadActual);
+    elementos.btnCancelarCantidad.addEventListener("click", cancelarProductoActual);
     elementos.cantidadInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") guardarCantidadActual();
     });
@@ -174,13 +180,13 @@ async function cargarProductos() {
         actualizarContador(obtenerContador());
         actualizarConteosUbicacion(obtenerConteosUbicacion());
         activarBotonDescargar(cantidad > 0);
-        limpiarProducto("Tocá Escanear producto para comenzar");
+        limpiarProducto("Esperando escaneo...");
         refrescarProductos();
 
         mostrarMensaje("Google Sheets conectado", "ok");
         reproducirConfirmacion("guardado");
         iniciarSincronizacionAutomatica();
-
+        mostrarScannerCerrado();
     } catch (error) {
         actualizarEstadoExcel(0);
         activarBotonDescargar(false);
@@ -197,39 +203,86 @@ function cambiarUbicacion(ubicacion) {
     mostrarMensaje(`Ubicación: ${ubicacion === "salon" ? "Salón" : "Depósito"}`, "ok");
 }
 
-async function iniciarCamaraManual() {
-    if (scannerActivo || obtenerCantidadProductos() === 0) return;
+function mostrarScannerCerrado() {
+    if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
+    if (elementos.scanPanel) elementos.scanPanel.classList.remove("oculto");
+}
+
+function mostrarScannerAbierto() {
+    if (elementos.scanPanel) elementos.scanPanel.classList.add("oculto");
+    if (elementos.cameraCard) elementos.cameraCard.classList.remove("oculto");
+}
+
+function ocultarControlesEscaneo() {
+    if (elementos.scanPanel) elementos.scanPanel.classList.add("oculto");
+    if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
+}
+
+function alternarCargaManual() {
+    elementos.manualPanel.classList.toggle("oculto");
+    if (!elementos.manualPanel.classList.contains("oculto")) {
+        elementos.codigoManualInput.focus();
+    }
+}
+
+async function procesarCodigoManual() {
+    const codigo = String(elementos.codigoManualInput.value || "").trim();
+    if (!codigo) {
+        mostrarMensaje("Ingresá un código", "error");
+        return;
+    }
+
+    elementos.codigoManualInput.value = "";
+    elementos.manualPanel.classList.add("oculto");
+    await manejarCodigoEscaneado(codigo);
+}
+
+async function abrirScannerManual() {
+    if (obtenerCantidadProductos() === 0) {
+        mostrarMensaje("Primero conectá Google Sheets", "error");
+        return;
+    }
+
+    if (scannerActivo) return;
 
     try {
+        limpiarProducto("Esperando escaneo...");
+        desactivarModoCantidad();
+        productoActual = null;
+        mostrarScannerAbierto();
         await iniciarScanner("video", manejarCodigoEscaneado);
         scannerActivo = true;
         actualizarEstadoCamara(true);
-        mostrarMensaje("Cámara activa", "ok");
+        mostrarMensaje("Escáner activo", "ok");
     } catch (error) {
         scannerActivo = false;
         actualizarEstadoCamara(false);
+        mostrarScannerCerrado();
         mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
         console.error(error);
     }
 }
 
-function cerrarCamaraManual() {
-    if (scannerActivo) {
-        detenerScanner();
-        scannerActivo = false;
-    }
-
+function cerrarScanner(mostrarBoton = true) {
+    detenerScanner();
+    scannerActivo = false;
     actualizarEstadoCamara(false);
-    mostrarMensaje("Escáner cerrado", "ok");
+
+    if (mostrarBoton) {
+        mostrarScannerCerrado();
+    } else {
+        ocultarControlesEscaneo();
+    }
 }
 
-async function cargarCodigoManual() {
-    const codigo = prompt("Ingresá el código de barras:");
-    const codigoLimpio = String(codigo || "").trim();
-
-    if (!codigoLimpio) return;
-
-    await manejarCodigoEscaneado(codigoLimpio);
+function cancelarProductoActual() {
+    productoActual = null;
+    elementos.cantidadInput.value = 1;
+    activarBotonGuardar(false);
+    desactivarModoCantidad();
+    limpiarProducto("Esperando escaneo...");
+    cerrarScanner(true);
+    mostrarMensaje("Carga cancelada", "ok");
 }
 
 async function manejarCodigoEscaneado(codigo) {
@@ -240,7 +293,7 @@ async function manejarCodigoEscaneado(codigo) {
         return;
     }
 
-    pausarScannerDespuesDeLectura();
+    cerrarScanner(false);
 
     let resultado = buscarProductoPorCodigo(codigo);
 
@@ -260,6 +313,7 @@ async function manejarCodigoEscaneado(codigo) {
         desactivarModoCantidad();
         mostrarMensaje("Producto no encontrado", "error");
         reproducirConfirmacion("error");
+        mostrarScannerCerrado();
         return;
     }
 
@@ -307,8 +361,9 @@ async function guardarCantidadActual() {
         elementos.cantidadInput.value = 1;
 
         setTimeout(() => {
-            limpiarProducto("Tocá Escanear producto para comenzar");
+            limpiarProducto("Esperando escaneo...");
             desactivarModoCantidad();
+            mostrarScannerCerrado();
         }, 350);
     } catch (error) {
         activarBotonGuardar(Boolean(productoActual));
@@ -317,27 +372,6 @@ async function guardarCantidadActual() {
     } finally {
         guardando = false;
     }
-}
-
-function pausarScannerDespuesDeLectura() {
-    if (!scannerActivo) return;
-    detenerScanner();
-    scannerActivo = false;
-    actualizarEstadoCamara(false);
-}
-
-function cancelarEscaneoActual() {
-    productoActual = null;
-    elementos.cantidadInput.value = 1;
-    activarBotonGuardar(false);
-    desactivarModoCantidad();
-    limpiarProducto("Tocá Escanear producto para comenzar");
-    actualizarEstadoCamara(false);
-    if (scannerActivo) {
-        detenerScanner();
-        scannerActivo = false;
-    }
-    mostrarMensaje("Escaneo cancelado", "ok");
 }
 
 function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {

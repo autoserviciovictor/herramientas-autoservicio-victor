@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 3.0.1</title>
+    <title>Inventario Victor 3.0 Estable</title>
 
-    <link rel="stylesheet" href="style.css?v=302">
-    <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
+    <link rel="stylesheet" href="style.css?v=300-estable">
+
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
 
 <div id="splash" class="splash">
     <div class="splash-logo">📦</div>
     <h1>Inventario Victor</h1>
-    <p>Versión 3.0.1</p>
+    <p>Versión 3.0 estable</p>
 </div>
 
 <div class="app">
+
     <div class="brand-header">🏪 Autoservicio Victor</div>
 
     <main id="pantallaInventario" class="pantalla activa">
@@ -30,40 +32,39 @@
             </div>
         </header>
 
-        <section id="scannerClosedCard" class="scan-open-card">
-            <button id="btnAbrirCamara" class="scan-open-btn">
-                <span class="scan-icon">📷</span>
-                <span>
-                    <strong>Escanear producto</strong>
-                    <small>Abrí el escáner para leer un código</small>
-                </span>
-            </button>
+        <section id="scanPanel" class="scan-panel">
+            <button id="btnAbrirScanner" class="scan-open-btn">📷 Escanear producto</button>
+            <button id="btnCodigoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <div id="manualPanel" class="manual-panel oculto">
+                <input type="text" id="codigoManualInput" inputmode="numeric" placeholder="Código de barras">
+                <button id="btnBuscarManual">Buscar</button>
+            </div>
         </section>
 
         <section class="camera-card oculto" id="cameraCard">
-            <div class="camera-topbar">
-                <span>Escáner activo</span>
-                <button id="btnCerrarCamara" type="button" aria-label="Cerrar escáner">✕</button>
+            <div class="scanner-topbar">
+                <strong>Escáner activo</strong>
+                <button id="btnCerrarScanner" type="button">✕ Cerrar</button>
             </div>
             <video id="video" autoplay muted playsinline></video>
             <div class="camera-overlay">
+                <span id="estadoCamaraTexto">Escáner activo</span>
                 <strong id="textoCamara">Apuntá al código de barras</strong>
                 <div class="corner corner-tl"></div>
                 <div class="corner corner-tr"></div>
                 <div class="corner corner-bl"></div>
                 <div class="corner corner-br"></div>
             </div>
-            <button id="btnCodigoManual" class="manual-code-btn" type="button">Ingresar código manualmente</button>
         </section>
 
         <section id="productoCard" class="product-card empty">
             <div class="product-status" id="estadoProducto">Esperando código</div>
-            <h2 id="nombreProducto">Tocá Escanear producto para comenzar</h2>
+            <h2 id="nombreProducto">Esperando escaneo...</h2>
             <p id="codigoProducto">-</p>
             <div class="stock-row">
-                <div class="stock-box stock-salon"><span>Salón</span><strong id="stockSalon">0</strong></div>
-                <div class="stock-box stock-deposito"><span>Depósito</span><strong id="stockDeposito">0</strong></div>
-                <div class="stock-box stock-total"><span>Total</span><strong id="stockTotal">0</strong></div>
+                <div><span>Salón</span><strong id="stockSalon">0</strong></div>
+                <div><span>Depósito</span><strong id="stockDeposito">0</strong></div>
+                <div><span>Total</span><strong id="stockTotal">0</strong></div>
             </div>
         </section>
 
@@ -75,17 +76,14 @@
                 <button id="btnMasCantidad">+</button>
             </div>
             <div class="action-row">
-                <button id="btnCancelarEscaneo" class="cancel-btn">Cancelar ✕</button>
+                <button id="btnCancelarCantidad" class="cancel-btn" type="button">Cancelar ✕</button>
                 <button id="btnGuardarCantidad" class="save-btn" disabled>Guardar ✓</button>
             </div>
         </section>
 
         <section class="bottom-info">
-            <h2>Resumen de conteo</h2>
-            <div class="bottom-info-grid">
-                <div><span>🏪 Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
-                <div><span>📦 Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
-            </div>
+            <div><span>Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
+            <div><span>Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
         </section>
     </main>
 
@@ -101,7 +99,6 @@
         </section>
 
         <section class="search-card">
-            <span>🔎</span>
             <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
         </section>
 
@@ -143,7 +140,7 @@
             </div>
 
             <div class="edit-total"><span>Total</span><strong id="editarTotal">0</strong></div>
-            <button id="btnGuardarCorreccion" class="save-btn full">Guardar cambios ✓</button>
+            <button id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
         </section>
     </main>
 
@@ -155,8 +152,8 @@
 
         <section class="settings-card">
             <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
-            <button id="btnActualizarProductos" class="setting-btn"><span>🔄</span><div><strong>Actualizar productos</strong><small>Sincronizar con Google Sheets</small></div></button>
-            <button id="btnDescargar" class="setting-btn" disabled><span>💾</span><div><strong>Descargar Excel</strong><small>Para importar al sistema</small></div></button>
+            <button id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
+            <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel para importar</button>
         </section>
 
         <section class="settings-card">
@@ -173,7 +170,7 @@
                 <input type="checkbox" id="checkSonidos" checked>
             </div>
             <div class="switch-row">
-                <div><strong>Vibración</strong><span>Confirmación al guardar</span></div>
+                <div><strong>Vibración</strong><span>Vibración corta al confirmar</span></div>
                 <input type="checkbox" id="checkVibracion" checked>
             </div>
         </section>
@@ -182,8 +179,6 @@
             <button id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
             <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
         </section>
-
-        <p class="about-text">Inventario Victor v3.0<br>Hecho con ❤ para Autoservicio Victor</p>
     </main>
 
     <nav class="bottom-nav">
@@ -195,6 +190,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=302"></script>
+<script type="module" src="./app.js?v=300-estable"></script>
 </body>
 </html>

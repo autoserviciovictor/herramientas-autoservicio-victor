@@ -1,14 +1,59 @@
-# Inventario Victor V3.0.1
+# Inventario Victor V3.0 estable
 
-Versión visual V3.0 manteniendo el escáner estable de Samsung S25.
+Aplicación web para inventario del Autoservicio Victor con celular como lector de códigos de barras.
 
-Cambios principales:
-- Nuevo diseño visual V3.0.
-- Botón para abrir escáner.
-- Botón para cerrar escáner.
-- Carga manual de código de barras.
-- Mejora interna de enfoque para Samsung S25.
-- Al leer un código se pausa/cierra el escáner para cargar cantidad.
-- Botones Guardar y Cancelar.
-- Se conserva Render + Google Sheets.
-- Se conserva el uso desde diferentes dispositivos.
+## Objetivo de V3.0 estable
+
+Preparar el sistema para que varias personas puedan contar desde distintos celulares usando la misma base en Google Sheets.
+
+## Cambios principales
+
+- Sincronización automática de productos cada 15 segundos.
+- La pestaña **Cargados** se actualiza con cambios hechos desde otros celulares.
+- Al escanear un producto, la app intenta refrescar ese producto desde Google Sheets antes de cargar cantidad.
+- Después de guardar o corregir, la app sincroniza en segundo plano.
+- Nueva ruta del servidor: `GET /producto/:codigo`.
+- El servidor tiene una cola por código para evitar que dos celulares pisen el mismo producto si guardan al mismo tiempo.
+
+## Rutas del servidor
+
+- `GET /productos`
+- `GET /producto/:codigo`
+- `POST /guardar`
+- `POST /corregir`
+- `GET /descargar`
+- `POST /reiniciar`
+
+## Columnas de Google Sheets
+
+La hoja debe llamarse `Stock` y mantener este orden exacto:
+
+```text
+codigo
+articulo
+stock
+salon
+deposito
+```
+
+## Render
+
+Variables necesarias:
+
+```text
+SPREADSHEET_ID
+GOOGLE_CLIENT_EMAIL
+GOOGLE_PRIVATE_KEY
+```
+
+Build command:
+
+```text
+npm install
+```
+
+Start command:
+
+```text
+npm start
+```

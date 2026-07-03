@@ -11,8 +11,7 @@ const elementos = {
     pantallaInventario: document.getElementById("pantallaInventario"),
     estadoConteoTexto: document.getElementById("estadoConteoTexto"),
     estadoExcelTexto: document.getElementById("estadoExcelTexto"),
-    scannerClosedCard: document.getElementById("scannerClosedCard"),
-    cameraCard: document.getElementById("cameraCard"),
+    estadoCamaraTexto: document.getElementById("estadoCamaraTexto"),
     textoCamara: document.getElementById("textoCamara"),
     productoCard: document.getElementById("productoCard"),
     quantityCard: document.getElementById("quantityCard"),
@@ -86,9 +85,8 @@ export function actualizarEstadoExcel(cantidad) {
 }
 
 export function actualizarEstadoCamara(activa) {
-    if (elementos.cameraCard) elementos.cameraCard.classList.toggle("oculto", !activa);
-    if (elementos.scannerClosedCard) elementos.scannerClosedCard.classList.toggle("oculto", activa);
-    if (elementos.textoCamara) elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "";
+    elementos.estadoCamaraTexto.textContent = activa ? "Escáner activo" : "Escáner cerrado";
+    elementos.textoCamara.textContent = activa ? "Apuntá al código de barras" : "";
 }
 
 export function actualizarUbicacion(ubicacion) {
@@ -104,7 +102,7 @@ export function mostrarProducto(producto) {
     elementos.productoCard.classList.add("found");
     elementos.estadoProducto.textContent = "Producto encontrado";
     elementos.nombreProducto.textContent = producto.articulo;
-    elementos.codigoProducto.textContent = producto.codigo || "Sin código";
+    elementos.codigoProducto.textContent = producto.codigo ? `Código: ${producto.codigo}` : "Sin código";
     elementos.stockSalon.textContent = producto.salon;
     elementos.stockDeposito.textContent = producto.deposito;
     elementos.stockTotal.textContent = producto.stock;
@@ -218,10 +216,10 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
         btn.innerHTML = `
             <strong>${producto.articulo}</strong>
             <span class="result-code">Código: ${producto.codigo || "-"}</span>
-            <div class="result-stocks">
-                <span class="salon">Salón ${producto.salon}</span>
-                <span class="deposito">Depósito ${producto.deposito}</span>
-                <span class="total">Total ${producto.stock}</span>
+            <div class="result-stock-row">
+                <b class="stock-salon">Salón ${producto.salon}</b>
+                <b class="stock-deposito">Depósito ${producto.deposito}</b>
+                <b class="stock-total">Total ${producto.stock}</b>
             </div>
         `;
         btn.addEventListener("click", () => onSeleccionar(producto));
@@ -254,12 +252,9 @@ export function obtenerValoresEditor() {
 export function activarModoCantidad() {
     elementos.pantallaInventario.classList.add("modo-cantidad");
     elementos.quantityCard.classList.remove("oculto");
-    if (elementos.scannerClosedCard) elementos.scannerClosedCard.classList.add("oculto");
 }
 
 export function desactivarModoCantidad() {
     elementos.pantallaInventario.classList.remove("modo-cantidad");
     elementos.quantityCard.classList.add("oculto");
-    const camaraOculta = !elementos.cameraCard || elementos.cameraCard.classList.contains("oculto");
-    if (elementos.scannerClosedCard && camaraOculta) elementos.scannerClosedCard.classList.remove("oculto");
 }

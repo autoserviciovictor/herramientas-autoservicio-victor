@@ -1,12 +1,4 @@
-V2.1.1 S25 Pausa + Cancelar + Marco rojo
-
-- Se agregó botón Cancelar al conteo después de escanear un producto.
-- Al cancelar se limpia el producto y se reanuda el escáner.
-- Se agregó marco superior rojo suave con “Autoservicio Victor” visible en Inventario, Productos y Ajustes.
-- Se reforzó la pausa inmediata del scanner para que no lea otro código antes de guardar o cancelar.
-- Se mantiene la mejora de enfoque para Samsung S25.
-
-V2.1.1
+V3.0 estable
 - Preparación para varios celulares trabajando al mismo tiempo.
 - Sincronización automática cada 15 segundos.
 - Refresco de producto por código al escanear.

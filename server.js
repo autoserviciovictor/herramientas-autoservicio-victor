@@ -23,7 +23,7 @@ const auth = new google.auth.JWT(
 
 const sheets = google.sheets({ version: "v4", auth });
 
-// V2.1.1: cola simple por código para soportar varios celulares sin pisar escrituras.
+// V3.0 estable: cola simple por código para soportar varios celulares sin pisar escrituras.
 // Si dos dispositivos guardan el mismo producto al mismo tiempo, el segundo espera
 // a que el primero termine y luego vuelve a leer el valor actualizado.
 const colasPorCodigo = new Map();
@@ -135,7 +135,7 @@ async function actualizarProducto(producto) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Inventario Victor V2.1.1 funcionando");
+  res.send("Servidor Inventario Victor V3.0 estable funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -296,5 +296,5 @@ app.post("/reiniciar", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor Inventario Victor V2.1.1 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Inventario Victor V3.0 estable funcionando en puerto ${PORT}`);
 });
