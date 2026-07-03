@@ -462,3 +462,140 @@ video { width: 100%; height: 100%; object-fit: cover; }
     .action-row { gap: 8px; }
     .save-btn, .cancel-btn { font-size: 14px; }
 }
+
+/* =========================
+   V3.1 PROFESIONAL
+   Solo interfaz y experiencia de uso.
+   ========================= */
+:root {
+    --bg: #f7f4ee;
+    --brand: #ef4d55;
+    --brand-dark: #dc323b;
+    --brand-soft: #fff0f1;
+    --primary: #198044;
+    --primary-dark: #126636;
+    --primary-soft: #edf9f1;
+    --salon: #f28a24;
+    --salon-soft: #fff2df;
+    --deposito: #176fd0;
+    --deposito-soft: #edf5ff;
+    --total: #565d63;
+    --total-soft: #f1f2f2;
+    --shadow: 0 12px 30px rgba(33, 35, 38, 0.08);
+}
+
+body { background: var(--bg); }
+.app { background: var(--bg); }
+
+.brand-header {
+    min-height: 58px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, var(--brand), #ee7e81);
+}
+
+.pantalla { padding: 16px 16px 0; animation: fadeScreen .18s ease; }
+@keyframes fadeScreen { from { opacity: .75; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.header-app h1, .header-simple h1, .header-edit h1 { font-size: 29px; }
+.status-line span { background: #eaf7ee; color: var(--primary-dark); }
+
+.scan-panel {
+    padding: 16px;
+    border: 0;
+    box-shadow: var(--shadow);
+}
+.scan-open-btn {
+    background: linear-gradient(135deg, var(--brand), #f26067);
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(239, 77, 85, .22);
+}
+.manual-link-btn {
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+}
+.manual-link-btn::before {
+    content: "⌨️ ";
+}
+
+.camera-card { height: 210px; }
+.scanner-topbar strong { background: rgba(255,255,255,.94); }
+.scanner-topbar button { background: rgba(255,255,255,.96); }
+
+.product-card { border: 1px solid rgba(255,255,255,.8); }
+.product-card.found { background: linear-gradient(135deg, var(--primary-soft), #fbfffb); }
+.product-card.error { background: linear-gradient(135deg, var(--danger-soft), #fffafa); }
+.product-status::before { content: "✓ "; }
+.product-card.error .product-status::before { content: "⚠ "; }
+.product-card.empty .product-status::before { content: ""; }
+.product-card h2 { font-size: 27px; }
+.product-card p { font-size: 14px; }
+.stock-row div { border: 1px solid rgba(0,0,0,.04); }
+.stock-row div:nth-child(1) { background: var(--salon-soft); border-color: #ffd6a7; }
+.stock-row div:nth-child(2) { background: var(--deposito-soft); border-color: #bddaff; }
+.stock-row div:nth-child(3) { background: var(--total-soft); border-color: #dddddd; }
+.stock-row strong { font-size: 25px; }
+
+.quantity-control button { background: var(--salon-soft); color: var(--salon); }
+.quantity-control input { background: #fff; }
+.save-btn { background: linear-gradient(135deg, var(--primary), #0f6e3a); }
+.cancel-btn { background: #fff; }
+
+.bottom-info div:nth-child(1) { background: var(--salon-soft); }
+.bottom-info div:nth-child(1) span { color: var(--salon); }
+.bottom-info div:nth-child(2) { background: var(--deposito-soft); }
+.bottom-info div:nth-child(2) span { color: var(--deposito); }
+
+.tabs-card { padding: 6px; }
+.tab-btn.activo { background: var(--brand); }
+.search-card { display: flex; align-items: center; gap: 8px; }
+.search-card::before { content: "🔎"; opacity: .6; }
+.result-list { gap: 12px; }
+.result-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    align-items: center;
+    padding: 16px;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.result-item:active { transform: scale(.99); }
+.result-item strong, .result-code { grid-column: 1; }
+.result-stock-row {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(42px, auto));
+    gap: 7px;
+    text-align: center;
+}
+.result-stock-row b {
+    border-left: 1px solid var(--border);
+    padding-left: 8px;
+    font-size: 12px;
+}
+.stock-total { color: var(--total); }
+.result-empty { padding: 20px; }
+
+.edit-card, .settings-card, .product-card, .quantity-card, .bottom-info, .tabs-card, .search-card, .result-item {
+    box-shadow: var(--shadow);
+}
+.location-btn:nth-child(1).activo { background: var(--salon); color: white; }
+.location-btn:nth-child(2).activo { background: var(--deposito); color: white; }
+.excel-status-card.cargado { background: var(--primary-soft); color: var(--primary-dark); }
+.setting-btn, .danger-btn { position: relative; }
+.setting-btn::after, .danger-btn::after { content: "›"; position: absolute; right: 16px; color: var(--muted); }
+.switch-row input { accent-color: var(--brand); }
+
+@media (max-width: 430px) {
+    .result-item { grid-template-columns: 1fr; }
+    .result-stock-row { grid-column: 1; grid-row: auto; display: flex; text-align: left; }
+    .result-stock-row b { border-left: 0; padding-left: 0; }
+}

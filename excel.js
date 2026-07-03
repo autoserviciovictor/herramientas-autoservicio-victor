@@ -125,7 +125,13 @@ export function obtenerContador() {
 }
 
 export function obtenerConteosUbicacion() {
-    return { salon: contadorSalon, deposito: contadorDeposito };
+    // V3.1: los contadores se calculan desde la copia actual de Google Sheets.
+    // Así, si otro celular carga o corrige stock, la pantalla se actualiza en tiempo real.
+    return datos.reduce((total, fila) => {
+        total.salon += normalizarNumero(fila.salon);
+        total.deposito += normalizarNumero(fila.deposito);
+        return total;
+    }, { salon: 0, deposito: 0 });
 }
 
 export function obtenerUltimosEscaneados() {

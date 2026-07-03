@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=303-real";
+} from "./excel.js?v=31-profesional";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=303-real";
+} from "./scanner.js?v=31-profesional";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=303-real";
+} from "./ui.js?v=31-profesional";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -54,7 +54,7 @@ let guardando = false;
 let corrigiendo = false;
 let sincronizando = false;
 let sincronizacionAutomatica = null;
-const INTERVALO_SINCRONIZACION = 15000;
+const INTERVALO_SINCRONIZACION = 7000;
 
 const $ = (id) => document.getElementById(id);
 
@@ -528,4 +528,9 @@ async function sincronizarEnSegundoPlano() {
 
 window.addEventListener("beforeunload", () => {
     detenerScanner();
+});
+
+
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) sincronizarEnSegundoPlano();
 });

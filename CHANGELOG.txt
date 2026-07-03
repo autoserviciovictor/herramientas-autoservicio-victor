@@ -1,3 +1,13 @@
+V3.1 profesional
+- Rediseño visual completo de la aplicación manteniendo la lógica estable.
+- Encabezado rojo pastel más compacto.
+- Botón principal “Abrir escáner” y flujo de cámara que se cierra al leer.
+- Tarjetas más modernas para producto encontrado, producto inexistente, cantidad, productos y ajustes.
+- Colores separados: encontrado, inexistente, salón, depósito y total.
+- Sincronización automática más frecuente para varios celulares.
+- Conteos de salón y depósito calculados desde Google Sheets para reflejar cambios de otros celulares.
+- Productos cargados se actualiza solo y elimina productos que vuelven a stock 0.
+
 V3.0 estable
 - Preparación para varios celulares trabajando al mismo tiempo.
 - Sincronización automática cada 15 segundos.
