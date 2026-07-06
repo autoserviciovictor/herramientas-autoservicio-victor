@@ -1,1 +1,2 @@
-Inventario Victor V3.1 Profesional
+Inventario Victor V3.1.1
+Corrección: conteos de Salón y Depósito por producto distinto, no por unidades.

@@ -125,11 +125,12 @@ export function obtenerContador() {
 }
 
 export function obtenerConteosUbicacion() {
-    // V3.1: los contadores se calculan desde la copia actual de Google Sheets.
-    // Así, si otro celular carga o corrige stock, la pantalla se actualiza en tiempo real.
+    // V3.1.1: los contadores muestran productos distintos contados, no unidades.
+    // Ejemplo: si Coca tiene salón 24 y Yerba salón 10, Salón contado = 2.
+    // Se calcula desde la copia actual de Google Sheets para reflejar cambios de otros celulares.
     return datos.reduce((total, fila) => {
-        total.salon += normalizarNumero(fila.salon);
-        total.deposito += normalizarNumero(fila.deposito);
+        if (normalizarNumero(fila.salon) > 0) total.salon++;
+        if (normalizarNumero(fila.deposito) > 0) total.deposito++;
         return total;
     }, { salon: 0, deposito: 0 });
 }
