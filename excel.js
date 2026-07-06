@@ -1,9 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=300-estable";
+import { API_BASE_URL } from "./config.js?v=312-contador-productos";
 
 let datos = [];
 let contador = 0;
-let contadorSalon = 0;
-let contadorDeposito = 0;
 let ultimosEscaneados = [];
 
 function apiUrl(ruta) {
@@ -125,7 +123,7 @@ export function obtenerContador() {
 }
 
 export function obtenerConteosUbicacion() {
-    // V3.1.1: los contadores muestran productos distintos contados, no unidades.
+    // V3.1.2: los contadores muestran productos distintos contados, no unidades.
     // Ejemplo: si Coca tiene salón 24 y Yerba salón 10, Salón contado = 2.
     // Se calcula desde la copia actual de Google Sheets para reflejar cambios de otros celulares.
     return datos.reduce((total, fila) => {
@@ -155,9 +153,7 @@ export function obtenerProductosCargados(limite = 80) {
 
 export function reiniciarContador() {
     contador = 0;
-    contadorSalon = 0;
-    contadorDeposito = 0;
-    ultimosEscaneados = [];
+        ultimosEscaneados = [];
     return contador;
 }
 
@@ -210,11 +206,8 @@ export async function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     const producto = guardarProductoLocal(data.producto);
 
     contador++;
-    if (ubicacion === "deposito") {
-        contadorDeposito++;
-    } else {
-        contadorSalon++;
-    }
+    // El contador general sigue contando guardados locales.
+    // Los contadores de Salón/Depósito se recalculan aparte por productos con valor > 0.
 
     registrarUltimo(producto);
     return { producto, contador, ultimos: obtenerUltimosEscaneados() };

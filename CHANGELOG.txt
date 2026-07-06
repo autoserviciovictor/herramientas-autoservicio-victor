@@ -1,3 +1,8 @@
+V3.1.2 contador por productos
+- Salón contado y Depósito contado muestran cantidad de productos con stock mayor a cero.
+- Se fuerza actualización de caché del navegador con nuevos parámetros de versión.
+- No se modificó scanner.js, Render ni Google Sheets.
+
 V3.1 profesional
 - Rediseño visual completo de la aplicación manteniendo la lógica estable.
 - Encabezado rojo pastel más compacto.
