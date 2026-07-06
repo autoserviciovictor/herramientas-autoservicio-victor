@@ -1,2 +1,12 @@
-Inventario Victor V3.1.3
-Corrección visual: Salón contado y Depósito contado muestran solo la cantidad, sin la palabra productos.
+Herramientas Autoservicio Victor V4.1
+Base: V3.1.2 estable + Dashboard V4.0
+
+Cambios V4.1:
+- Módulo Vencimientos funcional.
+- Escáner de código dentro de Vencimientos.
+- Ingreso manual de código.
+- Búsqueda del producto en la base maestra.
+- Formulario con fecha de vencimiento, salón, depósito y total.
+- Guardado en Google Sheets en hoja separada "Vencimientos".
+- Creación automática de la hoja Vencimientos si no existe.
+- Listado de últimos vencimientos cargados.

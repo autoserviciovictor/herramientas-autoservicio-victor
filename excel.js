@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=313-contador-numero";
+import { API_BASE_URL } from "./config.js?v=410-vencimientos";
 
 let datos = [];
 let contador = 0;
@@ -235,4 +235,24 @@ export async function modificarStockProducto(indice, salon, deposito) {
 export function descargarExcel() {
     if (datos.length === 0) throw new Error("Primero conectá Google Sheets");
     window.location.href = apiUrl("/descargar");
+}
+
+
+export async function listarVencimientos() {
+    const data = await pedirJson("/vencimientos");
+    return data.vencimientos || [];
+}
+
+export async function guardarVencimiento(registro) {
+    const data = await pedirJson("/vencimientos", {
+        method: "POST",
+        body: JSON.stringify({
+            codigo: normalizarTexto(registro.codigo),
+            articulo: normalizarTexto(registro.articulo),
+            vencimiento: normalizarTexto(registro.vencimiento),
+            salon: normalizarNumero(registro.salon),
+            deposito: normalizarNumero(registro.deposito)
+        })
+    });
+    return data.vencimiento;
 }

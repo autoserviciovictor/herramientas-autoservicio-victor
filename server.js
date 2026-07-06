@@ -135,7 +135,7 @@ async function actualizarProducto(producto) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Inventario Victor V3.0 estable funcionando");
+  res.send("Servidor Herramientas Autoservicio Victor V4.1 funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -295,6 +295,132 @@ app.post("/reiniciar", async (req, res) => {
   }
 });
 
+
+const VENCIMIENTOS_SHEET_NAME = "Vencimientos";
+
+function fechaIsoHoy() {
+  const ahora = new Date();
+  const y = ahora.getFullYear();
+  const m = String(ahora.getMonth() + 1).padStart(2, "0");
+  const d = String(ahora.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function calcularEstadoVencimiento(fechaVencimiento) {
+  if (!fechaVencimiento) return "Sin fecha";
+  const hoy = new Date(fechaIsoHoy() + "T00:00:00");
+  const vence = new Date(String(fechaVencimiento) + "T00:00:00");
+  if (Number.isNaN(vence.getTime())) return "Sin fecha";
+  const dias = Math.ceil((vence - hoy) / 86400000);
+  if (dias < 0) return "Vencido";
+  if (dias <= 30) return "Próximo";
+  return "Vigente";
+}
+
+async function asegurarHojaVencimientos() {
+  validarConfiguracion();
+
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === VENCIMIENTOS_SHEET_NAME);
+
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: VENCIMIENTOS_SHEET_NAME } } }]
+      }
+    });
+  }
+
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${VENCIMIENTOS_SHEET_NAME}!A1:H1`
+  });
+
+  const encabezado = respuesta.data.values?.[0] || [];
+  if (encabezado.length === 0) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A1:H1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [["Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado"]] }
+    });
+  }
+}
+
+function filaAVencimiento(fila, index) {
+  return {
+    id: index + 2,
+    fecha_carga: normalizarTexto(fila[0]),
+    codigo: normalizarTexto(fila[1]),
+    articulo: normalizarTexto(fila[2]),
+    vencimiento: normalizarTexto(fila[3]),
+    salon: numero(fila[4]),
+    deposito: numero(fila[5]),
+    total: numero(fila[6]),
+    estado: normalizarTexto(fila[7]) || calcularEstadoVencimiento(fila[3])
+  };
+}
+
+app.get("/vencimientos", async (req, res) => {
+  try {
+    await asegurarHojaVencimientos();
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:H`
+    });
+    const filas = respuesta.data.values || [];
+    const vencimientos = filas.slice(1).map(filaAVencimiento).reverse();
+    res.json({ ok: true, total: vencimientos.length, vencimientos });
+  } catch (error) {
+    console.error("Error en /vencimientos:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener vencimientos" });
+  }
+});
+
+app.post("/vencimientos", async (req, res) => {
+  try {
+    const codigo = normalizarCodigo(req.body.codigo);
+    const articulo = normalizarTexto(req.body.articulo);
+    const vencimiento = normalizarTexto(req.body.vencimiento);
+    const salon = numero(req.body.salon);
+    const deposito = numero(req.body.deposito);
+    const total = salon + deposito;
+
+    if (!codigo) return res.status(400).json({ ok: false, mensaje: "Falta el código" });
+    if (!articulo) return res.status(400).json({ ok: false, mensaje: "Falta el artículo" });
+    if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
+    if (total <= 0) return res.status(400).json({ ok: false, mensaje: "Cargá cantidad en salón o depósito" });
+
+    await asegurarHojaVencimientos();
+    const registro = {
+      fecha_carga: fechaIsoHoy(),
+      codigo,
+      articulo,
+      vencimiento,
+      salon,
+      deposito,
+      total,
+      estado: calcularEstadoVencimiento(vencimiento)
+    };
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:H`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [[registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado]]
+      }
+    });
+
+    res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
+  } catch (error) {
+    console.error("Error en POST /vencimientos:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al guardar vencimiento" });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`Servidor Inventario Victor V3.0 estable funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V4.1 funcionando en puerto ${PORT}`);
 });

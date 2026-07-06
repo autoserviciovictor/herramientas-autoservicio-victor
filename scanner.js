@@ -211,12 +211,14 @@ export function detenerScanner() {
         lectorCodigo.reset();
     }
 
-    const video = document.getElementById("video");
-    const stream = video?.srcObject;
-    if (stream?.getTracks) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    if (video) video.srcObject = null;
+    ["video", "videoVencimientos"].forEach(videoId => {
+        const video = document.getElementById(videoId);
+        const stream = video?.srcObject;
+        if (stream?.getTracks) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        if (video) video.srcObject = null;
+    });
 
     lectorCodigo = null;
     camaraActiva = false;
