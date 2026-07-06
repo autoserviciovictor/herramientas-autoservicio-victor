@@ -684,7 +684,7 @@ body.en-inicio .app { padding-bottom: 20px; }
 .coming-card p { margin: 0 0 14px; color: var(--muted); font-weight: 700; line-height: 1.35; }
 .coming-card ul { margin: 0; padding-left: 20px; color: var(--text); font-weight: 800; line-height: 1.8; }
 
-/* V4.1 - Módulo vencimientos */
+/* V4.2 - Módulo vencimientos */
 .venc-actions-card,
 .venc-form-card,
 .venc-list-card {
@@ -777,4 +777,72 @@ body.en-inicio .app { padding-bottom: 20px; }
 }
 .venc-badges .venc-vencido { background: #ffe3e3; color: #b42318; }
 .venc-badges .venc-proximo { background: #fff4d8; color: #a15c00; }
+.venc-badges .venc-vigente { background: #e7f7ee; color: #087443; }
+
+
+/* V4.2 - Buscador, filtros y listado mejorado */
+.venc-search {
+    width: 100%;
+    border: 1px solid rgba(0,0,0,.10);
+    border-radius: 16px;
+    padding: 13px 14px;
+    font-weight: 800;
+    font-size: 15px;
+    box-sizing: border-box;
+    margin: 4px 0 10px;
+    background: #fff;
+}
+.venc-filtros {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+.venc-filtros button {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 999px;
+    padding: 9px 12px;
+    background: #fff;
+    color: var(--muted);
+    font-weight: 900;
+    white-space: nowrap;
+}
+.venc-filtros button.activo {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 10px 20px rgba(239, 77, 85, .22);
+}
+.venc-resumen {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.venc-resumen-card {
+    border-radius: 16px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 900;
+}
+.venc-resumen-card span { font-size: 12px; color: rgba(0,0,0,.62); }
+.venc-resumen-card strong { font-size: 22px; }
+.venc-resumen-7 { background: #ffe3e3; color: #b42318; }
+.venc-resumen-15 { background: #fff0da; color: #c2410c; }
+.venc-resumen-30 { background: #e8f3ff; color: #0b66c3; }
+.venc-resumen-vencidos { background: #f2f2f2; color: #222; }
+.venc-list { margin-top: 8px; }
+.venc-item {
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+.venc-item:active { transform: scale(.985); }
+.venc-item-main strong { line-height: 1.25; }
+.venc-badges .venc-7 { background: #ffe3e3; color: #b42318; }
+.venc-badges .venc-15 { background: #fff0da; color: #c2410c; }
+.venc-badges .venc-30 { background: #e8f3ff; color: #0b66c3; }
+.venc-badges .venc-vencido { background: #e5e7eb; color: #111827; }
 .venc-badges .venc-vigente { background: #e7f7ee; color: #087443; }

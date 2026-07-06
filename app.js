@@ -14,13 +14,16 @@ import {
     reiniciarContador,
     obtenerConteosUbicacion,
     listarVencimientos,
-    guardarVencimiento
-} from "./excel.js?v=410-vencimientos";
+    guardarVencimiento,
+    buscarProductoMaestroPorCodigo,
+    actualizarVencimiento,
+    eliminarVencimiento
+} from "./excel.js?v=420-vencimientos";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=410-vencimientos";
+} from "./scanner.js?v=420-vencimientos";
 
 import {
     ocultarSplash,
@@ -45,7 +48,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=410-vencimientos";
+} from "./ui.js?v=420-vencimientos";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -58,6 +61,9 @@ let sincronizando = false;
 let sincronizacionAutomatica = null;
 let productoVencimientoActual = null;
 let guardandoVencimiento = false;
+let vencimientosCache = [];
+let filtroVencimientos = "todos";
+let busquedaVencimientos = "";
 const INTERVALO_SINCRONIZACION = 7000;
 
 const $ = (id) => document.getElementById(id);
@@ -112,7 +118,9 @@ const elementos = {
     vencTotalTexto: $("vencTotalTexto"),
     btnVencGuardar: $("btnVencGuardar"),
     btnVencActualizar: $("btnVencActualizar"),
-    vencListado: $("vencListado")
+    vencListado: $("vencListado"),
+    vencBuscador: $("vencBuscador"),
+    vencFiltroBtns: document.querySelectorAll("[data-venc-filtro]")
 };
 
 inicializar();
@@ -207,6 +215,18 @@ function configurarEventos() {
     elementos.vencDepositoInput?.addEventListener("input", actualizarTotalVencimiento);
     elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
     elementos.btnVencActualizar?.addEventListener("click", cargarListadoVencimientos);
+    elementos.vencBuscador?.addEventListener("input", () => {
+        busquedaVencimientos = elementos.vencBuscador.value || "";
+        renderListadoVencimientos();
+    });
+    elementos.vencFiltroBtns?.forEach(btn => {
+        btn.addEventListener("click", () => {
+            filtroVencimientos = btn.dataset.vencFiltro || "todos";
+            elementos.vencFiltroBtns.forEach(b => b.classList.toggle("activo", b === btn));
+            renderListadoVencimientos();
+        });
+    });
+    elementos.vencListado?.addEventListener("click", manejarClickListadoVencimientos);
 }
 
 async function cargarProductos() {
@@ -603,10 +623,6 @@ function cerrarScannerVencimientos(mostrarMensajeCierre = false) {
 }
 
 async function abrirScannerVencimientos() {
-    if (obtenerCantidadProductos() === 0) {
-        mostrarMensaje("Primero conectá Google Sheets", "error");
-        return;
-    }
     if (scannerActivo) return;
 
     try {
@@ -626,13 +642,11 @@ async function abrirScannerVencimientos() {
 async function manejarCodigoVencimiento(codigo) {
     cerrarScannerVencimientos(false);
 
-    let resultado = buscarProductoPorCodigo(codigo);
-    if (resultado.encontrado) {
-        try {
-            resultado = await obtenerProductoActualizadoPorCodigo(codigo);
-        } catch (error) {
-            console.warn("No se pudo refrescar el producto:", error);
-        }
+    let resultado = { encontrado: false };
+    try {
+        resultado = await buscarProductoMaestroPorCodigo(codigo);
+    } catch (error) {
+        console.warn("No se encontró en Productos:", error);
     }
 
     if (!resultado.encontrado) {
@@ -727,38 +741,154 @@ async function cargarListadoVencimientos() {
     try {
         if (!elementos.vencListado) return;
         elementos.vencListado.textContent = "Cargando vencimientos...";
-        const lista = await listarVencimientos();
-        renderListadoVencimientos(lista.slice(0, 12));
+        vencimientosCache = await listarVencimientos();
+        renderListadoVencimientos();
     } catch (error) {
         if (elementos.vencListado) elementos.vencListado.innerHTML = `<div class="venc-list-empty">${error.message}</div>`;
     }
 }
 
-function renderListadoVencimientos(lista) {
+function diasHastaVencimiento(fecha) {
+    if (!fecha) return 99999;
+    const hoy = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+    const vence = new Date(String(fecha) + "T00:00:00");
+    if (Number.isNaN(vence.getTime())) return 99999;
+    return Math.ceil((vence - hoy) / 86400000);
+}
+
+function formatearFecha(fecha) {
+    if (!fecha) return "-";
+    const partes = String(fecha).split("-");
+    if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    return fecha;
+}
+
+function claseEstadoVencimiento(item) {
+    const estado = String(item.estado || "").toLowerCase();
+    const dias = diasHastaVencimiento(item.vencimiento);
+    if (estado.includes("vencido") || dias < 0) return "venc-vencido";
+    if (dias <= 7) return "venc-7";
+    if (dias <= 15) return "venc-15";
+    if (dias <= 30 || estado.includes("próximo") || estado.includes("proximo")) return "venc-30";
+    return "venc-vigente";
+}
+
+function textoEstadoVencimiento(item) {
+    const dias = diasHastaVencimiento(item.vencimiento);
+    if (dias < 0) return "Vencido";
+    if (dias === 0) return "Vence hoy";
+    if (dias <= 7) return `En ${dias} días`;
+    if (dias <= 15) return "En 15 días";
+    if (dias <= 30) return "En 30 días";
+    return "Vigente";
+}
+
+function filtrarVencimientos() {
+    const q = String(busquedaVencimientos || "").trim().toLowerCase();
+    return vencimientosCache.filter(item => {
+        const dias = diasHastaVencimiento(item.vencimiento);
+        if (filtroVencimientos === "vencidos" && dias >= 0) return false;
+        if (filtroVencimientos === "7" && (dias < 0 || dias > 7)) return false;
+        if (filtroVencimientos === "15" && (dias < 0 || dias > 15)) return false;
+        if (filtroVencimientos === "30" && (dias < 0 || dias > 30)) return false;
+        if (q) {
+            const texto = `${item.codigo || ""} ${item.articulo || ""}`.toLowerCase();
+            if (!texto.includes(q)) return false;
+        }
+        return true;
+    });
+}
+
+function renderResumenVencimientos() {
+    const resumen = {
+        vencidos: vencimientosCache.filter(item => diasHastaVencimiento(item.vencimiento) < 0).length,
+        siete: vencimientosCache.filter(item => { const d = diasHastaVencimiento(item.vencimiento); return d >= 0 && d <= 7; }).length,
+        quince: vencimientosCache.filter(item => { const d = diasHastaVencimiento(item.vencimiento); return d >= 0 && d <= 15; }).length,
+        treinta: vencimientosCache.filter(item => { const d = diasHastaVencimiento(item.vencimiento); return d >= 0 && d <= 30; }).length,
+    };
+    const el = $("vencResumen");
+    if (!el) return;
+    el.innerHTML = `
+        <div class="venc-resumen-card venc-resumen-7"><span>7 días</span><strong>${resumen.siete}</strong></div>
+        <div class="venc-resumen-card venc-resumen-15"><span>15 días</span><strong>${resumen.quince}</strong></div>
+        <div class="venc-resumen-card venc-resumen-30"><span>30 días</span><strong>${resumen.treinta}</strong></div>
+        <div class="venc-resumen-card venc-resumen-vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong></div>
+    `;
+}
+
+function renderListadoVencimientos() {
     if (!elementos.vencListado) return;
+    renderResumenVencimientos();
+    const lista = filtrarVencimientos().slice(0, 30);
     if (!lista.length) {
         elementos.vencListado.className = "venc-list-empty";
-        elementos.vencListado.textContent = "Todavía no hay vencimientos cargados.";
+        elementos.vencListado.textContent = vencimientosCache.length ? "No hay registros con ese filtro." : "Todavía no hay vencimientos cargados.";
         return;
     }
-    elementos.vencListado.className = "";
+    elementos.vencListado.className = "venc-list";
     elementos.vencListado.innerHTML = lista.map(item => {
-        const estado = String(item.estado || "Vigente").toLowerCase();
-        const clase = estado.includes("vencido") ? "venc-vencido" : estado.includes("próximo") || estado.includes("proximo") ? "venc-proximo" : "venc-vigente";
+        const clase = claseEstadoVencimiento(item);
         return `
-            <article class="venc-item">
-                <strong>${item.articulo || "Sin descripción"}</strong>
-                <span>Código: ${item.codigo || "-"}</span>
-                <span>Vence: ${item.vencimiento || "-"}</span>
+            <article class="venc-item" data-id="${item.id}">
+                <div class="venc-item-main">
+                    <strong>${item.articulo || "Sin descripción"}</strong>
+                    <span>Código: ${item.codigo || "-"}</span>
+                    <span>Vence: ${formatearFecha(item.vencimiento)}</span>
+                </div>
                 <div class="venc-badges">
                     <b>Salón ${item.salon || 0}</b>
                     <b>Depósito ${item.deposito || 0}</b>
                     <b>Total ${item.total || 0}</b>
-                    <b class="${clase}">${item.estado || "Vigente"}</b>
+                    <b class="${clase}">${textoEstadoVencimiento(item)}</b>
                 </div>
             </article>
         `;
     }).join("");
+}
+
+function manejarClickListadoVencimientos(event) {
+    const card = event.target.closest(".venc-item");
+    if (!card) return;
+    const item = vencimientosCache.find(registro => String(registro.id) === String(card.dataset.id));
+    if (!item) return;
+    abrirDetalleVencimiento(item);
+}
+
+function abrirDetalleVencimiento(item) {
+    const accion = prompt(
+        `Detalle del registro\n\n${item.articulo}\nCódigo: ${item.codigo}\nVence: ${formatearFecha(item.vencimiento)}\nSalón: ${item.salon}\nDepósito: ${item.deposito}\nTotal: ${item.total}\nEstado: ${textoEstadoVencimiento(item)}\n\nEscribí:\n1 para editar\n2 para eliminar\nEnter para cerrar`
+    );
+    if (accion === "1") editarVencimiento(item);
+    if (accion === "2") borrarVencimiento(item);
+}
+
+async function editarVencimiento(item) {
+    const vencimiento = prompt("Nueva fecha de vencimiento (AAAA-MM-DD):", item.vencimiento);
+    if (!vencimiento) return;
+    const salon = prompt("Cantidad en salón:", item.salon);
+    if (salon === null) return;
+    const deposito = prompt("Cantidad en depósito:", item.deposito);
+    if (deposito === null) return;
+    try {
+        mostrarMensaje("Actualizando registro...", "ok");
+        await actualizarVencimiento(item.id, { vencimiento, salon, deposito });
+        await cargarListadoVencimientos();
+        mostrarMensaje("Registro actualizado", "ok");
+    } catch (error) {
+        mostrarMensaje(error.message, "error");
+    }
+}
+
+async function borrarVencimiento(item) {
+    if (!confirm(`¿Eliminar este lote?\n\n${item.articulo}\nVence: ${formatearFecha(item.vencimiento)}`)) return;
+    try {
+        mostrarMensaje("Eliminando registro...", "ok");
+        await eliminarVencimiento(item.id);
+        await cargarListadoVencimientos();
+        mostrarMensaje("Registro eliminado", "ok");
+    } catch (error) {
+        mostrarMensaje(error.message, "error");
+    }
 }
 
 window.addEventListener("beforeunload", () => {

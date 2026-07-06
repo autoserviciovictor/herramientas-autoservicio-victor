@@ -1,12 +1,14 @@
-Herramientas Autoservicio Victor V4.1
-Base: V3.1.2 estable + Dashboard V4.0
+Herramientas Autoservicio Victor - V4.2
 
-Cambios V4.1:
-- Módulo Vencimientos funcional.
-- Escáner de código dentro de Vencimientos.
-- Ingreso manual de código.
-- Búsqueda del producto en la base maestra.
-- Formulario con fecha de vencimiento, salón, depósito y total.
-- Guardado en Google Sheets en hoja separada "Vencimientos".
-- Creación automática de la hoja Vencimientos si no existe.
-- Listado de últimos vencimientos cargados.
+Base: V4.1 estable.
+
+Cambios principales:
+- Vencimientos usa la hoja Productos como base maestra para buscar artículos.
+- Vencimientos guarda en la hoja Vencimientos con columnas: ID, Fecha carga, Código, Artículo, Vencimiento, Salón, Depósito, Total, Estado.
+- Se corrigió el desplazamiento de columnas en Google Sheets agregando ID real.
+- Se agregó listado mejorado de vencimientos.
+- Se agregó buscador por código o artículo.
+- Se agregaron filtros rápidos: Todos, 7 días, 15 días, 30 días y Vencidos.
+- Se agregaron resumenes visuales de próximos y vencidos.
+- Se agregó edición y eliminación de registros desde la lista.
+- Se mantiene Inventario sin tocar su flujo estable.

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=410-vencimientos";
+import { API_BASE_URL } from "./config.js?v=420-vencimientos";
 
 let datos = [];
 let contador = 0;
@@ -243,6 +243,13 @@ export async function listarVencimientos() {
     return data.vencimientos || [];
 }
 
+export async function buscarProductoMaestroPorCodigo(codigoBuscado) {
+    const codigo = normalizarTexto(codigoBuscado);
+    if (!codigo) return { encontrado: false };
+    const data = await pedirJson(`/producto-maestro/${encodeURIComponent(codigo)}`);
+    return { encontrado: true, producto: data.producto };
+}
+
 export async function guardarVencimiento(registro) {
     const data = await pedirJson("/vencimientos", {
         method: "POST",
@@ -255,4 +262,24 @@ export async function guardarVencimiento(registro) {
         })
     });
     return data.vencimiento;
+}
+
+
+export async function actualizarVencimiento(id, registro) {
+    const data = await pedirJson(`/vencimientos/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+            vencimiento: normalizarTexto(registro.vencimiento),
+            salon: normalizarNumero(registro.salon),
+            deposito: normalizarNumero(registro.deposito)
+        })
+    });
+    return data.vencimiento;
+}
+
+export async function eliminarVencimiento(id) {
+    const data = await pedirJson(`/vencimientos/${encodeURIComponent(id)}`, {
+        method: "DELETE"
+    });
+    return data;
 }

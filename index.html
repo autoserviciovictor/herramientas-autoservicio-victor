@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Herramientas Autoservicio Victor V4.1</title>
 
-    <link rel="stylesheet" href="style.css?v=410-vencimientos">
+    <link rel="stylesheet" href="style.css?v=420-vencimientos">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -282,9 +282,22 @@
 
         <section class="venc-list-card">
             <div class="venc-list-head">
-                <h2>Últimos vencimientos</h2>
+                <h2>Vencimientos cargados</h2>
                 <button id="btnVencActualizar" type="button">Actualizar</button>
             </div>
+
+            <div id="vencResumen" class="venc-resumen"></div>
+
+            <input id="vencBuscador" class="venc-search" type="search" placeholder="Buscar por código o producto...">
+
+            <div class="venc-filtros">
+                <button type="button" class="activo" data-venc-filtro="todos">Todos</button>
+                <button type="button" data-venc-filtro="7">7 días</button>
+                <button type="button" data-venc-filtro="15">15 días</button>
+                <button type="button" data-venc-filtro="30">30 días</button>
+                <button type="button" data-venc-filtro="vencidos">Vencidos</button>
+            </div>
+
             <div id="vencListado" class="venc-list-empty">Todavía no hay vencimientos cargados.</div>
         </section>
     </main>
@@ -298,6 +311,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=410-vencimientos"></script>
+<script type="module" src="./app.js?v=420-vencimientos"></script>
 </body>
 </html>

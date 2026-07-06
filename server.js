@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = "Stock";
+const PRODUCTOS_SHEET_NAME = "Productos";
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
@@ -134,8 +135,34 @@ async function actualizarProducto(producto) {
   return productoActualizado;
 }
 
+
+function filaAProductoMaestro(fila, index) {
+  return {
+    filaGoogle: index + 2,
+    codigo: normalizarTexto(fila[0]),
+    articulo: normalizarTexto(fila[1])
+  };
+}
+
+async function obtenerProductosMaestros() {
+  validarConfiguracion();
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${PRODUCTOS_SHEET_NAME}!A:B`
+  });
+  const filas = respuesta.data.values || [];
+  if (filas.length <= 1) return [];
+  return filas.slice(1).map(filaAProductoMaestro).filter(producto => producto.codigo || producto.articulo);
+}
+
+async function buscarProductoMaestroPorCodigo(codigoBuscado) {
+  const productos = await obtenerProductosMaestros();
+  const codigo = normalizarCodigo(codigoBuscado);
+  return productos.find(producto => producto.codigo === codigo) || null;
+}
+
 app.get("/", (req, res) => {
-  res.send("Servidor Herramientas Autoservicio Victor V4.1 funcionando");
+  res.send("Servidor Herramientas Autoservicio Victor V4.2 funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -160,6 +187,30 @@ app.get("/producto/:codigo", async (req, res) => {
   } catch (error) {
     console.error("Error en /producto/:codigo:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener producto" });
+  }
+});
+
+
+app.get("/productos-maestro", async (req, res) => {
+  try {
+    const productos = await obtenerProductosMaestros();
+    res.json({ ok: true, total: productos.length, productos });
+  } catch (error) {
+    console.error("Error en /productos-maestro:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener productos maestros" });
+  }
+});
+
+app.get("/producto-maestro/:codigo", async (req, res) => {
+  try {
+    const producto = await buscarProductoMaestroPorCodigo(req.params.codigo);
+    if (!producto) {
+      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado en Productos" });
+    }
+    res.json({ ok: true, producto });
+  } catch (error) {
+    console.error("Error en /producto-maestro/:codigo:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener producto maestro" });
   }
 });
 
@@ -306,6 +357,12 @@ function fechaIsoHoy() {
   return `${y}-${m}-${d}`;
 }
 
+function generarIdVencimiento() {
+  const ahora = new Date();
+  const marca = ahora.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+  return `V${marca}${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
+}
+
 function calcularEstadoVencimiento(fechaVencimiento) {
   if (!fechaVencimiento) return "Sin fecha";
   const hoy = new Date(fechaIsoHoy() + "T00:00:00");
@@ -313,64 +370,70 @@ function calcularEstadoVencimiento(fechaVencimiento) {
   if (Number.isNaN(vence.getTime())) return "Sin fecha";
   const dias = Math.ceil((vence - hoy) / 86400000);
   if (dias < 0) return "Vencido";
-  if (dias <= 30) return "Próximo";
+  if (dias <= 7) return "En 7 días";
+  if (dias <= 15) return "En 15 días";
+  if (dias <= 30) return "En 30 días";
   return "Vigente";
 }
 
 async function asegurarHojaVencimientos() {
   validarConfiguracion();
-
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
   const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === VENCIMIENTOS_SHEET_NAME);
 
   if (!existe) {
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [{ addSheet: { properties: { title: VENCIMIENTOS_SHEET_NAME } } }]
-      }
+      requestBody: { requests: [{ addSheet: { properties: { title: VENCIMIENTOS_SHEET_NAME } } }] }
     });
   }
 
   const respuesta = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${VENCIMIENTOS_SHEET_NAME}!A1:H1`
+    range: `${VENCIMIENTOS_SHEET_NAME}!A1:I1`
   });
 
   const encabezado = respuesta.data.values?.[0] || [];
-  if (encabezado.length === 0) {
+  const correcto = ["ID", "Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado"];
+  const necesitaEncabezado = encabezado.length === 0 || encabezado[0] !== "ID" || encabezado.length < 9;
+  if (necesitaEncabezado) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A1:H1`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A1:I1`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [["Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado"]] }
+      requestBody: { values: [correcto] }
     });
   }
 }
 
 function filaAVencimiento(fila, index) {
   return {
-    id: index + 2,
-    fecha_carga: normalizarTexto(fila[0]),
-    codigo: normalizarTexto(fila[1]),
-    articulo: normalizarTexto(fila[2]),
-    vencimiento: normalizarTexto(fila[3]),
-    salon: numero(fila[4]),
-    deposito: numero(fila[5]),
-    total: numero(fila[6]),
-    estado: normalizarTexto(fila[7]) || calcularEstadoVencimiento(fila[3])
+    filaGoogle: index + 2,
+    id: normalizarTexto(fila[0]) || String(index + 1),
+    fecha_carga: normalizarTexto(fila[1]),
+    codigo: normalizarTexto(fila[2]),
+    articulo: normalizarTexto(fila[3]),
+    vencimiento: normalizarTexto(fila[4]),
+    salon: numero(fila[5]),
+    deposito: numero(fila[6]),
+    total: numero(fila[7]),
+    estado: normalizarTexto(fila[8]) || calcularEstadoVencimiento(fila[4])
   };
+}
+
+async function obtenerVencimientos() {
+  await asegurarHojaVencimientos();
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${VENCIMIENTOS_SHEET_NAME}!A:I`
+  });
+  const filas = respuesta.data.values || [];
+  return filas.slice(1).map(filaAVencimiento).filter(item => item.codigo || item.articulo || item.id);
 }
 
 app.get("/vencimientos", async (req, res) => {
   try {
-    await asegurarHojaVencimientos();
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:H`
-    });
-    const filas = respuesta.data.values || [];
-    const vencimientos = filas.slice(1).map(filaAVencimiento).reverse();
+    const vencimientos = (await obtenerVencimientos()).reverse();
     res.json({ ok: true, total: vencimientos.length, vencimientos });
   } catch (error) {
     console.error("Error en /vencimientos:", error);
@@ -381,19 +444,22 @@ app.get("/vencimientos", async (req, res) => {
 app.post("/vencimientos", async (req, res) => {
   try {
     const codigo = normalizarCodigo(req.body.codigo);
-    const articulo = normalizarTexto(req.body.articulo);
     const vencimiento = normalizarTexto(req.body.vencimiento);
     const salon = numero(req.body.salon);
     const deposito = numero(req.body.deposito);
     const total = salon + deposito;
 
     if (!codigo) return res.status(400).json({ ok: false, mensaje: "Falta el código" });
-    if (!articulo) return res.status(400).json({ ok: false, mensaje: "Falta el artículo" });
     if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
     if (total <= 0) return res.status(400).json({ ok: false, mensaje: "Cargá cantidad en salón o depósito" });
 
+    const producto = await buscarProductoMaestroPorCodigo(codigo);
+    const articulo = normalizarTexto(req.body.articulo) || producto?.articulo;
+    if (!articulo) return res.status(404).json({ ok: false, mensaje: "Producto no encontrado en la hoja Productos" });
+
     await asegurarHojaVencimientos();
     const registro = {
+      id: generarIdVencimiento(),
       fecha_carga: fechaIsoHoy(),
       codigo,
       articulo,
@@ -406,12 +472,10 @@ app.post("/vencimientos", async (req, res) => {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:H`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [[registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado]]
-      }
+      requestBody: { values: [[registro.id, registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado]] }
     });
 
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
@@ -421,6 +485,58 @@ app.post("/vencimientos", async (req, res) => {
   }
 });
 
+app.put("/vencimientos/:id", async (req, res) => {
+  try {
+    const id = normalizarTexto(req.params.id);
+    const vencimientos = await obtenerVencimientos();
+    const registro = vencimientos.find(item => item.id === id);
+    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+
+    const salon = numero(req.body.salon);
+    const deposito = numero(req.body.deposito);
+    const vencimiento = normalizarTexto(req.body.vencimiento);
+    const total = salon + deposito;
+    if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
+    if (total <= 0) return res.status(400).json({ ok: false, mensaje: "Cargá cantidad en salón o depósito" });
+
+    const actualizado = { ...registro, vencimiento, salon, deposito, total, estado: calcularEstadoVencimiento(vencimiento) };
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:I${registro.filaGoogle}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado]] }
+    });
+    res.json({ ok: true, mensaje: "Vencimiento actualizado", vencimiento: actualizado });
+  } catch (error) {
+    console.error("Error en PUT /vencimientos/:id:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar vencimiento" });
+  }
+});
+
+app.delete("/vencimientos/:id", async (req, res) => {
+  try {
+    const id = normalizarTexto(req.params.id);
+    const vencimientos = await obtenerVencimientos();
+    const registro = vencimientos.find(item => item.id === id);
+    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
+    });
+    res.json({ ok: true, mensaje: "Vencimiento eliminado" });
+  } catch (error) {
+    console.error("Error en DELETE /vencimientos/:id:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al eliminar vencimiento" });
+  }
+});
+
+async function obtenerSheetId(nombreHoja) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const hoja = (meta.data.sheets || []).find(item => item.properties?.title === nombreHoja);
+  if (!hoja) throw new Error(`No existe la hoja ${nombreHoja}`);
+  return hoja.properties.sheetId;
+}
+
 app.listen(PORT, () => {
-  console.log(`Servidor Herramientas Autoservicio Victor V4.1 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V4.2 funcionando en puerto ${PORT}`);
 });
