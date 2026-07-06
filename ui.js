@@ -1,7 +1,9 @@
 const elementos = {
     splash: document.getElementById("splash"),
     pantallas: {
+        inicio: document.getElementById("pantallaInicio"),
         inventario: document.getElementById("pantallaInventario"),
+        vencimientos: document.getElementById("pantallaVencimientos"),
         productos: document.getElementById("pantallaProductos"),
         editarProducto: document.getElementById("pantallaEditarProducto"),
         ajustes: document.getElementById("pantallaAjustes")
@@ -52,6 +54,7 @@ export function ocultarSplash() {
 
 export function cambiarPantalla(nombre) {
     Object.entries(elementos.pantallas).forEach(([clave, pantalla]) => {
+        if (!pantalla) return;
         pantalla.classList.toggle("activa", clave === nombre);
     });
 
@@ -60,6 +63,8 @@ export function cambiarPantalla(nombre) {
     elementos.navBtns.forEach(btn => {
         btn.classList.toggle("activo", btn.dataset.pantalla === pantallaNav);
     });
+
+    document.body.classList.toggle("en-inicio", nombre === "inicio" || nombre === "vencimientos");
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {

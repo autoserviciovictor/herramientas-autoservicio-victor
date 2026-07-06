@@ -3,27 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Inventario Victor 3.1.2</title>
+    <title>Herramientas Autoservicio Victor V4.0</title>
 
-    <link rel="stylesheet" href="style.css?v=313-contador-numero">
+    <link rel="stylesheet" href="style.css?v=400-dashboard">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
 
 <div id="splash" class="splash">
-    <div class="splash-logo">📦</div>
-    <h1>Inventario Victor</h1>
-    <p>Versión 3.1.2</p>
+    <div class="splash-logo">🏪</div>
+    <h1>Autoservicio Victor</h1>
+    <p>Herramientas V4.0</p>
 </div>
 
 <div class="app">
 
-    <div class="brand-header">🏪 Autoservicio Victor</div>
+    <div class="brand-header"><span>🏪 Autoservicio Victor</span><small>Herramientas</small></div>
 
-    <main id="pantallaInventario" class="pantalla activa">
+    
+    <main id="pantallaInicio" class="pantalla pantalla-inicio activa">
+        <header class="home-header">
+            <h1>Herramientas</h1>
+            <p>Elegí el módulo que querés usar</p>
+        </header>
+
+        <section class="module-grid">
+            <button class="module-card module-inventario" data-modulo="inventario">
+                <span class="module-icon">📦</span>
+                <strong>Inventario</strong>
+                <small>Contar stock</small>
+            </button>
+
+            <button class="module-card module-vencimientos" data-modulo="vencimientos">
+                <span class="module-icon">📅</span>
+                <strong>Vencimientos</strong>
+                <small>Control de fechas</small>
+            </button>
+
+            <button class="module-card module-disabled" type="button" disabled>
+                <span class="module-icon">🏷️</span>
+                <strong>Etiquetas</strong>
+                <small>Próximamente</small>
+            </button>
+
+            <button class="module-card module-disabled" type="button" disabled>
+                <span class="module-icon">📊</span>
+                <strong>Estadísticas</strong>
+                <small>Próximamente</small>
+            </button>
+        </section>
+
+        <section class="home-status">
+            <span>✅ Sistema conectado</span>
+            <strong>V4.0</strong>
+        </section>
+    </main>
+
+    <main id="pantallaInventario" class="pantalla">
         <header class="header-app">
             <div>
+                <button class="module-back-btn" data-modulo="inicio" type="button">‹</button>
                 <h1>Inventario</h1>
                 <div class="status-line">
                     <span id="estadoExcelTexto">Conectando...</span>
@@ -181,8 +221,30 @@
         </section>
     </main>
 
+    <main id="pantallaVencimientos" class="pantalla">
+        <header class="header-edit">
+            <button class="back-btn" data-modulo="inicio" type="button">‹</button>
+            <div>
+                <h1>Vencimientos</h1>
+                <p>Módulo preparado para control de fechas</p>
+            </div>
+        </header>
+
+        <section class="coming-card">
+            <div class="coming-icon">📅</div>
+            <h2>Control de vencimientos</h2>
+            <p>Acá vamos a cargar productos escaneados, fecha de vencimiento y cantidades en salón y depósito.</p>
+            <ul>
+                <li>Escanear código</li>
+                <li>Buscar producto en la base maestra</li>
+                <li>Cargar fecha de vencimiento</li>
+                <li>Guardar salón, depósito y total</li>
+            </ul>
+        </section>
+    </main>
+
     <nav class="bottom-nav">
-        <button class="nav-btn activo" data-pantalla="inventario">🏠<span>Inventario</span></button>
+        <button class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
         <button class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
         <button class="nav-btn" data-pantalla="ajustes">⚙️<span>Ajustes</span></button>
     </nav>
@@ -190,6 +252,6 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<script type="module" src="./app.js?v=313-contador-numero"></script>
+<script type="module" src="./app.js?v=400-dashboard"></script>
 </body>
 </html>

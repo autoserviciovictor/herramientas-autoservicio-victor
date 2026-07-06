@@ -13,12 +13,12 @@ import {
     obtenerContador,
     reiniciarContador,
     obtenerConteosUbicacion
-} from "./excel.js?v=313-contador-numero";
+} from "./excel.js?v=400-dashboard";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=313-contador-numero";
+} from "./scanner.js?v=400-dashboard";
 
 import {
     ocultarSplash,
@@ -43,7 +43,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=313-contador-numero";
+} from "./ui.js?v=400-dashboard";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -96,6 +96,7 @@ inicializar();
 
 async function inicializar() {
     ocultarSplash();
+    cambiarPantalla("inicio");
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
     actualizarContador(0);
@@ -119,6 +120,14 @@ function configurarEventos() {
             if (pantalla !== "inventario") cerrarScanner(true);
             cambiarPantalla(pantalla);
             if (pantalla === "productos") refrescarProductos();
+        });
+    });
+
+    document.querySelectorAll("[data-modulo]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const modulo = btn.dataset.modulo;
+            if (modulo !== "inventario") cerrarScanner(true);
+            cambiarPantalla(modulo);
         });
     });
 

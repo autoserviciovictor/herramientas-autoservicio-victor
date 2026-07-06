@@ -599,3 +599,87 @@ body { background: var(--bg); }
     .result-stock-row { grid-column: 1; grid-row: auto; display: flex; text-align: left; }
     .result-stock-row b { border-left: 0; padding-left: 0; }
 }
+
+
+/* =========================
+   V4.0 - Dashboard de módulos
+   ========================= */
+.brand-header {
+    flex-direction: column;
+    gap: 1px;
+}
+.brand-header span { line-height: 1.1; }
+.brand-header small { font-size: 12px; opacity: .92; font-weight: 700; }
+
+body.en-inicio .bottom-nav { display: none; }
+body.en-inicio .app { padding-bottom: 20px; }
+
+.pantalla-inicio { padding-top: 22px; }
+.home-header { text-align: center; margin: 4px 0 20px; }
+.home-header h1 { margin: 0; font-size: 32px; letter-spacing: -0.8px; }
+.home-header p { margin: 6px 0 0; color: var(--muted); font-weight: 800; }
+
+.module-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.module-card {
+    min-height: 132px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    color: var(--text);
+    text-align: center;
+}
+.module-card:active { transform: scale(.99); }
+.module-icon { font-size: 38px; line-height: 1; }
+.module-card strong { font-size: 17px; }
+.module-card small { color: var(--muted); font-weight: 700; }
+.module-inventario { border-color: rgba(25, 128, 68, .25); }
+.module-vencimientos { border-color: rgba(239, 77, 85, .35); background: linear-gradient(135deg, #fff, var(--brand-soft)); }
+.module-disabled { opacity: .58; cursor: not-allowed; }
+.home-status {
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-radius: 18px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 900;
+}
+.module-back-btn {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 14px;
+    background: white;
+    box-shadow: var(--shadow);
+    font-size: 30px;
+    line-height: 1;
+    margin-right: 8px;
+    cursor: pointer;
+}
+.header-app > div:first-child { display: grid; grid-template-columns: auto 1fr; align-items: center; }
+.header-app .status-line { grid-column: 1 / -1; }
+
+.coming-card {
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    border: 1px solid rgba(239, 77, 85, .18);
+}
+.coming-icon { font-size: 48px; margin-bottom: 10px; }
+.coming-card h2 { margin: 0 0 8px; font-size: 25px; }
+.coming-card p { margin: 0 0 14px; color: var(--muted); font-weight: 700; line-height: 1.35; }
+.coming-card ul { margin: 0; padding-left: 20px; color: var(--text); font-weight: 800; line-height: 1.8; }
