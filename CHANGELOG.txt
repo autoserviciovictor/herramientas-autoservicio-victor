@@ -1,3 +1,8 @@
+V3.1.3 contador solo numero
+- Se quitó la palabra "productos" del contador visual de Salón contado y Depósito contado.
+- El conteo sigue siendo por productos distintos con valor mayor a 0, no por unidades.
+- No se tocó scanner.js, Render ni Google Sheets.
+
 V3.1.2 contador por productos
 - Salón contado y Depósito contado muestran cantidad de productos con stock mayor a cero.
 - Se fuerza actualización de caché del navegador con nuevos parámetros de versión.

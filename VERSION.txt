@@ -1,2 +1,2 @@
-Inventario Victor V3.1.2
-Corrección: Salón contado y Depósito contado cuentan productos con valor mayor a 0, no unidades.
+Inventario Victor V3.1.3
+Corrección visual: Salón contado y Depósito contado muestran solo la cantidad, sin la palabra productos.

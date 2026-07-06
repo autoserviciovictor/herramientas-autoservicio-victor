@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=312-contador-productos";
+import { API_BASE_URL } from "./config.js?v=313-contador-numero";
 
 let datos = [];
 let contador = 0;

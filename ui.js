@@ -141,8 +141,8 @@ export function actualizarConteosUbicacion(conteos = { salon: 0, deposito: 0 }) 
     const deposito = Number(conteos.deposito) || 0;
     // V3.1.2: estos valores son CANTIDAD DE PRODUCTOS contados, no suma de unidades.
     // Ejemplo: Coca salón 20 + Azúcar salón 5 = 2 productos.
-    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = `${salon} productos`;
-    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = `${deposito} productos`;
+    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = `${salon}`;
+    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = `${deposito}`;
 }
 
 export function activarBotonGuardar(estado) {
