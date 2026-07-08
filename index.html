@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Herramientas Autoservicio Victor V4.1</title>
 
-    <link rel="stylesheet" href="style.css?v=420-vencimientos">
+    <link rel="stylesheet" href="style.css?v=430-vencimientos">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -309,8 +309,63 @@
     </nav>
 
     <div id="toast" class="toast"></div>
+
+    <div id="vencModal" class="modal-overlay oculto" aria-hidden="true">
+        <div class="modal-card venc-modal-card" role="dialog" aria-modal="true" aria-labelledby="vencModalTitulo">
+            <button id="btnVencModalCerrar" class="modal-close" type="button">×</button>
+            <div id="vencModalVista" class="venc-modal-vista">
+                <div class="modal-kicker">Detalle del lote</div>
+                <h2 id="vencModalTitulo">Producto</h2>
+                <div id="vencModalEstado" class="venc-modal-status">Estado</div>
+                <div class="venc-modal-info">
+                    <div><span>Código</span><strong id="vencModalCodigo">-</strong></div>
+                    <div><span>Vence</span><strong id="vencModalFecha">-</strong></div>
+                    <div><span>Salón</span><strong id="vencModalSalon">0</strong></div>
+                    <div><span>Depósito</span><strong id="vencModalDeposito">0</strong></div>
+                    <div><span>Total</span><strong id="vencModalTotal">0</strong></div>
+                </div>
+                <div class="modal-actions">
+                    <button id="btnVencEditarAbrir" class="secondary-btn" type="button">✏️ Editar</button>
+                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">🗑 Eliminar</button>
+                </div>
+            </div>
+
+            <div id="vencModalEditar" class="venc-modal-editar oculto">
+                <div class="modal-kicker">Editar vencimiento</div>
+                <h2 id="vencEditarTitulo">Producto</h2>
+                <label>Fecha de vencimiento</label>
+                <input type="date" id="vencEditFechaInput">
+                <div class="venc-grid">
+                    <div>
+                        <label>Salón</label>
+                        <input type="number" id="vencEditSalonInput" min="0" step="1" inputmode="numeric">
+                    </div>
+                    <div>
+                        <label>Depósito</label>
+                        <input type="number" id="vencEditDepositoInput" min="0" step="1" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="venc-total"><span>Total</span><strong id="vencEditTotalTexto">0</strong></div>
+                <div class="modal-actions">
+                    <button id="btnVencGuardarEdicion" class="save-btn" type="button">Guardar cambios</button>
+                    <button id="btnVencCancelarEdicion" class="secondary-btn" type="button">Cancelar</button>
+                </div>
+            </div>
+
+            <div id="vencModalEliminar" class="venc-modal-eliminar oculto">
+                <div class="modal-kicker danger-text">Eliminar lote</div>
+                <h2>¿Eliminar este vencimiento?</h2>
+                <p id="vencEliminarTexto">Esta acción no se puede deshacer.</p>
+                <div class="modal-actions">
+                    <button id="btnVencConfirmarEliminar" class="danger-btn" type="button">Eliminar</button>
+                    <button id="btnVencCancelarEliminar" class="secondary-btn" type="button">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<script type="module" src="./app.js?v=420-vencimientos"></script>
+<script type="module" src="./app.js?v=430-vencimientos"></script>
 </body>
 </html>

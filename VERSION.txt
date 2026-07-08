@@ -1,14 +1,15 @@
-Herramientas Autoservicio Victor - V4.2
+Herramientas Autoservicio Victor - V4.3
 
-Base: V4.1 estable.
+Base: V4.2 estable.
 
 Cambios principales:
-- Vencimientos usa la hoja Productos como base maestra para buscar artículos.
-- Vencimientos guarda en la hoja Vencimientos con columnas: ID, Fecha carga, Código, Artículo, Vencimiento, Salón, Depósito, Total, Estado.
-- Se corrigió el desplazamiento de columnas en Google Sheets agregando ID real.
-- Se agregó listado mejorado de vencimientos.
-- Se agregó buscador por código o artículo.
-- Se agregaron filtros rápidos: Todos, 7 días, 15 días, 30 días y Vencidos.
-- Se agregaron resumenes visuales de próximos y vencidos.
-- Se agregó edición y eliminación de registros desde la lista.
-- Se mantiene Inventario sin tocar su flujo estable.
+- Se reemplazaron alert/prompt/confirm por un modal moderno dentro de la app.
+- Se agregó detalle visual de cada vencimiento.
+- Se agregó edición de fecha, salón y depósito desde modal.
+- Se agregó eliminación con confirmación integrada.
+- Se rediseñaron las tarjetas del listado para celular.
+- Se muestran fechas como dd/mm/aaaa dentro de la aplicación.
+- Los contadores superiores ahora son clickeables y aplican filtros.
+- Después de guardar un vencimiento, vuelve a Esperando código.
+- El escáner de Vencimientos se mantiene manual como Inventario: botón Escanear y cierre al leer.
+- Inventario queda sin cambios funcionales.

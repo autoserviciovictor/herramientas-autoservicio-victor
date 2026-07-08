@@ -162,7 +162,7 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Herramientas Autoservicio Victor V4.2 funcionando");
+  res.send("Servidor Herramientas Autoservicio Victor V4.3 funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -538,5 +538,5 @@ async function obtenerSheetId(nombreHoja) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Servidor Herramientas Autoservicio Victor V4.2 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V4.3 funcionando en puerto ${PORT}`);
 });
