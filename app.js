@@ -18,12 +18,12 @@ import {
     buscarProductoMaestroPorCodigo,
     actualizarVencimiento,
     eliminarVencimiento
-} from "./excel.js?v=430-vencimientos";
+} from "./excel.js?v=431-venc-fixes";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=430-vencimientos";
+} from "./scanner.js?v=431-venc-fixes";
 
 import {
     ocultarSplash,
@@ -48,7 +48,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=430-vencimientos";
+} from "./ui.js?v=431-venc-fixes";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -651,12 +651,14 @@ async function procesarCodigoManualVencimientos() {
 
 function mostrarScannerVencimientosAbierto() {
     elementos.vencCameraCard?.classList.remove("oculto");
+    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.add("oculto");
 }
 
 function cerrarScannerVencimientos(mostrarMensajeCierre = false) {
     detenerScanner();
     scannerActivo = false;
     elementos.vencCameraCard?.classList.add("oculto");
+    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
     if (mostrarMensajeCierre) mostrarMensaje("Escáner cerrado", "ok");
 }
 
@@ -672,6 +674,7 @@ async function abrirScannerVencimientos() {
     } catch (error) {
         scannerActivo = false;
         elementos.vencCameraCard?.classList.add("oculto");
+        elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
         mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
         console.error(error);
     }
@@ -821,14 +824,23 @@ function textoEstadoVencimiento(item) {
     return "Vigente";
 }
 
+function bucketVencimiento(item) {
+    const dias = diasHastaVencimiento(item.vencimiento);
+    if (dias < 0) return "vencidos";
+    if (dias <= 7) return "7";
+    if (dias <= 15) return "15";
+    if (dias <= 30) return "30";
+    return "vigente";
+}
+
 function filtrarVencimientos() {
     const q = String(busquedaVencimientos || "").trim().toLowerCase();
     return vencimientosCache.filter(item => {
-        const dias = diasHastaVencimiento(item.vencimiento);
-        if (filtroVencimientos === "vencidos" && dias >= 0) return false;
-        if (filtroVencimientos === "7" && (dias < 0 || dias > 7)) return false;
-        if (filtroVencimientos === "15" && (dias < 0 || dias > 15)) return false;
-        if (filtroVencimientos === "30" && (dias < 0 || dias > 30)) return false;
+        const bucket = bucketVencimiento(item);
+        if (filtroVencimientos === "vencidos" && bucket !== "vencidos") return false;
+        if (filtroVencimientos === "7" && bucket !== "7") return false;
+        if (filtroVencimientos === "15" && bucket !== "15") return false;
+        if (filtroVencimientos === "30" && bucket !== "30") return false;
         if (q) {
             const texto = `${item.codigo || ""} ${item.articulo || ""}`.toLowerCase();
             if (!texto.includes(q)) return false;
@@ -839,10 +851,10 @@ function filtrarVencimientos() {
 
 function renderResumenVencimientos() {
     const resumen = {
-        vencidos: vencimientosCache.filter(item => diasHastaVencimiento(item.vencimiento) < 0).length,
-        siete: vencimientosCache.filter(item => { const d = diasHastaVencimiento(item.vencimiento); return d >= 0 && d <= 7; }).length,
-        quince: vencimientosCache.filter(item => { const d = diasHastaVencimiento(item.vencimiento); return d >= 0 && d <= 15; }).length,
-        treinta: vencimientosCache.filter(item => { const d = diasHastaVencimiento(item.vencimiento); return d >= 0 && d <= 30; }).length,
+        vencidos: vencimientosCache.filter(item => bucketVencimiento(item) === "vencidos").length,
+        siete: vencimientosCache.filter(item => bucketVencimiento(item) === "7").length,
+        quince: vencimientosCache.filter(item => bucketVencimiento(item) === "15").length,
+        treinta: vencimientosCache.filter(item => bucketVencimiento(item) === "30").length,
     };
     const el = elementos.vencResumen || $("vencResumen");
     if (!el) return;
@@ -880,10 +892,10 @@ function renderListadoVencimientos() {
                     <span class="venc-code">Código: ${item.codigo || "-"}</span>
                 </div>
                 <div class="venc-mini-grid">
-                    <span>📅 <b>${formatearFecha(item.vencimiento)}</b></span>
-                    <span>🏪 <b>${item.salon || 0}</b></span>
-                    <span>📦 <b>${item.deposito || 0}</b></span>
-                    <span>🧾 <b>${item.total || 0}</b></span>
+                    <span><small>📅 Vence</small><b>${formatearFecha(item.vencimiento)}</b></span>
+                    <span><small>🏪 Salón</small><b>${item.salon || 0}</b></span>
+                    <span><small>📦 Depósito</small><b>${item.deposito || 0}</b></span>
+                    <span><small>🧾 Total</small><b>${item.total || 0}</b></span>
                 </div>
                 <div class="venc-badges">
                     <b class="${clase}">${textoEstadoVencimiento(item)}</b>

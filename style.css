@@ -1023,3 +1023,22 @@ body.en-inicio .app { padding-bottom: 20px; }
     font-weight: 800;
     line-height: 1.35;
 }
+
+
+/* V4.3.1 - correcciones de usabilidad vencimientos */
+.venc-mini-grid span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.venc-mini-grid small {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 1000;
+    line-height: 1;
+}
+.venc-mini-grid b {
+    font-size: 14px;
+}
+.venc-actions-card.oculto { display: none; }
