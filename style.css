@@ -1171,3 +1171,35 @@ body:not(.en-vencimientos) .venc-bottom-nav { display: none; }
     .venc-grid { grid-template-columns: 1fr; }
     .venc-qty-control { grid-template-columns: 48px 1fr 48px; }
 }
+
+/* V4.3.4 - Ajustes de pestañas de vencimientos */
+.venc-search.oculto,
+.venc-filtros.oculto,
+.venc-resumen.oculto { display: none !important; }
+.venc-list-cargar .venc-item,
+.venc-list-vencidos .venc-item { cursor: default; }
+.venc-item-simple {
+    padding: 12px 13px;
+}
+.venc-item-simple .venc-item-title strong {
+    font-size: 15px;
+}
+.venc-simple-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+    background: #f8f8f8;
+    border-radius: 14px;
+    padding: 10px 11px;
+    color: var(--muted);
+    font-weight: 900;
+}
+.venc-simple-row b {
+    color: var(--text);
+    white-space: nowrap;
+}
+.venc-list-vencidos .venc-simple-row {
+    background: #fff1f1;
+}
