@@ -18,12 +18,12 @@ import {
     buscarProductoMaestroPorCodigo,
     actualizarVencimiento,
     eliminarVencimiento
-} from "./excel.js?v=431-venc-fixes";
+} from "./excel.js?v=432-venc-cancel";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=431-venc-fixes";
+} from "./scanner.js?v=432-venc-cancel";
 
 import {
     ocultarSplash,
@@ -48,7 +48,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=431-venc-fixes";
+} from "./ui.js?v=432-venc-cancel";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -118,6 +118,7 @@ const elementos = {
     vencDepositoInput: $("vencDepositoInput"),
     vencTotalTexto: $("vencTotalTexto"),
     btnVencGuardar: $("btnVencGuardar"),
+    btnVencCancelarCarga: $("btnVencCancelarCarga"),
     btnVencActualizar: $("btnVencActualizar"),
     vencListado: $("vencListado"),
     vencBuscador: $("vencBuscador"),
@@ -231,6 +232,7 @@ function configurarEventos() {
     elementos.vencSalonInput?.addEventListener("input", actualizarTotalVencimiento);
     elementos.vencDepositoInput?.addEventListener("input", actualizarTotalVencimiento);
     elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
+    elementos.btnVencCancelarCarga?.addEventListener("click", cancelarCargaVencimiento);
     elementos.btnVencActualizar?.addEventListener("click", cargarListadoVencimientos);
     elementos.vencBuscador?.addEventListener("input", () => {
         busquedaVencimientos = elementos.vencBuscador.value || "";
@@ -662,6 +664,36 @@ function cerrarScannerVencimientos(mostrarMensajeCierre = false) {
     if (mostrarMensajeCierre) mostrarMensaje("Escáner cerrado", "ok");
 }
 
+function ocultarAccionesVencimientos() {
+    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.add("oculto");
+    elementos.vencManualPanel?.classList.add("oculto");
+}
+
+function mostrarAccionesVencimientos() {
+    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
+}
+
+function reiniciarFormularioVencimientos() {
+    productoVencimientoActual = null;
+    if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
+    if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
+    if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;
+    actualizarTotalVencimiento();
+    elementos.vencFormCard?.classList.add("oculto");
+    elementos.vencProductoCard?.classList.remove("found", "error");
+    elementos.vencProductoCard?.classList.add("empty");
+    if (elementos.vencEstadoProducto) elementos.vencEstadoProducto.textContent = "Esperando código";
+    if (elementos.vencNombreProducto) elementos.vencNombreProducto.textContent = "Escaneá o ingresá un código...";
+    if (elementos.vencCodigoProducto) elementos.vencCodigoProducto.textContent = "-";
+}
+
+function cancelarCargaVencimiento() {
+    cerrarScannerVencimientos(false);
+    reiniciarFormularioVencimientos();
+    mostrarAccionesVencimientos();
+    mostrarMensaje("Carga cancelada", "ok");
+}
+
 async function abrirScannerVencimientos() {
     if (scannerActivo) return;
 
@@ -698,6 +730,7 @@ async function manejarCodigoVencimiento(codigo) {
         elementos.vencNombreProducto.textContent = "No encontramos este código en la base maestra.";
         elementos.vencCodigoProducto.textContent = codigo;
         elementos.vencFormCard?.classList.add("oculto");
+        mostrarAccionesVencimientos();
         mostrarMensaje("Producto no encontrado", "error");
         reproducirConfirmacion("error");
         return;
@@ -710,6 +743,7 @@ async function manejarCodigoVencimiento(codigo) {
     elementos.vencNombreProducto.textContent = productoVencimientoActual.articulo;
     elementos.vencCodigoProducto.textContent = `Código: ${productoVencimientoActual.codigo}`;
     elementos.vencFormCard?.classList.remove("oculto");
+    ocultarAccionesVencimientos();
     elementos.vencFechaInput.focus();
     actualizarTotalVencimiento();
     mostrarMensaje("Producto encontrado", "ok");
@@ -754,17 +788,8 @@ async function guardarVencimientoActual() {
             deposito
         });
 
-        elementos.vencFechaInput.value = "";
-        elementos.vencSalonInput.value = 0;
-        elementos.vencDepositoInput.value = 0;
-        actualizarTotalVencimiento();
-        elementos.vencFormCard?.classList.add("oculto");
-        productoVencimientoActual = null;
-        elementos.vencProductoCard?.classList.remove("found", "error");
-        elementos.vencProductoCard?.classList.add("empty");
-        elementos.vencEstadoProducto.textContent = "Esperando código";
-        elementos.vencNombreProducto.textContent = "Escaneá o ingresá un código...";
-        elementos.vencCodigoProducto.textContent = "-";
+        reiniciarFormularioVencimientos();
+        mostrarAccionesVencimientos();
 
         await cargarListadoVencimientos();
         mostrarMensaje("Vencimiento guardado", "ok");

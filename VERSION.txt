@@ -1,4 +1,4 @@
-Herramientas Autoservicio Victor - V4.3.1
+Herramientas Autoservicio Victor - V4.3.2
 
 Base: V4.3.
 
@@ -10,3 +10,5 @@ Correcciones:
 - Al cerrar o leer un código, vuelve a aparecer la tarjeta para escanear o ingresar manualmente.
 - Las tarjetas de vencimientos muestran Salón, Depósito y Total con texto claro, no solo iconos.
 - Inventario queda sin cambios funcionales.
+
+V4.3.2: Oculta botones de escaneo/manual al cargar un producto y agrega botón Cancelar en vencimientos.
