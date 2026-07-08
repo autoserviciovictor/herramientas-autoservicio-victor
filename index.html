@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V4.3.2</title>
+    <title>Herramientas Autoservicio Victor V4.3.3</title>
 
-    <link rel="stylesheet" href="style.css?v=431-venc-fixes">
+    <link rel="stylesheet" href="style.css?v=4333-venc-tabs">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V4.3.2</p>
+    <p>Herramientas V4.3.3</p>
 </div>
 
 <div class="app">
@@ -56,7 +56,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V4.3.2</strong>
+            <strong>V4.3.3</strong>
         </section>
     </main>
 
@@ -265,14 +265,22 @@
             <label>Fecha de vencimiento</label>
             <input type="date" id="vencFechaInput">
 
-            <div class="venc-grid">
-                <div>
+            <div class="venc-grid venc-qty-grid">
+                <div class="venc-qty-box venc-qty-salon">
                     <label>Salón</label>
-                    <input type="number" id="vencSalonInput" min="0" step="1" value="0" inputmode="numeric">
+                    <div class="venc-qty-control">
+                        <button id="btnVencMenosSalon" type="button">−</button>
+                        <input type="number" id="vencSalonInput" min="0" step="1" value="0" inputmode="numeric">
+                        <button id="btnVencMasSalon" type="button">+</button>
+                    </div>
                 </div>
-                <div>
+                <div class="venc-qty-box venc-qty-deposito">
                     <label>Depósito</label>
-                    <input type="number" id="vencDepositoInput" min="0" step="1" value="0" inputmode="numeric">
+                    <div class="venc-qty-control">
+                        <button id="btnVencMenosDeposito" type="button">−</button>
+                        <input type="number" id="vencDepositoInput" min="0" step="1" value="0" inputmode="numeric">
+                        <button id="btnVencMasDeposito" type="button">+</button>
+                    </div>
                 </div>
             </div>
 
@@ -285,7 +293,7 @@
 
         <section class="venc-list-card">
             <div class="venc-list-head">
-                <h2>Vencimientos cargados</h2>
+                <h2 id="vencListadoTitulo">Registros recientes</h2>
                 <button id="btnVencActualizar" type="button">Actualizar</button>
             </div>
 
@@ -303,6 +311,12 @@
 
             <div id="vencListado" class="venc-list-empty">Todavía no hay vencimientos cargados.</div>
         </section>
+
+        <nav class="venc-bottom-nav" aria-label="Navegación vencimientos">
+            <button type="button" class="activo" data-venc-tab="cargar">➕<span>Cargar</span></button>
+            <button type="button" data-venc-tab="proximos">📅<span>Próximos</span></button>
+            <button type="button" data-venc-tab="vencidos">⚠️<span>Vencidos</span></button>
+        </nav>
     </main>
 
     <nav class="bottom-nav">
@@ -338,14 +352,22 @@
                 <h2 id="vencEditarTitulo">Producto</h2>
                 <label>Fecha de vencimiento</label>
                 <input type="date" id="vencEditFechaInput">
-                <div class="venc-grid">
-                    <div>
+                <div class="venc-grid venc-qty-grid">
+                    <div class="venc-qty-box venc-qty-salon">
                         <label>Salón</label>
-                        <input type="number" id="vencEditSalonInput" min="0" step="1" inputmode="numeric">
+                        <div class="venc-qty-control">
+                            <button id="btnVencEditMenosSalon" type="button">−</button>
+                            <input type="number" id="vencEditSalonInput" min="0" step="1" inputmode="numeric">
+                            <button id="btnVencEditMasSalon" type="button">+</button>
+                        </div>
                     </div>
-                    <div>
+                    <div class="venc-qty-box venc-qty-deposito">
                         <label>Depósito</label>
-                        <input type="number" id="vencEditDepositoInput" min="0" step="1" inputmode="numeric">
+                        <div class="venc-qty-control">
+                            <button id="btnVencEditMenosDeposito" type="button">−</button>
+                            <input type="number" id="vencEditDepositoInput" min="0" step="1" inputmode="numeric">
+                            <button id="btnVencEditMasDeposito" type="button">+</button>
+                        </div>
                     </div>
                 </div>
                 <div class="venc-total"><span>Total</span><strong id="vencEditTotalTexto">0</strong></div>
@@ -369,6 +391,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=431-venc-fixes"></script>
+<script type="module" src="./app.js?v=4333-venc-tabs"></script>
 </body>
 </html>

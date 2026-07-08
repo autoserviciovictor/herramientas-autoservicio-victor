@@ -1,14 +1,1 @@
-Herramientas Autoservicio Victor - V4.3.2
-
-Base: V4.3.
-
-Correcciones:
-- Se actualizó el número de versión visible en la pantalla principal.
-- Los contadores de 7, 15 y 30 días ahora son excluyentes: un producto que vence mañana cuenta solo en 7 días.
-- Los filtros de 7, 15 y 30 días ahora coinciden con esos grupos excluyentes.
-- Al abrir el escáner de Vencimientos se oculta la tarjeta de botones, igual que en Stock/Inventario.
-- Al cerrar o leer un código, vuelve a aparecer la tarjeta para escanear o ingresar manualmente.
-- Las tarjetas de vencimientos muestran Salón, Depósito y Total con texto claro, no solo iconos.
-- Inventario queda sin cambios funcionales.
-
-V4.3.2: Oculta botones de escaneo/manual al cargar un producto y agrega botón Cancelar en vencimientos.
+V4.3.3

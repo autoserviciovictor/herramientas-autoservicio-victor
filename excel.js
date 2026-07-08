@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=420-vencimientos";
+import { API_BASE_URL } from "./config.js?v=4333-venc-tabs";
 
 let datos = [];
 let contador = 0;

@@ -1,3 +1,9 @@
+V4.3.3
+- Vencimientos: navegación inferior propia (Cargar, Próximos, Vencidos).
+- Vencimientos: cantidad de salón y depósito con botones + / - y carga manual.
+- Vencimientos: tarjetas con datos más claros (vencimiento, salón, depósito y total).
+- Vencimientos: registros recientes en la pantalla de carga.
+- Vencimientos: filtros y contadores exclusivos por 7, 15, 30 días y vencidos.
 V3.1.3 contador solo numero
 - Se quitó la palabra "productos" del contador visual de Salón contado y Depósito contado.
 - El conteo sigue siendo por productos distintos con valor mayor a 0, no por unidades.

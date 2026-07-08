@@ -65,6 +65,7 @@ export function cambiarPantalla(nombre) {
     });
 
     document.body.classList.toggle("en-inicio", nombre === "inicio" || nombre === "vencimientos");
+    document.body.classList.toggle("en-vencimientos", nombre === "vencimientos");
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {

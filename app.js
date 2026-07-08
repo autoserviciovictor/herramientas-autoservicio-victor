@@ -18,12 +18,12 @@ import {
     buscarProductoMaestroPorCodigo,
     actualizarVencimiento,
     eliminarVencimiento
-} from "./excel.js?v=432-venc-cancel";
+} from "./excel.js?v=4333-venc-tabs";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=432-venc-cancel";
+} from "./scanner.js?v=4333-venc-tabs";
 
 import {
     ocultarSplash,
@@ -48,7 +48,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=432-venc-cancel";
+} from "./ui.js?v=4333-venc-tabs";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -65,6 +65,7 @@ let vencimientosCache = [];
 let filtroVencimientos = "todos";
 let busquedaVencimientos = "";
 let vencimientoSeleccionado = null;
+let vencTabActual = "cargar";
 const INTERVALO_SINCRONIZACION = 7000;
 
 const $ = (id) => document.getElementById(id);
@@ -116,6 +117,10 @@ const elementos = {
     vencFechaInput: $("vencFechaInput"),
     vencSalonInput: $("vencSalonInput"),
     vencDepositoInput: $("vencDepositoInput"),
+    btnVencMenosSalon: $("btnVencMenosSalon"),
+    btnVencMasSalon: $("btnVencMasSalon"),
+    btnVencMenosDeposito: $("btnVencMenosDeposito"),
+    btnVencMasDeposito: $("btnVencMasDeposito"),
     vencTotalTexto: $("vencTotalTexto"),
     btnVencGuardar: $("btnVencGuardar"),
     btnVencCancelarCarga: $("btnVencCancelarCarga"),
@@ -123,6 +128,8 @@ const elementos = {
     vencListado: $("vencListado"),
     vencBuscador: $("vencBuscador"),
     vencResumen: $("vencResumen"),
+    vencListadoTitulo: $("vencListadoTitulo"),
+    vencTabBtns: document.querySelectorAll("[data-venc-tab]"),
     vencModal: $("vencModal"),
     vencModalVista: $("vencModalVista"),
     vencModalEditar: $("vencModalEditar"),
@@ -137,6 +144,10 @@ const elementos = {
     vencEditFechaInput: $("vencEditFechaInput"),
     vencEditSalonInput: $("vencEditSalonInput"),
     vencEditDepositoInput: $("vencEditDepositoInput"),
+    btnVencEditMenosSalon: $("btnVencEditMenosSalon"),
+    btnVencEditMasSalon: $("btnVencEditMasSalon"),
+    btnVencEditMenosDeposito: $("btnVencEditMenosDeposito"),
+    btnVencEditMasDeposito: $("btnVencEditMasDeposito"),
     vencEditTotalTexto: $("vencEditTotalTexto"),
     vencFiltroBtns: document.querySelectorAll("[data-venc-filtro]")
 };
@@ -231,6 +242,10 @@ function configurarEventos() {
     });
     elementos.vencSalonInput?.addEventListener("input", actualizarTotalVencimiento);
     elementos.vencDepositoInput?.addEventListener("input", actualizarTotalVencimiento);
+    elementos.btnVencMenosSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencSalonInput, -1, 0, actualizarTotalVencimiento));
+    elementos.btnVencMasSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencSalonInput, 1, 0, actualizarTotalVencimiento));
+    elementos.btnVencMenosDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencDepositoInput, -1, 0, actualizarTotalVencimiento));
+    elementos.btnVencMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencDepositoInput, 1, 0, actualizarTotalVencimiento));
     elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
     elementos.btnVencCancelarCarga?.addEventListener("click", cancelarCargaVencimiento);
     elementos.btnVencActualizar?.addEventListener("click", cargarListadoVencimientos);
@@ -242,6 +257,9 @@ function configurarEventos() {
         btn.addEventListener("click", () => {
             aplicarFiltroVencimientos(btn.dataset.vencFiltro || "todos");
         });
+    });
+    elementos.vencTabBtns?.forEach(btn => {
+        btn.addEventListener("click", () => cambiarTabVencimientos(btn.dataset.vencTab || "cargar"));
     });
     elementos.vencListado?.addEventListener("click", manejarClickListadoVencimientos);
     elementos.vencResumen?.addEventListener("click", manejarClickResumenVencimientos);
@@ -255,10 +273,49 @@ function configurarEventos() {
     elementos.btnVencConfirmarEliminar?.addEventListener("click", confirmarEliminarVencimiento);
     elementos.vencEditSalonInput?.addEventListener("input", actualizarTotalEdicionVencimiento);
     elementos.vencEditDepositoInput?.addEventListener("input", actualizarTotalEdicionVencimiento);
+    elementos.btnVencEditMenosSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencEditSalonInput, -1, 0, actualizarTotalEdicionVencimiento));
+    elementos.btnVencEditMasSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencEditSalonInput, 1, 0, actualizarTotalEdicionVencimiento));
+    elementos.btnVencEditMenosDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, -1, 0, actualizarTotalEdicionVencimiento));
+    elementos.btnVencEditMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, 1, 0, actualizarTotalEdicionVencimiento));
+}
+
+function cambiarTabVencimientos(tab) {
+    vencTabActual = tab || "cargar";
+    elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
+
+    const enCarga = vencTabActual === "cargar";
+    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.toggle("oculto", !enCarga || Boolean(productoVencimientoActual));
+    if (!enCarga) {
+        elementos.vencCameraCard?.classList.add("oculto");
+        elementos.vencFormCard?.classList.add("oculto");
+        elementos.vencProductoCard?.classList.add("oculto");
+    } else {
+        elementos.vencProductoCard?.classList.remove("oculto");
+        if (productoVencimientoActual) {
+            elementos.vencFormCard?.classList.remove("oculto");
+        }
+    }
+
+    if (vencTabActual === "vencidos") {
+        filtroVencimientos = "vencidos";
+    } else if (vencTabActual === "proximos") {
+        filtroVencimientos = "todos";
+    } else {
+        filtroVencimientos = "todos";
+    }
+    elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
+    renderListadoVencimientos();
 }
 
 function aplicarFiltroVencimientos(filtro) {
     filtroVencimientos = filtro || "todos";
+    if (["7", "15", "30"].includes(filtroVencimientos) && vencTabActual !== "proximos") {
+        vencTabActual = "proximos";
+    }
+    if (filtroVencimientos === "vencidos" && vencTabActual !== "vencidos") {
+        vencTabActual = "vencidos";
+    }
+    elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
     elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
     renderListadoVencimientos();
 }
@@ -670,7 +727,9 @@ function ocultarAccionesVencimientos() {
 }
 
 function mostrarAccionesVencimientos() {
-    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
+    if (vencTabActual === "cargar") {
+        elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
+    }
 }
 
 function reiniciarFormularioVencimientos() {
@@ -713,6 +772,7 @@ async function abrirScannerVencimientos() {
 }
 
 async function manejarCodigoVencimiento(codigo) {
+    if (vencTabActual !== "cargar") cambiarTabVencimientos("cargar");
     cerrarScannerVencimientos(false);
 
     let resultado = { encontrado: false };
@@ -862,10 +922,15 @@ function filtrarVencimientos() {
     const q = String(busquedaVencimientos || "").trim().toLowerCase();
     return vencimientosCache.filter(item => {
         const bucket = bucketVencimiento(item);
+
+        if (vencTabActual === "proximos" && !["7", "15", "30"].includes(bucket)) return false;
+        if (vencTabActual === "vencidos" && bucket !== "vencidos") return false;
+
         if (filtroVencimientos === "vencidos" && bucket !== "vencidos") return false;
         if (filtroVencimientos === "7" && bucket !== "7") return false;
         if (filtroVencimientos === "15" && bucket !== "15") return false;
         if (filtroVencimientos === "30" && bucket !== "30") return false;
+
         if (q) {
             const texto = `${item.codigo || ""} ${item.articulo || ""}`.toLowerCase();
             if (!texto.includes(q)) return false;
@@ -894,9 +959,19 @@ function renderResumenVencimientos() {
 function renderListadoVencimientos() {
     if (!elementos.vencListado) return;
     renderResumenVencimientos();
-    const lista = filtrarVencimientos()
-        .sort((a, b) => diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento))
-        .slice(0, 40);
+
+    if (elementos.vencListadoTitulo) {
+        elementos.vencListadoTitulo.textContent = vencTabActual === "cargar"
+            ? "Registros recientes"
+            : (vencTabActual === "vencidos" ? "Productos vencidos" : "Próximos a vencer");
+    }
+
+    const limite = vencTabActual === "cargar" ? 8 : 80;
+    const baseLista = filtrarVencimientos();
+    const ordenada = vencTabActual === "cargar"
+        ? baseLista
+        : baseLista.sort((a, b) => diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento));
+    const lista = ordenada.slice(0, limite);
 
     if (!lista.length) {
         elementos.vencListado.className = "venc-list-empty";
@@ -917,13 +992,15 @@ function renderListadoVencimientos() {
                     <span class="venc-code">Código: ${item.codigo || "-"}</span>
                 </div>
                 <div class="venc-mini-grid">
-                    <span><small>📅 Vence</small><b>${formatearFecha(item.vencimiento)}</b></span>
-                    <span><small>🏪 Salón</small><b>${item.salon || 0}</b></span>
-                    <span><small>📦 Depósito</small><b>${item.deposito || 0}</b></span>
-                    <span><small>🧾 Total</small><b>${item.total || 0}</b></span>
+                    <span><small>Vencimiento</small><b>📅 ${formatearFecha(item.vencimiento)}</b></span>
+                    <span><small>Cant. salón</small><b>🏪 ${item.salon || 0} unid.</b></span>
+                    <span><small>Cant. depósito</small><b>📦 ${item.deposito || 0} unid.</b></span>
+                    <span><small>Total cargado</small><b>🧾 ${item.total || 0} unid.</b></span>
                 </div>
                 <div class="venc-badges">
                     <b class="${clase}">${textoEstadoVencimiento(item)}</b>
+                    <button type="button" class="venc-card-action" data-venc-accion="editar">Editar</button>
+                    <button type="button" class="venc-card-action danger" data-venc-accion="eliminar">Eliminar</button>
                 </div>
             </article>
         `;
@@ -936,6 +1013,9 @@ function manejarClickListadoVencimientos(event) {
     const item = vencimientosCache.find(registro => String(registro.id) === String(card.dataset.id));
     if (!item) return;
     abrirDetalleVencimiento(item);
+    const accion = event.target.closest("[data-venc-accion]")?.dataset.vencAccion;
+    if (accion === "editar") mostrarEdicionVencimiento();
+    if (accion === "eliminar") mostrarConfirmacionEliminarVencimiento();
 }
 
 function mostrarPanelModal(panel) {

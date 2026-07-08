@@ -1054,3 +1054,120 @@ body.en-inicio .app { padding-bottom: 20px; }
     font-size: 14px;
 }
 .venc-actions-card.oculto { display: none; }
+
+
+/* V4.3.3 - Vencimientos por pestañas y carga rápida */
+body.en-vencimientos .app { padding-bottom: 92px; }
+.venc-bottom-nav {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: min(520px, 100%);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    z-index: 60;
+}
+.venc-bottom-nav button {
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 18px;
+    font-weight: 900;
+    padding: 8px 4px;
+}
+.venc-bottom-nav button span {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 900;
+}
+.venc-bottom-nav button.activo {
+    background: var(--brand-soft);
+    color: var(--brand);
+}
+body:not(.en-vencimientos) .venc-bottom-nav { display: none; }
+
+.venc-qty-grid { gap: 10px; }
+.venc-qty-box {
+    border-radius: 18px;
+    padding: 12px;
+    border: 1px solid rgba(0,0,0,.05);
+}
+.venc-qty-salon { background: var(--salon-soft); }
+.venc-qty-deposito { background: var(--deposito-soft); }
+.venc-qty-control {
+    display: grid;
+    grid-template-columns: 42px 1fr 42px;
+    gap: 8px;
+    align-items: center;
+}
+.venc-qty-control button {
+    height: 46px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: var(--text);
+    font-size: 24px;
+    font-weight: 1000;
+    box-shadow: 0 4px 10px rgba(0,0,0,.05);
+}
+.venc-qty-control input,
+.venc-form-card .venc-qty-control input,
+.venc-modal-editar .venc-qty-control input {
+    height: 46px;
+    padding: 0;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 1000;
+    border-radius: 14px;
+}
+.venc-total {
+    background: linear-gradient(135deg, var(--primary-soft), #dcfce7);
+}
+.venc-total span::after { content: " unidades"; font-weight: 800; color: var(--muted); margin-left: 4px; font-size: 12px; }
+.venc-item { padding: 15px; }
+.venc-mini-grid span {
+    min-height: 48px;
+    padding: 9px 10px;
+}
+.venc-mini-grid small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-bottom: 3px;
+}
+.venc-mini-grid b {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+}
+.venc-badges {
+    align-items: center;
+}
+.venc-card-action {
+    border: 0;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: #f3f4f6;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 1000;
+}
+.venc-card-action.danger {
+    background: #ffe3e3;
+    color: #b42318;
+}
+.venc-list-head h2 {
+    line-height: 1.15;
+}
+@media (max-width: 390px) {
+    .venc-grid { grid-template-columns: 1fr; }
+    .venc-qty-control { grid-template-columns: 48px 1fr 48px; }
+}
