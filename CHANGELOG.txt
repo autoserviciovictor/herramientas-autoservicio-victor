@@ -41,3 +41,5 @@ V2.0
 - GET /descargar para generar Excel listo para importar.
 - Se mantiene la estructura: codigo, articulo, stock, salon, deposito.
 - Se conserva el diseño actual de la app.
+
+V4.4 - Diseño de Vencimientos ajustado a pantallas finales: carga con contador, próximos con edición/eliminación, vencidos como registro con eliminación, y refresco al cambiar de pestaña.

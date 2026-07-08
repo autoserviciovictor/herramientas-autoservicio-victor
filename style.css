@@ -1203,3 +1203,165 @@ body:not(.en-vencimientos) .venc-bottom-nav { display: none; }
 .venc-list-vencidos .venc-simple-row {
     background: #fff1f1;
 }
+
+
+/* V4.4 - Diseño final vencimientos por pestañas */
+.venc-list-cargar .venc-item-reciente {
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    border-left-width: 6px;
+    padding: 12px;
+}
+.venc-reciente-icon,
+.venc-vencido-icon,
+.venc-item-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.venc-reciente-info strong {
+    margin: 0 0 4px;
+    line-height: 1.18;
+    font-size: 14px;
+}
+.venc-reciente-info span {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 900;
+}
+.venc-item-reciente > b {
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.venc-list-proximos .venc-item-proximo {
+    padding: 15px;
+    border-left-width: 6px;
+    border-radius: 20px;
+}
+.venc-proximo-main {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 10px;
+    align-items: start;
+}
+.venc-proximo-main strong {
+    margin: 0 0 5px;
+    line-height: 1.18;
+    font-size: 15px;
+}
+.venc-code {
+    color: var(--muted);
+    font-weight: 900;
+    font-size: 12px;
+}
+.venc-proximo-fecha-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    margin: 12px 0 10px;
+}
+.venc-date-pill,
+.venc-state-pill {
+    border-radius: 999px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 1000;
+}
+.venc-date-pill { background: #f7f7f7; color: var(--text); }
+.venc-state-pill.venc-7 { background: #ffe3e3; color: #b42318; }
+.venc-state-pill.venc-15 { background: #fff0da; color: #c2410c; }
+.venc-state-pill.venc-30 { background: #e8f3ff; color: #0b66c3; }
+.venc-state-pill.venc-vigente { background: #e7f7ee; color: #087443; }
+.venc-proximo-grid,
+.venc-vencido-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.venc-proximo-grid span,
+.venc-vencido-grid span {
+    background: #fbfbfb;
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 13px;
+    padding: 9px 10px;
+    min-height: 46px;
+}
+.venc-proximo-grid small,
+.venc-vencido-grid small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    margin-bottom: 3px;
+}
+.venc-proximo-grid b,
+.venc-vencido-grid b {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 1000;
+}
+.venc-proximo-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+}
+.venc-proximo-actions .venc-card-action,
+.venc-delete-only {
+    min-height: 38px;
+    border: 1px solid rgba(0,0,0,.08);
+    background: #fff;
+}
+.venc-proximo-actions .venc-card-action:not(.danger) {
+    color: var(--primary-dark);
+    border-color: rgba(8,116,67,.28);
+}
+
+.venc-list-vencidos .venc-item-vencido-registro {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 10px;
+    align-items: start;
+    border-left: 6px solid #ef4444;
+    border-radius: 20px;
+    padding: 14px;
+}
+.venc-vencido-body strong {
+    margin: 0 0 5px;
+    line-height: 1.18;
+    font-size: 16px;
+}
+.venc-vencido-fecha {
+    margin: 10px 0;
+    padding: 9px 10px;
+    border-radius: 14px;
+    background: #fff1f1;
+    color: #7f1d1d;
+    font-weight: 900;
+}
+.venc-item-vencido-registro .venc-delete-only {
+    grid-column: 2;
+    justify-self: stretch;
+    margin-top: 8px;
+    border-color: rgba(239, 68, 68, .35);
+}
+
+@media (max-width: 390px) {
+    .venc-proximo-grid,
+    .venc-vencido-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .venc-proximo-grid span,
+    .venc-vencido-grid span { padding: 8px 7px; }
+    .venc-proximo-grid small,
+    .venc-vencido-grid small { font-size: 10px; }
+    .venc-proximo-grid b,
+    .venc-vencido-grid b { font-size: 12px; }
+}
