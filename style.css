@@ -1671,3 +1671,53 @@ body.en-anotar .bottom-nav{display:none}
 .repo-totales{margin-top:16px;border:1px solid #ffd1d1;background:#fff4f4;border-radius:15px;padding:14px;display:flex;justify-content:space-between;gap:10px;color:#d92b32}.repo-totales span{color:#555}
 .repo-bottom-nav{z-index:30}
 @media(max-width:520px){.repo-product-card,.repo-form-card{margin-left:20px;margin-right:20px}.repo-item{padding:12px}.repo-item-side div{display:flex}.repo-registro-card{margin-left:20px;margin-right:20px}}
+
+/* V4.7.1 - Ajustes móviles del módulo Reposición */
+body.en-anotar .repo-bottom-nav{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    z-index:70;
+}
+body.en-anotar .app{padding-bottom:92px}
+.repo-actions-card.oculto{display:none!important}
+.repo-camera-active .repo-actions-card{display:none}
+
+@media (max-width:520px){
+    .reposicion-screen .header-edit{padding:18px 20px 14px;gap:14px;align-items:center}
+    .reposicion-screen .header-edit h1{font-size:clamp(2rem,9vw,2.55rem);line-height:1.02;margin:0}
+    .reposicion-screen .header-edit p{font-size:1rem;line-height:1.2;margin-top:6px}
+    .reposicion-screen .back-btn{width:58px;height:58px;min-width:58px;border-radius:18px;font-size:2.2rem}
+    .repo-actions-card,.repo-recent-card,.repo-registro-card{margin-left:16px!important;margin-right:16px!important;border-radius:24px}
+    .repo-actions-card{padding:18px}
+    .repo-actions-card .scan-open-btn,.repo-actions-card .manual-link-btn{min-height:58px;font-size:1.05rem;border-radius:18px}
+    .repo-product-card,.repo-form-card{margin-left:16px;margin-right:16px;padding:17px;border-radius:22px}
+    .repo-product-card h2{font-size:1.28rem;line-height:1.12;overflow-wrap:anywhere}
+    .repo-product-card p{font-size:.92rem;overflow-wrap:anywhere}
+    .repo-quantity{grid-template-columns:64px 1fr 64px}
+    .repo-quantity button{min-height:64px;font-size:1.65rem}
+    .repo-quantity input{font-size:1.75rem;min-width:0}
+    .repo-help{font-size:.88rem;line-height:1.35}
+    .repo-mini-card{padding:13px 14px;gap:12px}
+    .repo-mini-card strong{font-size:.98rem;line-height:1.2;overflow-wrap:anywhere}
+    .repo-mini-card b{white-space:nowrap;font-size:1rem}
+    .repo-search-row input{font-size:1rem;min-height:54px}
+    .repo-filter-row{margin:12px 0 16px;padding-bottom:3px;scrollbar-width:none}
+    .repo-filter-row::-webkit-scrollbar{display:none}
+    .repo-filter-row button{padding:10px 15px;font-size:.94rem}
+    .repo-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 12px}
+    .repo-item-main strong{font-size:1rem;line-height:1.2;overflow-wrap:anywhere}
+    .repo-item-main small{overflow-wrap:anywhere}
+    .repo-item-side{min-width:112px;gap:6px}
+    .repo-item-side>b{font-size:1.18rem;white-space:nowrap}
+    .repo-item-side button{width:40px;height:40px;margin-left:4px;font-size:1rem}
+    .repo-totales{align-items:center;font-size:.92rem;line-height:1.2}
+    .repo-bottom-nav button{font-size:19px;padding:7px 2px}
+    .repo-bottom-nav button span{font-size:10.5px}
+}
+
+@media (max-width:370px){
+    .reposicion-screen .header-edit h1{font-size:1.82rem}
+    .repo-item{grid-template-columns:minmax(0,1fr) 104px}
+    .repo-item-side button{width:36px;height:36px}
+    .repo-filter-row button{padding:9px 12px}
+}

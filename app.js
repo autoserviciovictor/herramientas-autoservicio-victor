@@ -51,7 +51,7 @@ import {
     actualizarConteosUbicacion
 } from "./ui.js?v=470-reposicion";
 
-import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=470-reposicion";
+import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=471-reposicion";
 
 let ubicacionActual = "salon";
 let productoActual = null;

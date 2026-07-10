@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Herramientas Autoservicio Victor V4.7.0</title>
 
-    <link rel="stylesheet" href="style.css?v=470-reposicion">
+    <link rel="stylesheet" href="style.css?v=471-reposicion">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -328,7 +328,7 @@
         </header>
 
         <section id="repoCargaVista">
-            <section class="venc-actions-card repo-actions-card">
+            <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
                 <button id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
                 <button id="btnRepoManualToggle" class="manual-link-btn">⌨️ Ingresar código manualmente</button>
                 <div id="repoManualPanel" class="manual-panel oculto">
@@ -383,6 +383,7 @@
         <nav class="venc-bottom-nav repo-bottom-nav">
             <button type="button" class="activo" data-repo-tab="cargar">➕<span>Anotar</span></button>
             <button type="button" data-repo-tab="registro">☷<span>Registro</span></button>
+            <button type="button" data-repo-tab="completados">✓<span>Completados</span></button>
         </nav>
     </main>
 
@@ -458,6 +459,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=470-reposicion"></script>
+<script type="module" src="./app.js?v=471-reposicion"></script>
 </body>
 </html>

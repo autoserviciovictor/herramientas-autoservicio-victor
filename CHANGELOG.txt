@@ -73,3 +73,11 @@ V4.7.0 - Módulo Anotar / Reposición
 - Si un producto ya está pendiente, la nueva cantidad se suma.
 - Actualización desde servidor al entrar al registro.
 - Persistencia automática en una hoja interna "Reposicion" creada por la API, sin carga manual de archivos.
+
+V4.7.1
+- Se corrigió la barra inferior del módulo Anotar para que siempre sea visible.
+- Se agregó la pestaña Completados en la navegación inferior.
+- Al abrir el escáner se oculta el bloque de botones de escaneo/carga manual.
+- Al detectar un producto, la pantalla queda enfocada en producto y cantidad.
+- Se ajustaron tamaños, márgenes, tipografías y tarjetas para celulares.
+- Se mejoró la distribución de botones y textos en el registro.

@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=470-reposicion";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=470-reposicion";
+import { API_BASE_URL } from "./config.js?v=471-reposicion";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=471-reposicion";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -51,11 +51,12 @@ export async function refrescarReposicion(){
 }
 
 async function abrirScanner(){
+  $("repoActionsCard")?.classList.add("oculto");
   $("repoCameraCard")?.classList.remove("oculto");
   try { await iniciarScanner("videoReposicion", async codigo=>{ cerrarScanner(); await buscarProducto(codigo); }); }
-  catch(e){ $("repoCameraCard")?.classList.add("oculto"); toast("No se pudo abrir la cámara","error"); }
+  catch(e){ $("repoCameraCard")?.classList.add("oculto"); $("repoActionsCard")?.classList.remove("oculto"); toast("No se pudo abrir la cámara","error"); }
 }
-function cerrarScanner(){ detenerScanner(); $("repoCameraCard")?.classList.add("oculto"); }
+function cerrarScanner(){ detenerScanner(); $("repoCameraCard")?.classList.add("oculto"); if(!productoActual) $("repoActionsCard")?.classList.remove("oculto"); }
 function procesarManual(){ const c=$("repoCodigoManualInput")?.value.trim(); if(!c)return; $("repoCodigoManualInput").value=""; buscarProducto(c); }
 async function buscarProducto(codigo){
   try{
@@ -63,6 +64,7 @@ async function buscarProducto(codigo){
     productoActual=data.producto;
     $("repoNombreProducto").textContent=productoActual.articulo;
     $("repoCodigoProducto").textContent=`Código: ${productoActual.codigo}`;
+    $("repoActionsCard")?.classList.add("oculto");
     $("repoProductoCard").classList.remove("oculto"); $("repoFormCard").classList.remove("oculto");
     $("repoCantidadInput").value=1;
   }catch(e){ limpiar(); toast("Producto no encontrado","error"); }
@@ -76,15 +78,18 @@ async function guardar(){
     toast("Producto guardado correctamente"); limpiar(); await refrescarReposicion();
   }catch(e){toast(e.message,"error");}
 }
-function limpiar(){ productoActual=null; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); }
+function limpiar(){ productoActual=null; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
 function cambiarTab(nueva){
   tab=nueva||"cargar";
-  $("repoCargaVista")?.classList.toggle("oculto",tab!=="cargar");
-  $("repoRegistroVista")?.classList.toggle("oculto",tab!=="registro");
-  $("repoTitulo").textContent=tab==="cargar"?"Anotar reposición":"Registro de reposición";
-  $("repoSubtitulo").textContent=tab==="cargar"?"Escaneá o buscá un producto":"Productos anotados para llevar del depósito";
+  const esCarga=tab==="cargar";
+  $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
+  $("repoRegistroVista")?.classList.toggle("oculto",esCarga);
+  if(tab==="completados") filtro="completado";
+  else if(tab==="registro" && filtro==="completado") filtro="pendiente";
+  $("repoTitulo").textContent=esCarga?"Anotar reposición":tab==="completados"?"Reposiciones completadas":"Registro de reposición";
+  $("repoSubtitulo").textContent=esCarga?"Escaneá o buscá un producto":tab==="completados"?"Productos que ya llevaste al salón":"Productos anotados para llevar del depósito";
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
-  if(tab==="registro") refrescarReposicion();
+  if(!esCarga){ refrescarReposicion(); render(); }
 }
 function render(){ renderRecientes(); renderListado(); }
 function renderRecientes(){
