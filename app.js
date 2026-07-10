@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=450-oferta";
+} from "./excel.js?v=460-limpio";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=450-oferta";
+} from "./scanner.js?v=460-limpio";
 
 import {
     ocultarSplash,
@@ -49,7 +49,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=450-oferta";
+} from "./ui.js?v=460-limpio";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -1013,7 +1013,6 @@ function renderListadoVencimientos() {
         if (vencTabActual === "cargar") {
             return `
                 <article class="venc-item venc-item-reciente ${clase}" data-id="${item.id}">
-                    <div class="venc-reciente-icon">📦</div>
                     <div class="venc-reciente-info">
                         <strong>${articulo}</strong>
                         <span>📅 ${fecha}</span>
@@ -1026,14 +1025,13 @@ function renderListadoVencimientos() {
         if (vencTabActual === "vencidos") {
             return `
                 <article class="venc-item venc-item-vencido-registro venc-vencido" data-id="${item.id}">
-                    <div class="venc-vencido-icon">⚠️</div>
                     <div class="venc-vencido-body">
                         <strong>${articulo}</strong>
                         <span class="venc-code">Código: ${codigo}</span>
                         <div class="venc-vencido-fecha">📅 Venció: <b>${fecha}</b></div>
                         <div class="venc-vencido-grid">
-                            <span><small>Salón</small><b>🏪 ${salon}</b></span>
-                            <span><small>Depósito</small><b>📦 ${deposito}</b></span>
+                            <span><small>Salón</small><b>${salon}</b></span>
+                            <span><small>Depósito</small><b>${deposito}</b></span>
                             <span><small>Total</small><b>${cantidad} unid.</b></span>
                         </div>
                     </div>
@@ -1046,7 +1044,6 @@ function renderListadoVencimientos() {
             <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""}" data-id="${item.id}">
                 <div class="venc-offer-top ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "🏷️ OFERTA ACTIVA" : "Sin oferta"}</div>
                 <div class="venc-item-main venc-proximo-main">
-                    <span class="venc-item-icon">📦</span>
                     <div>
                         <strong>${articulo}</strong>
                         <span class="venc-code">Código: ${codigo}</span>
@@ -1057,8 +1054,8 @@ function renderListadoVencimientos() {
                     <b class="venc-state-pill ${clase}">${estado}</b>
                 </div>
                 <div class="venc-proximo-grid">
-                    <span><small>Salón</small><b>🏪 ${salon}</b></span>
-                    <span><small>Depósito</small><b>📦 ${deposito}</b></span>
+                    <span><small>Salón</small><b>${salon}</b></span>
+                    <span><small>Depósito</small><b>${deposito}</b></span>
                     <span><small>Total</small><b>${cantidad} unid.</b></span>
                 </div>
                 <div class="venc-proximo-actions venc-proximo-actions-3">

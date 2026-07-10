@@ -1,3 +1,10 @@
+V4.6
+- Se quitaron los logos/íconos de tarjetas de registros recientes, próximos y vencidos.
+- Se ajustaron tarjetas para que sean más compactas y legibles en celular.
+- Se reforzaron las barras laterales de color: rojo 7 días, amarillo 15 días, azul 30 días y negro vencidos.
+- Se mantuvo Oferta activa/Sin oferta con chips más limpios.
+- Se mantuvo actualización automática al cambiar entre Cargar, Próximos y Vencidos.
+
 V4.5
 - Vencimientos: colores definitivos por urgencia (rojo 7 días, amarillo 15 días, azul 30 días y negro vencido).
 - Vencimientos: columna Oferta en Google Sheets con valores Sí/No.
