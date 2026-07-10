@@ -1551,3 +1551,106 @@ body:not(.en-vencimientos) .venc-bottom-nav { display: none; }
         padding-top: 42px;
     }
 }
+
+
+/* V4.6.1 - Tarjetas más ordenadas y días exactos */
+.venc-list-cargar .venc-item-reciente {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+}
+.venc-reciente-info strong {
+    font-size: 15px;
+    line-height: 1.16;
+    margin-bottom: 7px;
+}
+.venc-reciente-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.venc-reciente-meta span,
+.venc-reciente-dias {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 11px;
+    line-height: 1;
+    font-style: normal;
+    font-weight: 1000;
+}
+.venc-reciente-meta span {
+    background: #f8fafc;
+    color: var(--muted);
+}
+.venc-reciente-dias.venc-7 { background: #fee2e2; color: #b91c1c; }
+.venc-reciente-dias.venc-15 { background: #fef3c7; color: #a16207; }
+.venc-reciente-dias.venc-30 { background: #dbeafe; color: #1d4ed8; }
+.venc-reciente-dias.venc-vencido { background: #e5e7eb; color: #111827; }
+.venc-item-reciente > b {
+    font-size: 16px;
+    color: var(--text);
+}
+
+.venc-list-proximos .venc-item-proximo {
+    padding: 38px 14px 14px 16px;
+}
+.venc-proximo-main strong {
+    font-size: 17px;
+    line-height: 1.14;
+    margin-bottom: 6px;
+}
+.venc-proximo-fecha-row {
+    grid-template-columns: 1fr auto;
+    margin: 12px 0 11px;
+}
+.venc-date-pill,
+.venc-state-pill {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.venc-state-pill {
+    white-space: nowrap;
+}
+.venc-proximo-grid span,
+.venc-vencido-grid span {
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.055);
+}
+.venc-proximo-grid small,
+.venc-vencido-grid small {
+    font-size: 11px;
+    margin-bottom: 5px;
+}
+.venc-proximo-grid b,
+.venc-vencido-grid b {
+    font-size: 15px;
+}
+.venc-proximo-actions-3 {
+    margin-top: 13px;
+}
+
+.venc-vencido-fecha {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+}
+.venc-vencido-fecha em {
+    font-style: normal;
+    font-size: 12px;
+    color: #991b1b;
+    font-weight: 1000;
+}
+
+@media (max-width: 390px) {
+    .venc-proximo-main strong { font-size: 16px; }
+    .venc-date-pill, .venc-state-pill { font-size: 11px; padding: 8px 9px; }
+    .venc-proximo-grid b, .venc-vencido-grid b { font-size: 13px; }
+    .venc-reciente-info strong { font-size: 14px; }
+}

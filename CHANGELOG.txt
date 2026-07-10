@@ -58,3 +58,8 @@ V2.0
 - Se conserva el diseño actual de la app.
 
 V4.4 - Diseño de Vencimientos ajustado a pantallas finales: carga con contador, próximos con edición/eliminación, vencidos como registro con eliminación, y refresco al cambiar de pestaña.
+
+V4.6.1
+- Tarjetas de vencimientos más ordenadas.
+- Días exactos visibles en próximos, vencidos y últimos registros.
+- Corrección de marcado/quitar oferta duplicado.

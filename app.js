@@ -913,11 +913,13 @@ function claseEstadoVencimiento(item) {
 
 function textoEstadoVencimiento(item) {
     const dias = diasHastaVencimiento(item.vencimiento);
-    if (dias < 0) return "Vencido";
+    if (dias < 0) {
+        const vencidoHace = Math.abs(dias);
+        return vencidoHace === 1 ? "Vencido ayer" : `Vencido hace ${vencidoHace} días`;
+    }
     if (dias === 0) return "Vence hoy";
-    if (dias <= 7) return `En ${dias} días`;
-    if (dias <= 15) return "En 15 días";
-    if (dias <= 30) return "En 30 días";
+    if (dias === 1) return "Falta 1 día";
+    if (dias <= 30) return `Faltan ${dias} días`;
     return "Vigente";
 }
 
@@ -1015,7 +1017,10 @@ function renderListadoVencimientos() {
                 <article class="venc-item venc-item-reciente ${clase}" data-id="${item.id}">
                     <div class="venc-reciente-info">
                         <strong>${articulo}</strong>
-                        <span>📅 ${fecha}</span>
+                        <div class="venc-reciente-meta">
+                            <span>📅 ${fecha}</span>
+                            <em class="venc-reciente-dias ${clase}">${estado}</em>
+                        </div>
                     </div>
                     <b>${cantidad} unid.</b>
                 </article>
@@ -1028,7 +1033,7 @@ function renderListadoVencimientos() {
                     <div class="venc-vencido-body">
                         <strong>${articulo}</strong>
                         <span class="venc-code">Código: ${codigo}</span>
-                        <div class="venc-vencido-fecha">📅 Venció: <b>${fecha}</b></div>
+                        <div class="venc-vencido-fecha"><span>📅 Venció: <b>${fecha}</b></span><em>${estado}</em></div>
                         <div class="venc-vencido-grid">
                             <span><small>Salón</small><b>${salon}</b></span>
                             <span><small>Depósito</small><b>${deposito}</b></span>
