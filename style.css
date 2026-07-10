@@ -1365,3 +1365,93 @@ body:not(.en-vencimientos) .venc-bottom-nav { display: none; }
     .venc-proximo-grid b,
     .venc-vencido-grid b { font-size: 12px; }
 }
+
+/* V4.5 - Colores definitivos y ofertas */
+.venc-resumen-7 { background: #fee2e2; color: #b91c1c; border: 1px solid rgba(239,68,68,.16); }
+.venc-resumen-15 { background: #fef3c7; color: #a16207; border: 1px solid rgba(234,179,8,.20); }
+.venc-resumen-30 { background: #dbeafe; color: #1d4ed8; border: 1px solid rgba(37,99,235,.16); }
+.venc-resumen-vencidos { background: #f1f5f9; color: #0f172a; border: 1px solid rgba(15,23,42,.12); }
+
+.venc-item.venc-7 { border-left-color: #ef4444; }
+.venc-item.venc-15 { border-left-color: #eab308; }
+.venc-item.venc-30 { border-left-color: #2563eb; }
+.venc-item.venc-vencido { border-left-color: #111827; }
+
+.venc-state-pill.venc-7,
+.venc-badges .venc-7,
+.venc-modal-status.venc-7 { background: #fee2e2; color: #b91c1c; }
+.venc-state-pill.venc-15,
+.venc-badges .venc-15,
+.venc-modal-status.venc-15 { background: #fef3c7; color: #a16207; }
+.venc-state-pill.venc-30,
+.venc-badges .venc-30,
+.venc-modal-status.venc-30 { background: #dbeafe; color: #1d4ed8; }
+.venc-state-pill.venc-vencido,
+.venc-badges .venc-vencido,
+.venc-modal-status.venc-vencido { background: #e5e7eb; color: #111827; }
+
+.venc-list-proximos .venc-item-proximo {
+    padding-top: 42px;
+}
+.venc-offer-top {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 1000;
+    z-index: 2;
+}
+.venc-offer-top.activa {
+    background: #15803d;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(21,128,61,.20);
+}
+.venc-offer-top.pendiente {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid rgba(249,115,22,.24);
+}
+.venc-con-oferta {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+.venc-card-action.offer {
+    color: #087443;
+    border-color: rgba(8,116,67,.28);
+    background: #f0fdf4;
+}
+.venc-card-action.offer.active {
+    color: #166534;
+    background: #dcfce7;
+    border-color: rgba(22,101,52,.34);
+}
+.venc-proximo-actions-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+.venc-filtros {
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: thin;
+}
+.venc-filtros button[data-venc-filtro="oferta"].activo,
+.venc-filtros button[data-venc-filtro="sinOferta"].activo {
+    background: #15803d;
+    border-color: #15803d;
+    color: #fff;
+}
+.venc-list-vencidos .venc-item-vencido-registro {
+    border-left-color: #111827;
+}
+.venc-list-vencidos .venc-vencido-fecha {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+@media (max-width: 390px) {
+    .venc-proximo-actions-3 {
+        grid-template-columns: 1fr;
+    }
+    .venc-list-proximos .venc-item-proximo {
+        padding-top: 48px;
+    }
+}

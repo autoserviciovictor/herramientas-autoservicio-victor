@@ -376,6 +376,11 @@ function calcularEstadoVencimiento(fechaVencimiento) {
   return "Vigente";
 }
 
+function normalizarOfertaVencimiento(valor) {
+  const texto = normalizarTexto(valor).toLowerCase();
+  return ["si", "sí", "true", "1", "oferta", "activo", "activa"].includes(texto) ? "Sí" : "No";
+}
+
 async function asegurarHojaVencimientos() {
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
@@ -390,16 +395,16 @@ async function asegurarHojaVencimientos() {
 
   const respuesta = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${VENCIMIENTOS_SHEET_NAME}!A1:I1`
+    range: `${VENCIMIENTOS_SHEET_NAME}!A1:J1`
   });
 
   const encabezado = respuesta.data.values?.[0] || [];
-  const correcto = ["ID", "Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado"];
-  const necesitaEncabezado = encabezado.length === 0 || encabezado[0] !== "ID" || encabezado.length < 9;
+  const correcto = ["ID", "Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado", "Oferta"];
+  const necesitaEncabezado = encabezado.length === 0 || encabezado[0] !== "ID" || encabezado.length < 10;
   if (necesitaEncabezado) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A1:I1`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A1:J1`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [correcto] }
     });
@@ -417,7 +422,8 @@ function filaAVencimiento(fila, index) {
     salon: numero(fila[5]),
     deposito: numero(fila[6]),
     total: numero(fila[7]),
-    estado: normalizarTexto(fila[8]) || calcularEstadoVencimiento(fila[4])
+    estado: normalizarTexto(fila[8]) || calcularEstadoVencimiento(fila[4]),
+    oferta: normalizarOfertaVencimiento(fila[9])
   };
 }
 
@@ -425,7 +431,7 @@ async function obtenerVencimientos() {
   await asegurarHojaVencimientos();
   const respuesta = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${VENCIMIENTOS_SHEET_NAME}!A:I`
+    range: `${VENCIMIENTOS_SHEET_NAME}!A:J`
   });
   const filas = respuesta.data.values || [];
   return filas.slice(1).map(filaAVencimiento).filter(item => item.codigo || item.articulo || item.id);
@@ -467,15 +473,16 @@ app.post("/vencimientos", async (req, res) => {
       salon,
       deposito,
       total,
-      estado: calcularEstadoVencimiento(vencimiento)
+      estado: calcularEstadoVencimiento(vencimiento),
+      oferta: normalizarOfertaVencimiento(req.body.oferta)
     };
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:J`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[registro.id, registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado]] }
+      requestBody: { values: [[registro.id, registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado, registro.oferta]] }
     });
 
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
@@ -499,17 +506,39 @@ app.put("/vencimientos/:id", async (req, res) => {
     if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
     if (total <= 0) return res.status(400).json({ ok: false, mensaje: "Cargá cantidad en salón o depósito" });
 
-    const actualizado = { ...registro, vencimiento, salon, deposito, total, estado: calcularEstadoVencimiento(vencimiento) };
+    const actualizado = { ...registro, vencimiento, salon, deposito, total, estado: calcularEstadoVencimiento(vencimiento), oferta: req.body.oferta === undefined ? registro.oferta : normalizarOfertaVencimiento(req.body.oferta) };
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:I${registro.filaGoogle}`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:J${registro.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado]] }
+      requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
     });
     res.json({ ok: true, mensaje: "Vencimiento actualizado", vencimiento: actualizado });
   } catch (error) {
     console.error("Error en PUT /vencimientos/:id:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar vencimiento" });
+  }
+});
+
+app.patch("/vencimientos/:id/oferta", async (req, res) => {
+  try {
+    const id = normalizarTexto(req.params.id);
+    const vencimientos = await obtenerVencimientos();
+    const registro = vencimientos.find(item => item.id === id);
+    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+
+    const oferta = normalizarOfertaVencimiento(req.body.oferta);
+    const actualizado = { ...registro, oferta };
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:J${registro.filaGoogle}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
+    });
+    res.json({ ok: true, mensaje: oferta === "Sí" ? "Oferta marcada" : "Oferta quitada", vencimiento: actualizado });
+  } catch (error) {
+    console.error("Error en PATCH /vencimientos/:id/oferta:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar oferta" });
   }
 });
 

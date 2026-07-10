@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=4333-venc-tabs";
+import { API_BASE_URL } from "./config.js?v=450-oferta";
 
 let datos = [];
 let contador = 0;
@@ -273,6 +273,14 @@ export async function actualizarVencimiento(id, registro) {
             salon: normalizarNumero(registro.salon),
             deposito: normalizarNumero(registro.deposito)
         })
+    });
+    return data.vencimiento;
+}
+
+export async function actualizarOfertaVencimiento(id, oferta) {
+    const data = await pedirJson(`/vencimientos/${encodeURIComponent(id)}/oferta`, {
+        method: "PATCH",
+        body: JSON.stringify({ oferta: oferta ? "Sí" : "No" })
     });
     return data.vencimiento;
 }

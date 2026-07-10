@@ -17,13 +17,14 @@ import {
     guardarVencimiento,
     buscarProductoMaestroPorCodigo,
     actualizarVencimiento,
-    eliminarVencimiento
-} from "./excel.js?v=440-venc-ux";
+    eliminarVencimiento,
+    actualizarOfertaVencimiento
+} from "./excel.js?v=450-oferta";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=440-venc-ux";
+} from "./scanner.js?v=450-oferta";
 
 import {
     ocultarSplash,
@@ -48,7 +49,7 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=440-venc-ux";
+} from "./ui.js?v=450-oferta";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -318,7 +319,7 @@ function actualizarVisibilidadPanelesVencimientos() {
 
 function aplicarFiltroVencimientos(filtro) {
     filtroVencimientos = filtro || "todos";
-    if (["7", "15", "30"].includes(filtroVencimientos)) vencTabActual = "proximos";
+    if (["7", "15", "30", "oferta", "sinOferta"].includes(filtroVencimientos)) vencTabActual = "proximos";
     if (filtroVencimientos === "vencidos") vencTabActual = "vencidos";
     elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
     elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
@@ -895,6 +896,11 @@ function formatearFecha(fecha) {
     return fecha;
 }
 
+function tieneOferta(item) {
+    const texto = String(item.oferta || "").trim().toLowerCase();
+    return ["sí", "si", "true", "1", "oferta", "activo", "activa"].includes(texto);
+}
+
 function claseEstadoVencimiento(item) {
     const estado = String(item.estado || "").toLowerCase();
     const dias = diasHastaVencimiento(item.vencimiento);
@@ -936,6 +942,8 @@ function filtrarVencimientos() {
             if (filtroVencimientos === "7" && bucket !== "7") return false;
             if (filtroVencimientos === "15" && bucket !== "15") return false;
             if (filtroVencimientos === "30" && bucket !== "30") return false;
+            if (filtroVencimientos === "oferta" && !tieneOferta(item)) return false;
+            if (filtroVencimientos === "sinOferta" && tieneOferta(item)) return false;
         }
 
         if (q) {
@@ -1000,6 +1008,7 @@ function renderListadoVencimientos() {
         const salon = Number(item.salon) || 0;
         const deposito = Number(item.deposito) || 0;
         const estado = textoEstadoVencimiento(item);
+        const ofertaActiva = tieneOferta(item);
 
         if (vencTabActual === "cargar") {
             return `
@@ -1034,7 +1043,8 @@ function renderListadoVencimientos() {
         }
 
         return `
-            <article class="venc-item venc-item-proximo ${clase}" data-id="${item.id}">
+            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""}" data-id="${item.id}">
+                <div class="venc-offer-top ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "🏷️ OFERTA ACTIVA" : "Sin oferta"}</div>
                 <div class="venc-item-main venc-proximo-main">
                     <span class="venc-item-icon">📦</span>
                     <div>
@@ -1051,7 +1061,8 @@ function renderListadoVencimientos() {
                     <span><small>Depósito</small><b>📦 ${deposito}</b></span>
                     <span><small>Total</small><b>${cantidad} unid.</b></span>
                 </div>
-                <div class="venc-proximo-actions">
+                <div class="venc-proximo-actions venc-proximo-actions-3">
+                    <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>
                     <button type="button" class="venc-card-action" data-venc-accion="editar">Editar</button>
                     <button type="button" class="venc-card-action danger" data-venc-accion="eliminar">Eliminar</button>
                 </div>
@@ -1068,6 +1079,10 @@ function manejarClickListadoVencimientos(event) {
     const item = vencimientosCache.find(registro => String(registro.id) === String(card.dataset.id));
     if (!item) return;
     vencimientoSeleccionado = item;
+    if (accion === "oferta" && vencTabActual === "proximos") {
+        alternarOfertaVencimiento(item);
+        return;
+    }
     if (accion === "editar" && vencTabActual === "proximos") {
         abrirDetalleVencimiento(item);
         mostrarEdicionVencimiento();
@@ -1076,6 +1091,21 @@ function manejarClickListadoVencimientos(event) {
     if (accion === "eliminar") {
         abrirDetalleVencimiento(item);
         mostrarConfirmacionEliminarVencimiento();
+    }
+}
+
+async function alternarOfertaVencimiento(item) {
+    if (!item?.id) return;
+    try {
+        mostrarMensaje(tieneOferta(item) ? "Quitando oferta..." : "Marcando oferta...", "ok");
+        const nuevaOferta = !tieneOferta(item);
+        await actualizarOfertaVencimiento(item.id, nuevaOferta);
+        await cargarListadoVencimientos();
+        mostrarMensaje(nuevaOferta ? "Oferta marcada" : "Oferta quitada", "ok");
+        reproducirConfirmacion("guardado");
+    } catch (error) {
+        mostrarMensaje(error.message, "error");
+        reproducirConfirmacion("error");
     }
 }
 

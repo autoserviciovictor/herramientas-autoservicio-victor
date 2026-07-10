@@ -1,3 +1,11 @@
+V4.5
+- Vencimientos: colores definitivos por urgencia (rojo 7 días, amarillo 15 días, azul 30 días y negro vencido).
+- Vencimientos: columna Oferta en Google Sheets con valores Sí/No.
+- Vencimientos: botón Marcar oferta / Quitar oferta en productos próximos a vencer.
+- Vencimientos: filtros Con oferta y Sin oferta en Próximos.
+- Vencimientos: tarjetas de Próximos y Vencidos rediseñadas con mejor lectura visual.
+- Dashboard: versión visible actualizada a V4.5.
+
 V4.3.3
 - Vencimientos: navegación inferior propia (Cargar, Próximos, Vencidos).
 - Vencimientos: cantidad de salón y depósito con botones + / - y carga manual.
