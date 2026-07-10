@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=470-reposicion";
+} from "./excel.js?v=472-reposicion";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=470-reposicion";
+} from "./scanner.js?v=472-reposicion";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=470-reposicion";
+} from "./ui.js?v=472-reposicion";
 
-import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=471-reposicion";
+import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=472-reposicion";
 
 let ubicacionActual = "salon";
 let productoActual = null;

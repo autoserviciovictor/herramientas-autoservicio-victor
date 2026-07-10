@@ -81,3 +81,12 @@ V4.7.1
 - Al detectar un producto, la pantalla queda enfocada en producto y cantidad.
 - Se ajustaron tamaños, márgenes, tipografías y tarjetas para celulares.
 - Se mejoró la distribución de botones y textos en el registro.
+
+V4.7.2
+- Barra inferior de Reposición reducida a Anotar y Registro.
+- Pendientes, Completados y Todos permanecen como filtros dentro del Registro.
+- Encabezado rojo dinámico según el módulo o pantalla activa.
+- Pantalla principal conserva Autoservicio Victor / Herramientas.
+- Rediseño móvil compacto de Anotar y Registro.
+- Tarjetas, filtros, botones y totales ajustados para pantallas angostas.
+- Eliminación del título duplicado dentro de las pantallas de Reposición.

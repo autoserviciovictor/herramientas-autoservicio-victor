@@ -1721,3 +1721,105 @@ body.en-anotar .app{padding-bottom:92px}
     .repo-item-side button{width:36px;height:36px}
     .repo-filter-row button{padding:9px 12px}
 }
+
+/* V4.7.2 - Encabezados dinámicos y ajuste final de Reposición */
+.brand-header{
+    min-height:64px;
+    padding:10px 14px;
+}
+.brand-header span{font-size:1.35rem}
+.brand-header small{font-size:.78rem}
+
+body.en-anotar .repo-bottom-nav{
+    grid-template-columns:repeat(2,1fr);
+}
+
+@media (max-width:520px){
+    .reposicion-screen{padding-top:8px}
+    .reposicion-screen .header-edit{
+        margin:0 0 8px;
+        padding:4px 16px 2px;
+        min-height:48px;
+    }
+    .reposicion-screen .header-edit>div{display:none}
+    .reposicion-screen .back-btn{
+        width:46px;
+        min-width:46px;
+        height:46px;
+        border-radius:15px;
+        font-size:1.8rem;
+    }
+
+    .repo-actions-card,.repo-recent-card,.repo-registro-card{
+        margin-left:8px!important;
+        margin-right:8px!important;
+        border-radius:21px;
+    }
+    .repo-actions-card{padding:14px;margin-bottom:12px}
+    .repo-actions-card .scan-open-btn,
+    .repo-actions-card .manual-link-btn{
+        min-height:52px;
+        border-radius:16px;
+        font-size:1rem;
+    }
+    .repo-actions-card .manual-link-btn{margin-top:10px}
+
+    .repo-recent-card,.repo-registro-card{padding:14px}
+    .repo-recent-card .venc-list-head{align-items:center;margin-bottom:10px}
+    .repo-recent-card .venc-list-head h2{font-size:1.35rem;line-height:1.05}
+    .repo-recent-card .venc-list-head button{padding:9px 12px;border-radius:14px;font-size:.84rem}
+
+    .repo-mini-card{
+        padding:11px 12px;
+        min-height:74px;
+        border-radius:13px;
+    }
+    .repo-mini-card strong{font-size:.94rem;line-height:1.15}
+    .repo-mini-card small{font-size:.78rem}
+    .repo-mini-card b{font-size:.95rem}
+
+    .repo-search-row input{min-height:48px;font-size:.95rem;border-radius:15px}
+    .repo-filter-row{margin:10px 0 12px;gap:8px}
+    .repo-filter-row button{padding:9px 13px;font-size:.88rem;white-space:nowrap}
+
+    .repo-item{
+        display:block;
+        padding:12px 12px 11px;
+        border-radius:14px;
+        margin-bottom:0;
+    }
+    .repo-item-main{gap:3px;padding-right:0}
+    .repo-item-main strong{font-size:.98rem;line-height:1.16}
+    .repo-item-main small,.repo-item-main span{font-size:.78rem}
+    .repo-item-side{
+        min-width:0;
+        margin-top:9px;
+        display:grid;
+        grid-template-columns:1fr auto;
+        grid-template-areas:"qty state" "actions actions";
+        align-items:center;
+        justify-items:stretch;
+        gap:8px;
+        text-align:left;
+    }
+    .repo-item-side>b{grid-area:qty;font-size:1.08rem}
+    .repo-item-side>em{grid-area:state;justify-self:end}
+    .repo-item-side>div{grid-area:actions;display:grid;grid-template-columns:repeat(3,38px);justify-content:end;gap:7px}
+    .repo-item-side button{width:38px;height:38px;margin:0;border-radius:10px}
+
+    .repo-totales{
+        margin-top:12px;
+        padding:12px;
+        border-radius:14px;
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        align-items:center;
+        font-size:.86rem;
+    }
+    .repo-totales strong{font-size:.98rem}
+    .repo-totales span{text-align:right}
+
+    .repo-product-card,.repo-form-card{margin-left:8px;margin-right:8px}
+    .repo-bottom-nav button{font-size:20px;padding:7px 2px}
+    .repo-bottom-nav button span{font-size:11px}
+}

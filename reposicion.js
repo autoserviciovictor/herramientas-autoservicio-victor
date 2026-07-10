@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=471-reposicion";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=471-reposicion";
+import { API_BASE_URL } from "./config.js?v=472-reposicion";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=472-reposicion";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -79,18 +79,25 @@ async function guardar(){
   }catch(e){toast(e.message,"error");}
 }
 function limpiar(){ productoActual=null; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
+function actualizarEncabezadoRepo(esCarga){
+  const titulo=$("brandHeaderTitulo");
+  const subtitulo=$("brandHeaderSubtitulo");
+  if(titulo) titulo.textContent=esCarga?"Anotar reposición":"Registro de reposición";
+  if(subtitulo) subtitulo.textContent=esCarga?"Reposición de salón":"Productos para llevar del depósito";
+}
 function cambiarTab(nueva){
-  tab=nueva||"cargar";
+  tab=nueva==="registro"?"registro":"cargar";
   const esCarga=tab==="cargar";
   $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
   $("repoRegistroVista")?.classList.toggle("oculto",esCarga);
-  if(tab==="completados") filtro="completado";
-  else if(tab==="registro" && filtro==="completado") filtro="pendiente";
-  $("repoTitulo").textContent=esCarga?"Anotar reposición":tab==="completados"?"Reposiciones completadas":"Registro de reposición";
-  $("repoSubtitulo").textContent=esCarga?"Escaneá o buscá un producto":tab==="completados"?"Productos que ya llevaste al salón":"Productos anotados para llevar del depósito";
+  if(!esCarga && filtro!=="pendiente" && filtro!=="completado" && filtro!=="todos") filtro="pendiente";
+  $("repoTitulo").textContent=esCarga?"Anotar reposición":"Registro de reposición";
+  $("repoSubtitulo").textContent=esCarga?"Escaneá o buscá un producto":"Productos anotados para llevar del depósito";
+  actualizarEncabezadoRepo(esCarga);
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
   if(!esCarga){ refrescarReposicion(); render(); }
 }
+
 function render(){ renderRecientes(); renderListado(); }
 function renderRecientes(){
   const c=$("repoRecientes"); if(!c)return;

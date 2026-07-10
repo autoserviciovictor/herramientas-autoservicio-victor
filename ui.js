@@ -53,7 +53,27 @@ export function ocultarSplash() {
     setTimeout(() => elementos.splash.classList.add("oculto"), 650);
 }
 
+function actualizarEncabezadoModulo(nombre) {
+    const titulo = document.getElementById("brandHeaderTitulo");
+    const subtitulo = document.getElementById("brandHeaderSubtitulo");
+    if (!titulo || !subtitulo) return;
+
+    const encabezados = {
+        inicio: ["🏪 Autoservicio Victor", "Herramientas"],
+        inventario: ["Inventario", "Control de stock"],
+        productos: ["Productos", "Inventario"],
+        editarProducto: ["Editar producto", "Inventario"],
+        ajustes: ["Ajustes", "Inventario"],
+        vencimientos: ["Vencimientos", "Control de fechas"],
+        anotar: ["Anotar reposición", "Reposición de salón"]
+    };
+    const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
+    titulo.textContent = textoTitulo;
+    subtitulo.textContent = textoSubtitulo;
+}
+
 export function cambiarPantalla(nombre) {
+    actualizarEncabezadoModulo(nombre);
     Object.entries(elementos.pantallas).forEach(([clave, pantalla]) => {
         if (!pantalla) return;
         pantalla.classList.toggle("activa", clave === nombre);
