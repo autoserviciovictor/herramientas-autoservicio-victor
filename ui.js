@@ -56,6 +56,7 @@ export function ocultarSplash() {
 function actualizarEncabezadoModulo(nombre) {
     const titulo = document.getElementById("brandHeaderTitulo");
     const subtitulo = document.getElementById("brandHeaderSubtitulo");
+    const volver = document.getElementById("brandBackBtn");
     if (!titulo || !subtitulo) return;
 
     const encabezados = {
@@ -70,6 +71,11 @@ function actualizarEncabezadoModulo(nombre) {
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
     titulo.textContent = textoTitulo;
     subtitulo.textContent = textoSubtitulo;
+    if (volver) {
+        const destinos = { productos: "inventario", editarProducto: "productos", ajustes: "inventario" };
+        volver.dataset.modulo = destinos[nombre] || "inicio";
+        volver.classList.toggle("oculto", nombre === "inicio");
+    }
 }
 
 export function cambiarPantalla(nombre) {
@@ -125,6 +131,7 @@ export function actualizarUbicacion(ubicacion) {
 }
 
 export function mostrarProducto(producto) {
+    elementos.productoCard.classList.remove("oculto");
     elementos.productoCard.classList.remove("empty", "error", "found");
     void elementos.productoCard.offsetWidth;
     elementos.productoCard.classList.add("found");
@@ -137,6 +144,7 @@ export function mostrarProducto(producto) {
 }
 
 export function mostrarProductoNoEncontrado(codigo) {
+    elementos.productoCard.classList.remove("oculto");
     elementos.productoCard.classList.remove("empty", "found");
     elementos.productoCard.classList.add("error");
     elementos.estadoProducto.textContent = "Código no encontrado";
@@ -148,6 +156,7 @@ export function mostrarProductoNoEncontrado(codigo) {
 }
 
 export function limpiarProducto(texto = "Esperando escaneo...") {
+    elementos.productoCard.classList.add("oculto");
     elementos.productoCard.classList.remove("found", "error");
     elementos.productoCard.classList.add("empty");
     elementos.estadoProducto.textContent = "Esperando código";

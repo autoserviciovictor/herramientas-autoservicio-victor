@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=472-reposicion";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=472-reposicion";
+import { API_BASE_URL } from "./config.js?v=473-reposicion";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=473-reposicion";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

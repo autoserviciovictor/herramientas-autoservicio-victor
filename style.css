@@ -1823,3 +1823,49 @@ body.en-anotar .repo-bottom-nav{
     .repo-bottom-nav button{font-size:20px;padding:7px 2px}
     .repo-bottom-nav button span{font-size:11px}
 }
+
+
+/* V4.7.3 — encabezado integrado y estados bajo demanda */
+.brand-header{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:82px;
+    padding:13px 64px;
+}
+.brand-header-text{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;text-align:center}
+.brand-back-btn{
+    position:absolute;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    width:48px;
+    height:48px;
+    border:1px solid rgba(255,255,255,.48);
+    border-radius:16px;
+    background:rgba(255,255,255,.94);
+    color:#181818;
+    font-size:2rem;
+    line-height:1;
+    font-weight:700;
+    box-shadow:0 7px 18px rgba(92,31,35,.14);
+    cursor:pointer;
+    z-index:2;
+}
+.brand-back-btn.oculto{display:none!important}
+body:not(.en-inicio) .header-edit,
+body:not(.en-inicio) .header-simple{display:none!important}
+#pantallaInventario .header-app{padding:10px 20px 0;margin:0;background:transparent;box-shadow:none}
+#pantallaInventario .header-app h1,
+#pantallaInventario .header-app .module-back-btn{display:none!important}
+#pantallaInventario .header-app>div{width:100%}
+#pantallaInventario .status-line{justify-content:center;margin:0}
+.manual-link-btn{font-weight:800}
+@media(max-width:520px){
+  .brand-header{min-height:76px;padding:11px 58px}
+  .brand-header span{font-size:1.24rem;line-height:1.08}
+  .brand-header small{font-size:.74rem;margin-top:3px}
+  .brand-back-btn{left:10px;width:44px;height:44px;border-radius:14px;font-size:1.8rem}
+  #pantallaInventario .header-app{padding:8px 14px 0}
+}

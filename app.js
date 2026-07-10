@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=472-reposicion";
+} from "./excel.js?v=473-reposicion";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=472-reposicion";
+} from "./scanner.js?v=473-reposicion";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=472-reposicion";
+} from "./ui.js?v=473-reposicion";
 
-import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=472-reposicion";
+import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=473-reposicion";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -300,7 +300,7 @@ function cambiarTabVencimientos(tab) {
         elementos.vencFormCard?.classList.add("oculto");
         elementos.vencProductoCard?.classList.add("oculto");
     } else {
-        elementos.vencProductoCard?.classList.remove("oculto");
+        elementos.vencProductoCard?.classList.toggle("oculto", !productoVencimientoActual);
         if (productoVencimientoActual) elementos.vencFormCard?.classList.remove("oculto");
     }
 
@@ -750,6 +750,7 @@ function reiniciarFormularioVencimientos() {
     if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;
     actualizarTotalVencimiento();
     elementos.vencFormCard?.classList.add("oculto");
+    elementos.vencProductoCard?.classList.add("oculto");
     elementos.vencProductoCard?.classList.remove("found", "error");
     elementos.vencProductoCard?.classList.add("empty");
     if (elementos.vencEstadoProducto) elementos.vencEstadoProducto.textContent = "Esperando código";
@@ -795,6 +796,7 @@ async function manejarCodigoVencimiento(codigo) {
 
     if (!resultado.encontrado) {
         productoVencimientoActual = null;
+        elementos.vencProductoCard?.classList.remove("oculto");
         elementos.vencProductoCard?.classList.remove("empty", "found");
         elementos.vencProductoCard?.classList.add("error");
         elementos.vencEstadoProducto.textContent = "Código no encontrado";
@@ -808,6 +810,7 @@ async function manejarCodigoVencimiento(codigo) {
     }
 
     productoVencimientoActual = resultado.producto;
+    elementos.vencProductoCard?.classList.remove("oculto");
     elementos.vencProductoCard?.classList.remove("empty", "error");
     elementos.vencProductoCard?.classList.add("found");
     elementos.vencEstadoProducto.textContent = "Producto encontrado";

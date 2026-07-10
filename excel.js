@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=450-oferta";
+import { API_BASE_URL } from "./config.js?v=473-reposicion";
 
 let datos = [];
 let contador = 0;

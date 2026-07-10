@@ -1,3 +1,10 @@
+V4.7.3
+- Flecha Volver integrada en el encabezado rojo de todos los módulos.
+- Se eliminaron encabezados internos duplicados para aprovechar mejor la pantalla.
+- Inventario y Vencimientos ya no muestran la tarjeta fija “Esperando código”; aparece solo al encontrar o rechazar un producto.
+- Botón de carga manual de Reposición igualado al diseño y texto de Inventario/Vencimientos.
+- Ajustes visuales para celular y actualización de caché.
+
 V4.6
 - Se quitaron los logos/íconos de tarjetas de registros recientes, próximos y vencidos.
 - Se ajustaron tarjetas para que sean más compactas y legibles en celular.
