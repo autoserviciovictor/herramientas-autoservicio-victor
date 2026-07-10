@@ -162,7 +162,7 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Herramientas Autoservicio Victor V4.3.3 funcionando");
+  res.send("Servidor Herramientas Autoservicio Victor V4.7.0 funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -566,6 +566,148 @@ async function obtenerSheetId(nombreHoja) {
   return hoja.properties.sheetId;
 }
 
+
+// V4.7.0 - Reposición. La hoja se crea automáticamente dentro del archivo ya conectado.
+const REPOSICION_SHEET_NAME = "Reposicion";
+
+async function asegurarHojaReposicion() {
+  validarConfiguracion();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === REPOSICION_SHEET_NAME);
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: REPOSICION_SHEET_NAME } } }] }
+    });
+  }
+  const encabezado = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${REPOSICION_SHEET_NAME}!A1:G1`
+  });
+  if (!(encabezado.data.values || []).length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${REPOSICION_SHEET_NAME}!A1:G1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [["ID", "Fecha", "Código", "Artículo", "Cantidad", "Estado", "Actualizado"]] }
+    });
+  }
+}
+
+function filaAReposicion(fila, index) {
+  return {
+    filaGoogle: index + 2,
+    id: normalizarTexto(fila[0]),
+    fecha: normalizarTexto(fila[1]),
+    codigo: normalizarTexto(fila[2]),
+    articulo: normalizarTexto(fila[3]),
+    cantidad: numero(fila[4]),
+    estado: normalizarTexto(fila[5]).toLowerCase() === "completado" ? "completado" : "pendiente",
+    actualizado: normalizarTexto(fila[6])
+  };
+}
+
+async function obtenerReposicion() {
+  await asegurarHojaReposicion();
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${REPOSICION_SHEET_NAME}!A:G`
+  });
+  const filas = respuesta.data.values || [];
+  if (filas.length <= 1) return [];
+  return filas.slice(1).map(filaAReposicion).filter(item => item.id && item.codigo);
+}
+
+function fechaIsoActual() { return new Date().toISOString(); }
+function crearIdReposicion() { return `REP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
+
+app.get("/reposicion", async (req, res) => {
+  try {
+    const registros = (await obtenerReposicion()).sort((a, b) => String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha)));
+    res.json({ ok: true, total: registros.length, registros });
+  } catch (error) {
+    console.error("Error en GET /reposicion:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener reposición" });
+  }
+});
+
+app.post("/reposicion", async (req, res) => {
+  try {
+    const codigo = normalizarCodigo(req.body.codigo);
+    const articulo = normalizarTexto(req.body.articulo);
+    const cantidad = numero(req.body.cantidad);
+    if (!codigo || !articulo) return res.status(400).json({ ok: false, mensaje: "Falta el producto" });
+    if (cantidad <= 0) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad válida" });
+
+    const registros = await obtenerReposicion();
+    const existente = registros.find(item => item.codigo === codigo && item.estado === "pendiente");
+    const ahora = fechaIsoActual();
+    if (existente) {
+      const actualizado = { ...existente, cantidad: existente.cantidad + cantidad, actualizado: ahora };
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${REPOSICION_SHEET_NAME}!A${existente.filaGoogle}:G${existente.filaGoogle}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
+      });
+      return res.json({ ok: true, mensaje: "Cantidad sumada al producto pendiente", registro: actualizado });
+    }
+
+    const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora };
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${REPOSICION_SHEET_NAME}!A:G`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[registro.id, registro.fecha, registro.codigo, registro.articulo, registro.cantidad, registro.estado, registro.actualizado]] }
+    });
+    res.json({ ok: true, mensaje: "Producto anotado", registro });
+  } catch (error) {
+    console.error("Error en POST /reposicion:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al guardar reposición" });
+  }
+});
+
+app.put("/reposicion/:id", async (req, res) => {
+  try {
+    const id = normalizarTexto(req.params.id);
+    const registros = await obtenerReposicion();
+    const registro = registros.find(item => item.id === id);
+    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+    const cantidad = numero(req.body.cantidad);
+    if (cantidad <= 0) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad válida" });
+    const estado = normalizarTexto(req.body.estado).toLowerCase() === "completado" ? "completado" : "pendiente";
+    const actualizado = { ...registro, cantidad, estado, actualizado: fechaIsoActual() };
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${REPOSICION_SHEET_NAME}!A${registro.filaGoogle}:G${registro.filaGoogle}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
+    });
+    res.json({ ok: true, mensaje: "Reposición actualizada", registro: actualizado });
+  } catch (error) {
+    console.error("Error en PUT /reposicion/:id:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar reposición" });
+  }
+});
+
+app.delete("/reposicion/:id", async (req, res) => {
+  try {
+    const id = normalizarTexto(req.params.id);
+    const registros = await obtenerReposicion();
+    const registro = registros.find(item => item.id === id);
+    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(REPOSICION_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
+    });
+    res.json({ ok: true, mensaje: "Producto eliminado" });
+  } catch (error) {
+    console.error("Error en DELETE /reposicion/:id:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "Error al eliminar reposición" });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`Servidor Herramientas Autoservicio Victor V4.3.3 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V4.7.0 funcionando en puerto ${PORT}`);
 });

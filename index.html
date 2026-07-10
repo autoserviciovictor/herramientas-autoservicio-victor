@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V4.6.1</title>
+    <title>Herramientas Autoservicio Victor V4.7.0</title>
 
-    <link rel="stylesheet" href="style.css?v=460-limpio">
+    <link rel="stylesheet" href="style.css?v=470-reposicion">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V4.6.1</p>
+    <p>Herramientas V4.7.0</p>
 </div>
 
 <div class="app">
@@ -41,10 +41,10 @@
                 <small>Control de fechas</small>
             </button>
 
-            <button class="module-card module-disabled" type="button" disabled>
-                <span class="module-icon">🏷️</span>
-                <strong>Etiquetas</strong>
-                <small>Próximamente</small>
+            <button class="module-card module-anotar" data-modulo="anotar">
+                <span class="module-icon">📝</span>
+                <strong>Anotar</strong>
+                <small>Reposición</small>
             </button>
 
             <button class="module-card module-disabled" type="button" disabled>
@@ -56,7 +56,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V4.6.1</strong>
+            <strong>V4.7.0</strong>
         </section>
     </main>
 
@@ -320,6 +320,72 @@
         </nav>
     </main>
 
+
+    <main id="pantallaAnotar" class="pantalla reposicion-screen">
+        <header class="header-edit">
+            <button class="back-btn" data-modulo="inicio" type="button">‹</button>
+            <div><h1 id="repoTitulo">Anotar reposición</h1><p id="repoSubtitulo">Escaneá o buscá un producto</p></div>
+        </header>
+
+        <section id="repoCargaVista">
+            <section class="venc-actions-card repo-actions-card">
+                <button id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
+                <button id="btnRepoManualToggle" class="manual-link-btn">⌨️ Ingresar código manualmente</button>
+                <div id="repoManualPanel" class="manual-panel oculto">
+                    <input id="repoCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
+                    <button id="btnRepoBuscarManual" type="button">Buscar</button>
+                </div>
+            </section>
+
+            <section id="repoCameraCard" class="camera-card oculto">
+                <div class="scanner-topbar"><strong>Escáner reposición</strong><button id="btnRepoCerrarScanner" type="button">✕ Cerrar</button></div>
+                <video id="videoReposicion" autoplay muted playsinline></video>
+                <div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div>
+            </section>
+
+            <section id="repoProductoCard" class="repo-product-card oculto">
+                <div class="product-status">✓ Producto encontrado</div>
+                <h2 id="repoNombreProducto">Producto</h2>
+                <p id="repoCodigoProducto">Código: -</p>
+            </section>
+
+            <section id="repoFormCard" class="repo-form-card oculto">
+                <label>Cantidad necesaria</label>
+                <div class="quantity-control repo-quantity">
+                    <button id="btnRepoMenos" type="button">−</button>
+                    <input id="repoCantidadInput" type="number" min="1" step="1" value="1" inputmode="numeric">
+                    <button id="btnRepoMas" type="button">+</button>
+                </div>
+                <p class="repo-help">ⓘ Indicá la cantidad que hace falta en el salón.</p>
+                <button id="btnRepoGuardar" class="save-btn" type="button">✔ Guardar reposición</button>
+                <button id="btnRepoCancelar" class="cancel-btn repo-cancel" type="button">Cancelar</button>
+            </section>
+
+            <section class="venc-list-card repo-recent-card">
+                <div class="venc-list-head"><h2>Últimos agregados</h2><button id="btnRepoVerRegistro" type="button">Ver registro</button></div>
+                <div id="repoRecientes" class="venc-list-empty">Todavía no hay productos anotados.</div>
+            </section>
+        </section>
+
+        <section id="repoRegistroVista" class="oculto">
+            <section class="venc-list-card repo-registro-card">
+                <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
+                <div class="repo-filter-row">
+                    <button class="activo" data-repo-filtro="pendiente">Pendientes</button>
+                    <button data-repo-filtro="completado">Completados</button>
+                    <button data-repo-filtro="todos">Todos</button>
+                </div>
+                <div id="repoListado" class="venc-list-empty">No hay productos pendientes.</div>
+                <div id="repoTotales" class="repo-totales"></div>
+            </section>
+        </section>
+
+        <nav class="venc-bottom-nav repo-bottom-nav">
+            <button type="button" class="activo" data-repo-tab="cargar">➕<span>Anotar</span></button>
+            <button type="button" data-repo-tab="registro">☷<span>Registro</span></button>
+        </nav>
+    </main>
+
     <nav class="bottom-nav">
         <button class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
         <button class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
@@ -392,6 +458,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=460-limpio"></script>
+<script type="module" src="./app.js?v=470-reposicion"></script>
 </body>
 </html>

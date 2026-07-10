@@ -4,6 +4,7 @@ const elementos = {
         inicio: document.getElementById("pantallaInicio"),
         inventario: document.getElementById("pantallaInventario"),
         vencimientos: document.getElementById("pantallaVencimientos"),
+        anotar: document.getElementById("pantallaAnotar"),
         productos: document.getElementById("pantallaProductos"),
         editarProducto: document.getElementById("pantallaEditarProducto"),
         ajustes: document.getElementById("pantallaAjustes")
@@ -64,8 +65,9 @@ export function cambiarPantalla(nombre) {
         btn.classList.toggle("activo", btn.dataset.pantalla === pantallaNav);
     });
 
-    document.body.classList.toggle("en-inicio", nombre === "inicio" || nombre === "vencimientos");
+    document.body.classList.toggle("en-inicio", nombre === "inicio" || nombre === "vencimientos" || nombre === "anotar");
     document.body.classList.toggle("en-vencimientos", nombre === "vencimientos");
+    document.body.classList.toggle("en-anotar", nombre === "anotar");
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {

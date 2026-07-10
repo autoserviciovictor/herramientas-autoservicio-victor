@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=460-limpio";
+} from "./excel.js?v=470-reposicion";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=460-limpio";
+} from "./scanner.js?v=470-reposicion";
 
 import {
     ocultarSplash,
@@ -49,7 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=460-limpio";
+} from "./ui.js?v=470-reposicion";
+
+import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=470-reposicion";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -170,6 +172,7 @@ async function inicializar() {
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
     configurarEventos();
+    inicializarReposicion();
 
     await cargarProductos();
 }
@@ -190,6 +193,7 @@ function configurarEventos() {
             if (modulo !== "inventario") cerrarScanner(true);
             cambiarPantalla(modulo);
             if (modulo === "vencimientos") cargarListadoVencimientos();
+            if (modulo === "anotar") refrescarReposicion();
         });
     });
 

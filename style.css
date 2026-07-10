@@ -1654,3 +1654,20 @@ body:not(.en-vencimientos) .venc-bottom-nav { display: none; }
     .venc-proximo-grid b, .venc-vencido-grid b { font-size: 13px; }
     .venc-reciente-info strong { font-size: 14px; }
 }
+
+/* V4.7.0 - Módulo Anotar / Reposición */
+.module-anotar{border-color:#f1c8cb;background:linear-gradient(145deg,#fff,#fff4f4)}
+body.en-anotar .bottom-nav{display:none}
+.reposicion-screen{padding-bottom:94px}
+.repo-actions-card{margin-bottom:16px}
+.repo-product-card,.repo-form-card{background:#fff;border:1px solid #eee;border-radius:24px;padding:20px;margin:0 20px 16px;box-shadow:0 10px 26px rgba(80,55,35,.08)}
+.repo-product-card{background:linear-gradient(145deg,#f3fff7,#fff);border-color:#ccebd7}
+.repo-product-card h2{font-size:1.45rem;margin:16px 0 8px}.repo-product-card p{color:#666;font-weight:700;margin:0}
+.repo-form-card>label{display:block;font-weight:800;margin-bottom:12px}.repo-quantity{display:grid;grid-template-columns:72px 1fr 72px}.repo-quantity input{font-size:2rem;font-weight:900;text-align:center}
+.repo-help{background:#eef6ff;color:#1e5fa8;border-radius:14px;padding:13px;font-weight:700}.repo-cancel{width:100%;margin-top:12px}
+.repo-recent-card,.repo-registro-card{margin-bottom:14px}.repo-list{display:grid;gap:10px}.repo-mini-card{display:flex;justify-content:space-between;align-items:center;border:1px solid #ececec;border-left:5px solid #ef3f46;border-radius:14px;padding:13px;background:#fff}.repo-mini-card div{display:grid;gap:5px}.repo-mini-card small{color:#777}.repo-mini-card b{font-size:1.05rem}
+.repo-search-row{display:flex;gap:10px}.repo-filter-row{display:flex;gap:8px;overflow:auto;margin:12px 0 18px}.repo-filter-row button{border:1px solid #e3e3e3;background:#fff;border-radius:999px;padding:11px 15px;font-weight:800;white-space:nowrap}.repo-filter-row button.activo{background:#e9343c;color:#fff;border-color:#e9343c}
+.repo-item{display:flex;justify-content:space-between;gap:12px;border:1px solid #e8e8e8;border-left:5px solid #ef3f46;border-radius:16px;padding:14px;background:#fff}.repo-item.completado{border-left-color:#1aa75b}.repo-item-main{display:grid;gap:5px;min-width:0}.repo-item-main strong{font-size:1rem}.repo-item-main small,.repo-item-main span{color:#687080;font-weight:650;font-size:.82rem}.repo-item-side{text-align:right;display:grid;justify-items:end;gap:7px}.repo-item-side>b{font-size:1.2rem;color:#e9343c}.repo-item.completado .repo-item-side>b{color:#15934e}.repo-item-side em{font-style:normal;background:#fff0c9;color:#9a6500;border-radius:999px;padding:5px 9px;font-size:.75rem;font-weight:800}.repo-item.completado .repo-item-side em{background:#dff7e9;color:#08753a}.repo-item-side button{width:38px;height:38px;border-radius:9px;background:#fff;margin-left:5px}.repo-check{border:1px solid #25a65c;color:#168849}.repo-edit{border:1px solid #8bb7ff;color:#1568d4}.repo-delete{border:1px solid #ff9c9c;color:#e1262e}
+.repo-totales{margin-top:16px;border:1px solid #ffd1d1;background:#fff4f4;border-radius:15px;padding:14px;display:flex;justify-content:space-between;gap:10px;color:#d92b32}.repo-totales span{color:#555}
+.repo-bottom-nav{z-index:30}
+@media(max-width:520px){.repo-product-card,.repo-form-card{margin-left:20px;margin-right:20px}.repo-item{padding:12px}.repo-item-side div{display:flex}.repo-registro-card{margin-left:20px;margin-right:20px}}

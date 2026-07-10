@@ -63,3 +63,13 @@ V4.6.1
 - Tarjetas de vencimientos más ordenadas.
 - Días exactos visibles en próximos, vencidos y últimos registros.
 - Corrección de marcado/quitar oferta duplicado.
+
+V4.7.0 - Módulo Anotar / Reposición
+- Nuevo módulo móvil Anotar integrado al inicio.
+- Escaneo y búsqueda manual de productos desde la base maestra existente.
+- Carga de cantidad necesaria para reposición del salón.
+- Registro con pendientes, completados y todos.
+- Edición de cantidad, completar/reabrir y eliminar.
+- Si un producto ya está pendiente, la nueva cantidad se suma.
+- Actualización desde servidor al entrar al registro.
+- Persistencia automática en una hoja interna "Reposicion" creada por la API, sin carga manual de archivos.

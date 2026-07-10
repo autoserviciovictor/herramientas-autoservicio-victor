@@ -211,7 +211,7 @@ export function detenerScanner() {
         lectorCodigo.reset();
     }
 
-    ["video", "videoVencimientos"].forEach(videoId => {
+    ["video", "videoVencimientos", "videoReposicion"].forEach(videoId => {
         const video = document.getElementById(videoId);
         const stream = video?.srcObject;
         if (stream?.getTracks) {
