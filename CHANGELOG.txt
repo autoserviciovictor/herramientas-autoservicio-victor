@@ -1,3 +1,12 @@
+V4.7.4
+- Eliminada definitivamente la flecha y el encabezado interno duplicado del módulo Reposición.
+- La única flecha para volver queda integrada en el encabezado rojo.
+- Rediseñada la tarjeta de productos del Registro.
+- Estado Pendiente/Completado ubicado arriba en la columna derecha.
+- Cantidad destacada en un recuadro grande a la derecha.
+- Botones Completar, Editar y Eliminar alineados en una fila inferior.
+- Ajustes específicos para pantallas móviles angostas.
+
 V4.7.3
 - Flecha Volver integrada en el encabezado rojo de todos los módulos.
 - Se eliminaron encabezados internos duplicados para aprovechar mejor la pantalla.

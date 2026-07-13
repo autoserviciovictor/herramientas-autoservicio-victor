@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=473-reposicion";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=473-reposicion";
+import { API_BASE_URL } from "./config.js?v=474-reposicion";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=474-reposicion";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -91,8 +91,6 @@ function cambiarTab(nueva){
   $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
   $("repoRegistroVista")?.classList.toggle("oculto",esCarga);
   if(!esCarga && filtro!=="pendiente" && filtro!=="completado" && filtro!=="todos") filtro="pendiente";
-  $("repoTitulo").textContent=esCarga?"Anotar reposición":"Registro de reposición";
-  $("repoSubtitulo").textContent=esCarga?"Escaneá o buscá un producto":"Productos anotados para llevar del depósito";
   actualizarEncabezadoRepo(esCarga);
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
   if(!esCarga){ refrescarReposicion(); render(); }
@@ -111,7 +109,7 @@ function renderListado(){
   const q=($("repoBuscador")?.value||"").toLowerCase();
   const items=registros.filter(r=>(filtro==="todos"||r.estado===filtro)&&(!q||r.articulo.toLowerCase().includes(q)||r.codigo.includes(q)));
   c.className=items.length?"repo-list":"venc-list-empty";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-item ${r.estado}"><div class="repo-item-main"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small><span>📅 ${fechaCorta(r.fecha)}</span></div><div class="repo-item-side"><b>${r.cantidad} un.</b><em>${r.estado==="completado"?"Completado":"Pendiente"}</em><div><button data-repo-accion="${r.estado==="pendiente"?"completar":"reabrir"}" data-id="${r.id}" class="repo-check">${r.estado==="pendiente"?"✓":"↺"}</button><button data-repo-accion="editar" data-id="${r.id}" class="repo-edit">✎</button><button data-repo-accion="eliminar" data-id="${r.id}" class="repo-delete">🗑</button></div></div></article>`).join(""):"No hay productos para mostrar.";
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-item ${r.estado}"><div class="repo-item-main"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small><span>📅 ${fechaCorta(r.fecha)}</span></div><div class="repo-item-side"><b><span>${r.cantidad}</span><small>unidades</small></b><em>${r.estado==="completado"?"Completado":"Pendiente"}</em><div><button data-repo-accion="${r.estado==="pendiente"?"completar":"reabrir"}" data-id="${r.id}" class="repo-check">${r.estado==="pendiente"?"✓":"↺"}</button><button data-repo-accion="editar" data-id="${r.id}" class="repo-edit">✎</button><button data-repo-accion="eliminar" data-id="${r.id}" class="repo-delete">🗑</button></div></div></article>`).join(""):"No hay productos para mostrar.";
   const pendientes=registros.filter(r=>r.estado==="pendiente");
   $("repoTotales").innerHTML=`<strong>Total pendientes</strong><span>${pendientes.length} productos · ${pendientes.reduce((a,r)=>a+numero(r.cantidad),0)} unidades</span>`;
 }
