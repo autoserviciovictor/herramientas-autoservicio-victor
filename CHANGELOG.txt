@@ -1,3 +1,14 @@
+V4.8.0
+- Navegación y encabezados unificados en todos los módulos.
+- Flecha única dentro del encabezado rojo.
+- Vencimientos cambia el título según Cargar, Próximos o Vencidos.
+- Carga manual uniforme: el botón cambia a Cancelar código manual.
+- Buscadores y datos se limpian/actualizan al cambiar de pantalla.
+- Salón y Depósito se movieron a la pantalla principal de Inventario.
+- Cargados se ordena por la última modificación local.
+- Ajustes vuelve al menú principal.
+- Espaciados, botones, tarjetas, estados vacíos y transiciones unificados.
+
 V4.7.4
 - Eliminada definitivamente la flecha y el encabezado interno duplicado del módulo Reposición.
 - La única flecha para volver queda integrada en el encabezado rojo.

@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=474-reposicion";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=474-reposicion";
+import { API_BASE_URL } from "./config.js?v=480-unificado";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=480-unificado";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -31,7 +31,15 @@ export function inicializarReposicion(){
   if(iniciado) return; iniciado=true;
   $("btnRepoAbrirScanner")?.addEventListener("click", abrirScanner);
   $("btnRepoCerrarScanner")?.addEventListener("click", cerrarScanner);
-  $("btnRepoManualToggle")?.addEventListener("click",()=>{ $("repoManualPanel").classList.toggle("oculto"); $("repoCodigoManualInput")?.focus(); });
+  $("btnRepoManualToggle")?.addEventListener("click",()=>{
+    const panel=$("repoManualPanel");
+    const abierto=panel?.classList.contains("oculto");
+    panel?.classList.toggle("oculto", !abierto);
+    const boton=$("btnRepoManualToggle");
+    if(boton) boton.textContent=abierto?"Cancelar código manual":"Ingresar código manualmente";
+    if(abierto) $("repoCodigoManualInput")?.focus();
+    else if($("repoCodigoManualInput")) $("repoCodigoManualInput").value="";
+  });
   $("btnRepoBuscarManual")?.addEventListener("click",procesarManual);
   $("repoCodigoManualInput")?.addEventListener("keydown",e=>{if(e.key==="Enter")procesarManual();});
   $("btnRepoMenos")?.addEventListener("click",()=>cambiarCantidad(-1));
@@ -45,6 +53,8 @@ export function inicializarReposicion(){
   $("repoListado")?.addEventListener("click",manejarAccion);
 }
 
+export function prepararReposicion(){ cambiarTab("cargar"); }
+
 export async function refrescarReposicion(){
   try { const data=await pedir("/reposicion"); registros=data.registros||[]; render(); }
   catch(e){ toast(e.message,"error"); }
@@ -57,7 +67,7 @@ async function abrirScanner(){
   catch(e){ $("repoCameraCard")?.classList.add("oculto"); $("repoActionsCard")?.classList.remove("oculto"); toast("No se pudo abrir la cámara","error"); }
 }
 function cerrarScanner(){ detenerScanner(); $("repoCameraCard")?.classList.add("oculto"); if(!productoActual) $("repoActionsCard")?.classList.remove("oculto"); }
-function procesarManual(){ const c=$("repoCodigoManualInput")?.value.trim(); if(!c)return; $("repoCodigoManualInput").value=""; buscarProducto(c); }
+function procesarManual(){ const c=$("repoCodigoManualInput")?.value.trim(); if(!c)return; $("repoCodigoManualInput").value=""; $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar código manualmente"; buscarProducto(c); }
 async function buscarProducto(codigo){
   try{
     const data=await pedir(`/producto-maestro/${encodeURIComponent(codigo)}`);
@@ -78,7 +88,7 @@ async function guardar(){
     toast("Producto guardado correctamente"); limpiar(); await refrescarReposicion();
   }catch(e){toast(e.message,"error");}
 }
-function limpiar(){ productoActual=null; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
+function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar código manualmente"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
 function actualizarEncabezadoRepo(esCarga){
   const titulo=$("brandHeaderTitulo");
   const subtitulo=$("brandHeaderSubtitulo");
@@ -93,7 +103,8 @@ function cambiarTab(nueva){
   if(!esCarga && filtro!=="pendiente" && filtro!=="completado" && filtro!=="todos") filtro="pendiente";
   actualizarEncabezadoRepo(esCarga);
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
-  if(!esCarga){ refrescarReposicion(); render(); }
+  if($("repoBuscador")) $("repoBuscador").value="";
+  if(!esCarga){ refrescarReposicion(); render(); } else { refrescarReposicion(); }
 }
 
 function render(){ renderRecientes(); renderListado(); }

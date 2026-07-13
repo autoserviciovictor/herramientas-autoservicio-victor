@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V4.7.4</title>
+    <title>Herramientas Autoservicio Victor V4.8.0</title>
 
-    <link rel="stylesheet" href="style.css?v=474-reposicion">
+    <link rel="stylesheet" href="style.css?v=480-unificado">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V4.7.4</p>
+    <p>Herramientas V4.8.0</p>
 </div>
 
 <div class="app">
@@ -62,21 +62,23 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V4.7.4</strong>
+            <strong>V4.8.0</strong>
         </section>
     </main>
 
     <main id="pantallaInventario" class="pantalla">
-        <header class="header-app">
-            <div>
-                <button class="module-back-btn" data-modulo="inicio" type="button">‹</button>
-                <h1>Inventario</h1>
-                <div class="status-line">
-                    <span id="estadoExcelTexto">Conectando...</span>
-                    <span id="estadoConteoTexto">0 productos</span>
-                </div>
+        <section class="inventory-status-strip">
+            <span id="estadoExcelTexto">Conectando...</span>
+            <span id="estadoConteoTexto">0 productos</span>
+        </section>
+
+        <section class="inventory-location-card" aria-label="Ubicación de conteo">
+            <span>¿Dónde estás contando?</span>
+            <div class="location-grid">
+                <button id="btnSalon" class="location-btn activo">🏪 Salón</button>
+                <button id="btnDeposito" class="location-btn">📦 Depósito</button>
             </div>
-        </header>
+        </section>
 
         <section id="scanPanel" class="scan-panel">
             <button id="btnAbrirScanner" class="scan-open-btn">📷 Abrir escáner</button>
@@ -203,14 +205,6 @@
         </section>
 
         <section class="settings-card">
-            <h2>Ubicación predeterminada</h2>
-            <div class="location-grid">
-                <button id="btnSalon" class="location-btn activo">🏪 Salón</button>
-                <button id="btnDeposito" class="location-btn">📦 Depósito</button>
-            </div>
-        </section>
-
-        <section class="settings-card">
             <div class="switch-row">
                 <div><strong>Sonidos</strong><span>Confirmación al escanear y guardar</span></div>
                 <input type="checkbox" id="checkSonidos" checked>
@@ -228,13 +222,6 @@
     </main>
 
     <main id="pantallaVencimientos" class="pantalla">
-        <header class="header-edit">
-            <button class="back-btn" data-modulo="inicio" type="button">‹</button>
-            <div>
-                <h1>Vencimientos</h1>
-                <p>Módulo preparado para control de fechas</p>
-            </div>
-        </header>
 
         <section class="venc-actions-card">
             <button id="btnVencAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
@@ -459,6 +446,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=474-reposicion"></script>
+<script type="module" src="./app.js?v=480-unificado"></script>
 </body>
 </html>

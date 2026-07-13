@@ -1,8 +1,23 @@
-import { API_BASE_URL } from "./config.js?v=474-reposicion";
+import { API_BASE_URL } from "./config.js?v=480-unificado";
 
 let datos = [];
 let contador = 0;
 let ultimosEscaneados = [];
+const CLAVE_MODIFICACIONES = "inventario_modificaciones_v1";
+
+function leerModificaciones() {
+    try { return JSON.parse(localStorage.getItem(CLAVE_MODIFICACIONES) || "{}"); } catch (_) { return {}; }
+}
+
+function registrarModificacion(codigo) {
+    const mapa = leerModificaciones();
+    mapa[normalizarTexto(codigo)] = Date.now();
+    localStorage.setItem(CLAVE_MODIFICACIONES, JSON.stringify(mapa));
+}
+
+function marcaModificacion(codigo) {
+    return Number(leerModificaciones()[normalizarTexto(codigo)]) || 0;
+}
 
 function apiUrl(ruta) {
     const base = String(API_BASE_URL || "").replace(/\/$/, "");
@@ -142,13 +157,11 @@ export function obtenerProductos(limite = 40) {
 }
 
 export function obtenerProductosCargados(limite = 80) {
-    const resultados = [];
-    for (let i = 0; i < datos.length; i++) {
-        const producto = armarProducto(datos[i], i);
-        if (producto.stock > 0) resultados.push(producto);
-        if (resultados.length >= limite) break;
-    }
-    return resultados;
+    return datos
+        .map((fila, indice) => armarProducto(fila, indice))
+        .filter(producto => producto.stock > 0)
+        .sort((a, b) => marcaModificacion(b.codigo) - marcaModificacion(a.codigo))
+        .slice(0, limite);
 }
 
 export function reiniciarContador() {
@@ -183,6 +196,7 @@ export function buscarProductosPorTexto(texto, limite = 40, soloCargados = false
         if (resultados.length >= limite) break;
     }
 
+    if (soloCargados) resultados.sort((a, b) => marcaModificacion(b.codigo) - marcaModificacion(a.codigo));
     return resultados;
 }
 
@@ -210,6 +224,7 @@ export async function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     // Los contadores de Salón/Depósito se recalculan aparte por productos con valor > 0.
 
     registrarUltimo(producto);
+    registrarModificacion(producto.codigo);
     return { producto, contador, ultimos: obtenerUltimosEscaneados() };
 }
 
@@ -229,6 +244,7 @@ export async function modificarStockProducto(indice, salon, deposito) {
 
     const producto = guardarProductoLocal(data.producto);
     registrarUltimo(producto);
+    registrarModificacion(producto.codigo);
     return producto;
 }
 

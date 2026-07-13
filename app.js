@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=474-reposicion";
+} from "./excel.js?v=480-unificado";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=474-reposicion";
+} from "./scanner.js?v=480-unificado";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=474-reposicion";
+} from "./ui.js?v=480-unificado";
 
-import { inicializarReposicion, refrescarReposicion } from "./reposicion.js?v=474-reposicion";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=480-unificado";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -177,24 +177,31 @@ async function inicializar() {
     await cargarProductos();
 }
 
+async function entrarPantalla(nombre) {
+    if (nombre !== "inventario") cerrarScanner(true);
+    if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
+
+    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+    if (elementos.vencBuscador) elementos.vencBuscador.value = "";
+    busquedaVencimientos = "";
+
+    cambiarPantalla(nombre);
+
+    if (["inventario", "productos", "ajustes"].includes(nombre)) {
+        await sincronizarEnSegundoPlano();
+        if (nombre === "productos") refrescarProductos();
+    }
+    if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
+    if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
+}
+
 function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const pantalla = btn.dataset.pantalla;
-            if (pantalla !== "inventario") cerrarScanner(true);
-            cambiarPantalla(pantalla);
-            if (pantalla === "productos") refrescarProductos();
-        });
+        btn.addEventListener("click", () => entrarPantalla(btn.dataset.pantalla));
     });
 
     document.querySelectorAll("[data-modulo]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const modulo = btn.dataset.modulo;
-            if (modulo !== "inventario") cerrarScanner(true);
-            cambiarPantalla(modulo);
-            if (modulo === "vencimientos") cargarListadoVencimientos();
-            if (modulo === "anotar") refrescarReposicion();
-        });
+        btn.addEventListener("click", () => entrarPantalla(btn.dataset.modulo));
     });
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
@@ -289,6 +296,12 @@ function configurarEventos() {
 
 function cambiarTabVencimientos(tab) {
     vencTabActual = tab || "cargar";
+    const titulos = { cargar: ["Vencimientos", "Control de fechas"], proximos: ["Próximos a vencer", "Control de fechas"], vencidos: ["Productos vencidos", "Control de fechas"] };
+    const actual = titulos[vencTabActual] || titulos.cargar;
+    if ($("brandHeaderTitulo")) $("brandHeaderTitulo").textContent = actual[0];
+    if ($("brandHeaderSubtitulo")) $("brandHeaderSubtitulo").textContent = actual[1];
+    if (elementos.vencBuscador) elementos.vencBuscador.value = "";
+    busquedaVencimientos = "";
     filtroVencimientos = "todos";
     elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
     elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
@@ -306,6 +319,7 @@ function cambiarTabVencimientos(tab) {
 
     actualizarVisibilidadPanelesVencimientos();
     renderListadoVencimientos();
+    cargarListadoVencimientos();
 }
 
 function actualizarVisibilidadPanelesVencimientos() {
@@ -392,10 +406,11 @@ function ocultarControlesEscaneo() {
 }
 
 function alternarCargaManual() {
-    elementos.manualPanel.classList.toggle("oculto");
-    if (!elementos.manualPanel.classList.contains("oculto")) {
-        elementos.codigoManualInput.focus();
-    }
+    const abrir = elementos.manualPanel.classList.contains("oculto");
+    elementos.manualPanel.classList.toggle("oculto", !abrir);
+    elementos.btnCodigoManualToggle.textContent = abrir ? "Cancelar código manual" : "Ingresar código manualmente";
+    if (abrir) elementos.codigoManualInput.focus();
+    else elementos.codigoManualInput.value = "";
 }
 
 async function procesarCodigoManual() {
@@ -407,6 +422,7 @@ async function procesarCodigoManual() {
 
     elementos.codigoManualInput.value = "";
     elementos.manualPanel.classList.add("oculto");
+    elementos.btnCodigoManualToggle.textContent = "Ingresar código manualmente";
     await manejarCodigoEscaneado(codigo);
 }
 
@@ -556,8 +572,9 @@ function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {
 
 function cambiarTabProductos(tab) {
     tabProductosActual = tab;
+    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     activarTabProductos(tab);
-    refrescarProductos();
+    sincronizarEnSegundoPlano().finally(refrescarProductos);
 }
 
 function refrescarProductos() {
@@ -702,10 +719,11 @@ async function sincronizarEnSegundoPlano() {
 
 
 function alternarCargaManualVencimientos() {
-    elementos.vencManualPanel?.classList.toggle("oculto");
-    if (!elementos.vencManualPanel?.classList.contains("oculto")) {
-        elementos.vencCodigoManualInput.focus();
-    }
+    const abrir = elementos.vencManualPanel?.classList.contains("oculto");
+    elementos.vencManualPanel?.classList.toggle("oculto", !abrir);
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = abrir ? "Cancelar código manual" : "Ingresar código manualmente";
+    if (abrir) elementos.vencCodigoManualInput?.focus();
+    else if (elementos.vencCodigoManualInput) elementos.vencCodigoManualInput.value = "";
 }
 
 async function procesarCodigoManualVencimientos() {
@@ -716,6 +734,7 @@ async function procesarCodigoManualVencimientos() {
     }
     elementos.vencCodigoManualInput.value = "";
     elementos.vencManualPanel?.classList.add("oculto");
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar código manualmente";
     await manejarCodigoVencimiento(codigo);
 }
 
@@ -745,6 +764,8 @@ function mostrarAccionesVencimientos() {
 
 function reiniciarFormularioVencimientos() {
     productoVencimientoActual = null;
+    elementos.vencManualPanel?.classList.add("oculto");
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar código manualmente";
     if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
     if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
     if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;

@@ -1977,3 +1977,32 @@ body:not(.en-inicio) .header-simple{display:none!important}
     .repo-item-side>b>span{font-size:1.65rem!important}
     .repo-item-side button{height:34px!important}
 }
+
+
+/* V4.8.0 — configuración visual unificada */
+.brand-header{min-height:68px!important;padding:9px 54px!important}
+.brand-back-btn{left:14px!important;width:42px!important;height:42px!important;border-radius:12px!important;font-size:2rem!important}
+.brand-header span{font-size:1.2rem!important;line-height:1.05!important}
+.brand-header small{font-size:.72rem!important;margin-top:2px!important}
+.pantalla{padding:14px 14px 84px!important;animation:screenIn .2s ease both}
+@keyframes screenIn{from{opacity:.25;transform:translateX(7px)}to{opacity:1;transform:none}}
+.inventory-status-strip{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.inventory-status-strip span{background:#fff;border:1px solid #ececec;border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:800;color:#5f6673}
+.inventory-location-card{background:#fff;border:1px solid #e7e7e7;border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 5px 14px rgba(0,0,0,.04)}
+.inventory-location-card>span{display:block;text-align:center;font-size:.8rem;font-weight:800;color:#69717e;margin-bottom:8px}
+.location-btn,.scan-open-btn,.manual-link-btn,.setting-btn,.save-btn,.cancel-btn{min-height:48px;border-radius:14px!important;font-weight:850!important}
+.scan-panel,.venc-actions-card,.settings-card,.search-card,.tabs-card,.venc-list-card,.repo-product-card,.repo-form-card{border-radius:16px!important}
+.manual-link-btn{border:1px solid #dadde2!important;background:#fff!important;color:#222!important}
+.manual-panel input,.manual-panel button,.venc-search,#buscadorProducto{min-height:46px;border-radius:12px!important}
+.repo-item{border-radius:16px!important;box-shadow:0 4px 13px rgba(0,0,0,.045)}
+.repo-item-side>div{width:100%;grid-template-columns:repeat(3,1fr)!important}
+.repo-item-side button{width:100%!important;min-width:0!important;margin:0!important}
+.venc-list-empty{padding:28px 16px!important;text-align:center!important;color:#747b87!important;background:#fafafa!important;border:1px dashed #d9dce1!important;border-radius:14px!important}
+.module-card,.product-result,.venc-proximo-card,.venc-vencido-card,.repo-mini-card{transition:transform .18s ease,box-shadow .18s ease}
+.module-card:active,.product-result:active,.repo-item button:active{transform:scale(.98)}
+@media(max-width:420px){
+  .brand-header{min-height:64px!important;padding:8px 50px!important}
+  .brand-header span{font-size:1.1rem!important}
+  .pantalla{padding:12px 12px 82px!important}
+  .inventory-location-card{padding:10px}
+}

@@ -72,7 +72,7 @@ function actualizarEncabezadoModulo(nombre) {
     titulo.textContent = textoTitulo;
     subtitulo.textContent = textoSubtitulo;
     if (volver) {
-        const destinos = { productos: "inventario", editarProducto: "productos", ajustes: "inventario" };
+        const destinos = { editarProducto: "productos" };
         volver.dataset.modulo = destinos[nombre] || "inicio";
         volver.classList.toggle("oculto", nombre === "inicio");
     }
@@ -91,7 +91,7 @@ export function cambiarPantalla(nombre) {
         btn.classList.toggle("activo", btn.dataset.pantalla === pantallaNav);
     });
 
-    document.body.classList.toggle("en-inicio", nombre === "inicio" || nombre === "vencimientos" || nombre === "anotar");
+    document.body.classList.toggle("en-inicio", nombre === "inicio");
     document.body.classList.toggle("en-vencimientos", nombre === "vencimientos");
     document.body.classList.toggle("en-anotar", nombre === "anotar");
 }
