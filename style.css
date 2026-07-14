@@ -2088,3 +2088,50 @@ body:not(.en-anotar) #pantallaAnotar .repo-bottom-nav{display:none!important}
 .venc-list-head h2,.repo-recent-card h2{font-size:21px!important;line-height:1.15}
 .pantalla>section+section{margin-top:var(--ui-gap)}
 .bottom-nav,.venc-bottom-nav{box-shadow:0 -6px 20px rgba(60,55,50,.07)}
+
+
+/* V5.0.1 — correcciones de navegación inferior, filtros y estados */
+/* La animación no puede usar transform porque convierte a las barras fixed en relativas al panel. */
+.pantalla{animation:uiFade .18s ease both!important;transform:none!important}
+@keyframes uiFade{from{opacity:.45}to{opacity:1}}
+.pantalla.activa{transform:none!important}
+
+/* Todas las navegaciones de módulo quedan realmente fijas al borde inferior del viewport. */
+.bottom-nav,.venc-bottom-nav,.repo-bottom-nav{
+  position:fixed!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:0!important;
+  top:auto!important;
+  transform:translateX(-50%)!important;
+  width:min(520px,100%)!important;
+  margin:0!important;
+  z-index:1000!important;
+}
+body.en-vencimientos .app,body.en-anotar .app,.app{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+
+/* Filtros de vencimientos: todos visibles y sin barra gris. */
+.venc-filtros{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:8px!important;
+  overflow:visible!important;
+  padding:0!important;
+  margin:12px 0 14px!important;
+  scrollbar-width:none!important;
+}
+.venc-filtros::-webkit-scrollbar{display:none!important}
+.venc-filtros button{width:100%!important;min-width:0!important;padding:10px 6px!important;font-size:12px!important}
+.venc-filtros button:nth-child(5){grid-column:1/-1!important}
+
+/* Buscadores consistentes y con espacio para lupa. */
+.venc-search,#repoBuscador,#buscadorProducto{padding-left:42px!important;background-image:none!important}
+.repo-search-row,.venc-list-card{position:relative}
+.repo-search-row::before{content:'🔍';position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:2;font-size:16px;pointer-events:none}
+#pantallaVencimientos .venc-list-card>.venc-search{background:#fff!important}
+
+/* Estados vacíos alineados y sin alturas excesivas. */
+.venc-list-empty{min-height:132px!important;padding:24px 18px!important;justify-content:center!important}
+
+/* Botones secundarios verdes con el mismo tono. */
+.venc-list-head button,#btnRepoVerRegistro{background:var(--primary-soft)!important;color:var(--primary-dark)!important}

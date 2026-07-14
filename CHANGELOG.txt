@@ -11,3 +11,12 @@ V5.0.0 — Consolidación visual y funcional
 - Cargados ordenados por última modificación.
 - Tarjeta de reposición rediseñada con estado, cantidad destacada y acciones alineadas.
 - Colores, sombras, radios, espaciados y animaciones consolidados.
+
+V5.0.1 — Correcciones de estabilidad y navegación
+- Barras inferiores de Vencimientos y Reposición fijadas al borde inferior real del celular.
+- Eliminado el transform del contenedor que hacía que las barras quedaran en el medio con poco contenido.
+- Filtros de Próximos reorganizados sin barra gris ni botones cortados.
+- Estados vacíos y botones secundarios ajustados.
+- Eliminada una lectura duplicada al cambiar pestañas de Vencimientos.
+- Caché breve, deduplicación de solicitudes y reutilización del último dato disponible para reducir la cuota de Google Sheets.
+- Invalidación automática de caché después de guardar, editar o eliminar.

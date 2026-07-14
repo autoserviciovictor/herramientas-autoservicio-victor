@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=500-consolidado";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=500-consolidado";
+import { API_BASE_URL } from "./config.js?v=501-correcciones";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=501-correcciones";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

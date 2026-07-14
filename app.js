@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=500-consolidado";
+} from "./excel.js?v=501-correcciones";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=500-consolidado";
+} from "./scanner.js?v=501-correcciones";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=500-consolidado";
+} from "./ui.js?v=501-correcciones";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=500-consolidado";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=501-correcciones";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -271,9 +271,8 @@ function configurarEventos() {
         });
     });
     elementos.vencTabBtns?.forEach(btn => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", () => {
             cambiarTabVencimientos(btn.dataset.vencTab || "cargar");
-            await cargarListadoVencimientos();
         });
     });
     elementos.vencListado?.addEventListener("click", manejarClickListadoVencimientos);

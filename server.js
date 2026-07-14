@@ -24,6 +24,45 @@ const auth = new google.auth.JWT(
 
 const sheets = google.sheets({ version: "v4", auth });
 
+// V5.0.1 - Caché breve y deduplicación de lecturas para no exceder la cuota de Google Sheets.
+const cacheLecturas = new Map();
+const promesasLectura = new Map();
+const CACHE_TTL = {
+  productos: 15000,
+  productosMaestros: 60000,
+  vencimientos: 20000,
+  reposicion: 15000,
+  metadata: 300000
+};
+
+async function leerConCache(clave, ttl, lector) {
+  const ahora = Date.now();
+  const guardado = cacheLecturas.get(clave);
+  if (guardado && ahora - guardado.fecha < ttl) return guardado.valor;
+  if (promesasLectura.has(clave)) return promesasLectura.get(clave);
+
+  const promesa = (async () => {
+    try {
+      const valor = await lector();
+      cacheLecturas.set(clave, { fecha: Date.now(), valor });
+      return valor;
+    } catch (error) {
+      // Si Google limita temporalmente las lecturas, conservar el último dato conocido.
+      if (guardado) return guardado.valor;
+      throw error;
+    } finally {
+      promesasLectura.delete(clave);
+    }
+  })();
+
+  promesasLectura.set(clave, promesa);
+  return promesa;
+}
+
+function invalidarCache(...claves) {
+  claves.forEach(clave => cacheLecturas.delete(clave));
+}
+
 // V3.0 estable: cola simple por código para soportar varios celulares sin pisar escrituras.
 // Si dos dispositivos guardan el mismo producto al mismo tiempo, el segundo espera
 // a que el primero termine y luego vuelve a leer el valor actualizado.
@@ -87,16 +126,15 @@ function filaAProducto(fila, index) {
 
 async function obtenerProductos() {
   validarConfiguracion();
-
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:E`
+  return leerConCache("productos", CACHE_TTL.productos, async () => {
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A:E`
+    });
+    const filas = respuesta.data.values || [];
+    if (filas.length <= 1) return [];
+    return filas.slice(1).map(filaAProducto).filter(producto => producto.codigo || producto.articulo);
   });
-
-  const filas = respuesta.data.values || [];
-  if (filas.length <= 1) return [];
-
-  return filas.slice(1).map(filaAProducto).filter(producto => producto.codigo || producto.articulo);
 }
 
 async function buscarProductoPorCodigo(codigoBuscado) {
@@ -146,13 +184,15 @@ function filaAProductoMaestro(fila, index) {
 
 async function obtenerProductosMaestros() {
   validarConfiguracion();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${PRODUCTOS_SHEET_NAME}!A:B`
+  return leerConCache("productosMaestros", CACHE_TTL.productosMaestros, async () => {
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PRODUCTOS_SHEET_NAME}!A:B`
+    });
+    const filas = respuesta.data.values || [];
+    if (filas.length <= 1) return [];
+    return filas.slice(1).map(filaAProductoMaestro).filter(producto => producto.codigo || producto.articulo);
   });
-  const filas = respuesta.data.values || [];
-  if (filas.length <= 1) return [];
-  return filas.slice(1).map(filaAProductoMaestro).filter(producto => producto.codigo || producto.articulo);
 }
 
 async function buscarProductoMaestroPorCodigo(codigoBuscado) {
@@ -162,7 +202,7 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Herramientas Autoservicio Victor V4.7.0 funcionando");
+  res.send("Servidor Herramientas Autoservicio Victor V5.0.1 funcionando");
 });
 
 app.get("/productos", async (req, res) => {
@@ -250,6 +290,7 @@ app.post("/guardar", async (req, res) => {
       return await actualizarProducto(producto);
     });
 
+    invalidarCache("productos");
     res.json({ ok: true, mensaje: "Producto guardado", producto: productoActualizado });
   } catch (error) {
     console.error("Error en /guardar:", error);
@@ -281,6 +322,7 @@ app.post("/corregir", async (req, res) => {
       return await actualizarProducto(producto);
     });
 
+    invalidarCache("productos");
     res.json({ ok: true, mensaje: "Producto corregido", producto: productoActualizado });
   } catch (error) {
     console.error("Error en /corregir:", error);
@@ -339,6 +381,7 @@ app.post("/reiniciar", async (req, res) => {
       });
     }
 
+    invalidarCache("productos");
     res.json({ ok: true, mensaje: "Inventario reiniciado" });
   } catch (error) {
     console.error("Error en /reiniciar:", error);
@@ -381,7 +424,12 @@ function normalizarOfertaVencimiento(valor) {
   return ["si", "sí", "true", "1", "oferta", "activo", "activa"].includes(texto) ? "Sí" : "No";
 }
 
+let hojaVencimientosAsegurada = false;
+let promesaHojaVencimientos = null;
 async function asegurarHojaVencimientos() {
+  if (hojaVencimientosAsegurada) return;
+  if (promesaHojaVencimientos) return promesaHojaVencimientos;
+  promesaHojaVencimientos = (async () => {
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
   const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === VENCIMIENTOS_SHEET_NAME);
@@ -409,6 +457,10 @@ async function asegurarHojaVencimientos() {
       requestBody: { values: [correcto] }
     });
   }
+  hojaVencimientosAsegurada = true;
+  })();
+  try { await promesaHojaVencimientos; }
+  finally { promesaHojaVencimientos = null; }
 }
 
 function filaAVencimiento(fila, index) {
@@ -429,12 +481,14 @@ function filaAVencimiento(fila, index) {
 
 async function obtenerVencimientos() {
   await asegurarHojaVencimientos();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${VENCIMIENTOS_SHEET_NAME}!A:J`
+  return leerConCache("vencimientos", CACHE_TTL.vencimientos, async () => {
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:J`
+    });
+    const filas = respuesta.data.values || [];
+    return filas.slice(1).map(filaAVencimiento).filter(item => item.codigo || item.articulo || item.id);
   });
-  const filas = respuesta.data.values || [];
-  return filas.slice(1).map(filaAVencimiento).filter(item => item.codigo || item.articulo || item.id);
 }
 
 app.get("/vencimientos", async (req, res) => {
@@ -485,6 +539,7 @@ app.post("/vencimientos", async (req, res) => {
       requestBody: { values: [[registro.id, registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado, registro.oferta]] }
     });
 
+    invalidarCache("vencimientos");
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
   } catch (error) {
     console.error("Error en POST /vencimientos:", error);
@@ -513,6 +568,7 @@ app.put("/vencimientos/:id", async (req, res) => {
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
     });
+    invalidarCache("vencimientos");
     res.json({ ok: true, mensaje: "Vencimiento actualizado", vencimiento: actualizado });
   } catch (error) {
     console.error("Error en PUT /vencimientos/:id:", error);
@@ -535,6 +591,7 @@ app.patch("/vencimientos/:id/oferta", async (req, res) => {
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
     });
+    invalidarCache("vencimientos");
     res.json({ ok: true, mensaje: oferta === "Sí" ? "Oferta marcada" : "Oferta quitada", vencimiento: actualizado });
   } catch (error) {
     console.error("Error en PATCH /vencimientos/:id/oferta:", error);
@@ -552,6 +609,7 @@ app.delete("/vencimientos/:id", async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
     });
+    invalidarCache("vencimientos");
     res.json({ ok: true, mensaje: "Vencimiento eliminado" });
   } catch (error) {
     console.error("Error en DELETE /vencimientos/:id:", error);
@@ -570,7 +628,12 @@ async function obtenerSheetId(nombreHoja) {
 // V4.7.0 - Reposición. La hoja se crea automáticamente dentro del archivo ya conectado.
 const REPOSICION_SHEET_NAME = "Reposicion";
 
+let hojaReposicionAsegurada = false;
+let promesaHojaReposicion = null;
 async function asegurarHojaReposicion() {
+  if (hojaReposicionAsegurada) return;
+  if (promesaHojaReposicion) return promesaHojaReposicion;
+  promesaHojaReposicion = (async () => {
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
   const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === REPOSICION_SHEET_NAME);
@@ -592,6 +655,10 @@ async function asegurarHojaReposicion() {
       requestBody: { values: [["ID", "Fecha", "Código", "Artículo", "Cantidad", "Estado", "Actualizado"]] }
     });
   }
+  hojaReposicionAsegurada = true;
+  })();
+  try { await promesaHojaReposicion; }
+  finally { promesaHojaReposicion = null; }
 }
 
 function filaAReposicion(fila, index) {
@@ -609,13 +676,15 @@ function filaAReposicion(fila, index) {
 
 async function obtenerReposicion() {
   await asegurarHojaReposicion();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${REPOSICION_SHEET_NAME}!A:G`
+  return leerConCache("reposicion", CACHE_TTL.reposicion, async () => {
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${REPOSICION_SHEET_NAME}!A:G`
+    });
+    const filas = respuesta.data.values || [];
+    if (filas.length <= 1) return [];
+    return filas.slice(1).map(filaAReposicion).filter(item => item.id && item.codigo);
   });
-  const filas = respuesta.data.values || [];
-  if (filas.length <= 1) return [];
-  return filas.slice(1).map(filaAReposicion).filter(item => item.id && item.codigo);
 }
 
 function fechaIsoActual() { return new Date().toISOString(); }
@@ -650,6 +719,7 @@ app.post("/reposicion", async (req, res) => {
         valueInputOption: "USER_ENTERED",
         requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
       });
+      invalidarCache("reposicion");
       return res.json({ ok: true, mensaje: "Cantidad sumada al producto pendiente", registro: actualizado });
     }
 
@@ -661,6 +731,7 @@ app.post("/reposicion", async (req, res) => {
       insertDataOption: "INSERT_ROWS",
       requestBody: { values: [[registro.id, registro.fecha, registro.codigo, registro.articulo, registro.cantidad, registro.estado, registro.actualizado]] }
     });
+    invalidarCache("reposicion");
     res.json({ ok: true, mensaje: "Producto anotado", registro });
   } catch (error) {
     console.error("Error en POST /reposicion:", error);
@@ -684,6 +755,7 @@ app.put("/reposicion/:id", async (req, res) => {
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
     });
+    invalidarCache("reposicion");
     res.json({ ok: true, mensaje: "Reposición actualizada", registro: actualizado });
   } catch (error) {
     console.error("Error en PUT /reposicion/:id:", error);
@@ -701,6 +773,7 @@ app.delete("/reposicion/:id", async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(REPOSICION_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
     });
+    invalidarCache("reposicion");
     res.json({ ok: true, mensaje: "Producto eliminado" });
   } catch (error) {
     console.error("Error en DELETE /reposicion/:id:", error);
@@ -709,5 +782,5 @@ app.delete("/reposicion/:id", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor Herramientas Autoservicio Victor V4.7.0 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V5.0.1 funcionando en puerto ${PORT}`);
 });
