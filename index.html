@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.0.2</title>
+    <title>Herramientas Autoservicio Victor V5.1.0</title>
 
-    <link rel="stylesheet" href="style.css?v=502-navegacion-inventario">
+    <link rel="stylesheet" href="style.css?v=510-pulido-general">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.0.2</p>
+    <p>Herramientas V5.1.0</p>
 </div>
 
 <div class="app">
@@ -68,7 +68,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.0.2</strong>
+            <strong>V5.1.0</strong>
         </section>
     </main>
 
@@ -296,13 +296,9 @@
 
             <input id="vencBuscador" class="venc-search" type="search" placeholder="Buscar por código o producto...">
 
-            <div class="venc-filtros">
-                <button type="button" class="activo" data-venc-filtro="todos">Todos</button>
-                <button type="button" data-venc-filtro="7">7 días</button>
-                <button type="button" data-venc-filtro="15">15 días</button>
-                <button type="button" data-venc-filtro="30">30 días</button>
-                <button type="button" data-venc-filtro="oferta">🏷️ Con oferta</button>
-                <button type="button" data-venc-filtro="sinOferta">Sin oferta</button>
+            <div class="venc-filter-toolbar">
+                <button id="btnVencAbrirFiltros" type="button" class="filter-open-btn">⚙️ Filtros</button>
+                <span id="vencFiltrosActivos" class="filter-active-label">Todos</span>
             </div>
 
             <div id="vencListado" class="venc-list-empty">Todavía no hay vencimientos cargados.</div>
@@ -340,7 +336,7 @@
             </section>
 
             <section id="repoFormCard" class="repo-form-card oculto">
-                <label>Cantidad necesaria</label>
+                <label>Unidades para llevar al salón</label>
                 <div class="quantity-control repo-quantity">
                     <button id="btnRepoMenos" type="button">−</button>
                     <input id="repoCantidadInput" type="number" min="1" step="1" value="1" inputmode="numeric">
@@ -383,6 +379,25 @@
     </nav>
 
     <div id="toast" class="toast"></div>
+
+    <div id="vencFiltrosModal" class="modal-overlay filter-modal-overlay oculto" aria-hidden="true">
+        <div class="filter-sheet" role="dialog" aria-modal="true" aria-labelledby="vencFiltrosTitulo">
+            <div class="filter-sheet-handle"></div>
+            <div class="filter-sheet-head"><h2 id="vencFiltrosTitulo">Filtrar productos</h2><button id="btnVencCerrarFiltros" type="button" aria-label="Cerrar">×</button></div>
+            <fieldset><legend>Vencimiento</legend>
+                <label><input type="radio" name="vencEstadoFiltro" value="todos" checked> Todos</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="7"> Hasta 7 días</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="15"> De 8 a 15 días</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="30"> De 16 a 30 días</label>
+            </fieldset>
+            <fieldset><legend>Oferta</legend>
+                <label><input type="radio" name="vencOfertaFiltro" value="todos" checked> Todas</label>
+                <label><input type="radio" name="vencOfertaFiltro" value="oferta"> Con oferta</label>
+                <label><input type="radio" name="vencOfertaFiltro" value="sinOferta"> Sin oferta</label>
+            </fieldset>
+            <div class="filter-sheet-actions"><button id="btnVencLimpiarFiltros" type="button" class="cancel-btn">Limpiar</button><button id="btnVencAplicarFiltros" type="button" class="save-btn">Aplicar filtros</button></div>
+        </div>
+    </div>
 
     <div id="vencModal" class="modal-overlay oculto" aria-hidden="true">
         <div class="modal-card venc-modal-card" role="dialog" aria-modal="true" aria-labelledby="vencModalTitulo">

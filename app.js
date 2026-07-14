@@ -51,7 +51,7 @@ import {
     actualizarConteosUbicacion
 } from "./ui.js?v=502-navegacion-inventario";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=502-navegacion-inventario";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=510-pulido-general";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -66,6 +66,7 @@ let productoVencimientoActual = null;
 let guardandoVencimiento = false;
 let vencimientosCache = [];
 let filtroVencimientos = "todos";
+let filtroOfertaVencimientos = "todos";
 let busquedaVencimientos = "";
 let vencimientoSeleccionado = null;
 let vencTabActual = "cargar";
@@ -304,6 +305,8 @@ function cambiarTabVencimientos(tab) {
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     busquedaVencimientos = "";
     filtroVencimientos = "todos";
+    filtroOfertaVencimientos = "todos";
+    actualizarEtiquetaFiltros();
     elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
     elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
 
@@ -337,6 +340,34 @@ function actualizarVisibilidadPanelesVencimientos() {
     filtros?.classList.toggle("oculto", !enProximos);
     buscador?.classList.toggle("oculto", enCarga);
     if (buscador && enCarga) buscador.value = "";
+}
+
+function actualizarEtiquetaFiltros() {
+    const el = $("vencFiltrosActivos");
+    if (!el) return;
+    const estadoTxt = {todos:"Todos", "7":"7 días", "15":"15 días", "30":"30 días"}[filtroVencimientos] || "Todos";
+    const ofertaTxt = {todos:"", oferta:"Con oferta", sinOferta:"Sin oferta"}[filtroOfertaVencimientos] || "";
+    el.textContent = ofertaTxt ? `${estadoTxt} · ${ofertaTxt}` : estadoTxt;
+}
+function abrirFiltrosVencimientos() {
+    const modal = $("vencFiltrosModal");
+    if (!modal) return;
+    const e = modal.querySelector(`input[name="vencEstadoFiltro"][value="${filtroVencimientos}"]`);
+    const o = modal.querySelector(`input[name="vencOfertaFiltro"][value="${filtroOfertaVencimientos}"]`);
+    if (e) e.checked = true; if (o) o.checked = true;
+    modal.classList.remove("oculto"); modal.setAttribute("aria-hidden","false");
+}
+function cerrarFiltrosVencimientos() { const m=$("vencFiltrosModal"); m?.classList.add("oculto"); m?.setAttribute("aria-hidden","true"); }
+function aplicarFiltrosDesdeModal() {
+    filtroVencimientos = document.querySelector('input[name="vencEstadoFiltro"]:checked')?.value || "todos";
+    filtroOfertaVencimientos = document.querySelector('input[name="vencOfertaFiltro"]:checked')?.value || "todos";
+    actualizarEtiquetaFiltros(); cerrarFiltrosVencimientos(); renderListadoVencimientos();
+}
+function limpiarFiltrosVencimientos() {
+    filtroVencimientos="todos"; filtroOfertaVencimientos="todos";
+    document.querySelector('input[name="vencEstadoFiltro"][value="todos"]')?.click();
+    document.querySelector('input[name="vencOfertaFiltro"][value="todos"]')?.click();
+    actualizarEtiquetaFiltros(); renderListadoVencimientos();
 }
 
 function aplicarFiltroVencimientos(filtro) {
@@ -975,8 +1006,8 @@ function filtrarVencimientos() {
             if (filtroVencimientos === "7" && bucket !== "7") return false;
             if (filtroVencimientos === "15" && bucket !== "15") return false;
             if (filtroVencimientos === "30" && bucket !== "30") return false;
-            if (filtroVencimientos === "oferta" && !tieneOferta(item)) return false;
-            if (filtroVencimientos === "sinOferta" && tieneOferta(item)) return false;
+            if (filtroOfertaVencimientos === "oferta" && !tieneOferta(item)) return false;
+            if (filtroOfertaVencimientos === "sinOferta" && tieneOferta(item)) return false;
         }
 
         if (q) {
@@ -997,10 +1028,10 @@ function renderResumenVencimientos() {
     const el = elementos.vencResumen || $("vencResumen");
     if (!el) return;
     el.innerHTML = `
-        <button type="button" class="venc-resumen-card venc-resumen-7" data-venc-resumen="7"><span>7 días</span><strong>${resumen.siete}</strong></button>
-        <button type="button" class="venc-resumen-card venc-resumen-15" data-venc-resumen="15"><span>15 días</span><strong>${resumen.quince}</strong></button>
-        <button type="button" class="venc-resumen-card venc-resumen-30" data-venc-resumen="30"><span>30 días</span><strong>${resumen.treinta}</strong></button>
-        <button type="button" class="venc-resumen-card venc-resumen-vencidos" data-venc-resumen="vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-7" data-venc-resumen="7"><span>7 días</span><strong>${resumen.siete}</strong><small>${resumen.siete === 1 ? "producto" : "productos"}</small></button>
+        <button type="button" class="venc-resumen-card venc-resumen-15" data-venc-resumen="15"><span>15 días</span><strong>${resumen.quince}</strong><small>${resumen.quince === 1 ? "producto" : "productos"}</small></button>
+        <button type="button" class="venc-resumen-card venc-resumen-30" data-venc-resumen="30"><span>30 días</span><strong>${resumen.treinta}</strong><small>${resumen.treinta === 1 ? "producto" : "productos"}</small></button>
+        <button type="button" class="venc-resumen-card venc-resumen-vencidos" data-venc-resumen="vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong><small>${resumen.vencidos === 1 ? "producto" : "productos"}</small></button>
     `;
 }
 
@@ -1053,7 +1084,7 @@ function renderListadoVencimientos() {
                             <em class="venc-reciente-dias ${clase}">${estado}</em>
                         </div>
                     </div>
-                    <b>${cantidad} unid.</b>
+                    <b>${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}</b>
                 </article>
             `;
         }
@@ -1068,7 +1099,7 @@ function renderListadoVencimientos() {
                         <div class="venc-vencido-grid">
                             <span><small>Salón</small><b>${salon}</b></span>
                             <span><small>Depósito</small><b>${deposito}</b></span>
-                            <span><small>Total</small><b>${cantidad} unid.</b></span>
+                            <span><small>Total</small><b>${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}</b></span>
                         </div>
                     </div>
                     <button type="button" class="venc-card-action danger venc-delete-only" data-venc-accion="eliminar">Eliminar</button>
@@ -1092,7 +1123,7 @@ function renderListadoVencimientos() {
                 <div class="venc-proximo-grid">
                     <span><small>Salón</small><b>${salon}</b></span>
                     <span><small>Depósito</small><b>${deposito}</b></span>
-                    <span><small>Total</small><b>${cantidad} unid.</b></span>
+                    <span><small>Total</small><b>${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}</b></span>
                 </div>
                 <div class="venc-proximo-actions venc-proximo-actions-3">
                     <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>

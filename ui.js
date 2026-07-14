@@ -62,8 +62,8 @@ function actualizarEncabezadoModulo(nombre) {
     const encabezados = {
         inicio: ["🏪 Autoservicio Victor", "Herramientas"],
         inventario: ["Inventario", "Control de stock"],
-        productos: ["Productos", "Inventario"],
-        cargados: ["Cargados", "Inventario"],
+        productos: ["Productos", "Lista completa"],
+        cargados: ["Cargados", "Productos con stock"],
         editarProducto: ["Editar producto", "Inventario"],
         ajustes: ["Ajustes", "Configuración general"],
         vencimientos: ["Vencimientos", "Control de fechas"],
@@ -182,8 +182,8 @@ export function actualizarConteosUbicacion(conteos = { salon: 0, deposito: 0 }) 
     const deposito = Number(conteos.deposito) || 0;
     // V3.1.2: estos valores son CANTIDAD DE PRODUCTOS contados, no suma de unidades.
     // Ejemplo: Coca salón 20 + Azúcar salón 5 = 2 productos.
-    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = `${salon}`;
-    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = `${deposito}`;
+    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = `${salon} ${salon === 1 ? "producto" : "productos"}`;
+    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = `${deposito} ${deposito === 1 ? "producto" : "productos"}`;
 }
 
 export function activarBotonGuardar(estado) {
@@ -258,14 +258,16 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     lista.forEach(producto => {
         const btn = document.createElement("button");
         btn.className = "result-item";
+        const modificado = producto.ultimaModificacion || producto.fechaModificacion || producto.updatedAt || "";
         btn.innerHTML = `
-            <strong>${producto.articulo}</strong>
-            <span class="result-code">Código: ${producto.codigo || "-"}</span>
+            <div class="result-product-copy"><strong>${producto.articulo}</strong><span class="result-code">${producto.codigo || "-"}</span></div>
+            <span class="result-chevron" aria-hidden="true">›</span>
             <div class="result-stock-row">
-                <b class="stock-salon">Salón ${producto.salon}</b>
-                <b class="stock-deposito">Depósito ${producto.deposito}</b>
-                <b class="stock-total">Total ${producto.stock}</b>
+                <b class="stock-salon"><small>Salón</small>${producto.salon}</b>
+                <b class="stock-deposito"><small>Depósito</small>${producto.deposito}</b>
+                <b class="stock-total"><small>Total</small>${producto.stock}</b>
             </div>
+            ${tab === "cargados" ? `<div class="result-sync-row"><span>✓ Sincronizado</span>${modificado ? `<time>Modificado: ${modificado}</time>` : ""}</div>` : ""}
         `;
         btn.addEventListener("click", () => onSeleccionar(producto));
         elementos.resultadoBusqueda.appendChild(btn);

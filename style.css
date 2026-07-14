@@ -2142,3 +2142,60 @@ body.en-ajustes .bottom-nav { display: none !important; }
 .module-ajustes { background: linear-gradient(145deg, #f3efe8, #e9e1d7); color: #665342; }
 .nav-btn[data-pantalla="cargados"].activo { background: var(--primary-soft); color: var(--primary-dark); }
 #pantallaProductos > .header-simple { display: none; }
+
+
+/* =========================================================
+   V5.1.0 — Pulido general, claridad y listas de trabajo
+   ========================================================= */
+:root{--ui-radius:20px;--ui-shadow:0 8px 22px rgba(43,45,42,.075);--ui-gap:12px;--ui-muted:#747970}
+.brand-header{min-height:72px!important;padding:9px 16px!important}
+.brand-header-text span{font-size:21px!important}.brand-header-text small{font-size:12px!important}
+.pantalla{padding-top:14px!important}.pantalla>section+section{margin-top:12px!important}
+
+/* Buscadores: una única medida en toda la aplicación */
+.search-card{padding:9px 12px!important;min-height:58px!important;margin-bottom:10px!important}
+.search-card input,.venc-search,#repoBuscador{height:42px!important;min-height:42px!important;padding-top:8px!important;padding-bottom:8px!important;font-size:15px!important;border-radius:14px!important}
+.search-card::before{font-size:15px!important}.list-summary{margin:8px 2px 10px!important;font-size:13px!important}
+
+/* Inventario más compacto y claro */
+.inventory-status-strip{min-height:38px!important;padding:7px 11px!important}.inventory-location-card{padding:12px!important}.inventory-location-card>span{font-size:13px!important}
+.location-btn{min-height:42px!important}.bottom-info{padding:10px!important;gap:8px!important}.bottom-info strong{font-size:19px!important}.bottom-info span{font-size:12px!important}
+.manual-panel{align-items:stretch}.manual-panel button{min-height:44px!important}.manual-panel input{min-height:44px!important}
+
+/* Productos y cargados */
+.result-list{gap:10px!important}.result-item{position:relative;padding:14px!important;border-radius:18px!important;grid-template-columns:minmax(0,1fr) auto!important;gap:10px!important}
+.result-product-copy{min-width:0}.result-product-copy strong{display:block;font-size:16px;line-height:1.2;padding-right:18px}.result-code{display:block;margin-top:5px;font-size:11px;color:var(--muted)}
+.result-chevron{position:absolute;right:13px;top:13px;font-size:24px;color:#a5aaa4}.result-stock-row{grid-column:1/-1!important;grid-row:auto!important;display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:7px!important;width:100%}
+.result-stock-row b{border:0!important;padding:8px 6px!important;border-radius:12px!important;display:flex;flex-direction:column;font-size:18px!important;line-height:1.1}
+.result-stock-row b small{font-size:10px;margin-bottom:4px}.stock-salon{background:var(--salon-soft);color:var(--salon)}.stock-deposito{background:var(--deposito-soft);color:var(--deposito)}.stock-total{background:var(--primary-soft);color:var(--primary-dark);font-weight:900!important}
+.result-sync-row{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--primary-dark);margin-top:1px}.result-sync-row time{color:var(--muted)}
+
+/* Resumen de vencimientos */
+.venc-resumen-card{min-height:84px!important;padding:9px 6px!important}.venc-resumen-card strong{font-size:25px!important}.venc-resumen-card small{display:block;font-size:9px;margin-top:1px;opacity:.78}
+.venc-item-reciente{min-height:74px!important;padding:11px 12px!important}.venc-item-reciente>b{font-size:14px!important;white-space:nowrap}
+
+/* Buscador + botón de filtros */
+.venc-filter-toolbar{display:flex;align-items:center;gap:9px;margin:10px 0 2px}.filter-open-btn{border:0;border-radius:14px;min-height:42px;padding:0 15px;background:var(--primary);color:#fff;font-weight:900;font-size:14px}.filter-active-label{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:999px;background:#f1f2ee;color:var(--muted);padding:9px 12px;font-size:12px;font-weight:800}
+.venc-filtros{display:none!important}
+.filter-modal-overlay{align-items:flex-end!important;padding:0!important}.filter-sheet{width:min(520px,100%);background:#fff;border-radius:24px 24px 0 0;padding:10px 17px calc(17px + env(safe-area-inset-bottom));box-shadow:0 -15px 45px rgba(0,0,0,.18)}
+.filter-sheet-handle{width:44px;height:5px;border-radius:999px;background:#d6d8d3;margin:0 auto 10px}.filter-sheet-head{display:flex;justify-content:space-between;align-items:center}.filter-sheet-head h2{margin:0;font-size:21px}.filter-sheet-head button{border:0;background:#f1f2ee;border-radius:12px;width:38px;height:38px;font-size:25px}
+.filter-sheet fieldset{border:0;padding:0;margin:16px 0}.filter-sheet legend{font-weight:900;margin-bottom:7px}.filter-sheet label{display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #f0eee8;font-weight:700}.filter-sheet input{accent-color:var(--primary);width:18px;height:18px}.filter-sheet-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px}.filter-sheet-actions button{min-height:48px!important}
+
+/* Tarjetas próximos: jerarquía, chip separado y sin superposición */
+.venc-item-proximo{position:relative;padding:14px!important;padding-top:48px!important;overflow:visible!important}.venc-offer-top{position:absolute!important;right:12px!important;top:11px!important;left:auto!important;max-width:48%;font-size:9px!important;padding:6px 9px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.venc-proximo-main{padding-right:0!important}.venc-proximo-main strong{display:block;line-height:1.22;padding-right:4px}.venc-proximo-fecha-row{margin-top:10px!important}.venc-proximo-grid{gap:7px!important}.venc-proximo-grid span{padding:9px 5px!important}.venc-proximo-grid b{font-size:18px!important}.venc-proximo-actions{gap:7px!important}.venc-card-action{min-height:40px!important;padding:8px!important;font-size:11px!important}
+.venc-item-vencido-registro{padding:13px!important}.venc-vencido-fecha{padding:9px 10px!important}.venc-vencido-grid span{padding:8px 5px!important}
+
+/* Reposición: lista real para reemplazar el papel */
+.repo-form-card>label{font-size:14px!important}.repo-help{font-size:12px!important}.repo-mini-card{min-height:68px!important;padding:10px 12px!important}.repo-mini-card b{font-size:28px!important}.repo-mini-card b small{font-size:11px!important}
+.repo-registro-card{padding:12px!important}.repo-filter-row{gap:6px!important}.repo-filter-row button{min-height:38px!important;padding:7px!important;font-size:12px!important}
+.repo-list-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;min-height:0!important;padding:13px!important;gap:10px!important}.repo-list-row .repo-item-main{justify-content:center}.repo-list-row .repo-item-main strong{font-size:16px!important}.repo-list-row .repo-item-main small{font-size:11px!important}
+.repo-quantity-badge{min-width:78px;background:#fff6f6;border:1px solid #f3d0d2;border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;color:var(--brand-dark)}.repo-quantity-badge b{font-size:30px;line-height:1}.repo-quantity-badge span{font-size:10px;margin-top:3px;font-weight:800}.repo-item.completado .repo-quantity-badge{background:var(--primary-soft);border-color:#c4e4ce;color:var(--primary-dark)}
+.repo-row-footer{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding-top:9px;border-top:1px solid #eeeae2}.repo-row-footer em{font-style:normal;font-size:11px;font-weight:900;color:var(--muted)}.repo-primary-action{border:0;border-radius:12px;min-height:38px;background:var(--primary);color:#fff;font-weight:900}.repo-item.completado .repo-primary-action{background:#e9eee9;color:#526057}
+.repo-more{position:relative}.repo-more summary{list-style:none;width:38px;height:38px;border-radius:12px;background:#f0f1ed;display:grid;place-items:center;font-size:23px;cursor:pointer}.repo-more summary::-webkit-details-marker{display:none}.repo-more>div{position:absolute;right:0;bottom:44px;width:150px;background:#fff;border-radius:13px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:20}.repo-more button{width:100%;border:0;background:transparent;padding:10px;text-align:left;font-weight:800}.repo-more button.danger{color:var(--danger)}
+.repo-totales{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;background:transparent!important;padding:0!important}.repo-totales>div{background:#f3f4f0;border-radius:14px;padding:10px;text-align:center}.repo-totales span{display:block;font-size:10px;color:var(--muted);font-weight:800}.repo-totales strong{display:block;font-size:23px;margin-top:3px}
+
+/* Cantidades siempre completas */
+.unit-full{white-space:nowrap}
+
+@media(max-width:370px){.venc-item-proximo{padding-top:51px!important}.venc-offer-top{max-width:56%}.filter-active-label{font-size:11px}.repo-row-footer{grid-template-columns:1fr auto}.repo-row-footer em{grid-column:1/-1}.result-stock-row b{font-size:16px!important}}
