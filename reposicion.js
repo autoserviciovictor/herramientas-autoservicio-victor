@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=480-unificado";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=480-unificado";
+import { API_BASE_URL } from "./config.js?v=500-consolidado";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=500-consolidado";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -112,7 +112,8 @@ function renderRecientes(){
   const c=$("repoRecientes"); if(!c)return;
   const items=registros.slice(0,3);
   c.className=items.length?"repo-list":"venc-list-empty";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad} un.</b></article>`).join(""):"Todavía no hay productos anotados.";
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}<small>unidades</small></b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small>`;
+  const ver=$('btnRepoVerRegistro'); if(ver) ver.disabled=!registros.length;
 }
 function renderListado(){
   const c=$("repoListado"); if(!c)return;
@@ -120,7 +121,8 @@ function renderListado(){
   const q=($("repoBuscador")?.value||"").toLowerCase();
   const items=registros.filter(r=>(filtro==="todos"||r.estado===filtro)&&(!q||r.articulo.toLowerCase().includes(q)||r.codigo.includes(q)));
   c.className=items.length?"repo-list":"venc-list-empty";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-item ${r.estado}"><div class="repo-item-main"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small><span>📅 ${fechaCorta(r.fecha)}</span></div><div class="repo-item-side"><b><span>${r.cantidad}</span><small>unidades</small></b><em>${r.estado==="completado"?"Completado":"Pendiente"}</em><div><button data-repo-accion="${r.estado==="pendiente"?"completar":"reabrir"}" data-id="${r.id}" class="repo-check">${r.estado==="pendiente"?"✓":"↺"}</button><button data-repo-accion="editar" data-id="${r.id}" class="repo-edit">✎</button><button data-repo-accion="eliminar" data-id="${r.id}" class="repo-delete">🗑</button></div></div></article>`).join(""):"No hay productos para mostrar.";
+  const vacio=filtro==="pendiente"?"No hay productos pendientes.":filtro==="completado"?"No hay productos completados.":"No hay productos para mostrar.";
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-item ${r.estado}"><div class="repo-item-main"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small><span>📅 ${fechaCorta(r.fecha)}</span></div><div class="repo-item-side"><em>${r.estado==="completado"?"Completado":"Pendiente"}</em><b><span>${r.cantidad}</span><small>unidades</small></b><div class="repo-actions"><button aria-label="${r.estado==="pendiente"?"Completar":"Reabrir"}" data-repo-accion="${r.estado==="pendiente"?"completar":"reabrir"}" data-id="${r.id}" class="repo-check">${r.estado==="pendiente"?"✓":"↺"}</button><button aria-label="Editar" data-repo-accion="editar" data-id="${r.id}" class="repo-edit">✎</button><button aria-label="Eliminar" data-repo-accion="eliminar" data-id="${r.id}" class="repo-delete">🗑</button></div></div></article>`).join(""):`<span class="empty-icon">📦</span><strong>${vacio}</strong><small>El registro se actualiza automáticamente.</small>`;
   const pendientes=registros.filter(r=>r.estado==="pendiente");
   $("repoTotales").innerHTML=`<strong>Total pendientes</strong><span>${pendientes.length} productos · ${pendientes.reduce((a,r)=>a+numero(r.cantidad),0)} unidades</span>`;
 }

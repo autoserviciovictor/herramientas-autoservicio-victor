@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V4.8.0</title>
+    <title>Herramientas Autoservicio Victor V5.0.0</title>
 
-    <link rel="stylesheet" href="style.css?v=480-unificado">
+    <link rel="stylesheet" href="style.css?v=500-consolidado">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V4.8.0</p>
+    <p>Herramientas V5.0.0</p>
 </div>
 
 <div class="app">
@@ -62,7 +62,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V4.8.0</strong>
+            <strong>V5.0.0</strong>
         </section>
     </main>
 
@@ -287,7 +287,7 @@
         <section class="venc-list-card">
             <div class="venc-list-head">
                 <h2 id="vencListadoTitulo">Registros recientes</h2>
-                <button id="btnVencActualizar" type="button">Actualizar</button>
+                
             </div>
 
             <div id="vencResumen" class="venc-resumen"></div>
@@ -351,7 +351,7 @@
 
             <section class="venc-list-card repo-recent-card">
                 <div class="venc-list-head"><h2>Últimos agregados</h2><button id="btnRepoVerRegistro" type="button">Ver registro</button></div>
-                <div id="repoRecientes" class="venc-list-empty">Todavía no hay productos anotados.</div>
+                <div id="repoRecientes" class="venc-list-empty"><span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small></div>
             </section>
         </section>
 
@@ -363,7 +363,7 @@
                     <button data-repo-filtro="completado">Completados</button>
                     <button data-repo-filtro="todos">Todos</button>
                 </div>
-                <div id="repoListado" class="venc-list-empty">No hay productos pendientes.</div>
+                <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
                 <div id="repoTotales" class="repo-totales"></div>
             </section>
         </section>
@@ -446,6 +446,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=480-unificado"></script>
+<script type="module" src="./app.js?v=500-consolidado"></script>
 </body>
 </html>

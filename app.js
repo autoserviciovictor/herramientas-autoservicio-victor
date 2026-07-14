@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=480-unificado";
+} from "./excel.js?v=500-consolidado";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=480-unificado";
+} from "./scanner.js?v=500-consolidado";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=480-unificado";
+} from "./ui.js?v=500-consolidado";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=480-unificado";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=500-consolidado";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -330,9 +330,12 @@ function actualizarVisibilidadPanelesVencimientos() {
     const buscador = elementos.vencBuscador;
 
     resumen?.classList.toggle("oculto", !enCarga);
-    // En Cargar se ven los contadores y los últimos registros. En las otras pestañas no se muestran contadores por días.
+    // Un solo título: el encabezado rojo identifica la pantalla.
+    const cabeceraLista = document.querySelector("#pantallaVencimientos .venc-list-head");
+    cabeceraLista?.classList.toggle("oculto", !enCarga);
     filtros?.classList.toggle("oculto", !enProximos);
     buscador?.classList.toggle("oculto", enCarga);
+    if (buscador && enCarga) buscador.value = "";
 }
 
 function aplicarFiltroVencimientos(filtro) {

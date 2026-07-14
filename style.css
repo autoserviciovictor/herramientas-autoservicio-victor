@@ -2006,3 +2006,85 @@ body:not(.en-inicio) .header-simple{display:none!important}
   .pantalla{padding:12px 12px 82px!important}
   .inventory-location-card{padding:10px}
 }
+
+/* V5.0.0 — consolidación visual y funcional */
+:root{
+  --ui-gap:16px;
+  --ui-radius:22px;
+  --ui-shadow:0 10px 28px rgba(83,69,54,.09);
+  --ui-green:#168447;
+  --ui-red:#ef3c43;
+  --ui-muted:#6f746f;
+}
+
+/* Una sola navegación por módulo */
+body.en-vencimientos .bottom-nav,
+body.en-anotar .bottom-nav{display:none!important}
+body:not(.en-vencimientos) #pantallaVencimientos .venc-bottom-nav{display:none!important}
+body:not(.en-anotar) #pantallaAnotar .repo-bottom-nav{display:none!important}
+
+/* El encabezado rojo es el único título de pantalla */
+#pantallaProductos>.header-simple,
+#pantallaAjustes>.header-simple,
+#pantallaEditarProducto>.header-edit{display:none!important}
+
+.brand-header{min-height:78px;padding:10px 18px;box-sizing:border-box}
+.brand-back-btn{width:46px;height:46px;border-radius:15px;font-size:34px;line-height:1}
+.brand-header-text span{font-size:22px;line-height:1.08}
+.brand-header-text small{font-size:12px;margin-top:3px}
+
+.pantalla{padding-left:16px;padding-right:16px;animation:uiEnter .18s ease both}
+@keyframes uiEnter{from{opacity:.45;transform:translateX(7px)}to{opacity:1;transform:none}}
+
+.scan-panel,.venc-actions-card,.venc-list-card,.settings-card,.search-card,.tabs-card,
+.inventory-location-card,.bottom-info,.product-card,.quantity-card,.edit-card,.repo-form-card,.repo-product-card{
+  border-radius:var(--ui-radius)!important;
+  box-shadow:var(--ui-shadow)!important;
+}
+
+.scan-open-btn,.manual-link-btn,.save-btn,.cancel-btn{min-height:52px;border-radius:17px!important}
+.manual-link-btn{font-size:15px!important}
+.manual-panel{gap:10px;margin-top:10px}
+.manual-panel input,.manual-panel button,.venc-search,.search-card input{min-height:48px;border-radius:15px!important}
+
+/* Estados vacíos consistentes, sin borde punteado */
+.venc-list-empty{
+  border:0!important;background:#f5f5f3!important;border-radius:17px!important;
+  min-height:118px;padding:22px 16px!important;display:flex!important;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;gap:5px;color:var(--ui-muted)!important
+}
+.venc-list-empty .empty-icon{font-size:28px;line-height:1}
+.venc-list-empty strong{font-size:16px}
+.venc-list-empty small{font-size:12px;font-weight:600}
+
+/* Actualización es automática */
+#btnVencActualizar{display:none!important}
+.venc-list-head.oculto{display:none!important}
+
+/* Tarjeta de reposición: estado, cantidad y acciones claramente ordenadas */
+.repo-item{display:grid!important;grid-template-columns:minmax(0,1fr) 112px!important;gap:12px!important;padding:15px!important;border-radius:18px!important;min-height:170px}
+.repo-item-main{min-width:0;display:flex;flex-direction:column;gap:5px}
+.repo-item-main>strong{font-size:17px;line-height:1.18}
+.repo-item-main>small,.repo-item-main>span{font-size:12px;color:#6f746f}
+.repo-item-side{display:grid!important;grid-template-rows:auto 1fr auto;gap:8px;align-items:start;justify-items:stretch}
+.repo-item-side em{grid-row:1;font-style:normal!important;text-align:center;border-radius:999px;padding:6px 8px;font-size:11px;font-weight:800}
+.repo-item-side b{grid-row:2;display:flex!important;flex-direction:column;align-items:center;justify-content:center;min-height:72px;border:1px solid #f0d1d3;border-radius:16px;background:#fff7f7;color:#df3038}
+.repo-item.completado .repo-item-side b{background:#effaf3;border-color:#bfe4cc;color:#168447}
+.repo-item-side b span{font-size:32px;line-height:1;font-weight:900}
+.repo-item-side b small{font-size:10px;margin-top:4px}
+.repo-actions{grid-row:3;display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.repo-actions button{width:100%!important;height:38px!important;min-width:0!important;border-radius:11px!important;padding:0!important;font-size:18px!important}
+.repo-mini-card b{display:flex;flex-direction:column;align-items:flex-end;font-size:23px}
+.repo-mini-card b small{font-size:10px;color:#6f746f}
+
+/* Dos pestañas realmente centradas */
+.repo-bottom-nav{grid-template-columns:repeat(2,1fr)!important}
+.repo-bottom-nav button{justify-self:stretch!important}
+
+/* Ver registro no parece activo cuando no hay datos */
+#btnRepoVerRegistro:disabled{opacity:.42;pointer-events:none;filter:grayscale(.25)}
+
+/* Tipografía y espaciados comunes */
+.venc-list-head h2,.repo-recent-card h2{font-size:21px!important;line-height:1.15}
+.pantalla>section+section{margin-top:var(--ui-gap)}
+.bottom-nav,.venc-bottom-nav{box-shadow:0 -6px 20px rgba(60,55,50,.07)}
