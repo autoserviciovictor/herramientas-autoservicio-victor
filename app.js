@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=501-correcciones";
+} from "./excel.js?v=502-navegacion-inventario";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=501-correcciones";
+} from "./scanner.js?v=502-navegacion-inventario";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=501-correcciones";
+} from "./ui.js?v=502-navegacion-inventario";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=501-correcciones";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=502-navegacion-inventario";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -185,11 +185,15 @@ async function entrarPantalla(nombre) {
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     busquedaVencimientos = "";
 
+    if (nombre === "productos" || nombre === "cargados") {
+        tabProductosActual = nombre === "cargados" ? "cargados" : "productos";
+    }
+
     cambiarPantalla(nombre);
 
-    if (["inventario", "productos", "ajustes"].includes(nombre)) {
+    if (["inventario", "productos", "cargados", "ajustes"].includes(nombre)) {
         await sincronizarEnSegundoPlano();
-        if (nombre === "productos") refrescarProductos();
+        if (nombre === "productos" || nombre === "cargados") refrescarProductos();
     }
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
@@ -229,10 +233,8 @@ function configurarEventos() {
     elementos.btnReiniciar.addEventListener("click", manejarReinicio);
 
     elementos.buscadorProducto.addEventListener("input", refrescarProductos);
-    elementos.tabProductos.addEventListener("click", () => cambiarTabProductos("productos"));
-    elementos.tabCargados.addEventListener("click", () => cambiarTabProductos("cargados"));
     elementos.btnVolverProductos.addEventListener("click", () => {
-        cambiarPantalla("productos");
+        cambiarPantalla(tabProductosActual === "cargados" ? "cargados" : "productos");
         refrescarProductos();
         sincronizarEnSegundoPlano();
     });
@@ -573,9 +575,8 @@ function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {
 }
 
 function cambiarTabProductos(tab) {
-    tabProductosActual = tab;
+    tabProductosActual = tab === "cargados" ? "cargados" : "productos";
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
-    activarTabProductos(tab);
     sincronizarEnSegundoPlano().finally(refrescarProductos);
 }
 
@@ -629,7 +630,7 @@ async function guardarCorreccion() {
         const producto = await modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
 
         productoEditando = null;
-        cambiarPantalla("productos");
+        cambiarPantalla(tabProductosActual === "cargados" ? "cargados" : "productos");
         refrescarProductos();
         sincronizarEnSegundoPlano();
 

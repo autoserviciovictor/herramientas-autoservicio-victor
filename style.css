@@ -2135,3 +2135,10 @@ body.en-vencimientos .app,body.en-anotar .app,.app{padding-bottom:calc(96px + en
 
 /* Botones secundarios verdes con el mismo tono. */
 .venc-list-head button,#btnRepoVerRegistro{background:var(--primary-soft)!important;color:var(--primary-dark)!important}
+
+
+/* V5.0.2 - Navegación simplificada de Inventario */
+body.en-ajustes .bottom-nav { display: none !important; }
+.module-ajustes { background: linear-gradient(145deg, #f3efe8, #e9e1d7); color: #665342; }
+.nav-btn[data-pantalla="cargados"].activo { background: var(--primary-soft); color: var(--primary-dark); }
+#pantallaProductos > .header-simple { display: none; }

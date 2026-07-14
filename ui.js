@@ -63,8 +63,9 @@ function actualizarEncabezadoModulo(nombre) {
         inicio: ["🏪 Autoservicio Victor", "Herramientas"],
         inventario: ["Inventario", "Control de stock"],
         productos: ["Productos", "Inventario"],
+        cargados: ["Cargados", "Inventario"],
         editarProducto: ["Editar producto", "Inventario"],
-        ajustes: ["Ajustes", "Inventario"],
+        ajustes: ["Ajustes", "Configuración general"],
         vencimientos: ["Vencimientos", "Control de fechas"],
         anotar: ["Anotar reposición", "Reposición de salón"]
     };
@@ -80,9 +81,10 @@ function actualizarEncabezadoModulo(nombre) {
 
 export function cambiarPantalla(nombre) {
     actualizarEncabezadoModulo(nombre);
+    const pantallaReal = nombre === "cargados" ? "productos" : nombre;
     Object.entries(elementos.pantallas).forEach(([clave, pantalla]) => {
         if (!pantalla) return;
-        pantalla.classList.toggle("activa", clave === nombre);
+        pantalla.classList.toggle("activa", clave === pantallaReal);
     });
 
     const pantallaNav = nombre === "editarProducto" ? "productos" : nombre;
@@ -94,6 +96,8 @@ export function cambiarPantalla(nombre) {
     document.body.classList.toggle("en-inicio", nombre === "inicio");
     document.body.classList.toggle("en-vencimientos", nombre === "vencimientos");
     document.body.classList.toggle("en-anotar", nombre === "anotar");
+    document.body.classList.toggle("en-ajustes", nombre === "ajustes");
+    document.body.classList.toggle("en-modulo-inventario", ["inventario", "productos", "cargados", "editarProducto"].includes(nombre));
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {
@@ -222,8 +226,8 @@ export function reproducirConfirmacion(tipo = "ok") {
 
 export function activarTabProductos(tab) {
     const cargados = tab === "cargados";
-    elementos.tabProductos.classList.toggle("activo", !cargados);
-    elementos.tabCargados.classList.toggle("activo", cargados);
+    elementos.tabProductos?.classList.toggle("activo", !cargados);
+    elementos.tabCargados?.classList.toggle("activo", cargados);
 }
 
 export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {

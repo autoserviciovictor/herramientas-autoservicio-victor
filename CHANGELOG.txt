@@ -1,3 +1,11 @@
+V5.0.2
+- Ajustes pasa al menú principal como módulo independiente.
+- La barra inferior de Inventario queda con Inventario, Productos y Cargados.
+- Cargados pasa a ser una pantalla de navegación propia.
+- Se elimina el selector interno Productos/Cargados.
+- Productos y Cargados limpian el buscador y actualizan sus datos al entrar.
+- La flecha de Ajustes vuelve al menú principal.
+
 V5.0.0 — Consolidación visual y funcional
 
 - Encabezado único y flecha única dentro del marco rojo.

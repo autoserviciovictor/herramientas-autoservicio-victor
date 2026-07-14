@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.0.1</title>
+    <title>Herramientas Autoservicio Victor V5.0.2</title>
 
-    <link rel="stylesheet" href="style.css?v=501-correcciones">
+    <link rel="stylesheet" href="style.css?v=502-navegacion-inventario">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.0.1</p>
+    <p>Herramientas V5.0.2</p>
 </div>
 
 <div class="app">
@@ -53,6 +53,12 @@
                 <small>Reposición</small>
             </button>
 
+            <button class="module-card module-ajustes" data-modulo="ajustes">
+                <span class="module-icon">⚙️</span>
+                <strong>Ajustes</strong>
+                <small>Configuración</small>
+            </button>
+
             <button class="module-card module-disabled" type="button" disabled>
                 <span class="module-icon">📊</span>
                 <strong>Estadísticas</strong>
@@ -62,7 +68,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.0.1</strong>
+            <strong>V5.0.2</strong>
         </section>
     </main>
 
@@ -141,10 +147,6 @@
             <p>Buscá, revisá o modificá el stock</p>
         </header>
 
-        <section class="tabs-card">
-            <button id="tabProductos" class="tab-btn activo">Productos</button>
-            <button id="tabCargados" class="tab-btn">Cargados</button>
-        </section>
 
         <section class="search-card">
             <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
@@ -374,10 +376,10 @@
         </nav>
     </main>
 
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" aria-label="Navegación de inventario">
         <button class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
         <button class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
-        <button class="nav-btn" data-pantalla="ajustes">⚙️<span>Ajustes</span></button>
+        <button class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
     </nav>
 
     <div id="toast" class="toast"></div>
@@ -446,6 +448,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=501-correcciones"></script>
+<script type="module" src="./app.js?v=502-navegacion-inventario"></script>
 </body>
 </html>
