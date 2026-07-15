@@ -1,26 +1,37 @@
-import { API_BASE_URL } from "./config.js?v=511-correcciones-finales";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=511-correcciones-finales";
+import { API_BASE_URL } from "./config.js?v=512-entrega2";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=512-entrega2";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
 let registros = [];
 let tab = "cargar";
 let iniciado = false;
+let operacionEnCurso = false;
+let temporizadorToast = null;
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
 async function pedir(ruta, opciones={}){
-  const r = await fetch(apiUrl(ruta), {headers:{"Content-Type":"application/json"}, ...opciones});
+  const controlador = new AbortController();
+  const temporizador = setTimeout(()=>controlador.abort(),15000);
+  let r;
+  try {
+    r = await fetch(apiUrl(ruta), {...opciones, headers:{"Content-Type":"application/json",...(opciones.headers||{})}, signal:controlador.signal});
+  } catch(error) {
+    if(error?.name === "AbortError") throw new Error("El servidor tardó demasiado en responder");
+    throw new Error("No se pudo conectar con el servidor");
+  } finally { clearTimeout(temporizador); }
   const data = await r.json().catch(()=>null);
   if(!r.ok || !data?.ok) throw new Error(data?.mensaje || "No se pudo conectar");
   return data;
 }
 function toast(texto, tipo="ok"){
   const t=$("toast"); if(!t) return;
+  clearTimeout(temporizadorToast);
   t.textContent=texto; t.className=`toast mostrar ${tipo}`;
-  setTimeout(()=>t.className="toast",1800);
+  temporizadorToast=setTimeout(()=>t.className="toast",1800);
 }
 function unidades(n){ const v=numero(n); return `${v} ${v===1?"unidad":"unidades"}`; }
-function numero(v){ const n=Number(v); return Number.isFinite(n)&&n>=0?n:0; }
+function numero(v){ const n=Number(v); return Number.isInteger(n)&&n>=0?n:0; }
 function escapar(s){ return String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
 function fechaCorta(valor){
   const d=new Date(valor); if(Number.isNaN(d.getTime())) return "";
@@ -80,12 +91,15 @@ async function buscarProducto(codigo){
 }
 function cambiarCantidad(delta){ const i=$("repoCantidadInput"); i.value=Math.max(1,numero(i.value)+delta); }
 async function guardar(){
-  if(!productoActual) return;
+  if(!productoActual || operacionEnCurso) return;
   const cantidad=Math.max(1,numero($("repoCantidadInput").value));
   try{
+    operacionEnCurso=true;
+    const boton=$("btnRepoGuardar"); if(boton) boton.disabled=true;
     await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:productoActual.codigo,articulo:productoActual.articulo,cantidad})});
     toast("Producto guardado correctamente"); limpiar(); await refrescarReposicion();
   }catch(e){toast(e.message,"error");}
+  finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton) boton.disabled=false; }
 }
 function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar código manualmente"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
 function actualizarEncabezadoRepo(esCarga){
@@ -126,13 +140,15 @@ function renderListado(){
 }
 
 async function manejarAccion(e){
-  const b=e.target.closest("[data-repo-accion]"); if(!b)return;
+  const b=e.target.closest("[data-repo-accion]"); if(!b || operacionEnCurso)return;
   const r=registros.find(x=>x.id===b.dataset.id); if(!r)return;
   const a=b.dataset.repoAccion;
   try{
+    operacionEnCurso=true; b.disabled=true;
     if(a==="eliminar"){ if(!confirm(`¿Eliminar ${r.articulo}?`))return; await pedir(`/reposicion/${r.id}`,{method:"DELETE"}); }
-    else if(a==="editar"){ const v=prompt("Nueva cantidad",r.cantidad); if(v===null)return; const n=Number(v); if(!Number.isFinite(n)||n<1)return toast("Cantidad inválida","error"); await pedir(`/reposicion/${r.id}`,{method:"PUT",body:JSON.stringify({cantidad:n,estado:r.estado})}); }
+    else if(a==="editar"){ const v=prompt("Nueva cantidad",r.cantidad); if(v===null)return; const n=Number(v); if(!Number.isInteger(n)||n<1)return toast("Cantidad inválida","error"); await pedir(`/reposicion/${r.id}`,{method:"PUT",body:JSON.stringify({cantidad:n,estado:r.estado})}); }
     else { await pedir(`/reposicion/${r.id}`,{method:"PUT",body:JSON.stringify({cantidad:r.cantidad,estado:a==="completar"?"completado":"pendiente"})}); }
     await refrescarReposicion();
   }catch(err){toast(err.message,"error");}
+  finally { operacionEnCurso=false; b.disabled=false; }
 }

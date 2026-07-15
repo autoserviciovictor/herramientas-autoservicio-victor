@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=511-correcciones-finales";
+} from "./excel.js?v=512-entrega2";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=511-correcciones-finales";
+} from "./scanner.js?v=512-entrega2";
 
 import {
     ocultarSplash,
@@ -47,11 +47,10 @@ import {
     obtenerValoresEditor,
     activarModoCantidad,
     desactivarModoCantidad,
-    activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=511-correcciones-finales";
+} from "./ui.js?v=512-entrega2";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=511-correcciones-finales";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=512-entrega2";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -96,8 +95,6 @@ const elementos = {
     checkVibracion: $("checkVibracion"),
     btnReiniciar: $("btnReiniciar"),
     buscadorProducto: $("buscadorProducto"),
-    tabProductos: $("tabProductos"),
-    tabCargados: $("tabCargados"),
     btnVolverProductos: $("btnVolverProductos"),
     editarSalon: $("editarSalon"),
     editarDeposito: $("editarDeposito"),
@@ -128,7 +125,6 @@ const elementos = {
     vencTotalTexto: $("vencTotalTexto"),
     btnVencGuardar: $("btnVencGuardar"),
     btnVencCancelarCarga: $("btnVencCancelarCarga"),
-    btnVencActualizar: $("btnVencActualizar"),
     vencListado: $("vencListado"),
     vencBuscador: $("vencBuscador"),
     vencResumen: $("vencResumen"),
@@ -260,7 +256,6 @@ function configurarEventos() {
     elementos.btnVencMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencDepositoInput, 1, 0, actualizarTotalVencimiento));
     elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
     elementos.btnVencCancelarCarga?.addEventListener("click", cancelarCargaVencimiento);
-    elementos.btnVencActualizar?.addEventListener("click", cargarListadoVencimientos);
     elementos.vencBuscador?.addEventListener("input", () => {
         busquedaVencimientos = elementos.vencBuscador.value || "";
         renderListadoVencimientos();

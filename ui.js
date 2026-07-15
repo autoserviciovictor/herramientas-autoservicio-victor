@@ -28,15 +28,12 @@ const elementos = {
     btnGuardarCantidad: document.getElementById("btnGuardarCantidad"),
     contadorSalonTexto: document.getElementById("contadorSalonTexto"),
     contadorDepositoTexto: document.getElementById("contadorDepositoTexto"),
-    textoBotonExcel: document.getElementById("textoBotonExcel"),
     estadoExcelAjustes: document.getElementById("estadoExcelAjustes"),
     btnSalon: document.getElementById("btnSalon"),
     btnDeposito: document.getElementById("btnDeposito"),
     btnDescargar: document.getElementById("btnDescargar"),
     resultadoBusqueda: document.getElementById("resultadoBusqueda"),
     resumenProductos: document.getElementById("resumenProductos"),
-    tabProductos: document.getElementById("tabProductos"),
-    tabCargados: document.getElementById("tabCargados"),
     editarNombreProducto: document.getElementById("editarNombreProducto"),
     editarCodigoProducto: document.getElementById("editarCodigoProducto"),
     editarSalon: document.getElementById("editarSalon"),
@@ -117,9 +114,6 @@ export function actualizarEstadoExcel(cantidad) {
     if (elementos.estadoExcelAjustes) {
         elementos.estadoExcelAjustes.textContent = cantidad ? `✅ Google Sheets conectado: ${cantidad} productos` : "Sin conexión con Google Sheets";
         elementos.estadoExcelAjustes.classList.toggle("cargado", Boolean(cantidad));
-    }
-    if (elementos.textoBotonExcel) {
-        elementos.textoBotonExcel.textContent = cantidad ? "✅ Google Sheets conectado" : "Sin conexión";
     }
 }
 
@@ -225,11 +219,6 @@ export function reproducirConfirmacion(tipo = "ok") {
     } catch (error) {}
 }
 
-export function activarTabProductos(tab) {
-    const cargados = tab === "cargados";
-    elementos.tabProductos?.classList.toggle("activo", !cargados);
-    elementos.tabCargados?.classList.toggle("activo", cargados);
-}
 
 export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     elementos.resultadoBusqueda.innerHTML = "";

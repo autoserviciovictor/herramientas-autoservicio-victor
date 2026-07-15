@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=480-unificado";
+import { API_BASE_URL } from "./config.js?v=512-entrega2";
 
 let datos = [];
 let contador = 0;
@@ -27,6 +27,13 @@ function apiUrl(ruta) {
 function normalizarNumero(valor) {
     const numero = Number(valor);
     return Number.isFinite(numero) && numero >= 0 ? numero : 0;
+}
+
+function normalizarEntero(valor, { permitirCero = true } = {}) {
+    const numero = Number(valor);
+    const valido = Number.isInteger(numero) && (permitirCero ? numero >= 0 : numero > 0);
+    if (!valido) throw new Error(permitirCero ? "Ingresá una cantidad entera válida" : "Ingresá una cantidad entera mayor a 0");
+    return numero;
 }
 
 function normalizarTexto(valor) {
@@ -78,12 +85,24 @@ function registrarUltimo(producto) {
 }
 
 async function pedirJson(ruta, opciones = {}) {
-    const respuesta = await fetch(apiUrl(ruta), {
-        headers: {
-            "Content-Type": "application/json"
-        },
-        ...opciones
-    });
+    const controlador = new AbortController();
+    const temporizador = setTimeout(() => controlador.abort(), 15000);
+    let respuesta;
+    try {
+        respuesta = await fetch(apiUrl(ruta), {
+            ...opciones,
+            headers: {
+                "Content-Type": "application/json",
+                ...(opciones.headers || {})
+            },
+            signal: controlador.signal
+        });
+    } catch (error) {
+        if (error?.name === "AbortError") throw new Error("El servidor tardó demasiado en responder");
+        throw new Error("No se pudo conectar con el servidor");
+    } finally {
+        clearTimeout(temporizador);
+    }
 
     let data = null;
     try {
@@ -203,8 +222,7 @@ export function buscarProductosPorTexto(texto, limite = 40, soloCargados = false
 export async function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     if (!datos[indice]) throw new Error("Producto inválido");
 
-    const cantidadNumerica = normalizarNumero(cantidad);
-    if (cantidadNumerica <= 0) throw new Error("Ingresá una cantidad válida");
+    const cantidadNumerica = normalizarEntero(cantidad, { permitirCero: false });
 
     const productoBase = armarProducto(datos[indice], indice);
 
@@ -237,8 +255,8 @@ export async function modificarStockProducto(indice, salon, deposito) {
         method: "POST",
         body: JSON.stringify({
             codigo: productoBase.codigo,
-            salon: normalizarNumero(salon),
-            deposito: normalizarNumero(deposito)
+            salon: normalizarEntero(salon),
+            deposito: normalizarEntero(deposito)
         })
     });
 
@@ -273,8 +291,8 @@ export async function guardarVencimiento(registro) {
             codigo: normalizarTexto(registro.codigo),
             articulo: normalizarTexto(registro.articulo),
             vencimiento: normalizarTexto(registro.vencimiento),
-            salon: normalizarNumero(registro.salon),
-            deposito: normalizarNumero(registro.deposito)
+            salon: normalizarEntero(registro.salon),
+            deposito: normalizarEntero(registro.deposito)
         })
     });
     return data.vencimiento;
@@ -286,8 +304,8 @@ export async function actualizarVencimiento(id, registro) {
         method: "PUT",
         body: JSON.stringify({
             vencimiento: normalizarTexto(registro.vencimiento),
-            salon: normalizarNumero(registro.salon),
-            deposito: normalizarNumero(registro.deposito)
+            salon: normalizarEntero(registro.salon),
+            deposito: normalizarEntero(registro.deposito)
         })
     });
     return data.vencimiento;

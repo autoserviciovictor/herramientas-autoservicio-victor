@@ -13,3 +13,10 @@ Versión 5.1.1 — Entrega 1 (backend y configuración)
 - README y .env.example ampliados.
 
 Base funcional conservada: Inventario, Vencimientos, Reposición, Google Sheets y escáner.
+
+V5.1.2 - Entrega 2
+- Frontend con timeout y mensajes claros ante fallas de red.
+- Cantidades validadas como enteros en inventario, vencimientos y reposición.
+- Bloqueo de doble ejecución en las operaciones de reposición.
+- Limpieza de referencias antiguas a controles eliminados.
+- Unificación de identificadores de caché de módulos.
