@@ -1,5 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=520-pwa1";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=520-pwa1";
+import { API_BASE_URL } from "./config.js?v=521-search";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=521-search";
+import { ordenarPorBusqueda } from "./search.js?v=521-search";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -129,8 +130,9 @@ function renderRecientes(){
 }
 function renderListado(){
   const c=$("repoListado"); if(!c)return;
-  const q=($("repoBuscador")?.value||"").toLowerCase();
-  const items=registros.filter(r=>r.estado!=="completado"&&(!q||r.articulo.toLowerCase().includes(q)||String(r.codigo||"").includes(q)));
+  const q=($("repoBuscador")?.value||"").trim();
+  const pendientes=registros.filter(r=>r.estado!=="completado");
+  const items=q ? ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}) : pendientes;
   c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
   c.innerHTML=items.length?items.map(r=>`<article class="repo-simple-item">
       <button class="repo-check" data-repo-accion="completar" data-id="${r.id}" aria-label="Marcar como llevado">✓</button>

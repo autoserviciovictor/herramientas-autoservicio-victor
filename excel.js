@@ -1,4 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=520-pwa1";
+import { API_BASE_URL } from "./config.js?v=521-search";
+import { ordenarPorBusqueda } from "./search.js?v=521-search";
 
 let datos = [];
 let contador = 0;
@@ -197,26 +198,23 @@ export function buscarProductoPorCodigo(codigoBuscado) {
 }
 
 export function buscarProductosPorTexto(texto, limite = 40, soloCargados = false) {
-    const consulta = normalizarTexto(texto).toLowerCase();
-    const resultados = [];
+    const productos = datos
+        .map((fila, indice) => armarProducto(fila, indice))
+        .filter(producto => !soloCargados || producto.stock > 0);
 
-    for (let i = 0; i < datos.length; i++) {
-        const producto = armarProducto(datos[i], i);
-        if (soloCargados && producto.stock <= 0) continue;
-
-        if (!consulta) {
-            resultados.push(producto);
-        } else {
-            const codigo = producto.codigo.toLowerCase();
-            const articulo = producto.articulo.toLowerCase();
-            if (codigo.includes(consulta) || articulo.includes(consulta)) resultados.push(producto);
-        }
-
-        if (resultados.length >= limite) break;
+    const consulta = String(texto || "").trim();
+    if (!consulta) {
+        if (soloCargados) productos.sort((a, b) => marcaModificacion(b.codigo) - marcaModificacion(a.codigo));
+        return productos.slice(0, limite);
     }
 
-    if (soloCargados) resultados.sort((a, b) => marcaModificacion(b.codigo) - marcaModificacion(a.codigo));
-    return resultados;
+    return ordenarPorBusqueda(productos, consulta, {
+        limite,
+        campos: ["articulo", "codigo"],
+        desempate: soloCargados
+            ? (a, b) => marcaModificacion(b.codigo) - marcaModificacion(a.codigo)
+            : undefined
+    });
 }
 
 export async function guardarCantidadEnProducto(indice, cantidad, ubicacion) {

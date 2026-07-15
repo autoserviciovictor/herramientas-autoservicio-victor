@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=520-pwa1";
+} from "./excel.js?v=521-search";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=520-pwa1";
+} from "./scanner.js?v=521-search";
 
 import {
     ocultarSplash,
@@ -48,9 +48,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=520-pwa1";
+} from "./ui.js?v=521-search";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=520-pwa1";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=521-search";
+import { coincideBusqueda } from "./search.js?v=521-search";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -1018,10 +1019,7 @@ function filtrarVencimientos() {
             if (filtroOfertaVencimientos === "sinOferta" && tieneOferta(item)) return false;
         }
 
-        if (q) {
-            const texto = `${item.codigo || ""} ${item.articulo || ""}`.toLowerCase();
-            if (!texto.includes(q)) return false;
-        }
+        if (q && !coincideBusqueda(item, q, ["articulo", "codigo"])) return false;
         return true;
     });
 }

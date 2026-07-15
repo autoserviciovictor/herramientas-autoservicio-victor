@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "5.2.0",
-  "description": "Servidor de Herramientas Autoservicio Victor V5.2.0",
+  "version": "5.2.1",
+  "description": "Servidor de Herramientas Autoservicio Victor V5.2.1",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
