@@ -1,10 +1,14 @@
 {
-  "name": "inventario-victor-v2-servidor",
-  "version": "3.0.0",
-  "description": "Servidor Inventario Victor V3.0 estable conectado a Google Sheets",
+  "name": "herramientas-autoservicio-victor",
+  "version": "5.1.1",
+  "description": "Servidor de Herramientas Autoservicio Victor conectado a Google Sheets",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "cors": "^2.8.5",

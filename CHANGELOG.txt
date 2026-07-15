@@ -1,10 +1,15 @@
-V5.1.1 - Correcciones y simplificación
+HERRAMIENTAS AUTOSERVICIO VICTOR — CAMBIOS
 
-- Filtros de vencimientos funcionales con modal.
-- Contadores y totales muestran solo números.
-- Productos simplificado a nombre y código.
-- Editor con botón Cancelar y regreso al origen correcto.
-- Navegación inferior oculta durante edición.
-- Registro de reposición simplificado como lista digital con check.
-- Eliminados filtros y resumen inferior de reposición.
-- Ajustes visuales y táctiles generales.
+Versión 5.1.1 — Entrega 1 (backend y configuración)
+- Versionado unificado en server.js, package.json, config.js y VERSION.txt.
+- Fechas de carga y actualización calculadas con America/Argentina/Buenos_Aires.
+- Cantidades validadas como números enteros no negativos o positivos según la operación.
+- La corrección de stock rechaza valores inválidos en lugar de convertirlos silenciosamente en cero.
+- Estados de vencimiento recalculados al leer los registros.
+- Cola de concurrencia agregada al alta y edición de Reposición.
+- Reinicio total deshabilitado sin RESET_KEY y protegido con clave más confirmación explícita.
+- CORS configurable mediante ALLOWED_ORIGINS.
+- Protección opcional de escrituras mediante API_WRITE_KEY, sin romper el frontend actual.
+- README y .env.example ampliados.
+
+Base funcional conservada: Inventario, Vencimientos, Reposición, Google Sheets y escáner.

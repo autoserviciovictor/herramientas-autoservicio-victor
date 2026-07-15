@@ -5,15 +5,45 @@ const XLSX = require("xlsx");
 require("dotenv").config();
 
 const app = express();
+const APP_VERSION = "5.1.1";
+const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = "Stock";
 const PRODUCTOS_SHEET_NAME = "Productos";
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+const API_WRITE_KEY = normalizarTexto(process.env.API_WRITE_KEY);
+const RESET_KEY = normalizarTexto(process.env.RESET_KEY);
+const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
+  .split(",")
+  .map(origen => origen.trim())
+  .filter(Boolean);
 
-app.use(cors());
+app.use(cors({
+  origin(origen, callback) {
+    if (!origen || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origen)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Origen no permitido por CORS"));
+  }
+}));
 app.use(express.json({ limit: "10mb" }));
+
+function protegerEscrituras(req, res, next) {
+  if (!API_WRITE_KEY) return next();
+  const clave = normalizarTexto(req.get("x-api-key"));
+  if (clave !== API_WRITE_KEY) {
+    return res.status(401).json({ ok: false, mensaje: "No autorizado" });
+  }
+  next();
+}
+
+app.use((req, res, next) => {
+  const esEscritura = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
+  if (!esEscritura || req.path === "/reiniciar") return next();
+  return protegerEscrituras(req, res, next);
+});
 
 const auth = new google.auth.JWT(
   GOOGLE_CLIENT_EMAIL,
@@ -24,7 +54,7 @@ const auth = new google.auth.JWT(
 
 const sheets = google.sheets({ version: "v4", auth });
 
-// V5.0.1 - Caché breve y deduplicación de lecturas para no exceder la cuota de Google Sheets.
+// V5.1.1 - Caché breve y deduplicación de lecturas para no exceder la cuota de Google Sheets.
 const cacheLecturas = new Map();
 const promesasLectura = new Map();
 const CACHE_TTL = {
@@ -63,7 +93,7 @@ function invalidarCache(...claves) {
   claves.forEach(clave => cacheLecturas.delete(clave));
 }
 
-// V3.0 estable: cola simple por código para soportar varios celulares sin pisar escrituras.
+// Cola simple por recurso para soportar varios celulares sin pisar escrituras.
 // Si dos dispositivos guardan el mismo producto al mismo tiempo, el segundo espera
 // a que el primero termine y luego vuelve a leer el valor actualizado.
 const colasPorCodigo = new Map();
@@ -102,6 +132,41 @@ function normalizarCodigo(codigo) {
 function numero(valor) {
   const n = Number(valor);
   return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function enteroNoNegativo(valor) {
+  const n = Number(valor);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+function enteroPositivo(valor) {
+  const n = enteroNoNegativo(valor);
+  return n !== null && n > 0 ? n : null;
+}
+
+function fechaArgentina(fecha = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(fecha);
+  const obtener = tipo => partes.find(parte => parte.type === tipo)?.value;
+  return `${obtener("year")}-${obtener("month")}-${obtener("day")}`;
+}
+
+function fechaHoraArgentinaIso(fecha = new Date()) {
+  const partes = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(fecha).replace(" ", "T");
+  return `${partes}-03:00`;
 }
 
 function validarConfiguracion() {
@@ -202,7 +267,7 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor Herramientas Autoservicio Victor V5.0.1 funcionando");
+  res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
 });
 
 app.get("/productos", async (req, res) => {
@@ -258,7 +323,7 @@ app.post("/guardar", async (req, res) => {
   try {
     const { codigo, ubicacion, cantidad } = req.body;
     const codigoBuscado = normalizarCodigo(codigo);
-    const cantidadNumerica = numero(cantidad);
+    const cantidadNumerica = enteroPositivo(cantidad);
 
     if (!codigoBuscado) {
       return res.status(400).json({ ok: false, mensaje: "Falta el código" });
@@ -268,8 +333,8 @@ app.post("/guardar", async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "Ubicación inválida" });
     }
 
-    if (cantidadNumerica <= 0) {
-      return res.status(400).json({ ok: false, mensaje: "La cantidad debe ser mayor a 0" });
+    if (cantidadNumerica === null) {
+      return res.status(400).json({ ok: false, mensaje: "La cantidad debe ser un número entero mayor a 0" });
     }
 
     const productoActualizado = await ejecutarEnCola(codigoBuscado, async () => {
@@ -307,6 +372,12 @@ app.post("/corregir", async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "Falta el código" });
     }
 
+    const salonValidado = enteroNoNegativo(salon);
+    const depositoValidado = enteroNoNegativo(deposito);
+    if (salonValidado === null || depositoValidado === null) {
+      return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser números enteros iguales o mayores a 0" });
+    }
+
     const productoActualizado = await ejecutarEnCola(codigoBuscado, async () => {
       const producto = await buscarProductoPorCodigo(codigoBuscado);
 
@@ -316,8 +387,8 @@ app.post("/corregir", async (req, res) => {
         throw error;
       }
 
-      producto.salon = numero(salon);
-      producto.deposito = numero(deposito);
+      producto.salon = salonValidado;
+      producto.deposito = depositoValidado;
 
       return await actualizarProducto(producto);
     });
@@ -362,6 +433,16 @@ app.get("/descargar", async (req, res) => {
 
 app.post("/reiniciar", async (req, res) => {
   try {
+    if (!RESET_KEY) {
+      return res.status(503).json({ ok: false, mensaje: "El reinicio total está deshabilitado" });
+    }
+    const clave = normalizarTexto(req.get("x-reset-key") || req.body?.resetKey);
+    if (clave !== RESET_KEY) {
+      return res.status(401).json({ ok: false, mensaje: "Clave de reinicio inválida" });
+    }
+    if (normalizarTexto(req.body?.confirmacion) !== "REINICIAR INVENTARIO") {
+      return res.status(400).json({ ok: false, mensaje: "Falta la confirmación de reinicio" });
+    }
     const productos = await obtenerProductos();
 
     const valores = productos.map(producto => [
@@ -393,16 +474,11 @@ app.post("/reiniciar", async (req, res) => {
 const VENCIMIENTOS_SHEET_NAME = "Vencimientos";
 
 function fechaIsoHoy() {
-  const ahora = new Date();
-  const y = ahora.getFullYear();
-  const m = String(ahora.getMonth() + 1).padStart(2, "0");
-  const d = String(ahora.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return fechaArgentina();
 }
 
 function generarIdVencimiento() {
-  const ahora = new Date();
-  const marca = ahora.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+  const marca = fechaHoraArgentinaIso().replace(/[-:T+]/g, "").slice(0, 14);
   return `V${marca}${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
 }
 
@@ -474,7 +550,7 @@ function filaAVencimiento(fila, index) {
     salon: numero(fila[5]),
     deposito: numero(fila[6]),
     total: numero(fila[7]),
-    estado: normalizarTexto(fila[8]) || calcularEstadoVencimiento(fila[4]),
+    estado: calcularEstadoVencimiento(fila[4]),
     oferta: normalizarOfertaVencimiento(fila[9])
   };
 }
@@ -505,13 +581,13 @@ app.post("/vencimientos", async (req, res) => {
   try {
     const codigo = normalizarCodigo(req.body.codigo);
     const vencimiento = normalizarTexto(req.body.vencimiento);
-    const salon = numero(req.body.salon);
-    const deposito = numero(req.body.deposito);
-    const total = salon + deposito;
+    const salon = enteroNoNegativo(req.body.salon);
+    const deposito = enteroNoNegativo(req.body.deposito);
+    const total = salon === null || deposito === null ? null : salon + deposito;
 
     if (!codigo) return res.status(400).json({ ok: false, mensaje: "Falta el código" });
     if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
-    if (total <= 0) return res.status(400).json({ ok: false, mensaje: "Cargá cantidad en salón o depósito" });
+    if (total === null || total <= 0) return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad" });
 
     const producto = await buscarProductoMaestroPorCodigo(codigo);
     const articulo = normalizarTexto(req.body.articulo) || producto?.articulo;
@@ -554,12 +630,12 @@ app.put("/vencimientos/:id", async (req, res) => {
     const registro = vencimientos.find(item => item.id === id);
     if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
 
-    const salon = numero(req.body.salon);
-    const deposito = numero(req.body.deposito);
+    const salon = enteroNoNegativo(req.body.salon);
+    const deposito = enteroNoNegativo(req.body.deposito);
     const vencimiento = normalizarTexto(req.body.vencimiento);
-    const total = salon + deposito;
+    const total = salon === null || deposito === null ? null : salon + deposito;
     if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
-    if (total <= 0) return res.status(400).json({ ok: false, mensaje: "Cargá cantidad en salón o depósito" });
+    if (total === null || total <= 0) return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad" });
 
     const actualizado = { ...registro, vencimiento, salon, deposito, total, estado: calcularEstadoVencimiento(vencimiento), oferta: req.body.oferta === undefined ? registro.oferta : normalizarOfertaVencimiento(req.body.oferta) };
     await sheets.spreadsheets.values.update({
@@ -687,7 +763,7 @@ async function obtenerReposicion() {
   });
 }
 
-function fechaIsoActual() { return new Date().toISOString(); }
+function fechaIsoActual() { return fechaHoraArgentinaIso(); }
 function crearIdReposicion() { return `REP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
 
 app.get("/reposicion", async (req, res) => {
@@ -704,35 +780,38 @@ app.post("/reposicion", async (req, res) => {
   try {
     const codigo = normalizarCodigo(req.body.codigo);
     const articulo = normalizarTexto(req.body.articulo);
-    const cantidad = numero(req.body.cantidad);
+    const cantidad = enteroPositivo(req.body.cantidad);
     if (!codigo || !articulo) return res.status(400).json({ ok: false, mensaje: "Falta el producto" });
-    if (cantidad <= 0) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad válida" });
+    if (cantidad === null) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
 
-    const registros = await obtenerReposicion();
-    const existente = registros.find(item => item.codigo === codigo && item.estado === "pendiente");
-    const ahora = fechaIsoActual();
-    if (existente) {
-      const actualizado = { ...existente, cantidad: existente.cantidad + cantidad, actualizado: ahora };
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${REPOSICION_SHEET_NAME}!A${existente.filaGoogle}:G${existente.filaGoogle}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
-      });
+    const resultado = await ejecutarEnCola(`reposicion:${codigo}`, async () => {
       invalidarCache("reposicion");
-      return res.json({ ok: true, mensaje: "Cantidad sumada al producto pendiente", registro: actualizado });
-    }
+      const registros = await obtenerReposicion();
+      const existente = registros.find(item => item.codigo === codigo && item.estado === "pendiente");
+      const ahora = fechaIsoActual();
+      if (existente) {
+        const actualizado = { ...existente, cantidad: existente.cantidad + cantidad, actualizado: ahora };
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${REPOSICION_SHEET_NAME}!A${existente.filaGoogle}:G${existente.filaGoogle}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
+        });
+        return { mensaje: "Cantidad sumada al producto pendiente", registro: actualizado };
+      }
 
-    const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora };
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${REPOSICION_SHEET_NAME}!A:G`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[registro.id, registro.fecha, registro.codigo, registro.articulo, registro.cantidad, registro.estado, registro.actualizado]] }
+      const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora };
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${REPOSICION_SHEET_NAME}!A:G`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [[registro.id, registro.fecha, registro.codigo, registro.articulo, registro.cantidad, registro.estado, registro.actualizado]] }
+      });
+      return { mensaje: "Producto anotado", registro };
     });
     invalidarCache("reposicion");
-    res.json({ ok: true, mensaje: "Producto anotado", registro });
+    res.json({ ok: true, ...resultado });
   } catch (error) {
     console.error("Error en POST /reposicion:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al guardar reposición" });
@@ -742,24 +821,32 @@ app.post("/reposicion", async (req, res) => {
 app.put("/reposicion/:id", async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
-    const registros = await obtenerReposicion();
-    const registro = registros.find(item => item.id === id);
-    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
-    const cantidad = numero(req.body.cantidad);
-    if (cantidad <= 0) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad válida" });
+    const cantidad = enteroPositivo(req.body.cantidad);
+    if (cantidad === null) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
     const estado = normalizarTexto(req.body.estado).toLowerCase() === "completado" ? "completado" : "pendiente";
-    const actualizado = { ...registro, cantidad, estado, actualizado: fechaIsoActual() };
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${REPOSICION_SHEET_NAME}!A${registro.filaGoogle}:G${registro.filaGoogle}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
+    const actualizado = await ejecutarEnCola(`reposicion-id:${id}`, async () => {
+      invalidarCache("reposicion");
+      const registros = await obtenerReposicion();
+      const registro = registros.find(item => item.id === id);
+      if (!registro) {
+        const error = new Error("Registro no encontrado");
+        error.statusCode = 404;
+        throw error;
+      }
+      const resultado = { ...registro, cantidad, estado, actualizado: fechaIsoActual() };
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${REPOSICION_SHEET_NAME}!A${registro.filaGoogle}:G${registro.filaGoogle}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [[resultado.id, resultado.fecha, resultado.codigo, resultado.articulo, resultado.cantidad, resultado.estado, resultado.actualizado]] }
+      });
+      return resultado;
     });
     invalidarCache("reposicion");
     res.json({ ok: true, mensaje: "Reposición actualizada", registro: actualizado });
   } catch (error) {
     console.error("Error en PUT /reposicion/:id:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar reposición" });
+    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al actualizar reposición" });
   }
 });
 
@@ -782,5 +869,5 @@ app.delete("/reposicion/:id", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor Herramientas Autoservicio Victor V5.0.1 funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
 });
