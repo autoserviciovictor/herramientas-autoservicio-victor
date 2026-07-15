@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=535-admin-unificado";
+import { API_BASE_URL } from "./config.js?v=536-menu-admin";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
@@ -42,9 +42,12 @@ function ocultarLogin() {
 function actualizarInterfazUsuario() {
   const nombre = usuarioActual?.nombre || usuarioActual?.usuario || "";
   if ($("sesionNombre")) $("sesionNombre").textContent = nombre;
-  if ($("sesionRol")) $("sesionRol").textContent = usuarioActual?.rol === "administrador" ? "Administrador" : "Repositor";
-  const adminEntry = document.querySelector(".admin-entry-card");
-  if (adminEntry) adminEntry.classList.toggle("oculto", usuarioActual?.rol !== "administrador");
+  const textoRol = usuarioActual?.rol === "administrador" ? "Administrador" : "Repositor";
+  if ($("sesionRol")) $("sesionRol").textContent = textoRol;
+  if ($("menuSesionNombre")) $("menuSesionNombre").textContent = nombre || "Usuario";
+  if ($("menuSesionRol")) $("menuSesionRol").textContent = textoRol;
+  const adminModule = document.querySelector(".admin-module-card");
+  if (adminModule) adminModule.classList.toggle("oculto", usuarioActual?.rol !== "administrador");
   window.dispatchEvent(new CustomEvent("autoservicio:sesion", { detail: usuarioActual }));
 }
 
@@ -94,6 +97,24 @@ async function validarSesion() {
   } catch { cerrarSesion(false); }
 }
 
+function cerrarMenuUsuario() {
+  const menu = $("userDropdown");
+  const boton = $("brandMenuBtn");
+  menu?.classList.add("oculto");
+  menu?.setAttribute("aria-hidden", "true");
+  boton?.setAttribute("aria-expanded", "false");
+}
+
+function alternarMenuUsuario() {
+  const menu = $("userDropdown");
+  const boton = $("brandMenuBtn");
+  if (!menu || !boton) return;
+  const abrir = menu.classList.contains("oculto");
+  menu.classList.toggle("oculto", !abrir);
+  menu.setAttribute("aria-hidden", String(!abrir));
+  boton.setAttribute("aria-expanded", String(abrir));
+}
+
 window.AutoservicioAuth = {
   getToken: () => token,
   getUsuario: () => usuarioActual,
@@ -106,5 +127,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("loginUsuario")?.addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword")?.focus(); });
   $("loginPassword")?.addEventListener("keydown", e => { if (e.key === "Enter") iniciarSesion(); });
   $("btnCerrarSesionGeneral")?.addEventListener("click", () => cerrarSesion(true));
+  $("brandMenuBtn")?.addEventListener("click", event => { event.stopPropagation(); alternarMenuUsuario(); });
+  $("userDropdown")?.addEventListener("click", event => event.stopPropagation());
+  $("btnMenuAjustes")?.addEventListener("click", () => { cerrarMenuUsuario(); window.AutoservicioNavigate?.("ajustes"); });
+  document.addEventListener("click", cerrarMenuUsuario);
+  document.addEventListener("keydown", event => { if (event.key === "Escape") cerrarMenuUsuario(); });
   validarSesion();
 });

@@ -64,7 +64,7 @@ function actualizarEncabezadoModulo(nombre) {
         editarProducto: ["Editar producto", "Inventario"],
         ajustes: ["Ajustes", "Configuración general"],
         vencimientos: ["Vencimientos", "Control de fechas"],
-        anotar: ["Anotar reposición", "Reposición de salón"]
+        anotar: ["Lista", "Reposición de salón"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
     titulo.textContent = textoTitulo;

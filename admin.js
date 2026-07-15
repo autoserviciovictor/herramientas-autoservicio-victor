@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=535-admin-unificado";
+import { API_BASE_URL } from "./config.js?v=536-menu-admin";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -30,12 +30,8 @@ function mostrarPanel() {
   cargarTodo();
 }
 
-function volverAjustes() {
-  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
-  $("pantallaAjustes")?.classList.add("activa");
-  document.body.className = "en-ajustes";
-  $("brandHeaderTitulo").textContent = "Ajustes";
-  $("brandHeaderSubtitulo").textContent = "Configuración general";
+function volverInicio() {
+  window.AutoservicioNavigate?.("inicio");
 }
 
 async function cargarResumen() {
@@ -153,8 +149,8 @@ function cambiarTab(tab) {
 function abrirAdmin() { if (window.AutoservicioAuth?.esAdmin()) mostrarPanel(); }
 
 document.addEventListener("DOMContentLoaded", () => {
-  $("btnAbrirAdmin")?.addEventListener("click", abrirAdmin);
-  $("btnAdminVolver")?.addEventListener("click", volverAjustes);
+  $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);
+  $("btnAdminVolver")?.addEventListener("click", volverInicio);
   $("btnAdminCerrarSesion")?.addEventListener("click", () => window.AutoservicioAuth?.cerrarSesion?.(true));
   $("btnAdminActualizar")?.addEventListener("click", cargarTodo);
   $("btnAdminNuevoUsuario")?.addEventListener("click", abrirNuevoUsuario);
