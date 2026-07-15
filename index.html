@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.1.0</title>
+    <title>Herramientas Autoservicio Victor V5.1.1</title>
 
-    <link rel="stylesheet" href="style.css?v=510-pulido-general">
+    <link rel="stylesheet" href="style.css?v=511-correcciones-finales">
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
@@ -14,7 +14,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.1.0</p>
+    <p>Herramientas V5.1.1</p>
 </div>
 
 <div class="app">
@@ -68,7 +68,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.1.0</strong>
+            <strong>V5.1.1</strong>
         </section>
     </main>
 
@@ -191,6 +191,7 @@
 
             <div class="edit-total"><span>Total</span><strong id="editarTotal">0</strong></div>
             <button id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
+            <button id="btnCancelarCorreccion" class="cancel-btn" type="button">Cancelar</button>
         </section>
     </main>
 
@@ -356,13 +357,9 @@
         <section id="repoRegistroVista" class="oculto">
             <section class="venc-list-card repo-registro-card">
                 <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
-                <div class="repo-filter-row">
-                    <button class="activo" data-repo-filtro="pendiente">Pendientes</button>
-                    <button data-repo-filtro="completado">Completados</button>
-                    <button data-repo-filtro="todos">Todos</button>
-                </div>
+
                 <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
-                <div id="repoTotales" class="repo-totales"></div>
+
             </section>
         </section>
 
@@ -463,6 +460,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=502-navegacion-inventario"></script>
+<script type="module" src="./app.js?v=511-correcciones-finales"></script>
 </body>
 </html>

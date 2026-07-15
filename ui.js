@@ -98,6 +98,7 @@ export function cambiarPantalla(nombre) {
     document.body.classList.toggle("en-anotar", nombre === "anotar");
     document.body.classList.toggle("en-ajustes", nombre === "ajustes");
     document.body.classList.toggle("en-modulo-inventario", ["inventario", "productos", "cargados", "editarProducto"].includes(nombre));
+    document.body.classList.toggle("en-editor-producto", nombre === "editarProducto");
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {
@@ -182,8 +183,8 @@ export function actualizarConteosUbicacion(conteos = { salon: 0, deposito: 0 }) 
     const deposito = Number(conteos.deposito) || 0;
     // V3.1.2: estos valores son CANTIDAD DE PRODUCTOS contados, no suma de unidades.
     // Ejemplo: Coca salón 20 + Azúcar salón 5 = 2 productos.
-    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = `${salon} ${salon === 1 ? "producto" : "productos"}`;
-    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = `${deposito} ${deposito === 1 ? "producto" : "productos"}`;
+    if (elementos.contadorSalonTexto) elementos.contadorSalonTexto.textContent = String(salon);
+    if (elementos.contadorDepositoTexto) elementos.contadorDepositoTexto.textContent = String(deposito);
 }
 
 export function activarBotonGuardar(estado) {
@@ -232,43 +233,37 @@ export function activarTabProductos(tab) {
 
 export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     elementos.resultadoBusqueda.innerHTML = "";
-
     const { tab = "productos", total = 0, consulta = "" } = opciones;
 
-    if (!total) {
-        elementos.resumenProductos.textContent = "Conectá Google Sheets para ver productos.";
-    } else if (tab === "cargados") {
-        elementos.resumenProductos.textContent = consulta
-            ? `Productos cargados que coinciden con “${consulta}”`
-            : "Productos con stock cargado";
-    } else {
-        elementos.resumenProductos.textContent = consulta
-            ? `Resultados para “${consulta}”`
-            : `Mostrando primeros productos de ${total} en total`;
-    }
+    if (!total) elementos.resumenProductos.textContent = "Conectá Google Sheets para ver productos.";
+    else if (tab === "cargados") elementos.resumenProductos.textContent = consulta ? `Resultados cargados para “${consulta}”` : "Productos con stock cargado";
+    else elementos.resumenProductos.textContent = consulta ? `Resultados para “${consulta}”` : `${total} productos`;
 
     if (!lista.length) {
-        const mensaje = tab === "cargados"
-            ? "Todavía no hay productos con stock cargado."
-            : "Buscá o conectá Google Sheets para ver productos.";
-        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>${mensaje}</strong><span>Tocá un producto para editar salón o depósito.</span></div>`;
+        const mensaje = tab === "cargados" ? "Todavía no hay productos con stock cargado." : "No se encontraron productos.";
+        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>${mensaje}</strong></div>`;
         return;
     }
 
     lista.forEach(producto => {
         const btn = document.createElement("button");
-        btn.className = "result-item";
+        btn.className = `result-item ${tab === "productos" ? "result-item-simple" : "result-item-loaded"}`;
         const modificado = producto.ultimaModificacion || producto.fechaModificacion || producto.updatedAt || "";
-        btn.innerHTML = `
-            <div class="result-product-copy"><strong>${producto.articulo}</strong><span class="result-code">${producto.codigo || "-"}</span></div>
-            <span class="result-chevron" aria-hidden="true">›</span>
-            <div class="result-stock-row">
-                <b class="stock-salon"><small>Salón</small>${producto.salon}</b>
-                <b class="stock-deposito"><small>Depósito</small>${producto.deposito}</b>
-                <b class="stock-total"><small>Total</small>${producto.stock}</b>
-            </div>
-            ${tab === "cargados" ? `<div class="result-sync-row"><span>✓ Sincronizado</span>${modificado ? `<time>Modificado: ${modificado}</time>` : ""}</div>` : ""}
-        `;
+        if (tab === "productos") {
+            btn.innerHTML = `
+                <div class="result-product-copy"><strong>${producto.articulo}</strong><span class="result-code">${producto.codigo || "-"}</span></div>
+                <span class="result-chevron" aria-hidden="true">›</span>`;
+        } else {
+            btn.innerHTML = `
+                <div class="result-product-copy"><strong>${producto.articulo}</strong><span class="result-code">${producto.codigo || "-"}</span></div>
+                <span class="result-chevron" aria-hidden="true">›</span>
+                <div class="result-stock-row">
+                    <b class="stock-salon"><small>Salón</small>${producto.salon}</b>
+                    <b class="stock-deposito"><small>Depósito</small>${producto.deposito}</b>
+                    <b class="stock-total"><small>Total</small>${producto.stock}</b>
+                </div>
+                <div class="result-sync-row"><span>✓ Sincronizado</span>${modificado ? `<time>${modificado}</time>` : ""}</div>`;
+        }
         btn.addEventListener("click", () => onSeleccionar(producto));
         elementos.resultadoBusqueda.appendChild(btn);
     });

@@ -2199,3 +2199,31 @@ body.en-ajustes .bottom-nav { display: none !important; }
 .unit-full{white-space:nowrap}
 
 @media(max-width:370px){.venc-item-proximo{padding-top:51px!important}.venc-offer-top{max-width:56%}.filter-active-label{font-size:11px}.repo-row-footer{grid-template-columns:1fr auto}.repo-row-footer em{grid-column:1/-1}.result-stock-row b{font-size:16px!important}}
+
+
+/* V5.1.1 correcciones de uso diario */
+body.en-editor-producto .bottom-nav{display:none!important}
+body.en-editor-producto #pantallaEditarProducto{padding-bottom:28px!important}
+#btnCancelarCorreccion{width:100%;margin-top:12px}
+.result-item-simple{min-height:92px!important;padding:18px 52px 18px 20px!important;display:flex!important;align-items:center!important}
+.result-item-simple .result-product-copy{width:100%}
+.result-item-simple .result-chevron{top:50%!important;transform:translateY(-50%)}
+.result-item-loaded{padding-bottom:16px!important}
+.venc-resumen-card small{display:none!important}
+.venc-resumen-card{grid-template-columns:1fr auto!important}
+.venc-resumen-card strong{font-size:28px!important}
+.venc-filter-toolbar.oculto{display:none!important}
+.filter-modal-overlay:not(.oculto){display:flex!important}
+.filter-sheet{animation:filterSheetIn .18s ease-out}
+@keyframes filterSheetIn{from{transform:translateY(24px);opacity:.4}to{transform:translateY(0);opacity:1}}
+.repo-simple-list{display:grid;gap:10px}
+.repo-simple-item{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid #eee9e3;border-radius:18px;padding:14px;box-shadow:0 5px 14px rgba(55,47,40,.06)}
+.repo-check{width:44px;height:44px;border-radius:14px;border:2px solid #1a9a55;background:#fff;color:#1a9a55;font-size:24px;font-weight:900}
+.repo-check:active{background:#1a9a55;color:#fff}
+.repo-simple-copy{min-width:0;display:flex;flex-direction:column;gap:4px}
+.repo-simple-copy strong{font-size:18px;line-height:1.15}
+.repo-simple-copy small{font-size:13px;color:#777;overflow:hidden;text-overflow:ellipsis}
+.repo-simple-qty{min-width:54px;text-align:center;font-size:30px;color:#d9343f}
+.repo-registro-card{padding-bottom:18px!important}
+.repo-search-row{margin-bottom:14px!important}
+@media(max-width:390px){.repo-simple-item{grid-template-columns:44px 1fr auto;padding:12px;gap:9px}.repo-simple-copy strong{font-size:16px}.repo-simple-qty{font-size:26px;min-width:42px}}

@@ -1,10 +1,9 @@
-import { API_BASE_URL } from "./config.js?v=510-pulido-general";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=510-pulido-general";
+import { API_BASE_URL } from "./config.js?v=511-correcciones-finales";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=511-correcciones-finales";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
 let registros = [];
-let filtro = "pendiente";
 let tab = "cargar";
 let iniciado = false;
 
@@ -49,7 +48,6 @@ export function inicializarReposicion(){
   $("btnRepoCancelar")?.addEventListener("click",limpiar);
   $("btnRepoVerRegistro")?.addEventListener("click",()=>cambiarTab("registro"));
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.addEventListener("click",()=>cambiarTab(b.dataset.repoTab)));
-  document.querySelectorAll("[data-repo-filtro]").forEach(b=>b.addEventListener("click",()=>{filtro=b.dataset.repoFiltro; render();}));
   $("repoBuscador")?.addEventListener("input",render);
   $("repoListado")?.addEventListener("click",manejarAccion);
 }
@@ -101,7 +99,6 @@ function cambiarTab(nueva){
   const esCarga=tab==="cargar";
   $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
   $("repoRegistroVista")?.classList.toggle("oculto",esCarga);
-  if(!esCarga && filtro!=="pendiente" && filtro!=="completado" && filtro!=="todos") filtro="pendiente";
   actualizarEncabezadoRepo(esCarga);
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
   if($("repoBuscador")) $("repoBuscador").value="";
@@ -113,21 +110,21 @@ function renderRecientes(){
   const c=$("repoRecientes"); if(!c)return;
   const items=registros.slice(0,3);
   c.className=items.length?"repo-list":"venc-list-empty";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}<small>${numero(r.cantidad)===1?"unidad":"unidades"}</small></b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small>`;
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small>`;
   const ver=$('btnRepoVerRegistro'); if(ver) ver.disabled=!registros.length;
 }
 function renderListado(){
   const c=$("repoListado"); if(!c)return;
-  document.querySelectorAll("[data-repo-filtro]").forEach(b=>b.classList.toggle("activo",b.dataset.repoFiltro===filtro));
   const q=($("repoBuscador")?.value||"").toLowerCase();
-  const items=registros.filter(r=>(filtro==="todos"||r.estado===filtro)&&(!q||r.articulo.toLowerCase().includes(q)||r.codigo.includes(q)));
-  c.className=items.length?"repo-list":"venc-list-empty";
-  const vacio=filtro==="pendiente"?"No hay productos pendientes.":filtro==="completado"?"No hay productos completados.":"No hay productos para mostrar.";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-item repo-list-row ${r.estado}"><div class="repo-item-main"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small></div><div class="repo-quantity-badge"><b>${r.cantidad}</b><span>${numero(r.cantidad)===1?"unidad":"unidades"}</span></div><div class="repo-row-footer"><em>${r.estado==="completado"?"✓ Completado":"Pendiente"}</em><button class="repo-primary-action" data-repo-accion="${r.estado==="pendiente"?"completar":"reabrir"}" data-id="${r.id}">${r.estado==="pendiente"?"Marcar completado":"Volver a pendientes"}</button><details class="repo-more"><summary aria-label="Más opciones">⋮</summary><div><button data-repo-accion="editar" data-id="${r.id}">Editar cantidad</button><button class="danger" data-repo-accion="eliminar" data-id="${r.id}">Eliminar</button></div></details></div></article>`).join(""):`<span class="empty-icon">📦</span><strong>${vacio}</strong><small>El registro se actualiza automáticamente.</small>`;
-  const pendientes=registros.filter(r=>r.estado==="pendiente");
-  const totalUnidades=pendientes.reduce((a,r)=>a+numero(r.cantidad),0);
-  $("repoTotales").innerHTML=`<div><span>Productos pendientes</span><strong>${pendientes.length}</strong></div><div><span>Unidades pendientes</span><strong>${totalUnidades}</strong></div>`;
+  const items=registros.filter(r=>r.estado!=="completado"&&(!q||r.articulo.toLowerCase().includes(q)||String(r.codigo||"").includes(q)));
+  c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-simple-item">
+      <button class="repo-check" data-repo-accion="completar" data-id="${r.id}" aria-label="Marcar como llevado">✓</button>
+      <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small></div>
+      <b class="repo-simple-qty">${numero(r.cantidad)}</b>
+    </article>`).join(""):`<span class="empty-icon">📦</span><strong>No hay productos para llevar.</strong><small>Los productos anotados aparecerán acá.</small>`;
 }
+
 async function manejarAccion(e){
   const b=e.target.closest("[data-repo-accion]"); if(!b)return;
   const r=registros.find(x=>x.id===b.dataset.id); if(!r)return;

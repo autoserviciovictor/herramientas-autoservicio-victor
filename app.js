@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=502-navegacion-inventario";
+} from "./excel.js?v=511-correcciones-finales";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=502-navegacion-inventario";
+} from "./scanner.js?v=511-correcciones-finales";
 
 import {
     ocultarSplash,
@@ -49,9 +49,9 @@ import {
     desactivarModoCantidad,
     activarTabProductos,
     actualizarConteosUbicacion
-} from "./ui.js?v=502-navegacion-inventario";
+} from "./ui.js?v=511-correcciones-finales";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=510-pulido-general";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=511-correcciones-finales";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -234,11 +234,8 @@ function configurarEventos() {
     elementos.btnReiniciar.addEventListener("click", manejarReinicio);
 
     elementos.buscadorProducto.addEventListener("input", refrescarProductos);
-    elementos.btnVolverProductos.addEventListener("click", () => {
-        cambiarPantalla(tabProductosActual === "cargados" ? "cargados" : "productos");
-        refrescarProductos();
-        sincronizarEnSegundoPlano();
-    });
+    elementos.btnVolverProductos.addEventListener("click", cancelarEdicionProducto);
+    $("btnCancelarCorreccion")?.addEventListener("click", cancelarEdicionProducto);
 
     elementos.editarSalon.addEventListener("input", actualizarTotalEditor);
     elementos.editarDeposito.addEventListener("input", actualizarTotalEditor);
@@ -268,6 +265,11 @@ function configurarEventos() {
         busquedaVencimientos = elementos.vencBuscador.value || "";
         renderListadoVencimientos();
     });
+    $("btnVencAbrirFiltros")?.addEventListener("click", abrirFiltrosVencimientos);
+    $("btnVencCerrarFiltros")?.addEventListener("click", cerrarFiltrosVencimientos);
+    $("btnVencAplicarFiltros")?.addEventListener("click", aplicarFiltrosDesdeModal);
+    $("btnVencLimpiarFiltros")?.addEventListener("click", limpiarFiltrosVencimientos);
+    $("vencFiltrosModal")?.addEventListener("click", (e) => { if (e.target.id === "vencFiltrosModal") cerrarFiltrosVencimientos(); });
     elementos.vencFiltroBtns?.forEach(btn => {
         btn.addEventListener("click", () => {
             aplicarFiltroVencimientos(btn.dataset.vencFiltro || "todos");
@@ -330,7 +332,7 @@ function actualizarVisibilidadPanelesVencimientos() {
     const enCarga = vencTabActual === "cargar";
     const enProximos = vencTabActual === "proximos";
     const resumen = elementos.vencResumen || $("vencResumen");
-    const filtros = document.querySelector(".venc-filtros");
+    const filtros = document.querySelector(".venc-filter-toolbar");
     const buscador = elementos.vencBuscador;
 
     resumen?.classList.toggle("oculto", !enCarga);
@@ -642,6 +644,17 @@ function refrescarProductos() {
 function seleccionarProductoParaEditar(producto) {
     productoEditando = producto;
     mostrarEditorStock(producto);
+    const volver = $("brandBackBtn");
+    if (volver) volver.dataset.modulo = tabProductosActual === "cargados" ? "cargados" : "productos";
+}
+
+function cancelarEdicionProducto() {
+    productoEditando = null;
+    const destino = tabProductosActual === "cargados" ? "cargados" : "productos";
+    cambiarPantalla(destino);
+    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+    refrescarProductos();
+    sincronizarEnSegundoPlano();
 }
 
 async function guardarCorreccion() {
@@ -1028,10 +1041,10 @@ function renderResumenVencimientos() {
     const el = elementos.vencResumen || $("vencResumen");
     if (!el) return;
     el.innerHTML = `
-        <button type="button" class="venc-resumen-card venc-resumen-7" data-venc-resumen="7"><span>7 días</span><strong>${resumen.siete}</strong><small>${resumen.siete === 1 ? "producto" : "productos"}</small></button>
-        <button type="button" class="venc-resumen-card venc-resumen-15" data-venc-resumen="15"><span>15 días</span><strong>${resumen.quince}</strong><small>${resumen.quince === 1 ? "producto" : "productos"}</small></button>
-        <button type="button" class="venc-resumen-card venc-resumen-30" data-venc-resumen="30"><span>30 días</span><strong>${resumen.treinta}</strong><small>${resumen.treinta === 1 ? "producto" : "productos"}</small></button>
-        <button type="button" class="venc-resumen-card venc-resumen-vencidos" data-venc-resumen="vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong><small>${resumen.vencidos === 1 ? "producto" : "productos"}</small></button>
+        <button type="button" class="venc-resumen-card venc-resumen-7" data-venc-resumen="7"><span>7 días</span><strong>${resumen.siete}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-15" data-venc-resumen="15"><span>15 días</span><strong>${resumen.quince}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-30" data-venc-resumen="30"><span>30 días</span><strong>${resumen.treinta}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-vencidos" data-venc-resumen="vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong></button>
     `;
 }
 
@@ -1084,7 +1097,7 @@ function renderListadoVencimientos() {
                             <em class="venc-reciente-dias ${clase}">${estado}</em>
                         </div>
                     </div>
-                    <b>${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}</b>
+                    <b>${cantidad}</b>
                 </article>
             `;
         }
@@ -1099,7 +1112,7 @@ function renderListadoVencimientos() {
                         <div class="venc-vencido-grid">
                             <span><small>Salón</small><b>${salon}</b></span>
                             <span><small>Depósito</small><b>${deposito}</b></span>
-                            <span><small>Total</small><b>${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}</b></span>
+                            <span><small>Total</small><b>${cantidad}</b></span>
                         </div>
                     </div>
                     <button type="button" class="venc-card-action danger venc-delete-only" data-venc-accion="eliminar">Eliminar</button>
@@ -1123,7 +1136,7 @@ function renderListadoVencimientos() {
                 <div class="venc-proximo-grid">
                     <span><small>Salón</small><b>${salon}</b></span>
                     <span><small>Depósito</small><b>${deposito}</b></span>
-                    <span><small>Total</small><b>${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}</b></span>
+                    <span><small>Total</small><b>${cantidad}</b></span>
                 </div>
                 <div class="venc-proximo-actions venc-proximo-actions-3">
                     <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>

@@ -1,32 +1,10 @@
-V5.1.0 - Pulido general de interfaz, filtros y listas
+V5.1.1 - Correcciones y simplificación
 
-V5.0.2
-- Ajustes pasa al menú principal como módulo independiente.
-- La barra inferior de Inventario queda con Inventario, Productos y Cargados.
-- Cargados pasa a ser una pantalla de navegación propia.
-- Se elimina el selector interno Productos/Cargados.
-- Productos y Cargados limpian el buscador y actualizan sus datos al entrar.
-- La flecha de Ajustes vuelve al menú principal.
-
-V5.0.0 — Consolidación visual y funcional
-
-- Encabezado único y flecha única dentro del marco rojo.
-- Eliminados títulos internos duplicados.
-- Navegación inferior sin barras duplicadas en Vencimientos.
-- Componentes de escaneo, carga manual, buscadores, tarjetas y estados vacíos unificados.
-- Código manual cambia a Cancelar código manual en los tres módulos.
-- Buscadores y filtros se limpian al cambiar de pantalla o pestaña.
-- Actualización automática al entrar a cada pantalla.
-- Salón y Depósito movidos a la pantalla principal de Inventario.
-- Cargados ordenados por última modificación.
-- Tarjeta de reposición rediseñada con estado, cantidad destacada y acciones alineadas.
-- Colores, sombras, radios, espaciados y animaciones consolidados.
-
-V5.0.1 — Correcciones de estabilidad y navegación
-- Barras inferiores de Vencimientos y Reposición fijadas al borde inferior real del celular.
-- Eliminado el transform del contenedor que hacía que las barras quedaran en el medio con poco contenido.
-- Filtros de Próximos reorganizados sin barra gris ni botones cortados.
-- Estados vacíos y botones secundarios ajustados.
-- Eliminada una lectura duplicada al cambiar pestañas de Vencimientos.
-- Caché breve, deduplicación de solicitudes y reutilización del último dato disponible para reducir la cuota de Google Sheets.
-- Invalidación automática de caché después de guardar, editar o eliminar.
+- Filtros de vencimientos funcionales con modal.
+- Contadores y totales muestran solo números.
+- Productos simplificado a nombre y código.
+- Editor con botón Cancelar y regreso al origen correcto.
+- Navegación inferior oculta durante edición.
+- Registro de reposición simplificado como lista digital con check.
+- Eliminados filtros y resumen inferior de reposición.
+- Ajustes visuales y táctiles generales.
