@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=536-menu-admin";
+import { API_BASE_URL } from "./config.js?v=537-menu-derecha";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -151,7 +151,6 @@ function abrirAdmin() { if (window.AutoservicioAuth?.esAdmin()) mostrarPanel(); 
 document.addEventListener("DOMContentLoaded", () => {
   $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);
   $("btnAdminVolver")?.addEventListener("click", volverInicio);
-  $("btnAdminCerrarSesion")?.addEventListener("click", () => window.AutoservicioAuth?.cerrarSesion?.(true));
   $("btnAdminActualizar")?.addEventListener("click", cargarTodo);
   $("btnAdminNuevoUsuario")?.addEventListener("click", abrirNuevoUsuario);
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);

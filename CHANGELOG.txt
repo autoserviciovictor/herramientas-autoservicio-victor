@@ -1,3 +1,10 @@
+5.3.7
+- Menú de usuario trasladado a la derecha del encabezado.
+- Flecha de volver reservada a la izquierda.
+- Cierre de sesión trasladado al menú desplegable.
+- Eliminado cierre de sesión de Configuración y Administración.
+- Eliminada la sección de sesión de Configuración.
+
 5.3.6
 - Acceso administrativo unificado: los administradores usan su sesión actual sin volver a ingresar clave.
 - Tarjeta Ajustes con el mismo marco, sombra y jerarquía visual que los demás módulos.

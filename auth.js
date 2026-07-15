@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=536-menu-admin";
+import { API_BASE_URL } from "./config.js?v=537-menu-derecha";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
@@ -126,10 +126,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnLoginIngresar")?.addEventListener("click", iniciarSesion);
   $("loginUsuario")?.addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword")?.focus(); });
   $("loginPassword")?.addEventListener("keydown", e => { if (e.key === "Enter") iniciarSesion(); });
-  $("btnCerrarSesionGeneral")?.addEventListener("click", () => cerrarSesion(true));
   $("brandMenuBtn")?.addEventListener("click", event => { event.stopPropagation(); alternarMenuUsuario(); });
   $("userDropdown")?.addEventListener("click", event => event.stopPropagation());
   $("btnMenuAjustes")?.addEventListener("click", () => { cerrarMenuUsuario(); window.AutoservicioNavigate?.("ajustes"); });
+  $("btnMenuCerrarSesion")?.addEventListener("click", () => { cerrarMenuUsuario(); cerrarSesion(true); });
   document.addEventListener("click", cerrarMenuUsuario);
   document.addEventListener("keydown", event => { if (event.key === "Escape") cerrarMenuUsuario(); });
   validarSesion();

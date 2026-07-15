@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.3.6</title>
+    <title>Herramientas Autoservicio Victor V5.3.7</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=536-menu-admin">
+    <link rel="stylesheet" href="style.css?v=537-menu-derecha">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.3.6</p>
+    <p>Herramientas V5.3.7</p>
 </div>
 
 <div class="app">
@@ -54,6 +54,7 @@
                 <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Repositor</small></div>
             </div>
             <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><div><strong>Configuración</strong><small>Ajustes de la aplicación</small></div></button>
+            <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><div><strong>Cerrar sesión</strong><small>Salir de este usuario</small></div></button>
         </div>
     </div>
 
@@ -92,7 +93,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.3.6</strong>
+            <strong>V5.3.7</strong>
         </section>
     </main>
 
@@ -251,13 +252,6 @@
         </section>
 
 
-        <section class="settings-card session-card">
-            <div class="session-user-info">
-                <span class="session-avatar">👤</span>
-                <div><strong id="sesionNombre">Usuario</strong><small id="sesionRol">Repositor</small></div>
-            </div>
-            <button id="btnCerrarSesionGeneral" type="button" class="setting-btn danger-btn-soft">Cerrar sesión</button>
-        </section>
 
         <section class="settings-card danger-zone">
             <button type="button" id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
@@ -445,7 +439,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Panel administrativo</strong><p>Usuarios y listas privadas</p></div></div>
-            <span id="adminVersion" class="admin-version">V5.3.6</span>
+            <span id="adminVersion" class="admin-version">V5.3.7</span>
         </section>
         <div id="adminMensaje" class="admin-message"></div>
         <section class="settings-card">
@@ -470,7 +464,6 @@
             <div id="adminListasLista" class="admin-lists-list"></div>
         </section>
         <button id="btnAdminVolver" type="button" class="secondary-btn admin-full-btn">Volver al inicio</button>
-        <button id="btnAdminCerrarSesion" type="button" class="danger-btn-soft admin-full-btn">Cerrar sesión</button>
     </main>
 
     <div id="adminUsuarioModal" class="modal-overlay oculto" aria-hidden="true">
@@ -551,9 +544,9 @@
 
 </div>
 
-<script src="./pwa.js?v=536-menu-admin" defer></script>
-<script type="module" src="./auth.js?v=536-menu-admin"></script>
-<script type="module" src="./admin.js?v=536-menu-admin"></script>
-<script type="module" src="./app.js?v=536-menu-admin"></script>
+<script src="./pwa.js?v=537-menu-derecha" defer></script>
+<script type="module" src="./auth.js?v=537-menu-derecha"></script>
+<script type="module" src="./admin.js?v=537-menu-derecha"></script>
+<script type="module" src="./app.js?v=537-menu-derecha"></script>
 </body>
 </html>
