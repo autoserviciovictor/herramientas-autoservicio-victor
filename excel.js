@@ -1,4 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=513-entrega3";
+import { API_BASE_URL } from "./config.js?v=520";
+import { apiRequest } from "./offline.js?v=520";
+import { puntuarBusqueda } from "./search.js?v=520";
 
 let datos = [];
 let contador = 0;
@@ -85,37 +87,7 @@ function registrarUltimo(producto) {
 }
 
 async function pedirJson(ruta, opciones = {}) {
-    const controlador = new AbortController();
-    const temporizador = setTimeout(() => controlador.abort(), 15000);
-    let respuesta;
-    try {
-        respuesta = await fetch(apiUrl(ruta), {
-            ...opciones,
-            headers: {
-                "Content-Type": "application/json",
-                ...(opciones.headers || {})
-            },
-            signal: controlador.signal
-        });
-    } catch (error) {
-        if (error?.name === "AbortError") throw new Error("El servidor tardó demasiado en responder");
-        throw new Error("No se pudo conectar con el servidor");
-    } finally {
-        clearTimeout(temporizador);
-    }
-
-    let data = null;
-    try {
-        data = await respuesta.json();
-    } catch (_) {
-        data = null;
-    }
-
-    if (!respuesta.ok || !data?.ok) {
-        throw new Error(data?.mensaje || "No se pudo conectar con el servidor");
-    }
-
-    return data;
+    return apiRequest(ruta, opciones);
 }
 
 export async function cargarProductosDesdeServidor() {
@@ -197,25 +169,13 @@ export function buscarProductoPorCodigo(codigoBuscado) {
 }
 
 export function buscarProductosPorTexto(texto, limite = 40, soloCargados = false) {
-    const consulta = normalizarTexto(texto).toLowerCase();
-    const resultados = [];
-
-    for (let i = 0; i < datos.length; i++) {
-        const producto = armarProducto(datos[i], i);
-        if (soloCargados && producto.stock <= 0) continue;
-
-        if (!consulta) {
-            resultados.push(producto);
-        } else {
-            const codigo = producto.codigo.toLowerCase();
-            const articulo = producto.articulo.toLowerCase();
-            if (codigo.includes(consulta) || articulo.includes(consulta)) resultados.push(producto);
-        }
-
-        if (resultados.length >= limite) break;
-    }
-
-    if (soloCargados) resultados.sort((a, b) => marcaModificacion(b.codigo) - marcaModificacion(a.codigo));
+    const resultados = datos.map((fila, indice) => armarProducto(fila, indice))
+        .filter(producto => !soloCargados || producto.stock > 0)
+        .map(producto => ({ producto, puntaje: puntuarBusqueda(texto, producto.codigo, producto.articulo) }))
+        .filter(item => !String(texto || "").trim() || item.puntaje > 0)
+        .sort((a, b) => b.puntaje - a.puntaje || (soloCargados ? marcaModificacion(b.producto.codigo)-marcaModificacion(a.producto.codigo) : a.producto.articulo.localeCompare(b.producto.articulo, "es")))
+        .slice(0, limite)
+        .map(item => item.producto);
     return resultados;
 }
 
@@ -235,7 +195,12 @@ export async function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
         })
     });
 
-    const producto = guardarProductoLocal(data.producto);
+    const productoServidor = data.offline ? {
+        ...productoBase,
+        [ubicacion]: normalizarNumero(productoBase[ubicacion]) + cantidadNumerica,
+        stock: normalizarNumero(productoBase.stock) + cantidadNumerica
+    } : data.producto;
+    const producto = guardarProductoLocal(productoServidor);
 
     contador++;
     // El contador general sigue contando guardados locales.
@@ -260,7 +225,8 @@ export async function modificarStockProducto(indice, salon, deposito) {
         })
     });
 
-    const producto = guardarProductoLocal(data.producto);
+    const productoServidor = data.offline ? { ...productoBase, salon: normalizarEntero(salon), deposito: normalizarEntero(deposito), stock: normalizarEntero(salon) + normalizarEntero(deposito) } : data.producto;
+    const producto = guardarProductoLocal(productoServidor);
     registrarUltimo(producto);
     registrarModificacion(producto.codigo);
     return producto;
@@ -295,7 +261,7 @@ export async function guardarVencimiento(registro) {
             deposito: normalizarEntero(registro.deposito)
         })
     });
-    return data.vencimiento;
+    return data.offline ? { ...registro, id: `offline-${Date.now()}`, pendiente: true } : data.vencimiento;
 }
 
 
@@ -308,7 +274,7 @@ export async function actualizarVencimiento(id, registro) {
             deposito: normalizarEntero(registro.deposito)
         })
     });
-    return data.vencimiento;
+    return data.offline ? { id, ...registro, pendiente: true } : data.vencimiento;
 }
 
 export async function actualizarOfertaVencimiento(id, oferta) {
@@ -316,7 +282,7 @@ export async function actualizarOfertaVencimiento(id, oferta) {
         method: "PATCH",
         body: JSON.stringify({ oferta: oferta ? "Sí" : "No" })
     });
-    return data.vencimiento;
+    return data.offline ? { id, oferta, pendiente: true } : data.vencimiento;
 }
 
 export async function eliminarVencimiento(id) {

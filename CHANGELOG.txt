@@ -1,3 +1,11 @@
+V5.2.0
+- Modo administrador protegido por clave y sesión temporal.
+- Historial privado de movimientos en Google Sheets.
+- Buscador inteligente con palabras parciales, acentos y errores pequeños.
+- Aplicación PWA instalable en celular y computadora.
+- Cola offline con sincronización automática al recuperar Internet.
+- Estado de conexión y cantidad de cambios pendientes.
+
 VERSIÓN 5.1.3 - ENTREGA 3
 - ZXing fijado en la versión 0.23.0 para evitar cambios imprevistos.
 - Prevención de cámaras simultáneas entre Inventario, Vencimientos y Reposición.

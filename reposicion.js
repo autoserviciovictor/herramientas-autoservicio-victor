@@ -1,5 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=513-entrega3";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=513-entrega3";
+import { API_BASE_URL } from "./config.js?v=520";
+import { apiRequest } from "./offline.js?v=520";
+import { coincideBusqueda } from "./search.js?v=520";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=520";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -10,20 +12,7 @@ let operacionEnCurso = false;
 let temporizadorToast = null;
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
-async function pedir(ruta, opciones={}){
-  const controlador = new AbortController();
-  const temporizador = setTimeout(()=>controlador.abort(),15000);
-  let r;
-  try {
-    r = await fetch(apiUrl(ruta), {...opciones, headers:{"Content-Type":"application/json",...(opciones.headers||{})}, signal:controlador.signal});
-  } catch(error) {
-    if(error?.name === "AbortError") throw new Error("El servidor tardó demasiado en responder");
-    throw new Error("No se pudo conectar con el servidor");
-  } finally { clearTimeout(temporizador); }
-  const data = await r.json().catch(()=>null);
-  if(!r.ok || !data?.ok) throw new Error(data?.mensaje || "No se pudo conectar");
-  return data;
-}
+async function pedir(ruta, opciones={}){ return apiRequest(ruta, opciones); }
 function toast(texto, tipo="ok"){
   const t=$("toast"); if(!t) return;
   clearTimeout(temporizadorToast);
@@ -130,7 +119,7 @@ function renderRecientes(){
 function renderListado(){
   const c=$("repoListado"); if(!c)return;
   const q=($("repoBuscador")?.value||"").toLowerCase();
-  const items=registros.filter(r=>r.estado!=="completado"&&(!q||r.articulo.toLowerCase().includes(q)||String(r.codigo||"").includes(q)));
+  const items=registros.filter(r=>r.estado!=="completado"&&(!q||coincideBusqueda(q,r.articulo,r.codigo)));
   c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
   c.innerHTML=items.length?items.map(r=>`<article class="repo-simple-item">
       <button class="repo-check" data-repo-accion="completar" data-id="${r.id}" aria-label="Marcar como llevado">✓</button>

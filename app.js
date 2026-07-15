@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=513-entrega3";
+} from "./excel.js?v=520";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=513-entrega3";
+} from "./scanner.js?v=520";
 
 import {
     ocultarSplash,
@@ -48,9 +48,12 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=513-entrega3";
+} from "./ui.js?v=520";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=513-entrega3";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=520";
+import { inicializarAdmin, prepararAdmin } from "./admin.js?v=520";
+import { inicializarOffline, instalarApp, obtenerPendientes, estaOnline, sincronizarPendientes } from "./offline.js?v=520";
+import { coincideBusqueda } from "./search.js?v=520";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -170,6 +173,9 @@ async function inicializar() {
     configurarFeedback({ sonidos: true, vibracion: true });
     configurarEventos();
     inicializarReposicion();
+    inicializarAdmin();
+    inicializarOffline();
+    configurarEstadoOffline();
 
     await cargarProductos();
 }
@@ -194,6 +200,7 @@ async function entrarPantalla(nombre) {
     }
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
+    if (nombre === "admin") await prepararAdmin();
 }
 
 function configurarEventos() {
@@ -204,6 +211,11 @@ function configurarEventos() {
     document.querySelectorAll("[data-modulo]").forEach(btn => {
         btn.addEventListener("click", () => entrarPantalla(btn.dataset.modulo));
     });
+
+    $("btnInstalarApp")?.addEventListener("click", async () => { const ok = await instalarApp(); mostrarMensaje(ok ? "Aplicación instalada" : "Usá el menú del navegador para instalarla", ok ? "ok" : "error"); });
+    window.addEventListener("app-install-available", () => $("btnInstalarApp")?.classList.add("disponible"));
+    window.addEventListener("offline-queue-change", configurarEstadoOffline);
+    window.addEventListener("offline-sync-complete", () => { mostrarMensaje("Cambios offline sincronizados", "ok"); sincronizarEnSegundoPlano(); });
 
     elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
     elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
@@ -1288,3 +1300,12 @@ window.addEventListener("beforeunload", () => {
 document.addEventListener("visibilitychange", () => {
     if (!document.hidden) sincronizarEnSegundoPlano();
 });
+
+function configurarEstadoOffline(){
+    const online=estaOnline(), pendientes=obtenerPendientes();
+    const estado=$("conexionEstado"), detalle=$("offlineEstado"), texto=$("offlinePendientesTexto");
+    if(estado)estado.textContent=online?"✅ Sistema conectado":"⚠️ Trabajando sin conexión";
+    if(detalle){detalle.textContent=online?"Conexión disponible":"Sin Internet: los cambios se guardarán en este dispositivo";detalle.classList.toggle("sin-conexion",!online);}
+    if(texto)texto.textContent=pendientes?`${pendientes} cambio${pendientes===1?"":"s"} pendiente${pendientes===1?"":"s"} de sincronización.`:"Sin cambios pendientes de sincronización.";
+    if(online&&pendientes)sincronizarPendientes();
+}

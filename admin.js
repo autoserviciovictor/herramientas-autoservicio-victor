@@ -1,0 +1,11 @@
+import { API_BASE_URL } from "./config.js?v=520";
+const $=id=>document.getElementById(id), TOKEN_KEY="av_admin_token";
+let token=sessionStorage.getItem(TOKEN_KEY)||"";
+const api=async(ruta,op={})=>{const r=await fetch(`${String(API_BASE_URL).replace(/\/$/,"")}${ruta}`,{...op,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(op.headers||{})}});const d=await r.json().catch(()=>null);if(!r.ok||!d?.ok)throw new Error(d?.mensaje||"No autorizado");return d;};
+function escapar(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function mostrarLogin(){$("adminLoginCard")?.classList.remove("oculto");$("adminPanel")?.classList.add("oculto");}
+function mostrarPanel(){$("adminLoginCard")?.classList.add("oculto");$("adminPanel")?.classList.remove("oculto");}
+async function cargar(){try{const d=await api("/admin/historial");mostrarPanel();const c=$("adminHistorial");const items=d.historial||[];c.className=items.length?"admin-history":"venc-list-empty";c.innerHTML=items.length?items.map(x=>`<article class="admin-history-item"><div><strong>${escapar(x.accion)}</strong><small>${escapar(x.modulo)} · ${escapar(x.articulo||x.codigo||"")}</small><small>${escapar(x.fecha)}</small></div><span>${escapar(x.detalle||"")}</span></article>`).join(""):`<strong>No hay movimientos registrados.</strong>`;}catch{token="";sessionStorage.removeItem(TOKEN_KEY);mostrarLogin();}}
+async function login(){const clave=$("adminClave")?.value||"";try{const d=await api("/admin/login",{method:"POST",body:JSON.stringify({clave})});token=d.token;sessionStorage.setItem(TOKEN_KEY,token);$("adminClave").value="";await cargar();}catch(e){const m=$("adminMensaje");if(m)m.textContent=e.message;}}
+export function inicializarAdmin(){$("btnAdminIngresar")?.addEventListener("click",login);$("adminClave")?.addEventListener("keydown",e=>{if(e.key==="Enter")login();});$("btnAdminSalir")?.addEventListener("click",()=>{token="";sessionStorage.removeItem(TOKEN_KEY);mostrarLogin();});$("btnAdminActualizar")?.addEventListener("click",cargar);}
+export async function prepararAdmin(){if(token)await cargar();else mostrarLogin();}
