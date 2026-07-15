@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V6.0.0</title>
+    <title>Herramientas Autoservicio Victor V6.0.1</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=600-offline-historial">
+    <link rel="stylesheet" href="style.css?v=601-admin-limpio">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V6.0.0</p>
+    <p>Herramientas V6.0.1</p>
 </div>
 
 <div class="app">
@@ -87,17 +87,13 @@
             <button id="btnAbrirAdminHome" type="button" class="module-card module-administrador admin-module-card oculto">
                 <span class="module-icon">🔐</span>
                 <strong>Administrador</strong>
-                <small>Usuarios y listas</small>
+                <small>Usuarios e historial</small>
             </button>
         </section>
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.0.0</strong>
-        </section>
-        <section id="adminTab-historial" class="admin-tab-panel settings-card oculto">
-            <div class="admin-section-head"><div><strong>Historial de vencimientos</strong><span>Quién y cuándo creó, editó o eliminó registros</span></div></div>
-            <div id="adminHistorialLista" class="admin-history-list"></div>
+            <strong>V6.0.1</strong>
         </section>
     </main>
 
@@ -440,33 +436,39 @@
     </div>
 
 
-    <main id="pantallaAdmin" class="pantalla admin-screen" hidden aria-hidden="true">
+    <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
-            <div><span class="admin-lock">🔐</span><div><strong>Panel administrativo</strong><p>Usuarios y listas privadas</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.0.0</span>
+            <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
+            <span id="adminVersion" class="admin-version">V6.0.1</span>
         </section>
+
         <div id="adminMensaje" class="admin-message"></div>
-        <section class="settings-card">
-            <div id="adminServidorEstado" class="admin-server-status">Consultando servidor…</div>
-            <div class="admin-summary-grid">
-                <div><span>Productos</span><strong id="adminProductos">—</strong></div>
-                <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Reposición</span><strong id="adminReposicion">—</strong></div>
-            </div>
-            <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar datos</button>
-        </section>
-        <nav class="admin-tabs">
-            <button type="button" class="admin-tab activo" data-admin-tab="usuarios">Usuarios</button>
-            <button type="button" class="admin-tab" data-admin-tab="listas">Listas activas</button>
-            <button type="button" class="admin-tab" data-admin-tab="historial">Historial vencimientos</button>
+
+        <nav class="admin-tabs admin-tabs-clean">
+            <button type="button" class="admin-tab activo" data-admin-tab="usuarios">👤 Usuarios</button>
+            <button type="button" class="admin-tab" data-admin-tab="historial">📋 Historial</button>
+            <button type="button" class="admin-tab" data-admin-tab="sistema">⚙️ Sistema</button>
         </nav>
+
         <section id="adminTab-usuarios" class="admin-tab-panel settings-card">
             <div class="admin-section-head"><div><strong>Usuarios</strong><span>Crear, editar y desactivar cuentas</span></div><button id="btnAdminNuevoUsuario" type="button">+ Crear</button></div>
             <div id="adminUsuariosLista" class="admin-users-list"></div>
         </section>
-        <section id="adminTab-listas" class="admin-tab-panel settings-card oculto">
-            <div class="admin-section-head"><div><strong>Listas de reposición</strong><span>Visualización de todas las listas actuales</span></div></div>
-            <div id="adminListasLista" class="admin-lists-list"></div>
+
+        <section id="adminTab-historial" class="admin-tab-panel settings-card oculto">
+            <div class="admin-section-head"><div><strong>Historial de vencimientos</strong><span>Quién y cuándo creó, editó o eliminó registros</span></div></div>
+            <div id="adminHistorialLista" class="admin-history-list"></div>
+        </section>
+
+        <section id="adminTab-sistema" class="admin-tab-panel settings-card oculto">
+            <div class="admin-section-head"><div><strong>Sistema</strong><span>Estado general de la aplicación</span></div></div>
+            <div id="adminServidorEstado" class="admin-server-status">Consultando servidor…</div>
+            <div class="admin-summary-grid admin-summary-grid-clean">
+                <div><span>Productos</span><strong id="adminProductos">—</strong></div>
+                <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.0.1</strong></div>
+            </div>
+            <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
         </section>
     </main>
 
@@ -548,10 +550,10 @@
 
 </div>
 
-<script src="./pwa.js?v=600-offline-historial" defer></script>
-<script type="module" src="./auth.js?v=600-offline-historial"></script>
-<script type="module" src="./admin.js?v=600-offline-historial"></script>
-<script type="module" src="./app.js?v=600-offline-historial"></script>
+<script src="./pwa.js?v=601-admin-limpio" defer></script>
+<script type="module" src="./auth.js?v=601-admin-limpio"></script>
+<script type="module" src="./admin.js?v=601-admin-limpio"></script>
+<script type="module" src="./app.js?v=601-admin-limpio"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

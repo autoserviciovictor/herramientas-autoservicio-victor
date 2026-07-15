@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=600-offline-historial";
-import { ordenarPorBusqueda } from "./search.js?v=600-offline-historial";
+import { API_BASE_URL } from "./config.js?v=601-admin-limpio";
+import { ordenarPorBusqueda } from "./search.js?v=601-admin-limpio";
 
 let datos = [];
 let contador = 0;

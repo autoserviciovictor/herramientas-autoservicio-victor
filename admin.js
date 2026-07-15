@@ -1,8 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=600-offline-historial";
+import { API_BASE_URL } from "./config.js?v=601-admin-limpio";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
-let listas = [];
 let historialVencimientos = [];
 
 function mensaje(texto, tipo = "") {
@@ -25,27 +24,17 @@ function ocultarPanelAdmin() {
   const panel = $("pantallaAdmin");
   if (!panel) return;
   panel.classList.remove("activa");
-  panel.hidden = true;
   panel.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("en-admin");
 }
 
 function mostrarPanel() {
   if (!window.AutoservicioAuth?.esAdmin()) {
-    ocultarPanelAdmin();
     window.AutoservicioNavigate?.("inicio");
     return;
   }
-  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
-  const panel = $("pantallaAdmin");
-  if (!panel) return;
-  panel.hidden = false;
-  panel.setAttribute("aria-hidden", "false");
-  panel.classList.add("activa");
-  document.body.className = "en-admin";
-  $("brandBackBtn")?.classList.remove("oculto");
-  $("brandHeaderTitulo").textContent = "Administración";
-  $("brandHeaderSubtitulo").textContent = "Usuarios y listas";
+  window.AutoservicioNavigate?.("admin");
+  $("pantallaAdmin")?.setAttribute("aria-hidden", "false");
+  cambiarTab("usuarios");
   cargarTodo();
 }
 
@@ -54,8 +43,8 @@ async function cargarResumen() {
   $("adminVersion").textContent = `V${data.version}`;
   $("adminProductos").textContent = data.productos;
   $("adminVencimientos").textContent = data.vencimientos;
-  $("adminReposicion").textContent = data.reposicionPendiente;
   $("adminServidorEstado").textContent = "● Servidor conectado";
+  if ($("adminVersionSistema")) $("adminVersionSistema").textContent = data.version;
 }
 
 async function cargarUsuarios() {
@@ -125,32 +114,6 @@ async function guardarUsuario() {
   finally { btn.disabled = false; }
 }
 
-async function cargarListas() {
-  const data = await api("/admin/reposicion-listas");
-  listas = data.listas || [];
-  renderListas();
-}
-
-function renderListas() {
-  const cont = $("adminListasLista");
-  if (!cont) return;
-  if (!listas.length) { cont.innerHTML = '<div class="empty-state">No hay listas activas.</div>'; return; }
-  cont.innerHTML = listas.map(l => `
-    <article class="admin-list-card" data-usuario="${l.usuario}">
-      <button type="button" class="admin-list-open"><div><strong>${l.usuario}</strong><span>${l.pendientes} pendientes · ${l.completados} listos</span></div><b>${l.total}</b></button>
-      <div class="admin-list-detail oculto">${l.registros.map(r => `<div class="admin-list-item ${r.estado}"><span>${r.articulo}<small>${r.codigo}</small></span><strong>${r.cantidad}</strong></div>`).join("")}<button type="button" class="danger-btn-soft btn-vaciar-lista">Vaciar lista de ${l.usuario}</button></div>
-    </article>`).join("");
-  cont.querySelectorAll(".admin-list-open").forEach(btn => btn.addEventListener("click", () => btn.nextElementSibling.classList.toggle("oculto")));
-  cont.querySelectorAll(".btn-vaciar-lista").forEach(btn => btn.addEventListener("click", () => vaciarLista(btn.closest("[data-usuario]").dataset.usuario)));
-}
-
-async function vaciarLista(usuario) {
-  if (!confirm(`¿Vaciar completamente la lista de ${usuario}?`)) return;
-  try { await api(`/admin/reposicion-listas/${encodeURIComponent(usuario)}`, { method:"DELETE" }); mensaje("Lista eliminada", "ok"); await Promise.all([cargarListas(), cargarResumen()]); }
-  catch(e) { mensaje(e.message, "error"); }
-}
-
-
 async function cargarHistorialVencimientos() {
   const data = await api("/admin/historial-vencimientos");
   historialVencimientos = data.historial || [];
@@ -162,7 +125,7 @@ async function cargarHistorialVencimientos() {
 
 async function cargarTodo() {
   $("adminServidorEstado").textContent = "Consultando servidor…";
-  try { await Promise.all([cargarResumen(), cargarUsuarios(), cargarListas(), cargarHistorialVencimientos()]); }
+  try { await Promise.all([cargarResumen(), cargarUsuarios(), cargarHistorialVencimientos()]); }
   catch(e) { $("adminServidorEstado").textContent = e.message; mensaje(e.message, "error"); }
 }
 

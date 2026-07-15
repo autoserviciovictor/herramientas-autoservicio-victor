@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=600-offline-historial";
+} from "./excel.js?v=601-admin-limpio";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=600-offline-historial";
+} from "./scanner.js?v=601-admin-limpio";
 
 import {
     ocultarSplash,
@@ -48,10 +48,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=600-offline-historial";
+} from "./ui.js?v=601-admin-limpio";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=600-offline-historial";
-import { coincideBusqueda } from "./search.js?v=600-offline-historial";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=601-admin-limpio";
+import { coincideBusqueda } from "./search.js?v=601-admin-limpio";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -195,6 +195,7 @@ async function entrarPantalla(nombre) {
     }
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
+    if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) { cambiarPantalla("inicio"); }
 }
 
 window.AutoservicioNavigate = entrarPantalla;
