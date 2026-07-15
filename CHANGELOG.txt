@@ -1,3 +1,9 @@
+V6.0.3 - Corrección crítica de inicio y actualización
+- Corrige mezcla de caché entre V6.0.3 y V6.0.3.
+- Evita que la pantalla de inicio quede bloqueada.
+- Agrega inicio de emergencia si un módulo no carga.
+- Refuerza el flujo de actualización del service worker.
+
 5.3.8
 - El panel administrativo se mantiene completamente oculto en el inicio.
 - Solo se carga al entrar al módulo Administrador.
@@ -125,21 +131,21 @@ V5.3.6
 - La tarjeta Ajustes fue reemplazada por Administrador.
 - Administrador solo aparece para cuentas con rol administrador.
 
-V6.0.1
+V6.0.3
 - Modo offline con copia local de consultas y cola de cambios.
 - Sincronización automática al recuperar conexión.
 - Indicador de conexión y operaciones pendientes.
 - Historial exclusivo de Vencimientos con usuario, fecha, hora y acción.
 - Nueva pestaña administrativa Historial vencimientos.
 
-V6.0.1
+V6.0.3
 - Administración aislada como pantalla independiente.
 - Eliminadas listas activas del panel administrativo.
 - Eliminado historial de vencimientos de la pantalla principal.
 - Administración organizada en Usuarios, Historial y Sistema.
 - Eliminados contador y datos de Reposición del panel administrativo.
 
-V6.0.2
+V6.0.3
 - Diálogos propios para confirmar, alertar y editar cantidades.
 - Nueva lista sin cuadros nativos del navegador ni superposición de mensajes.
 - Historial de vencimientos resumido, filtrable y paginado de a 20 movimientos.

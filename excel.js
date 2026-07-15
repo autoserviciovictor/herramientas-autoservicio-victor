@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=602-mejoras";
-import { ordenarPorBusqueda } from "./search.js?v=602-mejoras";
+import { API_BASE_URL } from "./config.js?v=603-hotfix-inicio";
+import { ordenarPorBusqueda } from "./search.js?v=603-hotfix-inicio";
 
 let datos = [];
 let contador = 0;

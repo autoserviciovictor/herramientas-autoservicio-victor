@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=602-mejoras";
+} from "./excel.js?v=603-hotfix-inicio";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=602-mejoras";
+} from "./scanner.js?v=603-hotfix-inicio";
 
 import {
     ocultarSplash,
@@ -48,10 +48,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=602-mejoras";
+} from "./ui.js?v=603-hotfix-inicio";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=602-mejoras";
-import { coincideBusqueda } from "./search.js?v=602-mejoras";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=603-hotfix-inicio";
+import { coincideBusqueda } from "./search.js?v=603-hotfix-inicio";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -157,6 +157,7 @@ inicializar();
 
 async function inicializar() {
     ocultarSplash();
+    window.dispatchEvent(new CustomEvent("autoservicio:boot-ok"));
     cambiarPantalla("inicio");
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);

@@ -1,8 +1,13 @@
-const CACHE_VERSION = 'autoservicio-v6.0.2-mejoras';
+const CACHE_VERSION = 'autoservicio-v6.0.3-hotfix-inicio';
 const APP_SHELL = [
-  './','./index.html','./style.css?v=602-mejoras','./app.js?v=602-mejoras','./config.js?v=602-mejoras','./excel.js?v=602-mejoras','./scanner.js?v=602-mejoras','./reposicion.js?v=602-mejoras','./ui.js?v=602-mejoras','./pwa.js?v=602-mejoras','./dialog.js?v=602-mejoras','./search.js?v=602-mejoras','./admin.js?v=602-mejoras','./auth.js?v=602-mejoras','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png'
+  './','./index.html','./style.css?v=603-hotfix-inicio','./app.js?v=603-hotfix-inicio','./config.js?v=603-hotfix-inicio','./excel.js?v=603-hotfix-inicio','./scanner.js?v=603-hotfix-inicio','./reposicion.js?v=603-hotfix-inicio','./ui.js?v=603-hotfix-inicio','./pwa.js?v=603-hotfix-inicio','./dialog.js?v=603-hotfix-inicio','./search.js?v=603-hotfix-inicio','./admin.js?v=603-hotfix-inicio','./auth.js?v=603-hotfix-inicio','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png'
 ];
-self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL))); });
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    await Promise.allSettled(APP_SHELL.map(url => cache.add(url)));
+  })());
+});
 self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_VERSION).map(key => caches.delete(key))))); self.clients.claim(); });
 self.addEventListener('fetch', event => {

@@ -1,6 +1,7 @@
 let eventoInstalacion = null;
 let registroSW = null;
 let workerEsperando = null;
+const UPDATE_RELOAD_KEY = 'autoservicio-update-reload';
 
 const btnInstalar = document.getElementById('btnInstalarApp');
 const textoInstalacion = document.getElementById('estadoInstalacionApp');
@@ -55,17 +56,37 @@ btnInstalar?.addEventListener('click', async () => {
 });
 
 document.getElementById('btnActualizarDespues')?.addEventListener('click', ocultarActualizacion);
-document.getElementById('btnActualizarAhora')?.addEventListener('click', () => {
+document.getElementById('btnActualizarAhora')?.addEventListener('click', async () => {
   if (estadoActualizacion) estadoActualizacion.textContent = 'Actualizando…';
-  workerEsperando?.postMessage({ type:'SKIP_WAITING' });
+  const boton = document.getElementById('btnActualizarAhora');
+  if (boton) boton.disabled = true;
+  try {
+    sessionStorage.setItem(UPDATE_RELOAD_KEY, '1');
+    if (workerEsperando) {
+      workerEsperando.postMessage({ type:'SKIP_WAITING' });
+      setTimeout(() => window.location.reload(), 4000);
+    } else {
+      await registroSW?.update();
+      window.location.reload();
+    }
+  } catch (error) {
+    console.error('No se pudo aplicar la actualización:', error);
+    sessionStorage.removeItem(UPDATE_RELOAD_KEY);
+    if (estadoActualizacion) estadoActualizacion.textContent = 'No se pudo actualizar';
+    if (boton) boton.disabled = false;
+  }
 });
 
 if ('serviceWorker' in navigator) {
   let recargando = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (recargando) return; recargando = true; window.location.reload();
+    if (recargando) return;
+    recargando = true;
+    sessionStorage.removeItem(UPDATE_RELOAD_KEY);
+    window.location.reload();
   });
   window.addEventListener('load', async () => {
+    sessionStorage.removeItem(UPDATE_RELOAD_KEY);
     try {
       registroSW = await navigator.serviceWorker.register('./service-worker.js', { scope:'./' });
       if (registroSW.waiting && navigator.serviceWorker.controller) mostrarActualizacion(registroSW.waiting);

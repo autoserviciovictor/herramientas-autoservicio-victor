@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=602-mejoras";
+import { API_BASE_URL } from "./config.js?v=603-hotfix-inicio";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

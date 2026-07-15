@@ -48,7 +48,7 @@ let vibracionHabilitada = true;
 let totalProductos = 0;
 
 export function ocultarSplash() {
-    setTimeout(() => elementos.splash.classList.add("oculto"), 650);
+    setTimeout(() => elementos.splash?.classList.add("oculto"), 650);
 }
 
 function actualizarEncabezadoModulo(nombre) {
