@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
   "version": "5.2.0",
-  "description": "Herramientas Autoservicio Victor V5.2.0 - inventario, vencimientos, reposición, administrador y PWA offline",
+  "description": "Servidor de Herramientas Autoservicio Victor V5.2.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

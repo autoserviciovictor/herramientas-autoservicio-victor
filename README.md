@@ -1,6 +1,6 @@
 # Herramientas Autoservicio Victor
 
-Versión **5.2.0**.
+Versión **5.1.1**.
 
 Aplicación web para Inventario, Control de Vencimientos y Reposición, con frontend estático y servidor Node.js conectado a Google Sheets.
 
@@ -19,7 +19,6 @@ Aplicación web para Inventario, Control de Vencimientos y Reposición, con fron
 - `Productos`: `codigo`, `articulo`.
 - `Vencimientos`: se crea automáticamente con 10 columnas.
 - `Reposicion`: se crea automáticamente con 7 columnas.
-- `Historial`: se crea automáticamente y solo se consulta desde el modo administrador.
 
 ## Variables de entorno
 
@@ -30,8 +29,7 @@ Copiar `.env.example` y configurar:
 - `GOOGLE_PRIVATE_KEY`
 - `ALLOWED_ORIGINS` (recomendado)
 - `RESET_KEY` (necesaria para habilitar el reinicio total)
-- `API_WRITE_KEY` (opcional)
-- `ADMIN_KEY` y `ADMIN_TOKEN_SECRET` (necesarias para el modo administrador)
+- `API_WRITE_KEY` (opcional; no activarla hasta actualizar el frontend para enviar la clave)
 
 ## Ejecutar
 
@@ -57,5 +55,8 @@ Las escrituras generales pueden protegerse mediante `API_WRITE_KEY`. Esta opció
 La aplicación utiliza `@zxing/library` 0.23.0 fijado desde UNPKG. Solo puede existir una sesión de cámara activa entre los módulos. Al cerrar o cambiar de módulo se detienen todos los tracks de video.
 
 
-## V5.2.0
-La app es instalable como PWA y permite guardar operaciones sin conexión. Para habilitar el modo administrador, configurar `ADMIN_KEY` y `ADMIN_TOKEN_SECRET` en Render. La hoja `Historial` se crea automáticamente.
+## Instalación como aplicación (PWA)
+
+La aplicación se puede instalar desde Chrome o Edge mediante el botón **Instalar aplicación** de la pantalla Ajustes. Debe publicarse por HTTPS (GitHub Pages cumple este requisito).
+
+Esta entrega almacena la interfaz para que pueda abrirse sin conexión. El guardado offline de inventario, vencimientos y reposición se incorporará por separado.

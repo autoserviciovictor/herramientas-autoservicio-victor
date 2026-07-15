@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const { google } = require("googleapis");
 const XLSX = require("xlsx");
-const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
@@ -16,9 +15,6 @@ const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 const API_WRITE_KEY = normalizarTexto(process.env.API_WRITE_KEY);
 const RESET_KEY = normalizarTexto(process.env.RESET_KEY);
-const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
-const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET) || ADMIN_KEY;
-const HISTORIAL_SHEET_NAME = "Historial";
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
   .map(origen => origen.trim())
@@ -45,25 +41,9 @@ function protegerEscrituras(req, res, next) {
 
 app.use((req, res, next) => {
   const esEscritura = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  if (!esEscritura || req.path === "/reiniciar" || req.path === "/admin/login") return next();
+  if (!esEscritura || req.path === "/reiniciar") return next();
   return protegerEscrituras(req, res, next);
 });
-
-
-const operacionesRecientes = new Map();
-app.use((req,res,next)=>{
-  const op=normalizarTexto(req.get("x-operation-id"));
-  if(!op||req.method==="GET")return next();
-  const anterior=operacionesRecientes.get(op);
-  if(anterior&&Date.now()-anterior<24*60*60*1000)return res.json({ok:true,duplicada:true,mensaje:"Operación ya procesada"});
-  const original=res.json.bind(res);res.json=(body)=>{if(res.statusCode<400&&body?.ok){operacionesRecientes.set(op,Date.now());setTimeout(()=>operacionesRecientes.delete(op),24*60*60*1000);}return original(body);};next();
-});
-function crearTokenAdmin(){const exp=Date.now()+8*60*60*1000;const payload=Buffer.from(JSON.stringify({exp})).toString("base64url");const firma=crypto.createHmac("sha256",ADMIN_TOKEN_SECRET).update(payload).digest("base64url");return `${payload}.${firma}`;}
-function validarTokenAdmin(token){try{const [payload,firma]=String(token||"").split(".");const esperada=crypto.createHmac("sha256",ADMIN_TOKEN_SECRET).update(payload).digest("base64url");if(!crypto.timingSafeEqual(Buffer.from(firma||""),Buffer.from(esperada)))return false;const data=JSON.parse(Buffer.from(payload,"base64url").toString());return data.exp>Date.now();}catch{return false;}}
-function soloAdmin(req,res,next){if(!ADMIN_KEY||!ADMIN_TOKEN_SECRET)return res.status(503).json({ok:false,mensaje:"Modo administrador no configurado"});const token=normalizarTexto(req.get("authorization")).replace(/^Bearer\s+/i,"");if(!validarTokenAdmin(token))return res.status(401).json({ok:false,mensaje:"Sesión administrativa inválida"});next();}
-let historialAsegurado=false;
-async function asegurarHistorial(){if(historialAsegurado)return;const meta=await sheets.spreadsheets.get({spreadsheetId:SPREADSHEET_ID});const existe=(meta.data.sheets||[]).some(h=>h.properties?.title===HISTORIAL_SHEET_NAME);if(!existe)await sheets.spreadsheets.batchUpdate({spreadsheetId:SPREADSHEET_ID,requestBody:{requests:[{addSheet:{properties:{title:HISTORIAL_SHEET_NAME}}}]}});const h=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${HISTORIAL_SHEET_NAME}!A1:H1`});if(!(h.data.values||[]).length)await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${HISTORIAL_SHEET_NAME}!A1:H1`,valueInputOption:"RAW",requestBody:{values:[["Fecha","Módulo","Acción","Código","Artículo","Anterior","Nuevo","Detalle"]]}});historialAsegurado=true;}
-async function registrarHistorial({modulo,accion,codigo="",articulo="",anterior="",nuevo="",detalle=""}){try{await asegurarHistorial();await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${HISTORIAL_SHEET_NAME}!A:H`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:[[fechaHoraArgentinaIso(),modulo,accion,codigo,articulo,JSON.stringify(anterior),JSON.stringify(nuevo),detalle]]}});}catch(e){console.error("No se pudo registrar historial:",e.message);}}
 
 const auth = new google.auth.JWT(
   GOOGLE_CLIENT_EMAIL,
@@ -286,10 +266,6 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
   return productos.find(producto => producto.codigo === codigo) || null;
 }
 
-
-app.post("/admin/login",(req,res)=>{if(!ADMIN_KEY)return res.status(503).json({ok:false,mensaje:"Modo administrador no configurado"});if(normalizarTexto(req.body?.clave)!==ADMIN_KEY)return res.status(401).json({ok:false,mensaje:"Clave incorrecta"});res.json({ok:true,token:crearTokenAdmin()});});
-app.get("/admin/historial",soloAdmin,async(req,res)=>{try{await asegurarHistorial();const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${HISTORIAL_SHEET_NAME}!A2:H`});const filas=r.data.values||[];const historial=filas.map(f=>({fecha:normalizarTexto(f[0]),modulo:normalizarTexto(f[1]),accion:normalizarTexto(f[2]),codigo:normalizarTexto(f[3]),articulo:normalizarTexto(f[4]),anterior:normalizarTexto(f[5]),nuevo:normalizarTexto(f[6]),detalle:normalizarTexto(f[7])})).reverse().slice(0,300);res.json({ok:true,historial});}catch(e){res.status(500).json({ok:false,mensaje:e.message||"Error al leer historial"});}});
-
 app.get("/", (req, res) => {
   res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
 });
@@ -376,10 +352,7 @@ app.post("/guardar", async (req, res) => {
         producto.salon = numero(producto.salon) + cantidadNumerica;
       }
 
-      const anterior = { salon: producto.salon - (ubicacion === "salon" ? cantidadNumerica : 0), deposito: producto.deposito - (ubicacion === "deposito" ? cantidadNumerica : 0) };
-      const actualizado = await actualizarProducto(producto);
-      await registrarHistorial({modulo:"Inventario",accion:"Agregar stock",codigo:actualizado.codigo,articulo:actualizado.articulo,anterior,nuevo:{salon:actualizado.salon,deposito:actualizado.deposito},detalle:`${ubicacion}: +${cantidadNumerica}`});
-      return actualizado;
+      return await actualizarProducto(producto);
     });
 
     invalidarCache("productos");
@@ -414,12 +387,10 @@ app.post("/corregir", async (req, res) => {
         throw error;
       }
 
-      const anterior = { salon: producto.salon, deposito: producto.deposito };
       producto.salon = salonValidado;
       producto.deposito = depositoValidado;
-      const actualizado = await actualizarProducto(producto);
-      await registrarHistorial({modulo:"Inventario",accion:"Corregir stock",codigo:actualizado.codigo,articulo:actualizado.articulo,anterior,nuevo:{salon:actualizado.salon,deposito:actualizado.deposito}});
-      return actualizado;
+
+      return await actualizarProducto(producto);
     });
 
     invalidarCache("productos");
@@ -645,7 +616,6 @@ app.post("/vencimientos", async (req, res) => {
     });
 
     invalidarCache("vencimientos");
-    await registrarHistorial({modulo:"Vencimientos",accion:"Crear vencimiento",codigo:registro.codigo,articulo:registro.articulo,nuevo:{vencimiento:registro.vencimiento,salon:registro.salon,deposito:registro.deposito}});
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
   } catch (error) {
     console.error("Error en POST /vencimientos:", error);
@@ -675,7 +645,6 @@ app.put("/vencimientos/:id", async (req, res) => {
       requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
     });
     invalidarCache("vencimientos");
-    await registrarHistorial({modulo:"Vencimientos",accion:"Editar vencimiento",codigo:actualizado.codigo,articulo:actualizado.articulo,anterior:registro,nuevo:actualizado});
     res.json({ ok: true, mensaje: "Vencimiento actualizado", vencimiento: actualizado });
   } catch (error) {
     console.error("Error en PUT /vencimientos/:id:", error);
@@ -699,7 +668,6 @@ app.patch("/vencimientos/:id/oferta", async (req, res) => {
       requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
     });
     invalidarCache("vencimientos");
-    await registrarHistorial({modulo:"Vencimientos",accion:oferta === "Sí" ? "Marcar oferta" : "Quitar oferta",codigo:actualizado.codigo,articulo:actualizado.articulo,anterior:{oferta:registro.oferta},nuevo:{oferta:actualizado.oferta}});
     res.json({ ok: true, mensaje: oferta === "Sí" ? "Oferta marcada" : "Oferta quitada", vencimiento: actualizado });
   } catch (error) {
     console.error("Error en PATCH /vencimientos/:id/oferta:", error);
@@ -718,7 +686,6 @@ app.delete("/vencimientos/:id", async (req, res) => {
       requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
     });
     invalidarCache("vencimientos");
-    await registrarHistorial({modulo:"Vencimientos",accion:"Eliminar vencimiento",codigo:registro.codigo,articulo:registro.articulo,anterior:registro});
     res.json({ ok: true, mensaje: "Vencimiento eliminado" });
   } catch (error) {
     console.error("Error en DELETE /vencimientos/:id:", error);
@@ -844,7 +811,6 @@ app.post("/reposicion", async (req, res) => {
       return { mensaje: "Producto anotado", registro };
     });
     invalidarCache("reposicion");
-    await registrarHistorial({modulo:"Reposición",accion:"Anotar producto",codigo:resultado.registro.codigo,articulo:resultado.registro.articulo,nuevo:{cantidad:resultado.registro.cantidad,estado:resultado.registro.estado}});
     res.json({ ok: true, ...resultado });
   } catch (error) {
     console.error("Error en POST /reposicion:", error);
@@ -877,7 +843,6 @@ app.put("/reposicion/:id", async (req, res) => {
       return resultado;
     });
     invalidarCache("reposicion");
-    await registrarHistorial({modulo:"Reposición",accion:actualizado.estado === "completado" ? "Completar reposición" : "Editar reposición",codigo:actualizado.codigo,articulo:actualizado.articulo,nuevo:{cantidad:actualizado.cantidad,estado:actualizado.estado}});
     res.json({ ok: true, mensaje: "Reposición actualizada", registro: actualizado });
   } catch (error) {
     console.error("Error en PUT /reposicion/:id:", error);
@@ -896,7 +861,6 @@ app.delete("/reposicion/:id", async (req, res) => {
       requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(REPOSICION_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
     });
     invalidarCache("reposicion");
-    await registrarHistorial({modulo:"Reposición",accion:"Eliminar producto",codigo:registro.codigo,articulo:registro.articulo,anterior:registro});
     res.json({ ok: true, mensaje: "Producto eliminado" });
   } catch (error) {
     console.error("Error en DELETE /reposicion/:id:", error);

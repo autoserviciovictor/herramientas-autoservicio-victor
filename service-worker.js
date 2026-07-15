@@ -1,4 +1,70 @@
-const CACHE="av-v520";const ASSETS=["./","./index.html","./style.css?v=520","./app.js?v=520","./excel.js?v=520","./ui.js?v=520","./scanner.js?v=520","./reposicion.js?v=520","./offline.js?v=520","./admin.js?v=520","./search.js?v=520","./config.js?v=520","./manifest.webmanifest"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.hostname==="unpkg.com"){e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,copy));return r;})));return;}if(u.origin!==location.origin)return;e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r;}).catch(()=>caches.match("./index.html"))));});
+const CACHE_VERSION = 'autoservicio-victor-pwa-5.2.0';
+const APP_SHELL = [
+  './',
+  './index.html',
+  './style.css?v=520-pwa1',
+  './app.js?v=520-pwa1',
+  './config.js?v=520-pwa1',
+  './excel.js?v=520-pwa1',
+  './scanner.js?v=520-pwa1',
+  './reposicion.js?v=520-pwa1',
+  './ui.js?v=520-pwa1',
+  './pwa.js?v=520-pwa1',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_VERSION).map(key => caches.delete(key))))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_VERSION).then(cache => cache.put('./index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(request).then(cached => cached || fetch(request).then(response => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_VERSION).then(cache => cache.put(request, copy));
+        }
+        return response;
+      }))
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(request).then(response => {
+      const copy = response.clone();
+      caches.open(CACHE_VERSION).then(cache => cache.put(request, copy));
+      return response;
+    }).catch(() => caches.match(request))
+  );
+});

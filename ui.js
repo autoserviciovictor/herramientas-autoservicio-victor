@@ -7,8 +7,7 @@ const elementos = {
         anotar: document.getElementById("pantallaAnotar"),
         productos: document.getElementById("pantallaProductos"),
         editarProducto: document.getElementById("pantallaEditarProducto"),
-        ajustes: document.getElementById("pantallaAjustes"),
-        admin: document.getElementById("pantallaAdmin")
+        ajustes: document.getElementById("pantallaAjustes")
     },
     navBtns: document.querySelectorAll(".nav-btn"),
     toast: document.getElementById("toast"),
@@ -65,8 +64,7 @@ function actualizarEncabezadoModulo(nombre) {
         editarProducto: ["Editar producto", "Inventario"],
         ajustes: ["Ajustes", "Configuración general"],
         vencimientos: ["Vencimientos", "Control de fechas"],
-        anotar: ["Anotar reposición", "Reposición de salón"],
-        admin: ["Administrador", "Historial privado"]
+        anotar: ["Anotar reposición", "Reposición de salón"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
     titulo.textContent = textoTitulo;
@@ -96,7 +94,6 @@ export function cambiarPantalla(nombre) {
     document.body.classList.toggle("en-vencimientos", nombre === "vencimientos");
     document.body.classList.toggle("en-anotar", nombre === "anotar");
     document.body.classList.toggle("en-ajustes", nombre === "ajustes");
-    document.body.classList.toggle("en-admin", nombre === "admin");
     document.body.classList.toggle("en-modulo-inventario", ["inventario", "productos", "cargados", "editarProducto"].includes(nombre));
     document.body.classList.toggle("en-editor-producto", nombre === "editarProducto");
 }

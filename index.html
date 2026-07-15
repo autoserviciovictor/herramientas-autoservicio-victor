@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Herramientas Autoservicio Victor V5.2.0</title>
 
-    <link rel="manifest" href="manifest.webmanifest">
-    <meta name="theme-color" content="#c95656">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="style.css?v=520">
+    <meta name="theme-color" content="#b24444">
+    <meta name="application-name" content="Autoservicio Victor">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Autoservicio Victor">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="style.css?v=520-pwa1">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -61,16 +66,10 @@
                 <strong>Ajustes</strong>
                 <small>Configuración</small>
             </button>
-
-            <button type="button" class="module-card module-admin" data-modulo="admin">
-                <span class="module-icon">🔐</span>
-                <strong>Administrador</strong>
-                <small>Historial y control</small>
-            </button>
         </section>
 
         <section class="home-status">
-            <span id="conexionEstado">✅ Sistema conectado</span>
+            <span>✅ Sistema conectado</span>
             <strong>V5.2.0</strong>
         </section>
     </main>
@@ -221,28 +220,17 @@
             </div>
         </section>
 
-        <section class="settings-card">
-            <div id="offlineEstado" class="offline-status">Conexión disponible</div>
-            <button type="button" id="btnInstalarApp" class="setting-btn">📲 Instalar aplicación</button>
-            <p id="offlinePendientesTexto">Sin cambios pendientes de sincronización.</p>
+        <section class="settings-card pwa-install-card">
+            <div class="pwa-install-copy">
+                <strong>Instalar aplicación</strong>
+                <span id="estadoInstalacionApp">Preparando instalación...</span>
+            </div>
+            <button type="button" id="btnInstalarApp" class="setting-btn">⬇ Instalar aplicación</button>
         </section>
 
         <section class="settings-card danger-zone">
             <button type="button" id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
             <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
-        </section>
-    </main>
-
-
-    <main id="pantallaAdmin" class="pantalla">
-        <section id="adminLoginCard" class="settings-card admin-login-card">
-            <h2>Modo administrador</h2><p>Ingresá la clave administrativa.</p>
-            <input id="adminClave" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Clave">
-            <button id="btnAdminIngresar" type="button" class="save-btn">Ingresar</button><p id="adminMensaje" class="admin-message"></p>
-        </section>
-        <section id="adminPanel" class="oculto">
-            <div class="admin-toolbar"><button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar historial</button><button id="btnAdminSalir" type="button" class="cancel-btn">Cerrar sesión</button></div>
-            <section id="adminHistorial" class="admin-history"></section>
         </section>
     </main>
 
@@ -482,6 +470,7 @@
 
 </div>
 
-<script type="module" src="./app.js?v=520"></script>
+<script src="./pwa.js?v=520-pwa1" defer></script>
+<script type="module" src="./app.js?v=520-pwa1"></script>
 </body>
 </html>

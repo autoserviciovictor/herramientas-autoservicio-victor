@@ -2254,10 +2254,25 @@ video {
     }
 }
 
-/* V5.2.0 — Administrador, PWA y estado offline */
-.module-admin{background:linear-gradient(145deg,#fff7e8,#fff);border-color:#e7c67a}.module-admin .module-icon{background:#fff0c7}
-.offline-status{padding:12px;border-radius:12px;background:#edf8ef;font-weight:700;color:#2e7040}.offline-status.sin-conexion{background:#fff3d6;color:#8a5b00}
-#btnInstalarApp.disponible{box-shadow:0 0 0 3px rgba(201,86,86,.15)}
-.admin-login-card{max-width:480px;margin:24px auto}.admin-login-card h2{margin:0 0 6px}.admin-login-card input{width:100%;margin:14px 0;padding:14px;border:1px solid var(--border);border-radius:12px;font-size:18px}.admin-message{min-height:20px;color:#b33434}
-.admin-toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:14px}.admin-history{display:grid;gap:10px}.admin-history-item{background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px;display:flex;justify-content:space-between;gap:12px}.admin-history-item div{display:grid;gap:3px}.admin-history-item small{color:var(--muted)}.admin-history-item>span{font-size:13px;text-align:right;color:#555}
-@media(max-width:520px){.admin-toolbar{grid-template-columns:1fr}.admin-history-item{flex-direction:column}.admin-history-item>span{text-align:left}}
+
+/* PWA - V5.2.0 */
+.pwa-install-card {
+    display: grid;
+    gap: 14px;
+}
+.pwa-install-copy {
+    display: grid;
+    gap: 5px;
+}
+.pwa-install-copy strong {
+    font-size: 1rem;
+}
+.pwa-install-copy span {
+    color: var(--text-soft, #6f6363);
+    line-height: 1.4;
+}
+@media (display-mode: standalone) {
+    .pwa-install-card {
+        display: none;
+    }
+}
