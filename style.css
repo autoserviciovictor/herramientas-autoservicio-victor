@@ -2322,7 +2322,7 @@ body.login-bloqueado{overflow:hidden}.session-card{display:flex;flex-direction:c
 .admin-entry-card:not(.oculto){border:1px solid #ead7d9;background:linear-gradient(145deg,#fff,#fff8f8)}
 
 
-/* V5.3.7 - Menú de usuario a la derecha */
+/* V5.3.8 - Menú de usuario a la derecha */
 .brand-menu-btn{
   position:absolute;left:14px;top:50%;transform:translateY(-50%);
   width:48px;height:48px;border:1px solid rgba(255,255,255,.48);border-radius:16px;
@@ -2353,7 +2353,7 @@ body.login-bloqueado{overflow:hidden}.session-card{display:flex;flex-direction:c
 }
 
 
-/* V5.3.7 — menú de usuario a la derecha y cierre de sesión centralizado */
+/* V5.3.8 — menú de usuario a la derecha y cierre de sesión centralizado */
 .brand-menu-btn{left:auto!important;right:14px!important}
 .brand-back-btn{left:14px!important}
 .user-dropdown{left:auto!important;right:14px!important}
@@ -2364,3 +2364,7 @@ body.login-bloqueado{overflow:hidden}.session-card{display:flex;flex-direction:c
   .brand-back-btn{left:9px!important}
   .user-dropdown{left:9px!important;right:9px!important;width:auto!important}
 }
+
+/* V5.3.8 — panel administrativo aislado */
+#pantallaAdmin[hidden], #pantallaAdmin:not(.activa) { display: none !important; }
+#pantallaAdmin.activa:not([hidden]) { display: block !important; }

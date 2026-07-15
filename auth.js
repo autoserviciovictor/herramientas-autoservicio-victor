@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=537-menu-derecha";
+import { API_BASE_URL } from "./config.js?v=538-admin-aislado";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
@@ -46,8 +46,18 @@ function actualizarInterfazUsuario() {
   if ($("sesionRol")) $("sesionRol").textContent = textoRol;
   if ($("menuSesionNombre")) $("menuSesionNombre").textContent = nombre || "Usuario";
   if ($("menuSesionRol")) $("menuSesionRol").textContent = textoRol;
+  const esAdministrador = usuarioActual?.rol === "administrador";
   const adminModule = document.querySelector(".admin-module-card");
-  if (adminModule) adminModule.classList.toggle("oculto", usuarioActual?.rol !== "administrador");
+  if (adminModule) adminModule.classList.toggle("oculto", !esAdministrador);
+  const adminPanel = $("pantallaAdmin");
+  if (adminPanel && !esAdministrador) {
+    const estabaActivo = adminPanel.classList.contains("activa");
+    adminPanel.classList.remove("activa");
+    adminPanel.hidden = true;
+    adminPanel.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("en-admin");
+    if (estabaActivo) window.AutoservicioNavigate?.("inicio");
+  }
   window.dispatchEvent(new CustomEvent("autoservicio:sesion", { detail: usuarioActual }));
 }
 

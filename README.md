@@ -62,15 +62,15 @@ La aplicación se puede instalar desde Chrome o Edge mediante el botón **Instal
 Esta entrega almacena la interfaz para que pueda abrirse sin conexión. El guardado offline de inventario, vencimientos y reposición se incorporará por separado.
 
 
-## Modo administrador (V5.3.7)
+## Modo administrador (V5.3.8)
 Configure `ADMIN_KEY` y `ADMIN_TOKEN_SECRET` en Render. El PIN se valida en el servidor y la sesión firmada vence a las 8 horas.
 
 
-## Reposición individual (V5.3.7)
+## Reposición individual (V5.3.8)
 
 La lista de Reposición es temporal y privada por usuario. No usa Google Sheets. Inventario y Vencimientos siguen compartidos. Al marcar un producto como terminado, se elimina. El archivo temporal se guarda por defecto en `data/reposicion-temporal.json`; en servicios con disco efímero puede perderse tras un nuevo despliegue. Para persistencia garantizada se puede configurar `REPOSICION_DATA_FILE` sobre un disco persistente.
 
-## Flujo de la lista de reposición (V5.3.7)
+## Flujo de la lista de reposición (V5.3.8)
 
 - Los productos pendientes se muestran primero.
 - Al marcarlos con la tilde, permanecen visibles con marco verde y pasan al final.
@@ -78,7 +78,7 @@ La lista de Reposición es temporal y privada por usuario. No usa Google Sheets.
 - Al terminar el trabajo, `Empezar nueva lista` elimina todos los registros de la lista personal actual.
 
 
-## Navegación V5.3.7
+## Navegación V5.3.8
 
 - El menú de usuario está en la esquina superior derecha.
 - La flecha de regreso queda disponible en la esquina superior izquierda.

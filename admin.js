@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=537-menu-derecha";
+import { API_BASE_URL } from "./config.js?v=538-admin-aislado";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -20,18 +20,32 @@ async function api(ruta, opciones = {}) {
   return data;
 }
 
+function ocultarPanelAdmin() {
+  const panel = $("pantallaAdmin");
+  if (!panel) return;
+  panel.classList.remove("activa");
+  panel.hidden = true;
+  panel.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("en-admin");
+}
+
 function mostrarPanel() {
+  if (!window.AutoservicioAuth?.esAdmin()) {
+    ocultarPanelAdmin();
+    window.AutoservicioNavigate?.("inicio");
+    return;
+  }
   document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
-  $("pantallaAdmin")?.classList.add("activa");
+  const panel = $("pantallaAdmin");
+  if (!panel) return;
+  panel.hidden = false;
+  panel.setAttribute("aria-hidden", "false");
+  panel.classList.add("activa");
   document.body.className = "en-admin";
   $("brandBackBtn")?.classList.remove("oculto");
   $("brandHeaderTitulo").textContent = "Administración";
   $("brandHeaderSubtitulo").textContent = "Usuarios y listas";
   cargarTodo();
-}
-
-function volverInicio() {
-  window.AutoservicioNavigate?.("inicio");
 }
 
 async function cargarResumen() {
@@ -146,15 +160,21 @@ function cambiarTab(tab) {
   document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.toggle("oculto", p.id !== `adminTab-${tab}`));
 }
 
-function abrirAdmin() { if (window.AutoservicioAuth?.esAdmin()) mostrarPanel(); }
+function abrirAdmin() {
+  if (window.AutoservicioAuth?.esAdmin()) mostrarPanel();
+  else ocultarPanelAdmin();
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);
-  $("btnAdminVolver")?.addEventListener("click", volverInicio);
   $("btnAdminActualizar")?.addEventListener("click", cargarTodo);
   $("btnAdminNuevoUsuario")?.addEventListener("click", abrirNuevoUsuario);
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
   document.querySelectorAll(".admin-tab").forEach(btn => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)));
+  ocultarPanelAdmin();
+  window.addEventListener("autoservicio:sesion", (event) => {
+    if (event.detail?.rol !== "administrador") ocultarPanelAdmin();
+  });
 });

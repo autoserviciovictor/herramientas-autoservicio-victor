@@ -1,3 +1,10 @@
+5.3.8
+- El panel administrativo se mantiene completamente oculto en el inicio.
+- Solo se carga al entrar al módulo Administrador.
+- Los usuarios repositor no pueden visualizarlo aunque exista una sesión anterior en caché.
+- Se eliminó el botón inferior Volver al inicio; se usa la flecha del encabezado.
+- Caché PWA renovada.
+
 5.3.7
 - Menú de usuario trasladado a la derecha del encabezado.
 - Flecha de volver reservada a la izquierda.
