@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.3.4</title>
+    <title>Herramientas Autoservicio Victor V5.3.5</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=534-admin-usuarios">
+    <link rel="stylesheet" href="style.css?v=535-admin-unificado">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.3.4</p>
+    <p>Herramientas V5.3.5</p>
 </div>
 
 <div class="app">
@@ -71,7 +71,7 @@
 
             <button type="button" class="module-card module-anotar" data-modulo="anotar">
                 <span class="module-icon">📝</span>
-                <strong>Anotar</strong>
+                <strong>Lista</strong>
                 <small>Reposición</small>
             </button>
 
@@ -84,7 +84,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.3.4</strong>
+            <strong>V5.3.5</strong>
         </section>
     </main>
 
@@ -253,10 +253,10 @@
 
         <section class="settings-card admin-entry-card">
             <div class="pwa-install-copy">
-                <strong>Modo administrador</strong>
-                <span>Acceso protegido a herramientas privadas</span>
+                <strong>Administración</strong>
+                <span>Usuarios y listas de reposición</span>
             </div>
-            <button type="button" id="btnAbrirAdmin" class="setting-btn">🔒 Ingresar como administrador</button>
+            <button type="button" id="btnAbrirAdmin" class="setting-btn">⚙️ Abrir administración</button>
         </section>
 
         <section class="settings-card danger-zone">
@@ -369,7 +369,7 @@
             </section>
 
             <section id="repoCameraCard" class="camera-card oculto">
-                <div class="scanner-topbar"><strong>Escáner reposición</strong><button id="btnRepoCerrarScanner" type="button">✕ Cerrar</button></div>
+                <div class="scanner-topbar"><strong>Escáner de lista</strong><button id="btnRepoCerrarScanner" type="button">✕ Cerrar</button></div>
                 <video id="videoReposicion" autoplay muted playsinline></video>
                 <div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div>
             </section>
@@ -388,12 +388,12 @@
                     <button id="btnRepoMas" type="button">+</button>
                 </div>
                 <p class="repo-help">ⓘ Indicá la cantidad que hace falta en el salón.</p>
-                <button id="btnRepoGuardar" class="save-btn" type="button">✔ Guardar reposición</button>
+                <button id="btnRepoGuardar" class="save-btn" type="button">✔ Agregar a mi lista</button>
                 <button id="btnRepoCancelar" class="cancel-btn repo-cancel" type="button">Cancelar</button>
             </section>
 
             <section class="venc-list-card repo-recent-card">
-                <div class="venc-list-head"><h2>Últimos agregados</h2><button id="btnRepoVerRegistro" type="button">Ver registro</button></div>
+                <div class="venc-list-head"><h2>Últimos agregados</h2><button id="btnRepoVerRegistro" type="button">Ver mi lista</button></div>
                 <div id="repoRecientes" class="venc-list-empty"><span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small></div>
             </section>
         </section>
@@ -409,8 +409,8 @@
         </section>
 
         <nav class="venc-bottom-nav repo-bottom-nav">
-            <button type="button" class="activo" data-repo-tab="cargar">➕<span>Anotar</span></button>
-            <button type="button" data-repo-tab="registro">☷<span>Registro</span></button>
+            <button type="button" class="activo" data-repo-tab="cargar">➕<span>Agregar</span></button>
+            <button type="button" data-repo-tab="registro">☷<span>Mi lista</span></button>
         </nav>
     </main>
 
@@ -445,7 +445,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Panel administrativo</strong><p>Usuarios y listas privadas</p></div></div>
-            <span id="adminVersion" class="admin-version">V5.3.4</span>
+            <span id="adminVersion" class="admin-version">V5.3.5</span>
         </section>
         <div id="adminMensaje" class="admin-message"></div>
         <section class="settings-card">
@@ -551,9 +551,9 @@
 
 </div>
 
-<script src="./pwa.js?v=534-admin-usuarios" defer></script>
-<script type="module" src="./auth.js?v=534-admin-usuarios"></script>
-<script type="module" src="./admin.js?v=534-admin-usuarios"></script>
-<script type="module" src="./app.js?v=534-admin-usuarios"></script>
+<script src="./pwa.js?v=535-admin-unificado" defer></script>
+<script type="module" src="./auth.js?v=535-admin-unificado"></script>
+<script type="module" src="./admin.js?v=535-admin-unificado"></script>
+<script type="module" src="./app.js?v=535-admin-unificado"></script>
 </body>
 </html>

@@ -1,3 +1,9 @@
+5.3.5
+- Acceso administrativo unificado: los administradores usan su sesión actual sin volver a ingresar clave.
+- Tarjeta Ajustes con el mismo marco, sombra y jerarquía visual que los demás módulos.
+- Módulo Anotar renombrado como Lista.
+- Pestañas internas renombradas como Agregar y Mi lista.
+
 V5.3.4 - Administración de usuarios y listas
 - Crear, editar, activar y desactivar usuarios.
 - Cambiar contraseñas y roles.
@@ -92,3 +98,9 @@ V5.3.0 - Modo administrador
 - Token firmado con vencimiento de 8 horas.
 - Panel administrativo privado y cierre de sesión.
 - Resumen protegido del estado del sistema.
+
+V5.3.5
+- Acceso administrativo unificado: los administradores usan su sesión actual sin volver a ingresar clave.
+- Tarjeta Ajustes con el mismo marco, sombra y jerarquía visual que los demás módulos.
+- Módulo Anotar renombrado como Lista.
+- Pestañas internas renombradas como Agregar y Mi lista.

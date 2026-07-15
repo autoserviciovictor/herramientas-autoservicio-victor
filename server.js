@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.3.4";
+const APP_VERSION = "5.3.5";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1019,7 +1019,7 @@ async function obtenerSheetId(nombreHoja) {
 }
 
 
-// V5.3.2 - Reposición temporal e individual por usuario.
+// V5.3.5 - Reposición temporal e individual por usuario.
 // No utiliza Google Sheets. Cada usuario autenticado administra únicamente su lista.
 const REPOSICION_DATA_FILE = process.env.REPOSICION_DATA_FILE
   ? path.resolve(process.env.REPOSICION_DATA_FILE)

@@ -109,7 +109,7 @@ async function guardar(){
     operacionEnCurso=true;
     const boton=$("btnRepoGuardar"); if(boton) boton.disabled=true;
     await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:productoActual.codigo,articulo:productoActual.articulo,cantidad})});
-    toast("Producto guardado correctamente"); limpiar(); await refrescarReposicion();
+    toast("Producto agregado a tu lista"); limpiar(); await refrescarReposicion();
   }catch(e){toast(e.message,"error");}
   finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton) boton.disabled=false; }
 }
@@ -117,8 +117,8 @@ function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoC
 function actualizarEncabezadoRepo(esCarga){
   const titulo=$("brandHeaderTitulo");
   const subtitulo=$("brandHeaderSubtitulo");
-  if(titulo) titulo.textContent=esCarga?"Anotar reposición":"Registro de reposición";
-  if(subtitulo) subtitulo.textContent=esCarga?"Reposición de salón":"Productos para llevar del depósito";
+  if(titulo) titulo.textContent=esCarga?"Lista de reposición":"Mi lista de reposición";
+  if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos para llevar del depósito";
 }
 function cambiarTab(nueva){
   tab=nueva==="registro"?"registro":"cargar";

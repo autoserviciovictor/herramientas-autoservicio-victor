@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=534-admin-usuarios";
+import { API_BASE_URL } from "./config.js?v=535-admin-unificado";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
