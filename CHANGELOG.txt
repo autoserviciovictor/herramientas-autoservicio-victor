@@ -1,3 +1,11 @@
+V5.3.3 - Corrección de tilde en Registro de reposición
+
+- La tilde cambia la tarjeta de estado inmediatamente.
+- Los productos listos reciben marco verde y pasan debajo de los pendientes.
+- El cambio se confirma con el servidor y se revierte si ocurre un error.
+- Comparación robusta de identificadores y botones dinámicos con type=button.
+- Caché PWA renovada para forzar la actualización instalada.
+
 V5.3.2 - Lista de reposición con productos completados
 - Marcar un producto ya no lo elimina.
 - Los productos completados muestran marco verde y pasan debajo de los pendientes.

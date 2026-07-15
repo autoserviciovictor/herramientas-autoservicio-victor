@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=532-lista-completada";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=532-lista-completada";
-import { ordenarPorBusqueda } from "./search.js?v=532-lista-completada";
+import { API_BASE_URL } from "./config.js?v=533-tilde-reposicion";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=533-tilde-reposicion";
+import { ordenarPorBusqueda } from "./search.js?v=533-tilde-reposicion";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -155,7 +155,7 @@ function renderListado(){
   c.innerHTML=items.length?items.map(r=>{
     const completado=r.estado==="completado";
     return `<article class="repo-simple-item${completado?" completado":""}">
-      <button class="repo-check${completado?" completado":""}" data-repo-accion="${completado?"pendiente":"completar"}" data-id="${r.id}" aria-label="${completado?"Volver a pendiente":"Marcar como llevado"}">✓</button>
+      <button type="button" class="repo-check${completado?" completado":""}" data-repo-accion="${completado?"pendiente":"completar"}" data-id="${escapar(r.id)}" aria-label="${completado?"Volver a pendiente":"Marcar como llevado"}">✓</button>
       <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}${completado?' · Listo':''}</small></div>
       <b class="repo-simple-qty">${numero(r.cantidad)}</b>
     </article>`;
@@ -175,15 +175,58 @@ async function vaciarLista(){
 }
 
 async function manejarAccion(e){
-  const b=e.target.closest("[data-repo-accion]"); if(!b || operacionEnCurso)return;
-  const r=registros.find(x=>x.id===b.dataset.id); if(!r)return;
-  const a=b.dataset.repoAccion;
+  const b=e.target.closest("[data-repo-accion]");
+  if(!b || operacionEnCurso) return;
+
+  const id=String(b.dataset.id||"");
+  const r=registros.find(x=>String(x.id)===id);
+  if(!r) return toast("No se encontró el producto en la lista","error");
+
+  const accion=String(b.dataset.repoAccion||"");
+  const estadoAnterior=r.estado||"pendiente";
+
   try{
-    operacionEnCurso=true; b.disabled=true;
-    if(a==="eliminar"){ if(!confirm(`¿Eliminar ${r.articulo}?`))return; await pedir(`/reposicion/${r.id}`,{method:"DELETE"}); }
-    else if(a==="editar"){ const v=prompt("Nueva cantidad",r.cantidad); if(v===null)return; const n=Number(v); if(!Number.isInteger(n)||n<1)return toast("Cantidad inválida","error"); await pedir(`/reposicion/${r.id}`,{method:"PUT",body:JSON.stringify({cantidad:n,estado:r.estado})}); }
-    else { await pedir(`/reposicion/${r.id}`,{method:"PUT",body:JSON.stringify({cantidad:r.cantidad,estado:a==="completar"?"completado":"pendiente"})}); }
-    await refrescarReposicion();
-  }catch(err){toast(err.message,"error");}
-  finally { operacionEnCurso=false; b.disabled=false; }
+    operacionEnCurso=true;
+    b.disabled=true;
+
+    if(accion==="eliminar"){
+      if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
+      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"DELETE"});
+      registros=registros.filter(item=>String(item.id)!==id);
+      render();
+      return;
+    }
+
+    if(accion==="editar"){
+      const valor=prompt("Nueva cantidad",r.cantidad);
+      if(valor===null) return;
+      const cantidad=Number(valor);
+      if(!Number.isInteger(cantidad)||cantidad<1) return toast("Cantidad inválida","error");
+      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente"})});
+      r.cantidad=cantidad;
+      render();
+      return;
+    }
+
+    const nuevoEstado=accion==="completar"?"completado":"pendiente";
+
+    // Cambio visual inmediato: la tarjeta cambia de color y se reordena sin esperar al servidor.
+    r.estado=nuevoEstado;
+    render();
+
+    await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{
+      method:"PUT",
+      body:JSON.stringify({cantidad:numero(r.cantidad),estado:nuevoEstado})
+    });
+
+    toast(nuevoEstado==="completado"?"Producto marcado como listo":"Producto devuelto a pendientes");
+  }catch(err){
+    r.estado=estadoAnterior;
+    render();
+    toast(err.message,"error");
+  }finally{
+    operacionEnCurso=false;
+    const botonActual=document.querySelector(`[data-repo-accion][data-id="${CSS.escape(id)}"]`);
+    if(botonActual) botonActual.disabled=false;
+  }
 }

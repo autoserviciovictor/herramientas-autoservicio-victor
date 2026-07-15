@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=532-lista-completada";
+import { API_BASE_URL } from "./config.js?v=533-tilde-reposicion";
 
 let token = "";
 
