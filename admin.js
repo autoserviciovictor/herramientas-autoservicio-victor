@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=601-admin-limpio";
+import { API_BASE_URL } from "./config.js?v=602-mejoras";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -114,13 +114,102 @@ async function guardarUsuario() {
   finally { btn.disabled = false; }
 }
 
+let historialLimite = 20;
+
+function escaparHtml(valor) {
+  return String(valor ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function fechaHistorial(valor) {
+  const partes = String(valor || "").split(/[\/\-]/).map(Number);
+  if (partes.length !== 3) return null;
+  const [a,b,c] = partes;
+  const d = a > 1900 ? new Date(a,b-1,c) : new Date(c,b-1,a);
+  d.setHours(0,0,0,0);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function historialFiltrado() {
+  const periodo = $("historialPeriodo")?.value || "hoy";
+  const usuario = $("historialUsuario")?.value || "todos";
+  const accion = $("historialAccion")?.value || "todos";
+  const buscar = ($("historialBuscar")?.value || "").trim().toLocaleLowerCase("es");
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return historialVencimientos.filter(h => {
+    const fecha = fechaHistorial(h.fecha);
+    if (periodo !== "todos" && fecha) {
+      const dias = Math.floor((hoy - fecha) / 86400000);
+      if (periodo === "hoy" && dias !== 0) return false;
+      if (periodo === "7" && (dias < 0 || dias > 6)) return false;
+      if (periodo === "30" && (dias < 0 || dias > 29)) return false;
+    }
+    if (usuario !== "todos" && String(h.usuario) !== usuario) return false;
+    if (accion !== "todos" && String(h.accion) !== accion) return false;
+    if (buscar) {
+      const texto = `${h.articulo||""} ${h.codigo||""} ${h.nombre||""} ${h.usuario||""}`.toLocaleLowerCase("es");
+      if (!texto.includes(buscar)) return false;
+    }
+    return true;
+  });
+}
+
+function renderResumenHistorial(items) {
+  const cont = $("adminHistorialResumen"); if (!cont) return;
+  if (!items.length) { cont.innerHTML = ""; return; }
+  const porUsuario = new Map();
+  items.forEach(h => {
+    const clave = h.nombre || h.usuario || "Usuario";
+    porUsuario.set(clave, (porUsuario.get(clave) || 0) + 1);
+  });
+  const usuarios = [...porUsuario.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4);
+  cont.innerHTML = `<div class="history-summary-total"><strong>${items.length}</strong><span>movimientos</span></div>${usuarios.map(([nombre,cantidad])=>`<div><strong>${cantidad}</strong><span>${escaparHtml(nombre)}</span></div>`).join("")}`;
+}
+
+function renderHistorial() {
+  const cont = $("adminHistorialLista"); if (!cont) return;
+  const items = historialFiltrado();
+  renderResumenHistorial(items);
+  const visibles = items.slice(0, historialLimite);
+  if (!items.length) {
+    cont.innerHTML = '<div class="empty-state">No hay movimientos para estos filtros.</div>';
+  } else {
+    let fechaActual = "";
+    cont.innerHTML = visibles.map((h, indice) => {
+      const separador = h.fecha !== fechaActual ? `<div class="history-day-title">${escaparHtml(h.fecha || "Sin fecha")}</div>` : "";
+      fechaActual = h.fecha;
+      return `${separador}<article class="admin-history-card compacta" data-history-index="${indice}">
+        <button type="button" class="history-card-toggle" aria-expanded="false">
+          <div><strong>${escaparHtml(h.accion)} · ${escaparHtml(h.articulo || "Producto")}</strong><span>${escaparHtml(h.hora)} · ${escaparHtml(h.nombre || h.usuario)}</span></div><span class="history-chevron">⌄</span>
+        </button>
+        <div class="history-detail oculto"><small>Código: ${escaparHtml(h.codigo || "—")}</small>${h.vencimiento ? `<small>Vencimiento: ${escaparHtml(h.vencimiento)}</small>` : ""}${h.detalle ? `<p>${escaparHtml(h.detalle)}</p>` : ""}</div>
+      </article>`;
+    }).join("");
+    cont.querySelectorAll('.history-card-toggle').forEach(btn => btn.addEventListener('click', () => {
+      const detalle = btn.parentElement.querySelector('.history-detail');
+      const abierto = !detalle.classList.contains('oculto');
+      detalle.classList.toggle('oculto', abierto);
+      btn.setAttribute('aria-expanded', String(!abierto));
+    }));
+  }
+  const mas = $("btnHistorialCargarMas");
+  if (mas) mas.classList.toggle("oculto", items.length <= historialLimite);
+}
+
+function actualizarUsuariosFiltro() {
+  const select = $("historialUsuario"); if (!select) return;
+  const actual = select.value;
+  const mapa = new Map();
+  historialVencimientos.forEach(h => mapa.set(h.usuario || h.nombre, h.nombre || h.usuario));
+  select.innerHTML = '<option value="todos">Todos los usuarios</option>' + [...mapa.entries()].filter(([u])=>u).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),"es")).map(([u,n])=>`<option value="${escaparHtml(u)}">${escaparHtml(n)}</option>`).join("");
+  if ([...select.options].some(o=>o.value===actual)) select.value=actual;
+}
+
 async function cargarHistorialVencimientos() {
   const data = await api("/admin/historial-vencimientos");
   historialVencimientos = data.historial || [];
-  const cont = $("adminHistorialLista");
-  if (!cont) return;
-  if (!historialVencimientos.length) { cont.innerHTML = '<div class="empty-state">Todavía no hay movimientos registrados.</div>'; return; }
-  cont.innerHTML = historialVencimientos.map(h => `<article class="admin-history-card"><div><strong>${h.accion} · ${h.articulo || "Producto"}</strong><span>${h.fecha} ${h.hora} · ${h.nombre || h.usuario}</span><small>${h.codigo || ""} ${h.vencimiento ? `· Vence ${h.vencimiento}` : ""}</small>${h.detalle ? `<p>${h.detalle}</p>` : ""}</div></article>`).join("");
+  historialLimite = 20;
+  actualizarUsuariosFiltro();
+  renderHistorial();
 }
 
 async function cargarTodo() {
@@ -147,6 +236,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
   document.querySelectorAll(".admin-tab").forEach(btn => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)));
+  ["historialPeriodo","historialUsuario","historialAccion"].forEach(id => $(id)?.addEventListener("change", () => { historialLimite=20; renderHistorial(); }));
+  $("historialBuscar")?.addEventListener("input", () => { historialLimite=20; renderHistorial(); });
+  $("btnHistorialCargarMas")?.addEventListener("click", () => { historialLimite += 20; renderHistorial(); });
   ocultarPanelAdmin();
   window.addEventListener("autoservicio:sesion", (event) => {
     if (event.detail?.rol !== "administrador") ocultarPanelAdmin();

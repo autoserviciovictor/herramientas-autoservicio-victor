@@ -1,6 +1,6 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "description": "Servidor de Herramientas Autoservicio Victor V5.3.5 - Administración unificada y módulo Lista",
   "main": "server.js",
   "scripts": {

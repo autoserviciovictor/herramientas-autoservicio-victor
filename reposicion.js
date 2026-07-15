@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=534-admin-usuarios";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=534-admin-usuarios";
-import { ordenarPorBusqueda } from "./search.js?v=534-admin-usuarios";
+import { API_BASE_URL } from "./config.js?v=602-mejoras";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=602-mejoras";
+import { ordenarPorBusqueda } from "./search.js?v=602-mejoras";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -164,7 +164,13 @@ function renderListado(){
 
 async function vaciarLista(){
   if(operacionEnCurso || !registros.length) return;
-  if(!confirm("¿Empezar una nueva lista? Se eliminarán todos los productos de la lista actual.")) return;
+  const confirmar = await window.AppDialog.confirm({
+    titulo: "Empezar una nueva lista",
+    mensaje: "Se eliminarán todos los productos de tu lista actual. Esta acción no se puede deshacer.",
+    confirmarTexto: "Empezar nueva lista",
+    peligro: true
+  });
+  if(!confirmar) return;
   try {
     operacionEnCurso=true;
     const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=true;
@@ -190,7 +196,8 @@ async function manejarAccion(e){
     b.disabled=true;
 
     if(accion==="eliminar"){
-      if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
+      const confirmar = await window.AppDialog.confirm({ titulo: "Eliminar producto", mensaje: `¿Eliminar ${r.articulo} de tu lista?`, confirmarTexto: "Eliminar", peligro: true });
+      if(!confirmar) return;
       await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"DELETE"});
       registros=registros.filter(item=>String(item.id)!==id);
       render();
@@ -198,8 +205,8 @@ async function manejarAccion(e){
     }
 
     if(accion==="editar"){
-      const valor=prompt("Nueva cantidad",r.cantidad);
-      if(valor===null) return;
+      const valor=await window.AppDialog.prompt({ titulo: "Editar cantidad", mensaje: r.articulo, confirmarTexto: "Guardar", valor: r.cantidad });
+      if(valor===false || valor===null) return;
       const cantidad=Number(valor);
       if(!Number.isInteger(cantidad)||cantidad<1) return toast("Cantidad inválida","error");
       await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente"})});

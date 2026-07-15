@@ -89,3 +89,6 @@ La lista de Reposición es temporal y privada por usuario. No usa Google Sheets.
 La aplicación puede abrir datos previamente consultados sin conexión y guardar temporalmente operaciones de Inventario, Vencimientos y Lista. Los cambios pendientes se sincronizan automáticamente al recuperar Internet.
 
 El servidor crea automáticamente la hoja `Historial Vencimientos`, visible desde Administración, con el usuario, fecha y hora de cada alta, edición o eliminación.
+
+## V6.0.2
+Incluye diálogos integrados, historial administrativo resumido y actualizaciones de PWA con confirmación del usuario.

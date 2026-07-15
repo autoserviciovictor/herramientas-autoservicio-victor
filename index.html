@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V6.0.1</title>
+    <title>Herramientas Autoservicio Victor V6.0.2</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=601-admin-limpio">
+    <link rel="stylesheet" href="style.css?v=602-mejoras">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V6.0.1</p>
+    <p>Herramientas V6.0.2</p>
 </div>
 
 <div class="app">
@@ -93,7 +93,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.0.1</strong>
+            <strong>V6.0.2</strong>
         </section>
     </main>
 
@@ -249,6 +249,8 @@
                 <span id="estadoInstalacionApp">Preparando instalación...</span>
             </div>
             <button type="button" id="btnInstalarApp" class="setting-btn">⬇ Instalar aplicación</button>
+            <div class="pwa-update-row"><span>Versión instalada</span><strong id="versionInstaladaApp">6.0.2</strong></div>
+            <div class="pwa-update-row"><span>Actualización</span><strong id="estadoActualizacionApp">Actualizada</strong></div>
         </section>
 
 
@@ -439,7 +441,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.0.1</span>
+            <span id="adminVersion" class="admin-version">V6.0.2</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -456,8 +458,16 @@
         </section>
 
         <section id="adminTab-historial" class="admin-tab-panel settings-card oculto">
-            <div class="admin-section-head"><div><strong>Historial de vencimientos</strong><span>Quién y cuándo creó, editó o eliminó registros</span></div></div>
+            <div class="admin-section-head"><div><strong>Historial de vencimientos</strong><span>Resumen por día y usuario</span></div></div>
+            <div class="history-filters">
+                <select id="historialPeriodo" aria-label="Período"><option value="hoy">Hoy</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="todos">Todo</option></select>
+                <select id="historialUsuario" aria-label="Usuario"><option value="todos">Todos los usuarios</option></select>
+                <select id="historialAccion" aria-label="Acción"><option value="todos">Todas las acciones</option><option value="Creó">Creó</option><option value="Editó">Editó</option><option value="Eliminó">Eliminó</option></select>
+                <input id="historialBuscar" type="search" placeholder="Buscar producto o código…">
+            </div>
+            <div id="adminHistorialResumen" class="history-summary"></div>
             <div id="adminHistorialLista" class="admin-history-list"></div>
+            <button id="btnHistorialCargarMas" type="button" class="setting-btn oculto">Cargar movimientos anteriores</button>
         </section>
 
         <section id="adminTab-sistema" class="admin-tab-panel settings-card oculto">
@@ -466,7 +476,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">6.0.1</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.0.2</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
         </section>
@@ -550,10 +560,30 @@
 
 </div>
 
-<script src="./pwa.js?v=601-admin-limpio" defer></script>
-<script type="module" src="./auth.js?v=601-admin-limpio"></script>
-<script type="module" src="./admin.js?v=601-admin-limpio"></script>
-<script type="module" src="./app.js?v=601-admin-limpio"></script>
+<div id="appDialogOverlay" class="app-dialog-overlay oculto" aria-hidden="true">
+  <div class="app-dialog-card" role="dialog" aria-modal="true" aria-labelledby="appDialogTitulo">
+    <button id="appDialogCerrar" type="button" class="app-dialog-close" aria-label="Cerrar">×</button>
+    <div class="app-dialog-icon">📝</div>
+    <h2 id="appDialogTitulo">Confirmar</h2>
+    <p id="appDialogMensaje"></p>
+    <label id="appDialogInputWrap" class="app-dialog-input-wrap oculto"><span>Valor</span><input id="appDialogInput" type="text"></label>
+    <div class="app-dialog-actions"><button id="appDialogCancelar" type="button" class="secondary-btn">Cancelar</button><button id="appDialogConfirmar" type="button" class="save-btn">Aceptar</button></div>
+  </div>
+</div>
+
+<div id="updateOverlay" class="app-dialog-overlay oculto" aria-hidden="true">
+  <div class="app-dialog-card update-dialog-card" role="dialog" aria-modal="true">
+    <div class="app-dialog-icon">🔄</div><h2>Nueva versión disponible</h2>
+    <p>Hay una actualización lista para instalar. La sesión y los cambios pendientes se conservarán.</p>
+    <div class="app-dialog-actions"><button id="btnActualizarDespues" type="button" class="secondary-btn">Después</button><button id="btnActualizarAhora" type="button" class="save-btn">Actualizar ahora</button></div>
+  </div>
+</div>
+
+<script src="./dialog.js?v=602-mejoras" defer></script>
+<script src="./pwa.js?v=602-mejoras" defer></script>
+<script type="module" src="./auth.js?v=602-mejoras"></script>
+<script type="module" src="./admin.js?v=602-mejoras"></script>
+<script type="module" src="./app.js?v=602-mejoras"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>
