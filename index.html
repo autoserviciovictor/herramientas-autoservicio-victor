@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.1.1</title>
+    <title>Herramientas Autoservicio Victor V5.1.3</title>
 
-    <link rel="stylesheet" href="style.css?v=511-correcciones-finales">
+    <link rel="stylesheet" href="style.css?v=513-entrega3">
 
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
 <body>
 
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.1.1</p>
+    <p>Herramientas V5.1.3</p>
 </div>
 
 <div class="app">
@@ -35,25 +35,25 @@
         </header>
 
         <section class="module-grid">
-            <button class="module-card module-inventario" data-modulo="inventario">
+            <button type="button" class="module-card module-inventario" data-modulo="inventario">
                 <span class="module-icon">📦</span>
                 <strong>Inventario</strong>
                 <small>Contar stock</small>
             </button>
 
-            <button class="module-card module-vencimientos" data-modulo="vencimientos">
+            <button type="button" class="module-card module-vencimientos" data-modulo="vencimientos">
                 <span class="module-icon">📅</span>
                 <strong>Vencimientos</strong>
                 <small>Control de fechas</small>
             </button>
 
-            <button class="module-card module-anotar" data-modulo="anotar">
+            <button type="button" class="module-card module-anotar" data-modulo="anotar">
                 <span class="module-icon">📝</span>
                 <strong>Anotar</strong>
                 <small>Reposición</small>
             </button>
 
-            <button class="module-card module-ajustes" data-modulo="ajustes">
+            <button type="button" class="module-card module-ajustes" data-modulo="ajustes">
                 <span class="module-icon">⚙️</span>
                 <strong>Ajustes</strong>
                 <small>Configuración</small>
@@ -68,7 +68,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.1.1</strong>
+            <strong>V5.1.3</strong>
         </section>
     </main>
 
@@ -81,17 +81,17 @@
         <section class="inventory-location-card" aria-label="Ubicación de conteo">
             <span>¿Dónde estás contando?</span>
             <div class="location-grid">
-                <button id="btnSalon" class="location-btn activo">🏪 Salón</button>
-                <button id="btnDeposito" class="location-btn">📦 Depósito</button>
+                <button type="button" id="btnSalon" class="location-btn activo">🏪 Salón</button>
+                <button type="button" id="btnDeposito" class="location-btn">📦 Depósito</button>
             </div>
         </section>
 
         <section id="scanPanel" class="scan-panel">
-            <button id="btnAbrirScanner" class="scan-open-btn">📷 Abrir escáner</button>
-            <button id="btnCodigoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <button type="button" id="btnAbrirScanner" class="scan-open-btn">📷 Abrir escáner</button>
+            <button type="button" id="btnCodigoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
             <div id="manualPanel" class="manual-panel oculto">
                 <input type="text" id="codigoManualInput" inputmode="numeric" placeholder="Código de barras">
-                <button id="btnBuscarManual">Buscar</button>
+                <button type="button" id="btnBuscarManual">Buscar</button>
             </div>
         </section>
 
@@ -125,13 +125,13 @@
         <section id="quantityCard" class="quantity-card oculto">
             <p>Cantidad a agregar</p>
             <div class="quantity-control">
-                <button id="btnMenosCantidad">−</button>
+                <button type="button" id="btnMenosCantidad">−</button>
                 <input type="number" id="cantidadInput" min="1" step="1" value="1" inputmode="numeric">
-                <button id="btnMasCantidad">+</button>
+                <button type="button" id="btnMasCantidad">+</button>
             </div>
             <div class="action-row">
                 <button id="btnCancelarCantidad" class="cancel-btn" type="button">Cancelar ✕</button>
-                <button id="btnGuardarCantidad" class="save-btn" disabled>Guardar ✓</button>
+                <button type="button" id="btnGuardarCantidad" class="save-btn" disabled>Guardar ✓</button>
             </div>
         </section>
 
@@ -158,7 +158,7 @@
 
     <main id="pantallaEditarProducto" class="pantalla">
         <header class="header-edit">
-            <button id="btnVolverProductos" class="back-btn">‹</button>
+            <button type="button" id="btnVolverProductos" class="back-btn">‹</button>
             <div>
                 <h1>Editar producto</h1>
                 <p>Modificá salón o depósito manualmente</p>
@@ -174,23 +174,23 @@
             <div class="edit-row salon-row">
                 <label>Salón</label>
                 <div class="quantity-control small">
-                    <button id="btnMenosSalon">−</button>
+                    <button type="button" id="btnMenosSalon">−</button>
                     <input type="number" id="editarSalon" min="0" step="1" value="0" inputmode="numeric">
-                    <button id="btnMasSalon">+</button>
+                    <button type="button" id="btnMasSalon">+</button>
                 </div>
             </div>
 
             <div class="edit-row deposito-row">
                 <label>Depósito</label>
                 <div class="quantity-control small">
-                    <button id="btnMenosDeposito">−</button>
+                    <button type="button" id="btnMenosDeposito">−</button>
                     <input type="number" id="editarDeposito" min="0" step="1" value="0" inputmode="numeric">
-                    <button id="btnMasDeposito">+</button>
+                    <button type="button" id="btnMasDeposito">+</button>
                 </div>
             </div>
 
             <div class="edit-total"><span>Total</span><strong id="editarTotal">0</strong></div>
-            <button id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
+            <button type="button" id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
             <button id="btnCancelarCorreccion" class="cancel-btn" type="button">Cancelar</button>
         </section>
     </main>
@@ -203,8 +203,8 @@
 
         <section class="settings-card">
             <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
-            <button id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
-            <button id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel para importar</button>
+            <button type="button" id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
+            <button type="button" id="btnDescargar" class="setting-btn" disabled>💾 Descargar Excel para importar</button>
         </section>
 
         <section class="settings-card">
@@ -219,7 +219,7 @@
         </section>
 
         <section class="settings-card danger-zone">
-            <button id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
+            <button type="button" id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
             <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
         </section>
     </main>
@@ -227,11 +227,11 @@
     <main id="pantallaVencimientos" class="pantalla">
 
         <section class="venc-actions-card">
-            <button id="btnVencAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
-            <button id="btnVencManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <button type="button" id="btnVencAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
+            <button type="button" id="btnVencManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
             <div id="vencManualPanel" class="manual-panel oculto">
                 <input type="text" id="vencCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
-                <button id="btnVencBuscarManual">Buscar</button>
+                <button type="button" id="btnVencBuscarManual">Buscar</button>
             </div>
         </section>
 
@@ -282,7 +282,7 @@
 
             <div class="venc-total"><span>Total</span><strong id="vencTotalTexto">0</strong></div>
             <div class="venc-form-actions">
-                <button id="btnVencGuardar" class="save-btn">✔ Guardar vencimiento</button>
+                <button type="button" id="btnVencGuardar" class="save-btn">✔ Guardar vencimiento</button>
                 <button id="btnVencCancelarCarga" class="cancel-btn" type="button">Cancelar</button>
             </div>
         </section>
@@ -316,8 +316,8 @@
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
         <section id="repoCargaVista">
             <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
-                <button id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
-                <button id="btnRepoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+                <button type="button" id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
+                <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
                 <div id="repoManualPanel" class="manual-panel oculto">
                     <input id="repoCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
                     <button id="btnRepoBuscarManual" type="button">Buscar</button>
@@ -370,9 +370,9 @@
     </main>
 
     <nav class="bottom-nav" aria-label="Navegación de inventario">
-        <button class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
-        <button class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
-        <button class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
+        <button type="button" class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
+        <button type="button" class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
+        <button type="button" class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
     </nav>
 
     <div id="toast" class="toast"></div>
@@ -460,6 +460,6 @@
 
 </div>
 
-<script type="module" src="./app.js?v=511-correcciones-finales"></script>
+<script type="module" src="./app.js?v=513-entrega3"></script>
 </body>
 </html>

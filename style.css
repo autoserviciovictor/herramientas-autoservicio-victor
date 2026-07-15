@@ -2227,3 +2227,29 @@ body.en-editor-producto #pantallaEditarProducto{padding-bottom:28px!important}
 .repo-registro-card{padding-bottom:18px!important}
 .repo-search-row{margin-bottom:14px!important}
 @media(max-width:390px){.repo-simple-item{grid-template-columns:44px 1fr auto;padding:12px;gap:9px}.repo-simple-copy strong{font-size:16px}.repo-simple-qty{font-size:26px;min-width:42px}}
+
+/* ===== Entrega 3: estabilidad, accesibilidad y cámara ===== */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(63, 135, 88, 0.32);
+    outline-offset: 2px;
+}
+
+button:disabled {
+    pointer-events: none;
+}
+
+video {
+    background: #111;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

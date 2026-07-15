@@ -49,3 +49,7 @@ npm run check
 El endpoint `/reiniciar` queda deshabilitado si `RESET_KEY` no está configurada. Para ejecutarlo requiere el encabezado `x-reset-key` y el texto exacto `REINICIAR INVENTARIO` en `confirmacion`.
 
 Las escrituras generales pueden protegerse mediante `API_WRITE_KEY`. Esta opción se mantiene desactivada si la variable está vacía para conservar compatibilidad con el frontend actual.
+
+## Escáner
+
+La aplicación utiliza `@zxing/library` 0.23.0 fijado desde UNPKG. Solo puede existir una sesión de cámara activa entre los módulos. Al cerrar o cambiar de módulo se detienen todos los tracks de video.

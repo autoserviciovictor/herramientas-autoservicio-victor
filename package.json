@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "5.1.2",
-  "description": "Servidor de Herramientas Autoservicio Victor conectado a Google Sheets",
+  "version": "5.1.3",
+  "description": "Servidor de Herramientas Autoservicio Victor V5.1.3",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

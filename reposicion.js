@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=512-entrega2";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=512-entrega2";
+import { API_BASE_URL } from "./config.js?v=513-entrega3";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=513-entrega3";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
