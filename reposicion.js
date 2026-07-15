@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=531-repo-individual";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=531-repo-individual";
-import { ordenarPorBusqueda } from "./search.js?v=531-repo-individual";
+import { API_BASE_URL } from "./config.js?v=532-lista-completada";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=532-lista-completada";
+import { ordenarPorBusqueda } from "./search.js?v=532-lista-completada";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -143,24 +143,33 @@ function renderListado(){
   const c=$("repoListado"); if(!c)return;
   const q=($("repoBuscador")?.value||"").trim();
   const pendientes=registros.filter(r=>r.estado!=="completado");
-  const items=q ? ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}) : pendientes;
+  const completados=registros.filter(r=>r.estado==="completado");
+  const items=q
+    ? [
+        ...ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}),
+        ...ordenarPorBusqueda(completados,q,{limite:200,campos:["articulo","codigo"]})
+      ]
+    : [...pendientes,...completados];
   c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
-  const vaciar=$("btnRepoVaciarLista"); if(vaciar) vaciar.disabled=!items.length;
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-simple-item">
-      <button class="repo-check" data-repo-accion="completar" data-id="${r.id}" aria-label="Marcar como llevado">✓</button>
-      <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small></div>
+  const nuevaLista=$("btnRepoVaciarLista"); if(nuevaLista) nuevaLista.disabled=!registros.length;
+  c.innerHTML=items.length?items.map(r=>{
+    const completado=r.estado==="completado";
+    return `<article class="repo-simple-item${completado?" completado":""}">
+      <button class="repo-check${completado?" completado":""}" data-repo-accion="${completado?"pendiente":"completar"}" data-id="${r.id}" aria-label="${completado?"Volver a pendiente":"Marcar como llevado"}">✓</button>
+      <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}${completado?' · Listo':''}</small></div>
       <b class="repo-simple-qty">${numero(r.cantidad)}</b>
-    </article>`).join(""):`<span class="empty-icon">📦</span><strong>No hay productos para llevar.</strong><small>Los productos anotados aparecerán acá.</small>`;
+    </article>`;
+  }).join(""):`<span class="empty-icon">📦</span><strong>No hay productos en esta lista.</strong><small>Los productos anotados aparecerán acá.</small>`;
 }
 
 async function vaciarLista(){
   if(operacionEnCurso || !registros.length) return;
-  if(!confirm("¿Vaciar por completo tu lista de reposición?")) return;
+  if(!confirm("¿Empezar una nueva lista? Se eliminarán todos los productos de la lista actual.")) return;
   try {
     operacionEnCurso=true;
     const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=true;
     await pedir("/reposicion",{method:"DELETE"});
-    registros=[]; render(); toast("Tu lista quedó vacía");
+    registros=[]; render(); toast("Nueva lista lista para comenzar");
   } catch(error){ toast(error.message,"error"); }
   finally { operacionEnCurso=false; const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=false; }
 }

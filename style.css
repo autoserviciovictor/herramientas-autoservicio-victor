@@ -2295,3 +2295,13 @@ body.login-bloqueado{overflow:hidden}.session-card{display:flex;flex-direction:c
 
 /* V5.3.1 - Reposición individual */
 .repo-user-strip{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 14px 12px;padding:9px 12px;border:1px solid #f0d6d7;border-radius:12px;background:#fff7f7;color:#6f4a4c;font-size:13px}.repo-user-strip strong{color:#b72e35}.repo-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 14px}.repo-list-toolbar span{font-size:12px;color:#777}.repo-list-toolbar button{border:1px solid #e0a6a9;background:#fff;color:#b72e35;border-radius:10px;padding:8px 11px;font-weight:700}.repo-list-toolbar button:disabled{opacity:.45}
+
+/* V5.3.2 - Productos completados conservados hasta iniciar una nueva lista */
+.repo-simple-item{transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease}
+.repo-simple-item.completado{border:2px solid #22a95f;background:#f1fff6;box-shadow:0 6px 18px rgba(34,169,95,.14)}
+.repo-simple-item.completado .repo-simple-copy strong{color:#12743e}
+.repo-simple-item.completado .repo-simple-copy small{color:#21824c;font-weight:800}
+.repo-simple-item.completado .repo-simple-qty{color:#15934e}
+.repo-check.completado{background:#22a95f;color:#fff;border-color:#22a95f;box-shadow:0 4px 10px rgba(34,169,95,.22)}
+#btnRepoVaciarLista{background:#e9343c;color:#fff;border:0;border-radius:12px;padding:10px 13px;font-weight:900}
+#btnRepoVaciarLista:disabled{opacity:.45}

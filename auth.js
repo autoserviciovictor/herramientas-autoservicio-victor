@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=531-repo-individual";
+import { API_BASE_URL } from "./config.js?v=532-lista-completada";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

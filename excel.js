@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=531-repo-individual";
-import { ordenarPorBusqueda } from "./search.js?v=531-repo-individual";
+import { API_BASE_URL } from "./config.js?v=532-lista-completada";
+import { ordenarPorBusqueda } from "./search.js?v=532-lista-completada";
 
 let datos = [];
 let contador = 0;

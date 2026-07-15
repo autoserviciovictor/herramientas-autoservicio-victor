@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.3.1";
+const APP_VERSION = "5.3.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -924,7 +924,7 @@ async function obtenerSheetId(nombreHoja) {
 }
 
 
-// V5.3.1 - Reposición temporal e individual por usuario.
+// V5.3.2 - Reposición temporal e individual por usuario.
 // No utiliza Google Sheets. Cada usuario autenticado administra únicamente su lista.
 const REPOSICION_DATA_FILE = process.env.REPOSICION_DATA_FILE
   ? path.resolve(process.env.REPOSICION_DATA_FILE)
@@ -1015,6 +1015,7 @@ app.post("/reposicion", async (req, res) => {
       const ahora = fechaHoraArgentinaIso();
       if (existente) {
         existente.cantidad = (enteroPositivo(existente.cantidad) || 0) + cantidad;
+        existente.estado = "pendiente";
         existente.actualizado = ahora;
         guardarReposicionTemporal();
         return { mensaje: "Cantidad sumada a tu lista", registro: limpiarRegistroReposicion(existente) };
@@ -1044,23 +1045,24 @@ app.put("/reposicion/:id", async (req, res) => {
         error.statusCode = 404;
         throw error;
       }
-      if (estado === "completado") {
-        const [eliminado] = lista.splice(indice, 1);
+      if (estado === "completado" || estado === "pendiente") {
+        const cantidad = enteroPositivo(req.body.cantidad);
+        if (cantidad === null) {
+          const error = new Error("Ingresá una cantidad entera mayor a 0");
+          error.statusCode = 400;
+          throw error;
+        }
+        lista[indice].cantidad = cantidad;
+        lista[indice].estado = estado;
+        lista[indice].actualizado = fechaHoraArgentinaIso();
         guardarReposicionTemporal();
-        return { eliminado: true, registro: limpiarRegistroReposicion(eliminado) };
+        return { registro: limpiarRegistroReposicion(lista[indice]) };
       }
-      const cantidad = enteroPositivo(req.body.cantidad);
-      if (cantidad === null) {
-        const error = new Error("Ingresá una cantidad entera mayor a 0");
-        error.statusCode = 400;
-        throw error;
-      }
-      lista[indice].cantidad = cantidad;
-      lista[indice].actualizado = fechaHoraArgentinaIso();
-      guardarReposicionTemporal();
-      return { eliminado: false, registro: limpiarRegistroReposicion(lista[indice]) };
+      const error = new Error("Estado de reposición inválido");
+      error.statusCode = 400;
+      throw error;
     });
-    res.json({ ok: true, mensaje: actualizado.eliminado ? "Producto terminado y eliminado de tu lista" : "Cantidad actualizada", ...actualizado });
+    res.json({ ok: true, mensaje: estado === "completado" ? "Producto marcado como listo" : "Producto devuelto a pendientes", ...actualizado });
   } catch (error) {
     console.error("Error en PUT /reposicion/:id:", error);
     res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al actualizar reposición" });
@@ -1087,7 +1089,7 @@ app.delete("/reposicion", (req, res) => {
   try {
     reposicionPorUsuario.set(req.usuario.usuario, []);
     guardarReposicionTemporal();
-    res.json({ ok: true, mensaje: "Tu lista quedó vacía" });
+    res.json({ ok: true, mensaje: "Nueva lista creada" });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo vaciar la lista" });
   }
