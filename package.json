@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "5.3.0",
-  "description": "Servidor de Herramientas Autoservicio Victor V5.3.0 - Login y usuarios",
+  "version": "5.3.1",
+  "description": "Servidor de Herramientas Autoservicio Victor V5.3.1 - Reposición individual por usuario",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

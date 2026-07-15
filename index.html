@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V5.3.0</title>
+    <title>Herramientas Autoservicio Victor V5.3.1</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=530-login">
+    <link rel="stylesheet" href="style.css?v=531-repo-individual">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V5.3.0</p>
+    <p>Herramientas V5.3.1</p>
 </div>
 
 <div class="app">
@@ -84,7 +84,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V5.3.0</strong>
+            <strong>V5.3.1</strong>
         </section>
     </main>
 
@@ -355,6 +355,9 @@
 
 
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
+        <section class="repo-user-strip" aria-label="Lista personal">
+            <span>Lista de</span><strong id="repoUsuarioActual">Mi usuario</strong>
+        </section>
         <section id="repoCargaVista">
             <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
                 <button type="button" id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
@@ -398,6 +401,7 @@
         <section id="repoRegistroVista" class="oculto">
             <section class="venc-list-card repo-registro-card">
                 <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
+                <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><button id="btnRepoVaciarLista" type="button" disabled>Vaciar lista</button></div>
 
                 <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
 
@@ -441,7 +445,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Panel administrativo</strong><p>Sesión privada activa</p></div></div>
-            <span id="adminVersion" class="admin-version">V5.3.0</span>
+            <span id="adminVersion" class="admin-version">V5.3.1</span>
         </section>
         <section class="settings-card">
             <div id="adminServidorEstado" class="admin-server-status">Consultando servidor…</div>
@@ -536,9 +540,9 @@
 
 </div>
 
-<script src="./pwa.js?v=530-login" defer></script>
-<script type="module" src="./auth.js?v=530-login"></script>
-<script type="module" src="./admin.js?v=530-login"></script>
-<script type="module" src="./app.js?v=530-login"></script>
+<script src="./pwa.js?v=531-repo-individual" defer></script>
+<script type="module" src="./auth.js?v=531-repo-individual"></script>
+<script type="module" src="./admin.js?v=531-repo-individual"></script>
+<script type="module" src="./app.js?v=531-repo-individual"></script>
 </body>
 </html>

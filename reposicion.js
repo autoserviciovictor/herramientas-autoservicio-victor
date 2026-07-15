@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=530-login";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=530-login";
-import { ordenarPorBusqueda } from "./search.js?v=530-login";
+import { API_BASE_URL } from "./config.js?v=531-repo-individual";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=531-repo-individual";
+import { ordenarPorBusqueda } from "./search.js?v=531-repo-individual";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -62,12 +62,23 @@ export function inicializarReposicion(){
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.addEventListener("click",()=>cambiarTab(b.dataset.repoTab)));
   $("repoBuscador")?.addEventListener("input",render);
   $("repoListado")?.addEventListener("click",manejarAccion);
+  $("btnRepoVaciarLista")?.addEventListener("click", vaciarLista);
+  window.addEventListener("autoservicio:sesion", actualizarUsuarioReposicion);
 }
 
-export function prepararReposicion(){ cambiarTab("cargar"); }
+export function prepararReposicion(){
+  actualizarUsuarioReposicion();
+  cambiarTab("cargar");
+}
+
+function actualizarUsuarioReposicion(){
+  const usuario = window.AutoservicioAuth?.getUsuario?.();
+  const nombre = usuario?.nombre || usuario?.usuario || "Mi usuario";
+  if ($("repoUsuarioActual")) $("repoUsuarioActual").textContent = nombre;
+}
 
 export async function refrescarReposicion(){
-  try { const data=await pedir("/reposicion"); registros=data.registros||[]; render(); }
+  try { const data=await pedir("/reposicion"); registros=data.registros||[]; actualizarUsuarioReposicion(); render(); }
   catch(e){ toast(e.message,"error"); }
 }
 
@@ -134,11 +145,24 @@ function renderListado(){
   const pendientes=registros.filter(r=>r.estado!=="completado");
   const items=q ? ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}) : pendientes;
   c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
+  const vaciar=$("btnRepoVaciarLista"); if(vaciar) vaciar.disabled=!items.length;
   c.innerHTML=items.length?items.map(r=>`<article class="repo-simple-item">
       <button class="repo-check" data-repo-accion="completar" data-id="${r.id}" aria-label="Marcar como llevado">✓</button>
       <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small></div>
       <b class="repo-simple-qty">${numero(r.cantidad)}</b>
     </article>`).join(""):`<span class="empty-icon">📦</span><strong>No hay productos para llevar.</strong><small>Los productos anotados aparecerán acá.</small>`;
+}
+
+async function vaciarLista(){
+  if(operacionEnCurso || !registros.length) return;
+  if(!confirm("¿Vaciar por completo tu lista de reposición?")) return;
+  try {
+    operacionEnCurso=true;
+    const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=true;
+    await pedir("/reposicion",{method:"DELETE"});
+    registros=[]; render(); toast("Tu lista quedó vacía");
+  } catch(error){ toast(error.message,"error"); }
+  finally { operacionEnCurso=false; const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=false; }
 }
 
 async function manejarAccion(e){

@@ -1,3 +1,12 @@
+V5.3.1 - Reposición individual por usuario
+- La lista Anotar queda separada por usuario autenticado.
+- Inventario y Vencimientos continúan compartidos.
+- Reposición deja de utilizar la hoja Reposicion de Google Sheets.
+- Marcar un producto como terminado lo elimina inmediatamente de la lista.
+- Se agregó Vaciar lista para borrar todos los pendientes del usuario actual.
+- Ningún repositor puede leer, editar ni eliminar la lista de otro.
+- Los datos temporales se conservan en un archivo local del servidor mientras la instancia los mantenga.
+
 V5.3.0 - Login y usuarios (Entrega 1)
 - Inicio de sesión obligatorio antes de acceder a la aplicación.
 - Usuarios almacenados en la hoja Usuarios con contraseña protegida mediante scrypt.

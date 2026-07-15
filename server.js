@@ -3,10 +3,12 @@ const cors = require("cors");
 const { google } = require("googleapis");
 const XLSX = require("xlsx");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.3.0";
+const APP_VERSION = "5.3.1";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -474,13 +476,13 @@ app.get("/admin/session", requerirAdministrador, (req, res) => {
 
 app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
   try {
-    const [productos, vencimientos, reposicion] = await Promise.all([obtenerProductos(), obtenerVencimientos(), obtenerReposicion()]);
+    const [productos, vencimientos] = await Promise.all([obtenerProductos(), obtenerVencimientos()]);
     res.json({
       ok: true,
       version: APP_VERSION,
       productos: productos.length,
       vencimientos: vencimientos.length,
-      reposicionPendiente: reposicion.filter(item => item.estado === "pendiente").length,
+      reposicionPendiente: resumenReposicionGlobal(),
       servidor: "conectado"
     });
   } catch (error) {
@@ -922,75 +924,76 @@ async function obtenerSheetId(nombreHoja) {
 }
 
 
-// V4.7.0 - Reposición. La hoja se crea automáticamente dentro del archivo ya conectado.
-const REPOSICION_SHEET_NAME = "Reposicion";
+// V5.3.1 - Reposición temporal e individual por usuario.
+// No utiliza Google Sheets. Cada usuario autenticado administra únicamente su lista.
+const REPOSICION_DATA_FILE = process.env.REPOSICION_DATA_FILE
+  ? path.resolve(process.env.REPOSICION_DATA_FILE)
+  : path.join(process.cwd(), "data", "reposicion-temporal.json");
 
-let hojaReposicionAsegurada = false;
-let promesaHojaReposicion = null;
-async function asegurarHojaReposicion() {
-  if (hojaReposicionAsegurada) return;
-  if (promesaHojaReposicion) return promesaHojaReposicion;
-  promesaHojaReposicion = (async () => {
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === REPOSICION_SHEET_NAME);
-  if (!existe) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: REPOSICION_SHEET_NAME } } }] }
+let reposicionPorUsuario = new Map();
+let reposicionCargada = false;
+
+function cargarReposicionTemporal() {
+  if (reposicionCargada) return;
+  reposicionCargada = true;
+  try {
+    if (!fs.existsSync(REPOSICION_DATA_FILE)) return;
+    const contenido = JSON.parse(fs.readFileSync(REPOSICION_DATA_FILE, "utf8"));
+    if (!contenido || typeof contenido !== "object") return;
+    Object.entries(contenido).forEach(([usuario, registros]) => {
+      if (Array.isArray(registros)) reposicionPorUsuario.set(normalizarUsuario(usuario), registros);
     });
+  } catch (error) {
+    console.error("No se pudo leer la reposición temporal:", error.message);
   }
-  const encabezado = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${REPOSICION_SHEET_NAME}!A1:G1`
-  });
-  if (!(encabezado.data.values || []).length) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${REPOSICION_SHEET_NAME}!A1:G1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [["ID", "Fecha", "Código", "Artículo", "Cantidad", "Estado", "Actualizado"]] }
-    });
-  }
-  hojaReposicionAsegurada = true;
-  })();
-  try { await promesaHojaReposicion; }
-  finally { promesaHojaReposicion = null; }
 }
 
-function filaAReposicion(fila, index) {
+function guardarReposicionTemporal() {
+  try {
+    fs.mkdirSync(path.dirname(REPOSICION_DATA_FILE), { recursive: true });
+    const contenido = Object.fromEntries(reposicionPorUsuario.entries());
+    fs.writeFileSync(REPOSICION_DATA_FILE, JSON.stringify(contenido, null, 2), "utf8");
+  } catch (error) {
+    console.error("No se pudo guardar la reposición temporal:", error.message);
+  }
+}
+
+function obtenerListaReposicion(usuario) {
+  cargarReposicionTemporal();
+  const clave = normalizarUsuario(usuario);
+  if (!reposicionPorUsuario.has(clave)) reposicionPorUsuario.set(clave, []);
+  return reposicionPorUsuario.get(clave);
+}
+
+function crearIdReposicion() {
+  return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
+}
+
+function limpiarRegistroReposicion(registro) {
   return {
-    filaGoogle: index + 2,
-    id: normalizarTexto(fila[0]),
-    fecha: normalizarTexto(fila[1]),
-    codigo: normalizarTexto(fila[2]),
-    articulo: normalizarTexto(fila[3]),
-    cantidad: numero(fila[4]),
-    estado: normalizarTexto(fila[5]).toLowerCase() === "completado" ? "completado" : "pendiente",
-    actualizado: normalizarTexto(fila[6])
+    id: normalizarTexto(registro.id),
+    fecha: normalizarTexto(registro.fecha),
+    codigo: normalizarTexto(registro.codigo),
+    articulo: normalizarTexto(registro.articulo),
+    cantidad: enteroPositivo(registro.cantidad) || 1,
+    estado: "pendiente",
+    actualizado: normalizarTexto(registro.actualizado),
+    usuario: normalizarUsuario(registro.usuario)
   };
 }
 
-async function obtenerReposicion() {
-  await asegurarHojaReposicion();
-  return leerConCache("reposicion", CACHE_TTL.reposicion, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${REPOSICION_SHEET_NAME}!A:G`
-    });
-    const filas = respuesta.data.values || [];
-    if (filas.length <= 1) return [];
-    return filas.slice(1).map(filaAReposicion).filter(item => item.id && item.codigo);
-  });
+function resumenReposicionGlobal() {
+  cargarReposicionTemporal();
+  return [...reposicionPorUsuario.values()].reduce((total, lista) => total + lista.length, 0);
 }
 
-function fechaIsoActual() { return fechaHoraArgentinaIso(); }
-function crearIdReposicion() { return `REP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
-
-app.get("/reposicion", async (req, res) => {
+app.get("/reposicion", (req, res) => {
   try {
-    const registros = (await obtenerReposicion()).sort((a, b) => String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha)));
-    res.json({ ok: true, total: registros.length, registros });
+    const usuario = req.usuario.usuario;
+    const registros = obtenerListaReposicion(usuario)
+      .map(limpiarRegistroReposicion)
+      .sort((a, b) => String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha)));
+    res.json({ ok: true, total: registros.length, usuario: req.usuario, registros });
   } catch (error) {
     console.error("Error en GET /reposicion:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener reposición" });
@@ -999,39 +1002,28 @@ app.get("/reposicion", async (req, res) => {
 
 app.post("/reposicion", async (req, res) => {
   try {
+    const usuario = req.usuario.usuario;
     const codigo = normalizarCodigo(req.body.codigo);
     const articulo = normalizarTexto(req.body.articulo);
     const cantidad = enteroPositivo(req.body.cantidad);
     if (!codigo || !articulo) return res.status(400).json({ ok: false, mensaje: "Falta el producto" });
     if (cantidad === null) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
 
-    const resultado = await ejecutarEnCola(`reposicion:${codigo}`, async () => {
-      invalidarCache("reposicion");
-      const registros = await obtenerReposicion();
-      const existente = registros.find(item => item.codigo === codigo && item.estado === "pendiente");
-      const ahora = fechaIsoActual();
+    const resultado = await ejecutarEnCola(`reposicion:${usuario}:${codigo}`, async () => {
+      const lista = obtenerListaReposicion(usuario);
+      const existente = lista.find(item => item.codigo === codigo);
+      const ahora = fechaHoraArgentinaIso();
       if (existente) {
-        const actualizado = { ...existente, cantidad: existente.cantidad + cantidad, actualizado: ahora };
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${REPOSICION_SHEET_NAME}!A${existente.filaGoogle}:G${existente.filaGoogle}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: [[actualizado.id, actualizado.fecha, actualizado.codigo, actualizado.articulo, actualizado.cantidad, actualizado.estado, actualizado.actualizado]] }
-        });
-        return { mensaje: "Cantidad sumada al producto pendiente", registro: actualizado };
+        existente.cantidad = (enteroPositivo(existente.cantidad) || 0) + cantidad;
+        existente.actualizado = ahora;
+        guardarReposicionTemporal();
+        return { mensaje: "Cantidad sumada a tu lista", registro: limpiarRegistroReposicion(existente) };
       }
-
-      const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora };
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${REPOSICION_SHEET_NAME}!A:G`,
-        valueInputOption: "USER_ENTERED",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: { values: [[registro.id, registro.fecha, registro.codigo, registro.articulo, registro.cantidad, registro.estado, registro.actualizado]] }
-      });
-      return { mensaje: "Producto anotado", registro };
+      const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora, usuario };
+      lista.unshift(registro);
+      guardarReposicionTemporal();
+      return { mensaje: "Producto agregado a tu lista", registro: limpiarRegistroReposicion(registro) };
     });
-    invalidarCache("reposicion");
     res.json({ ok: true, ...resultado });
   } catch (error) {
     console.error("Error en POST /reposicion:", error);
@@ -1041,30 +1033,34 @@ app.post("/reposicion", async (req, res) => {
 
 app.put("/reposicion/:id", async (req, res) => {
   try {
+    const usuario = req.usuario.usuario;
     const id = normalizarTexto(req.params.id);
-    const cantidad = enteroPositivo(req.body.cantidad);
-    if (cantidad === null) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
-    const estado = normalizarTexto(req.body.estado).toLowerCase() === "completado" ? "completado" : "pendiente";
-    const actualizado = await ejecutarEnCola(`reposicion-id:${id}`, async () => {
-      invalidarCache("reposicion");
-      const registros = await obtenerReposicion();
-      const registro = registros.find(item => item.id === id);
-      if (!registro) {
-        const error = new Error("Registro no encontrado");
+    const estado = normalizarTexto(req.body.estado).toLowerCase();
+    const actualizado = await ejecutarEnCola(`reposicion:${usuario}:${id}`, async () => {
+      const lista = obtenerListaReposicion(usuario);
+      const indice = lista.findIndex(item => item.id === id);
+      if (indice < 0) {
+        const error = new Error("Registro no encontrado en tu lista");
         error.statusCode = 404;
         throw error;
       }
-      const resultado = { ...registro, cantidad, estado, actualizado: fechaIsoActual() };
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${REPOSICION_SHEET_NAME}!A${registro.filaGoogle}:G${registro.filaGoogle}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: [[resultado.id, resultado.fecha, resultado.codigo, resultado.articulo, resultado.cantidad, resultado.estado, resultado.actualizado]] }
-      });
-      return resultado;
+      if (estado === "completado") {
+        const [eliminado] = lista.splice(indice, 1);
+        guardarReposicionTemporal();
+        return { eliminado: true, registro: limpiarRegistroReposicion(eliminado) };
+      }
+      const cantidad = enteroPositivo(req.body.cantidad);
+      if (cantidad === null) {
+        const error = new Error("Ingresá una cantidad entera mayor a 0");
+        error.statusCode = 400;
+        throw error;
+      }
+      lista[indice].cantidad = cantidad;
+      lista[indice].actualizado = fechaHoraArgentinaIso();
+      guardarReposicionTemporal();
+      return { eliminado: false, registro: limpiarRegistroReposicion(lista[indice]) };
     });
-    invalidarCache("reposicion");
-    res.json({ ok: true, mensaje: "Reposición actualizada", registro: actualizado });
+    res.json({ ok: true, mensaje: actualizado.eliminado ? "Producto terminado y eliminado de tu lista" : "Cantidad actualizada", ...actualizado });
   } catch (error) {
     console.error("Error en PUT /reposicion/:id:", error);
     res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al actualizar reposición" });
@@ -1073,19 +1069,27 @@ app.put("/reposicion/:id", async (req, res) => {
 
 app.delete("/reposicion/:id", async (req, res) => {
   try {
+    const usuario = req.usuario.usuario;
     const id = normalizarTexto(req.params.id);
-    const registros = await obtenerReposicion();
-    const registro = registros.find(item => item.id === id);
-    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(REPOSICION_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
-    });
-    invalidarCache("reposicion");
-    res.json({ ok: true, mensaje: "Producto eliminado" });
+    const lista = obtenerListaReposicion(usuario);
+    const indice = lista.findIndex(item => item.id === id);
+    if (indice < 0) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado en tu lista" });
+    lista.splice(indice, 1);
+    guardarReposicionTemporal();
+    res.json({ ok: true, mensaje: "Producto eliminado de tu lista" });
   } catch (error) {
     console.error("Error en DELETE /reposicion/:id:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al eliminar reposición" });
+  }
+});
+
+app.delete("/reposicion", (req, res) => {
+  try {
+    reposicionPorUsuario.set(req.usuario.usuario, []);
+    guardarReposicionTemporal();
+    res.json({ ok: true, mensaje: "Tu lista quedó vacía" });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo vaciar la lista" });
   }
 });
 

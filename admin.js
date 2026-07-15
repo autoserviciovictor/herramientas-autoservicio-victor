@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=530-login";
+import { API_BASE_URL } from "./config.js?v=531-repo-individual";
 
 let token = "";
 
