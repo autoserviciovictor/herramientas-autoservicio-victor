@@ -46,3 +46,9 @@ V5.1.2 - Entrega 2
 - Bloqueo de doble ejecución en las operaciones de reposición.
 - Limpieza de referencias antiguas a controles eliminados.
 - Unificación de identificadores de caché de módulos.
+
+V5.2.2 - Modo administrador
+- Inicio de sesión por PIN validado en el servidor.
+- Token firmado con vencimiento de 8 horas.
+- Panel administrativo privado y cierre de sesión.
+- Resumen protegido del estado del sistema.

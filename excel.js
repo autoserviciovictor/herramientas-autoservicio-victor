@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=521-search";
-import { ordenarPorBusqueda } from "./search.js?v=521-search";
+import { API_BASE_URL } from "./config.js?v=522-admin";
+import { ordenarPorBusqueda } from "./search.js?v=522-admin";
 
 let datos = [];
 let contador = 0;

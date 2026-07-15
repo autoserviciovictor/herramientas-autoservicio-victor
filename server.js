@@ -2,10 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const { google } = require("googleapis");
 const XLSX = require("xlsx");
+const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.2.1";
+const APP_VERSION = "5.2.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -15,6 +16,9 @@ const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 const API_WRITE_KEY = normalizarTexto(process.env.API_WRITE_KEY);
 const RESET_KEY = normalizarTexto(process.env.RESET_KEY);
+const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
+const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
+const ADMIN_SESSION_HOURS = 8;
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
   .map(origen => origen.trim())
@@ -41,7 +45,7 @@ function protegerEscrituras(req, res, next) {
 
 app.use((req, res, next) => {
   const esEscritura = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  if (!esEscritura || req.path === "/reiniciar") return next();
+  if (!esEscritura || req.path === "/reiniciar" || req.path === "/admin/login") return next();
   return protegerEscrituras(req, res, next);
 });
 
@@ -169,6 +173,44 @@ function fechaHoraArgentinaIso(fecha = new Date()) {
   return `${partes}-03:00`;
 }
 
+
+function base64Url(valor) {
+  return Buffer.from(valor).toString("base64url");
+}
+
+function firmarTokenAdmin(payload) {
+  if (!ADMIN_TOKEN_SECRET) return "";
+  const cuerpo = base64Url(JSON.stringify(payload));
+  const firma = crypto.createHmac("sha256", ADMIN_TOKEN_SECRET).update(cuerpo).digest("base64url");
+  return `${cuerpo}.${firma}`;
+}
+
+function verificarTokenAdmin(token) {
+  try {
+    if (!ADMIN_TOKEN_SECRET || !token || !token.includes(".")) return null;
+    const [cuerpo, firma] = token.split(".");
+    const esperada = crypto.createHmac("sha256", ADMIN_TOKEN_SECRET).update(cuerpo).digest("base64url");
+    if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null;
+    const payload = JSON.parse(Buffer.from(cuerpo, "base64url").toString("utf8"));
+    if (!payload.exp || Date.now() >= payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function obtenerTokenAdmin(req) {
+  const authorization = normalizarTexto(req.get("authorization"));
+  return authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
+}
+
+function requerirAdmin(req, res, next) {
+  const sesion = verificarTokenAdmin(obtenerTokenAdmin(req));
+  if (!sesion) return res.status(401).json({ ok: false, mensaje: "Sesión de administrador inválida o vencida" });
+  req.admin = sesion;
+  next();
+}
+
 function validarConfiguracion() {
   if (!SPREADSHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
     throw new Error("Faltan variables de entorno: SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY");
@@ -265,6 +307,41 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
   const codigo = normalizarCodigo(codigoBuscado);
   return productos.find(producto => producto.codigo === codigo) || null;
 }
+
+
+app.post("/admin/login", (req, res) => {
+  if (!ADMIN_KEY || !ADMIN_TOKEN_SECRET) {
+    return res.status(503).json({ ok: false, mensaje: "El modo administrador no está configurado en Render" });
+  }
+  const clave = normalizarTexto(req.body?.clave);
+  if (!clave || clave !== ADMIN_KEY) {
+    return res.status(401).json({ ok: false, mensaje: "PIN de administrador incorrecto" });
+  }
+  const ahora = Date.now();
+  const exp = ahora + ADMIN_SESSION_HOURS * 60 * 60 * 1000;
+  const token = firmarTokenAdmin({ rol: "administrador", iat: ahora, exp });
+  res.json({ ok: true, token, expira: new Date(exp).toISOString(), version: APP_VERSION });
+});
+
+app.get("/admin/session", requerirAdmin, (req, res) => {
+  res.json({ ok: true, rol: req.admin.rol, expira: new Date(req.admin.exp).toISOString(), version: APP_VERSION });
+});
+
+app.get("/admin/resumen", requerirAdmin, async (req, res) => {
+  try {
+    const [productos, vencimientos, reposicion] = await Promise.all([obtenerProductos(), obtenerVencimientos(), obtenerReposicion()]);
+    res.json({
+      ok: true,
+      version: APP_VERSION,
+      productos: productos.length,
+      vencimientos: vencimientos.length,
+      reposicionPendiente: reposicion.filter(item => item.estado === "pendiente").length,
+      servidor: "conectado"
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el panel" });
+  }
+});
 
 app.get("/", (req, res) => {
   res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
@@ -433,12 +510,11 @@ app.get("/descargar", async (req, res) => {
 
 app.post("/reiniciar", async (req, res) => {
   try {
-    if (!RESET_KEY) {
-      return res.status(503).json({ ok: false, mensaje: "El reinicio total está deshabilitado" });
-    }
+    const sesionAdmin = verificarTokenAdmin(obtenerTokenAdmin(req));
     const clave = normalizarTexto(req.get("x-reset-key") || req.body?.resetKey);
-    if (clave !== RESET_KEY) {
-      return res.status(401).json({ ok: false, mensaje: "Clave de reinicio inválida" });
+    const autorizadoPorClave = Boolean(RESET_KEY) && clave === RESET_KEY;
+    if (!sesionAdmin && !autorizadoPorClave) {
+      return res.status(401).json({ ok: false, mensaje: "Se requiere una sesión de administrador" });
     }
     if (normalizarTexto(req.body?.confirmacion) !== "REINICIAR INVENTARIO") {
       return res.status(400).json({ ok: false, mensaje: "Falta la confirmación de reinicio" });

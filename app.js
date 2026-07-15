@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=521-search";
+} from "./excel.js?v=522-admin";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=521-search";
+} from "./scanner.js?v=522-admin";
 
 import {
     ocultarSplash,
@@ -48,10 +48,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=521-search";
+} from "./ui.js?v=522-admin";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=521-search";
-import { coincideBusqueda } from "./search.js?v=521-search";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=522-admin";
+import { coincideBusqueda } from "./search.js?v=522-admin";
 
 let ubicacionActual = "salon";
 let productoActual = null;

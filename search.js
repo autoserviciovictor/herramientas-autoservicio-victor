@@ -1,4 +1,4 @@
-// Buscador inteligente compartido - V5.2.1
+// Buscador inteligente compartido - V5.2.2
 // Tolera acentos, palabras en distinto orden, códigos parciales y errores breves.
 
 export function normalizarBusqueda(valor) {

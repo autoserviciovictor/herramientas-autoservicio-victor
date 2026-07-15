@@ -1,11 +1,104 @@
-import { API_BASE_URL } from "./config.js?v=520";
-const $=id=>document.getElementById(id), TOKEN_KEY="av_admin_token";
-let token=sessionStorage.getItem(TOKEN_KEY)||"";
-const api=async(ruta,op={})=>{const r=await fetch(`${String(API_BASE_URL).replace(/\/$/,"")}${ruta}`,{...op,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(op.headers||{})}});const d=await r.json().catch(()=>null);if(!r.ok||!d?.ok)throw new Error(d?.mensaje||"No autorizado");return d;};
-function escapar(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function mostrarLogin(){$("adminLoginCard")?.classList.remove("oculto");$("adminPanel")?.classList.add("oculto");}
-function mostrarPanel(){$("adminLoginCard")?.classList.add("oculto");$("adminPanel")?.classList.remove("oculto");}
-async function cargar(){try{const d=await api("/admin/historial");mostrarPanel();const c=$("adminHistorial");const items=d.historial||[];c.className=items.length?"admin-history":"venc-list-empty";c.innerHTML=items.length?items.map(x=>`<article class="admin-history-item"><div><strong>${escapar(x.accion)}</strong><small>${escapar(x.modulo)} · ${escapar(x.articulo||x.codigo||"")}</small><small>${escapar(x.fecha)}</small></div><span>${escapar(x.detalle||"")}</span></article>`).join(""):`<strong>No hay movimientos registrados.</strong>`;}catch{token="";sessionStorage.removeItem(TOKEN_KEY);mostrarLogin();}}
-async function login(){const clave=$("adminClave")?.value||"";try{const d=await api("/admin/login",{method:"POST",body:JSON.stringify({clave})});token=d.token;sessionStorage.setItem(TOKEN_KEY,token);$("adminClave").value="";await cargar();}catch(e){const m=$("adminMensaje");if(m)m.textContent=e.message;}}
-export function inicializarAdmin(){$("btnAdminIngresar")?.addEventListener("click",login);$("adminClave")?.addEventListener("keydown",e=>{if(e.key==="Enter")login();});$("btnAdminSalir")?.addEventListener("click",()=>{token="";sessionStorage.removeItem(TOKEN_KEY);mostrarLogin();});$("btnAdminActualizar")?.addEventListener("click",cargar);}
-export async function prepararAdmin(){if(token)await cargar();else mostrarLogin();}
+import { API_BASE_URL } from "./config.js?v=522-admin";
+
+const TOKEN_KEY = "autoservicio_admin_token";
+const $ = id => document.getElementById(id);
+let token = localStorage.getItem(TOKEN_KEY) || "";
+
+function mostrarEstado(texto, tipo = "") {
+  const el = $("adminLoginEstado");
+  if (!el) return;
+  el.textContent = texto;
+  el.className = `admin-login-status ${tipo}`.trim();
+}
+
+function abrirLogin() {
+  $("adminLoginModal")?.classList.remove("oculto");
+  $("adminLoginModal")?.setAttribute("aria-hidden", "false");
+  const input = $("adminPinInput");
+  if (input) { input.value = ""; setTimeout(() => input.focus(), 50); }
+  mostrarEstado("");
+}
+
+function cerrarLogin() {
+  $("adminLoginModal")?.classList.add("oculto");
+  $("adminLoginModal")?.setAttribute("aria-hidden", "true");
+}
+
+function mostrarPanel() {
+  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+  $("pantallaAdmin")?.classList.add("activa");
+  document.body.className = "en-admin";
+  $("brandBackBtn")?.classList.remove("oculto");
+  $("brandHeaderTitulo").textContent = "Modo administrador";
+  $("brandHeaderSubtitulo").textContent = "Acceso privado";
+  cargarResumen();
+}
+
+function volverAjustes() {
+  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+  $("pantallaAjustes")?.classList.add("activa");
+  document.body.className = "en-ajustes";
+  $("brandHeaderTitulo").textContent = "Ajustes";
+  $("brandHeaderSubtitulo").textContent = "Configuración general";
+}
+
+async function login() {
+  const clave = $("adminPinInput")?.value.trim();
+  if (!clave) return mostrarEstado("Ingresá el PIN", "error");
+  const boton = $("btnAdminIngresar");
+  if (boton) boton.disabled = true;
+  mostrarEstado("Verificando…");
+  try {
+    const r = await fetch(`${API_BASE_URL}/admin/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clave })
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo ingresar");
+    token = data.token;
+    localStorage.setItem(TOKEN_KEY, token);
+    cerrarLogin();
+    mostrarPanel();
+  } catch (e) { mostrarEstado(e.message, "error"); }
+  finally { if (boton) boton.disabled = false; }
+}
+
+async function cargarResumen() {
+  const estado = $("adminServidorEstado");
+  if (estado) estado.textContent = "Consultando servidor…";
+  try {
+    const r = await fetch(`${API_BASE_URL}/admin/resumen`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "Sesión vencida");
+    $("adminVersion").textContent = `V${data.version}`;
+    $("adminProductos").textContent = data.productos;
+    $("adminVencimientos").textContent = data.vencimientos;
+    $("adminReposicion").textContent = data.reposicionPendiente;
+    if (estado) estado.textContent = "● Servidor conectado";
+  } catch (e) {
+    if (estado) estado.textContent = e.message;
+    if (/sesión|token|vencida/i.test(e.message)) cerrarSesion();
+  }
+}
+
+function cerrarSesion() {
+  token = ""; localStorage.removeItem(TOKEN_KEY); volverAjustes();
+}
+
+async function abrirAdmin() {
+  if (!token) return abrirLogin();
+  try {
+    const r = await fetch(`${API_BASE_URL}/admin/session`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) throw new Error();
+    mostrarPanel();
+  } catch { token = ""; localStorage.removeItem(TOKEN_KEY); abrirLogin(); }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  $("btnAbrirAdmin")?.addEventListener("click", abrirAdmin);
+  $("btnAdminCerrarLogin")?.addEventListener("click", cerrarLogin);
+  $("btnAdminIngresar")?.addEventListener("click", login);
+  $("adminPinInput")?.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+  $("btnAdminVolver")?.addEventListener("click", volverAjustes);
+  $("btnAdminCerrarSesion")?.addEventListener("click", cerrarSesion);
+  $("btnAdminActualizar")?.addEventListener("click", cargarResumen);
+});
