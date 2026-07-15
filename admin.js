@@ -1,8 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=522-admin";
+import { API_BASE_URL } from "./config.js?v=530-login";
 
-const TOKEN_KEY = "autoservicio_admin_token";
-const $ = id => document.getElementById(id);
-let token = localStorage.getItem(TOKEN_KEY) || "";
+let token = "";
+
 
 function mostrarEstado(texto, tipo = "") {
   const el = $("adminLoginEstado");
@@ -55,7 +54,6 @@ async function login() {
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo ingresar");
     token = data.token;
-    localStorage.setItem(TOKEN_KEY, token);
     cerrarLogin();
     mostrarPanel();
   } catch (e) { mostrarEstado(e.message, "error"); }
@@ -63,6 +61,7 @@ async function login() {
 }
 
 async function cargarResumen() {
+  token = window.AutoservicioAuth?.getToken?.() || token;
   const estado = $("adminServidorEstado");
   if (estado) estado.textContent = "Consultando servidor…";
   try {
@@ -80,17 +79,12 @@ async function cargarResumen() {
   }
 }
 
-function cerrarSesion() {
-  token = ""; localStorage.removeItem(TOKEN_KEY); volverAjustes();
-}
+function cerrarSesion() { volverAjustes(); }
 
 async function abrirAdmin() {
-  if (!token) return abrirLogin();
-  try {
-    const r = await fetch(`${API_BASE_URL}/admin/session`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) throw new Error();
-    mostrarPanel();
-  } catch { token = ""; localStorage.removeItem(TOKEN_KEY); abrirLogin(); }
+  if (!window.AutoservicioAuth?.esAdmin()) return;
+  token = window.AutoservicioAuth.getToken();
+  mostrarPanel();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

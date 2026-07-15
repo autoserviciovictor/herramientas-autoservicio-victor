@@ -1,3 +1,12 @@
+V5.3.0 - Login y usuarios (Entrega 1)
+- Inicio de sesión obligatorio antes de acceder a la aplicación.
+- Usuarios almacenados en la hoja Usuarios con contraseña protegida mediante scrypt.
+- Roles administrador y repositor.
+- Usuarios activos/inactivos preparados en el modelo de datos.
+- Sesión persistente durante 30 días y cierre de sesión manual.
+- Toda la API de trabajo requiere una sesión válida.
+- Primer administrador automático: usuario admin y contraseña ADMIN_KEY.
+
 V5.2.1 - Buscador inteligente
 - Búsqueda sin distinguir mayúsculas ni acentos.
 - Coincidencias por varias palabras aunque estén en distinto orden.
@@ -47,7 +56,7 @@ V5.1.2 - Entrega 2
 - Limpieza de referencias antiguas a controles eliminados.
 - Unificación de identificadores de caché de módulos.
 
-V5.2.2 - Modo administrador
+V5.3.0 - Modo administrador
 - Inicio de sesión por PIN validado en el servidor.
 - Token firmado con vencimiento de 8 horas.
 - Panel administrativo privado y cierre de sesión.

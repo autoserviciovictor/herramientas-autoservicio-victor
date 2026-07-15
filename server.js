@@ -6,7 +6,7 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.2.2";
+const APP_VERSION = "5.3.0";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -19,6 +19,9 @@ const RESET_KEY = normalizarTexto(process.env.RESET_KEY);
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const ADMIN_SESSION_HOURS = 8;
+const USER_SESSION_DAYS = 30;
+const USUARIOS_SHEET_NAME = "Usuarios";
+const ADMIN_USERNAME = normalizarTexto(process.env.ADMIN_USERNAME || "admin").toLowerCase();
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
   .map(origen => origen.trim())
@@ -45,7 +48,7 @@ function protegerEscrituras(req, res, next) {
 
 app.use((req, res, next) => {
   const esEscritura = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  if (!esEscritura || req.path === "/reiniciar" || req.path === "/admin/login") return next();
+  if (!esEscritura || req.path === "/reiniciar" || req.path === "/admin/login" || req.path === "/auth/login") return next();
   return protegerEscrituras(req, res, next);
 });
 
@@ -66,7 +69,8 @@ const CACHE_TTL = {
   productosMaestros: 60000,
   vencimientos: 20000,
   reposicion: 15000,
-  metadata: 300000
+  metadata: 300000,
+  usuarios: 15000
 };
 
 async function leerConCache(clave, ttl, lector) {
@@ -211,6 +215,115 @@ function requerirAdmin(req, res, next) {
   next();
 }
 
+
+function normalizarUsuario(valor) {
+  return normalizarTexto(valor).toLowerCase().replace(/\s+/g, "");
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const hash = crypto.scryptSync(String(password), salt, 64).toString("hex");
+  return `scrypt$${salt}$${hash}`;
+}
+
+function verificarPassword(password, guardado) {
+  try {
+    const [metodo, salt, hashHex] = normalizarTexto(guardado).split("$");
+    if (metodo !== "scrypt" || !salt || !hashHex) return false;
+    const calculado = crypto.scryptSync(String(password), salt, 64);
+    const esperado = Buffer.from(hashHex, "hex");
+    return calculado.length === esperado.length && crypto.timingSafeEqual(calculado, esperado);
+  } catch {
+    return false;
+  }
+}
+
+let hojaUsuariosAsegurada = false;
+let promesaHojaUsuarios = null;
+async function asegurarHojaUsuarios() {
+  if (hojaUsuariosAsegurada) return;
+  if (promesaHojaUsuarios) return promesaHojaUsuarios;
+  promesaHojaUsuarios = (async () => {
+    validarConfiguracion();
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+    const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === USUARIOS_SHEET_NAME);
+    if (!existe) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title: USUARIOS_SHEET_NAME } } }] }
+      });
+    }
+    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado"];
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:F2` });
+    const filas = respuesta.data.values || [];
+    if (!filas[0] || filas[0][0] !== "Usuario") {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${USUARIOS_SHEET_NAME}!A1:F1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [encabezados] }
+      });
+    }
+    const tieneUsuarios = filas.slice(1).some(f => normalizarUsuario(f[0]));
+    if (!tieneUsuarios) {
+      if (!ADMIN_KEY) throw new Error("Configurá ADMIN_KEY en Render para crear el primer usuario administrador");
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${USUARIOS_SHEET_NAME}!A:F`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso()]] }
+      });
+    }
+    hojaUsuariosAsegurada = true;
+    invalidarCache("usuarios");
+  })();
+  try { await promesaHojaUsuarios; }
+  finally { promesaHojaUsuarios = null; }
+}
+
+function filaAUsuario(fila, index) {
+  const activoTexto = normalizarTexto(fila[4]).toLowerCase();
+  return {
+    filaGoogle: index + 2,
+    usuario: normalizarUsuario(fila[0]),
+    nombre: normalizarTexto(fila[1]) || normalizarTexto(fila[0]),
+    passwordHash: normalizarTexto(fila[2]),
+    rol: normalizarTexto(fila[3]).toLowerCase() === "administrador" ? "administrador" : "repositor",
+    activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto)
+  };
+}
+
+async function obtenerUsuarios() {
+  await asegurarHojaUsuarios();
+  return leerConCache("usuarios", CACHE_TTL.usuarios, async () => {
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:F` });
+    const filas = respuesta.data.values || [];
+    return filas.slice(1).map(filaAUsuario).filter(u => u.usuario);
+  });
+}
+
+async function requerirSesion(req, res, next) {
+  try {
+    const sesion = verificarTokenAdmin(obtenerTokenAdmin(req));
+    if (!sesion?.usuario) return res.status(401).json({ ok: false, mensaje: "Iniciá sesión para continuar" });
+    const usuarios = await obtenerUsuarios();
+    const usuario = usuarios.find(u => u.usuario === sesion.usuario);
+    if (!usuario || !usuario.activo) return res.status(401).json({ ok: false, mensaje: "Usuario inexistente o desactivado" });
+    req.usuario = { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol };
+    next();
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo validar la sesión" });
+  }
+}
+
+async function requerirAdministrador(req, res, next) {
+  await requerirSesion(req, res, () => {
+    if (req.usuario?.rol !== "administrador") return res.status(403).json({ ok: false, mensaje: "Acceso exclusivo para administradores" });
+    req.admin = req.usuario;
+    next();
+  });
+}
+
 function validarConfiguracion() {
   if (!SPREADSHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
     throw new Error("Faltan variables de entorno: SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY");
@@ -309,6 +422,38 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 
+
+app.post("/auth/login", async (req, res) => {
+  try {
+    const usuarioBuscado = normalizarUsuario(req.body?.usuario);
+    const password = String(req.body?.password ?? "");
+    if (!usuarioBuscado || !password) return res.status(400).json({ ok: false, mensaje: "Ingresá usuario y contraseña" });
+    const usuarios = await obtenerUsuarios();
+    const usuario = usuarios.find(item => item.usuario === usuarioBuscado);
+    if (!usuario || !usuario.activo || !verificarPassword(password, usuario.passwordHash)) {
+      return res.status(401).json({ ok: false, mensaje: "Usuario o contraseña incorrectos" });
+    }
+    if (!ADMIN_TOKEN_SECRET) return res.status(503).json({ ok: false, mensaje: "Configurá ADMIN_TOKEN_SECRET en Render" });
+    const ahora = Date.now();
+    const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
+    const token = firmarTokenAdmin({ usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, iat: ahora, exp });
+    res.json({ ok: true, token, usuario: { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol }, expira: new Date(exp).toISOString() });
+  } catch (error) {
+    console.error("Error en /auth/login:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo iniciar sesión" });
+  }
+});
+
+app.get("/auth/session", requerirSesion, (req, res) => {
+  res.json({ ok: true, usuario: req.usuario, version: APP_VERSION });
+});
+
+// Desde aquí, toda la API de trabajo requiere una sesión válida.
+app.use((req, res, next) => {
+  if (req.path === "/" || req.path === "/admin/login") return next();
+  return requerirSesion(req, res, next);
+});
+
 app.post("/admin/login", (req, res) => {
   if (!ADMIN_KEY || !ADMIN_TOKEN_SECRET) {
     return res.status(503).json({ ok: false, mensaje: "El modo administrador no está configurado en Render" });
@@ -323,11 +468,11 @@ app.post("/admin/login", (req, res) => {
   res.json({ ok: true, token, expira: new Date(exp).toISOString(), version: APP_VERSION });
 });
 
-app.get("/admin/session", requerirAdmin, (req, res) => {
+app.get("/admin/session", requerirAdministrador, (req, res) => {
   res.json({ ok: true, rol: req.admin.rol, expira: new Date(req.admin.exp).toISOString(), version: APP_VERSION });
 });
 
-app.get("/admin/resumen", requerirAdmin, async (req, res) => {
+app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
   try {
     const [productos, vencimientos, reposicion] = await Promise.all([obtenerProductos(), obtenerVencimientos(), obtenerReposicion()]);
     res.json({

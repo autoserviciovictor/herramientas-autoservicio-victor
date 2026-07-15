@@ -62,5 +62,5 @@ La aplicación se puede instalar desde Chrome o Edge mediante el botón **Instal
 Esta entrega almacena la interfaz para que pueda abrirse sin conexión. El guardado offline de inventario, vencimientos y reposición se incorporará por separado.
 
 
-## Modo administrador (V5.2.2)
+## Modo administrador (V5.3.0)
 Configure `ADMIN_KEY` y `ADMIN_TOKEN_SECRET` en Render. El PIN se valida en el servidor y la sesión firmada vence a las 8 horas.
