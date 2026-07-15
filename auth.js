@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=538-admin-aislado";
+import { API_BASE_URL } from "./config.js?v=600-offline-historial";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
@@ -14,15 +14,86 @@ function esApi(url) {
   catch { return false; }
 }
 
+const OFFLINE_QUEUE_KEY = "autoservicio_offline_queue_v1";
+const OFFLINE_CACHE_PREFIX = "autoservicio_api_cache_v1:";
+let sincronizandoOffline = false;
+
+function leerColaOffline() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]"); } catch { return []; }
+}
+function guardarColaOffline(cola) {
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(cola));
+  window.dispatchEvent(new CustomEvent("autoservicio:offline", { detail: { online: navigator.onLine, pendientes: cola.length } }));
+}
+function rutaApi(input) {
+  try { const u = new URL(typeof input === "string" ? input : input.url, location.href); return u.pathname + u.search; } catch { return ""; }
+}
+function respuestaJson(data, status = 200) {
+  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+}
+function esOperacionOfflinePermitida(method, ruta) {
+  if (!["POST","PUT","PATCH","DELETE"].includes(method)) return false;
+  return ruta.startsWith("/guardar") || ruta.startsWith("/corregir") || ruta.startsWith("/vencimientos") || ruta.startsWith("/reposicion");
+}
+async function serializarBody(input, init) {
+  if (typeof init.body === "string") return init.body;
+  if (input instanceof Request) return await input.clone().text().catch(() => "");
+  return "";
+}
+async function sincronizarColaOffline() {
+  if (sincronizandoOffline || !navigator.onLine || !token) return;
+  const cola = leerColaOffline();
+  if (!cola.length) return;
+  sincronizandoOffline = true;
+  const restantes = [];
+  for (const op of cola) {
+    try {
+      const headers = new Headers(op.headers || {});
+      headers.set("Authorization", `Bearer ${token}`);
+      headers.set("X-Offline-Operation-Id", op.id);
+      const r = await originalFetch(`${API_BASE_URL}${op.ruta}`, { method: op.method, headers, body: op.body || undefined });
+      if (!r.ok) {
+        if (r.status >= 500) restantes.push(op);
+      }
+    } catch { restantes.push(op); }
+  }
+  guardarColaOffline(restantes);
+  sincronizandoOffline = false;
+  if (!restantes.length) window.dispatchEvent(new CustomEvent("autoservicio:sincronizado"));
+}
+
 window.fetch = async (input, init = {}) => {
   const opciones = { ...init, headers: new Headers(init.headers || (input instanceof Request ? input.headers : undefined)) };
+  const method = String(opciones.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+  const ruta = rutaApi(input);
   if (token && esApi(input)) opciones.headers.set("Authorization", `Bearer ${token}`);
-  const respuesta = await originalFetch(input, opciones);
-  if (respuesta.status === 401 && token && esApi(input) && !String(typeof input === "string" ? input : input.url).includes("/auth/login")) {
-    cerrarSesion(false);
+  try {
+    const respuesta = await originalFetch(input, opciones);
+    if (respuesta.status === 401 && token && esApi(input) && !ruta.includes("/auth/login")) cerrarSesion(false);
+    if (esApi(input) && method === "GET" && respuesta.ok) {
+      respuesta.clone().text().then(text => localStorage.setItem(OFFLINE_CACHE_PREFIX + ruta, text)).catch(() => {});
+    }
+    return respuesta;
+  } catch (error) {
+    if (!esApi(input)) throw error;
+    if (method === "GET") {
+      const cache = localStorage.getItem(OFFLINE_CACHE_PREFIX + ruta);
+      if (cache) return new Response(cache, { status: 200, headers: { "Content-Type":"application/json", "X-Offline-Cache":"1" } });
+      throw error;
+    }
+    if (esOperacionOfflinePermitida(method, ruta)) {
+      const body = await serializarBody(input, opciones);
+      const cola = leerColaOffline();
+      cola.push({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, ruta, method, body, headers: { "Content-Type": opciones.headers.get("Content-Type") || "application/json" }, creado: Date.now() });
+      guardarColaOffline(cola);
+      return respuestaJson({ ok:true, offline:true, pendiente:true, mensaje:"Cambio guardado en el teléfono. Se sincronizará al recuperar Internet." });
+    }
+    throw error;
   }
-  return respuesta;
 };
+
+window.addEventListener("online", () => sincronizarColaOffline());
+setInterval(() => sincronizarColaOffline(), 15000);
 
 function mostrarLogin(mensaje = "") {
   $("loginOverlay")?.classList.remove("oculto");
@@ -129,7 +200,9 @@ window.AutoservicioAuth = {
   getToken: () => token,
   getUsuario: () => usuarioActual,
   esAdmin: () => usuarioActual?.rol === "administrador",
-  cerrarSesion
+  cerrarSesion,
+  sincronizarOffline: sincronizarColaOffline,
+  pendientesOffline: () => leerColaOffline().length
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -144,3 +217,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", event => { if (event.key === "Escape") cerrarMenuUsuario(); });
   validarSesion();
 });
+
+
+function actualizarEstadoOffline(evento) {
+  const el = document.getElementById("offlineStatus");
+  if (!el) return;
+  const pendientes = evento?.detail?.pendientes ?? leerColaOffline().length;
+  const online = evento?.detail?.online ?? navigator.onLine;
+  if (!online) { el.textContent = pendientes ? `Sin Internet · ${pendientes} cambios pendientes` : "Sin conexión"; el.className = "offline-status error"; }
+  else if (pendientes) { el.textContent = `Sincronizando ${pendientes} cambios pendientes…`; el.className = "offline-status"; }
+  else { el.className = "offline-status oculto"; }
+}
+window.addEventListener("autoservicio:offline", actualizarEstadoOffline);
+window.addEventListener("offline", () => actualizarEstadoOffline());
+window.addEventListener("online", () => actualizarEstadoOffline());
+document.addEventListener("DOMContentLoaded", () => { actualizarEstadoOffline(); sincronizarColaOffline(); });

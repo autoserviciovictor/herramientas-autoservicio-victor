@@ -1,8 +1,9 @@
-import { API_BASE_URL } from "./config.js?v=538-admin-aislado";
+import { API_BASE_URL } from "./config.js?v=600-offline-historial";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
 let listas = [];
+let historialVencimientos = [];
 
 function mensaje(texto, tipo = "") {
   const el = $("adminMensaje");
@@ -149,9 +150,19 @@ async function vaciarLista(usuario) {
   catch(e) { mensaje(e.message, "error"); }
 }
 
+
+async function cargarHistorialVencimientos() {
+  const data = await api("/admin/historial-vencimientos");
+  historialVencimientos = data.historial || [];
+  const cont = $("adminHistorialLista");
+  if (!cont) return;
+  if (!historialVencimientos.length) { cont.innerHTML = '<div class="empty-state">Todavía no hay movimientos registrados.</div>'; return; }
+  cont.innerHTML = historialVencimientos.map(h => `<article class="admin-history-card"><div><strong>${h.accion} · ${h.articulo || "Producto"}</strong><span>${h.fecha} ${h.hora} · ${h.nombre || h.usuario}</span><small>${h.codigo || ""} ${h.vencimiento ? `· Vence ${h.vencimiento}` : ""}</small>${h.detalle ? `<p>${h.detalle}</p>` : ""}</div></article>`).join("");
+}
+
 async function cargarTodo() {
   $("adminServidorEstado").textContent = "Consultando servidor…";
-  try { await Promise.all([cargarResumen(), cargarUsuarios(), cargarListas()]); }
+  try { await Promise.all([cargarResumen(), cargarUsuarios(), cargarListas(), cargarHistorialVencimientos()]); }
   catch(e) { $("adminServidorEstado").textContent = e.message; mensaje(e.message, "error"); }
 }
 

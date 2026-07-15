@@ -124,3 +124,10 @@ V5.3.6
 - El menú muestra el usuario y rol activos.
 - La tarjeta Ajustes fue reemplazada por Administrador.
 - Administrador solo aparece para cuentas con rol administrador.
+
+V6.0.0
+- Modo offline con copia local de consultas y cola de cambios.
+- Sincronización automática al recuperar conexión.
+- Indicador de conexión y operaciones pendientes.
+- Historial exclusivo de Vencimientos con usuario, fecha, hora y acción.
+- Nueva pestaña administrativa Historial vencimientos.

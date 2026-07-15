@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.3.5";
+const APP_VERSION = "6.0.0";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -23,6 +23,7 @@ const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const ADMIN_SESSION_HOURS = 8;
 const USER_SESSION_DAYS = 30;
 const USUARIOS_SHEET_NAME = "Usuarios";
+const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
 const ADMIN_USERNAME = normalizarTexto(process.env.ADMIN_USERNAME || "admin").toLowerCase();
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
@@ -934,6 +935,7 @@ app.post("/vencimientos", async (req, res) => {
     });
 
     invalidarCache("vencimientos");
+    await registrarHistorialVencimiento(req, "Creó", registro, `Salón: ${registro.salon} · Depósito: ${registro.deposito}`);
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
   } catch (error) {
     console.error("Error en POST /vencimientos:", error);
@@ -963,6 +965,7 @@ app.put("/vencimientos/:id", async (req, res) => {
       requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
     });
     invalidarCache("vencimientos");
+    await registrarHistorialVencimiento(req, "Editó", actualizado, `Antes: ${registro.vencimiento} / ${registro.total} · Después: ${actualizado.vencimiento} / ${actualizado.total}`);
     res.json({ ok: true, mensaje: "Vencimiento actualizado", vencimiento: actualizado });
   } catch (error) {
     console.error("Error en PUT /vencimientos/:id:", error);
@@ -1004,10 +1007,57 @@ app.delete("/vencimientos/:id", async (req, res) => {
       requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
     });
     invalidarCache("vencimientos");
+    await registrarHistorialVencimiento(req, "Eliminó", registro, `Cantidad total: ${registro.total}`);
     res.json({ ok: true, mensaje: "Vencimiento eliminado" });
   } catch (error) {
     console.error("Error en DELETE /vencimientos/:id:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "Error al eliminar vencimiento" });
+  }
+});
+
+
+async function asegurarHojaHistorialVencimientos() {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some(h => h.properties?.title === HISTORIAL_VENCIMIENTOS_SHEET_NAME);
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: HISTORIAL_VENCIMIENTOS_SHEET_NAME } } }] }
+    });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A1:J1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [["Fecha", "Hora", "Usuario", "Nombre", "Acción", "ID", "Código", "Artículo", "Vencimiento", "Detalle"]] }
+    });
+  }
+}
+
+async function registrarHistorialVencimiento(req, accion, registro, detalle = "") {
+  await asegurarHojaHistorialVencimientos();
+  const ahora = new Date();
+  const partes = new Intl.DateTimeFormat("es-AR", { timeZone: TIME_ZONE, day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }).formatToParts(ahora);
+  const get = t => partes.find(x => x.type === t)?.value || "";
+  const fecha = `${get("day")}/${get("month")}/${get("year")}`;
+  const hora = `${get("hour")}:${get("minute")}:${get("second")}`;
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[fecha, hora, req.usuario?.usuario || "desconocido", req.usuario?.nombre || "", accion, registro?.id || "", registro?.codigo || "", registro?.articulo || "", registro?.vencimiento || "", detalle]] }
+  });
+}
+
+app.get("/admin/historial-vencimientos", requerirAdministrador, async (req, res) => {
+  try {
+    await asegurarHojaHistorialVencimientos();
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J` });
+    const filas = respuesta.data.values || [];
+    const historial = filas.slice(1).reverse().map(f => ({ fecha:f[0]||"", hora:f[1]||"", usuario:f[2]||"", nombre:f[3]||"", accion:f[4]||"", id:f[5]||"", codigo:f[6]||"", articulo:f[7]||"", vencimiento:f[8]||"", detalle:f[9]||"" }));
+    res.json({ ok:true, historial });
+  } catch (error) {
+    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo obtener el historial" });
   }
 });
 
