@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=533-tilde-reposicion";
-import { ordenarPorBusqueda } from "./search.js?v=533-tilde-reposicion";
+import { API_BASE_URL } from "./config.js?v=534-admin-usuarios";
+import { ordenarPorBusqueda } from "./search.js?v=534-admin-usuarios";
 
 let datos = [];
 let contador = 0;

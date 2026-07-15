@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=533-tilde-reposicion";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=533-tilde-reposicion";
-import { ordenarPorBusqueda } from "./search.js?v=533-tilde-reposicion";
+import { API_BASE_URL } from "./config.js?v=534-admin-usuarios";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=534-admin-usuarios";
+import { ordenarPorBusqueda } from "./search.js?v=534-admin-usuarios";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "5.3.2";
+const APP_VERSION = "5.3.4";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -487,6 +487,101 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el panel" });
+  }
+});
+
+
+app.get("/admin/usuarios", requerirAdministrador, async (req, res) => {
+  try {
+    const usuarios = await obtenerUsuarios();
+    res.json({ ok: true, usuarios: usuarios.map(({ passwordHash, filaGoogle, ...usuario }) => usuario) });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudieron cargar los usuarios" });
+  }
+});
+
+app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.body?.usuario);
+    const nombre = normalizarTexto(req.body?.nombre) || usuario;
+    const password = String(req.body?.password || "");
+    const rol = normalizarTexto(req.body?.rol).toLowerCase() === "administrador" ? "administrador" : "repositor";
+    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return res.status(400).json({ ok:false, mensaje:"El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo" });
+    if (password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
+    const usuarios = await obtenerUsuarios();
+    if (usuarios.some(item => item.usuario === usuario)) return res.status(409).json({ ok:false, mensaje:"Ese usuario ya existe" });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${USUARIOS_SHEET_NAME}!A:F`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso()]] }
+    });
+    invalidarCache("usuarios");
+    res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true } });
+  } catch (error) {
+    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo crear el usuario" });
+  }
+});
+
+app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
+  try {
+    const clave = normalizarUsuario(req.params.usuario);
+    const usuarios = await obtenerUsuarios();
+    const actual = usuarios.find(item => item.usuario === clave);
+    if (!actual) return res.status(404).json({ ok:false, mensaje:"Usuario no encontrado" });
+    const nombre = normalizarTexto(req.body?.nombre) || actual.nombre;
+    const rol = req.body?.rol === undefined ? actual.rol : (normalizarTexto(req.body.rol).toLowerCase() === "administrador" ? "administrador" : "repositor");
+    const activo = req.body?.activo === undefined ? actual.activo : Boolean(req.body.activo);
+    const password = String(req.body?.password || "");
+    if (clave === req.usuario.usuario && (!activo || rol !== "administrador")) {
+      return res.status(400).json({ ok:false, mensaje:"No podés desactivar tu propia cuenta ni quitarte el rol de administrador" });
+    }
+    if (password && password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
+    const hash = password ? hashPassword(password) : actual.passwordHash;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:F${actual.filaGoogle}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso()]] }
+    });
+    invalidarCache("usuarios");
+    res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo } });
+  } catch (error) {
+    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });
+  }
+});
+
+app.get("/admin/reposicion-listas", requerirAdministrador, (req, res) => {
+  try {
+    cargarReposicionTemporal();
+    const listas = [...reposicionPorUsuario.entries()].map(([usuario, registros]) => {
+      const limpios = registros.map(limpiarRegistroReposicion).sort((a,b) => {
+        if (a.estado !== b.estado) return a.estado === "pendiente" ? -1 : 1;
+        return String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha));
+      });
+      return {
+        usuario,
+        total: limpios.length,
+        pendientes: limpios.filter(item => item.estado === "pendiente").length,
+        completados: limpios.filter(item => item.estado === "completado").length,
+        registros: limpios
+      };
+    }).filter(lista => lista.total > 0).sort((a,b) => a.usuario.localeCompare(b.usuario));
+    res.json({ ok:true, listas });
+  } catch (error) {
+    res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron cargar las listas" });
+  }
+});
+
+app.delete("/admin/reposicion-listas/:usuario", requerirAdministrador, (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.params.usuario);
+    reposicionPorUsuario.set(usuario, []);
+    guardarReposicionTemporal();
+    res.json({ ok:true, mensaje:`Lista de ${usuario} eliminada` });
+  } catch (error) {
+    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo vaciar la lista" });
   }
 });
 
@@ -976,7 +1071,7 @@ function limpiarRegistroReposicion(registro) {
     codigo: normalizarTexto(registro.codigo),
     articulo: normalizarTexto(registro.articulo),
     cantidad: enteroPositivo(registro.cantidad) || 1,
-    estado: "pendiente",
+    estado: normalizarTexto(registro.estado).toLowerCase() === "completado" ? "completado" : "pendiente",
     actualizado: normalizarTexto(registro.actualizado),
     usuario: normalizarUsuario(registro.usuario)
   };
