@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=612-responsive-dia";
+import { API_BASE_URL } from "./config.js?v=613-doble-lista";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];

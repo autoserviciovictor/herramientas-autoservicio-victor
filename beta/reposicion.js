@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=612-responsive-dia";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=612-responsive-dia";
-import { ordenarPorBusqueda } from "./search.js?v=612-responsive-dia";
+import { API_BASE_URL } from "./config.js?v=613-doble-lista";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=613-doble-lista";
+import { ordenarPorBusqueda } from "./search.js?v=613-doble-lista";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -10,6 +10,7 @@ let iniciado = false;
 let operacionEnCurso = false;
 let temporizadorToast = null;
 let elementoFocoAntesDelModal = null;
+let listaActual = "1";
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
 async function pedir(ruta, opciones={}){
@@ -61,6 +62,7 @@ export function inicializarReposicion(){
   $("btnRepoCancelar")?.addEventListener("click",limpiar);
   $("btnRepoVerRegistro")?.addEventListener("click",()=>cambiarTab("registro"));
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.addEventListener("click",()=>cambiarTab(b.dataset.repoTab)));
+  document.querySelectorAll("[data-repo-lista]").forEach(b=>b.addEventListener("click",()=>seleccionarLista(b.dataset.repoLista)));
   $("repoBuscador")?.addEventListener("input",render);
   $("repoListado")?.addEventListener("click",manejarAccion);
   $("btnRepoVaciarLista")?.addEventListener("click", abrirModalNuevaLista);
@@ -73,10 +75,12 @@ export function inicializarReposicion(){
     if (event.key === "Escape" && !$("repoNuevaListaModal")?.classList.contains("oculto")) cerrarModalNuevaLista();
   });
   window.addEventListener("autoservicio:sesion", actualizarUsuarioReposicion);
+  sincronizarSelectorListas();
 }
 
 export function prepararReposicion(){
   actualizarUsuarioReposicion();
+  seleccionarLista("1", { refrescar: false });
   cambiarTab("cargar");
 }
 
@@ -86,8 +90,31 @@ function actualizarUsuarioReposicion(){
   if ($("repoUsuarioActual")) $("repoUsuarioActual").textContent = nombre;
 }
 
+function sincronizarSelectorListas(){
+  document.querySelectorAll("[data-repo-lista]").forEach(b=>{
+    const activo=String(b.dataset.repoLista||"1")===listaActual;
+    b.classList.toggle("activo",activo);
+    b.setAttribute("aria-pressed",activo?"true":"false");
+  });
+  const nombre=`Lista ${listaActual}`;
+  const modalNombre=$("repoModalListaNombre"); if(modalNombre) modalNombre.textContent=nombre;
+  const toolbar=$("btnRepoVaciarLista"); if(toolbar) toolbar.setAttribute("aria-label",`Empezar nueva ${nombre.toLowerCase()}`);
+}
+
+async function seleccionarLista(valor,{refrescar=true}={}){
+  const nueva=String(valor)==="2"?"2":"1";
+  if(listaActual===nueva && refrescar){ sincronizarSelectorListas(); return; }
+  listaActual=nueva;
+  productoActual=null;
+  limpiar();
+  registros=[];
+  sincronizarSelectorListas();
+  render();
+  if(refrescar) await refrescarReposicion();
+}
+
 export async function refrescarReposicion(){
-  try { const data=await pedir("/reposicion"); registros=data.registros||[]; actualizarUsuarioReposicion(); render(); }
+  try { const data=await pedir(`/reposicion?lista=${listaActual}`); registros=data.registros||[]; actualizarUsuarioReposicion(); render(); }
   catch(e){ toast(e.message,"error"); }
 }
 
@@ -117,8 +144,8 @@ async function guardar(){
   try{
     operacionEnCurso=true;
     const boton=$("btnRepoGuardar"); if(boton) boton.disabled=true;
-    await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:productoActual.codigo,articulo:productoActual.articulo,cantidad})});
-    toast("Producto agregado a tu lista"); limpiar(); await refrescarReposicion();
+    await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:productoActual.codigo,articulo:productoActual.articulo,cantidad,lista:listaActual})});
+    toast(`Producto agregado a Lista ${listaActual}`); limpiar(); await refrescarReposicion();
   }catch(e){toast(e.message,"error");}
   finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton) boton.disabled=false; }
 }
@@ -126,7 +153,7 @@ function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoC
 function actualizarEncabezadoRepo(esCarga){
   const titulo=$("brandHeaderTitulo");
   const subtitulo=$("brandHeaderSubtitulo");
-  if(titulo) titulo.textContent=esCarga?"Lista de reposición":"Mi lista de reposición";
+  if(titulo) titulo.textContent=esCarga?`Lista ${listaActual} · Agregar`:`Mi Lista ${listaActual}`;
   if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos para llevar del depósito";
 }
 function cambiarTab(nueva){
@@ -135,6 +162,7 @@ function cambiarTab(nueva){
   $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
   $("repoRegistroVista")?.classList.toggle("oculto",esCarga);
   actualizarEncabezadoRepo(esCarga);
+  sincronizarSelectorListas();
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
   if($("repoBuscador")) $("repoBuscador").value="";
   if(!esCarga){ refrescarReposicion(); render(); } else { refrescarReposicion(); }
@@ -145,7 +173,7 @@ function renderRecientes(){
   const c=$("repoRecientes"); if(!c)return;
   const items=registros.slice(0,3);
   c.className=items.length?"repo-list":"venc-list-empty";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small>`;
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados en Lista ${listaActual}.</strong><small>Escaneá un producto para comenzar.</small>`;
   const ver=$('btnRepoVerRegistro'); if(ver) ver.disabled=!registros.length;
 }
 function renderListado(){
@@ -168,7 +196,7 @@ function renderListado(){
       <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}${completado?' · Listo':''}</small></div>
       <b class="repo-simple-qty">${numero(r.cantidad)}</b>
     </article>`;
-  }).join(""):`<span class="empty-icon">📦</span><strong>No hay productos en esta lista.</strong><small>Los productos anotados aparecerán acá.</small>`;
+  }).join(""):`<span class="empty-icon">📦</span><strong>No hay productos en Lista ${listaActual}.</strong><small>Los productos anotados aparecerán acá.</small>`;
 }
 
 function ocultarToast(){
@@ -205,14 +233,14 @@ async function confirmarNuevaLista(){
     operacionEnCurso=true;
     const boton=$("btnRepoConfirmarNuevaLista"); if(boton){ boton.disabled=true; boton.textContent="Comenzando..."; }
     const botonLista=$("btnRepoVaciarLista"); if(botonLista) botonLista.disabled=true;
-    await pedir("/reposicion",{method:"DELETE"});
+    await pedir(`/reposicion?lista=${listaActual}`,{method:"DELETE"});
     registros=[]; render();
     const modal=$("repoNuevaListaModal");
     modal?.classList.add("oculto");
     modal?.setAttribute("aria-hidden","true");
     document.body.classList.remove("modal-abierto");
     elementoFocoAntesDelModal=null;
-    toast("Nueva lista lista para comenzar");
+    toast(`Lista ${listaActual} lista para comenzar`);
   } catch(error){ toast(error.message,"error"); }
   finally {
     operacionEnCurso=false;
@@ -238,7 +266,7 @@ async function manejarAccion(e){
 
     if(accion==="eliminar"){
       if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
-      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"DELETE"});
+      await pedir(`/reposicion/${encodeURIComponent(r.id)}?lista=${listaActual}`,{method:"DELETE"});
       registros=registros.filter(item=>String(item.id)!==id);
       render();
       return;
@@ -249,7 +277,7 @@ async function manejarAccion(e){
       if(valor===null) return;
       const cantidad=Number(valor);
       if(!Number.isInteger(cantidad)||cantidad<1) return toast("Cantidad inválida","error");
-      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente"})});
+      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente",lista:listaActual})});
       r.cantidad=cantidad;
       render();
       return;
@@ -263,7 +291,7 @@ async function manejarAccion(e){
 
     await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{
       method:"PUT",
-      body:JSON.stringify({cantidad:numero(r.cantidad),estado:nuevoEstado})
+      body:JSON.stringify({cantidad:numero(r.cantidad),estado:nuevoEstado,lista:listaActual})
     });
 
     toast(nuevoEstado==="completado"?"Producto marcado como listo":"Producto devuelto a pendientes");

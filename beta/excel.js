@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=612-responsive-dia";
-import { ordenarPorBusqueda } from "./search.js?v=612-responsive-dia";
+import { API_BASE_URL } from "./config.js?v=613-doble-lista";
+import { ordenarPorBusqueda } from "./search.js?v=613-doble-lista";
 
 let datos = [];
 let contador = 0;

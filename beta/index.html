@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V6.1.2</title>
+    <title>Herramientas Autoservicio Victor V6.1.3</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=612-responsive-dia">
+    <link rel="stylesheet" href="style.css?v=613-doble-lista">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V6.1.2</p>
+    <p>Herramientas V6.1.3</p>
 </div>
 
 <div class="app">
@@ -93,7 +93,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.2</strong>
+            <strong>V6.1.3</strong>
         </section>
     </main>
 
@@ -352,6 +352,10 @@
             <span>Lista de</span><strong id="repoUsuarioActual">Mi usuario</strong>
         </section>
         <section id="repoCargaVista">
+            <div class="repo-list-selector" role="group" aria-label="Lista para agregar productos">
+                <button type="button" class="activo" data-repo-lista="1" data-repo-lista-contexto="cargar">Lista 1</button>
+                <button type="button" data-repo-lista="2" data-repo-lista-contexto="cargar">Lista 2</button>
+            </div>
             <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
                 <button type="button" id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
                 <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
@@ -392,6 +396,10 @@
         </section>
 
         <section id="repoRegistroVista" class="oculto">
+            <div class="repo-list-selector" role="group" aria-label="Lista para consultar">
+                <button type="button" class="activo" data-repo-lista="1" data-repo-lista-contexto="registro">Lista 1</button>
+                <button type="button" data-repo-lista="2" data-repo-lista-contexto="registro">Lista 2</button>
+            </div>
             <section class="venc-list-card repo-registro-card">
                 <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
                 <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button></div>
@@ -418,7 +426,7 @@
         <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoNuevaListaTitulo" aria-describedby="repoNuevaListaTexto">
             <div class="repo-confirm-icon" aria-hidden="true">📝</div>
             <h2 id="repoNuevaListaTitulo">Empezar nueva lista</h2>
-            <p id="repoNuevaListaTexto">Se eliminarán todos los productos de tu lista actual.</p>
+            <p id="repoNuevaListaTexto">Se eliminarán todos los productos de <strong id="repoModalListaNombre">Lista 1</strong>.</p>
             <div class="repo-confirm-actions">
                 <button id="btnRepoCancelarNuevaLista" type="button" class="cancel-btn">Cancelar</button>
                 <button id="btnRepoConfirmarNuevaLista" type="button" class="danger-btn">Empezar nueva lista</button>
@@ -451,7 +459,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.2</span>
+            <span id="adminVersion" class="admin-version">V6.1.3</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -592,11 +600,11 @@
 
 </div>
 
-<script src="./release-channel.js?v=612-responsive-dia"></script>
-<script src="./pwa.js?v=612-responsive-dia" defer></script>
-<script type="module" src="./auth.js?v=612-responsive-dia"></script>
-<script type="module" src="./admin.js?v=612-responsive-dia"></script>
-<script type="module" src="./app.js?v=612-responsive-dia"></script>
+<script src="./release-channel.js?v=613-doble-lista"></script>
+<script src="./pwa.js?v=613-doble-lista" defer></script>
+<script type="module" src="./auth.js?v=613-doble-lista"></script>
+<script type="module" src="./admin.js?v=613-doble-lista"></script>
+<script type="module" src="./app.js?v=613-doble-lista"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>
