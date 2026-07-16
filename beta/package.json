@@ -1,0 +1,19 @@
+{
+  "name": "herramientas-autoservicio-victor",
+  "version": "6.1.1",
+  "description": "Herramientas Autoservicio Victor V6.1.1 - historial de vencimientos mejorado",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "googleapis": "^134.0.0"
+  }
+}

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Herramientas Autoservicio Victor V6.1.1</title>
+
+    <meta name="theme-color" content="#b24444">
+    <meta name="application-name" content="Autoservicio Victor">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Autoservicio Victor">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="style.css?v=611-rol-beta">
+
+    <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
+</head>
+<body class="login-bloqueado">
+
+<div id="loginOverlay" class="login-overlay" aria-hidden="false">
+  <div class="login-card">
+    <div class="login-logo">🏪</div>
+    <h1>Autoservicio Victor</h1>
+    <p>Ingresá para continuar</p>
+    <label for="loginUsuario">Usuario</label>
+    <input id="loginUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario">
+    <label for="loginPassword">Contraseña</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña">
+    <div id="loginEstado" class="login-status"></div>
+    <button id="btnLoginIngresar" type="button" class="login-button">Ingresar</button>
+  </div>
+</div>
+
+<div id="splash" class="splash">
+    <div class="splash-logo">🏪</div>
+    <h1>Autoservicio Victor</h1>
+    <p>Herramientas V6.1.1</p>
+</div>
+
+<div class="app">
+
+    <div class="brand-header">
+        <button id="brandMenuBtn" class="brand-menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">☰</button>
+        <button id="brandBackBtn" class="brand-back-btn oculto" data-modulo="inicio" type="button" aria-label="Volver">‹</button>
+        <div class="brand-header-text">
+            <span id="brandHeaderTitulo">🏪 Autoservicio Victor</span>
+            <small id="brandHeaderSubtitulo">Herramientas</small>
+        </div>
+        <div id="userDropdown" class="user-dropdown oculto" aria-hidden="true">
+            <div class="user-dropdown-profile">
+                <span class="user-dropdown-avatar">👤</span>
+                <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Repositor</small></div>
+            </div>
+            <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><div><strong>Configuración</strong><small>Ajustes de la aplicación</small></div></button>
+            <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><div><strong>Cerrar sesión</strong><small>Salir de este usuario</small></div></button>
+        </div>
+    </div>
+
+    
+    <main id="pantallaInicio" class="pantalla pantalla-inicio activa">
+        <header class="home-header">
+            <h1>Herramientas</h1>
+            <p>Elegí el módulo que querés usar</p>
+        </header>
+
+        <section class="module-grid">
+            <button type="button" class="module-card module-inventario" data-modulo="inventario">
+                <span class="module-icon">📦</span>
+                <strong>Inventario</strong>
+                <small>Contar stock</small>
+            </button>
+
+            <button type="button" class="module-card module-vencimientos" data-modulo="vencimientos">
+                <span class="module-icon">📅</span>
+                <strong>Vencimientos</strong>
+                <small>Control de fechas</small>
+            </button>
+
+            <button type="button" class="module-card module-anotar" data-modulo="anotar">
+                <span class="module-icon">📝</span>
+                <strong>Lista</strong>
+                <small>Reposición</small>
+            </button>
+
+            <button id="btnAbrirAdminHome" type="button" class="module-card module-administrador admin-module-card oculto">
+                <span class="module-icon">🔐</span>
+                <strong>Administrador</strong>
+                <small>Usuarios e historial</small>
+            </button>
+        </section>
+
+        <section class="home-status">
+            <span>✅ Sistema conectado</span>
+            <strong>V6.1.1</strong>
+        </section>
+    </main>
+
+    <main id="pantallaInventario" class="pantalla">
+        <section class="inventory-status-strip">
+            <span id="estadoExcelTexto">Conectando...</span>
+            <span id="estadoConteoTexto">0 productos</span>
+        </section>
+
+        <section class="inventory-location-card" aria-label="Ubicación de conteo">
+            <span>¿Dónde estás contando?</span>
+            <div class="location-grid">
+                <button type="button" id="btnSalon" class="location-btn activo">🏪 Salón</button>
+                <button type="button" id="btnDeposito" class="location-btn">📦 Depósito</button>
+            </div>
+        </section>
+
+        <section id="scanPanel" class="scan-panel">
+            <button type="button" id="btnAbrirScanner" class="scan-open-btn">📷 Abrir escáner</button>
+            <button type="button" id="btnCodigoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <div id="manualPanel" class="manual-panel oculto">
+                <input type="text" id="codigoManualInput" inputmode="numeric" placeholder="Código de barras">
+                <button type="button" id="btnBuscarManual">Buscar</button>
+            </div>
+        </section>
+
+        <section class="camera-card oculto" id="cameraCard">
+            <div class="scanner-topbar">
+                <strong>Escáner activo</strong>
+                <button id="btnCerrarScanner" type="button">✕ Cerrar</button>
+            </div>
+            <video id="video" autoplay muted playsinline></video>
+            <div class="camera-overlay">
+                <span id="estadoCamaraTexto">Escáner activo</span>
+                <strong id="textoCamara">Apuntá al código de barras</strong>
+                <div class="corner corner-tl"></div>
+                <div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div>
+                <div class="corner corner-br"></div>
+            </div>
+        </section>
+
+        <section id="productoCard" class="product-card empty oculto">
+            <div class="product-status" id="estadoProducto">Esperando código</div>
+            <h2 id="nombreProducto">Esperando escaneo...</h2>
+            <p id="codigoProducto">-</p>
+            <div class="stock-row">
+                <div><span>Salón</span><strong id="stockSalon">0</strong></div>
+                <div><span>Depósito</span><strong id="stockDeposito">0</strong></div>
+                <div><span>Total</span><strong id="stockTotal">0</strong></div>
+            </div>
+        </section>
+
+        <section id="quantityCard" class="quantity-card oculto">
+            <p>Cantidad a agregar</p>
+            <div class="quantity-control">
+                <button type="button" id="btnMenosCantidad">−</button>
+                <input type="number" id="cantidadInput" min="1" step="1" value="1" inputmode="numeric">
+                <button type="button" id="btnMasCantidad">+</button>
+            </div>
+            <div class="action-row">
+                <button id="btnCancelarCantidad" class="cancel-btn" type="button">Cancelar ✕</button>
+                <button type="button" id="btnGuardarCantidad" class="save-btn" disabled>Guardar ✓</button>
+            </div>
+        </section>
+
+        <section class="bottom-info">
+            <div><span>Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
+            <div><span>Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
+        </section>
+    </main>
+
+    <main id="pantallaProductos" class="pantalla">
+        <header class="header-simple">
+            <h1>Productos</h1>
+            <p>Buscá, revisá o modificá el stock</p>
+        </header>
+
+
+        <section class="search-card">
+            <input type="search" id="buscadorProducto" placeholder="Buscar por nombre o código...">
+        </section>
+
+        <p id="resumenProductos" class="list-summary">Conectá Google Sheets para ver productos.</p>
+        <section id="resultadoBusqueda" class="result-list"></section>
+    </main>
+
+    <main id="pantallaEditarProducto" class="pantalla">
+        <header class="header-edit">
+            <button type="button" id="btnVolverProductos" class="back-btn">‹</button>
+            <div>
+                <h1>Editar producto</h1>
+                <p>Modificá salón o depósito manualmente</p>
+            </div>
+        </header>
+
+        <section id="editorStock" class="edit-card">
+            <div class="edit-title">
+                <h2 id="editarNombreProducto">Producto</h2>
+                <p id="editarCodigoProducto">-</p>
+            </div>
+
+            <div class="edit-row salon-row">
+                <label>Salón</label>
+                <div class="quantity-control small">
+                    <button type="button" id="btnMenosSalon">−</button>
+                    <input type="number" id="editarSalon" min="0" step="1" value="0" inputmode="numeric">
+                    <button type="button" id="btnMasSalon">+</button>
+                </div>
+            </div>
+
+            <div class="edit-row deposito-row">
+                <label>Depósito</label>
+                <div class="quantity-control small">
+                    <button type="button" id="btnMenosDeposito">−</button>
+                    <input type="number" id="editarDeposito" min="0" step="1" value="0" inputmode="numeric">
+                    <button type="button" id="btnMasDeposito">+</button>
+                </div>
+            </div>
+
+            <div class="edit-total"><span>Total</span><strong id="editarTotal">0</strong></div>
+            <button type="button" id="btnGuardarCorreccion" class="save-btn">✔ Guardar cambios</button>
+            <button id="btnCancelarCorreccion" class="cancel-btn" type="button">Cancelar</button>
+        </section>
+    </main>
+
+    <main id="pantallaAjustes" class="pantalla">
+        <header class="header-simple">
+            <h1>Ajustes</h1>
+            <p>Configuración del inventario</p>
+        </header>
+
+        <section class="settings-card">
+            <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
+            <button type="button" id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
+        </section>
+
+        <section class="settings-card">
+            <div class="switch-row">
+                <div><strong>Sonidos</strong><span>Confirmación al escanear y guardar</span></div>
+                <input type="checkbox" id="checkSonidos" checked>
+            </div>
+            <div class="switch-row">
+                <div><strong>Vibración</strong><span>Vibración corta al confirmar</span></div>
+                <input type="checkbox" id="checkVibracion" checked>
+            </div>
+        </section>
+
+        <section class="settings-card pwa-install-card">
+            <div class="pwa-install-copy">
+                <strong>Instalar aplicación</strong>
+                <span id="estadoInstalacionApp">Preparando instalación...</span>
+            </div>
+            <button type="button" id="btnInstalarApp" class="setting-btn">⬇ Instalar aplicación</button>
+        </section>
+
+
+
+        <section class="settings-card danger-zone">
+            <button type="button" id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
+            <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
+        </section>
+    </main>
+
+    <main id="pantallaVencimientos" class="pantalla">
+
+        <section class="venc-actions-card">
+            <button type="button" id="btnVencAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
+            <button type="button" id="btnVencManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <div id="vencManualPanel" class="manual-panel oculto">
+                <input type="text" id="vencCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
+                <button type="button" id="btnVencBuscarManual">Buscar</button>
+            </div>
+        </section>
+
+        <section class="camera-card oculto" id="vencCameraCard">
+            <div class="scanner-topbar">
+                <strong>Escáner vencimientos</strong>
+                <button id="btnVencCerrarScanner" type="button">✕ Cerrar</button>
+            </div>
+            <video id="videoVencimientos" autoplay muted playsinline></video>
+            <div class="camera-overlay">
+                <span>Escáner activo</span>
+                <strong>Apuntá al código de barras</strong>
+                <div class="corner corner-tl"></div>
+                <div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div>
+                <div class="corner corner-br"></div>
+            </div>
+        </section>
+
+        <section id="vencProductoCard" class="product-card empty venc-card oculto">
+            <div class="product-status" id="vencEstadoProducto">Esperando código</div>
+            <h2 id="vencNombreProducto">Escaneá o ingresá un código...</h2>
+            <p id="vencCodigoProducto">-</p>
+        </section>
+
+        <section id="vencFormCard" class="venc-form-card oculto">
+            <label>Fecha de vencimiento</label>
+            <input type="date" id="vencFechaInput">
+
+            <div class="venc-grid venc-qty-grid">
+                <div class="venc-qty-box venc-qty-salon">
+                    <label>Salón</label>
+                    <div class="venc-qty-control">
+                        <button id="btnVencMenosSalon" type="button">−</button>
+                        <input type="number" id="vencSalonInput" min="0" step="1" value="0" inputmode="numeric">
+                        <button id="btnVencMasSalon" type="button">+</button>
+                    </div>
+                </div>
+                <div class="venc-qty-box venc-qty-deposito">
+                    <label>Depósito</label>
+                    <div class="venc-qty-control">
+                        <button id="btnVencMenosDeposito" type="button">−</button>
+                        <input type="number" id="vencDepositoInput" min="0" step="1" value="0" inputmode="numeric">
+                        <button id="btnVencMasDeposito" type="button">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="venc-total"><span>Total</span><strong id="vencTotalTexto">0</strong></div>
+            <div class="venc-form-actions">
+                <button type="button" id="btnVencGuardar" class="save-btn">✔ Guardar vencimiento</button>
+                <button id="btnVencCancelarCarga" class="cancel-btn" type="button">Cancelar</button>
+            </div>
+        </section>
+
+        <section class="venc-list-card">
+            <div class="venc-list-head">
+                <h2 id="vencListadoTitulo">Registros recientes</h2>
+                
+            </div>
+
+            <div id="vencResumen" class="venc-resumen"></div>
+
+            <input id="vencBuscador" class="venc-search" type="search" placeholder="Buscar por código o producto...">
+
+            <div class="venc-filter-toolbar">
+                <button id="btnVencAbrirFiltros" type="button" class="filter-open-btn">⚙️ Filtros</button>
+                <span id="vencFiltrosActivos" class="filter-active-label">Todos</span>
+            </div>
+
+            <div id="vencListado" class="venc-list-empty">Todavía no hay vencimientos cargados.</div>
+        </section>
+
+        <nav class="venc-bottom-nav" aria-label="Navegación vencimientos">
+            <button type="button" class="activo" data-venc-tab="cargar">➕<span>Cargar</span></button>
+            <button type="button" data-venc-tab="proximos">📅<span>Próximos</span></button>
+            <button type="button" data-venc-tab="vencidos">⚠️<span>Vencidos</span></button>
+        </nav>
+    </main>
+
+
+    <main id="pantallaAnotar" class="pantalla reposicion-screen">
+        <section class="repo-user-strip" aria-label="Lista personal">
+            <span>Lista de</span><strong id="repoUsuarioActual">Mi usuario</strong>
+        </section>
+        <section id="repoCargaVista">
+            <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
+                <button type="button" id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
+                <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+                <div id="repoManualPanel" class="manual-panel oculto">
+                    <input id="repoCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
+                    <button id="btnRepoBuscarManual" type="button">Buscar</button>
+                </div>
+            </section>
+
+            <section id="repoCameraCard" class="camera-card oculto">
+                <div class="scanner-topbar"><strong>Escáner de lista</strong><button id="btnRepoCerrarScanner" type="button">✕ Cerrar</button></div>
+                <video id="videoReposicion" autoplay muted playsinline></video>
+                <div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div>
+            </section>
+
+            <section id="repoProductoCard" class="repo-product-card oculto">
+                <div class="product-status">✓ Producto encontrado</div>
+                <h2 id="repoNombreProducto">Producto</h2>
+                <p id="repoCodigoProducto">Código: -</p>
+            </section>
+
+            <section id="repoFormCard" class="repo-form-card oculto">
+                <label>Unidades para llevar al salón</label>
+                <div class="quantity-control repo-quantity">
+                    <button id="btnRepoMenos" type="button">−</button>
+                    <input id="repoCantidadInput" type="number" min="1" step="1" value="1" inputmode="numeric">
+                    <button id="btnRepoMas" type="button">+</button>
+                </div>
+                <p class="repo-help">ⓘ Indicá la cantidad que hace falta en el salón.</p>
+                <button id="btnRepoGuardar" class="save-btn" type="button">✔ Agregar a mi lista</button>
+                <button id="btnRepoCancelar" class="cancel-btn repo-cancel" type="button">Cancelar</button>
+            </section>
+
+            <section class="venc-list-card repo-recent-card">
+                <div class="venc-list-head"><h2>Últimos agregados</h2><button id="btnRepoVerRegistro" type="button">Ver mi lista</button></div>
+                <div id="repoRecientes" class="venc-list-empty"><span class="empty-icon">📝</span><strong>Todavía no hay productos anotados.</strong><small>Escaneá un producto para comenzar.</small></div>
+            </section>
+        </section>
+
+        <section id="repoRegistroVista" class="oculto">
+            <section class="venc-list-card repo-registro-card">
+                <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
+                <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button></div>
+
+                <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
+
+            </section>
+        </section>
+
+        <nav class="venc-bottom-nav repo-bottom-nav">
+            <button type="button" class="activo" data-repo-tab="cargar">➕<span>Agregar</span></button>
+            <button type="button" data-repo-tab="registro">☷<span>Mi lista</span></button>
+        </nav>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegación de inventario">
+        <button type="button" class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
+        <button type="button" class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
+        <button type="button" class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
+    </nav>
+
+
+    <div id="repoNuevaListaModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoNuevaListaTitulo" aria-describedby="repoNuevaListaTexto">
+            <div class="repo-confirm-icon" aria-hidden="true">📝</div>
+            <h2 id="repoNuevaListaTitulo">Empezar nueva lista</h2>
+            <p id="repoNuevaListaTexto">Se eliminarán todos los productos de tu lista actual.</p>
+            <div class="repo-confirm-actions">
+                <button id="btnRepoCancelarNuevaLista" type="button" class="cancel-btn">Cancelar</button>
+                <button id="btnRepoConfirmarNuevaLista" type="button" class="danger-btn">Empezar nueva lista</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="vencFiltrosModal" class="modal-overlay filter-modal-overlay oculto" aria-hidden="true">
+        <div class="filter-sheet" role="dialog" aria-modal="true" aria-labelledby="vencFiltrosTitulo">
+            <div class="filter-sheet-handle"></div>
+            <div class="filter-sheet-head"><h2 id="vencFiltrosTitulo">Filtrar productos</h2><button id="btnVencCerrarFiltros" type="button" aria-label="Cerrar">×</button></div>
+            <fieldset><legend>Vencimiento</legend>
+                <label><input type="radio" name="vencEstadoFiltro" value="todos" checked> Todos</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="7"> Hasta 7 días</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="15"> De 8 a 15 días</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="30"> 16 días o más</label>
+            </fieldset>
+            <fieldset><legend>Oferta</legend>
+                <label><input type="radio" name="vencOfertaFiltro" value="todos" checked> Todas</label>
+                <label><input type="radio" name="vencOfertaFiltro" value="oferta"> Con oferta</label>
+                <label><input type="radio" name="vencOfertaFiltro" value="sinOferta"> Sin oferta</label>
+            </fieldset>
+            <div class="filter-sheet-actions"><button id="btnVencLimpiarFiltros" type="button" class="cancel-btn">Limpiar</button><button id="btnVencAplicarFiltros" type="button" class="save-btn">Aplicar filtros</button></div>
+        </div>
+    </div>
+
+
+    <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
+        <section class="admin-welcome-card">
+            <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
+            <span id="adminVersion" class="admin-version">V6.1.1</span>
+        </section>
+
+        <div id="adminMensaje" class="admin-message"></div>
+
+        <nav class="admin-tabs admin-tabs-clean">
+            <button type="button" class="admin-tab activo" data-admin-tab="usuarios">👤 Usuarios</button>
+            <button type="button" class="admin-tab" data-admin-tab="historial">📋 Historial</button>
+            <button type="button" class="admin-tab" data-admin-tab="sistema">⚙️ Sistema</button>
+        </nav>
+
+        <section id="adminTab-usuarios" class="admin-tab-panel settings-card">
+            <div class="admin-section-head"><div><strong>Usuarios</strong><span>Crear, editar y desactivar cuentas</span></div><button id="btnAdminNuevoUsuario" type="button">+ Crear</button></div>
+            <div id="adminUsuariosLista" class="admin-users-list"></div>
+        </section>
+
+        <section id="adminTab-historial" class="admin-tab-panel settings-card oculto">
+            <div class="admin-section-head"><div><strong>Historial de vencimientos</strong><span>Filtrá por fecha, usuario, acción o producto</span></div></div>
+
+            <div class="admin-history-filters" aria-label="Filtros del historial">
+                <div class="admin-period-filter" role="group" aria-label="Período">
+                    <button type="button" class="admin-period-btn activo" data-periodo="hoy">Hoy</button>
+                    <button type="button" class="admin-period-btn" data-periodo="7">7 días</button>
+                    <button type="button" class="admin-period-btn" data-periodo="30">30 días</button>
+                    <button type="button" class="admin-period-btn" data-periodo="todo">Todo</button>
+                </div>
+                <div class="admin-history-filter-grid">
+                    <label>Usuario
+                        <select id="adminHistorialUsuario">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+                    <label>Acción
+                        <select id="adminHistorialAccion">
+                            <option value="">Todas</option>
+                            <option value="creo">Creó</option>
+                            <option value="edito">Editó</option>
+                            <option value="elimino">Eliminó</option>
+                        </select>
+                    </label>
+                </div>
+                <label class="admin-history-search">Buscar producto o código
+                    <input id="adminHistorialBuscar" type="search" placeholder="Ej.: Coca, aceite, 779..." autocomplete="off">
+                </label>
+            </div>
+
+            <div id="adminHistorialResumen" class="admin-history-summary" aria-live="polite"></div>
+            <div id="adminHistorialLista" class="admin-history-list"></div>
+            <button id="btnAdminHistorialMas" type="button" class="setting-btn admin-history-more oculto">Cargar movimientos anteriores</button>
+        </section>
+
+        <section id="adminTab-sistema" class="admin-tab-panel settings-card oculto">
+            <div class="admin-section-head"><div><strong>Sistema</strong><span>Estado general de la aplicación</span></div></div>
+            <div id="adminServidorEstado" class="admin-server-status">Consultando servidor…</div>
+            <div class="admin-summary-grid admin-summary-grid-clean">
+                <div><span>Productos</span><strong id="adminProductos">—</strong></div>
+                <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.0.2.1</strong></div>
+            </div>
+            <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
+        </section>
+    </main>
+
+    <div id="adminUsuarioModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card admin-user-modal" role="dialog" aria-modal="true">
+        <button id="btnAdminCerrarUsuario" class="modal-close" type="button">×</button>
+        <h2 id="adminUsuarioModalTitulo">Crear usuario</h2>
+        <input id="adminUsuarioOriginal" type="hidden">
+        <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
+        <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
+        <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
+        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="administrador">Administrador</option></select></label>
+        <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked> Usuario activo</label>
+        <div class="admin-modal-actions"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar</button></div>
+      </div>
+    </div>
+
+    <div id="vencModal" class="modal-overlay oculto" aria-hidden="true">
+        <div class="modal-card venc-modal-card" role="dialog" aria-modal="true" aria-labelledby="vencModalTitulo">
+            <button id="btnVencModalCerrar" class="modal-close" type="button">×</button>
+            <div id="vencModalVista" class="venc-modal-vista">
+                <div class="modal-kicker">Detalle del lote</div>
+                <h2 id="vencModalTitulo">Producto</h2>
+                <div id="vencModalEstado" class="venc-modal-status">Estado</div>
+                <div class="venc-modal-info">
+                    <div><span>Código</span><strong id="vencModalCodigo">-</strong></div>
+                    <div><span>Vence</span><strong id="vencModalFecha">-</strong></div>
+                    <div><span>Salón</span><strong id="vencModalSalon">0</strong></div>
+                    <div><span>Depósito</span><strong id="vencModalDeposito">0</strong></div>
+                    <div><span>Total</span><strong id="vencModalTotal">0</strong></div>
+                </div>
+                <div class="modal-actions">
+                    <button id="btnVencEditarAbrir" class="secondary-btn" type="button">✏️ Editar</button>
+                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">🗑 Eliminar</button>
+                </div>
+            </div>
+
+            <div id="vencModalEditar" class="venc-modal-editar oculto">
+                <div class="modal-kicker">Editar vencimiento</div>
+                <h2 id="vencEditarTitulo">Producto</h2>
+                <label>Fecha de vencimiento</label>
+                <input type="date" id="vencEditFechaInput">
+                <div class="venc-grid venc-qty-grid">
+                    <div class="venc-qty-box venc-qty-salon">
+                        <label>Salón</label>
+                        <div class="venc-qty-control">
+                            <button id="btnVencEditMenosSalon" type="button">−</button>
+                            <input type="number" id="vencEditSalonInput" min="0" step="1" inputmode="numeric">
+                            <button id="btnVencEditMasSalon" type="button">+</button>
+                        </div>
+                    </div>
+                    <div class="venc-qty-box venc-qty-deposito">
+                        <label>Depósito</label>
+                        <div class="venc-qty-control">
+                            <button id="btnVencEditMenosDeposito" type="button">−</button>
+                            <input type="number" id="vencEditDepositoInput" min="0" step="1" inputmode="numeric">
+                            <button id="btnVencEditMasDeposito" type="button">+</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="venc-total"><span>Total</span><strong id="vencEditTotalTexto">0</strong></div>
+                <div class="modal-actions">
+                    <button id="btnVencGuardarEdicion" class="save-btn" type="button">Guardar cambios</button>
+                    <button id="btnVencCancelarEdicion" class="secondary-btn" type="button">Cancelar</button>
+                </div>
+            </div>
+
+            <div id="vencModalEliminar" class="venc-modal-eliminar oculto">
+                <div class="modal-kicker danger-text">Eliminar lote</div>
+                <h2>¿Eliminar este vencimiento?</h2>
+                <p id="vencEliminarTexto">Esta acción no se puede deshacer.</p>
+                <div class="modal-actions">
+                    <button id="btnVencConfirmarEliminar" class="danger-btn" type="button">Eliminar</button>
+                    <button id="btnVencCancelarEliminar" class="secondary-btn" type="button">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="./release-channel.js?v=611-rol-beta"></script>
+<script src="./pwa.js?v=611-rol-beta" defer></script>
+<script type="module" src="./auth.js?v=611-rol-beta"></script>
+<script type="module" src="./admin.js?v=611-rol-beta"></script>
+<script type="module" src="./app.js?v=611-rol-beta"></script>
+<div id="offlineStatus" class="offline-status oculto" role="status"></div>
+</body>
+</html>
