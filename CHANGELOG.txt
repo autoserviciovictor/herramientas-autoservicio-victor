@@ -1,4 +1,9 @@
-V6.0.5 - Próximos, ofertas y actualización silenciosa
+V6.1.1 - Canal beta automático por rol
+- Administrador entra automáticamente a beta.
+- Repositores permanecen en estable.
+- Eliminada la selección manual por dispositivo.
+
+V6.1.1 - Próximos, ofertas y actualización silenciosa
 - Próximos muestra todos los productos vigentes, incluso los que superan 30 días.
 - Clasificación: hasta 7 días rojo, 8 a 15 amarillo y 16 días o más azul.
 - El contador de 30 días incluye todos los productos vigentes con 16 días o más.

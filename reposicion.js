@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=605-proximos";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=605-proximos";
-import { ordenarPorBusqueda } from "./search.js?v=605-proximos";
+import { API_BASE_URL } from "./config.js?v=611-rol-beta";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=611-rol-beta";
+import { ordenarPorBusqueda } from "./search.js?v=611-rol-beta";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

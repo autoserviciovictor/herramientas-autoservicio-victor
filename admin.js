@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=605-proximos";
+import { API_BASE_URL } from "./config.js?v=611-rol-beta";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -290,6 +290,8 @@ function cambiarTab(tab) {
   document.querySelectorAll(".admin-tab").forEach(b => b.classList.toggle("activo", b.dataset.adminTab === tab));
   document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.toggle("oculto", p.id !== `adminTab-${tab}`));
 }
+
+
 
 function abrirAdmin() {
   if (window.AutoservicioAuth?.esAdmin()) mostrarPanel();

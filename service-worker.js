@@ -1,18 +1,20 @@
-const CACHE_VERSION = 'autoservicio-v6.0.5-proximos';
+const CACHE_PREFIX = 'autoservicio-';
+const CACHE_VERSION = 'autoservicio-v6.1.1-role-beta';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css?v=605-proximos',
-  './app.js?v=605-proximos',
-  './config.js?v=605-proximos',
-  './excel.js?v=605-proximos',
-  './scanner.js?v=605-proximos',
-  './reposicion.js?v=605-proximos',
-  './ui.js?v=605-proximos',
-  './pwa.js?v=605-proximos',
-  './search.js?v=605-proximos',
-  './admin.js?v=605-proximos',
-  './auth.js?v=605-proximos',
+  './style.css?v=611-rol-beta',
+  './app.js?v=611-rol-beta',
+  './config.js?v=611-rol-beta',
+  './excel.js?v=611-rol-beta',
+  './scanner.js?v=611-rol-beta',
+  './reposicion.js?v=611-rol-beta',
+  './ui.js?v=611-rol-beta',
+  './release-channel.js?v=611-rol-beta',
+  './pwa.js?v=611-rol-beta',
+  './search.js?v=611-rol-beta',
+  './admin.js?v=611-rol-beta',
+  './auth.js?v=611-rol-beta',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -27,7 +29,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_VERSION).map(key => caches.delete(key))))
+    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_VERSION).map(key => caches.delete(key))))
   );
   self.clients.claim();
 });

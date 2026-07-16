@@ -18,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=605-proximos";
+} from "./excel.js?v=611-rol-beta";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=605-proximos";
+} from "./scanner.js?v=611-rol-beta";
 
 import {
     ocultarSplash,
@@ -46,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=605-proximos";
+} from "./ui.js?v=611-rol-beta";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=605-proximos";
-import { coincideBusqueda } from "./search.js?v=605-proximos";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=611-rol-beta";
+import { coincideBusqueda } from "./search.js?v=611-rol-beta";
 
 let ubicacionActual = "salon";
 let productoActual = null;

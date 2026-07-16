@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=605-proximos";
-import { ordenarPorBusqueda } from "./search.js?v=605-proximos";
+import { API_BASE_URL } from "./config.js?v=611-rol-beta";
+import { ordenarPorBusqueda } from "./search.js?v=611-rol-beta";
 
 let datos = [];
 let contador = 0;

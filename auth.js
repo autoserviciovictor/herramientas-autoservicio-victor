@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=605-proximos";
+import { API_BASE_URL } from "./config.js?v=611-rol-beta";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
@@ -111,6 +111,7 @@ function ocultarLogin() {
 }
 
 function actualizarInterfazUsuario() {
+  if (usuarioActual?.rol && window.AutoservicioReleaseChannel?.syncForRole?.(usuarioActual.rol)) return;
   const nombre = usuarioActual?.nombre || usuarioActual?.usuario || "";
   if ($("sesionNombre")) $("sesionNombre").textContent = nombre;
   const textoRol = usuarioActual?.rol === "administrador" ? "Administrador" : "Repositor";
