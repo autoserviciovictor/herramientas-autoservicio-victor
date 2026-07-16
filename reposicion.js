@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=603-hotfix-inicio";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=603-hotfix-inicio";
-import { ordenarPorBusqueda } from "./search.js?v=603-hotfix-inicio";
+import { API_BASE_URL } from "./config.js?v=534-admin-usuarios";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=534-admin-usuarios";
+import { ordenarPorBusqueda } from "./search.js?v=534-admin-usuarios";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -9,6 +9,7 @@ let tab = "cargar";
 let iniciado = false;
 let operacionEnCurso = false;
 let temporizadorToast = null;
+let elementoFocoAntesDelModal = null;
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
 async function pedir(ruta, opciones={}){
@@ -62,7 +63,15 @@ export function inicializarReposicion(){
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.addEventListener("click",()=>cambiarTab(b.dataset.repoTab)));
   $("repoBuscador")?.addEventListener("input",render);
   $("repoListado")?.addEventListener("click",manejarAccion);
-  $("btnRepoVaciarLista")?.addEventListener("click", vaciarLista);
+  $("btnRepoVaciarLista")?.addEventListener("click", abrirModalNuevaLista);
+  $("btnRepoCancelarNuevaLista")?.addEventListener("click", cerrarModalNuevaLista);
+  $("btnRepoConfirmarNuevaLista")?.addEventListener("click", confirmarNuevaLista);
+  $("repoNuevaListaModal")?.addEventListener("click", event => {
+    if (event.target === $("repoNuevaListaModal")) cerrarModalNuevaLista();
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !$("repoNuevaListaModal")?.classList.contains("oculto")) cerrarModalNuevaLista();
+  });
   window.addEventListener("autoservicio:sesion", actualizarUsuarioReposicion);
 }
 
@@ -162,22 +171,54 @@ function renderListado(){
   }).join(""):`<span class="empty-icon">📦</span><strong>No hay productos en esta lista.</strong><small>Los productos anotados aparecerán acá.</small>`;
 }
 
-async function vaciarLista(){
+function ocultarToast(){
+  const t=$("toast");
+  clearTimeout(temporizadorToast);
+  if(t){ t.className="toast"; t.textContent=""; }
+}
+
+function abrirModalNuevaLista(){
   if(operacionEnCurso || !registros.length) return;
-  const confirmar = await window.AppDialog.confirm({
-    titulo: "Empezar una nueva lista",
-    mensaje: "Se eliminarán todos los productos de tu lista actual. Esta acción no se puede deshacer.",
-    confirmarTexto: "Empezar nueva lista",
-    peligro: true
-  });
-  if(!confirmar) return;
+  const modal=$("repoNuevaListaModal");
+  if(!modal) return confirmarNuevaLista();
+  ocultarToast();
+  elementoFocoAntesDelModal=document.activeElement;
+  modal.classList.remove("oculto");
+  modal.setAttribute("aria-hidden","false");
+  document.body.classList.add("modal-abierto");
+  requestAnimationFrame(()=>$("btnRepoCancelarNuevaLista")?.focus());
+}
+
+function cerrarModalNuevaLista(){
+  if(operacionEnCurso) return;
+  const modal=$("repoNuevaListaModal");
+  modal?.classList.add("oculto");
+  modal?.setAttribute("aria-hidden","true");
+  document.body.classList.remove("modal-abierto");
+  if(elementoFocoAntesDelModal instanceof HTMLElement) elementoFocoAntesDelModal.focus();
+  elementoFocoAntesDelModal=null;
+}
+
+async function confirmarNuevaLista(){
+  if(operacionEnCurso || !registros.length) return;
   try {
     operacionEnCurso=true;
-    const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=true;
+    const boton=$("btnRepoConfirmarNuevaLista"); if(boton){ boton.disabled=true; boton.textContent="Comenzando..."; }
+    const botonLista=$("btnRepoVaciarLista"); if(botonLista) botonLista.disabled=true;
     await pedir("/reposicion",{method:"DELETE"});
-    registros=[]; render(); toast("Nueva lista lista para comenzar");
+    registros=[]; render();
+    const modal=$("repoNuevaListaModal");
+    modal?.classList.add("oculto");
+    modal?.setAttribute("aria-hidden","true");
+    document.body.classList.remove("modal-abierto");
+    elementoFocoAntesDelModal=null;
+    toast("Nueva lista lista para comenzar");
   } catch(error){ toast(error.message,"error"); }
-  finally { operacionEnCurso=false; const boton=$("btnRepoVaciarLista"); if(boton) boton.disabled=false; }
+  finally {
+    operacionEnCurso=false;
+    const boton=$("btnRepoConfirmarNuevaLista"); if(boton){ boton.disabled=false; boton.textContent="Empezar nueva lista"; }
+    const botonLista=$("btnRepoVaciarLista"); if(botonLista) botonLista.disabled=!registros.length;
+  }
 }
 
 async function manejarAccion(e){
@@ -196,8 +237,7 @@ async function manejarAccion(e){
     b.disabled=true;
 
     if(accion==="eliminar"){
-      const confirmar = await window.AppDialog.confirm({ titulo: "Eliminar producto", mensaje: `¿Eliminar ${r.articulo} de tu lista?`, confirmarTexto: "Eliminar", peligro: true });
-      if(!confirmar) return;
+      if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
       await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"DELETE"});
       registros=registros.filter(item=>String(item.id)!==id);
       render();
@@ -205,8 +245,8 @@ async function manejarAccion(e){
     }
 
     if(accion==="editar"){
-      const valor=await window.AppDialog.prompt({ titulo: "Editar cantidad", mensaje: r.articulo, confirmarTexto: "Guardar", valor: r.cantidad });
-      if(valor===false || valor===null) return;
+      const valor=prompt("Nueva cantidad",r.cantidad);
+      if(valor===null) return;
       const cantidad=Number(valor);
       if(!Number.isInteger(cantidad)||cantidad<1) return toast("Cantidad inválida","error");
       await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente"})});

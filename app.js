@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=603-hotfix-inicio";
+} from "./excel.js?v=601-admin-limpio";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=603-hotfix-inicio";
+} from "./scanner.js?v=601-admin-limpio";
 
 import {
     ocultarSplash,
@@ -48,10 +48,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=603-hotfix-inicio";
+} from "./ui.js?v=601-admin-limpio";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=603-hotfix-inicio";
-import { coincideBusqueda } from "./search.js?v=603-hotfix-inicio";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=602-modal-lista";
+import { coincideBusqueda } from "./search.js?v=601-admin-limpio";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -157,7 +157,6 @@ inicializar();
 
 async function inicializar() {
     ocultarSplash();
-    window.dispatchEvent(new CustomEvent("autoservicio:boot-ok"));
     cambiarPantalla("inicio");
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
@@ -713,7 +712,7 @@ function actualizarPreferenciasFeedback() {
 }
 
 function manejarReinicio() {
-    const confirmar = await window.AppDialog.confirm({ titulo: "Reiniciar contador local", mensaje: "No se borrará Google Sheets. Solo se reiniciarán los contadores de este dispositivo.", confirmarTexto: "Reiniciar", peligro: true });
+    const confirmar = confirm("¿Querés reiniciar los contadores locales de esta app?");
     if (!confirmar) return;
 
     const nuevoContador = reiniciarContador();

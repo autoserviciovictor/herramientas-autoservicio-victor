@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V6.0.3</title>
+    <title>Herramientas Autoservicio Victor V6.0.2</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=603-hotfix-inicio">
+    <link rel="stylesheet" href="style.css?v=602-modal-lista">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V6.0.3</p>
+    <p>Herramientas V6.0.2</p>
 </div>
 
 <div class="app">
@@ -93,7 +93,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.0.3</strong>
+            <strong>V6.0.2</strong>
         </section>
     </main>
 
@@ -414,6 +414,19 @@
         <button type="button" class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
     </nav>
 
+
+    <div id="repoNuevaListaModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoNuevaListaTitulo" aria-describedby="repoNuevaListaTexto">
+            <div class="repo-confirm-icon" aria-hidden="true">📝</div>
+            <h2 id="repoNuevaListaTitulo">Empezar nueva lista</h2>
+            <p id="repoNuevaListaTexto">Se eliminarán todos los productos de tu lista actual.</p>
+            <div class="repo-confirm-actions">
+                <button id="btnRepoCancelarNuevaLista" type="button" class="cancel-btn">Cancelar</button>
+                <button id="btnRepoConfirmarNuevaLista" type="button" class="danger-btn">Empezar nueva lista</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <div id="vencFiltrosModal" class="modal-overlay filter-modal-overlay oculto" aria-hidden="true">
@@ -439,7 +452,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.0.3</span>
+            <span id="adminVersion" class="admin-version">V6.0.2</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -466,7 +479,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">6.0.3</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.0.2</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
         </section>
@@ -550,27 +563,10 @@
 
 </div>
 
-<script src="./pwa.js?v=603-hotfix-inicio" defer></script>
-<script type="module" src="./auth.js?v=603-hotfix-inicio"></script>
-<script type="module" src="./admin.js?v=603-hotfix-inicio"></script>
-<script type="module" src="./app.js?v=603-hotfix-inicio"></script>
+<script src="./pwa.js?v=601-admin-limpio" defer></script>
+<script type="module" src="./auth.js?v=601-admin-limpio"></script>
+<script type="module" src="./admin.js?v=601-admin-limpio"></script>
+<script type="module" src="./app.js?v=602-modal-lista"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
-<script>
-(function () {
-  const BOOT_TIMEOUT_MS = 6000;
-  window.__autoservicioBootOk = false;
-  window.addEventListener('autoservicio:boot-ok', function () {
-    window.__autoservicioBootOk = true;
-  }, { once: true });
-  setTimeout(function () {
-    const splash = document.getElementById('splash');
-    if (!splash || window.__autoservicioBootOk) return;
-    splash.classList.add('oculto');
-    const inicio = document.getElementById('pantallaInicio');
-    if (inicio) inicio.classList.add('activa');
-    console.error('Inicio de emergencia: la aplicación tardó demasiado en arrancar.');
-  }, BOOT_TIMEOUT_MS);
-})();
-</script>
 </body>
 </html>
