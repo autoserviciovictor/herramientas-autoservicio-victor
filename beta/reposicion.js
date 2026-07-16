@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=613-doble-lista";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=613-doble-lista";
-import { ordenarPorBusqueda } from "./search.js?v=613-doble-lista";
+import { API_BASE_URL } from "./config.js?v=6131-listas-separadas";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=6131-listas-separadas";
+import { ordenarPorBusqueda } from "./search.js?v=6131-listas-separadas";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -18,7 +18,7 @@ async function pedir(ruta, opciones={}){
   const temporizador = setTimeout(()=>controlador.abort(),15000);
   let r;
   try {
-    r = await fetch(apiUrl(ruta), {...opciones, headers:{"Content-Type":"application/json",...(opciones.headers||{})}, signal:controlador.signal});
+    r = await fetch(apiUrl(ruta), {...opciones, cache:"no-store", headers:{"Content-Type":"application/json",...(opciones.headers||{})}, signal:controlador.signal});
   } catch(error) {
     if(error?.name === "AbortError") throw new Error("El servidor tardó demasiado en responder");
     throw new Error("No se pudo conectar con el servidor");

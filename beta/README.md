@@ -1,4 +1,4 @@
-# Herramientas Autoservicio Victor V6.1.3 Beta
+# Herramientas Autoservicio Victor V6.1.3.1.1 Beta
 
 ## Canal beta automático por rol
 
@@ -17,10 +17,10 @@
 El resto de las funciones de V6.0.5 y del historial mejorado se conservan.
 
 
-## V6.1.3 Beta
+## V6.1.3.1.1 Beta
 - Diseño responsive para computadora.
 - La pantalla Cargar vencimiento muestra únicamente los registros cargados hoy.
 
 
-## V6.1.3 Beta
+## V6.1.3.1.1 Beta
 Incluye Lista 1 y Lista 2 independientes por usuario.

@@ -7,7 +7,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.3";
+const APP_VERSION = "6.1.3.1";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -929,7 +929,7 @@ async function obtenerSheetId(nombreHoja) {
 }
 
 
-// V6.1.3 - Reposición temporal, individual y con dos listas por usuario.
+// V6.1.3.1 - Reposición temporal, individual y con dos listas por usuario.
 // No utiliza Google Sheets. Cada usuario autenticado administra Lista 1 y Lista 2.
 const REPOSICION_DATA_FILE = process.env.REPOSICION_DATA_FILE
   ? path.resolve(process.env.REPOSICION_DATA_FILE)
@@ -942,13 +942,42 @@ function normalizarNumeroLista(valor) {
   return String(valor) === "2" ? "2" : "1";
 }
 
+function registrosIgualesReposicion(a = [], b = []) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) return false;
+  const firma = item => [
+    normalizarTexto(item?.id),
+    normalizarCodigo(item?.codigo),
+    normalizarTexto(item?.articulo),
+    enteroPositivo(item?.cantidad) || 1,
+    normalizarTexto(item?.estado).toLowerCase()
+  ].join("|");
+  return a.every((item, indice) => firma(item) === firma(b[indice]));
+}
+
+function normalizarRegistrosDeLista(items, numeroLista) {
+  if (!Array.isArray(items)) return [];
+  return items.map(item => ({
+    ...item,
+    lista: normalizarNumeroLista(numeroLista)
+  }));
+}
+
 function crearContenedorListas(valor = null) {
   // Migración automática: el formato anterior era un único arreglo por usuario.
-  if (Array.isArray(valor)) return { lista1: valor, lista2: [] };
+  if (Array.isArray(valor)) {
+    return { lista1: normalizarRegistrosDeLista(valor, "1"), lista2: [] };
+  }
   if (valor && typeof valor === "object") {
+    const origen1 = Array.isArray(valor.lista1) ? valor.lista1 : (Array.isArray(valor["1"]) ? valor["1"] : []);
+    const origen2 = Array.isArray(valor.lista2) ? valor.lista2 : (Array.isArray(valor["2"]) ? valor["2"] : []);
+
+    // Corrección del error de la primera beta: si ambas listas quedaron como copias
+    // exactas, se conserva la Lista 1 y se reinicia la Lista 2 una sola vez.
+    const lista2Corregida = registrosIgualesReposicion(origen1, origen2) ? [] : origen2;
+
     return {
-      lista1: Array.isArray(valor.lista1) ? valor.lista1 : (Array.isArray(valor["1"]) ? valor["1"] : []),
-      lista2: Array.isArray(valor.lista2) ? valor.lista2 : (Array.isArray(valor["2"]) ? valor["2"] : [])
+      lista1: normalizarRegistrosDeLista(origen1, "1"),
+      lista2: normalizarRegistrosDeLista(lista2Corregida, "2")
     };
   }
   return { lista1: [], lista2: [] };
@@ -1016,6 +1045,7 @@ app.get("/reposicion", (req, res) => {
     const usuario = req.usuario.usuario;
     const numeroLista = normalizarNumeroLista(req.query.lista);
     const registros = obtenerListaReposicion(usuario, numeroLista)
+      .filter(item => normalizarNumeroLista(item.lista || numeroLista) === numeroLista)
       .map(item => limpiarRegistroReposicion(item, numeroLista))
       .sort((a, b) => String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha)));
     res.json({ ok: true, total: registros.length, lista: numeroLista, usuario: req.usuario, registros });
@@ -1043,10 +1073,11 @@ app.post("/reposicion", async (req, res) => {
         existente.cantidad = (enteroPositivo(existente.cantidad) || 0) + cantidad;
         existente.estado = "pendiente";
         existente.actualizado = ahora;
+        existente.lista = numeroLista;
         guardarReposicionTemporal();
         return { mensaje: `Cantidad sumada a Lista ${numeroLista}`, registro: limpiarRegistroReposicion(existente, numeroLista) };
       }
-      const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora, usuario };
+      const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora, usuario, lista: numeroLista };
       lista.unshift(registro);
       guardarReposicionTemporal();
       return { mensaje: `Producto agregado a Lista ${numeroLista}`, registro: limpiarRegistroReposicion(registro, numeroLista) };

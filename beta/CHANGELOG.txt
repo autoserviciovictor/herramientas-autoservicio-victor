@@ -1,20 +1,20 @@
-V6.1.3 BETA — Lista 1 y Lista 2
+V6.1.3.1 BETA — Lista 1 y Lista 2
 - Dos listas privadas e independientes por usuario.
 - Selectores en Agregar y Mi lista.
 - Migración automática de la lista anterior a Lista 1.
 - Empezar nueva lista vacía solo la lista seleccionada.
 
-V6.1.3 BETA — Responsive y registros diarios
+V6.1.3.1 BETA — Responsive y registros diarios
 - La interfaz se adapta a computadoras y pantallas amplias.
 - En Cargar vencimiento solo se muestran registros cargados durante el día actual en Argentina.
 - No se eliminan registros anteriores; siguen disponibles en Próximos, Vencidos e Historial.
 
-V6.1.3 - Canal beta automático por rol
+V6.1.3.1 - Canal beta automático por rol
 - Administrador entra automáticamente a beta.
 - Repositores permanecen en estable.
 - Eliminada la selección manual por dispositivo.
 
-V6.1.3 - Próximos, ofertas y actualización silenciosa
+V6.1.3.1 - Próximos, ofertas y actualización silenciosa
 - Próximos muestra todos los productos vigentes, incluso los que superan 30 días.
 - Clasificación: hasta 7 días rojo, 8 a 15 amarillo y 16 días o más azul.
 - El contador de 30 días incluye todos los productos vigentes con 16 días o más.
