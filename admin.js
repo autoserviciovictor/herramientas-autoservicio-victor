@@ -33,7 +33,12 @@ function mostrarPanel() {
     return;
   }
   window.AutoservicioNavigate?.("admin");
-  $("pantallaAdmin")?.setAttribute("aria-hidden", "false");
+  const panel = $("pantallaAdmin");
+  if (panel) {
+    panel.hidden = false;
+    panel.classList.add("activa");
+    panel.setAttribute("aria-hidden", "false");
+  }
   cambiarTab("usuarios");
   cargarTodo();
 }

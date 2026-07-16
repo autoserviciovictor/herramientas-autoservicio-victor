@@ -1,3 +1,7 @@
+V6.0.2.1 - Corrección pantalla Administración
+- Se elimina el atributo hidden al abrir Administración con un usuario administrador.
+- Se conserva sin cambios el modal propio de Nueva lista.
+
 V6.0.2 - Entrega 1 (modal Nueva lista)
 - Reemplazado el confirm() del navegador al empezar una nueva lista.
 - Nuevo modal integrado con el diseño de la aplicación.
