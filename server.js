@@ -1,14 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const { google } = require("googleapis");
-const XLSX = require("xlsx");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.0.0";
+const APP_VERSION = "6.0.3";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -16,11 +15,8 @@ const SHEET_NAME = "Stock";
 const PRODUCTOS_SHEET_NAME = "Productos";
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-const API_WRITE_KEY = normalizarTexto(process.env.API_WRITE_KEY);
-const RESET_KEY = normalizarTexto(process.env.RESET_KEY);
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
-const ADMIN_SESSION_HOURS = 8;
 const USER_SESSION_DAYS = 30;
 const USUARIOS_SHEET_NAME = "Usuarios";
 const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
@@ -39,21 +35,6 @@ app.use(cors({
   }
 }));
 app.use(express.json({ limit: "10mb" }));
-
-function protegerEscrituras(req, res, next) {
-  if (!API_WRITE_KEY) return next();
-  const clave = normalizarTexto(req.get("x-api-key"));
-  if (clave !== API_WRITE_KEY) {
-    return res.status(401).json({ ok: false, mensaje: "No autorizado" });
-  }
-  next();
-}
-
-app.use((req, res, next) => {
-  const esEscritura = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  if (!esEscritura || req.path === "/reiniciar" || req.path === "/admin/login" || req.path === "/auth/login") return next();
-  return protegerEscrituras(req, res, next);
-});
 
 const auth = new google.auth.JWT(
   GOOGLE_CLIENT_EMAIL,
@@ -453,26 +434,8 @@ app.get("/auth/session", requerirSesion, (req, res) => {
 
 // Desde aquí, toda la API de trabajo requiere una sesión válida.
 app.use((req, res, next) => {
-  if (req.path === "/" || req.path === "/admin/login") return next();
+  if (req.path === "/") return next();
   return requerirSesion(req, res, next);
-});
-
-app.post("/admin/login", (req, res) => {
-  if (!ADMIN_KEY || !ADMIN_TOKEN_SECRET) {
-    return res.status(503).json({ ok: false, mensaje: "El modo administrador no está configurado en Render" });
-  }
-  const clave = normalizarTexto(req.body?.clave);
-  if (!clave || clave !== ADMIN_KEY) {
-    return res.status(401).json({ ok: false, mensaje: "PIN de administrador incorrecto" });
-  }
-  const ahora = Date.now();
-  const exp = ahora + ADMIN_SESSION_HOURS * 60 * 60 * 1000;
-  const token = firmarTokenAdmin({ rol: "administrador", iat: ahora, exp });
-  res.json({ ok: true, token, expira: new Date(exp).toISOString(), version: APP_VERSION });
-});
-
-app.get("/admin/session", requerirAdministrador, (req, res) => {
-  res.json({ ok: true, rol: req.admin.rol, expira: new Date(req.admin.exp).toISOString(), version: APP_VERSION });
 });
 
 app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
@@ -483,7 +446,6 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
       version: APP_VERSION,
       productos: productos.length,
       vencimientos: vencimientos.length,
-      reposicionPendiente: resumenReposicionGlobal(),
       servidor: "conectado"
     });
   } catch (error) {
@@ -550,39 +512,6 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });
-  }
-});
-
-app.get("/admin/reposicion-listas", requerirAdministrador, (req, res) => {
-  try {
-    cargarReposicionTemporal();
-    const listas = [...reposicionPorUsuario.entries()].map(([usuario, registros]) => {
-      const limpios = registros.map(limpiarRegistroReposicion).sort((a,b) => {
-        if (a.estado !== b.estado) return a.estado === "pendiente" ? -1 : 1;
-        return String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha));
-      });
-      return {
-        usuario,
-        total: limpios.length,
-        pendientes: limpios.filter(item => item.estado === "pendiente").length,
-        completados: limpios.filter(item => item.estado === "completado").length,
-        registros: limpios
-      };
-    }).filter(lista => lista.total > 0).sort((a,b) => a.usuario.localeCompare(b.usuario));
-    res.json({ ok:true, listas });
-  } catch (error) {
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron cargar las listas" });
-  }
-});
-
-app.delete("/admin/reposicion-listas/:usuario", requerirAdministrador, (req, res) => {
-  try {
-    const usuario = normalizarUsuario(req.params.usuario);
-    reposicionPorUsuario.set(usuario, []);
-    guardarReposicionTemporal();
-    res.json({ ok:true, mensaje:`Lista de ${usuario} eliminada` });
-  } catch (error) {
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo vaciar la lista" });
   }
 });
 
@@ -720,75 +649,6 @@ app.post("/corregir", async (req, res) => {
     res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al corregir producto" });
   }
 });
-
-app.get("/descargar", async (req, res) => {
-  try {
-    const productos = await obtenerProductos();
-
-    const filas = productos.map(producto => ({
-      codigo: producto.codigo,
-      articulo: producto.articulo,
-      stock: numero(producto.stock),
-      salon: numero(producto.salon),
-      deposito: numero(producto.deposito)
-    }));
-
-    const hoja = XLSX.utils.json_to_sheet(filas, {
-      header: ["codigo", "articulo", "stock", "salon", "deposito"]
-    });
-
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, "Stock");
-
-    const buffer = XLSX.write(libro, { type: "buffer", bookType: "xlsx" });
-
-    res.setHeader("Content-Disposition", "attachment; filename=inventario-victor.xlsx");
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.send(buffer);
-  } catch (error) {
-    console.error("Error en /descargar:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al descargar Excel" });
-  }
-});
-
-app.post("/reiniciar", async (req, res) => {
-  try {
-    const sesionAdmin = verificarTokenAdmin(obtenerTokenAdmin(req));
-    const clave = normalizarTexto(req.get("x-reset-key") || req.body?.resetKey);
-    const autorizadoPorClave = Boolean(RESET_KEY) && clave === RESET_KEY;
-    if (!sesionAdmin && !autorizadoPorClave) {
-      return res.status(401).json({ ok: false, mensaje: "Se requiere una sesión de administrador" });
-    }
-    if (normalizarTexto(req.body?.confirmacion) !== "REINICIAR INVENTARIO") {
-      return res.status(400).json({ ok: false, mensaje: "Falta la confirmación de reinicio" });
-    }
-    const productos = await obtenerProductos();
-
-    const valores = productos.map(producto => [
-      producto.codigo,
-      producto.articulo,
-      0,
-      0,
-      0
-    ]);
-
-    if (valores.length > 0) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:E${valores.length + 1}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: valores }
-      });
-    }
-
-    invalidarCache("productos");
-    res.json({ ok: true, mensaje: "Inventario reiniciado" });
-  } catch (error) {
-    console.error("Error en /reiniciar:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al reiniciar inventario" });
-  }
-});
-
 
 const VENCIMIENTOS_SHEET_NAME = "Vencimientos";
 
@@ -1125,11 +985,6 @@ function limpiarRegistroReposicion(registro) {
     actualizado: normalizarTexto(registro.actualizado),
     usuario: normalizarUsuario(registro.usuario)
   };
-}
-
-function resumenReposicionGlobal() {
-  cargarReposicionTemporal();
-  return [...reposicionPorUsuario.values()].reduce((total, lista) => total + lista.length, 0);
 }
 
 app.get("/reposicion", (req, res) => {

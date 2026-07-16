@@ -1,3 +1,11 @@
+V6.0.3 - Limpieza completa
+- Eliminada la descarga Excel y la dependencia xlsx.
+- Eliminado el reinicio total remoto del inventario.
+- Eliminados endpoints administrativos antiguos y listas activas.
+- Unificado el versionado y la caché de todos los módulos.
+- Actualizada la documentación y variables de entorno.
+- Conservadas todas las funciones actuales de Inventario, Vencimientos, Lista y Administración.
+
 V6.0.2.1 - Corrección pantalla Administración
 - Se elimina el atributo hidden al abrir Administración con un usuario administrador.
 - Se conserva sin cambios el modal propio de Nueva lista.

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=601-admin-limpio";
+import { API_BASE_URL } from "./config.js?v=603-cleanup";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];

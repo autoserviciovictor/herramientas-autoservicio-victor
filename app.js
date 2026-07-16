@@ -2,7 +2,6 @@ import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
     obtenerProductoActualizadoPorCodigo,
-    descargarExcel,
     buscarProductoPorCodigo,
     buscarProductosPorTexto,
     obtenerProductos,
@@ -19,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=601-admin-limpio";
+} from "./excel.js?v=603-cleanup";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=601-admin-limpio";
+} from "./scanner.js?v=603-cleanup";
 
 import {
     ocultarSplash,
@@ -38,7 +37,6 @@ import {
     limpiarProducto,
     actualizarContador,
     activarBotonGuardar,
-    activarBotonDescargar,
     configurarFeedback,
     reproducirConfirmacion,
     renderResultadosBusqueda,
@@ -48,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=601-admin-limpio";
+} from "./ui.js?v=603-cleanup";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=602-modal-lista";
-import { coincideBusqueda } from "./search.js?v=601-admin-limpio";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=603-cleanup";
+import { coincideBusqueda } from "./search.js?v=603-cleanup";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -91,7 +89,6 @@ const elementos = {
     btnMasCantidad: $("btnMasCantidad"),
     btnCancelarCantidad: $("btnCancelarCantidad"),
     cantidadInput: $("cantidadInput"),
-    btnDescargar: $("btnDescargar"),
     checkSonidos: $("checkSonidos"),
     checkVibracion: $("checkVibracion"),
     btnReiniciar: $("btnReiniciar"),
@@ -163,7 +160,6 @@ async function inicializar() {
     actualizarContador(0);
     actualizarConteosUbicacion({ salon: 0, deposito: 0 });
     activarBotonGuardar(false);
-    activarBotonDescargar(false);
     actualizarEstadoCamara(false);
     mostrarScannerCerrado();
     limpiarProducto();
@@ -228,7 +224,6 @@ function configurarEventos() {
     elementos.btnMenosCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, -1, 1));
     elementos.btnMasCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, 1, 1));
 
-    elementos.btnDescargar.addEventListener("click", manejarDescargaExcel);
     elementos.checkSonidos.addEventListener("change", actualizarPreferenciasFeedback);
     elementos.checkVibracion.addEventListener("change", actualizarPreferenciasFeedback);
     elementos.btnReiniciar.addEventListener("click", manejarReinicio);
@@ -390,7 +385,6 @@ function manejarClickResumenVencimientos(event) {
 async function cargarProductos() {
     try {
         activarBotonGuardar(false);
-        activarBotonDescargar(false);
         productoActual = null;
         productoEditando = null;
         limpiarProducto("Conectando con Google Sheets...");
@@ -402,7 +396,6 @@ async function cargarProductos() {
         actualizarEstadoExcel(cantidad);
         actualizarContador(obtenerContador());
         actualizarConteosUbicacion(obtenerConteosUbicacion());
-        activarBotonDescargar(cantidad > 0);
         limpiarProducto("Esperando escaneo...");
         refrescarProductos();
 
@@ -412,7 +405,6 @@ async function cargarProductos() {
         mostrarScannerCerrado();
     } catch (error) {
         actualizarEstadoExcel(0);
-        activarBotonDescargar(false);
         limpiarProducto("Error de conexión");
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -690,17 +682,6 @@ async function guardarCorreccion() {
     } finally {
         corrigiendo = false;
         elementos.btnGuardarCorreccion.disabled = false;
-    }
-}
-
-function manejarDescargaExcel() {
-    try {
-        descargarExcel();
-        mostrarMensaje("Descargando Excel", "ok");
-        reproducirConfirmacion("guardado");
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
     }
 }
 

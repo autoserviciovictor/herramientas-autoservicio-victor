@@ -32,7 +32,6 @@ const elementos = {
     estadoExcelAjustes: document.getElementById("estadoExcelAjustes"),
     btnSalon: document.getElementById("btnSalon"),
     btnDeposito: document.getElementById("btnDeposito"),
-    btnDescargar: document.getElementById("btnDescargar"),
     resultadoBusqueda: document.getElementById("resultadoBusqueda"),
     resumenProductos: document.getElementById("resumenProductos"),
     editarNombreProducto: document.getElementById("editarNombreProducto"),
@@ -187,11 +186,6 @@ export function actualizarConteosUbicacion(conteos = { salon: 0, deposito: 0 }) 
 export function activarBotonGuardar(estado) {
     elementos.btnGuardarCantidad.disabled = !estado;
 }
-
-export function activarBotonDescargar(estado) {
-    elementos.btnDescargar.disabled = !estado;
-}
-
 
 export function configurarFeedback({ sonidos, vibracion }) {
     sonidoHabilitado = sonidos;

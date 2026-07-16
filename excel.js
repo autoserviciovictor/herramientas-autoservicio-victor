@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=601-admin-limpio";
-import { ordenarPorBusqueda } from "./search.js?v=601-admin-limpio";
+import { API_BASE_URL } from "./config.js?v=603-cleanup";
+import { ordenarPorBusqueda } from "./search.js?v=603-cleanup";
 
 let datos = [];
 let contador = 0;
@@ -263,12 +263,6 @@ export async function modificarStockProducto(indice, salon, deposito) {
     registrarModificacion(producto.codigo);
     return producto;
 }
-
-export function descargarExcel() {
-    if (datos.length === 0) throw new Error("Primero conectá Google Sheets");
-    window.location.href = apiUrl("/descargar");
-}
-
 
 export async function listarVencimientos() {
     const data = await pedirJson("/vencimientos");
