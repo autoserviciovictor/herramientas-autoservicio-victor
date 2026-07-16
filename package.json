@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.0.3",
-  "description": "Herramientas Autoservicio Victor V6.0.3 - base depurada",
+  "version": "6.0.4",
+  "description": "Herramientas Autoservicio Victor V6.0.4 - historial de vencimientos mejorado",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

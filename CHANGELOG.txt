@@ -1,3 +1,11 @@
+V6.0.4 - Historial de vencimientos mejorado
+- Filtros por hoy, 7 días, 30 días y todo.
+- Filtros por usuario y acción.
+- Búsqueda por producto o código.
+- Vista compacta con detalle desplegable.
+- Muestra 20 movimientos y permite cargar anteriores.
+- Resumen de movimientos por usuario.
+
 V6.0.3 - Limpieza completa
 - Eliminada la descarga Excel y la dependencia xlsx.
 - Eliminado el reinicio total remoto del inventario.
