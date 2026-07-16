@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=611-rol-beta";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=611-rol-beta";
-import { ordenarPorBusqueda } from "./search.js?v=611-rol-beta";
+import { API_BASE_URL } from "./config.js?v=612-responsive-dia";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=612-responsive-dia";
+import { ordenarPorBusqueda } from "./search.js?v=612-responsive-dia";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

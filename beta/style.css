@@ -2413,3 +2413,131 @@ body.modal-abierto{overflow:hidden}
 @media(max-width:560px){.admin-history-filter-grid{grid-template-columns:1fr}.admin-history-summary{align-items:flex-start;flex-direction:column}.admin-history-summary-users{justify-content:flex-start}.admin-history-toggle{grid-template-columns:auto minmax(0,1fr) auto}.admin-history-action{font-size:10px}.admin-period-btn{font-size:12px;padding:9px 3px}}
 
 
+
+
+/* =========================================================
+   V6.1.2 BETA — ADAPTACIÓN PARA COMPUTADORA
+   Mantiene el diseño móvil y aprovecha pantallas amplias.
+   ========================================================= */
+@media (min-width: 900px) {
+    body {
+        background: linear-gradient(145deg, #f4f1eb, #eef4ee);
+    }
+
+    .app {
+        max-width: 1440px;
+        width: 100%;
+        min-height: 100vh;
+        box-shadow: 0 0 40px rgba(38, 43, 39, .08);
+    }
+
+    .brand-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        padding-left: max(28px, calc((100vw - 1360px) / 2));
+        padding-right: max(28px, calc((100vw - 1360px) / 2));
+    }
+
+    .pantalla {
+        width: min(100%, 1240px);
+        margin: 0 auto;
+        padding: 28px 34px 26px;
+    }
+
+    .pantalla-inicio {
+        width: min(100%, 1160px);
+        padding-top: 38px;
+    }
+
+    .home-header h1 { font-size: 40px; }
+    .home-header p { font-size: 16px; }
+
+    .module-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .module-card {
+        min-height: 180px;
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .module-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 34px rgba(34, 39, 35, .13);
+    }
+
+    .module-icon { font-size: 48px; }
+    .module-card strong { font-size: 20px; }
+
+    .header-app h1, .header-simple h1, .header-edit h1 {
+        font-size: 36px;
+    }
+
+    .scan-panel,
+    .camera-card,
+    .product-card,
+    .quantity-card,
+    .search-card,
+    .edit-card,
+    .settings-card,
+    .venc-actions-card,
+    .venc-form-card,
+    .venc-list-card,
+    .repo-product-card,
+    .repo-form-card {
+        max-width: 920px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .result-list,
+    .venc-list,
+    .repo-list,
+    .admin-users-list,
+    .admin-history-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        align-items: start;
+    }
+
+    .venc-list-empty,
+    .empty-state {
+        grid-column: 1 / -1;
+    }
+
+    .admin-screen {
+        max-width: 1120px;
+    }
+
+    .admin-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .bottom-nav, .repo-bottom-nav {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: min(760px, calc(100vw - 48px));
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -8px 26px rgba(34, 39, 35, .12);
+    }
+
+    .modal-overlay {
+        padding: 32px;
+    }
+
+    .modal-card {
+        max-width: 560px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .result-list,
+    .venc-list-proximos,
+    .venc-list-vencidos {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}

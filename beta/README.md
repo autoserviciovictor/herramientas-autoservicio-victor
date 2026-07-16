@@ -1,4 +1,4 @@
-# Herramientas Autoservicio Victor V6.1.1
+# Herramientas Autoservicio Victor V6.1.2
 
 ## Canal beta automático por rol
 
@@ -15,3 +15,8 @@
 4. Para liberarla al resto, se copian los archivos aprobados de `beta/` a la raíz.
 
 El resto de las funciones de V6.0.5 y del historial mejorado se conservan.
+
+
+## V6.1.2 Beta
+- Diseño responsive para computadora.
+- La pantalla Cargar vencimiento muestra únicamente los registros cargados hoy.

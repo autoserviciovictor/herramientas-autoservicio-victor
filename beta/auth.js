@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=611-rol-beta";
+import { API_BASE_URL } from "./config.js?v=612-responsive-dia";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

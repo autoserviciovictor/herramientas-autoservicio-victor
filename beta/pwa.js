@@ -66,7 +66,7 @@ if ('serviceWorker' in navigator) {
 
   window.addEventListener('load', async () => {
     try {
-      const registro = await navigator.serviceWorker.register('./service-worker.js?v=611-rol-beta', {
+      const registro = await navigator.serviceWorker.register('./service-worker.js?v=612-responsive-dia', {
         scope: './',
         updateViaCache: 'none'
       });

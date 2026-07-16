@@ -18,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=611-rol-beta";
+} from "./excel.js?v=612-responsive-dia";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=611-rol-beta";
+} from "./scanner.js?v=612-responsive-dia";
 
 import {
     ocultarSplash,
@@ -46,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=611-rol-beta";
+} from "./ui.js?v=612-responsive-dia";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=611-rol-beta";
-import { coincideBusqueda } from "./search.js?v=611-rol-beta";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=612-responsive-dia";
+import { coincideBusqueda } from "./search.js?v=612-responsive-dia";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -986,9 +986,42 @@ function bucketVencimiento(item) {
     return "30";
 }
 
+function fechaHoyArgentina() {
+    try {
+        const partes = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Argentina/Buenos_Aires",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(new Date());
+        const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
+        return `${mapa.year}-${mapa.month}-${mapa.day}`;
+    } catch (_) {
+        const ahora = new Date();
+        const desplazada = new Date(ahora.getTime() - (3 * 60 * 60 * 1000));
+        return desplazada.toISOString().slice(0, 10);
+    }
+}
+
+function fechaCargaVencimiento(item) {
+    const valor = String(item?.fecha_carga || item?.fechaCarga || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+    const matchLatino = valor.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+    if (matchLatino) {
+        const [, dia, mes, anio] = matchLatino;
+        return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+    }
+    return "";
+}
+
+function fueCargadoHoy(item) {
+    return fechaCargaVencimiento(item) === fechaHoyArgentina();
+}
+
 function filtrarVencimientos() {
     const q = vencTabActual === "cargar" ? "" : String(busquedaVencimientos || "").trim().toLowerCase();
     return vencimientosCache.filter(item => {
+        if (vencTabActual === "cargar" && !fueCargadoHoy(item)) return false;
         const bucket = bucketVencimiento(item);
 
         if (vencTabActual === "proximos" && !["7", "15", "30"].includes(bucket)) return false;
@@ -1031,15 +1064,15 @@ function renderListadoVencimientos() {
 
     if (elementos.vencListadoTitulo) {
         elementos.vencListadoTitulo.textContent = vencTabActual === "cargar"
-            ? "Últimos registros cargados"
+            ? "Registros cargados hoy"
             : (vencTabActual === "vencidos" ? "Productos vencidos" : "Próximos a vencer");
     }
 
-    const limite = vencTabActual === "cargar" ? 6 : 80;
+    const limite = vencTabActual === "cargar" ? Number.POSITIVE_INFINITY : 80;
     const baseLista = filtrarVencimientos();
     const ordenada = [...baseLista].sort((a, b) => {
         if (vencTabActual === "cargar") {
-            return String(b.id || b.fechaCarga || "").localeCompare(String(a.id || a.fechaCarga || ""));
+            return String(b.id || b.fecha_carga || b.fechaCarga || "").localeCompare(String(a.id || a.fecha_carga || a.fechaCarga || ""));
         }
         return diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento);
     });
@@ -1047,7 +1080,11 @@ function renderListadoVencimientos() {
 
     if (!lista.length) {
         elementos.vencListado.className = "venc-list-empty";
-        elementos.vencListado.textContent = vencimientosCache.length ? "No hay registros con ese filtro." : "Todavía no hay vencimientos cargados.";
+        if (vencTabActual === "cargar") {
+            elementos.vencListado.textContent = "Todavía no se cargaron vencimientos hoy.";
+        } else {
+            elementos.vencListado.textContent = vencimientosCache.length ? "No hay registros con ese filtro." : "Todavía no hay vencimientos cargados.";
+        }
         return;
     }
 
