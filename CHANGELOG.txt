@@ -1,3 +1,11 @@
+V6.0.5 - Próximos, ofertas y actualización silenciosa
+- Próximos muestra todos los productos vigentes, incluso los que superan 30 días.
+- Clasificación: hasta 7 días rojo, 8 a 15 amarillo y 16 días o más azul.
+- El contador de 30 días incluye todos los productos vigentes con 16 días o más.
+- Las ofertas activas se resaltan con un marco verde completo.
+- La PWA comprueba y descarga nuevas versiones silenciosamente, sin carteles ni recargas durante el trabajo.
+- La actualización se aplica de forma segura al volver a abrir la aplicación.
+
 V6.0.4 - Historial de vencimientos mejorado
 - Filtros por hoy, 7 días, 30 días y todo.
 - Filtros por usuario y acción.

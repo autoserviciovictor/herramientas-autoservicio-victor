@@ -18,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=604-history";
+} from "./excel.js?v=605-proximos";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=604-history";
+} from "./scanner.js?v=605-proximos";
 
 import {
     ocultarSplash,
@@ -46,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=604-history";
+} from "./ui.js?v=605-proximos";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=604-history";
-import { coincideBusqueda } from "./search.js?v=604-history";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=605-proximos";
+import { coincideBusqueda } from "./search.js?v=605-proximos";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -962,8 +962,8 @@ function claseEstadoVencimiento(item) {
     if (estado.includes("vencido") || dias < 0) return "venc-vencido";
     if (dias <= 7) return "venc-7";
     if (dias <= 15) return "venc-15";
-    if (dias <= 30 || estado.includes("próximo") || estado.includes("proximo")) return "venc-30";
-    return "venc-vigente";
+    // Todo producto vigente con 16 días o más pertenece al grupo azul.
+    return "venc-30";
 }
 
 function textoEstadoVencimiento(item) {
@@ -974,8 +974,7 @@ function textoEstadoVencimiento(item) {
     }
     if (dias === 0) return "Vence hoy";
     if (dias === 1) return "Falta 1 día";
-    if (dias <= 30) return `Faltan ${dias} días`;
-    return "Vigente";
+    return `Faltan ${dias} días`;
 }
 
 function bucketVencimiento(item) {
@@ -983,8 +982,8 @@ function bucketVencimiento(item) {
     if (dias < 0) return "vencidos";
     if (dias <= 7) return "7";
     if (dias <= 15) return "15";
-    if (dias <= 30) return "30";
-    return "vigente";
+    // El contador azul agrupa todos los vigentes con 16 días o más.
+    return "30";
 }
 
 function filtrarVencimientos() {

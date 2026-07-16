@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=604-history";
-import { ordenarPorBusqueda } from "./search.js?v=604-history";
+import { API_BASE_URL } from "./config.js?v=605-proximos";
+import { ordenarPorBusqueda } from "./search.js?v=605-proximos";
 
 let datos = [];
 let contador = 0;

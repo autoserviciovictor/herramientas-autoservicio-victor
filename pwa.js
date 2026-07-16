@@ -50,9 +50,31 @@ btnInstalar?.addEventListener('click', async () => {
 });
 
 if ('serviceWorker' in navigator) {
+  let ultimoControlActualizacion = 0;
+
+  async function comprobarActualizacionSilenciosa(registro) {
+    const ahora = Date.now();
+    if (!registro || ahora - ultimoControlActualizacion < 15 * 60 * 1000) return;
+    ultimoControlActualizacion = ahora;
+    try {
+      await registro.update();
+    } catch (error) {
+      // La actualización es silenciosa y no debe interrumpir el uso de la app.
+      console.debug('Actualización PWA pendiente:', error?.message || error);
+    }
+  }
+
   window.addEventListener('load', async () => {
     try {
-      await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
+      const registro = await navigator.serviceWorker.register('./service-worker.js?v=605-proximos', {
+        scope: './',
+        updateViaCache: 'none'
+      });
+      await comprobarActualizacionSilenciosa(registro);
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') comprobarActualizacionSilenciosa(registro);
+      });
     } catch (error) {
       console.error('No se pudo registrar el service worker:', error);
       if (textoInstalacion) textoInstalacion.textContent = 'No se pudo preparar la instalación. Actualizá la página e intentá nuevamente.';

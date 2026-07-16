@@ -1,4 +1,4 @@
-# Herramientas Autoservicio Victor V6.0.4
+# Herramientas Autoservicio Victor V6.0.5
 
 Aplicación interna instalable para Inventario, Vencimientos y listas privadas de reposición.
 
@@ -39,7 +39,7 @@ Aplicación interna instalable para Inventario, Vencimientos y listas privadas d
 - `Usuarios`
 - `Historial Vencimientos`
 
-## Limpieza V6.0.4
+## Limpieza V6.0.5
 
 Se eliminaron componentes obsoletos que ya no eran usados por la aplicación:
 

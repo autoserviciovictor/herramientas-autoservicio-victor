@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=604-history";
+import { API_BASE_URL } from "./config.js?v=605-proximos";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

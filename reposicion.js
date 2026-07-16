@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=604-history";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=604-history";
-import { ordenarPorBusqueda } from "./search.js?v=604-history";
+import { API_BASE_URL } from "./config.js?v=605-proximos";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=605-proximos";
+import { ordenarPorBusqueda } from "./search.js?v=605-proximos";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

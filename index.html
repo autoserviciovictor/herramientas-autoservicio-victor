@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V6.0.4</title>
+    <title>Herramientas Autoservicio Victor V6.0.5</title>
 
     <meta name="theme-color" content="#b24444">
     <meta name="application-name" content="Autoservicio Victor">
@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=604-history">
+    <link rel="stylesheet" href="style.css?v=605-proximos">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <div class="splash-logo">🏪</div>
     <h1>Autoservicio Victor</h1>
-    <p>Herramientas V6.0.4</p>
+    <p>Herramientas V6.0.5</p>
 </div>
 
 <div class="app">
@@ -93,7 +93,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.0.4</strong>
+            <strong>V6.0.5</strong>
         </section>
     </main>
 
@@ -436,7 +436,7 @@
                 <label><input type="radio" name="vencEstadoFiltro" value="todos" checked> Todos</label>
                 <label><input type="radio" name="vencEstadoFiltro" value="7"> Hasta 7 días</label>
                 <label><input type="radio" name="vencEstadoFiltro" value="15"> De 8 a 15 días</label>
-                <label><input type="radio" name="vencEstadoFiltro" value="30"> De 16 a 30 días</label>
+                <label><input type="radio" name="vencEstadoFiltro" value="30"> 16 días o más</label>
             </fieldset>
             <fieldset><legend>Oferta</legend>
                 <label><input type="radio" name="vencOfertaFiltro" value="todos" checked> Todas</label>
@@ -451,7 +451,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.0.4</span>
+            <span id="adminVersion" class="admin-version">V6.0.5</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -592,10 +592,10 @@
 
 </div>
 
-<script src="./pwa.js?v=604-history" defer></script>
-<script type="module" src="./auth.js?v=604-history"></script>
-<script type="module" src="./admin.js?v=604-history"></script>
-<script type="module" src="./app.js?v=604-history"></script>
+<script src="./pwa.js?v=605-proximos" defer></script>
+<script type="module" src="./auth.js?v=605-proximos"></script>
+<script type="module" src="./admin.js?v=605-proximos"></script>
+<script type="module" src="./app.js?v=605-proximos"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>
