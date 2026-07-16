@@ -17,7 +17,7 @@ async function pedir(ruta, opciones={}){
   const temporizador = setTimeout(()=>controlador.abort(),15000);
   let r;
   try {
-    r = await fetch(apiUrl(ruta), {...opciones, headers:{"Content-Type":"application/json",...(opciones.headers||{})}, signal:controlador.signal});
+    r = await fetch(apiUrl(ruta), {...opciones, cache:"no-store", headers:{"Content-Type":"application/json",...(opciones.headers||{})}, signal:controlador.signal});
   } catch(error) {
     if(error?.name === "AbortError") throw new Error("El servidor tardó demasiado en responder");
     throw new Error("No se pudo conectar con el servidor");
