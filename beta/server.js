@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.6.2 Beta";
+const APP_VERSION = "6.1.7 Beta";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1108,286 +1108,146 @@ async function obtenerSheetId(nombreHoja) {
 }
 
 
-// V6.1.3.1 - Reposición temporal, individual y con dos listas por usuario.
-// No utiliza Google Sheets. Cada usuario autenticado administra Lista 1 y Lista 2.
-const REPOSICION_DATA_FILE = process.env.REPOSICION_DATA_FILE
-  ? path.resolve(process.env.REPOSICION_DATA_FILE)
-  : path.join(process.cwd(), "data", "reposicion-temporal.json");
+// V6.1.7 - Reposición persistente en Google Sheets, individual y con dos listas por usuario.
+const LISTAS_SHEET_NAME = "Listas";
+const LISTAS_HEADERS = ["ID", "Usuario", "Lista", "Código", "Artículo", "Cantidad", "Estado", "Orden", "Actualizado"];
 
-let reposicionPorUsuario = new Map();
-let reposicionCargada = false;
+function normalizarNumeroLista(valor) { return String(valor) === "2" ? "2" : "1"; }
+function crearIdReposicion() { return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`; }
 
-function normalizarNumeroLista(valor) {
-  return String(valor) === "2" ? "2" : "1";
-}
-
-function registrosIgualesReposicion(a = [], b = []) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) return false;
-  const firma = item => [
-    normalizarTexto(item?.id),
-    normalizarCodigo(item?.codigo),
-    normalizarTexto(item?.articulo),
-    enteroPositivo(item?.cantidad) || 1,
-    normalizarTexto(item?.estado).toLowerCase()
-  ].join("|");
-  return a.every((item, indice) => firma(item) === firma(b[indice]));
-}
-
-function normalizarRegistrosDeLista(items, numeroLista) {
-  if (!Array.isArray(items)) return [];
-  return items.map(item => ({
-    ...item,
-    lista: normalizarNumeroLista(numeroLista)
-  }));
-}
-
-function crearContenedorListas(valor = null) {
-  // Migración automática: el formato anterior era un único arreglo por usuario.
-  if (Array.isArray(valor)) {
-    return { lista1: normalizarRegistrosDeLista(valor, "1"), lista2: [] };
-  }
-  if (valor && typeof valor === "object") {
-    const origen1 = Array.isArray(valor.lista1) ? valor.lista1 : (Array.isArray(valor["1"]) ? valor["1"] : []);
-    const origen2 = Array.isArray(valor.lista2) ? valor.lista2 : (Array.isArray(valor["2"]) ? valor["2"] : []);
-
-    // Corrección del error de la primera beta: si ambas listas quedaron como copias
-    // exactas, se conserva la Lista 1 y se reinicia la Lista 2 una sola vez.
-    const lista2Corregida = registrosIgualesReposicion(origen1, origen2) ? [] : origen2;
-
-    return {
-      lista1: normalizarRegistrosDeLista(origen1, "1"),
-      lista2: normalizarRegistrosDeLista(lista2Corregida, "2")
-    };
-  }
-  return { lista1: [], lista2: [] };
-}
-
-function cargarReposicionTemporal() {
-  if (reposicionCargada) return;
-  reposicionCargada = true;
-  try {
-    if (!fs.existsSync(REPOSICION_DATA_FILE)) return;
-    const contenido = JSON.parse(fs.readFileSync(REPOSICION_DATA_FILE, "utf8"));
-    if (!contenido || typeof contenido !== "object") return;
-    Object.entries(contenido).forEach(([usuario, valor]) => {
-      reposicionPorUsuario.set(normalizarUsuario(usuario), crearContenedorListas(valor));
+async function asegurarHojaListas() {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some(s => s.properties?.title === LISTAS_SHEET_NAME);
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: LISTAS_SHEET_NAME } } }] }
     });
-  } catch (error) {
-    console.error("No se pudo leer la reposición temporal:", error.message);
+  }
+  const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A1:I1` });
+  if (!(respuesta.data.values || []).length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${LISTAS_SHEET_NAME}!A1:I1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [LISTAS_HEADERS] }
+    });
   }
 }
 
-function guardarReposicionTemporal() {
-  try {
-    fs.mkdirSync(path.dirname(REPOSICION_DATA_FILE), { recursive: true });
-    const contenido = Object.fromEntries(reposicionPorUsuario.entries());
-    fs.writeFileSync(REPOSICION_DATA_FILE, JSON.stringify(contenido, null, 2), "utf8");
-  } catch (error) {
-    console.error("No se pudo guardar la reposición temporal:", error.message);
-  }
-}
-
-function obtenerListasReposicion(usuario) {
-  cargarReposicionTemporal();
-  const clave = normalizarUsuario(usuario);
-  if (!reposicionPorUsuario.has(clave)) reposicionPorUsuario.set(clave, crearContenedorListas());
-  const actual = crearContenedorListas(reposicionPorUsuario.get(clave));
-  reposicionPorUsuario.set(clave, actual);
-  return actual;
-}
-
-function obtenerListaReposicion(usuario, numeroLista = "1") {
-  const listas = obtenerListasReposicion(usuario);
-  return normalizarNumeroLista(numeroLista) === "2" ? listas.lista2 : listas.lista1;
-}
-
-function crearIdReposicion() {
-  return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
-}
-
-function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
-  const idNormalizado = normalizarTexto(id);
-  let indice = lista.findIndex(item => normalizarTexto(item.id) === idNormalizado);
-  if (indice >= 0) return indice;
-  const codigoNormalizado = normalizarCodigo(codigo);
-  if (codigoNormalizado) indice = lista.findIndex(item => normalizarCodigo(item.codigo) === codigoNormalizado);
-  return indice;
-}
-
-function limpiarRegistroReposicion(registro, numeroLista = "1") {
+function filaARegistroReposicion(fila = []) {
   return {
-    id: normalizarTexto(registro.id),
-    fecha: normalizarTexto(registro.fecha),
-    codigo: normalizarTexto(registro.codigo),
-    articulo: normalizarTexto(registro.articulo),
-    cantidad: enteroPositivo(registro.cantidad) || 1,
-    estado: normalizarTexto(registro.estado).toLowerCase() === "completado" ? "completado" : "pendiente",
-    actualizado: normalizarTexto(registro.actualizado),
-    usuario: normalizarUsuario(registro.usuario),
-    lista: normalizarNumeroLista(numeroLista)
+    id: normalizarTexto(fila[0]), usuario: normalizarUsuario(fila[1]), lista: normalizarNumeroLista(fila[2]),
+    codigo: normalizarCodigo(fila[3]), articulo: normalizarTexto(fila[4]), cantidad: enteroPositivo(fila[5]) || 1,
+    estado: normalizarTexto(fila[6]).toLowerCase() === "completado" ? "completado" : "pendiente",
+    orden: Number.isFinite(Number(fila[7])) ? Number(fila[7]) : 0, actualizado: normalizarTexto(fila[8])
   };
 }
-
-app.get("/reposicion", (req, res) => {
-  try {
-    const usuario = req.usuario.usuario;
-    const numeroLista = normalizarNumeroLista(req.query.lista);
-    const registros = obtenerListaReposicion(usuario, numeroLista)
-      .filter(item => normalizarNumeroLista(item.lista || numeroLista) === numeroLista)
-      .map(item => limpiarRegistroReposicion(item, numeroLista))
-      .sort((a, b) => String(b.actualizado || b.fecha).localeCompare(String(a.actualizado || a.fecha)));
-    res.json({ ok: true, total: registros.length, lista: numeroLista, usuario: req.usuario, registros });
-  } catch (error) {
-    console.error("Error en GET /reposicion:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener reposición" });
+function registroAFilaReposicion(r) {
+  return [r.id, r.usuario, r.lista, r.codigo, r.articulo, r.cantidad, r.estado, r.orden || 0, r.actualizado || fechaHoraArgentinaIso()];
+}
+async function leerTodasLasListas() {
+  await asegurarHojaListas();
+  const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
+  return (respuesta.data.values || []).map(filaARegistroReposicion).filter(r => r.id && r.usuario && r.codigo);
+}
+async function escribirTodasLasListas(registros) {
+  await asegurarHojaListas();
+  await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
+  if (registros.length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I${registros.length + 1}`,
+      valueInputOption: "RAW", requestBody: { values: registros.map(registroAFilaReposicion) }
+    });
   }
+  invalidarCache("listas-reposicion");
+}
+async function obtenerListaReposicionPersistente(usuario, numeroLista) {
+  const claveUsuario = normalizarUsuario(usuario); const lista = normalizarNumeroLista(numeroLista);
+  const todos = await leerTodasLasListas();
+  return todos.filter(r => r.usuario === claveUsuario && r.lista === lista)
+    .sort((a,b) => (a.estado === b.estado ? (a.orden - b.orden) : (a.estado === "pendiente" ? -1 : 1)));
+}
+function limpiarRegistroReposicion(registro, numeroLista = "1") {
+  return { id:registro.id, fecha:registro.actualizado, codigo:registro.codigo, articulo:registro.articulo,
+    cantidad:enteroPositivo(registro.cantidad)||1, estado:registro.estado === "completado" ? "completado":"pendiente",
+    actualizado:registro.actualizado, usuario:registro.usuario, lista:normalizarNumeroLista(numeroLista) };
+}
+function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
+  let i = lista.findIndex(x => normalizarTexto(x.id) === normalizarTexto(id));
+  if (i < 0 && normalizarCodigo(codigo)) i = lista.findIndex(x => x.codigo === normalizarCodigo(codigo));
+  return i;
+}
+
+app.get("/reposicion", async (req, res) => {
+  try {
+    const numeroLista = normalizarNumeroLista(req.query.lista);
+    const registros = (await obtenerListaReposicionPersistente(req.usuario.usuario, numeroLista)).map(r => limpiarRegistroReposicion(r, numeroLista));
+    res.json({ ok:true, total:registros.length, lista:numeroLista, usuario:req.usuario, registros });
+  } catch(error) { console.error("Error en GET /reposicion:", error); res.status(500).json({ok:false,mensaje:error.message||"Error al obtener reposición"}); }
 });
 
 app.post("/reposicion", async (req, res) => {
   try {
-    const usuario = req.usuario.usuario;
-    const numeroLista = normalizarNumeroLista(req.body.lista);
-    const codigo = normalizarCodigo(req.body.codigo);
-    const articulo = normalizarTexto(req.body.articulo);
-    const cantidad = enteroPositivo(req.body.cantidad);
-    if (!codigo || !articulo) return res.status(400).json({ ok: false, mensaje: "Falta el producto" });
-    if (cantidad === null) return res.status(400).json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
-
-    const resultado = await ejecutarEnCola(`reposicion:${usuario}:${numeroLista}:${codigo}`, async () => {
-      const lista = obtenerListaReposicion(usuario, numeroLista);
-      const existente = lista.find(item => item.codigo === codigo);
-      const ahora = fechaHoraArgentinaIso();
-      if (existente) {
-        existente.cantidad = (enteroPositivo(existente.cantidad) || 0) + cantidad;
-        existente.estado = "pendiente";
-        existente.actualizado = ahora;
-        existente.lista = numeroLista;
-        guardarReposicionTemporal();
-        return { mensaje: `Cantidad sumada a Lista ${numeroLista}`, registro: limpiarRegistroReposicion(existente, numeroLista) };
-      }
-      const registro = { id: crearIdReposicion(), fecha: ahora, codigo, articulo, cantidad, estado: "pendiente", actualizado: ahora, usuario, lista: numeroLista };
-      lista.unshift(registro);
-      guardarReposicionTemporal();
-      return { mensaje: `Producto agregado a Lista ${numeroLista}`, registro: limpiarRegistroReposicion(registro, numeroLista) };
+    const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista);
+    const codigo=normalizarCodigo(req.body.codigo), articulo=normalizarTexto(req.body.articulo), cantidad=enteroPositivo(req.body.cantidad);
+    if(!codigo||!articulo) return res.status(400).json({ok:false,mensaje:"Falta el producto"});
+    if(cantidad===null) return res.status(400).json({ok:false,mensaje:"Ingresá una cantidad entera mayor a 0"});
+    const resultado=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async()=>{
+      const todos=await leerTodasLasListas();
+      let r=todos.find(x=>x.usuario===usuario&&x.lista===numeroLista&&x.codigo===codigo);
+      const ahora=fechaHoraArgentinaIso();
+      if(r){ r.cantidad+=cantidad; r.estado="pendiente"; r.actualizado=ahora; }
+      else { const orden=Math.max(0,...todos.filter(x=>x.usuario===usuario&&x.lista===numeroLista).map(x=>Number(x.orden)||0))+1;
+        r={id:crearIdReposicion(),usuario,lista:numeroLista,codigo,articulo,cantidad,estado:"pendiente",orden,actualizado:ahora}; todos.push(r); }
+      await escribirTodasLasListas(todos); return r;
     });
-    res.json({ ok: true, lista: numeroLista, ...resultado });
-  } catch (error) {
-    console.error("Error en POST /reposicion:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al guardar reposición" });
-  }
+    res.json({ok:true,lista:numeroLista,mensaje:`Producto agregado a Lista ${numeroLista}`,registro:limpiarRegistroReposicion(resultado,numeroLista)});
+  } catch(error){console.error("Error en POST /reposicion:",error);res.status(500).json({ok:false,mensaje:error.message||"Error al guardar reposición"});}
 });
 
-app.put("/reposicion/:id", async (req, res) => {
-  try {
-    const usuario = req.usuario.usuario;
-    const numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista);
-    const id = normalizarTexto(req.params.id);
-    const estado = normalizarTexto(req.body.estado).toLowerCase();
-    const actualizado = await ejecutarEnCola(`reposicion:${usuario}:${numeroLista}:${id}`, async () => {
-      const lista = obtenerListaReposicion(usuario, numeroLista);
-      const indice = buscarIndiceRegistroReposicion(lista, id, req.body.codigo);
-      if (indice < 0) {
-        const error = new Error(`Registro no encontrado en Lista ${numeroLista}`);
-        error.statusCode = 404;
-        throw error;
-      }
-      if (estado === "completado" || estado === "pendiente") {
-        const cantidad = enteroPositivo(req.body.cantidad);
-        if (cantidad === null) {
-          const error = new Error("Ingresá una cantidad entera mayor a 0");
-          error.statusCode = 400;
-          throw error;
-        }
-        lista[indice].cantidad = cantidad;
-        lista[indice].estado = estado;
-        lista[indice].actualizado = fechaHoraArgentinaIso();
-        guardarReposicionTemporal();
-        return { registro: limpiarRegistroReposicion(lista[indice], numeroLista) };
-      }
-      const error = new Error("Estado de reposición inválido");
-      error.statusCode = 400;
-      throw error;
-    });
-    res.json({ ok: true, lista: numeroLista, mensaje: estado === "completado" ? "Producto marcado como listo" : "Producto devuelto a pendientes", ...actualizado });
-  } catch (error) {
-    console.error("Error en PUT /reposicion/:id:", error);
-    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al actualizar reposición" });
-  }
+app.put("/reposicion/:id", async (req,res)=>{
+  try{
+    const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista||req.query.lista), id=normalizarTexto(req.params.id);
+    const cantidad=enteroPositivo(req.body.cantidad), estado=normalizarTexto(req.body.estado).toLowerCase();
+    if(cantidad===null||!["pendiente","completado"].includes(estado)) return res.status(400).json({ok:false,mensaje:"Datos de reposición inválidos"});
+    const r=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=await leerTodasLasListas();
+      const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.body.codigo)));
+      if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}
+      todos[i].cantidad=cantidad; todos[i].estado=estado; todos[i].actualizado=fechaHoraArgentinaIso(); await escribirTodasLasListas(todos); return todos[i];});
+    res.json({ok:true,lista:numeroLista,mensaje:"Producto actualizado",registro:limpiarRegistroReposicion(r,numeroLista)});
+  }catch(error){console.error("Error en PUT /reposicion/:id:",error);res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"Error al actualizar reposición"});}
 });
 
-app.patch("/reposicion", async (req, res) => {
-  try {
-    const usuario = req.usuario.usuario;
-    const numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista);
-    const cambios = Array.isArray(req.body.cambios) ? req.body.cambios : [];
-    if (!cambios.length) return res.status(400).json({ ok: false, mensaje: "No hay cambios para guardar" });
-
-    const resultado = await ejecutarEnCola(`reposicion:${usuario}:${numeroLista}:edicion`, async () => {
-      const lista = obtenerListaReposicion(usuario, numeroLista);
-      const copia = lista.map(item => ({ ...item }));
-
-      for (const cambio of cambios) {
-        const id = normalizarTexto(cambio.id);
-        const indice = buscarIndiceRegistroReposicion(copia, id, cambio.codigo);
-        if (indice < 0) {
-          const error = new Error(`Registro no encontrado en Lista ${numeroLista}`);
-          error.statusCode = 404;
-          throw error;
-        }
-        if (cambio.eliminar === true) {
-          copia.splice(indice, 1);
-          continue;
-        }
-        const cantidad = enteroPositivo(cambio.cantidad);
-        if (cantidad === null) {
-          const error = new Error("Todas las cantidades deben ser enteras y mayores a 0");
-          error.statusCode = 400;
-          throw error;
-        }
-        copia[indice].cantidad = cantidad;
-        copia[indice].actualizado = fechaHoraArgentinaIso();
-      }
-
-      lista.splice(0, lista.length, ...copia);
-      guardarReposicionTemporal();
-      return lista.map(item => limpiarRegistroReposicion(item, numeroLista));
-    });
-
-    res.json({ ok: true, lista: numeroLista, registros: resultado, mensaje: "Cambios guardados" });
-  } catch (error) {
-    console.error("Error en PATCH /reposicion:", error);
-    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "No se pudieron guardar los cambios" });
-  }
+app.patch("/reposicion", async(req,res)=>{
+  try{
+    const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista||req.query.lista), cambios=Array.isArray(req.body.cambios)?req.body.cambios:[];
+    if(!cambios.length) return res.status(400).json({ok:false,mensaje:"No hay cambios para guardar"});
+    const resultado=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{let todos=await leerTodasLasListas();
+      for(const c of cambios){const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===normalizarTexto(c.id)||x.codigo===normalizarCodigo(c.codigo)));
+        if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}
+        if(c.eliminar===true){todos.splice(i,1);continue;} const q=enteroPositivo(c.cantidad); if(q===null){const e=new Error("Cantidad inválida");e.statusCode=400;throw e;}
+        todos[i].cantidad=q; todos[i].actualizado=fechaHoraArgentinaIso();}
+      await escribirTodasLasListas(todos); return todos.filter(x=>x.usuario===usuario&&x.lista===numeroLista).map(x=>limpiarRegistroReposicion(x,numeroLista));});
+    res.json({ok:true,lista:numeroLista,registros:resultado,mensaje:"Cambios guardados"});
+  }catch(error){console.error("Error en PATCH /reposicion:",error);res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"No se pudieron guardar los cambios"});}
 });
 
-app.delete("/reposicion/:id", async (req, res) => {
-  try {
-    const usuario = req.usuario.usuario;
-    const numeroLista = normalizarNumeroLista(req.query.lista);
-    const id = normalizarTexto(req.params.id);
-    const lista = obtenerListaReposicion(usuario, numeroLista);
-    const indice = buscarIndiceRegistroReposicion(lista, id, req.query.codigo);
-    if (indice < 0) return res.status(404).json({ ok: false, mensaje: `Registro no encontrado en Lista ${numeroLista}` });
-    lista.splice(indice, 1);
-    guardarReposicionTemporal();
-    res.json({ ok: true, lista: numeroLista, mensaje: `Producto eliminado de Lista ${numeroLista}` });
-  } catch (error) {
-    console.error("Error en DELETE /reposicion/:id:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al eliminar reposición" });
-  }
+app.delete("/reposicion/:id", async(req,res)=>{
+  try{const usuario=normalizarUsuario(req.usuario.usuario),numeroLista=normalizarNumeroLista(req.query.lista),id=normalizarTexto(req.params.id);
+    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=await leerTodasLasListas();const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.query.codigo)));
+      if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}todos.splice(i,1);await escribirTodasLasListas(todos);});
+    res.json({ok:true,lista:numeroLista,mensaje:`Producto eliminado de Lista ${numeroLista}`});
+  }catch(error){res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"Error al eliminar reposición"});}
 });
 
-app.delete("/reposicion", (req, res) => {
-  try {
-    const numeroLista = normalizarNumeroLista(req.query.lista || req.body?.lista);
-    const lista = obtenerListaReposicion(req.usuario.usuario, numeroLista);
-    lista.splice(0, lista.length);
-    guardarReposicionTemporal();
-    res.json({ ok: true, lista: numeroLista, mensaje: `Lista ${numeroLista} lista para comenzar` });
-  } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo vaciar la lista" });
-  }
+app.delete("/reposicion", async(req,res)=>{
+  try{const usuario=normalizarUsuario(req.usuario.usuario),numeroLista=normalizarNumeroLista(req.query.lista||req.body?.lista);
+    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=(await leerTodasLasListas()).filter(x=>!(x.usuario===usuario&&x.lista===numeroLista));await escribirTodasLasListas(todos);});
+    res.json({ok:true,lista:numeroLista,mensaje:`Lista ${numeroLista} lista para comenzar`});
+  }catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo vaciar la lista"});}
 });
+
 
 setInterval(() => procesarAlertasVencimientos(), 60 * 60 * 1000);
 setTimeout(() => procesarAlertasVencimientos(), 15000);

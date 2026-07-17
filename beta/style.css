@@ -2630,3 +2630,12 @@ body.modal-abierto{overflow:hidden}
  .login-card{padding-top:28px!important}
  .login-brand-logo{width:86%!important}
 }
+
+/* V6.1.7 - cierre visual del login */
+.login-overlay{background:#fff!important;align-items:stretch!important;padding:0!important}
+.login-card{width:100%!important;max-width:none!important;min-height:100dvh!important;border-radius:0!important;padding:clamp(42px,8vh,90px) clamp(28px,10vw,92px) 170px!important;box-shadow:none!important;position:relative;overflow:hidden;justify-content:center}
+.login-card::after{content:"";position:absolute;left:-8%;right:-8%;bottom:-55px;height:175px;background:#ef393f;border-radius:50% 50% 0 0/35% 35% 0 0;z-index:0}
+.login-card>*{position:relative;z-index:1}
+.login-brand-logo{width:min(82%,420px)!important;max-height:190px!important;margin:0 auto 24px!important}
+.login-card h1{font-size:clamp(2.25rem,8vw,3rem)!important;color:#181818!important}.login-card>p{font-size:1.15rem!important}
+@media(min-width:700px){.login-card{max-width:720px!important;margin:auto;min-height:auto!important;border-radius:34px!important;padding-bottom:190px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important}.login-overlay{align-items:center!important;background:linear-gradient(180deg,#fff 0 70%,#ef393f 100%)!important}}
