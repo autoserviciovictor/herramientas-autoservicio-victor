@@ -66,7 +66,7 @@ if ('serviceWorker' in navigator) {
 
   window.addEventListener('load', async () => {
     try {
-      const registro = await navigator.serviceWorker.register('./service-worker.js?v=615-notificaciones', {
+      const registro = await navigator.serviceWorker.register('./service-worker.js?v=6151-badge', {
         scope: './',
         updateViaCache: 'none'
       });

@@ -1,3 +1,8 @@
+V6.1.5.1 Beta - Corrección del ícono de notificaciones
+- Se agregó un badge monocromático transparente para Android.
+- Se mantiene el ícono a color en la notificación desplegada.
+- Se elimina el cuadrado blanco de la barra de estado.
+
 V6.1.5 Beta - Notificaciones de vencimientos
 - Push para todos los dispositivos suscriptos: 7, 3 y 1 día y producto vencido.
 - Alerta inmediata si se carga un lote con 7 días o menos.

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v6.1.5-role-beta';
+const CACHE_VERSION = 'autoservicio-v6.1.5.1-role-beta';
 const APP_SHELL = [
   './',
   './index.html',
@@ -20,7 +20,8 @@ const APP_SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './icons/notification-badge-96.png'
 ];
 
 self.addEventListener('install', event => {
@@ -82,7 +83,7 @@ self.addEventListener('push', event => {
   const title = data.title || 'Vencimientos';
   const options = {
     body: data.body || 'Tenés una alerta de vencimiento.',
-    icon: './icons/icon-192.png', badge: './icons/icon-192.png',
+    icon: './icons/icon-192.png', badge: './icons/notification-badge-96.png',
     tag: data.tag || `vencimiento-${Date.now()}`, renotify: false,
     data: data.data || { url: './' }, vibrate: [150, 80, 150]
   };
