@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.9.1-beta";
+const APP_VERSION = "6.1.7";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -133,6 +133,20 @@ function normalizarCodigo(codigo) {
 function numero(valor) {
   const n = Number(valor);
   return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function numeroPrecio(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  if (typeof valor === "number") return Number.isFinite(valor) && valor >= 0 ? valor : null;
+  let texto = String(valor).trim().replace(/\s/g, "").replace(/\$/g, "");
+  if (!texto) return null;
+  if (texto.includes(",") && texto.includes(".")) {
+    texto = texto.lastIndexOf(",") > texto.lastIndexOf(".") ? texto.replace(/\./g, "").replace(",", ".") : texto.replace(/,/g, "");
+  } else if (texto.includes(",")) {
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  }
+  const numero = Number(texto);
+  return Number.isFinite(numero) && numero >= 0 ? numero : null;
 }
 
 function enteroNoNegativo(valor) {
@@ -347,25 +361,8 @@ function filaAProducto(fila, index) {
     articulo: normalizarTexto(fila[1]),
     stock: salon + deposito,
     salon,
-    deposito,
-    precio: numeroPrecio(fila[5])
+    deposito
   };
-}
-
-function numeroPrecio(valor) {
-  if (valor === null || valor === undefined || valor === "") return null;
-  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
-  let texto = normalizarTexto(valor).replace(/\s/g, "").replace(/\$/g, "");
-  if (!texto) return null;
-  if (texto.includes(",") && texto.includes(".")) {
-    texto = texto.lastIndexOf(",") > texto.lastIndexOf(".")
-      ? texto.replace(/\./g, "").replace(",", ".")
-      : texto.replace(/,/g, "");
-  } else if (texto.includes(",")) {
-    texto = texto.replace(/\./g, "").replace(",", ".");
-  }
-  const n = Number(texto);
-  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 async function obtenerProductos() {
@@ -373,7 +370,7 @@ async function obtenerProductos() {
   return leerConCache("productos", CACHE_TTL.productos, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:F`
+      range: `${SHEET_NAME}!A:E`
     });
     const filas = respuesta.data.values || [];
     if (filas.length <= 1) return [];
@@ -401,7 +398,7 @@ async function actualizarProducto(producto) {
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A${producto.filaGoogle}:F${producto.filaGoogle}`,
+    range: `${SHEET_NAME}!A${producto.filaGoogle}:E${producto.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [[
@@ -409,8 +406,7 @@ async function actualizarProducto(producto) {
         productoActualizado.articulo,
         productoActualizado.stock,
         productoActualizado.salon,
-        productoActualizado.deposito,
-        productoActualizado.precio ?? ""
+        productoActualizado.deposito
       ]]
     }
   });
@@ -561,7 +557,6 @@ app.get("/", (req, res) => {
   res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
 });
 
-
 const IMPORTACION_MAX_FILAS = 30000;
 let importacionProductosEnCurso = Promise.resolve();
 
@@ -695,6 +690,7 @@ app.post("/admin/importar-productos", requerirAdministrador, async (req,res)=>{
     res.status(500).json({ok:false,mensaje:error.message||"No se pudo importar el archivo"});
   }
 });
+
 
 app.get("/productos", async (req, res) => {
   try {
@@ -1348,7 +1344,7 @@ app.post("/reposicion", async (req, res) => {
     const codigo=normalizarCodigo(req.body.codigo), articulo=normalizarTexto(req.body.articulo), cantidad=enteroPositivo(req.body.cantidad);
     if(!codigo||!articulo) return res.status(400).json({ok:false,mensaje:"Falta el producto"});
     if(cantidad===null) return res.status(400).json({ok:false,mensaje:"Ingresá una cantidad entera mayor a 0"});
-    const resultado=await ejecutarEnCola("listas:global", async()=>{
+    const resultado=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async()=>{
       const todos=await leerTodasLasListas();
       let r=todos.find(x=>x.usuario===usuario&&x.lista===numeroLista&&x.codigo===codigo);
       const ahora=fechaHoraArgentinaIso();
@@ -1366,7 +1362,7 @@ app.put("/reposicion/:id", async (req,res)=>{
     const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista||req.query.lista), id=normalizarTexto(req.params.id);
     const cantidad=enteroPositivo(req.body.cantidad), estado=normalizarTexto(req.body.estado).toLowerCase();
     if(cantidad===null||!["pendiente","completado"].includes(estado)) return res.status(400).json({ok:false,mensaje:"Datos de reposición inválidos"});
-    const r=await ejecutarEnCola("listas:global",async()=>{const todos=await leerTodasLasListas();
+    const r=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=await leerTodasLasListas();
       const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.body.codigo)));
       if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}
       todos[i].cantidad=cantidad; todos[i].estado=estado; todos[i].actualizado=fechaHoraArgentinaIso(); await escribirTodasLasListas(todos); return todos[i];});
@@ -1378,7 +1374,7 @@ app.patch("/reposicion", async(req,res)=>{
   try{
     const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista||req.query.lista), cambios=Array.isArray(req.body.cambios)?req.body.cambios:[];
     if(!cambios.length) return res.status(400).json({ok:false,mensaje:"No hay cambios para guardar"});
-    const resultado=await ejecutarEnCola("listas:global",async()=>{let todos=await leerTodasLasListas();
+    const resultado=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{let todos=await leerTodasLasListas();
       for(const c of cambios){const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===normalizarTexto(c.id)||x.codigo===normalizarCodigo(c.codigo)));
         if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}
         if(c.eliminar===true){todos.splice(i,1);continue;} const q=enteroPositivo(c.cantidad); if(q===null){const e=new Error("Cantidad inválida");e.statusCode=400;throw e;}
@@ -1390,7 +1386,7 @@ app.patch("/reposicion", async(req,res)=>{
 
 app.delete("/reposicion/:id", async(req,res)=>{
   try{const usuario=normalizarUsuario(req.usuario.usuario),numeroLista=normalizarNumeroLista(req.query.lista),id=normalizarTexto(req.params.id);
-    await ejecutarEnCola("listas:global",async()=>{const todos=await leerTodasLasListas();const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.query.codigo)));
+    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=await leerTodasLasListas();const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.query.codigo)));
       if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}todos.splice(i,1);await escribirTodasLasListas(todos);});
     res.json({ok:true,lista:numeroLista,mensaje:`Producto eliminado de Lista ${numeroLista}`});
   }catch(error){res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"Error al eliminar reposición"});}
@@ -1398,7 +1394,7 @@ app.delete("/reposicion/:id", async(req,res)=>{
 
 app.delete("/reposicion", async(req,res)=>{
   try{const usuario=normalizarUsuario(req.usuario.usuario),numeroLista=normalizarNumeroLista(req.query.lista||req.body?.lista);
-    await ejecutarEnCola("listas:global",async()=>{const todos=(await leerTodasLasListas()).filter(x=>!(x.usuario===usuario&&x.lista===numeroLista));await escribirTodasLasListas(todos);});
+    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=(await leerTodasLasListas()).filter(x=>!(x.usuario===usuario&&x.lista===numeroLista));await escribirTodasLasListas(todos);});
     res.json({ok:true,lista:numeroLista,mensaje:`Lista ${numeroLista} lista para comenzar`});
   }catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo vaciar la lista"});}
 });

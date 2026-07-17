@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6191-importacion-valuado">
+    <link rel="stylesheet" href="style.css?v=6110-consolidada">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.9 Beta Beta</p>
+    <p>Herramientas V6.1.10 Beta</p>
 </div>
 
 <div class="app">
@@ -92,7 +92,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.9 Beta Beta</strong>
+            <strong>V6.1.10 Beta</strong>
         </section>
     </main>
 
@@ -330,12 +330,11 @@
         </section>
 
         <section class="venc-list-card">
+            <div id="vencResumen" class="venc-resumen"></div>
+
             <div class="venc-list-head">
                 <h2 id="vencListadoTitulo">Registros recientes</h2>
-                
             </div>
-
-            <div id="vencResumen" class="venc-resumen"></div>
 
             <input id="vencBuscador" class="venc-search" type="search" placeholder="Buscar por código o producto...">
 
@@ -506,7 +505,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.9 Beta Beta</span>
+            <span id="adminVersion" class="admin-version">V6.1.10 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -563,17 +562,33 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">6.0.2.1</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.1.10 Beta</strong></div>
             </div>
+            <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
                 <div class="admin-import-head"><div><strong>Importar catálogo del sistema</strong><span>Acepta “Stock _ Inventario Valuado.xls”: agrega productos nuevos y actualiza artículos y precios. Ignora Stock y Sub Total.</span></div></div>
                 <input id="adminImportarArchivo" type="file" accept=".xls,.xlsx" class="oculto">
-                <button id="btnAdminImportarArchivo" type="button" class="setting-btn">Seleccionar archivo valuado</button>
+                <button id="btnAdminImportarArchivo" type="button" class="setting-btn">Seleccionar archivo XLS</button>
                 <div id="adminImportarEstado" class="admin-import-status" aria-live="polite"></div>
             </div>
-            <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
+
         </section>
     </main>
+
+    <div id="adminUsuarioModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card admin-user-modal" role="dialog" aria-modal="true">
+        <button id="btnAdminCerrarUsuario" class="modal-close" type="button">×</button>
+        <h2 id="adminUsuarioModalTitulo">Crear usuario</h2>
+        <input id="adminUsuarioOriginal" type="hidden">
+        <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
+        <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
+        <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
+        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="administrador">Administrador</option></select></label>
+        <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked> Usuario activo</label>
+        <div class="admin-modal-actions"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar</button></div>
+      </div>
+    </div>
+
 
     <div id="adminImportarPreviewModal" class="modal-overlay oculto" aria-hidden="true">
       <div class="modal-card admin-import-preview-modal" role="dialog" aria-modal="true" aria-labelledby="adminImportarPreviewTitulo">
@@ -596,20 +611,6 @@
       </div>
     </div>
 
-    <div id="adminUsuarioModal" class="modal-overlay oculto" aria-hidden="true">
-      <div class="modal-card admin-user-modal" role="dialog" aria-modal="true">
-        <button id="btnAdminCerrarUsuario" class="modal-close" type="button">×</button>
-        <h2 id="adminUsuarioModalTitulo">Crear usuario</h2>
-        <input id="adminUsuarioOriginal" type="hidden">
-        <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
-        <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
-        <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
-        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="administrador">Administrador</option></select></label>
-        <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked> Usuario activo</label>
-        <div class="admin-modal-actions"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar</button></div>
-      </div>
-    </div>
-
     <div id="vencModal" class="modal-overlay oculto" aria-hidden="true">
         <div class="modal-card venc-modal-card" role="dialog" aria-modal="true" aria-labelledby="vencModalTitulo">
             <button id="btnVencModalCerrar" class="modal-close" type="button">×</button>
@@ -623,10 +624,6 @@
                     <div><span>Salón</span><strong id="vencModalSalon">0</strong></div>
                     <div><span>Depósito</span><strong id="vencModalDeposito">0</strong></div>
                     <div><span>Total</span><strong id="vencModalTotal">0</strong></div>
-                </div>
-                <div class="modal-actions">
-                    <button id="btnVencEditarAbrir" class="secondary-btn" type="button">✏️ Editar</button>
-                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">🗑 Eliminar</button>
                 </div>
             </div>
 
@@ -654,8 +651,9 @@
                     </div>
                 </div>
                 <div class="venc-total"><span>Total</span><strong id="vencEditTotalTexto">0</strong></div>
-                <div class="modal-actions">
+                <div class="modal-actions venc-edit-actions">
                     <button id="btnVencGuardarEdicion" class="save-btn" type="button">Guardar cambios</button>
+                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">Eliminar</button>
                     <button id="btnVencCancelarEdicion" class="secondary-btn" type="button">Cancelar</button>
                 </div>
             </div>
@@ -674,13 +672,13 @@
 
 </div>
 
-<script src="./release-channel.js?v=6191-importacion-valuado"></script>
-<script src="./pwa.js?v=6191-importacion-valuado" defer></script>
-<script type="module" src="./auth.js?v=6191-importacion-valuado"></script>
+<script src="./release-channel.js?v=6110-consolidada"></script>
+<script src="./pwa.js?v=6110-consolidada" defer></script>
+<script type="module" src="./auth.js?v=6110-consolidada"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6191-importacion-valuado"></script>
-<script type="module" src="./notifications.js?v=6191-importacion-valuado"></script>
-<script type="module" src="./app.js?v=6191-importacion-valuado"></script>
+<script type="module" src="./admin.js?v=6110-consolidada"></script>
+<script type="module" src="./notifications.js?v=6110-consolidada"></script>
+<script type="module" src="./app.js?v=6110-consolidada"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

@@ -2641,19 +2641,18 @@ body.modal-abierto{overflow:hidden}
 @media(min-width:700px){.login-card{max-width:720px!important;margin:auto;min-height:auto!important;border-radius:34px!important;padding-bottom:190px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important}.login-overlay{align-items:center!important;background:linear-gradient(180deg,#fff 0 70%,#ef393f 100%)!important}}
 
 
-/* === V6.1.7.1 Beta: identidad final + login continuo === */
-.login-overlay{background:#fff!important;padding:0!important;align-items:stretch!important;overflow:auto!important}
-.login-card{width:100%!important;max-width:none!important;min-height:100dvh!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;padding:clamp(36px,7vh,78px) clamp(28px,9vw,84px) 190px!important;position:relative!important;overflow:hidden!important;justify-content:center!important}
-.login-card::before{content:"";position:absolute;left:-12%;right:-12%;bottom:35px;height:145px;background:#f7a8ac;border-radius:50% 50% 0 0/42% 42% 0 0;transform:rotate(-1.5deg);z-index:0}
-.login-card::after{content:"";position:absolute;left:-10%;right:-10%;bottom:-58px;height:185px;background:#ef393f;border-radius:50% 50% 0 0/45% 45% 0 0;transform:rotate(1.2deg);z-index:0}
-.login-card>*{position:relative;z-index:1}
-.login-brand-logo{width:min(82%,420px)!important;max-height:184px!important;object-fit:contain!important;margin:0 auto 22px!important}
-.login-card h1{font-size:clamp(2.2rem,8vw,2.95rem)!important;color:#181818!important;margin:0 0 6px!important}
-.login-card>p{font-size:1.12rem!important;margin:0 0 20px!important;color:#666!important}
-.login-card label,.login-card input,.login-card .login-status,.login-card .login-button{width:min(100%,560px)!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
-.login-card input{height:58px!important;border-radius:18px!important}
-.login-button{height:60px!important;border-radius:18px!important;margin-top:18px!important}
-@media(min-width:760px){.login-card{padding-left:max(32px,calc((100vw - 720px)/2 + 64px))!important;padding-right:max(32px,calc((100vw - 720px)/2 + 64px))!important}.login-brand-logo{width:min(62%,420px)!important}}
+/* V6.1.8 Beta - Vencimientos compactos y edición desde tarjeta */
+.venc-item-proximo { cursor: pointer; }
+.venc-item-proximo .venc-proximo-main,
+.venc-item-proximo .venc-proximo-main > div { width: 100%; }
+.venc-item-proximo .venc-proximo-main strong,
+.venc-item-proximo .venc-code { text-align: left !important; margin-left: 0 !important; padding-left: 0 !important; }
+.venc-item-proximo .venc-code { display: block; margin-top: 4px; }
+.venc-item-proximo .venc-proximo-actions { grid-template-columns: 1fr !important; }
+.venc-edit-actions { grid-template-columns: 1fr 1fr !important; }
+.venc-edit-actions .secondary-btn { grid-column: 1 / -1; }
+@media (hover:hover) { .venc-item-proximo:hover { transform: translateY(-1px); } }
+
 
 /* V6.1.9 - Importación de catálogo */
 .admin-import-card{margin-top:16px;padding:16px;border:1px solid #eadfe1;border-radius:16px;background:#fff;}
@@ -2673,3 +2672,4 @@ body.modal-abierto{overflow:hidden}
 .admin-import-preview-grid strong{display:block;margin-top:4px;font-size:1.15rem;color:#2d2325;}
 .admin-import-warning{padding:11px 12px;border-radius:12px;background:#fff3d8;color:#70551b;font-size:.85rem;line-height:1.4;}
 @media (max-width:420px){.admin-import-preview-grid{grid-template-columns:1fr 1fr;}.admin-import-preview-modal{width:calc(100% - 28px);}}
+

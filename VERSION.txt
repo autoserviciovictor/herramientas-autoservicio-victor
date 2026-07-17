@@ -1,1 +1,1 @@
-6.1.9.2
+6.1.10 Beta (canal beta; raíz estable)

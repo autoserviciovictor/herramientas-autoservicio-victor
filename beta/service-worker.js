@@ -1,29 +1,28 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v6.1.9.2-importacion-valuado';
+const CACHE_VERSION = 'autoservicio-v6.1.10-consolidada';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=6191-importacion-valuado',
-  './app.js?v=6191-importacion-valuado',
-  './config.js?v=6191-importacion-valuado',
-  './excel.js?v=6191-importacion-valuado',
-  './scanner.js?v=6191-importacion-valuado',
-  './reposicion.js?v=6191-importacion-valuado',
-  './ui.js?v=6191-importacion-valuado',
-  './release-channel.js?v=6191-importacion-valuado',
-  './pwa.js?v=6191-importacion-valuado',
-  './search.js?v=6191-importacion-valuado',
-  './admin.js?v=6191-importacion-valuado',
-  './auth.js?v=6191-importacion-valuado',
-  './notifications.js?v=6191-importacion-valuado',
+  './style.css?v=6110-consolidada',
+  './app.js?v=6110-consolidada',
+  './config.js?v=6110-consolidada',
+  './excel.js?v=6110-consolidada',
+  './scanner.js?v=6110-consolidada',
+  './reposicion.js?v=6110-consolidada',
+  './ui.js?v=6110-consolidada',
+  './release-channel.js?v=6110-consolidada',
+  './pwa.js?v=6110-consolidada',
+  './search.js?v=6110-consolidada',
+  './admin.js?v=6110-consolidada',
+  './auth.js?v=6110-consolidada',
+  './notifications.js?v=6110-consolidada',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/notification-badge-96.png',
-  './icons/notification-transparent.png',
   './icons/brand-logo-full.png',
   './icons/favicon.png'
 ];
@@ -87,10 +86,9 @@ self.addEventListener('push', event => {
   const title = data.title || 'Vencimientos';
   const options = {
     body: data.body || 'Tenés una alerta de vencimiento.',
-    icon: './icons/notification-transparent.png',
     badge: './icons/notification-badge-96.png',
     tag: data.tag || `vencimiento-${Date.now()}`, renotify: false,
-    data: data.data || { url: './' }, image: undefined, vibrate: [150, 80, 150]
+    data: data.data || { url: './' }, vibrate: [150, 80, 150]
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

@@ -2413,22 +2413,3 @@ body.modal-abierto{overflow:hidden}
 @media(max-width:560px){.admin-history-filter-grid{grid-template-columns:1fr}.admin-history-summary{align-items:flex-start;flex-direction:column}.admin-history-summary-users{justify-content:flex-start}.admin-history-toggle{grid-template-columns:auto minmax(0,1fr) auto}.admin-history-action{font-size:10px}.admin-period-btn{font-size:12px;padding:9px 3px}}
 
 
-
-/* V6.1.9 - Importación de catálogo */
-.admin-import-card{margin-top:16px;padding:16px;border:1px solid #eadfe1;border-radius:16px;background:#fff;}
-.admin-import-head strong{display:block;font-size:1rem;color:#2a2022;}
-.admin-import-head span{display:block;margin-top:4px;color:#75686b;font-size:.88rem;line-height:1.35;}
-.admin-import-card .setting-btn{margin-top:14px;width:100%;}
-.admin-import-status{margin-top:12px;min-height:20px;color:#665b5d;font-size:.88rem;}
-.admin-import-status strong,.admin-import-status span{display:block;}
-.admin-import-status strong{color:#267447;margin-bottom:3px;}
-
-/* Vista previa segura de importación del catálogo valuado */
-.admin-import-preview-modal{max-width:460px;}
-.admin-import-preview-file{margin:6px 0 14px;color:#6f6265;word-break:break-word;}
-.admin-import-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0;}
-.admin-import-preview-grid>div{padding:11px;border:1px solid #eadfe1;border-radius:13px;background:#fffafa;}
-.admin-import-preview-grid span{display:block;color:#786a6d;font-size:.78rem;line-height:1.2;}
-.admin-import-preview-grid strong{display:block;margin-top:4px;font-size:1.15rem;color:#2d2325;}
-.admin-import-warning{padding:11px 12px;border-radius:12px;background:#fff3d8;color:#70551b;font-size:.85rem;line-height:1.4;}
-@media (max-width:420px){.admin-import-preview-grid{grid-template-columns:1fr 1fr;}.admin-import-preview-modal{width:calc(100% - 28px);}}

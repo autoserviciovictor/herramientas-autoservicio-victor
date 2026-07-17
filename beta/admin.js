@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=6191-importacion-valuado";
+import { API_BASE_URL } from "./config.js?v=6110-consolidada";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -301,7 +301,6 @@ function abrirAdmin() {
 }
 
 
-
 function normalizarEncabezadoImportacion(valor) {
   return String(valor ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -431,6 +430,7 @@ async function confirmarImportacionCatalogo() {
     boton.disabled=false; boton.textContent="Importar y guardar";
   }
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
   $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);

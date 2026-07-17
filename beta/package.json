@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.9.2",
-  "description": "Autoservicio V6.1.9 Beta - importación inteligente de catálogo XLS",
+  "version": "6.1.10-beta",
+  "description": "Autoservicio V6.1.10 Beta - Vencimientos mejorados e importación segura de catálogo",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
