@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.8-beta",
-  "description": "Autoservicio V6.1.6.2 Beta - identidad visual final",
+  "version": "6.1.7-1",
+  "description": "Autoservicio V6.1.7.1 Beta - persistencia de listas e identidad visual",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

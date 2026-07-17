@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.5",
-  "description": "Herramientas Autoservicio Victor V6.1.5 Beta - notificaciones de vencimientos",
+  "version": "6.1.7-1",
+  "description": "Autoservicio V6.1.7.1 Beta - persistencia de listas e identidad visual",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

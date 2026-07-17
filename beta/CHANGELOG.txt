@@ -1,11 +1,5 @@
-V6.1.8 Beta
-- Próximos: tocar una tarjeta abre directamente el editor.
-- Se quitaron los botones visibles Editar y Eliminar de las tarjetas.
-- Eliminar quedó dentro del editor.
-- Código alineado con el nombre del artículo.
-- Cargar muestra contadores antes del título y solo los últimos 3 registros del día.
-
-V6.1.7 Beta
+V6.1.7.1 Beta
 - Lista 1 y Lista 2 persistentes en Google Sheets.
-- Login corregido con fondo continuo y ola inferior.
-- Ajustes de identidad visual y notificaciones.
+- Escrituras de listas serializadas globalmente para evitar pérdidas entre usuarios simultáneos.
+- Login sin borde visible y con ola roja inferior de dos capas.
+- Notificaciones sin logo grande adicional a la derecha; se conserva el badge pequeño del sistema.

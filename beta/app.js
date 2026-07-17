@@ -1128,7 +1128,7 @@ function renderListadoVencimientos() {
             : (vencTabActual === "vencidos" ? "Productos vencidos" : "Próximos a vencer");
     }
 
-    const limite = vencTabActual === "cargar" ? 3 : 80;
+    const limite = vencTabActual === "cargar" ? Number.POSITIVE_INFINITY : 80;
     const baseLista = filtrarVencimientos();
     const ordenada = [...baseLista].sort((a, b) => {
         if (vencTabActual === "cargar") {
@@ -1211,8 +1211,10 @@ function renderListadoVencimientos() {
                     <span><small>Depósito</small><b>${deposito}</b></span>
                     <span><small>Total</small><b>${cantidad}</b></span>
                 </div>
-                <div class="venc-proximo-actions">
+                <div class="venc-proximo-actions venc-proximo-actions-3">
                     <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>
+                    <button type="button" class="venc-card-action" data-venc-accion="editar">Editar</button>
+                    <button type="button" class="venc-card-action danger" data-venc-accion="eliminar">Eliminar</button>
                 </div>
             </article>
         `;
@@ -1223,24 +1225,22 @@ function manejarClickListadoVencimientos(event) {
     const card = event.target.closest(".venc-item");
     if (!card) return;
     const accion = event.target.closest("[data-venc-accion]")?.dataset.vencAccion;
+    if (!accion) return;
     const item = vencimientosCache.find(registro => String(registro.id) === String(card.dataset.id));
     if (!item) return;
     vencimientoSeleccionado = item;
-
     if (accion === "oferta" && vencTabActual === "proximos") {
         alternarOfertaVencimiento(item);
         return;
     }
-
+    if (accion === "editar" && vencTabActual === "proximos") {
+        abrirDetalleVencimiento(item);
+        mostrarEdicionVencimiento();
+        return;
+    }
     if (accion === "eliminar") {
         abrirDetalleVencimiento(item);
         mostrarConfirmacionEliminarVencimiento();
-        return;
-    }
-
-    if (!accion && vencTabActual === "proximos") {
-        abrirDetalleVencimiento(item);
-        mostrarEdicionVencimiento();
     }
 }
 

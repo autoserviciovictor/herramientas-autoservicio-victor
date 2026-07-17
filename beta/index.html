@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=618-vencimientos">
+    <link rel="stylesheet" href="style.css?v=6171-persistencia-identidad">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.8 Beta</p>
+    <p>Herramientas V6.1.7.1 Beta</p>
 </div>
 
 <div class="app">
@@ -92,7 +92,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.8 Beta</strong>
+            <strong>V6.1.7.1 Beta</strong>
         </section>
     </main>
 
@@ -330,11 +330,12 @@
         </section>
 
         <section class="venc-list-card">
-            <div id="vencResumen" class="venc-resumen"></div>
-
             <div class="venc-list-head">
                 <h2 id="vencListadoTitulo">Registros recientes</h2>
+                
             </div>
+
+            <div id="vencResumen" class="venc-resumen"></div>
 
             <input id="vencBuscador" class="venc-search" type="search" placeholder="Buscar por código o producto...">
 
@@ -505,7 +506,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.8 Beta</span>
+            <span id="adminVersion" class="admin-version">V6.1.7.1 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -596,6 +597,10 @@
                     <div><span>Depósito</span><strong id="vencModalDeposito">0</strong></div>
                     <div><span>Total</span><strong id="vencModalTotal">0</strong></div>
                 </div>
+                <div class="modal-actions">
+                    <button id="btnVencEditarAbrir" class="secondary-btn" type="button">✏️ Editar</button>
+                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">🗑 Eliminar</button>
+                </div>
             </div>
 
             <div id="vencModalEditar" class="venc-modal-editar oculto">
@@ -622,9 +627,8 @@
                     </div>
                 </div>
                 <div class="venc-total"><span>Total</span><strong id="vencEditTotalTexto">0</strong></div>
-                <div class="modal-actions venc-edit-actions">
+                <div class="modal-actions">
                     <button id="btnVencGuardarEdicion" class="save-btn" type="button">Guardar cambios</button>
-                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">Eliminar</button>
                     <button id="btnVencCancelarEdicion" class="secondary-btn" type="button">Cancelar</button>
                 </div>
             </div>
@@ -643,12 +647,12 @@
 
 </div>
 
-<script src="./release-channel.js?v=618-vencimientos"></script>
-<script src="./pwa.js?v=618-vencimientos" defer></script>
-<script type="module" src="./auth.js?v=618-vencimientos"></script>
-<script type="module" src="./admin.js?v=618-vencimientos"></script>
-<script type="module" src="./notifications.js?v=618-vencimientos"></script>
-<script type="module" src="./app.js?v=618-vencimientos"></script>
+<script src="./release-channel.js?v=6171-persistencia-identidad"></script>
+<script src="./pwa.js?v=6171-persistencia-identidad" defer></script>
+<script type="module" src="./auth.js?v=6171-persistencia-identidad"></script>
+<script type="module" src="./admin.js?v=6171-persistencia-identidad"></script>
+<script type="module" src="./notifications.js?v=6171-persistencia-identidad"></script>
+<script type="module" src="./app.js?v=6171-persistencia-identidad"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

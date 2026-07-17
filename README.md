@@ -19,3 +19,7 @@ El resto de las funciones de V6.0.5 y del historial mejorado se conservan.
 
 ## V6.1.5 Beta - Notificaciones
 Configurar en Render VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y VAPID_SUBJECT. Cada dispositivo debe activar el permiso una vez desde Configuración. Para avisos diarios confiables con la app cerrada, invocar POST /notificaciones/cron con x-cron-secret mediante un cron externo.
+
+## V6.1.7.1
+
+Backend reforzado para persistencia de Lista 1 y Lista 2 en Google Sheets, sin pérdidas por escrituras simultáneas.

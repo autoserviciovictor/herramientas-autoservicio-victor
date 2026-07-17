@@ -183,3 +183,6 @@ V6.0.1
 - Eliminado historial de vencimientos de la pantalla principal.
 - Administración organizada en Usuarios, Historial y Sistema.
 - Eliminados contador y datos de Reposición del panel administrativo.
+
+V6.1.7.1
+- Persistencia de listas reforzada y backend serializado.
