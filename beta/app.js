@@ -18,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=6131-listas-separadas";
+} from "./excel.js?v=6142-listas-estables";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=6131-listas-separadas";
+} from "./scanner.js?v=6142-listas-estables";
 
 import {
     ocultarSplash,
@@ -46,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=6131-listas-separadas";
+} from "./ui.js?v=6142-listas-estables";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=6131-listas-separadas";
-import { coincideBusqueda } from "./search.js?v=6131-listas-separadas";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=6142-listas-estables";
+import { coincideBusqueda } from "./search.js?v=6142-listas-estables";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -69,6 +69,10 @@ let busquedaVencimientos = "";
 let vencimientoSeleccionado = null;
 let vencTabActual = "cargar";
 const INTERVALO_SINCRONIZACION = 7000;
+let pantallaActualApp = "inicio";
+let snapshotProductoEditando = null;
+let snapshotVencimientoEditando = null;
+let resolucionCambiosPendientes = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -155,6 +159,7 @@ inicializar();
 async function inicializar() {
     ocultarSplash();
     cambiarPantalla("inicio");
+    pantallaActualApp = "inicio";
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
     actualizarContador(0);
@@ -171,7 +176,21 @@ async function inicializar() {
     await cargarProductos();
 }
 
-async function entrarPantalla(nombre) {
+async function entrarPantalla(nombre, opciones = {}) {
+    if (!opciones.forzar) {
+        if (pantallaActualApp === "anotar" && nombre !== "anotar") {
+            resolverSalidaReposicion(() => entrarPantalla(nombre, { forzar: true }));
+            return;
+        }
+        if (productoEditando && nombre !== "editarProducto") {
+            resolverSalidaProducto(() => entrarPantalla(nombre, { forzar: true }));
+            return;
+        }
+        if (estaEditandoVencimiento() && nombre !== "vencimientos") {
+            resolverSalidaVencimiento(() => entrarPantalla(nombre, { forzar: true }));
+            return;
+        }
+    }
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
 
@@ -184,7 +203,9 @@ async function entrarPantalla(nombre) {
     }
 
     cambiarPantalla(nombre);
+    pantallaActualApp = nombre;
 
+    if (nombre === "productos" || nombre === "cargados") mostrarCargandoEn($("resultadoBusqueda"), "Cargando productos...");
     if (["inventario", "productos", "cargados", "ajustes"].includes(nombre)) {
         await sincronizarEnSegundoPlano();
         if (nombre === "productos" || nombre === "cargados") refrescarProductos();
@@ -276,11 +297,11 @@ function configurarEventos() {
     });
     elementos.vencListado?.addEventListener("click", manejarClickListadoVencimientos);
     elementos.vencResumen?.addEventListener("click", manejarClickResumenVencimientos);
-    elementos.btnVencModalCerrar?.addEventListener("click", cerrarModalVencimiento);
-    elementos.vencModal?.addEventListener("click", (e) => { if (e.target === elementos.vencModal) cerrarModalVencimiento(); });
+    elementos.btnVencModalCerrar?.addEventListener("click", () => resolverSalidaVencimiento(cerrarModalVencimiento));
+    elementos.vencModal?.addEventListener("click", (e) => { if (e.target === elementos.vencModal) resolverSalidaVencimiento(cerrarModalVencimiento); });
     elementos.btnVencEditarAbrir?.addEventListener("click", mostrarEdicionVencimiento);
     elementos.btnVencEliminarAbrir?.addEventListener("click", mostrarConfirmacionEliminarVencimiento);
-    elementos.btnVencCancelarEdicion?.addEventListener("click", () => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado));
+    elementos.btnVencCancelarEdicion?.addEventListener("click", () => resolverSalidaVencimiento(() => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado)));
     elementos.btnVencCancelarEliminar?.addEventListener("click", () => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado));
     elementos.btnVencGuardarEdicion?.addEventListener("click", guardarEdicionVencimiento);
     elementos.btnVencConfirmarEliminar?.addEventListener("click", confirmarEliminarVencimiento);
@@ -290,6 +311,9 @@ function configurarEventos() {
     elementos.btnVencEditMasSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencEditSalonInput, 1, 0, actualizarTotalEdicionVencimiento));
     elementos.btnVencEditMenosDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, -1, 0, actualizarTotalEdicionVencimiento));
     elementos.btnVencEditMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, 1, 0, actualizarTotalEdicionVencimiento));
+    $("btnCambiosContinuar")?.addEventListener("click", () => { cerrarModalCambiosPendientes(); resolucionCambiosPendientes?.continuar?.(); resolucionCambiosPendientes=null; });
+    $("btnCambiosDescartar")?.addEventListener("click", () => { const fn=resolucionCambiosPendientes?.descartar; cerrarModalCambiosPendientes(); resolucionCambiosPendientes=null; fn?.(); });
+    $("btnCambiosGuardar")?.addEventListener("click", async () => { const fn=resolucionCambiosPendientes?.guardar; cerrarModalCambiosPendientes(); resolucionCambiosPendientes=null; await fn?.(); });
 }
 
 function cambiarTabVencimientos(tab) {
@@ -634,15 +658,23 @@ function refrescarProductos() {
 
 function seleccionarProductoParaEditar(producto) {
     productoEditando = producto;
+    snapshotProductoEditando = { salon: Number(producto.salon)||0, deposito: Number(producto.deposito)||0 };
     mostrarEditorStock(producto);
+    pantallaActualApp = "editarProducto";
     const volver = $("brandBackBtn");
     if (volver) volver.dataset.modulo = tabProductosActual === "cargados" ? "cargados" : "productos";
 }
 
 function cancelarEdicionProducto() {
+    if (productoEditando && hayCambiosProducto()) { resolverSalidaProducto(() => cancelarEdicionProductoForzado()); return; }
+    cancelarEdicionProductoForzado();
+}
+function cancelarEdicionProductoForzado() {
     productoEditando = null;
+    snapshotProductoEditando = null;
     const destino = tabProductosActual === "cargados" ? "cargados" : "productos";
     cambiarPantalla(destino);
+    pantallaActualApp = destino;
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     refrescarProductos();
     sincronizarEnSegundoPlano();
@@ -665,7 +697,10 @@ async function guardarCorreccion() {
         const producto = await modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
 
         productoEditando = null;
-        cambiarPantalla(tabProductosActual === "cargados" ? "cargados" : "productos");
+        snapshotProductoEditando = null;
+        const destinoEdicion = tabProductosActual === "cargados" ? "cargados" : "productos";
+        cambiarPantalla(destinoEdicion);
+        pantallaActualApp = destinoEdicion;
         refrescarProductos();
         sincronizarEnSegundoPlano();
 
@@ -676,9 +711,11 @@ async function guardarCorreccion() {
 
         mostrarMensaje("Stock corregido", "ok");
         reproducirConfirmacion("guardado");
+        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
+        return false;
     } finally {
         corrigiendo = false;
         elementos.btnGuardarCorreccion.disabled = false;
@@ -916,6 +953,7 @@ async function guardarVencimientoActual() {
         await cargarListadoVencimientos();
         mostrarMensaje("Vencimiento guardado", "ok");
         reproducirConfirmacion("guardado");
+        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -928,7 +966,7 @@ async function guardarVencimientoActual() {
 async function cargarListadoVencimientos() {
     try {
         if (!elementos.vencListado) return;
-        elementos.vencListado.textContent = "Cargando vencimientos...";
+        mostrarCargandoEn(elementos.vencListado, "Cargando vencimientos...");
         vencimientosCache = await listarVencimientos();
         renderListadoVencimientos();
     } catch (error) {
@@ -1193,6 +1231,7 @@ async function alternarOfertaVencimiento(item) {
         await cargarListadoVencimientos();
         mostrarMensaje(nuevaOferta ? "Oferta marcada" : "Oferta quitada", "ok");
         reproducirConfirmacion("guardado");
+        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -1227,6 +1266,7 @@ function cerrarModalVencimiento() {
     elementos.vencModal?.classList.add("oculto");
     elementos.vencModal?.setAttribute("aria-hidden", "true");
     vencimientoSeleccionado = null;
+    snapshotVencimientoEditando = null;
 }
 
 function mostrarEdicionVencimiento() {
@@ -1237,6 +1277,7 @@ function mostrarEdicionVencimiento() {
     if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.value = item.vencimiento || "";
     if (elementos.vencEditSalonInput) elementos.vencEditSalonInput.value = item.salon || 0;
     if (elementos.vencEditDepositoInput) elementos.vencEditDepositoInput.value = item.deposito || 0;
+    snapshotVencimientoEditando = { vencimiento: item.vencimiento || "", salon: Number(item.salon)||0, deposito: Number(item.deposito)||0 };
     actualizarTotalEdicionVencimiento();
     mostrarPanelModal(elementos.vencModalEditar);
 }
@@ -1260,12 +1301,15 @@ async function guardarEdicionVencimiento() {
         mostrarMensaje("Actualizando registro...", "ok");
         await actualizarVencimiento(item.id, { vencimiento, salon, deposito });
         await cargarListadoVencimientos();
+        snapshotVencimientoEditando = null;
         cerrarModalVencimiento();
         mostrarMensaje("Registro actualizado", "ok");
         reproducirConfirmacion("guardado");
+        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
+        return false;
     } finally {
         if (elementos.btnVencGuardarEdicion) elementos.btnVencGuardarEdicion.disabled = false;
     }
@@ -1290,6 +1334,7 @@ async function confirmarEliminarVencimiento() {
         cerrarModalVencimiento();
         mostrarMensaje("Registro eliminado", "ok");
         reproducirConfirmacion("guardado");
+        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -1298,8 +1343,65 @@ async function confirmarEliminarVencimiento() {
     }
 }
 
-window.addEventListener("beforeunload", () => {
+
+function mostrarCargandoEn(contenedor, texto = "Cargando...") {
+    if (!contenedor) return;
+    contenedor.innerHTML = `<div class="app-loading"><span class="app-spinner" aria-hidden="true"></span><strong>${texto}</strong></div>`;
+}
+function hayCambiosProducto() {
+    if (!productoEditando || !snapshotProductoEditando) return false;
+    const valores = obtenerValoresEditor();
+    return Number(valores.salon)!==snapshotProductoEditando.salon || Number(valores.deposito)!==snapshotProductoEditando.deposito;
+}
+function estaEditandoVencimiento() {
+    return Boolean(snapshotVencimientoEditando && elementos.vencModalEditar && !elementos.vencModalEditar.classList.contains("oculto"));
+}
+function hayCambiosVencimiento() {
+    if (!estaEditandoVencimiento()) return false;
+    return (elementos.vencEditFechaInput?.value||"")!==snapshotVencimientoEditando.vencimiento ||
+        (Number(elementos.vencEditSalonInput?.value)||0)!==snapshotVencimientoEditando.salon ||
+        (Number(elementos.vencEditDepositoInput?.value)||0)!==snapshotVencimientoEditando.deposito;
+}
+function abrirModalCambiosPendientes({ titulo, texto, guardar, descartar, continuar }) {
+    resolucionCambiosPendientes = { guardar, descartar, continuar };
+    $("cambiosPendientesTitulo").textContent = titulo;
+    $("cambiosPendientesTexto").textContent = texto;
+    $("cambiosPendientesModal")?.classList.remove("oculto");
+    document.body.classList.add("modal-abierto");
+}
+function cerrarModalCambiosPendientes() {
+    $("cambiosPendientesModal")?.classList.add("oculto");
+    document.body.classList.remove("modal-abierto");
+}
+function resolverSalidaProducto(continuar) {
+    if (!productoEditando) { continuar?.(); return; }
+    if (!hayCambiosProducto()) { productoEditando=null; snapshotProductoEditando=null; continuar?.(); return; }
+    abrirModalCambiosPendientes({
+        titulo: "Cambios sin guardar",
+        texto: "¿Querés guardar los cambios del producto antes de salir?",
+        guardar: async () => { const ok=await guardarCorreccion(); if(ok) continuar?.(); },
+        descartar: () => { productoEditando=null; snapshotProductoEditando=null; continuar?.(); },
+        continuar: () => {}
+    });
+}
+function resolverSalidaVencimiento(continuar) {
+    if (!estaEditandoVencimiento()) { continuar?.(); return; }
+    if (!hayCambiosVencimiento()) { snapshotVencimientoEditando=null; continuar?.(); return; }
+    abrirModalCambiosPendientes({
+        titulo: "Cambios sin guardar",
+        texto: "¿Querés guardar los cambios del vencimiento antes de salir?",
+        guardar: async () => { const ok=await guardarEdicionVencimiento(); if(ok) continuar?.(); },
+        descartar: () => { snapshotVencimientoEditando=null; cerrarModalVencimiento(); continuar?.(); },
+        continuar: () => {}
+    });
+}
+
+window.addEventListener("beforeunload", (event) => {
     detenerScanner();
+    if (hayCambiosProducto() || hayCambiosVencimiento()) {
+        event.preventDefault();
+        event.returnValue = "";
+    }
 });
 
 

@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=614-editar-lista">
+    <link rel="stylesheet" href="style.css?v=6142-listas-estables">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -422,8 +422,6 @@
     </nav>
 
 
-    <button id="btnRepoGuardarEdicion" type="button" class="repo-save-floating oculto">Guardar cambios</button>
-
     <div id="repoGuardarEdicionModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
         <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoGuardarEdicionTitulo">
             <div class="repo-confirm-icon" aria-hidden="true">✏️</div>
@@ -441,9 +439,10 @@
             <div class="repo-confirm-icon" aria-hidden="true">↩️</div>
             <h2 id="repoDescartarEdicionTitulo">Descartar cambios</h2>
             <p>Los cambios realizados no se guardarán.</p>
-            <div class="repo-confirm-actions">
+            <div class="repo-confirm-actions repo-confirm-actions-triple">
                 <button id="btnRepoContinuarEdicion" type="button" class="cancel-btn">Continuar editando</button>
-                <button id="btnRepoConfirmarDescarte" type="button" class="danger-btn">Descartar</button>
+                <button id="btnRepoConfirmarDescarte" type="button" class="danger-btn">Descartar cambios</button>
+                <button id="btnRepoGuardarAntesSalir" type="button" class="save-btn">Guardar cambios</button>
             </div>
         </div>
     </div>
@@ -456,6 +455,20 @@
             <div class="repo-confirm-actions">
                 <button id="btnRepoCancelarNuevaLista" type="button" class="cancel-btn">Cancelar</button>
                 <button id="btnRepoConfirmarNuevaLista" type="button" class="danger-btn">Empezar nueva lista</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="cambiosPendientesModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="cambiosPendientesTitulo">
+            <div class="repo-confirm-icon" aria-hidden="true">✏️</div>
+            <h2 id="cambiosPendientesTitulo">Cambios sin guardar</h2>
+            <p id="cambiosPendientesTexto">¿Qué querés hacer con los cambios?</p>
+            <div class="repo-confirm-actions repo-confirm-actions-triple">
+                <button id="btnCambiosContinuar" type="button" class="cancel-btn">Seguir editando</button>
+                <button id="btnCambiosDescartar" type="button" class="danger-btn">Descartar</button>
+                <button id="btnCambiosGuardar" type="button" class="save-btn">Guardar</button>
             </div>
         </div>
     </div>
@@ -626,11 +639,11 @@
 
 </div>
 
-<script src="./release-channel.js?v=614-editar-lista"></script>
-<script src="./pwa.js?v=614-editar-lista" defer></script>
-<script type="module" src="./auth.js?v=614-editar-lista"></script>
-<script type="module" src="./admin.js?v=614-editar-lista"></script>
-<script type="module" src="./app.js?v=614-editar-lista"></script>
+<script src="./release-channel.js?v=6142-listas-estables"></script>
+<script src="./pwa.js?v=6142-listas-estables" defer></script>
+<script type="module" src="./auth.js?v=6142-listas-estables"></script>
+<script type="module" src="./admin.js?v=6142-listas-estables"></script>
+<script type="module" src="./app.js?v=6142-listas-estables"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

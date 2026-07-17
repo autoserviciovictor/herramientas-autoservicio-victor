@@ -1,10 +1,17 @@
-V6.1.4 BETA — Lista 1 y Lista 2
+V6.1.4.2 BETA — Edición segura y cargas
+- La X reemplaza la papelera en Mi lista.
+- Un único botón alterna Editar lista, Cancelar edición y Guardar lista.
+- Confirmación al guardar o descartar solo cuando existen cambios.
+- Protección de cambios sin guardar al navegar en Lista, Productos y Vencimientos.
+- Indicadores giratorios durante la carga de listas, productos y vencimientos.
+
+V6.1.4.2.1 BETA — Lista 1 y Lista 2
 - Dos listas privadas e independientes por usuario.
 - Selectores en Agregar y Mi lista.
 - Migración automática de la lista anterior a Lista 1.
 - Empezar nueva lista vacía solo la lista seleccionada.
 
-V6.1.4 BETA — Responsive y registros diarios
+V6.1.4.2.1 BETA — Responsive y registros diarios
 - La interfaz se adapta a computadoras y pantallas amplias.
 - En Cargar vencimiento solo se muestran registros cargados durante el día actual en Argentina.
 - No se eliminan registros anteriores; siguen disponibles en Próximos, Vencidos e Historial.

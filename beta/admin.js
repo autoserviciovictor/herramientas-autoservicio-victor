@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=6131-listas-separadas";
+import { API_BASE_URL } from "./config.js?v=6142-listas-estables";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];

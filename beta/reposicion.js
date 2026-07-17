@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=614-editar-lista";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=614-editar-lista";
-import { ordenarPorBusqueda } from "./search.js?v=614-editar-lista";
+import { API_BASE_URL } from "./config.js?v=6142-listas-estables";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=6142-listas-estables";
+import { ordenarPorBusqueda } from "./search.js?v=6142-listas-estables";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -14,6 +14,10 @@ let listaActual = "1";
 let modoEdicion = false;
 let borradorEdicion = [];
 let snapshotEdicion = [];
+let cargandoRegistros = false;
+let accionPendienteTrasEdicion = null;
+let secuenciaCargaLista = 0;
+let listaEdicion = "1";
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
 async function pedir(ruta, opciones={}){
@@ -70,11 +74,11 @@ export function inicializarReposicion(){
   $("repoListado")?.addEventListener("click",manejarAccion);
   $("btnRepoVaciarLista")?.addEventListener("click", abrirModalNuevaLista);
   $("btnRepoEditarLista")?.addEventListener("click", alternarModoEdicion);
-  $("btnRepoGuardarEdicion")?.addEventListener("click", abrirModalGuardarEdicion);
   $("btnRepoSeguirEditando")?.addEventListener("click", cerrarModalGuardarEdicion);
   $("btnRepoConfirmarEdicion")?.addEventListener("click", confirmarEdicion);
   $("btnRepoContinuarEdicion")?.addEventListener("click", cerrarModalDescartarEdicion);
   $("btnRepoConfirmarDescarte")?.addEventListener("click", descartarEdicion);
+  $("btnRepoGuardarAntesSalir")?.addEventListener("click", guardarEdicionAntesDeSalir);
   $("btnRepoCancelarNuevaLista")?.addEventListener("click", cerrarModalNuevaLista);
   $("btnRepoConfirmarNuevaLista")?.addEventListener("click", confirmarNuevaLista);
   $("repoNuevaListaModal")?.addEventListener("click", event => {
@@ -113,7 +117,10 @@ function sincronizarSelectorListas(){
 async function seleccionarLista(valor,{refrescar=true}={}){
   const nueva=String(valor)==="2"?"2":"1";
   if(listaActual===nueva && refrescar){ sincronizarSelectorListas(); return; }
-  if(modoEdicion && hayCambiosEdicion()) { abrirModalDescartarEdicion(); return; }
+  if(modoEdicion) {
+    solicitarSalidaEdicion(() => seleccionarLista(nueva,{refrescar}));
+    return;
+  }
   salirModoEdicionSilencioso();
   listaActual=nueva;
   productoActual=null;
@@ -125,8 +132,19 @@ async function seleccionarLista(valor,{refrescar=true}={}){
 }
 
 export async function refrescarReposicion(){
-  try { const data=await pedir(`/reposicion?lista=${listaActual}`); registros=data.registros||[]; actualizarUsuarioReposicion(); render(); }
-  catch(e){ toast(e.message,"error"); }
+  const listaSolicitada = listaActual;
+  const secuencia = ++secuenciaCargaLista;
+  cargandoRegistros=true; render();
+  try {
+    const data=await pedir(`/reposicion?lista=${listaSolicitada}`);
+    if(secuencia !== secuenciaCargaLista || listaActual !== listaSolicitada) return;
+    registros=(data.registros||[]).map(item=>({...item,lista:String(item.lista||listaSolicitada)==="2"?"2":"1"}));
+    actualizarUsuarioReposicion();
+  }
+  catch(e){ if(secuencia === secuenciaCargaLista) toast(e.message,"error"); }
+  finally {
+    if(secuencia === secuenciaCargaLista){ cargandoRegistros=false; render(); }
+  }
 }
 
 async function abrirScanner(){
@@ -168,7 +186,7 @@ function actualizarEncabezadoRepo(esCarga){
   if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos para llevar del depósito";
 }
 function cambiarTab(nueva){
-  if(modoEdicion && nueva!=="registro" && hayCambiosEdicion()){ abrirModalDescartarEdicion(); return; }
+  if(modoEdicion && nueva!=="registro"){ solicitarSalidaEdicion(() => cambiarTab(nueva)); return; }
   if(nueva!=="registro") salirModoEdicionSilencioso();
   tab=nueva==="registro"?"registro":"cargar";
   const esCarga=tab==="cargar";
@@ -181,9 +199,11 @@ function cambiarTab(nueva){
   if(!esCarga){ refrescarReposicion(); render(); } else { refrescarReposicion(); }
 }
 
+function htmlCargando(texto="Cargando..."){ return `<span class="app-spinner" aria-hidden="true"></span><strong>${escapar(texto)}</strong>`; }
 function render(){ renderRecientes(); renderListado(); }
 function renderRecientes(){
   const c=$("repoRecientes"); if(!c)return;
+  if(cargandoRegistros){ c.className="venc-list-empty"; c.innerHTML=htmlCargando("Cargando productos..."); return; }
   const items=registros.slice(0,3);
   c.className=items.length?"repo-list":"venc-list-empty";
   c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados en Lista ${listaActual}.</strong><small>Escaneá un producto para comenzar.</small>`;
@@ -198,22 +218,28 @@ function hayCambiosEdicion(){
 }
 function actualizarControlesEdicion(){
   const editar=$("btnRepoEditarLista");
-  if(editar){ editar.disabled=!registros.length || operacionEnCurso; editar.textContent=modoEdicion?"Cancelar edición":"Editar lista"; editar.classList.toggle("activo",modoEdicion); }
-  const guardar=$("btnRepoGuardarEdicion");
-  guardar?.classList.toggle("oculto",!modoEdicion || !hayCambiosEdicion());
+  const cambios=hayCambiosEdicion();
+  if(editar){
+    editar.disabled=!registros.length || operacionEnCurso;
+    editar.textContent=!modoEdicion?"Editar lista":(cambios?"Guardar lista":"Cancelar edición");
+    editar.classList.toggle("activo",modoEdicion);
+    editar.classList.toggle("guardar",modoEdicion&&cambios);
+  }
+  $("btnRepoGuardarEdicion")?.classList.add("oculto");
   const nueva=$("btnRepoVaciarLista"); if(nueva) nueva.disabled=!registros.length || modoEdicion;
 }
 function entrarModoEdicion(){
   if(!registros.length || operacionEnCurso) return;
   modoEdicion=true;
+  listaEdicion=listaActual;
   snapshotEdicion=registros.map(x=>({...x}));
   borradorEdicion=registros.map(x=>({...x,_eliminar:false}));
   render();
 }
-function salirModoEdicionSilencioso(){ modoEdicion=false; borradorEdicion=[]; snapshotEdicion=[]; actualizarControlesEdicion(); }
+function salirModoEdicionSilencioso(){ modoEdicion=false; borradorEdicion=[]; snapshotEdicion=[]; listaEdicion=listaActual; actualizarControlesEdicion(); }
 function alternarModoEdicion(){
   if(!modoEdicion) return entrarModoEdicion();
-  if(hayCambiosEdicion()) return abrirModalDescartarEdicion();
+  if(hayCambiosEdicion()) return abrirModalGuardarEdicion();
   salirModoEdicionSilencioso(); render();
 }
 function cambiarCantidadEdicion(id,delta){
@@ -234,23 +260,41 @@ function abrirModalGuardarEdicion(){
 function cerrarModalGuardarEdicion(){ $("repoGuardarEdicionModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
 function abrirModalDescartarEdicion(){ $("repoDescartarEdicionModal")?.classList.remove("oculto"); document.body.classList.add("modal-abierto"); }
 function cerrarModalDescartarEdicion(){ $("repoDescartarEdicionModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
-function descartarEdicion(){ cerrarModalDescartarEdicion(); salirModoEdicionSilencioso(); render(); }
+function descartarEdicion(){
+  const continuar=accionPendienteTrasEdicion; accionPendienteTrasEdicion=null;
+  cerrarModalDescartarEdicion(); salirModoEdicionSilencioso(); render();
+  if(typeof continuar==="function") continuar();
+}
+function solicitarSalidaEdicion(continuar){
+  if(!modoEdicion){ continuar?.(); return; }
+  if(!hayCambiosEdicion()){ salirModoEdicionSilencioso(); render(); continuar?.(); return; }
+  accionPendienteTrasEdicion=continuar;
+  abrirModalDescartarEdicion();
+}
+export function resolverSalidaReposicion(continuar){ solicitarSalidaEdicion(continuar); }
+async function guardarEdicionAntesDeSalir(){
+  const continuar=accionPendienteTrasEdicion; accionPendienteTrasEdicion=null;
+  cerrarModalDescartarEdicion();
+  const ok=await confirmarEdicion();
+  if(ok && typeof continuar==="function") continuar();
+}
 async function confirmarEdicion(){
-  if(!hayCambiosEdicion()||operacionEnCurso)return;
+  if(!hayCambiosEdicion()||operacionEnCurso)return false;
   const cambios=[];
   for(const item of borradorEdicion){
-    if(item._eliminar) cambios.push({id:item.id,eliminar:true});
-    else { const original=snapshotEdicion.find(x=>x.id===item.id); if(original&&numero(original.cantidad)!==numero(item.cantidad)) cambios.push({id:item.id,cantidad:numero(item.cantidad)}); }
+    if(item._eliminar) cambios.push({id:item.id,codigo:item.codigo,lista:item.lista||listaEdicion,eliminar:true});
+    else { const original=snapshotEdicion.find(x=>x.id===item.id); if(original&&numero(original.cantidad)!==numero(item.cantidad)) cambios.push({id:item.id,codigo:item.codigo,lista:item.lista||listaEdicion,cantidad:numero(item.cantidad)}); }
   }
   try{
     operacionEnCurso=true; const b=$("btnRepoConfirmarEdicion"); if(b){b.disabled=true;b.textContent="Guardando...";}
-    const data=await pedir("/reposicion",{method:"PATCH",body:JSON.stringify({lista:listaActual,cambios})});
-    registros=data.registros||[]; cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados");
-  }catch(e){toast(e.message,"error");}
+    const data=await pedir("/reposicion",{method:"PATCH",body:JSON.stringify({lista:listaEdicion,cambios})});
+    registros=data.registros||[]; cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados"); return true;
+  }catch(e){toast(e.message,"error"); return false;}
   finally{operacionEnCurso=false;const b=$("btnRepoConfirmarEdicion");if(b){b.disabled=false;b.textContent="Guardar cambios";} actualizarControlesEdicion();}
 }
 function renderListado(){
   const c=$("repoListado"); if(!c)return;
+  if(cargandoRegistros){ c.className="venc-list-empty"; c.innerHTML=htmlCargando("Cargando lista..."); actualizarControlesEdicion(); return; }
   const q=($("repoBuscador")?.value||"").trim();
   const fuente=registrosVista().filter(r=>!r._eliminar || modoEdicion);
   const pendientes=fuente.filter(r=>r.estado!=="completado");
@@ -261,7 +305,7 @@ function renderListado(){
   c.innerHTML=items.length?items.map(r=>{
     const completado=r.estado==="completado";
     if(modoEdicion) return `<article class="repo-simple-item repo-edit-item${r._eliminar?" marcado-eliminar":""}">
-      <button type="button" class="repo-delete-edit" data-repo-accion="eliminar-edicion" data-id="${escapar(r.id)}" aria-label="${r._eliminar?"Restaurar":"Eliminar"}">${r._eliminar?"↩":"🗑"}</button>
+      <button type="button" class="repo-delete-edit" data-repo-accion="eliminar-edicion" data-id="${escapar(r.id)}" aria-label="${r._eliminar?"Restaurar":"Eliminar"}">${r._eliminar?"↩":"×"}</button>
       <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small></div>
       <div class="repo-qty-editor"><button type="button" data-repo-accion="menos-edicion" data-id="${escapar(r.id)}" ${r._eliminar?"disabled":""}>−</button><b>${numero(r.cantidad)}</b><button type="button" data-repo-accion="mas-edicion" data-id="${escapar(r.id)}" ${r._eliminar?"disabled":""}>+</button></div>
     </article>`;
@@ -339,6 +383,7 @@ async function manejarAccion(e){
     return;
   }
   const estadoAnterior=r.estado||"pendiente";
+  const listaRegistro=String(r.lista||listaActual)==="2"?"2":"1";
 
   try{
     operacionEnCurso=true;
@@ -346,7 +391,7 @@ async function manejarAccion(e){
 
     if(accion==="eliminar"){
       if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
-      await pedir(`/reposicion/${encodeURIComponent(r.id)}?lista=${listaActual}`,{method:"DELETE"});
+      await pedir(`/reposicion/${encodeURIComponent(r.id)}?lista=${listaRegistro}&codigo=${encodeURIComponent(r.codigo||"")}`,{method:"DELETE"});
       registros=registros.filter(item=>String(item.id)!==id);
       render();
       return;
@@ -357,7 +402,7 @@ async function manejarAccion(e){
       if(valor===null) return;
       const cantidad=Number(valor);
       if(!Number.isInteger(cantidad)||cantidad<1) return toast("Cantidad inválida","error");
-      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente",lista:listaActual})});
+      await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente",lista:listaRegistro,codigo:r.codigo})});
       r.cantidad=cantidad;
       render();
       return;
@@ -371,7 +416,7 @@ async function manejarAccion(e){
 
     await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{
       method:"PUT",
-      body:JSON.stringify({cantidad:numero(r.cantidad),estado:nuevoEstado,lista:listaActual})
+      body:JSON.stringify({cantidad:numero(r.cantidad),estado:nuevoEstado,lista:listaRegistro,codigo:r.codigo})
     });
 
     toast(nuevoEstado==="completado"?"Producto marcado como listo":"Producto devuelto a pendientes");

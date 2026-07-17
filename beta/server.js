@@ -7,7 +7,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.3.1";
+const APP_VERSION = "6.1.4.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1026,6 +1026,15 @@ function crearIdReposicion() {
   return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
+function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
+  const idNormalizado = normalizarTexto(id);
+  let indice = lista.findIndex(item => normalizarTexto(item.id) === idNormalizado);
+  if (indice >= 0) return indice;
+  const codigoNormalizado = normalizarCodigo(codigo);
+  if (codigoNormalizado) indice = lista.findIndex(item => normalizarCodigo(item.codigo) === codigoNormalizado);
+  return indice;
+}
+
 function limpiarRegistroReposicion(registro, numeroLista = "1") {
   return {
     id: normalizarTexto(registro.id),
@@ -1097,7 +1106,7 @@ app.put("/reposicion/:id", async (req, res) => {
     const estado = normalizarTexto(req.body.estado).toLowerCase();
     const actualizado = await ejecutarEnCola(`reposicion:${usuario}:${numeroLista}:${id}`, async () => {
       const lista = obtenerListaReposicion(usuario, numeroLista);
-      const indice = lista.findIndex(item => item.id === id);
+      const indice = buscarIndiceRegistroReposicion(lista, id, req.body.codigo);
       if (indice < 0) {
         const error = new Error(`Registro no encontrado en Lista ${numeroLista}`);
         error.statusCode = 404;
@@ -1140,7 +1149,7 @@ app.patch("/reposicion", async (req, res) => {
 
       for (const cambio of cambios) {
         const id = normalizarTexto(cambio.id);
-        const indice = copia.findIndex(item => item.id === id);
+        const indice = buscarIndiceRegistroReposicion(copia, id, cambio.codigo);
         if (indice < 0) {
           const error = new Error(`Registro no encontrado en Lista ${numeroLista}`);
           error.statusCode = 404;
@@ -1178,7 +1187,7 @@ app.delete("/reposicion/:id", async (req, res) => {
     const numeroLista = normalizarNumeroLista(req.query.lista);
     const id = normalizarTexto(req.params.id);
     const lista = obtenerListaReposicion(usuario, numeroLista);
-    const indice = lista.findIndex(item => item.id === id);
+    const indice = buscarIndiceRegistroReposicion(lista, id, req.query.codigo);
     if (indice < 0) return res.status(404).json({ ok: false, mensaje: `Registro no encontrado en Lista ${numeroLista}` });
     lista.splice(indice, 1);
     guardarReposicionTemporal();
