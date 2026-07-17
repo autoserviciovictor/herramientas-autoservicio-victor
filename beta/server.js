@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.6";
+const APP_VERSION = "6.1.6.1 Beta";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -539,7 +539,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send(`Servidor Autoservicio V${APP_VERSION} funcionando`);
+  res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
 });
 
 app.get("/productos", async (req, res) => {
@@ -1393,5 +1393,5 @@ setInterval(() => procesarAlertasVencimientos(), 60 * 60 * 1000);
 setTimeout(() => procesarAlertasVencimientos(), 15000);
 
 app.listen(PORT, () => {
-  console.log(`Servidor Autoservicio V${APP_VERSION} funcionando en puerto ${PORT}`);
+  console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
 });

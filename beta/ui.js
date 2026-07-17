@@ -51,31 +51,30 @@ export function ocultarSplash() {
 }
 
 function actualizarEncabezadoModulo(nombre) {
-    const titulo = document.getElementById("brandHeaderTitulo");
-    const subtitulo = document.getElementById("brandHeaderSubtitulo");
+    const tituloMarca = document.getElementById("brandHeaderTitulo");
+    const subtituloMarca = document.getElementById("brandHeaderSubtitulo");
+    const tituloPagina = document.getElementById("modulePageTitle");
+    const subtituloPagina = document.getElementById("modulePageSubtitle");
     const volver = document.getElementById("brandBackBtn");
-    if (!titulo || !subtitulo) return;
+
+    if (tituloMarca) tituloMarca.textContent = "Autoservicio";
+    if (subtituloMarca) subtituloMarca.textContent = "Herramientas";
 
     const encabezados = {
-        inicio: ["Autoservicio", "Herramientas"],
+        inicio: ["Herramientas", "Elegí el módulo que querés usar"],
         inventario: ["Inventario", "Control de stock"],
         productos: ["Productos", "Lista completa"],
         cargados: ["Cargados", "Productos con stock"],
         editarProducto: ["Editar producto", "Inventario"],
-        ajustes: ["Ajustes", "Configuración general"],
+        ajustes: ["Configuración", "Ajustes de la aplicación"],
         vencimientos: ["Vencimientos", "Control de fechas"],
-        anotar: ["Lista", "Reposición de salón"],
-        admin: ["Administración", "Usuarios e historial"]
+        anotar: ["Lista", "Reposición"],
+        admin: ["Administrador", "Usuarios e historial"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
-    if (nombre === "inicio") {
-        titulo.classList.add("brand-title-home");
-        titulo.innerHTML = '<img src="./icons/brand-header-white.png" alt="Autoservicio">';
-    } else {
-        titulo.classList.remove("brand-title-home");
-        titulo.textContent = textoTitulo;
-    }
-    subtitulo.textContent = textoSubtitulo;
+    if (tituloPagina) tituloPagina.textContent = textoTitulo;
+    if (subtituloPagina) subtituloPagina.textContent = textoSubtitulo;
+
     if (volver) {
         const destinos = { editarProducto: "productos" };
         volver.dataset.modulo = destinos[nombre] || "inicio";

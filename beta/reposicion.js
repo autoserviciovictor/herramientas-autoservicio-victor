@@ -180,8 +180,8 @@ async function guardar(){
 }
 function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar código manualmente"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
 function actualizarEncabezadoRepo(esCarga){
-  const titulo=$("brandHeaderTitulo");
-  const subtitulo=$("brandHeaderSubtitulo");
+  const titulo=$("modulePageTitle");
+  const subtitulo=$("modulePageSubtitle");
   if(titulo) titulo.textContent=esCarga?`Lista ${listaActual} · Agregar`:`Mi Lista ${listaActual}`;
   if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos para llevar del depósito";
 }

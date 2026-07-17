@@ -1,30 +1,29 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v6.1.6-branding-beta';
+const CACHE_VERSION = 'autoservicio-v6.1.6.1-identidad-final';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css?v=616-branding',
-  './app.js?v=616-branding',
-  './config.js?v=616-branding',
-  './excel.js?v=616-branding',
-  './scanner.js?v=616-branding',
-  './reposicion.js?v=616-branding',
-  './ui.js?v=616-branding',
-  './release-channel.js?v=616-branding',
-  './pwa.js?v=616-branding',
-  './search.js?v=616-branding',
-  './admin.js?v=616-branding',
-  './auth.js?v=616-branding',
-  './notifications.js?v=616-branding',
+  './style.css?v=6161-identidad-final',
+  './app.js?v=6161-identidad-final',
+  './config.js?v=6161-identidad-final',
+  './excel.js?v=6161-identidad-final',
+  './scanner.js?v=6161-identidad-final',
+  './reposicion.js?v=6161-identidad-final',
+  './ui.js?v=6161-identidad-final',
+  './release-channel.js?v=6161-identidad-final',
+  './pwa.js?v=6161-identidad-final',
+  './search.js?v=6161-identidad-final',
+  './admin.js?v=6161-identidad-final',
+  './auth.js?v=6161-identidad-final',
+  './notifications.js?v=6161-identidad-final',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/notification-badge-96.png',
-  './icons/brand-card-192.png',
-  './icons/brand-header-white.png',
-  './icons/brand-main-512.png'
+  './icons/brand-logo-full.png',
+  './icons/favicon.png'
 ];
 
 self.addEventListener('install', event => {
@@ -86,7 +85,7 @@ self.addEventListener('push', event => {
   const title = data.title || 'Vencimientos';
   const options = {
     body: data.body || 'Tenés una alerta de vencimiento.',
-    icon: './icons/icon-192.png', badge: './icons/notification-badge-96.png',
+    badge: './icons/notification-badge-96.png',
     tag: data.tag || `vencimiento-${Date.now()}`, renotify: false,
     data: data.data || { url: './' }, vibrate: [150, 80, 150]
   };

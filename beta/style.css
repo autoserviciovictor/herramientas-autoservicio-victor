@@ -2582,43 +2582,26 @@ body.modal-abierto{overflow:hidden}
 .notification-settings-status.ok { color:#167342; }
 .notification-settings-status.error { color:#b4232c; }
 
-/* V6.1.6 BETA — NUEVA IDENTIDAD VISUAL */
-.login-logo,
-.splash-logo {
-  overflow: hidden;
-  padding: 0 !important;
-  background: #fff !important;
-}
-.login-logo img,
-.splash-logo img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-.splash-logo {
-  width: 112px !important;
-  height: 112px !important;
-  border-radius: 30px !important;
-}
-.login-logo {
-  width: 82px !important;
-  height: 82px !important;
-  border-radius: 24px !important;
-}
-.brand-title-home {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-}
-.brand-title-home img {
-  display: block;
-  width: auto;
-  height: 38px;
-  max-width: 210px;
-  object-fit: contain;
-}
-@media (max-width: 390px) {
-  .brand-title-home img { height: 34px; max-width: 180px; }
-}
+
+/* === V6.1.6.1 Beta: identidad visual final aprobada === */
+:root{--brand-red:#ef393f;--brand-red-dark:#c52b31;--brand-ink:#1a1a1a;--brand-surface:#f5f5f5}
+.brand-header{background:linear-gradient(135deg,var(--brand-red),#f25d64)!important;min-height:76px!important;padding:10px 64px!important;display:flex!important;align-items:center!important;justify-content:center!important;box-shadow:0 8px 22px rgba(197,43,49,.18)!important}
+.brand-header-text span{font-size:1.42rem!important;font-weight:900!important;color:#fff!important;letter-spacing:-.2px!important}
+.brand-header-text small{font-size:.78rem!important;color:#fff!important;opacity:1!important;font-weight:800!important;margin-top:2px!important}
+.brand-back-btn,.brand-menu-btn{top:50%!important;transform:translateY(-50%)!important;background:#fff!important;color:#111!important;border-radius:15px!important;width:48px!important;height:48px!important;box-shadow:0 4px 12px rgba(0,0,0,.13)!important}
+.brand-back-btn{left:14px!important}.brand-menu-btn{right:14px!important}
+.module-page-header{text-align:center;padding:22px 18px 18px;background:transparent}
+.module-page-header h1{margin:0;color:var(--brand-ink);font-size:clamp(2rem,8vw,2.65rem);line-height:1.05;font-weight:950;letter-spacing:-1.1px}
+.module-page-header p{margin:7px 0 0;color:#686862;font-size:1rem;font-weight:800}
+.home-header{display:none!important}
+.pantalla{padding-top:0!important}
+.login-overlay{background:linear-gradient(180deg,#fff 0%,#fff 78%,#ef393f 100%)!important}
+.login-card{background:#fff!important;border-radius:28px!important;box-shadow:none!important;border:0!important;padding-top:28px!important}
+.login-brand-logo{display:block;width:min(86%,330px);height:auto;object-fit:contain;margin:0 auto 18px}
+.login-card h1{font-size:2rem!important;color:var(--brand-ink)!important;margin:0 0 6px!important}
+.login-button{background:linear-gradient(135deg,var(--brand-red),#e72931)!important}
+.splash{background:#fff!important}
+.splash-brand-logo{display:block;width:min(78vw,390px);height:auto;object-fit:contain;margin:0 auto 20px}
+.splash h1{color:var(--brand-ink)!important;font-size:2rem!important;margin:0 0 6px!important}
+.splash p{color:#696963!important}
+@media(max-width:520px){.brand-header{min-height:72px!important;padding:9px 58px!important}.brand-header-text span{font-size:1.28rem!important}.module-page-header{padding:20px 16px 16px}.module-page-header h1{font-size:2.25rem}.login-brand-logo{width:78%}}

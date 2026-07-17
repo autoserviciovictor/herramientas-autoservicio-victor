@@ -337,8 +337,8 @@ function cambiarTabVencimientos(tab) {
     vencTabActual = tab || "cargar";
     const titulos = { cargar: ["Vencimientos", "Control de fechas"], proximos: ["Próximos a vencer", "Control de fechas"], vencidos: ["Productos vencidos", "Control de fechas"] };
     const actual = titulos[vencTabActual] || titulos.cargar;
-    if ($("brandHeaderTitulo")) $("brandHeaderTitulo").textContent = actual[0];
-    if ($("brandHeaderSubtitulo")) $("brandHeaderSubtitulo").textContent = actual[1];
+    if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
+    if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     busquedaVencimientos = "";
     filtroVencimientos = "todos";

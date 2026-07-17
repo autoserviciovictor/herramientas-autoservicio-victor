@@ -1,34 +1,13 @@
-# Autoservicio V6.1.6 Beta — Identidad visual
+# Autoservicio V6.1.6.1 Beta — Identidad visual final
 
-Nueva identidad visual basada en el logo oficial elegido.
+Base funcional: V6.1.5.1 Beta.
 
-# Herramientas Autoservicio Victor V6.1.4.2.1 Beta
+## Cambios
+- Ícono oficial compacto con V y carrito.
+- Nombre instalado: Autoservicio.
+- Logo institucional en login y splash.
+- Encabezado fijo Autoservicio / Herramientas en todas las pantallas.
+- Título y descripción del módulo debajo del encabezado rojo.
+- Notificaciones sin segundo logo grande a la derecha.
 
-## Canal beta automático por rol
-
-- Los usuarios con rol `administrador` ingresan automáticamente a la carpeta `beta/`.
-- Los usuarios con rol `repositor` permanecen siempre en la versión estable de la raíz.
-- No hay botones para elegir el canal.
-- El cambio se decide por el rol devuelto por el servidor al iniciar o validar la sesión.
-
-## Publicación
-
-1. La versión estable se mantiene en la raíz del repositorio.
-2. La versión que se quiere probar se carga en `beta/`.
-3. El administrador la prueba automáticamente.
-4. Para liberarla al resto, se copian los archivos aprobados de `beta/` a la raíz.
-
-El resto de las funciones de V6.0.5 y del historial mejorado se conservan.
-
-
-## V6.1.4.2.1 Beta
-- Diseño responsive para computadora.
-- La pantalla Cargar vencimiento muestra únicamente los registros cargados hoy.
-
-
-## V6.1.4.2.1 Beta
-Incluye Lista 1 y Lista 2 independientes por usuario.
-
-
-## V6.1.5 Beta - Notificaciones
-Configurar en Render VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y VAPID_SUBJECT. Cada dispositivo debe activar el permiso una vez desde Configuración. Para avisos diarios confiables con la app cerrada, invocar POST /notificaciones/cron con x-cron-secret mediante un cron externo.
+La versión estable ubicada en la raíz se mantiene sin cambios; el administrador prueba la carpeta beta.
