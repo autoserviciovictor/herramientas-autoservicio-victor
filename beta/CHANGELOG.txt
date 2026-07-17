@@ -1,3 +1,8 @@
+V6.1.6 Beta - Nueva identidad visual
+- Nombre de la app: Autoservicio.
+- Nuevo logo e iconos PWA.
+- Nuevo favicon, splash, login, encabezado y notificaciones.
+
 V6.1.5.1 Beta - Corrección del ícono de notificaciones
 - Se agregó un badge monocromático transparente para Android.
 - Se mantiene el ícono a color en la notificación desplegada.

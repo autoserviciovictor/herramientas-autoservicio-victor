@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.5-1",
-  "description": "Herramientas Autoservicio Victor V6.1.5.1 Beta - corrección del ícono de notificaciones",
+  "version": "6.1.6",
+  "description": "Autoservicio V6.1.6 Beta - nueva identidad visual",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

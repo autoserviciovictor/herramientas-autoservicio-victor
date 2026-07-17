@@ -57,7 +57,7 @@ function actualizarEncabezadoModulo(nombre) {
     if (!titulo || !subtitulo) return;
 
     const encabezados = {
-        inicio: ["🏪 Autoservicio Victor", "Herramientas"],
+        inicio: ["Autoservicio", "Herramientas"],
         inventario: ["Inventario", "Control de stock"],
         productos: ["Productos", "Lista completa"],
         cargados: ["Cargados", "Productos con stock"],
@@ -68,7 +68,13 @@ function actualizarEncabezadoModulo(nombre) {
         admin: ["Administración", "Usuarios e historial"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
-    titulo.textContent = textoTitulo;
+    if (nombre === "inicio") {
+        titulo.classList.add("brand-title-home");
+        titulo.innerHTML = '<img src="./icons/brand-header-white.png" alt="Autoservicio">';
+    } else {
+        titulo.classList.remove("brand-title-home");
+        titulo.textContent = textoTitulo;
+    }
     subtitulo.textContent = textoSubtitulo;
     if (volver) {
         const destinos = { editarProducto: "productos" };

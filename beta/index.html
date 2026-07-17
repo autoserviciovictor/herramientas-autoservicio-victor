@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Herramientas Autoservicio Victor V6.1.3.1</title>
+    <title>Autoservicio — Herramientas V6.1.6 Beta</title>
 
     <meta name="theme-color" content="#b24444">
-    <meta name="application-name" content="Autoservicio Victor">
+    <meta name="application-name" content="Autoservicio">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Autoservicio Victor">
+    <meta name="apple-mobile-web-app-title" content="Autoservicio">
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=615-notificaciones">
+    <link rel="stylesheet" href="style.css?v=616-branding">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -21,8 +21,8 @@
 
 <div id="loginOverlay" class="login-overlay" aria-hidden="false">
   <div class="login-card">
-    <div class="login-logo">🏪</div>
-    <h1>Autoservicio Victor</h1>
+    <div class="login-logo"><img src="./icons/brand-card-192.png" alt="Autoservicio"></div>
+    <h1>Autoservicio</h1>
     <p>Ingresá para continuar</p>
     <label for="loginUsuario">Usuario</label>
     <input id="loginUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario">
@@ -34,9 +34,9 @@
 </div>
 
 <div id="splash" class="splash">
-    <div class="splash-logo">🏪</div>
-    <h1>Autoservicio Victor</h1>
-    <p>Herramientas V6.1.3.1</p>
+    <div class="splash-logo"><img src="./icons/brand-main-512.png" alt="Autoservicio"></div>
+    <h1>Autoservicio</h1>
+    <p>Herramientas V6.1.6 Beta</p>
 </div>
 
 <div class="app">
@@ -45,7 +45,7 @@
         <button id="brandMenuBtn" class="brand-menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">☰</button>
         <button id="brandBackBtn" class="brand-back-btn oculto" data-modulo="inicio" type="button" aria-label="Volver">‹</button>
         <div class="brand-header-text">
-            <span id="brandHeaderTitulo">🏪 Autoservicio Victor</span>
+            <span id="brandHeaderTitulo" class="brand-title-home"><img src="./icons/brand-header-white.png" alt="Autoservicio"></span>
             <small id="brandHeaderSubtitulo">Herramientas</small>
         </div>
         <div id="userDropdown" class="user-dropdown oculto" aria-hidden="true">
@@ -93,7 +93,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.3.1</strong>
+            <strong>V6.1.6 Beta</strong>
         </section>
     </main>
 
@@ -507,7 +507,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.3.1</span>
+            <span id="adminVersion" class="admin-version">V6.1.6 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -648,12 +648,12 @@
 
 </div>
 
-<script src="./release-channel.js?v=615-notificaciones"></script>
+<script src="./release-channel.js?v=616-branding"></script>
 <script src="./pwa.js?v=6151-badge" defer></script>
-<script type="module" src="./auth.js?v=615-notificaciones"></script>
-<script type="module" src="./admin.js?v=615-notificaciones"></script>
-<script type="module" src="./notifications.js?v=615-notificaciones"></script>
-<script type="module" src="./app.js?v=615-notificaciones"></script>
+<script type="module" src="./auth.js?v=616-branding"></script>
+<script type="module" src="./admin.js?v=616-branding"></script>
+<script type="module" src="./notifications.js?v=616-branding"></script>
+<script type="module" src="./app.js?v=616-branding"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

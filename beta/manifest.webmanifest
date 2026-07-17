@@ -1,14 +1,14 @@
 {
-  "name": "Herramientas Autoservicio Victor Beta",
-  "short_name": "Autoservicio Victor Beta",
-  "description": "Inventario, vencimientos y reposición de Autoservicio Victor.",
+  "name": "Autoservicio",
+  "short_name": "Autoservicio",
+  "description": "Inventario, vencimientos y listas de reposición del autoservicio.",
   "lang": "es-AR",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#fff7f4",
-  "theme_color": "#b24444",
+  "theme_color": "#e53935",
   "categories": [
     "business",
     "productivity"

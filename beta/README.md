@@ -1,3 +1,7 @@
+# Autoservicio V6.1.6 Beta — Identidad visual
+
+Nueva identidad visual basada en el logo oficial elegido.
+
 # Herramientas Autoservicio Victor V6.1.4.2.1 Beta
 
 ## Canal beta automático por rol

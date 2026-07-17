@@ -1,27 +1,30 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v6.1.5.1-role-beta';
+const CACHE_VERSION = 'autoservicio-v6.1.6-branding-beta';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css?v=615-notificaciones',
-  './app.js?v=615-notificaciones',
-  './config.js?v=615-notificaciones',
-  './excel.js?v=615-notificaciones',
-  './scanner.js?v=615-notificaciones',
-  './reposicion.js?v=615-notificaciones',
-  './ui.js?v=615-notificaciones',
-  './release-channel.js?v=615-notificaciones',
-  './pwa.js?v=615-notificaciones',
-  './search.js?v=615-notificaciones',
-  './admin.js?v=615-notificaciones',
-  './auth.js?v=615-notificaciones',
-  './notifications.js?v=615-notificaciones',
+  './style.css?v=616-branding',
+  './app.js?v=616-branding',
+  './config.js?v=616-branding',
+  './excel.js?v=616-branding',
+  './scanner.js?v=616-branding',
+  './reposicion.js?v=616-branding',
+  './ui.js?v=616-branding',
+  './release-channel.js?v=616-branding',
+  './pwa.js?v=616-branding',
+  './search.js?v=616-branding',
+  './admin.js?v=616-branding',
+  './auth.js?v=616-branding',
+  './notifications.js?v=616-branding',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
-  './icons/notification-badge-96.png'
+  './icons/notification-badge-96.png',
+  './icons/brand-card-192.png',
+  './icons/brand-header-white.png',
+  './icons/brand-main-512.png'
 ];
 
 self.addEventListener('install', event => {
