@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=6142-listas-estables";
+import { API_BASE_URL } from "./config.js?v=615-notificaciones";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

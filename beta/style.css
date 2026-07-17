@@ -2575,3 +2575,9 @@ body.modal-abierto{overflow:hidden}
 .repo-confirm-actions-triple{display:grid;grid-template-columns:1fr;gap:10px}
 .repo-confirm-actions-triple button{width:100%}
 @media(min-width:700px){.repo-confirm-actions-triple{grid-template-columns:repeat(3,1fr)}}
+
+
+/* V6.1.5 - Notificaciones de vencimientos */
+.notification-settings-status { display:block; margin-top:4px; color:#6b6b66; font-size:.9rem; line-height:1.35; }
+.notification-settings-status.ok { color:#167342; }
+.notification-settings-status.error { color:#b4232c; }

@@ -1,20 +1,21 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v6.1.4.2-role-beta';
+const CACHE_VERSION = 'autoservicio-v6.1.5-role-beta';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css?v=6142-listas-estables',
-  './app.js?v=6142-listas-estables',
-  './config.js?v=6142-listas-estables',
-  './excel.js?v=6142-listas-estables',
-  './scanner.js?v=6142-listas-estables',
-  './reposicion.js?v=6142-listas-estables',
-  './ui.js?v=6142-listas-estables',
-  './release-channel.js?v=6142-listas-estables',
-  './pwa.js?v=6142-listas-estables',
-  './search.js?v=6142-listas-estables',
-  './admin.js?v=6142-listas-estables',
-  './auth.js?v=6142-listas-estables',
+  './style.css?v=615-notificaciones',
+  './app.js?v=615-notificaciones',
+  './config.js?v=615-notificaciones',
+  './excel.js?v=615-notificaciones',
+  './scanner.js?v=615-notificaciones',
+  './reposicion.js?v=615-notificaciones',
+  './ui.js?v=615-notificaciones',
+  './release-channel.js?v=615-notificaciones',
+  './pwa.js?v=615-notificaciones',
+  './search.js?v=615-notificaciones',
+  './admin.js?v=615-notificaciones',
+  './auth.js?v=615-notificaciones',
+  './notifications.js?v=615-notificaciones',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -72,4 +73,27 @@ self.addEventListener('fetch', event => {
       return response;
     }).catch(() => caches.match(request))
   );
+});
+
+
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { title: 'Vencimientos', body: event.data?.text() || '' }; }
+  const title = data.title || 'Vencimientos';
+  const options = {
+    body: data.body || 'Tenés una alerta de vencimiento.',
+    icon: './icons/icon-192.png', badge: './icons/icon-192.png',
+    tag: data.tag || `vencimiento-${Date.now()}`, renotify: false,
+    data: data.data || { url: './' }, vibrate: [150, 80, 150]
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const destino = event.notification.data?.url || './';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ventanas => {
+    for (const ventana of ventanas) { if ('focus' in ventana) { ventana.navigate(destino).catch(() => {}); return ventana.focus(); } }
+    return clients.openWindow ? clients.openWindow(destino) : undefined;
+  }));
 });

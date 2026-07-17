@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=6142-listas-estables";
-import { ordenarPorBusqueda } from "./search.js?v=6142-listas-estables";
+import { API_BASE_URL } from "./config.js?v=615-notificaciones";
+import { ordenarPorBusqueda } from "./search.js?v=615-notificaciones";
 
 let datos = [];
 let contador = 0;

@@ -3,11 +3,12 @@ const cors = require("cors");
 const { google } = require("googleapis");
 const crypto = require("crypto");
 const fs = require("fs");
+const webpush = require("web-push");
 const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.4.2";
+const APP_VERSION = "6.1.5";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -20,6 +21,14 @@ const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const USER_SESSION_DAYS = 30;
 const USUARIOS_SHEET_NAME = "Usuarios";
 const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
+const PUSH_SUBSCRIPTIONS_SHEET_NAME = "Notificaciones Suscripciones";
+const NOTIFICATION_LOG_SHEET_NAME = "Notificaciones Vencimientos";
+const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
+const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
+const VAPID_SUBJECT = normalizarTexto(process.env.VAPID_SUBJECT || "mailto:administracion@autoserviciovictor.com");
+const NOTIFICATION_CRON_SECRET = normalizarTexto(process.env.NOTIFICATION_CRON_SECRET);
+const PUSH_CONFIGURED = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+if (PUSH_CONFIGURED) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const ADMIN_USERNAME = normalizarTexto(process.env.ADMIN_USERNAME || "admin").toLowerCase();
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
@@ -145,6 +154,20 @@ function fechaArgentina(fecha = new Date()) {
   }).formatToParts(fecha);
   const obtener = tipo => partes.find(parte => parte.type === tipo)?.value;
   return `${obtener("year")}-${obtener("month")}-${obtener("day")}`;
+}
+
+function diasDesdeHoyArgentina(fechaIso) {
+  const valor = normalizarTexto(fechaIso);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
+  const hoy = fechaArgentina();
+  const [hy, hm, hd] = hoy.split("-").map(Number);
+  const [vy, vm, vd] = valor.split("-").map(Number);
+  return Math.round((Date.UTC(vy, vm - 1, vd) - Date.UTC(hy, hm - 1, hd)) / 86400000);
+}
+
+function fechaNoAnteriorAHoy(fechaIso) {
+  const dias = diasDesdeHoyArgentina(fechaIso);
+  return dias !== null && dias >= 0;
 }
 
 function fechaHoraArgentinaIso(fecha = new Date()) {
@@ -434,7 +457,7 @@ app.get("/auth/session", requerirSesion, (req, res) => {
 
 // Desde aquí, toda la API de trabajo requiere una sesión válida.
 app.use((req, res, next) => {
-  if (req.path === "/") return next();
+  if (req.path === "/" || req.path === "/notificaciones/cron") return next();
   return requerirSesion(req, res, next);
 });
 
@@ -746,6 +769,149 @@ async function obtenerVencimientos() {
   });
 }
 
+
+let hojasNotificacionesAseguradas = false;
+let procesandoNotificaciones = false;
+
+async function asegurarHojasNotificaciones() {
+  if (hojasNotificacionesAseguradas) return;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const titulos = new Set((meta.data.sheets || []).map(h => h.properties?.title));
+  const requests = [];
+  if (!titulos.has(PUSH_SUBSCRIPTIONS_SHEET_NAME)) requests.push({ addSheet: { properties: { title: PUSH_SUBSCRIPTIONS_SHEET_NAME } } });
+  if (!titulos.has(NOTIFICATION_LOG_SHEET_NAME)) requests.push({ addSheet: { properties: { title: NOTIFICATION_LOG_SHEET_NAME } } });
+  if (requests.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { requests } });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A1:G1`, valueInputOption: "RAW",
+    requestBody: { values: [["Endpoint", "P256DH", "Auth", "Usuario", "Nombre", "Activo", "Actualizado"]] }
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${NOTIFICATION_LOG_SHEET_NAME}!A1:G1`, valueInputOption: "RAW",
+    requestBody: { values: [["Clave", "Fecha envío", "Tipo", "ID", "Código", "Vencimiento", "Detalle"]] }
+  });
+  hojasNotificacionesAseguradas = true;
+}
+
+async function obtenerSuscripcionesPush() {
+  await asegurarHojasNotificaciones();
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G` });
+  return (r.data.values || []).slice(1).map((f, i) => ({
+    filaGoogle: i + 2, endpoint: normalizarTexto(f[0]), p256dh: normalizarTexto(f[1]), auth: normalizarTexto(f[2]),
+    usuario: normalizarTexto(f[3]), nombre: normalizarTexto(f[4]), activo: normalizarTexto(f[5]).toLowerCase() !== "no"
+  })).filter(s => s.endpoint && s.p256dh && s.auth && s.activo);
+}
+
+async function guardarSuscripcionPush(req) {
+  await asegurarHojasNotificaciones();
+  const endpoint = normalizarTexto(req.body?.subscription?.endpoint);
+  const p256dh = normalizarTexto(req.body?.subscription?.keys?.p256dh);
+  const authKey = normalizarTexto(req.body?.subscription?.keys?.auth);
+  if (!endpoint || !p256dh || !authKey) throw new Error("Suscripción push incompleta");
+  const existentes = await obtenerSuscripcionesPush();
+  const actual = existentes.find(s => s.endpoint === endpoint);
+  const fila = [endpoint, p256dh, authKey, req.usuario.usuario, req.usuario.nombre, "Sí", fechaHoraArgentinaIso()];
+  if (actual) {
+    await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A${actual.filaGoogle}:G${actual.filaGoogle}`, valueInputOption: "RAW", requestBody: { values: [fila] } });
+  } else {
+    await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS", requestBody: { values: [fila] } });
+  }
+}
+
+async function clavesNotificacionesEnviadas() {
+  await asegurarHojasNotificaciones();
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:A` });
+  return new Set((r.data.values || []).slice(1).map(f => normalizarTexto(f[0])).filter(Boolean));
+}
+
+async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
+  await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[clave, fechaHoraArgentinaIso(), tipo, registro.id, registro.codigo, registro.vencimiento, detalle]] } });
+}
+
+async function desactivarSuscripcionPush(filaGoogle) {
+  if (!filaGoogle) return;
+  await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!F${filaGoogle}:F${filaGoogle}`, valueInputOption: "RAW", requestBody: { values: [["No"]] } }).catch(() => {});
+}
+
+async function enviarPushATodos(payload) {
+  if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false };
+  const suscripciones = await obtenerSuscripcionesPush();
+  let enviados = 0;
+  await Promise.all(suscripciones.map(async s => {
+    try {
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload), { TTL: 86400 });
+      enviados += 1;
+    } catch (error) {
+      if ([404, 410].includes(error?.statusCode)) await desactivarSuscripcionPush(s.filaGoogle);
+      else console.error("Error enviando notificación push:", error?.statusCode || error?.message || error);
+    }
+  }));
+  return { enviados, configurado: true };
+}
+
+function payloadAlertaVencimiento(registro, dias, tipo) {
+  const total = numero(registro.total);
+  if (tipo === "vencido") return { title: "Producto vencido", body: `${registro.articulo} · ${total} ${total === 1 ? "unidad vencida" : "unidades vencidas"}`, tag: `venc-${registro.id}-vencido`, data: { url: "./" } };
+  const textoDias = dias === 1 ? "Vence mañana" : `Vence en ${dias} días`;
+  return { title: textoDias, body: `${registro.articulo} · ${total} ${total === 1 ? "unidad" : "unidades"}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
+}
+
+async function enviarAlertaRegistro(registro, dias, tipo, clave) {
+  const payload = payloadAlertaVencimiento(registro, dias, tipo);
+  const resultado = await enviarPushATodos(payload);
+  if (resultado.enviados > 0) await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
+  return resultado;
+}
+
+async function procesarAlertasVencimientos() {
+  if (procesandoNotificaciones || !PUSH_CONFIGURED) return;
+  procesandoNotificaciones = true;
+  try {
+    const [vencimientos, enviadas] = await Promise.all([obtenerVencimientos(), clavesNotificacionesEnviadas()]);
+    for (const registro of vencimientos) {
+      const dias = diasDesdeHoyArgentina(registro.vencimiento);
+      if (dias === null) continue;
+      let tipo = null;
+      if ([7, 3, 1].includes(dias)) tipo = String(dias);
+      else if (dias < 0) tipo = "vencido";
+      if (!tipo) continue;
+      const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
+      if (enviadas.has(clave)) continue;
+      await enviarAlertaRegistro(registro, dias, tipo, clave);
+      enviadas.add(clave);
+    }
+  } catch (error) {
+    console.error("Error procesando alertas de vencimientos:", error);
+  } finally { procesandoNotificaciones = false; }
+}
+
+app.get("/notificaciones/public-key", (req, res) => {
+  res.json({ ok: true, configurado: PUSH_CONFIGURED, publicKey: VAPID_PUBLIC_KEY || "" });
+});
+
+app.post("/notificaciones/suscribir", async (req, res) => {
+  try {
+    if (!PUSH_CONFIGURED) return res.status(503).json({ ok: false, mensaje: "Las notificaciones todavía no están configuradas en Render" });
+    await guardarSuscripcionPush(req);
+    setImmediate(() => procesarAlertasVencimientos());
+    res.json({ ok: true, mensaje: "Notificaciones activadas" });
+  } catch (error) { res.status(400).json({ ok: false, mensaje: error.message || "No se pudo guardar la suscripción" }); }
+});
+
+app.post("/notificaciones/procesar", async (req, res) => {
+  await procesarAlertasVencimientos();
+  res.json({ ok: true });
+});
+
+app.all("/notificaciones/cron", async (req, res) => {
+  const secreto = normalizarTexto(req.get("x-cron-secret") || req.query.secret);
+  if (!NOTIFICATION_CRON_SECRET || secreto !== NOTIFICATION_CRON_SECRET) return res.status(403).json({ ok: false, mensaje: "Secreto de cron inválido" });
+  await procesarAlertasVencimientos();
+  res.json({ ok: true });
+});
+
 app.get("/vencimientos", async (req, res) => {
   try {
     const vencimientos = (await obtenerVencimientos()).reverse();
@@ -766,6 +932,7 @@ app.post("/vencimientos", async (req, res) => {
 
     if (!codigo) return res.status(400).json({ ok: false, mensaje: "Falta el código" });
     if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
+    if (!fechaNoAnteriorAHoy(vencimiento)) return res.status(400).json({ ok: false, mensaje: "La fecha de vencimiento no puede ser anterior a hoy" });
     if (total === null || total <= 0) return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad" });
 
     const producto = await buscarProductoMaestroPorCodigo(codigo);
@@ -796,6 +963,17 @@ app.post("/vencimientos", async (req, res) => {
 
     invalidarCache("vencimientos");
     await registrarHistorialVencimiento(req, "Creó", registro, `Salón: ${registro.salon} · Depósito: ${registro.deposito}`);
+    const diasRestantes = diasDesdeHoyArgentina(registro.vencimiento);
+    if (PUSH_CONFIGURED && diasRestantes !== null && diasRestantes <= 7 && diasRestantes >= 0) {
+      const tipo = [7, 3, 1].includes(diasRestantes) ? String(diasRestantes) : `carga-${diasRestantes}`;
+      const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
+      setImmediate(async () => {
+        try {
+          const enviadas = await clavesNotificacionesEnviadas();
+          if (!enviadas.has(clave)) await enviarAlertaRegistro(registro, diasRestantes, tipo, clave);
+        } catch (error) { console.error("No se pudo enviar la alerta inmediata:", error); }
+      });
+    }
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
   } catch (error) {
     console.error("Error en POST /vencimientos:", error);
@@ -815,6 +993,7 @@ app.put("/vencimientos/:id", async (req, res) => {
     const vencimiento = normalizarTexto(req.body.vencimiento);
     const total = salon === null || deposito === null ? null : salon + deposito;
     if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
+    if (vencimiento !== registro.vencimiento && !fechaNoAnteriorAHoy(vencimiento)) return res.status(400).json({ ok: false, mensaje: "La nueva fecha de vencimiento no puede ser anterior a hoy" });
     if (total === null || total <= 0) return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad" });
 
     const actualizado = { ...registro, vencimiento, salon, deposito, total, estado: calcularEstadoVencimiento(vencimiento), oferta: req.body.oferta === undefined ? registro.oferta : normalizarOfertaVencimiento(req.body.oferta) };
@@ -1209,6 +1388,9 @@ app.delete("/reposicion", (req, res) => {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo vaciar la lista" });
   }
 });
+
+setInterval(() => procesarAlertasVencimientos(), 60 * 60 * 1000);
+setTimeout(() => procesarAlertasVencimientos(), 15000);
 
 app.listen(PORT, () => {
   console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);

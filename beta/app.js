@@ -18,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=6142-listas-estables";
+} from "./excel.js?v=615-notificaciones";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=6142-listas-estables";
+} from "./scanner.js?v=615-notificaciones";
 
 import {
     ocultarSplash,
@@ -46,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=6142-listas-estables";
+} from "./ui.js?v=615-notificaciones";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=6142-listas-estables";
-import { coincideBusqueda } from "./search.js?v=6142-listas-estables";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=615-notificaciones";
+import { coincideBusqueda } from "./search.js?v=615-notificaciones";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -156,6 +156,22 @@ const elementos = {
 
 inicializar();
 
+function fechaHoyLocalIso() {
+    try {
+        const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+        const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
+        return `${mapa.year}-${mapa.month}-${mapa.day}`;
+    } catch (_) {
+        return new Date().toISOString().slice(0, 10);
+    }
+}
+
+function configurarFechasMinimasVencimientos() {
+    const hoy = fechaHoyLocalIso();
+    if (elementos.vencFechaInput) elementos.vencFechaInput.min = hoy;
+    if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.min = hoy;
+}
+
 async function inicializar() {
     ocultarSplash();
     cambiarPantalla("inicio");
@@ -171,6 +187,7 @@ async function inicializar() {
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
     configurarEventos();
+    configurarFechasMinimasVencimientos();
     inicializarReposicion();
 
     await cargarProductos();
@@ -930,6 +947,11 @@ async function guardarVencimientoActual() {
             elementos.vencFechaInput.focus();
             return;
         }
+        if (vencimiento < fechaHoyLocalIso()) {
+            mostrarMensaje("La fecha no puede ser anterior a hoy", "error");
+            elementos.vencFechaInput.focus();
+            return;
+        }
         if (salon + deposito <= 0) {
             mostrarMensaje("Cargá salón o depósito", "error");
             return;
@@ -1295,6 +1317,7 @@ async function guardarEdicionVencimiento() {
     const salon = Number(elementos.vencEditSalonInput?.value) || 0;
     const deposito = Number(elementos.vencEditDepositoInput?.value) || 0;
     if (!vencimiento) { mostrarMensaje("Cargá la fecha de vencimiento", "error"); return; }
+    if (vencimiento !== item.vencimiento && vencimiento < fechaHoyLocalIso()) { mostrarMensaje("La nueva fecha no puede ser anterior a hoy", "error"); elementos.vencEditFechaInput?.focus(); return; }
     if (salon + deposito <= 0) { mostrarMensaje("Cargá salón o depósito", "error"); return; }
     try {
         elementos.btnVencGuardarEdicion.disabled = true;

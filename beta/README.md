@@ -24,3 +24,7 @@ El resto de las funciones de V6.0.5 y del historial mejorado se conservan.
 
 ## V6.1.4.2.1 Beta
 Incluye Lista 1 y Lista 2 independientes por usuario.
+
+
+## V6.1.5 Beta - Notificaciones
+Configurar en Render VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y VAPID_SUBJECT. Cada dispositivo debe activar el permiso una vez desde Configuración. Para avisos diarios confiables con la app cerrada, invocar POST /notificaciones/cron con x-cron-secret mediante un cron externo.

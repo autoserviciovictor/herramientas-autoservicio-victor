@@ -15,3 +15,7 @@
 4. Para liberarla al resto, se copian los archivos aprobados de `beta/` a la raíz.
 
 El resto de las funciones de V6.0.5 y del historial mejorado se conservan.
+
+
+## V6.1.5 Beta - Notificaciones
+Configurar en Render VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y VAPID_SUBJECT. Cada dispositivo debe activar el permiso una vez desde Configuración. Para avisos diarios confiables con la app cerrada, invocar POST /notificaciones/cron con x-cron-secret mediante un cron externo.

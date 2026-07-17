@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6142-listas-estables">
+    <link rel="stylesheet" href="style.css?v=615-notificaciones">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -242,6 +242,15 @@
             </div>
         </section>
 
+
+        <section class="settings-card notification-settings-card">
+            <div class="pwa-install-copy">
+                <strong>Notificaciones de vencimientos</strong>
+                <span id="estadoNotificaciones">Preparando notificaciones…</span>
+            </div>
+            <button type="button" id="btnActivarNotificaciones" class="setting-btn">Activar notificaciones</button>
+        </section>
+
         <section class="settings-card pwa-install-card">
             <div class="pwa-install-copy">
                 <strong>Instalar aplicación</strong>
@@ -293,7 +302,7 @@
 
         <section id="vencFormCard" class="venc-form-card oculto">
             <label>Fecha de vencimiento</label>
-            <input type="date" id="vencFechaInput">
+            <input type="date" id="vencFechaInput" min="">
 
             <div class="venc-grid venc-qty-grid">
                 <div class="venc-qty-box venc-qty-salon">
@@ -599,7 +608,7 @@
                 <div class="modal-kicker">Editar vencimiento</div>
                 <h2 id="vencEditarTitulo">Producto</h2>
                 <label>Fecha de vencimiento</label>
-                <input type="date" id="vencEditFechaInput">
+                <input type="date" id="vencEditFechaInput" min="">
                 <div class="venc-grid venc-qty-grid">
                     <div class="venc-qty-box venc-qty-salon">
                         <label>Salón</label>
@@ -639,11 +648,12 @@
 
 </div>
 
-<script src="./release-channel.js?v=6142-listas-estables"></script>
-<script src="./pwa.js?v=6142-listas-estables" defer></script>
-<script type="module" src="./auth.js?v=6142-listas-estables"></script>
-<script type="module" src="./admin.js?v=6142-listas-estables"></script>
-<script type="module" src="./app.js?v=6142-listas-estables"></script>
+<script src="./release-channel.js?v=615-notificaciones"></script>
+<script src="./pwa.js?v=615-notificaciones" defer></script>
+<script type="module" src="./auth.js?v=615-notificaciones"></script>
+<script type="module" src="./admin.js?v=615-notificaciones"></script>
+<script type="module" src="./notifications.js?v=615-notificaciones"></script>
+<script type="module" src="./app.js?v=615-notificaciones"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>
