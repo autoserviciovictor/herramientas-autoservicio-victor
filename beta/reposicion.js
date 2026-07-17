@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=6131-listas-separadas";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=6131-listas-separadas";
-import { ordenarPorBusqueda } from "./search.js?v=6131-listas-separadas";
+import { API_BASE_URL } from "./config.js?v=614-editar-lista";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=614-editar-lista";
+import { ordenarPorBusqueda } from "./search.js?v=614-editar-lista";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -11,6 +11,9 @@ let operacionEnCurso = false;
 let temporizadorToast = null;
 let elementoFocoAntesDelModal = null;
 let listaActual = "1";
+let modoEdicion = false;
+let borradorEdicion = [];
+let snapshotEdicion = [];
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
 async function pedir(ruta, opciones={}){
@@ -66,6 +69,12 @@ export function inicializarReposicion(){
   $("repoBuscador")?.addEventListener("input",render);
   $("repoListado")?.addEventListener("click",manejarAccion);
   $("btnRepoVaciarLista")?.addEventListener("click", abrirModalNuevaLista);
+  $("btnRepoEditarLista")?.addEventListener("click", alternarModoEdicion);
+  $("btnRepoGuardarEdicion")?.addEventListener("click", abrirModalGuardarEdicion);
+  $("btnRepoSeguirEditando")?.addEventListener("click", cerrarModalGuardarEdicion);
+  $("btnRepoConfirmarEdicion")?.addEventListener("click", confirmarEdicion);
+  $("btnRepoContinuarEdicion")?.addEventListener("click", cerrarModalDescartarEdicion);
+  $("btnRepoConfirmarDescarte")?.addEventListener("click", descartarEdicion);
   $("btnRepoCancelarNuevaLista")?.addEventListener("click", cerrarModalNuevaLista);
   $("btnRepoConfirmarNuevaLista")?.addEventListener("click", confirmarNuevaLista);
   $("repoNuevaListaModal")?.addEventListener("click", event => {
@@ -104,6 +113,8 @@ function sincronizarSelectorListas(){
 async function seleccionarLista(valor,{refrescar=true}={}){
   const nueva=String(valor)==="2"?"2":"1";
   if(listaActual===nueva && refrescar){ sincronizarSelectorListas(); return; }
+  if(modoEdicion && hayCambiosEdicion()) { abrirModalDescartarEdicion(); return; }
+  salirModoEdicionSilencioso();
   listaActual=nueva;
   productoActual=null;
   limpiar();
@@ -157,6 +168,8 @@ function actualizarEncabezadoRepo(esCarga){
   if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos para llevar del depósito";
 }
 function cambiarTab(nueva){
+  if(modoEdicion && nueva!=="registro" && hayCambiosEdicion()){ abrirModalDescartarEdicion(); return; }
+  if(nueva!=="registro") salirModoEdicionSilencioso();
   tab=nueva==="registro"?"registro":"cargar";
   const esCarga=tab==="cargar";
   $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
@@ -176,21 +189,82 @@ function renderRecientes(){
   c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados en Lista ${listaActual}.</strong><small>Escaneá un producto para comenzar.</small>`;
   const ver=$('btnRepoVerRegistro'); if(ver) ver.disabled=!registros.length;
 }
+function registrosVista(){ return modoEdicion ? borradorEdicion : registros; }
+function hayCambiosEdicion(){
+  if(!modoEdicion) return false;
+  const a=snapshotEdicion.map(x=>`${x.id}:${x.cantidad}`).sort().join("|");
+  const b=borradorEdicion.filter(x=>!x._eliminar).map(x=>`${x.id}:${x.cantidad}`).sort().join("|");
+  return a!==b || borradorEdicion.some(x=>x._eliminar);
+}
+function actualizarControlesEdicion(){
+  const editar=$("btnRepoEditarLista");
+  if(editar){ editar.disabled=!registros.length || operacionEnCurso; editar.textContent=modoEdicion?"Cancelar edición":"Editar lista"; editar.classList.toggle("activo",modoEdicion); }
+  const guardar=$("btnRepoGuardarEdicion");
+  guardar?.classList.toggle("oculto",!modoEdicion || !hayCambiosEdicion());
+  const nueva=$("btnRepoVaciarLista"); if(nueva) nueva.disabled=!registros.length || modoEdicion;
+}
+function entrarModoEdicion(){
+  if(!registros.length || operacionEnCurso) return;
+  modoEdicion=true;
+  snapshotEdicion=registros.map(x=>({...x}));
+  borradorEdicion=registros.map(x=>({...x,_eliminar:false}));
+  render();
+}
+function salirModoEdicionSilencioso(){ modoEdicion=false; borradorEdicion=[]; snapshotEdicion=[]; actualizarControlesEdicion(); }
+function alternarModoEdicion(){
+  if(!modoEdicion) return entrarModoEdicion();
+  if(hayCambiosEdicion()) return abrirModalDescartarEdicion();
+  salirModoEdicionSilencioso(); render();
+}
+function cambiarCantidadEdicion(id,delta){
+  const r=borradorEdicion.find(x=>String(x.id)===String(id)); if(!r||r._eliminar)return;
+  r.cantidad=Math.max(1,numero(r.cantidad)+delta); render();
+}
+function marcarEliminarEdicion(id){
+  const r=borradorEdicion.find(x=>String(x.id)===String(id)); if(!r)return;
+  r._eliminar=!r._eliminar; render();
+}
+function abrirModalGuardarEdicion(){
+  if(!hayCambiosEdicion()) return;
+  const modificados=borradorEdicion.filter(x=>!x._eliminar && snapshotEdicion.some(y=>y.id===x.id&&numero(y.cantidad)!==numero(x.cantidad))).length;
+  const eliminados=borradorEdicion.filter(x=>x._eliminar).length;
+  const texto=$("repoGuardarEdicionTexto"); if(texto) texto.textContent=`Se modificaron ${modificados} producto${modificados===1?"":"s"} y se eliminarán ${eliminados}.`;
+  $("repoGuardarEdicionModal")?.classList.remove("oculto"); document.body.classList.add("modal-abierto");
+}
+function cerrarModalGuardarEdicion(){ $("repoGuardarEdicionModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
+function abrirModalDescartarEdicion(){ $("repoDescartarEdicionModal")?.classList.remove("oculto"); document.body.classList.add("modal-abierto"); }
+function cerrarModalDescartarEdicion(){ $("repoDescartarEdicionModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
+function descartarEdicion(){ cerrarModalDescartarEdicion(); salirModoEdicionSilencioso(); render(); }
+async function confirmarEdicion(){
+  if(!hayCambiosEdicion()||operacionEnCurso)return;
+  const cambios=[];
+  for(const item of borradorEdicion){
+    if(item._eliminar) cambios.push({id:item.id,eliminar:true});
+    else { const original=snapshotEdicion.find(x=>x.id===item.id); if(original&&numero(original.cantidad)!==numero(item.cantidad)) cambios.push({id:item.id,cantidad:numero(item.cantidad)}); }
+  }
+  try{
+    operacionEnCurso=true; const b=$("btnRepoConfirmarEdicion"); if(b){b.disabled=true;b.textContent="Guardando...";}
+    const data=await pedir("/reposicion",{method:"PATCH",body:JSON.stringify({lista:listaActual,cambios})});
+    registros=data.registros||[]; cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados");
+  }catch(e){toast(e.message,"error");}
+  finally{operacionEnCurso=false;const b=$("btnRepoConfirmarEdicion");if(b){b.disabled=false;b.textContent="Guardar cambios";} actualizarControlesEdicion();}
+}
 function renderListado(){
   const c=$("repoListado"); if(!c)return;
   const q=($("repoBuscador")?.value||"").trim();
-  const pendientes=registros.filter(r=>r.estado!=="completado");
-  const completados=registros.filter(r=>r.estado==="completado");
-  const items=q
-    ? [
-        ...ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}),
-        ...ordenarPorBusqueda(completados,q,{limite:200,campos:["articulo","codigo"]})
-      ]
-    : [...pendientes,...completados];
+  const fuente=registrosVista().filter(r=>!r._eliminar || modoEdicion);
+  const pendientes=fuente.filter(r=>r.estado!=="completado");
+  const completados=fuente.filter(r=>r.estado==="completado");
+  const items=q ? [...ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}),...ordenarPorBusqueda(completados,q,{limite:200,campos:["articulo","codigo"]})] : [...pendientes,...completados];
   c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
-  const nuevaLista=$("btnRepoVaciarLista"); if(nuevaLista) nuevaLista.disabled=!registros.length;
+  actualizarControlesEdicion();
   c.innerHTML=items.length?items.map(r=>{
     const completado=r.estado==="completado";
+    if(modoEdicion) return `<article class="repo-simple-item repo-edit-item${r._eliminar?" marcado-eliminar":""}">
+      <button type="button" class="repo-delete-edit" data-repo-accion="eliminar-edicion" data-id="${escapar(r.id)}" aria-label="${r._eliminar?"Restaurar":"Eliminar"}">${r._eliminar?"↩":"🗑"}</button>
+      <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}</small></div>
+      <div class="repo-qty-editor"><button type="button" data-repo-accion="menos-edicion" data-id="${escapar(r.id)}" ${r._eliminar?"disabled":""}>−</button><b>${numero(r.cantidad)}</b><button type="button" data-repo-accion="mas-edicion" data-id="${escapar(r.id)}" ${r._eliminar?"disabled":""}>+</button></div>
+    </article>`;
     return `<article class="repo-simple-item${completado?" completado":""}">
       <button type="button" class="repo-check${completado?" completado":""}" data-repo-accion="${completado?"pendiente":"completar"}" data-id="${escapar(r.id)}" aria-label="${completado?"Volver a pendiente":"Marcar como llevado"}">✓</button>
       <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}${completado?' · Listo':''}</small></div>
@@ -258,6 +332,12 @@ async function manejarAccion(e){
   if(!r) return toast("No se encontró el producto en la lista","error");
 
   const accion=String(b.dataset.repoAccion||"");
+  if(modoEdicion){
+    if(accion==="menos-edicion") return cambiarCantidadEdicion(id,-1);
+    if(accion==="mas-edicion") return cambiarCantidadEdicion(id,1);
+    if(accion==="eliminar-edicion") return marcarEliminarEdicion(id);
+    return;
+  }
   const estadoAnterior=r.estado||"pendiente";
 
   try{

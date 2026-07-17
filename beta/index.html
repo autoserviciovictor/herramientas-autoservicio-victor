@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6131-listas-separadas">
+    <link rel="stylesheet" href="style.css?v=614-editar-lista">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -402,7 +402,7 @@
             </div>
             <section class="venc-list-card repo-registro-card">
                 <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
-                <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button></div>
+                <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><div class="repo-list-toolbar-actions"><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button><button id="btnRepoEditarLista" type="button" disabled>Editar lista</button></div></div>
 
                 <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
 
@@ -421,6 +421,32 @@
         <button type="button" class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
     </nav>
 
+
+    <button id="btnRepoGuardarEdicion" type="button" class="repo-save-floating oculto">Guardar cambios</button>
+
+    <div id="repoGuardarEdicionModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoGuardarEdicionTitulo">
+            <div class="repo-confirm-icon" aria-hidden="true">✏️</div>
+            <h2 id="repoGuardarEdicionTitulo">Guardar cambios</h2>
+            <p id="repoGuardarEdicionTexto">¿Querés guardar los cambios realizados?</p>
+            <div class="repo-confirm-actions">
+                <button id="btnRepoSeguirEditando" type="button" class="cancel-btn">Seguir editando</button>
+                <button id="btnRepoConfirmarEdicion" type="button" class="save-btn">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="repoDescartarEdicionModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoDescartarEdicionTitulo">
+            <div class="repo-confirm-icon" aria-hidden="true">↩️</div>
+            <h2 id="repoDescartarEdicionTitulo">Descartar cambios</h2>
+            <p>Los cambios realizados no se guardarán.</p>
+            <div class="repo-confirm-actions">
+                <button id="btnRepoContinuarEdicion" type="button" class="cancel-btn">Continuar editando</button>
+                <button id="btnRepoConfirmarDescarte" type="button" class="danger-btn">Descartar</button>
+            </div>
+        </div>
+    </div>
 
     <div id="repoNuevaListaModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
         <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoNuevaListaTitulo" aria-describedby="repoNuevaListaTexto">
@@ -600,11 +626,11 @@
 
 </div>
 
-<script src="./release-channel.js?v=6131-listas-separadas"></script>
-<script src="./pwa.js?v=6131-listas-separadas" defer></script>
-<script type="module" src="./auth.js?v=6131-listas-separadas"></script>
-<script type="module" src="./admin.js?v=6131-listas-separadas"></script>
-<script type="module" src="./app.js?v=6131-listas-separadas"></script>
+<script src="./release-channel.js?v=614-editar-lista"></script>
+<script src="./pwa.js?v=614-editar-lista" defer></script>
+<script type="module" src="./auth.js?v=614-editar-lista"></script>
+<script type="module" src="./admin.js?v=614-editar-lista"></script>
+<script type="module" src="./app.js?v=614-editar-lista"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

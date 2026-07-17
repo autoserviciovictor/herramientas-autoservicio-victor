@@ -1127,6 +1127,51 @@ app.put("/reposicion/:id", async (req, res) => {
   }
 });
 
+app.patch("/reposicion", async (req, res) => {
+  try {
+    const usuario = req.usuario.usuario;
+    const numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista);
+    const cambios = Array.isArray(req.body.cambios) ? req.body.cambios : [];
+    if (!cambios.length) return res.status(400).json({ ok: false, mensaje: "No hay cambios para guardar" });
+
+    const resultado = await ejecutarEnCola(`reposicion:${usuario}:${numeroLista}:edicion`, async () => {
+      const lista = obtenerListaReposicion(usuario, numeroLista);
+      const copia = lista.map(item => ({ ...item }));
+
+      for (const cambio of cambios) {
+        const id = normalizarTexto(cambio.id);
+        const indice = copia.findIndex(item => item.id === id);
+        if (indice < 0) {
+          const error = new Error(`Registro no encontrado en Lista ${numeroLista}`);
+          error.statusCode = 404;
+          throw error;
+        }
+        if (cambio.eliminar === true) {
+          copia.splice(indice, 1);
+          continue;
+        }
+        const cantidad = enteroPositivo(cambio.cantidad);
+        if (cantidad === null) {
+          const error = new Error("Todas las cantidades deben ser enteras y mayores a 0");
+          error.statusCode = 400;
+          throw error;
+        }
+        copia[indice].cantidad = cantidad;
+        copia[indice].actualizado = fechaHoraArgentinaIso();
+      }
+
+      lista.splice(0, lista.length, ...copia);
+      guardarReposicionTemporal();
+      return lista.map(item => limpiarRegistroReposicion(item, numeroLista));
+    });
+
+    res.json({ ok: true, lista: numeroLista, registros: resultado, mensaje: "Cambios guardados" });
+  } catch (error) {
+    console.error("Error en PATCH /reposicion:", error);
+    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "No se pudieron guardar los cambios" });
+  }
+});
+
 app.delete("/reposicion/:id", async (req, res) => {
   try {
     const usuario = req.usuario.usuario;
