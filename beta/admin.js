@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=615-notificaciones";
+import { API_BASE_URL } from "./config.js?v=6191-importacion-valuado";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -6,6 +6,8 @@ let historialVencimientos = [];
 let historialPeriodo = "hoy";
 let historialLimite = 20;
 let historialBusquedaTimer = null;
+let importacionPendiente = null;
+let importacionResumenPendiente = null;
 
 function mensaje(texto, tipo = "") {
   const el = $("adminMensaje");
@@ -298,6 +300,138 @@ function abrirAdmin() {
   else ocultarPanelAdmin();
 }
 
+
+
+function normalizarEncabezadoImportacion(valor) {
+  return String(valor ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function detectarColumnasImportacion(filas) {
+  const alias = {
+    codigo: ["codigo", "codigo de barras", "cod barra", "cod barras", "ean", "barcode"],
+    articulo: ["articulo", "descripcion", "producto", "nombre articulo"],
+    stock: ["stock", "existencia", "cantidad"],
+    precio: ["precio", "precio venta", "precio de venta", "p venta", "importe", "venta"],
+    subtotal: ["sub total", "subtotal", "total valuado", "valor total"]
+  };
+  for (let r=0; r<Math.min(filas.length,50); r++) {
+    const normalizados=(filas[r]||[]).map(normalizarEncabezadoImportacion);
+    const buscar = lista => normalizados.findIndex(v => lista.some(a => v===a || v.includes(a)));
+    const encontrados = {
+      codigo: buscar(alias.codigo), articulo: buscar(alias.articulo), stock: buscar(alias.stock),
+      precio: buscar(alias.precio), subtotal: buscar(alias.subtotal)
+    };
+    if (encontrados.codigo < 0 || encontrados.articulo < 0) continue;
+    const posiciones = Object.entries(encontrados).filter(([,i]) => i >= 0).sort((a,b) => a[1]-b[1]);
+    const rangos = {};
+    posiciones.forEach(([nombre, inicio], indice) => {
+      rangos[nombre] = { inicio, fin: indice + 1 < posiciones.length ? posiciones[indice+1][1] : normalizados.length };
+    });
+    return { fila:r, rangos, formatoValuado: encontrados.precio >= 0 && encontrados.subtotal >= 0 };
+  }
+  return null;
+}
+
+function leerCampoImportacion(fila, rango) {
+  if (!rango) return "";
+  for (let i=rango.inicio; i<rango.fin; i++) {
+    const valor=fila?.[i];
+    if (valor !== null && valor !== undefined && String(valor).trim() !== "") return valor;
+  }
+  return "";
+}
+
+function limpiarCodigoImportacion(valor) {
+  if (valor === null || valor === undefined || valor === "") return "";
+  if (typeof valor === "number") return Number.isSafeInteger(valor) ? String(valor) : String(valor).replace(/\.0+$/, "");
+  const texto=String(valor).trim();
+  if (/^\d+(\.0+)?$/.test(texto)) return texto.replace(/\.0+$/, "");
+  return texto;
+}
+
+function parsearPrecioImportacion(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
+  let texto=String(valor).trim().replace(/\s/g, "").replace(/\$/g, "");
+  if (!texto) return null;
+  if (texto.includes(",") && texto.includes(".")) texto = texto.lastIndexOf(",") > texto.lastIndexOf(".") ? texto.replace(/\./g, "").replace(",", ".") : texto.replace(/,/g, "");
+  else if (texto.includes(",")) texto=texto.replace(/\./g, "").replace(",", ".");
+  const n=Number(texto); return Number.isFinite(n) && n>=0 ? n : null;
+}
+
+function abrirVistaPreviaImportacion(resumen, archivoNombre) {
+  importacionResumenPendiente = resumen;
+  $("adminImportarPreviewArchivo").textContent = archivoNombre;
+  $("adminImportarPreviewProcesados").textContent = resumen.procesados ?? 0;
+  $("adminImportarPreviewNuevos").textContent = resumen.nuevos ?? 0;
+  $("adminImportarPreviewNombres").textContent = resumen.nombresActualizados ?? 0;
+  $("adminImportarPreviewPrecios").textContent = resumen.preciosActualizados ?? 0;
+  $("adminImportarPreviewSinCambios").textContent = resumen.sinCambios ?? 0;
+  const modal=$("adminImportarPreviewModal");
+  modal?.classList.remove("oculto"); modal?.setAttribute("aria-hidden","false");
+}
+
+function cerrarVistaPreviaImportacion() {
+  const modal=$("adminImportarPreviewModal");
+  modal?.classList.add("oculto"); modal?.setAttribute("aria-hidden","true");
+}
+
+function extraerProductosImportacion(filas, columnas) {
+  const mapa=new Map();
+  let filasIgnoradas=0;
+  for (let i=columnas.fila+1;i<filas.length;i++) {
+    const fila=filas[i]||[];
+    const codigo=limpiarCodigoImportacion(leerCampoImportacion(fila,columnas.rangos.codigo));
+    const articulo=String(leerCampoImportacion(fila,columnas.rangos.articulo)??"").trim();
+    // Stock y Sub Total se leen deliberadamente solo para reconocer el formato, pero nunca se importan.
+    const precio=columnas.rangos.precio ? parsearPrecioImportacion(leerCampoImportacion(fila,columnas.rangos.precio)) : null;
+    if (!codigo || !articulo || !/^\d{4,}$/.test(codigo)) { filasIgnoradas++; continue; }
+    mapa.set(codigo,{codigo,articulo,precio});
+  }
+  return { productos:[...mapa.values()], filasIgnoradas };
+}
+
+async function importarArchivoCatalogo(archivo) {
+  if (!window.XLSX) throw new Error("No se pudo cargar el lector de Excel");
+  const estado=$("adminImportarEstado");
+  estado.textContent="Leyendo archivo…";
+  const datos=await archivo.arrayBuffer();
+  const libro=window.XLSX.read(datos,{type:"array",raw:true});
+  let filas=[], columnas=null, hojaNombre="";
+  for (const nombre of libro.SheetNames) {
+    const actuales=window.XLSX.utils.sheet_to_json(libro.Sheets[nombre],{header:1,defval:"",raw:true});
+    const detectadas=detectarColumnasImportacion(actuales);
+    if (detectadas) { filas=actuales; columnas=detectadas; hojaNombre=nombre; break; }
+  }
+  if (!columnas) throw new Error("No encontré las columnas Código y Artículo en el archivo");
+  const extraidos=extraerProductosImportacion(filas,columnas);
+  if (!extraidos.productos.length) throw new Error("No encontré productos válidos para importar");
+  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre};
+  estado.textContent=`Analizando ${extraidos.productos.length} productos…`;
+  const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:extraidos.productos,confirmar:false})});
+  const resumen={...(data.resumen||{}),filasIgnoradas:extraidos.filasIgnoradas};
+  estado.textContent="Vista previa lista. Confirmá para guardar los cambios.";
+  abrirVistaPreviaImportacion(resumen,archivo.name);
+}
+
+async function confirmarImportacionCatalogo() {
+  if (!importacionPendiente) return;
+  const boton=$("btnAdminConfirmarImportacion");
+  const estado=$("adminImportarEstado");
+  boton.disabled=true; boton.textContent="Importando…";
+  try {
+    const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:importacionPendiente.productos,confirmar:true})});
+    const r=data.resumen||{};
+    cerrarVistaPreviaImportacion();
+    estado.innerHTML=`<strong>Importación finalizada</strong><span>${r.nuevos||0} productos nuevos · ${r.nombresActualizados||0} nombres actualizados · ${r.preciosActualizados||0} precios actualizados. Stock, Salón, Depósito y Sub Total no fueron importados.</span>`;
+    importacionPendiente=null; importacionResumenPendiente=null;
+    mensaje("Catálogo actualizado", "ok");
+    await cargarResumen();
+  } finally {
+    boton.disabled=false; boton.textContent="Importar y guardar";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);
   $("btnAdminActualizar")?.addEventListener("click", cargarTodo);
@@ -317,6 +451,17 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTimeout(historialBusquedaTimer);
     historialBusquedaTimer = setTimeout(reiniciarPaginacionHistorial, 180);
   });
+  $("btnAdminImportarArchivo")?.addEventListener("click", () => $("adminImportarArchivo")?.click());
+  $("adminImportarArchivo")?.addEventListener("change", async event => {
+    const archivo=event.target.files?.[0];
+    if (!archivo) return;
+    try { await importarArchivoCatalogo(archivo); }
+    catch(error) { $("adminImportarEstado").textContent=error.message; mensaje(error.message,"error"); importacionPendiente=null; }
+    finally { event.target.value=""; }
+  });
+  $("btnAdminCancelarImportacion")?.addEventListener("click", () => { cerrarVistaPreviaImportacion(); importacionPendiente=null; importacionResumenPendiente=null; $("adminImportarEstado").textContent="Importación cancelada. No se modificó ningún dato."; });
+  $("btnAdminCerrarImportacion")?.addEventListener("click", () => { cerrarVistaPreviaImportacion(); importacionPendiente=null; importacionResumenPendiente=null; });
+  $("btnAdminConfirmarImportacion")?.addEventListener("click", async () => { try { await confirmarImportacionCatalogo(); } catch(error) { mensaje(error.message,"error"); $("adminImportarEstado").textContent=error.message; } });
   $("btnAdminHistorialMas")?.addEventListener("click", () => {
     historialLimite += 20;
     renderHistorialVencimientos();

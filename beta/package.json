@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.7-1",
-  "description": "Autoservicio V6.1.7.1 Beta - persistencia de listas e identidad visual",
+  "version": "6.1.9-beta",
+  "description": "Autoservicio V6.1.9 Beta - importación inteligente de catálogo XLS",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

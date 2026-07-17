@@ -1,3 +1,16 @@
+V6.1.9.1 Beta
+- Compatibilidad exacta con Stock _ Inventario Valuado.xls.
+- Vista previa antes de guardar.
+- Importa Código, Artículo y Precio. Ignora Stock y Sub Total.
+- Conserva Stock, Salón y Depósito existentes.
+
+V6.1.9 Beta
+- Importación XLS/XLSX desde Administrador.
+- Alta automática de productos nuevos.
+- Actualización de nombres y precios cuando el archivo los incluye.
+- Conservación total del stock, salón y depósito existentes.
+- Columna precio preparada en Stock y Productos.
+
 V6.1.7.1 Beta
 - Lista 1 y Lista 2 persistentes en Google Sheets.
 - Escrituras de listas serializadas globalmente para evitar pérdidas entre usuarios simultáneos.

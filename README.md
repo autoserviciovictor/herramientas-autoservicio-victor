@@ -1,3 +1,17 @@
+# Autoservicio V6.1.9 Beta
+
+## Importación inteligente de catálogo
+
+Desde **Administrador → Sistema** se puede seleccionar un archivo `.xls` o `.xlsx` exportado por el sistema comercial.
+
+- Detecta automáticamente Código y Artículo.
+- Si el archivo incluye Precio, lo actualiza.
+- Agrega productos nuevos con stock, salón y depósito en cero.
+- Conserva el stock contado de los productos existentes.
+- Actualiza las hojas `Stock` y `Productos`.
+
+El archivo de ejemplo `Stock _ Inventario(3).xls` no contiene una columna de precio; por eso con ese archivo se sincronizan códigos y artículos, pero no precios.
+
 # Herramientas Autoservicio Victor V6.1.1
 
 ## Canal beta automático por rol
@@ -23,3 +37,7 @@ Configurar en Render VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y VAPID_SUBJECT. Cada d
 ## V6.1.7.1
 
 Backend reforzado para persistencia de Lista 1 y Lista 2 en Google Sheets, sin pérdidas por escrituras simultáneas.
+
+
+## Importación del catálogo valuado
+Use `Stock _ Inventario Valuado.xls`. El sistema importa Código, Artículo y Precio, muestra una vista previa y solo guarda después de confirmar. Stock y Sub Total del archivo se ignoran; Stock, Salón y Depósito de la app se conservan.

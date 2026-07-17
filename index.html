@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=611-rol-beta">
+    <link rel="stylesheet" href="style.css?v=6191-importacion-valuado">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -510,9 +510,36 @@
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
                 <div><span>Versión</span><strong id="adminVersionSistema">6.0.2.1</strong></div>
             </div>
+            <div class="admin-import-card">
+                <div class="admin-import-head"><div><strong>Importar catálogo del sistema</strong><span>Acepta “Stock _ Inventario Valuado.xls”: agrega productos nuevos y actualiza artículos y precios. Ignora Stock y Sub Total.</span></div></div>
+                <input id="adminImportarArchivo" type="file" accept=".xls,.xlsx" class="oculto">
+                <button id="btnAdminImportarArchivo" type="button" class="setting-btn">Seleccionar archivo valuado</button>
+                <div id="adminImportarEstado" class="admin-import-status" aria-live="polite"></div>
+            </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
         </section>
     </main>
+
+    <div id="adminImportarPreviewModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card admin-import-preview-modal" role="dialog" aria-modal="true" aria-labelledby="adminImportarPreviewTitulo">
+        <button id="btnAdminCerrarImportacion" class="modal-close" type="button">×</button>
+        <div class="modal-kicker">Vista previa</div>
+        <h2 id="adminImportarPreviewTitulo">Confirmar importación</h2>
+        <p class="admin-import-preview-file">Archivo: <strong id="adminImportarPreviewArchivo">—</strong></p>
+        <div class="admin-import-preview-grid">
+          <div><span>Productos leídos</span><strong id="adminImportarPreviewProcesados">0</strong></div>
+          <div><span>Productos nuevos</span><strong id="adminImportarPreviewNuevos">0</strong></div>
+          <div><span>Nombres a actualizar</span><strong id="adminImportarPreviewNombres">0</strong></div>
+          <div><span>Precios a actualizar</span><strong id="adminImportarPreviewPrecios">0</strong></div>
+          <div><span>Sin cambios</span><strong id="adminImportarPreviewSinCambios">0</strong></div>
+        </div>
+        <div class="admin-import-warning"><strong>No se modificarán:</strong> Stock, Salón ni Depósito. La columna Sub Total será ignorada.</div>
+        <div class="modal-actions">
+          <button id="btnAdminCancelarImportacion" type="button" class="cancel-btn">Cancelar</button>
+          <button id="btnAdminConfirmarImportacion" type="button" class="save-btn">Importar y guardar</button>
+        </div>
+      </div>
+    </div>
 
     <div id="adminUsuarioModal" class="modal-overlay oculto" aria-hidden="true">
       <div class="modal-card admin-user-modal" role="dialog" aria-modal="true">
@@ -592,11 +619,12 @@
 
 </div>
 
-<script src="./release-channel.js?v=611-rol-beta"></script>
-<script src="./pwa.js?v=611-rol-beta" defer></script>
-<script type="module" src="./auth.js?v=611-rol-beta"></script>
-<script type="module" src="./admin.js?v=611-rol-beta"></script>
-<script type="module" src="./app.js?v=611-rol-beta"></script>
+<script src="./release-channel.js?v=6191-importacion-valuado"></script>
+<script src="./pwa.js?v=6191-importacion-valuado" defer></script>
+<script type="module" src="./auth.js?v=6191-importacion-valuado"></script>
+<script src="./xlsx.full.min.js"></script>
+<script type="module" src="./admin.js?v=6191-importacion-valuado"></script>
+<script type="module" src="./app.js?v=6191-importacion-valuado"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 </body>
 </html>

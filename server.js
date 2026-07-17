@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.7.1";
+const APP_VERSION = "6.1.9.1-beta";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -347,8 +347,25 @@ function filaAProducto(fila, index) {
     articulo: normalizarTexto(fila[1]),
     stock: salon + deposito,
     salon,
-    deposito
+    deposito,
+    precio: numeroPrecio(fila[5])
   };
+}
+
+function numeroPrecio(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
+  let texto = normalizarTexto(valor).replace(/\s/g, "").replace(/\$/g, "");
+  if (!texto) return null;
+  if (texto.includes(",") && texto.includes(".")) {
+    texto = texto.lastIndexOf(",") > texto.lastIndexOf(".")
+      ? texto.replace(/\./g, "").replace(",", ".")
+      : texto.replace(/,/g, "");
+  } else if (texto.includes(",")) {
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  }
+  const n = Number(texto);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 async function obtenerProductos() {
@@ -356,7 +373,7 @@ async function obtenerProductos() {
   return leerConCache("productos", CACHE_TTL.productos, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:E`
+      range: `${SHEET_NAME}!A:F`
     });
     const filas = respuesta.data.values || [];
     if (filas.length <= 1) return [];
@@ -384,7 +401,7 @@ async function actualizarProducto(producto) {
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A${producto.filaGoogle}:E${producto.filaGoogle}`,
+    range: `${SHEET_NAME}!A${producto.filaGoogle}:F${producto.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [[
@@ -392,7 +409,8 @@ async function actualizarProducto(producto) {
         productoActualizado.articulo,
         productoActualizado.stock,
         productoActualizado.salon,
-        productoActualizado.deposito
+        productoActualizado.deposito,
+        productoActualizado.precio ?? ""
       ]]
     }
   });
@@ -405,7 +423,8 @@ function filaAProductoMaestro(fila, index) {
   return {
     filaGoogle: index + 2,
     codigo: normalizarTexto(fila[0]),
-    articulo: normalizarTexto(fila[1])
+    articulo: normalizarTexto(fila[1]),
+    precio: numeroPrecio(fila[2])
   };
 }
 
@@ -414,7 +433,7 @@ async function obtenerProductosMaestros() {
   return leerConCache("productosMaestros", CACHE_TTL.productosMaestros, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${PRODUCTOS_SHEET_NAME}!A:B`
+      range: `${PRODUCTOS_SHEET_NAME}!A:C`
     });
     const filas = respuesta.data.values || [];
     if (filas.length <= 1) return [];
@@ -540,6 +559,122 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
 
 app.get("/", (req, res) => {
   res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
+});
+
+
+const IMPORTACION_MAX_FILAS = 30000;
+let importacionProductosEnCurso = Promise.resolve();
+
+function normalizarProductoImportado(item) {
+  const codigo = normalizarCodigo(item?.codigo);
+  const articulo = normalizarTexto(item?.articulo);
+  const precio = numeroPrecio(item?.precio);
+  if (!codigo || !articulo) return null;
+  return { codigo, articulo, precio };
+}
+
+async function asegurarColumnasCatalogo() {
+  await Promise.all([
+    sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A1:F1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [["codigo", "articulo", "stock", "salon", "deposito", "precio"]] }
+    }),
+    sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [["codigo", "articulo", "precio"]] }
+    })
+  ]);
+}
+
+async function ejecutarImportacionProductos(items, aplicarCambios = true) {
+  await asegurarColumnasCatalogo();
+  const [stockResp, maestroResp] = await Promise.all([
+    sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A:F` }),
+    sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${PRODUCTOS_SHEET_NAME}!A:C` })
+  ]);
+  const stockFilas = stockResp.data.values || [];
+  const maestroFilas = maestroResp.data.values || [];
+  const stockMapa = new Map();
+  const maestroMapa = new Map();
+  stockFilas.slice(1).forEach((fila, i) => { const c=normalizarCodigo(fila[0]); if(c) stockMapa.set(c,{fila:i+2,datos:fila}); });
+  maestroFilas.slice(1).forEach((fila, i) => { const c=normalizarCodigo(fila[0]); if(c) maestroMapa.set(c,{fila:i+2,datos:fila}); });
+
+  const updates=[];
+  const nuevosStock=[];
+  const nuevosMaestro=[];
+  let nuevos=0, nombresActualizados=0, preciosActualizados=0, sinCambios=0;
+  let incluyePrecios=false;
+
+  for (const item of items) {
+    if (item.precio !== null) incluyePrecios=true;
+    const stock=stockMapa.get(item.codigo);
+    if (stock) {
+      const nombreAnterior=normalizarTexto(stock.datos[1]);
+      const precioAnterior=numeroPrecio(stock.datos[5]);
+      let cambio=false;
+      if (nombreAnterior !== item.articulo) {
+        updates.push({ range:`${SHEET_NAME}!B${stock.fila}`, values:[[item.articulo]] });
+        nombresActualizados++; cambio=true;
+      }
+      if (item.precio !== null && precioAnterior !== item.precio) {
+        updates.push({ range:`${SHEET_NAME}!F${stock.fila}`, values:[[item.precio]] });
+        preciosActualizados++; cambio=true;
+      }
+      if (!cambio) sinCambios++;
+    } else {
+      nuevosStock.push([item.codigo,item.articulo,0,0,0,item.precio ?? ""]);
+      nuevos++;
+    }
+
+    const maestro=maestroMapa.get(item.codigo);
+    if (maestro) {
+      if (normalizarTexto(maestro.datos[1]) !== item.articulo) updates.push({ range:`${PRODUCTOS_SHEET_NAME}!B${maestro.fila}`, values:[[item.articulo]] });
+      if (item.precio !== null && numeroPrecio(maestro.datos[2]) !== item.precio) updates.push({ range:`${PRODUCTOS_SHEET_NAME}!C${maestro.fila}`, values:[[item.precio]] });
+    } else {
+      nuevosMaestro.push([item.codigo,item.articulo,item.precio ?? ""]);
+    }
+  }
+
+  if (aplicarCambios) {
+    for (let i=0;i<updates.length;i+=500) {
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody:{ valueInputOption:"USER_ENTERED", data:updates.slice(i,i+500) }
+      });
+    }
+    if (nuevosStock.length) await sheets.spreadsheets.values.append({ spreadsheetId:SPREADSHEET_ID, range:`${SHEET_NAME}!A:F`, valueInputOption:"USER_ENTERED", insertDataOption:"INSERT_ROWS", requestBody:{values:nuevosStock} });
+    if (nuevosMaestro.length) await sheets.spreadsheets.values.append({ spreadsheetId:SPREADSHEET_ID, range:`${PRODUCTOS_SHEET_NAME}!A:C`, valueInputOption:"USER_ENTERED", insertDataOption:"INSERT_ROWS", requestBody:{values:nuevosMaestro} });
+    invalidarCache("productos","productosMaestros");
+  }
+  return { procesados:items.length,nuevos,nombresActualizados,preciosActualizados,sinCambios,incluyePrecios };
+}
+
+app.post("/admin/importar-productos", requerirAdministrador, async (req,res)=>{
+  try {
+    const entrada=Array.isArray(req.body?.productos)?req.body.productos:[];
+    if (!entrada.length) return res.status(400).json({ok:false,mensaje:"El archivo no contiene productos válidos"});
+    if (entrada.length>IMPORTACION_MAX_FILAS) return res.status(400).json({ok:false,mensaje:`El archivo supera el máximo de ${IMPORTACION_MAX_FILAS} productos`});
+    const mapa=new Map();
+    entrada.forEach(raw=>{const p=normalizarProductoImportado(raw); if(p) mapa.set(p.codigo,p);});
+    const items=[...mapa.values()];
+    if(!items.length) return res.status(400).json({ok:false,mensaje:"No se encontraron códigos y artículos válidos"});
+    const confirmar = req.body?.confirmar === true;
+    if (!confirmar) {
+      const resumen = await ejecutarImportacionProductos(items, false);
+      return res.json({ok:true,mensaje:"Vista previa calculada",vistaPrevia:true,resumen});
+    }
+    const tarea=importacionProductosEnCurso.catch(()=>{}).then(()=>ejecutarImportacionProductos(items, true));
+    importacionProductosEnCurso=tarea.catch(()=>{});
+    const resumen=await tarea;
+    res.json({ok:true,mensaje:"Importación finalizada",resumen});
+  } catch(error) {
+    console.error("Error importando productos:",error);
+    res.status(500).json({ok:false,mensaje:error.message||"No se pudo importar el archivo"});
+  }
 });
 
 app.get("/productos", async (req, res) => {
