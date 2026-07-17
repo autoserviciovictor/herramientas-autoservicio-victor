@@ -182,8 +182,8 @@ function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoC
 function actualizarEncabezadoRepo(esCarga){
   const titulo=$("modulePageTitle");
   const subtitulo=$("modulePageSubtitle");
-  if(titulo) titulo.textContent=esCarga?`Lista ${listaActual} · Agregar`:`Mi Lista ${listaActual}`;
-  if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos para llevar del depósito";
+  if(titulo) titulo.textContent=esCarga?"Lista":"Mi lista";
+  if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos anotados";
 }
 function cambiarTab(nueva){
   if(modoEdicion && nueva!=="registro"){ solicitarSalidaEdicion(() => cambiarTab(nueva)); return; }

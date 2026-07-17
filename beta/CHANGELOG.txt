@@ -1,4 +1,4 @@
-V6.1.6.1 Beta - Identidad visual final
+V6.1.6.3 Beta - Identidad visual final
 - Ícono V + carrito optimizado para PWA.
 - Logo institucional solo en login y splash.
 - Encabezado fijo Autoservicio / Herramientas.
