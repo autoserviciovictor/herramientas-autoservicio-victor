@@ -574,83 +574,102 @@ function normalizarProductoImportado(item) {
 }
 
 async function asegurarColumnasCatalogo() {
-  await Promise.all([
-    sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:F1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [["codigo", "articulo", "stock", "salon", "deposito", "precio"]] }
-    }),
-    sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [["codigo", "articulo", "precio"]] }
-    })
-  ]);
+  // La importación del catálogo nunca debe modificar la hoja Stock.
+  // Solo mantenemos el catálogo maestro permanente en la hoja Productos.
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [["codigo", "articulo", "precio"]] }
+  });
 }
 
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
   await asegurarColumnasCatalogo();
-  const [stockResp, maestroResp] = await Promise.all([
-    sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A:F` }),
-    sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${PRODUCTOS_SHEET_NAME}!A:C` })
-  ]);
-  const stockFilas = stockResp.data.values || [];
+  const maestroResp = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${PRODUCTOS_SHEET_NAME}!A:C`
+  });
   const maestroFilas = maestroResp.data.values || [];
-  const stockMapa = new Map();
   const maestroMapa = new Map();
-  stockFilas.slice(1).forEach((fila, i) => { const c=normalizarCodigo(fila[0]); if(c) stockMapa.set(c,{fila:i+2,datos:fila}); });
-  maestroFilas.slice(1).forEach((fila, i) => { const c=normalizarCodigo(fila[0]); if(c) maestroMapa.set(c,{fila:i+2,datos:fila}); });
+  maestroFilas.slice(1).forEach((fila, i) => {
+    const codigo = normalizarCodigo(fila[0]);
+    if (codigo) maestroMapa.set(codigo, { fila: i + 2, datos: fila });
+  });
 
-  const updates=[];
-  const nuevosStock=[];
-  const nuevosMaestro=[];
-  let nuevos=0, nombresActualizados=0, preciosActualizados=0, sinCambios=0;
-  let incluyePrecios=false;
+  const updates = [];
+  const nuevosMaestro = [];
+  let nuevos = 0;
+  let nombresActualizados = 0;
+  let preciosActualizados = 0;
+  let sinCambios = 0;
+  let incluyePrecios = false;
 
   for (const item of items) {
-    if (item.precio !== null) incluyePrecios=true;
-    const stock=stockMapa.get(item.codigo);
-    if (stock) {
-      const nombreAnterior=normalizarTexto(stock.datos[1]);
-      const precioAnterior=numeroPrecio(stock.datos[5]);
-      let cambio=false;
-      if (nombreAnterior !== item.articulo) {
-        updates.push({ range:`${SHEET_NAME}!B${stock.fila}`, values:[[item.articulo]] });
-        nombresActualizados++; cambio=true;
-      }
-      if (item.precio !== null && precioAnterior !== item.precio) {
-        updates.push({ range:`${SHEET_NAME}!F${stock.fila}`, values:[[item.precio]] });
-        preciosActualizados++; cambio=true;
-      }
-      if (!cambio) sinCambios++;
-    } else {
-      nuevosStock.push([item.codigo,item.articulo,0,0,0,item.precio ?? ""]);
+    if (item.precio !== null) incluyePrecios = true;
+    const maestro = maestroMapa.get(item.codigo);
+
+    if (!maestro) {
+      nuevosMaestro.push([item.codigo, item.articulo, item.precio ?? ""]);
       nuevos++;
+      continue;
     }
 
-    const maestro=maestroMapa.get(item.codigo);
-    if (maestro) {
-      if (normalizarTexto(maestro.datos[1]) !== item.articulo) updates.push({ range:`${PRODUCTOS_SHEET_NAME}!B${maestro.fila}`, values:[[item.articulo]] });
-      if (item.precio !== null && numeroPrecio(maestro.datos[2]) !== item.precio) updates.push({ range:`${PRODUCTOS_SHEET_NAME}!C${maestro.fila}`, values:[[item.precio]] });
-    } else {
-      nuevosMaestro.push([item.codigo,item.articulo,item.precio ?? ""]);
+    let cambio = false;
+    if (normalizarTexto(maestro.datos[1]) !== item.articulo) {
+      updates.push({
+        range: `${PRODUCTOS_SHEET_NAME}!B${maestro.fila}`,
+        values: [[item.articulo]]
+      });
+      nombresActualizados++;
+      cambio = true;
     }
+
+    if (item.precio !== null && numeroPrecio(maestro.datos[2]) !== item.precio) {
+      updates.push({
+        range: `${PRODUCTOS_SHEET_NAME}!C${maestro.fila}`,
+        values: [[item.precio]]
+      });
+      preciosActualizados++;
+      cambio = true;
+    }
+
+    if (!cambio) sinCambios++;
   }
 
   if (aplicarCambios) {
-    for (let i=0;i<updates.length;i+=500) {
+    for (let i = 0; i < updates.length; i += 500) {
       await sheets.spreadsheets.values.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
-        requestBody:{ valueInputOption:"USER_ENTERED", data:updates.slice(i,i+500) }
+        requestBody: {
+          valueInputOption: "USER_ENTERED",
+          data: updates.slice(i, i + 500)
+        }
       });
     }
-    if (nuevosStock.length) await sheets.spreadsheets.values.append({ spreadsheetId:SPREADSHEET_ID, range:`${SHEET_NAME}!A:F`, valueInputOption:"USER_ENTERED", insertDataOption:"INSERT_ROWS", requestBody:{values:nuevosStock} });
-    if (nuevosMaestro.length) await sheets.spreadsheets.values.append({ spreadsheetId:SPREADSHEET_ID, range:`${PRODUCTOS_SHEET_NAME}!A:C`, valueInputOption:"USER_ENTERED", insertDataOption:"INSERT_ROWS", requestBody:{values:nuevosMaestro} });
-    invalidarCache("productos","productosMaestros");
+
+    if (nuevosMaestro.length) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: nuevosMaestro }
+      });
+    }
+
+    // No invalidamos ni modificamos la caché de Stock.
+    invalidarCache("productosMaestros");
   }
-  return { procesados:items.length,nuevos,nombresActualizados,preciosActualizados,sinCambios,incluyePrecios };
+
+  return {
+    procesados: items.length,
+    nuevos,
+    nombresActualizados,
+    preciosActualizados,
+    sinCambios,
+    incluyePrecios
+  };
 }
 
 app.post("/admin/importar-productos", requerirAdministrador, async (req,res)=>{

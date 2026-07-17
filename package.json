@@ -1,6 +1,6 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.9-beta.1",
+  "version": "6.1.9.2",
   "description": "Autoservicio V6.1.9.1 Beta - importación segura de catálogo valuado XLS",
   "main": "server.js",
   "scripts": {

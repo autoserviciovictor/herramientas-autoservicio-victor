@@ -423,7 +423,7 @@ async function confirmarImportacionCatalogo() {
     const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:importacionPendiente.productos,confirmar:true})});
     const r=data.resumen||{};
     cerrarVistaPreviaImportacion();
-    estado.innerHTML=`<strong>Importación finalizada</strong><span>${r.nuevos||0} productos nuevos · ${r.nombresActualizados||0} nombres actualizados · ${r.preciosActualizados||0} precios actualizados. Stock, Salón, Depósito y Sub Total no fueron importados.</span>`;
+    estado.innerHTML=`<strong>Importación finalizada</strong><span>${r.nuevos||0} productos nuevos · ${r.nombresActualizados||0} nombres actualizados · ${r.preciosActualizados||0} precios actualizados. La hoja Stock no fue modificada. Stock, Salón, Depósito y Sub Total fueron ignorados.</span>`;
     importacionPendiente=null; importacionResumenPendiente=null;
     mensaje("Catálogo actualizado", "ok");
     await cargarResumen();

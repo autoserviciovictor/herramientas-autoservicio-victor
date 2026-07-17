@@ -1,3 +1,7 @@
+V6.1.9.2
+- La importación valuada escribe exclusivamente en la hoja Productos.
+- La hoja Stock no se lee, modifica ni repuebla durante la importación.
+
 V6.1.9.1 Beta
 - Compatibilidad exacta con Stock _ Inventario Valuado.xls.
 - Vista previa antes de guardar.

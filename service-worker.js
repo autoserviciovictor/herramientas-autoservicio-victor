@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v6.1.9.1-importacion-valuado';
+const CACHE_VERSION = 'autoservicio-v6.1.9.2-importacion-valuado';
 const APP_SHELL = [
   './',
   './index.html',
