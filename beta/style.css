@@ -2639,3 +2639,16 @@ body.modal-abierto{overflow:hidden}
 .login-brand-logo{width:min(82%,420px)!important;max-height:190px!important;margin:0 auto 24px!important}
 .login-card h1{font-size:clamp(2.25rem,8vw,3rem)!important;color:#181818!important}.login-card>p{font-size:1.15rem!important}
 @media(min-width:700px){.login-card{max-width:720px!important;margin:auto;min-height:auto!important;border-radius:34px!important;padding-bottom:190px!important;box-shadow:0 20px 60px rgba(0,0,0,.12)!important}.login-overlay{align-items:center!important;background:linear-gradient(180deg,#fff 0 70%,#ef393f 100%)!important}}
+
+
+/* V6.1.8 Beta - Vencimientos compactos y edición desde tarjeta */
+.venc-item-proximo { cursor: pointer; }
+.venc-item-proximo .venc-proximo-main,
+.venc-item-proximo .venc-proximo-main > div { width: 100%; }
+.venc-item-proximo .venc-proximo-main strong,
+.venc-item-proximo .venc-code { text-align: left !important; margin-left: 0 !important; padding-left: 0 !important; }
+.venc-item-proximo .venc-code { display: block; margin-top: 4px; }
+.venc-item-proximo .venc-proximo-actions { grid-template-columns: 1fr !important; }
+.venc-edit-actions { grid-template-columns: 1fr 1fr !important; }
+.venc-edit-actions .secondary-btn { grid-column: 1 / -1; }
+@media (hover:hover) { .venc-item-proximo:hover { transform: translateY(-1px); } }

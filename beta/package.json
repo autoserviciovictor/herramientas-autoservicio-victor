@@ -1,6 +1,6 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.6-1",
+  "version": "6.1.8-beta",
   "description": "Autoservicio V6.1.6.2 Beta - identidad visual final",
   "main": "server.js",
   "scripts": {
