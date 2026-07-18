@@ -2673,3 +2673,9 @@ body.modal-abierto{overflow:hidden}
 .admin-import-warning{padding:11px 12px;border-radius:12px;background:#fff3d8;color:#70551b;font-size:.85rem;line-height:1.4;}
 @media (max-width:420px){.admin-import-preview-grid{grid-template-columns:1fr 1fr;}.admin-import-preview-modal{width:calc(100% - 28px);}}
 
+
+/* V6.1.11 - Guía de instalación para iPhone/iPad */
+.ios-install-modal { max-width: 390px; }
+.ios-install-steps { margin: 14px 0; padding-left: 22px; line-height: 1.55; color: #2f3640; }
+.ios-install-steps li + li { margin-top: 8px; }
+.ios-install-warning { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff3cd; color: #6b5200; font-size: .92rem; }

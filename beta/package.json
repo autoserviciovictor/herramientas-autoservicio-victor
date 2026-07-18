@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "6.1.10-beta",
-  "description": "Autoservicio V6.1.10 Beta - Vencimientos mejorados e importación segura de catálogo",
+  "version": "6.1.11",
+  "description": "Autoservicio V6.1.11 Beta - notificaciones completas, limpieza automática e instalación iPhone",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

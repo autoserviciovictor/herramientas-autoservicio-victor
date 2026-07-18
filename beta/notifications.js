@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=615-notificaciones";
+import { API_BASE_URL } from "./config.js?v=6111";
 
 const $ = id => document.getElementById(id);
 const ESTADO_KEY = "autoservicio_notificaciones_preferencia_v1";
@@ -36,7 +36,7 @@ async function registrarSuscripcion() {
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo activar las notificaciones");
     localStorage.setItem(ESTADO_KEY, "activadas");
-    actualizarEstado("Recibirás avisos de vencimientos a 7, 3 y 1 día, y cuando estén vencidos.", "ok");
+    actualizarEstado("Recibirás avisos al cargar, a 15, 7, 3 y 1 día, y cuando estén vencidos.", "ok");
     fetch(`${API_BASE_URL}/notificaciones/procesar`, { method: "POST" }).catch(() => {});
     return true;
   } catch (error) { actualizarEstado(error.message || "No se pudieron activar las notificaciones", "error"); return false; }

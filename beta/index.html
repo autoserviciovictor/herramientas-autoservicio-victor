@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6110-consolidada">
+    <link rel="stylesheet" href="style.css?v=6111">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -672,13 +672,30 @@
 
 </div>
 
-<script src="./release-channel.js?v=6110-consolidada"></script>
-<script src="./pwa.js?v=6110-consolidada" defer></script>
-<script type="module" src="./auth.js?v=6110-consolidada"></script>
+<script src="./release-channel.js?v=6111"></script>
+<script src="./pwa.js?v=6111" defer></script>
+<script type="module" src="./auth.js?v=6111"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6110-consolidada"></script>
-<script type="module" src="./notifications.js?v=6110-consolidada"></script>
-<script type="module" src="./app.js?v=6110-consolidada"></script>
+<script type="module" src="./admin.js?v=6111"></script>
+<script type="module" src="./notifications.js?v=6111"></script>
+<script type="module" src="./app.js?v=6111"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
+
+    <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+      <div class="modal-card repo-confirm-card ios-install-modal" role="dialog" aria-modal="true" aria-labelledby="iosInstallTitulo">
+        <div class="modal-kicker">Instalar en iPhone o iPad</div>
+        <h3 id="iosInstallTitulo">Agregá Autoservicio a la pantalla de inicio</h3>
+        <ol class="ios-install-steps">
+          <li>Abrí esta página en <strong>Safari</strong>.</li>
+          <li>Tocá el botón <strong>Compartir</strong> de Safari.</li>
+          <li>Elegí <strong>Agregar a pantalla de inicio</strong>.</li>
+          <li>Confirmá tocando <strong>Agregar</strong>.</li>
+        </ol>
+        <p id="iosInstallBrowserWarning" class="ios-install-warning oculto">Estás usando otro navegador. Copiá el enlace y abrilo en Safari para poder instalar la app.</p>
+        <div class="modal-actions">
+          <button type="button" id="btnCerrarIosInstall" class="save-btn">Entendido</button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>

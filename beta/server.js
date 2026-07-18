@@ -1003,9 +1003,18 @@ async function enviarPushATodos(payload) {
 
 function payloadAlertaVencimiento(registro, dias, tipo) {
   const total = numero(registro.total);
+  const unidades = `${total} ${total === 1 ? "unidad" : "unidades"}`;
+  if (tipo === "nuevo") {
+    return {
+      title: "Nuevo vencimiento cargado",
+      body: `${registro.articulo} · ${unidades} · vence ${registro.vencimiento}`,
+      tag: `venc-${registro.id}-nuevo`,
+      data: { url: "./" }
+    };
+  }
   if (tipo === "vencido") return { title: "Producto vencido", body: `${registro.articulo} · ${total} ${total === 1 ? "unidad vencida" : "unidades vencidas"}`, tag: `venc-${registro.id}-vencido`, data: { url: "./" } };
   const textoDias = dias === 1 ? "Vence mañana" : `Vence en ${dias} días`;
-  return { title: textoDias, body: `${registro.articulo} · ${total} ${total === 1 ? "unidad" : "unidades"}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
+  return { title: textoDias, body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
 }
 
 async function enviarAlertaRegistro(registro, dias, tipo, clave) {
@@ -1015,16 +1024,77 @@ async function enviarAlertaRegistro(registro, dias, tipo, clave) {
   return resultado;
 }
 
+let limpiezaVencimientosEnCurso = false;
+let ultimaLimpiezaVencimientos = 0;
+
+async function reescribirHoja(nombreHoja, encabezados, filas) {
+  await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: `${nombreHoja}!A:Z` });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${nombreHoja}!A1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [encabezados, ...filas] }
+  });
+}
+
+async function limpiarVencimientosAntiguos({ forzar = false } = {}) {
+  const ahora = Date.now();
+  if (limpiezaVencimientosEnCurso || (!forzar && ahora - ultimaLimpiezaVencimientos < 60 * 60 * 1000)) return { eliminados: 0 };
+  limpiezaVencimientosEnCurso = true;
+  try {
+    const vencimientos = await obtenerVencimientos();
+    const antiguos = vencimientos.filter(item => {
+      const dias = diasDesdeHoyArgentina(item.vencimiento);
+      return dias !== null && dias <= -7;
+    });
+    if (!antiguos.length) {
+      ultimaLimpiezaVencimientos = ahora;
+      return { eliminados: 0 };
+    }
+
+    const ids = new Set(antiguos.map(item => item.id));
+    const vigentes = vencimientos.filter(item => !ids.has(item.id));
+    await reescribirHoja(VENCIMIENTOS_SHEET_NAME,
+      ["ID", "Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado", "Oferta"],
+      vigentes.map(item => [item.id, item.fecha_carga, item.codigo, item.articulo, item.vencimiento, item.salon, item.deposito, item.total, item.estado, item.oferta])
+    );
+
+    await asegurarHojaHistorialVencimientos();
+    const historialResp = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J` });
+    const historialFilas = (historialResp.data.values || []).slice(1).filter(fila => !ids.has(normalizarTexto(fila[5])));
+    await reescribirHoja(HISTORIAL_VENCIMIENTOS_SHEET_NAME,
+      ["Fecha", "Hora", "Usuario", "Nombre", "Acción", "ID", "Código", "Artículo", "Vencimiento", "Detalle"],
+      historialFilas
+    );
+
+    await asegurarHojasNotificaciones();
+    const notifResp = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G` });
+    const notifFilas = (notifResp.data.values || []).slice(1).filter(fila => !ids.has(normalizarTexto(fila[3])));
+    await reescribirHoja(NOTIFICATION_LOG_SHEET_NAME,
+      ["Clave", "Fecha envío", "Tipo", "ID", "Código", "Vencimiento", "Detalle"],
+      notifFilas
+    );
+
+    invalidarCache("vencimientos");
+    ultimaLimpiezaVencimientos = ahora;
+    console.log(`Limpieza automática: ${antiguos.length} vencimiento(s) eliminado(s) después de 7 días.`);
+    return { eliminados: antiguos.length };
+  } finally {
+    limpiezaVencimientosEnCurso = false;
+  }
+}
+
 async function procesarAlertasVencimientos() {
   if (procesandoNotificaciones || !PUSH_CONFIGURED) return;
   procesandoNotificaciones = true;
   try {
+    await limpiarVencimientosAntiguos();
     const [vencimientos, enviadas] = await Promise.all([obtenerVencimientos(), clavesNotificacionesEnviadas()]);
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
       if (dias === null) continue;
       let tipo = null;
-      if ([7, 3, 1].includes(dias)) tipo = String(dias);
+      if ([15, 7, 3, 1].includes(dias)) tipo = String(dias);
       else if (dias < 0) tipo = "vencido";
       if (!tipo) continue;
       const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
@@ -1064,6 +1134,7 @@ app.all("/notificaciones/cron", async (req, res) => {
 
 app.get("/vencimientos", async (req, res) => {
   try {
+    await limpiarVencimientosAntiguos();
     const vencimientos = (await obtenerVencimientos()).reverse();
     res.json({ ok: true, total: vencimientos.length, vencimientos });
   } catch (error) {
@@ -1114,14 +1185,14 @@ app.post("/vencimientos", async (req, res) => {
     invalidarCache("vencimientos");
     await registrarHistorialVencimiento(req, "Creó", registro, `Salón: ${registro.salon} · Depósito: ${registro.deposito}`);
     const diasRestantes = diasDesdeHoyArgentina(registro.vencimiento);
-    if (PUSH_CONFIGURED && diasRestantes !== null && diasRestantes <= 7 && diasRestantes >= 0) {
-      const tipo = [7, 3, 1].includes(diasRestantes) ? String(diasRestantes) : `carga-${diasRestantes}`;
+    if (PUSH_CONFIGURED) {
+      const tipo = "nuevo";
       const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
       setImmediate(async () => {
         try {
           const enviadas = await clavesNotificacionesEnviadas();
           if (!enviadas.has(clave)) await enviarAlertaRegistro(registro, diasRestantes, tipo, clave);
-        } catch (error) { console.error("No se pudo enviar la alerta inmediata:", error); }
+        } catch (error) { console.error("No se pudo enviar la notificación de nuevo vencimiento:", error); }
       });
     }
     res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
