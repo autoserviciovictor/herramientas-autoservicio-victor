@@ -57,9 +57,6 @@ function actualizarEncabezadoModulo(nombre) {
     const subtituloPagina = document.getElementById("modulePageSubtitle");
     const volver = document.getElementById("brandBackBtn");
 
-    if (tituloMarca) tituloMarca.textContent = "Autoservicio";
-    if (subtituloMarca) subtituloMarca.textContent = "Herramientas";
-
     const encabezados = {
         inicio: ["Herramientas", "Elegí el módulo que querés usar"],
         inventario: ["Inventario", "Control de stock"],
@@ -72,6 +69,8 @@ function actualizarEncabezadoModulo(nombre) {
         admin: ["Administrador", "Usuarios e historial"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
+    if (tituloMarca) tituloMarca.textContent = nombre === "inicio" ? "Autoservicio" : textoTitulo;
+    if (subtituloMarca) subtituloMarca.textContent = nombre === "inicio" ? "Herramientas" : textoSubtitulo;
     if (tituloPagina) tituloPagina.textContent = textoTitulo;
     if (subtituloPagina) subtituloPagina.textContent = textoSubtitulo;
 
@@ -84,6 +83,10 @@ function actualizarEncabezadoModulo(nombre) {
 
 export function cambiarPantalla(nombre) {
     actualizarEncabezadoModulo(nombre);
+    const homeNombre = document.getElementById("homeUsuarioNombre");
+    const menuNombre = document.getElementById("menuSesionNombre");
+    if (homeNombre && menuNombre?.textContent) homeNombre.textContent = menuNombre.textContent;
+
     const pantallaReal = nombre === "cargados" ? "productos" : nombre;
     Object.entries(elementos.pantallas).forEach(([clave, pantalla]) => {
         if (!pantalla) return;

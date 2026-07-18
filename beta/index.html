@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6111">
+    <link rel="stylesheet" href="style.css?v=6200">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.10 Beta</p>
+    <p>Herramientas V6.2.0 Beta</p>
 </div>
 
 <div class="app">
@@ -64,6 +64,10 @@
     </section>
 
     <main id="pantallaInicio" class="pantalla pantalla-inicio activa">
+        <section class="home-welcome">
+            <h1>Hola, <span id="homeUsuarioNombre">Usuario</span></h1>
+            <p>¿Qué módulo querés usar hoy?</p>
+        </section>
         <section class="module-grid">
             <button type="button" class="module-card module-inventario" data-modulo="inventario">
                 <span class="module-icon">📦</span>
@@ -92,7 +96,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.10 Beta</strong>
+            <strong>V6.2.0 Beta</strong>
         </section>
     </main>
 
@@ -505,7 +509,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.10 Beta</span>
+            <span id="adminVersion" class="admin-version">V6.2.0 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>

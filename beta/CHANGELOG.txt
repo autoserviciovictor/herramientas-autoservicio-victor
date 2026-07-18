@@ -1,4 +1,4 @@
-V6.1.11 Beta
+V6.2.0 Beta
 - Notificación de nuevo vencimiento y alertas a 15, 7, 3, 1 día y vencido.
 - Eliminación de vencimientos, historial y registro técnico al cumplirse 7 días de vencido.
 - Instalación guiada para iPhone/iPad.

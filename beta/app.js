@@ -339,6 +339,8 @@ function cambiarTabVencimientos(tab) {
     const actual = titulos[vencTabActual] || titulos.cargar;
     if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
     if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
+    if ($("brandHeaderTitulo")) $("brandHeaderTitulo").textContent = actual[0];
+    if ($("brandHeaderSubtitulo")) $("brandHeaderSubtitulo").textContent = actual[1];
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     busquedaVencimientos = "";
     filtroVencimientos = "todos";
