@@ -4,6 +4,7 @@ const btnInstalar = document.getElementById('btnInstalarApp');
 const textoInstalacion = document.getElementById('estadoInstalacionApp');
 const iosModal = document.getElementById('iosInstallModal');
 const iosWarning = document.getElementById('iosInstallBrowserWarning');
+const installCard = document.getElementById('pwaInstallCard');
 
 function estaInstalada() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -35,6 +36,7 @@ iosModal?.addEventListener('click', e => { if (e.target === iosModal) cerrarGuia
 
 function actualizarEstadoInstalacion() {
   if (!btnInstalar || !textoInstalacion) return;
+  installCard?.classList.toggle('oculto', estaInstalada());
   if (estaInstalada()) {
     btnInstalar.disabled = true;
     btnInstalar.textContent = '✓ Aplicación instalada';
@@ -91,7 +93,7 @@ if ('serviceWorker' in navigator) {
   }
   window.addEventListener('load', async () => {
     try {
-      const registro = await navigator.serviceWorker.register('./service-worker.js?v=6112-entrega1', { scope: './', updateViaCache: 'none' });
+      const registro = await navigator.serviceWorker.register('./service-worker.js?v=6113-entrega2', { scope: './', updateViaCache: 'none' });
       await comprobarActualizacionSilenciosa(registro);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacionSilenciosa(registro); });
     } catch (error) {

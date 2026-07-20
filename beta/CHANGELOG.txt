@@ -1,4 +1,4 @@
-V6.1.12 Beta - Entrega 1
+V6.1.13 Beta - Entrega 1
 
 - Login renovado con iconos y placeholders dentro de los campos.
 - Opcion Recordarme para conservar el nombre de usuario en el dispositivo.

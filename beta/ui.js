@@ -243,8 +243,20 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     else elementos.resumenProductos.textContent = consulta ? `Resultados para “${consulta}”` : `${total} productos`;
 
     if (!lista.length) {
-        const mensaje = tab === "cargados" ? "Todavía no hay productos con stock cargado." : "No se encontraron productos.";
-        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>${mensaje}</strong></div>`;
+        if (tab === "cargados") {
+            elementos.resultadoBusqueda.innerHTML = `
+                <div class="result-empty result-empty-large">
+                    <span class="empty-state-icon" aria-hidden="true">📦</span>
+                    <strong>Todavía no hay productos con stock cargado</strong>
+                    <small>Los productos que cargues aparecerán acá.</small>
+                </div>`;
+        } else {
+            elementos.resultadoBusqueda.innerHTML = `
+                <div class="result-empty">
+                    <strong>No se encontraron productos</strong>
+                    <small>Probá con otro nombre o código.</small>
+                </div>`;
+        }
         return;
     }
 
