@@ -91,7 +91,7 @@ if ('serviceWorker' in navigator) {
   }
   window.addEventListener('load', async () => {
     try {
-      const registro = await navigator.serviceWorker.register('./service-worker.js?v=6200', { scope: './', updateViaCache: 'none' });
+      const registro = await navigator.serviceWorker.register('./service-worker.js?v=6112-entrega1', { scope: './', updateViaCache: 'none' });
       await comprobarActualizacionSilenciosa(registro);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacionSilenciosa(registro); });
     } catch (error) {

@@ -1,3 +1,4 @@
+import { APP_VERSION } from "./config.js?v=6112-entrega1";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -18,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=615-notificaciones";
+} from "./excel.js?v=6112-entrega1";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=615-notificaciones";
+} from "./scanner.js?v=6112-entrega1";
 
 import {
     ocultarSplash,
@@ -46,10 +47,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=615-notificaciones";
+} from "./ui.js?v=6112-entrega1";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=615-notificaciones";
-import { coincideBusqueda } from "./search.js?v=615-notificaciones";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=6112-entrega1";
+import { coincideBusqueda } from "./search.js?v=6112-entrega1";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -186,6 +187,7 @@ async function inicializar() {
     limpiarProducto();
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
+    actualizarVersionConfiguracion();
     configurarEventos();
     configurarFechasMinimasVencimientos();
     inicializarReposicion();
@@ -234,6 +236,11 @@ async function entrarPantalla(nombre, opciones = {}) {
 
 window.AutoservicioNavigate = entrarPantalla;
 
+function actualizarVersionConfiguracion() {
+    const version = document.getElementById("settingsAppVersion");
+    if (version) version.textContent = APP_VERSION;
+}
+
 function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => entrarPantalla(btn.dataset.pantalla));
@@ -243,7 +250,7 @@ function configurarEventos() {
         btn.addEventListener("click", () => entrarPantalla(btn.dataset.modulo));
     });
 
-    elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
+    elementos.btnActualizarProductos?.addEventListener("click", cargarProductos);
     elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
     elementos.btnCerrarScanner.addEventListener("click", () => cerrarScanner(true));
     elementos.btnCodigoManualToggle.addEventListener("click", alternarCargaManual);
@@ -262,9 +269,9 @@ function configurarEventos() {
     elementos.btnMenosCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, -1, 1));
     elementos.btnMasCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, 1, 1));
 
-    elementos.checkSonidos.addEventListener("change", actualizarPreferenciasFeedback);
-    elementos.checkVibracion.addEventListener("change", actualizarPreferenciasFeedback);
-    elementos.btnReiniciar.addEventListener("click", manejarReinicio);
+    elementos.checkSonidos?.addEventListener("change", actualizarPreferenciasFeedback);
+    elementos.checkVibracion?.addEventListener("change", actualizarPreferenciasFeedback);
+    elementos.btnReiniciar?.addEventListener("click", manejarReinicio);
 
     elementos.buscadorProducto.addEventListener("input", refrescarProductos);
     elementos.btnVolverProductos.addEventListener("click", cancelarEdicionProducto);
@@ -339,8 +346,6 @@ function cambiarTabVencimientos(tab) {
     const actual = titulos[vencTabActual] || titulos.cargar;
     if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
     if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
-    if ($("brandHeaderTitulo")) $("brandHeaderTitulo").textContent = actual[0];
-    if ($("brandHeaderSubtitulo")) $("brandHeaderSubtitulo").textContent = actual[1];
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     busquedaVencimientos = "";
     filtroVencimientos = "todos";

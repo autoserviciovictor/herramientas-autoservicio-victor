@@ -1,7 +1,8 @@
-import { API_BASE_URL } from "./config.js?v=615-notificaciones";
+import { API_BASE_URL } from "./config.js?v=6112-entrega1";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
+const REMEMBER_USER_KEY = "autoservicio_login_usuario_recordado";
 const originalFetch = window.fetch.bind(window);
 let token = localStorage.getItem(TOKEN_KEY) || "";
 let usuarioActual = null;
@@ -150,20 +151,23 @@ function cerrarSesion(mostrar = true) {
 async function iniciarSesion() {
   const usuario = $("loginUsuario")?.value.trim();
   const password = $("loginPassword")?.value || "";
+  const recordar = Boolean($("loginRecordarme")?.checked);
   const boton = $("btnLoginIngresar");
   const estado = $("loginEstado");
   if (!usuario || !password) { if (estado) estado.textContent = "Ingresá usuario y contraseña"; return; }
-  if (boton) boton.disabled = true;
+  if (boton) { boton.disabled = true; boton.classList.add("cargando"); }
   if (estado) { estado.textContent = "Ingresando…"; estado.className = "login-status"; }
   try {
     const r = await originalFetch(`${API_BASE_URL}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ usuario, password }) });
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo ingresar");
     guardarSesion(data.token, data.usuario);
+    if (recordar) localStorage.setItem(REMEMBER_USER_KEY, usuario);
+    else localStorage.removeItem(REMEMBER_USER_KEY);
     if ($("loginPassword")) $("loginPassword").value = "";
   } catch (error) {
     if (estado) { estado.textContent = error.message; estado.className = "login-status error"; }
-  } finally { if (boton) boton.disabled = false; }
+  } finally { if (boton) { boton.disabled = false; boton.classList.remove("cargando"); } }
 }
 
 async function validarSesion() {
@@ -207,6 +211,9 @@ window.AutoservicioAuth = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  const usuarioRecordado = localStorage.getItem(REMEMBER_USER_KEY) || "";
+  if ($("loginUsuario") && usuarioRecordado) $("loginUsuario").value = usuarioRecordado;
+  if ($("loginRecordarme")) $("loginRecordarme").checked = Boolean(usuarioRecordado);
   $("btnLoginIngresar")?.addEventListener("click", iniciarSesion);
   $("loginUsuario")?.addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword")?.focus(); });
   $("loginPassword")?.addEventListener("keydown", e => { if (e.key === "Enter") iniciarSesion(); });

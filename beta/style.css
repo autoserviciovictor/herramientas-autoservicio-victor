@@ -2680,176 +2680,41 @@ body.modal-abierto{overflow:hidden}
 .ios-install-steps li + li { margin-top: 8px; }
 .ios-install-warning { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff3cd; color: #6b5200; font-size: .92rem; }
 
-/* =========================================================
-   V6.2.0 — UI POLISH / REDISEÑO VISUAL CONSOLIDADO
-   Mantiene la funcionalidad y compacta toda la experiencia.
-   ========================================================= */
-:root {
-  --bg: #fbfaf7;
-  --card: #ffffff;
-  --text: #181a1d;
-  --muted: #717780;
-  --brand: #ef2f3a;
-  --brand-dark: #d9232e;
-  --brand-soft: #fff1f2;
-  --primary: #16864b;
-  --primary-dark: #0f703e;
-  --primary-soft: #edf9f2;
-  --border: #ebe9e5;
-  --shadow: 0 5px 16px rgba(24, 28, 33, .055);
-  --shadow-lg: 0 12px 30px rgba(24, 28, 33, .075);
-  --radius: 15px;
-}
-html, body { background: #f4f2ee; }
-body { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
-.app { max-width: 480px; background: var(--bg); padding-bottom: 74px; }
+/* === V6.1.12 Beta - Entrega 1: login, encabezado, menú y configuración === */
+.brand-header{min-height:66px!important;padding:8px 58px!important}
+.brand-header-text{display:flex!important;align-items:center!important;justify-content:center!important}
+.brand-header-text span{font-size:1.35rem!important;line-height:1!important}
+.brand-header-text small{display:none!important}
 
-/* Header compacto y dinámico */
-.brand-header {
-  position: sticky; top: 0; z-index: 80;
-  min-height: 70px; padding: 10px 58px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #f4333d, #eb2733);
-  box-shadow: 0 3px 10px rgba(213, 27, 38, .14);
-}
-.brand-header-text { display:flex; flex-direction:column; align-items:center; min-width:0; }
-.brand-header-text span { font-size: 18px; line-height:1.05; letter-spacing:-.25px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px; }
-.brand-header-text small { font-size: 11px; margin-top:3px; opacity:.95; }
-.brand-menu-btn,.brand-back-btn {
-  position:absolute; top:13px; width:44px; height:44px; border:0; border-radius:13px;
-  background:#fff; color:#202226; box-shadow:0 4px 12px rgba(0,0,0,.12); font-size:23px;
-}
-.brand-menu-btn { right:14px; }
-.brand-back-btn { left:14px; font-size:32px; }
-.module-page-header { display:none !important; }
-.pantalla { padding: 14px 14px 0; }
+.login-card{gap:13px!important}
+.login-card label:not(.login-remember){display:none!important}
+.login-input-wrap{position:relative;width:100%;display:flex;align-items:center}
+.login-input-wrap .login-input-icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);z-index:2;font-size:1.15rem;filter:grayscale(1);opacity:.62;pointer-events:none;transition:.18s ease}
+.login-input-wrap input{width:100%;height:58px!important;padding:0 16px 0 52px!important;border:1px solid #d9d9d9!important;border-radius:17px!important;background:#fafafa!important;box-shadow:none!important;font-size:1rem!important;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.login-input-wrap:focus-within input{border-color:#ef393f!important;background:#fff!important;box-shadow:0 0 0 4px rgba(239,57,63,.11)!important;outline:none!important}
+.login-input-wrap:focus-within .login-input-icon{opacity:1;filter:none}
+.login-remember{display:flex!important;align-items:center;gap:10px;width:max-content;margin:0 0 2px 3px!important;color:#555!important;font-size:.94rem!important;font-weight:700!important;cursor:pointer}
+.login-remember input{appearance:none;-webkit-appearance:none;width:20px!important;height:20px!important;padding:0!important;margin:0!important;border:1.5px solid #c9c9c9!important;border-radius:6px!important;background:#fff!important;display:grid;place-content:center}
+.login-remember input::before{content:"✓";font-size:14px;font-weight:900;color:#fff;transform:scale(0);transition:.12s ease}
+.login-remember input:checked{background:#ef393f!important;border-color:#ef393f!important}
+.login-remember input:checked::before{transform:scale(1)}
+.login-button{display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 18px rgba(197,43,49,.22);transition:transform .12s ease,box-shadow .12s ease}
+.login-button:active{transform:scale(.985);box-shadow:0 4px 10px rgba(197,43,49,.18)}
+.login-button-spinner{display:none;width:18px;height:18px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:login-spin .7s linear infinite}
+.login-button.cargando .login-button-spinner{display:inline-block}.login-button.cargando span{opacity:.85}
+@keyframes login-spin{to{transform:rotate(360deg)}}
 
-/* Login limpio y fiel al concepto aprobado */
-.login-overlay { background:#fff; overflow:hidden; }
-.login-overlay::after {
-  content:""; position:absolute; left:-8%; right:-8%; bottom:-9vh; height:25vh;
-  background:#ef303b; border-radius:50% 50% 0 0 / 24% 24% 0 0;
-}
-.login-card {
-  width:min(92vw,420px); max-height:none; overflow:visible; padding:42px 28px 34px;
-  background:transparent; border:0; box-shadow:none; border-radius:0; z-index:2;
-}
-.login-brand-logo { width:min(78%,310px); max-height:180px; object-fit:contain; margin:0 auto 20px; }
-.login-card h1 { font-size:35px; margin:0 0 7px; letter-spacing:-1px; }
-.login-card p { margin:0 0 30px; font-size:18px; }
-.login-card label { font-size:14px; margin:13px 0 7px; }
-.login-card input { height:49px; border-radius:13px; border:1px solid #e3e1df; background:#fff; box-shadow:none; font-size:16px; }
-.login-button { height:50px; margin-top:25px; border-radius:13px; background:#ef303b; box-shadow:none; }
+.user-dropdown{top:calc(100% + 8px)!important;right:10px!important;left:auto!important;width:min(245px,calc(100vw - 24px))!important;padding:10px!important;border-radius:17px!important;box-shadow:0 14px 34px rgba(61,31,33,.2)!important;animation:user-menu-in .15s ease-out}
+@keyframes user-menu-in{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
+.user-dropdown-profile{padding:7px 7px 10px!important;gap:9px!important}
+.user-dropdown-avatar{width:38px!important;height:38px!important;border-radius:12px!important;font-size:1.05rem!important}
+.user-dropdown-profile strong{font-size:.94rem!important}.user-dropdown-profile small{font-size:.72rem!important}
+.user-dropdown-action{padding:10px 11px!important;margin-top:7px!important;border-radius:12px!important;gap:10px!important}
+.user-dropdown-action>span{font-size:1.1rem!important}.user-dropdown-action>div{display:contents!important}.user-dropdown-action strong{font-size:.9rem!important}.user-dropdown-action small{display:none!important}
+@media(max-width:520px){.user-dropdown{right:9px!important;left:auto!important;width:min(245px,calc(100vw - 18px))!important}}
 
-/* Inicio */
-.pantalla-inicio { padding-top:20px; }
-.home-welcome { margin:3px 3px 16px; }
-.home-welcome h1 { margin:0; font-size:20px; letter-spacing:-.35px; }
-.home-welcome p { margin:5px 0 0; color:var(--muted); font-size:13px; }
-.module-grid { gap:10px; }
-.module-card {
-  min-height:118px; border-radius:14px; box-shadow:var(--shadow); border:1px solid var(--border); gap:5px;
-  transition:transform .12s ease, box-shadow .12s ease;
-}
-.module-card:active { transform:scale(.975); }
-.module-icon { font-size:34px; }
-.module-card strong { font-size:15px; }
-.module-card small { font-size:11px; }
-.module-vencimientos { background:#fff; }
-.home-status { margin-top:12px; padding:11px 13px; border-radius:13px; font-size:13px; box-shadow:none; }
-.home-status::after { content:"Todos los servicios funcionando correctamente"; display:block; font-size:10px; font-weight:600; color:#55715f; position:absolute; }
-.home-status { position:relative; padding-bottom:25px; }
-.home-status strong { align-self:flex-start; }
-
-/* Bloques generales más compactos */
-.inventory-status-strip,.inventory-location-card,.scan-panel,.bottom-info,.search-card,.settings-card,.admin-card,.venc-actions-card,.venc-list-card,.venc-form-card,.repos-card,.repos-list-card {
-  border-radius:14px !important; box-shadow:var(--shadow) !important; border:1px solid var(--border) !important;
-}
-.inventory-status-strip { margin-bottom:10px; padding:11px 13px; background:#fff; }
-.inventory-status-strip span:first-child::before { content:"🟩 "; }
-.inventory-location-card { padding:12px; margin-bottom:10px; }
-.inventory-location-card > span { font-size:13px; margin-bottom:9px; }
-.location-grid { gap:8px; }
-.location-btn { min-height:45px; border-radius:11px; font-size:14px; box-shadow:none; }
-.scan-panel { padding:10px; margin-bottom:10px; }
-.scan-open-btn { border-radius:11px; padding:13px; background:var(--brand); color:#fff; font-size:15px; }
-.manual-link-btn { margin-top:7px; border:1px solid var(--border); border-radius:11px; background:#fff; padding:11px; color:#30343a; }
-.bottom-info { padding:10px; gap:8px; }
-.bottom-info > div { border-radius:11px; padding:10px 8px; }
-.bottom-info span { font-size:11px; }
-.bottom-info strong { font-size:23px; }
-
-/* Productos y cargados: filas densas */
-.header-simple,.header-app,.header-edit { display:none !important; }
-.search-card { padding:8px; margin-bottom:8px; }
-.search-card input,.venc-search input,.repos-search input { border:0 !important; background:#fff !important; padding:11px 12px 11px 38px !important; min-height:42px; font-size:14px !important; }
-.list-summary { font-size:12px; margin:8px 2px; }
-.result-list { gap:0; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); }
-.result-item,.loaded-item {
-  margin:0 !important; border:0 !important; border-bottom:1px solid #efede9 !important; border-radius:0 !important;
-  box-shadow:none !important; padding:11px 13px !important; min-height:66px;
-}
-.result-item:last-child,.loaded-item:last-child { border-bottom:0 !important; }
-.result-item h3,.loaded-item h3 { font-size:14px !important; margin:0 0 4px !important; line-height:1.25; }
-.result-item p,.loaded-item p { font-size:11px !important; margin:0 !important; color:#7d8289; }
-.result-item::after,.loaded-item::after { font-size:20px; color:#92979d; }
-.empty-list-card { min-height:265px; border-radius:14px !important; box-shadow:var(--shadow); }
-
-/* Vencimientos */
-.venc-resumen { gap:8px; margin:0 0 10px; }
-.venc-resumen-card { min-height:77px; border-radius:12px; padding:11px; box-shadow:none; }
-.venc-resumen-card strong { font-size:25px; }
-.venc-list-head { margin:10px 0 7px; }
-.venc-list-head h2 { font-size:17px; }
-.venc-list { gap:8px; }
-.venc-item { border-radius:13px !important; box-shadow:var(--shadow) !important; padding:12px !important; margin-bottom:8px !important; }
-.venc-list-proximos .venc-item-proximo { border-width:1px 1px 1px 3px !important; }
-.venc-proximo-main strong,.venc-vencido-body strong { font-size:14px !important; }
-.venc-code { font-size:10px !important; padding-left:0 !important; }
-.venc-proximo-grid span,.venc-vencido-grid span { border-radius:9px !important; padding:8px !important; }
-.venc-date-pill,.venc-state-pill { font-size:10px !important; padding:6px 8px !important; }
-.venc-filter-toolbar,.venc-filtros { gap:5px; }
-.venc-filtros button { padding:7px 10px; border-radius:9px; font-size:10px; }
-.venc-offer-top { font-size:9px; padding:4px 7px; }
-
-/* Reposición */
-.repos-owner,.repos-list-switch { border-radius:12px !important; }
-.repos-list-switch button { min-height:42px; border-radius:10px !important; font-size:13px; }
-.repos-card { padding:10px !important; }
-.repos-list-card { padding:11px !important; }
-.repos-list-item { min-height:60px; border-radius:11px !important; box-shadow:none !important; border:1px solid var(--border) !important; }
-
-/* Admin y configuración */
-.admin-hero { border-radius:14px !important; padding:14px !important; box-shadow:var(--shadow); }
-.admin-tabs { gap:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; }
-.admin-tab { border-radius:0 !important; min-height:42px; font-size:12px; }
-.admin-section-card { border-radius:14px !important; padding:13px !important; box-shadow:var(--shadow) !important; }
-.admin-user-row { padding:10px !important; min-height:62px; border-radius:11px !important; }
-.settings-card { padding:13px !important; margin-bottom:9px !important; }
-.switch-row { min-height:52px; padding:8px 0; }
-.setting-btn { border-radius:11px !important; min-height:44px; }
-
-/* Modal de edición */
-.venc-modal-card,.modal-card,.confirm-modal-card { border-radius:20px !important; padding:19px !important; max-height:88vh; }
-.venc-modal-card h2 { font-size:23px !important; }
-.venc-qty-box { border-radius:12px !important; padding:10px !important; }
-.venc-qty-control button,.quantity-control button { border-radius:11px !important; }
-
-/* Navegación inferior */
-.bottom-nav,.venc-bottom-nav,.repos-bottom-nav {
-  height:66px; padding:5px 8px calc(5px + env(safe-area-inset-bottom));
-  background:rgba(255,255,255,.96); border-top:1px solid #ebe9e5; box-shadow:0 -3px 12px rgba(0,0,0,.05);
-}
-.nav-btn,.venc-bottom-nav button,.repos-bottom-nav button { border-radius:11px !important; font-size:10px !important; gap:2px !important; }
-.nav-btn span,.venc-bottom-nav button span,.repos-bottom-nav button span { font-size:19px !important; }
-.nav-btn.activo,.venc-bottom-nav button.activo,.repos-bottom-nav button.activo { background:transparent !important; color:var(--brand) !important; }
-
-/* Desktop */
-@media (min-width: 760px) {
-  .app { max-width:980px; }
-  .pantalla { padding:18px 22px 0; }
-  .module-grid { grid-template-columns:repeat(4,1fr); }
-  .module-card { min-height:140px; }
-  #pantallaInventario { max-width:760px; margin:0 auto; }
-  #pantallaProductos,#pantallaAdmin,#pantallaAjustes { max-width:900px; margin:0 auto; }
-}
+body.en-ajustes .module-page-header p{display:none!important}
+.settings-preferences-card .switch-row:last-child{border-bottom:0!important}
+.settings-version-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px!important}
+.settings-version-card span{font-weight:700;color:#6d6d68}.settings-version-card strong{color:#2b2929;font-size:1rem}
+.notification-settings-card .setting-btn{white-space:nowrap}

@@ -52,10 +52,22 @@ export function ocultarSplash() {
 
 function actualizarEncabezadoModulo(nombre) {
     const tituloMarca = document.getElementById("brandHeaderTitulo");
-    const subtituloMarca = document.getElementById("brandHeaderSubtitulo");
     const tituloPagina = document.getElementById("modulePageTitle");
     const subtituloPagina = document.getElementById("modulePageSubtitle");
     const volver = document.getElementById("brandBackBtn");
+
+    const modulos = {
+        inicio: "Autoservicio",
+        inventario: "Inventario",
+        productos: "Inventario",
+        cargados: "Inventario",
+        editarProducto: "Inventario",
+        ajustes: "Configuración",
+        vencimientos: "Vencimientos",
+        anotar: "Lista",
+        admin: "Administrador"
+    };
+    if (tituloMarca) tituloMarca.textContent = modulos[nombre] || "Autoservicio";
 
     const encabezados = {
         inicio: ["Herramientas", "Elegí el módulo que querés usar"],
@@ -63,16 +75,17 @@ function actualizarEncabezadoModulo(nombre) {
         productos: ["Productos", "Lista completa"],
         cargados: ["Cargados", "Productos con stock"],
         editarProducto: ["Editar producto", "Inventario"],
-        ajustes: ["Configuración", "Ajustes de la aplicación"],
+        ajustes: ["Configuración", ""],
         vencimientos: ["Vencimientos", "Control de fechas"],
         anotar: ["Lista", "Agregar productos"],
         admin: ["Administrador", "Usuarios e historial"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
-    if (tituloMarca) tituloMarca.textContent = nombre === "inicio" ? "Autoservicio" : textoTitulo;
-    if (subtituloMarca) subtituloMarca.textContent = nombre === "inicio" ? "Herramientas" : textoSubtitulo;
     if (tituloPagina) tituloPagina.textContent = textoTitulo;
-    if (subtituloPagina) subtituloPagina.textContent = textoSubtitulo;
+    if (subtituloPagina) {
+        subtituloPagina.textContent = textoSubtitulo;
+        subtituloPagina.hidden = !textoSubtitulo;
+    }
 
     if (volver) {
         const destinos = { editarProducto: "productos" };
@@ -83,10 +96,6 @@ function actualizarEncabezadoModulo(nombre) {
 
 export function cambiarPantalla(nombre) {
     actualizarEncabezadoModulo(nombre);
-    const homeNombre = document.getElementById("homeUsuarioNombre");
-    const menuNombre = document.getElementById("menuSesionNombre");
-    if (homeNombre && menuNombre?.textContent) homeNombre.textContent = menuNombre.textContent;
-
     const pantallaReal = nombre === "cargados" ? "productos" : nombre;
     Object.entries(elementos.pantallas).forEach(([clave, pantalla]) => {
         if (!pantalla) return;

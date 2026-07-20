@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6200">
+    <link rel="stylesheet" href="style.css?v=6112-entrega1">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -24,19 +24,27 @@
     <img class="login-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
     <p>Ingresá para continuar</p>
-    <label for="loginUsuario">Usuario</label>
-    <input id="loginUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario">
-    <label for="loginPassword">Contraseña</label>
-    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña">
+    <div class="login-input-wrap">
+      <span class="login-input-icon" aria-hidden="true">👤</span>
+      <input id="loginUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario" aria-label="Usuario">
+    </div>
+    <div class="login-input-wrap">
+      <span class="login-input-icon" aria-hidden="true">🔒</span>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
+    </div>
+    <label class="login-remember">
+      <input id="loginRecordarme" type="checkbox">
+      <span>Recordarme</span>
+    </label>
     <div id="loginEstado" class="login-status"></div>
-    <button id="btnLoginIngresar" type="button" class="login-button">Ingresar</button>
+    <button id="btnLoginIngresar" type="button" class="login-button"><span>Ingresar</span><i class="login-button-spinner" aria-hidden="true"></i></button>
   </div>
 </div>
 
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.2.0 Beta</p>
+    <p>Herramientas V6.1.12 Beta</p>
 </div>
 
 <div class="app">
@@ -46,15 +54,14 @@
         <button id="brandBackBtn" class="brand-back-btn oculto" data-modulo="inicio" type="button" aria-label="Volver">‹</button>
         <div class="brand-header-text">
             <span id="brandHeaderTitulo">Autoservicio</span>
-            <small id="brandHeaderSubtitulo">Herramientas</small>
         </div>
         <div id="userDropdown" class="user-dropdown oculto" aria-hidden="true">
             <div class="user-dropdown-profile">
                 <span class="user-dropdown-avatar">👤</span>
                 <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Repositor</small></div>
             </div>
-            <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><div><strong>Configuración</strong><small>Ajustes de la aplicación</small></div></button>
-            <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><div><strong>Cerrar sesión</strong><small>Salir de este usuario</small></div></button>
+            <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><strong>Configuración</strong></button>
+            <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><strong>Cerrar sesión</strong></button>
         </div>
     </div>
 
@@ -64,10 +71,6 @@
     </section>
 
     <main id="pantallaInicio" class="pantalla pantalla-inicio activa">
-        <section class="home-welcome">
-            <h1>Hola, <span id="homeUsuarioNombre">Usuario</span></h1>
-            <p>¿Qué módulo querés usar hoy?</p>
-        </section>
         <section class="module-grid">
             <button type="button" class="module-card module-inventario" data-modulo="inventario">
                 <span class="module-icon">📦</span>
@@ -96,7 +99,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.2.0 Beta</strong>
+            <strong>V6.1.12 Beta</strong>
         </section>
     </main>
 
@@ -224,49 +227,28 @@
     </main>
 
     <main id="pantallaAjustes" class="pantalla">
-        <header class="header-simple">
-            <h1>Ajustes</h1>
-            <p>Configuración del inventario</p>
-        </header>
-
-        <section class="settings-card">
-            <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
-            <button type="button" id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
-        </section>
-
-        <section class="settings-card">
+        <section class="settings-card settings-preferences-card">
             <div class="switch-row">
-                <div><strong>Sonidos</strong><span>Confirmación al escanear y guardar</span></div>
+                <div><strong>Sonidos</strong><span>Reproducir sonido al escanear y guardar</span></div>
                 <input type="checkbox" id="checkSonidos" checked>
             </div>
             <div class="switch-row">
-                <div><strong>Vibración</strong><span>Vibración corta al confirmar</span></div>
+                <div><strong>Vibración</strong><span>Vibrar al confirmar una acción</span></div>
                 <input type="checkbox" id="checkVibracion" checked>
             </div>
         </section>
 
-
         <section class="settings-card notification-settings-card">
             <div class="pwa-install-copy">
-                <strong>Notificaciones de vencimientos</strong>
+                <strong>Permitir notificaciones</strong>
                 <span id="estadoNotificaciones">Preparando notificaciones…</span>
             </div>
-            <button type="button" id="btnActivarNotificaciones" class="setting-btn">Activar notificaciones</button>
+            <button type="button" id="btnActivarNotificaciones" class="setting-btn">Permitir notificaciones</button>
         </section>
 
-        <section class="settings-card pwa-install-card">
-            <div class="pwa-install-copy">
-                <strong>Instalar aplicación</strong>
-                <span id="estadoInstalacionApp">Preparando instalación...</span>
-            </div>
-            <button type="button" id="btnInstalarApp" class="setting-btn">⬇ Instalar aplicación</button>
-        </section>
-
-
-
-        <section class="settings-card danger-zone">
-            <button type="button" id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
-            <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
+        <section class="settings-card settings-version-card">
+            <span>Versión instalada</span>
+            <strong id="settingsAppVersion">6.1.12 Beta</strong>
         </section>
     </main>
 
@@ -509,7 +491,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.2.0 Beta</span>
+            <span id="adminVersion" class="admin-version">V6.1.12 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -566,7 +548,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">6.1.10 Beta</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.1.12 Beta</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
@@ -676,13 +658,13 @@
 
 </div>
 
-<script src="./release-channel.js?v=6111"></script>
-<script src="./pwa.js?v=6111" defer></script>
-<script type="module" src="./auth.js?v=6111"></script>
+<script src="./release-channel.js?v=6112-entrega1"></script>
+<script src="./pwa.js?v=6112-entrega1" defer></script>
+<script type="module" src="./auth.js?v=6112-entrega1"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6111"></script>
-<script type="module" src="./notifications.js?v=6111"></script>
-<script type="module" src="./app.js?v=6111"></script>
+<script type="module" src="./admin.js?v=6112-entrega1"></script>
+<script type="module" src="./notifications.js?v=6112-entrega1"></script>
+<script type="module" src="./app.js?v=6112-entrega1"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
