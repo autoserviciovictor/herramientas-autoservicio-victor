@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=61161-quota-fix";
+import { APP_VERSION } from "./config.js?v=6118-precios";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=61161-quota-fix";
+} from "./excel.js?v=6118-precios";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=61161-quota-fix";
+} from "./scanner.js?v=6118-precios";
 
 import {
     ocultarSplash,
@@ -47,10 +47,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=61161-quota-fix";
+} from "./ui.js?v=6118-precios";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=61161-quota-fix";
-import { coincideBusqueda } from "./search.js?v=61161-quota-fix";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=6118-precios";
+import { coincideBusqueda } from "./search.js?v=6118-precios";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -215,6 +215,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     }
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
+    if (nombre !== "precios") window.PreciosModule?.desactivar?.();
 
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
@@ -234,6 +235,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     }
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
+    if (nombre === "precios") await window.PreciosModule?.activar?.();
     if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) { cambiarPantalla("inicio"); }
 }
 
