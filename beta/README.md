@@ -1,1 +1,1 @@
-Autoservicio V6.1.16.1 Beta — Entrega 4: Lista y pulido general.
+Autoservicio V6.1.17 Beta — Contadores de vencimientos por rango y cantidad destacada.

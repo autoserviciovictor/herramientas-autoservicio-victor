@@ -3103,3 +3103,127 @@ body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(2,1fr)!important}
 .repo-check{touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background-color .12s ease,color .12s ease,border-color .12s ease,transform .1s ease}
 .repo-check:active{transform:scale(.9)}
 .repo-check.sincronizando{opacity:.72}
+
+/* === V6.1.17 Beta · Contadores por rango y cantidad destacada === */
+#pantallaVencimientos .venc-resumen{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:9px!important;
+}
+#pantallaVencimientos .venc-resumen-card{
+  width:100%!important;
+  min-height:66px!important;
+  display:grid!important;
+  grid-template-columns:minmax(82px,1fr) minmax(78px,.72fr) minmax(82px,.78fr)!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:10px 13px!important;
+  border-radius:15px!important;
+  text-align:left!important;
+}
+.venc-resumen-rango{
+  font-size:15px!important;
+  font-weight:950!important;
+  color:inherit!important;
+}
+.venc-resumen-datos,
+.venc-resumen-oferta{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:0;
+  line-height:1.05;
+}
+.venc-resumen-datos strong,
+.venc-resumen-oferta strong{
+  font-size:23px!important;
+  line-height:1!important;
+}
+.venc-resumen-datos small,
+.venc-resumen-oferta small{
+  display:block!important;
+  margin-top:4px!important;
+  font-size:10px!important;
+  font-weight:850!important;
+  color:currentColor!important;
+  opacity:.78!important;
+  white-space:nowrap;
+}
+.venc-resumen-oferta{
+  padding-left:10px;
+  border-left:1px solid currentColor;
+  border-left-color:rgba(0,0,0,.12);
+}
+.venc-resumen-oferta:before{
+  content:"Oferta";
+  display:block;
+  font-size:9px;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:3px;
+  opacity:.72;
+}
+
+/* Próximos / vencidos: cantidad más visible sin agrandar demasiado la tarjeta */
+.venc-card-summary{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  min-height:52px;
+  padding:8px 10px 8px 12px;
+  border-radius:13px;
+  background:#f7f7f8;
+}
+.venc-card-date{
+  color:#74777a;
+  font-size:12px;
+  font-weight:750;
+}
+.venc-card-qty{
+  display:inline-flex!important;
+  align-items:baseline!important;
+  justify-content:center!important;
+  gap:5px!important;
+  min-width:92px;
+  padding:7px 10px;
+  border-radius:11px;
+  background:#fff;
+  border:1px solid #eadfda;
+  color:#202124;
+  white-space:nowrap;
+}
+.venc-card-qty strong{
+  font-size:25px!important;
+  line-height:1!important;
+  font-weight:950!important;
+}
+.venc-card-qty small{
+  font-size:10px!important;
+  font-weight:850!important;
+  color:#6f7478!important;
+}
+.venc-list-proximos .venc-item-proximo,
+.venc-list-vencidos .venc-item-vencido-registro{
+  gap:8px!important;
+  padding:13px!important;
+}
+.venc-days-hero{
+  font-size:22px!important;
+  padding:11px 9px!important;
+}
+
+@media(max-width:360px){
+  #pantallaVencimientos .venc-resumen-card{
+    grid-template-columns:76px 1fr 1fr!important;
+    padding:9px 10px!important;
+  }
+  .venc-resumen-rango{font-size:14px!important}
+  .venc-resumen-datos strong,.venc-resumen-oferta strong{font-size:21px!important}
+  .venc-card-summary{padding-left:9px!important;gap:8px!important}
+  .venc-card-date{font-size:11px!important}
+  .venc-card-qty{min-width:82px;padding:7px 8px!important}
+  .venc-card-qty strong{font-size:22px!important}
+}

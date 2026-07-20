@@ -1,3 +1,8 @@
+V6.1.17 Beta
+- Contadores exclusivos 7/15/30/Vencidos con total de productos y cantidad en oferta.
+- Cantidad más visible en Próximos y Vencidos.
+- Mantiene corrección de cuota y velocidad de Mi lista.
+
 V6.1.16.1 Beta - Corrección Mi lista
 
 - Reduce drásticamente las lecturas a Google Sheets mediante caché del servidor.

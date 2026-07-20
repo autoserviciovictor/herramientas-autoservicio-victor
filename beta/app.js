@@ -1172,20 +1172,33 @@ function filtrarVencimientos() {
 }
 
 function renderResumenVencimientos() {
+    const contarRango = (bucket) => {
+        const items = vencimientosCache.filter(item => bucketVencimiento(item) === bucket);
+        return {
+            total: items.length,
+            oferta: items.filter(tieneOferta).length,
+        };
+    };
     const resumen = {
-        vencidos: vencimientosCache.filter(item => bucketVencimiento(item) === "vencidos").length,
-        siete: vencimientosCache.filter(item => bucketVencimiento(item) === "7").length,
-        quince: vencimientosCache.filter(item => bucketVencimiento(item) === "15").length,
-        treinta: vencimientosCache.filter(item => bucketVencimiento(item) === "30").length,
+        siete: contarRango("7"),
+        quince: contarRango("15"),
+        treinta: contarRango("30"),
+        vencidos: contarRango("vencidos"),
     };
     const el = elementos.vencResumen || $("vencResumen");
     if (!el) return;
-    el.innerHTML = `
-        <button type="button" class="venc-resumen-card venc-resumen-7" data-venc-resumen="7"><span>7 días</span><strong>${resumen.siete}</strong></button>
-        <button type="button" class="venc-resumen-card venc-resumen-15" data-venc-resumen="15"><span>15 días</span><strong>${resumen.quince}</strong></button>
-        <button type="button" class="venc-resumen-card venc-resumen-30" data-venc-resumen="30"><span>30 días</span><strong>${resumen.treinta}</strong></button>
-        <button type="button" class="venc-resumen-card venc-resumen-vencidos" data-venc-resumen="vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong></button>
-    `;
+    const fila = (clase, filtro, titulo, datos) => `
+        <button type="button" class="venc-resumen-card ${clase}" data-venc-resumen="${filtro}">
+            <span class="venc-resumen-rango">${titulo}</span>
+            <span class="venc-resumen-datos"><strong>${datos.total}</strong><small>productos</small></span>
+            <span class="venc-resumen-oferta"><strong>${datos.oferta}</strong><small>en oferta</small></span>
+        </button>`;
+    el.innerHTML = [
+        fila("venc-resumen-7", "7", "7 días", resumen.siete),
+        fila("venc-resumen-15", "15", "15 días", resumen.quince),
+        fila("venc-resumen-30", "30", "30 días", resumen.treinta),
+        fila("venc-resumen-vencidos", "vencidos", "Vencidos", resumen.vencidos),
+    ].join("");
 }
 
 function renderListadoVencimientos() {
@@ -1254,9 +1267,9 @@ function renderListadoVencimientos() {
                         <span class="venc-code">Código: ${codigo}</span>
                     </div>
                     <div class="venc-days-hero venc-vencido-hero">${estado}</div>
-                    <div class="venc-card-footer">
-                        <span>Fecha: ${fecha}</span>
-                        <b>Total: ${cantidad}</b>
+                    <div class="venc-card-summary">
+                        <span class="venc-card-date">Fecha: ${fecha}</span>
+                        <span class="venc-card-qty"><strong>${cantidad}</strong><small>${cantidad === 1 ? "unidad" : "unidades"}</small></span>
                     </div>
                 </article>
             `;
@@ -1272,9 +1285,9 @@ function renderListadoVencimientos() {
                     <span class="venc-code">Código: ${codigo}</span>
                 </div>
                 <div class="venc-days-hero ${clase}">${estado}</div>
-                <div class="venc-card-footer">
-                    <span>Fecha: ${fecha}</span>
-                    <b>Total: ${cantidad}</b>
+                <div class="venc-card-summary">
+                    <span class="venc-card-date">Fecha: ${fecha}</span>
+                    <span class="venc-card-qty"><strong>${cantidad}</strong><small>${cantidad === 1 ? "unidad" : "unidades"}</small></span>
                 </div>
                 <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>
             </article>
