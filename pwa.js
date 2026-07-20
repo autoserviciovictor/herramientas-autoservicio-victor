@@ -93,7 +93,7 @@ if ('serviceWorker' in navigator) {
   }
   window.addEventListener('load', async () => {
     try {
-      const registro = await navigator.serviceWorker.register('./service-worker.js?v=61161-quota-fix', { scope: './', updateViaCache: 'none' });
+      const registro = await navigator.serviceWorker.register('./service-worker.js?v=71-productos-source', { scope: './', updateViaCache: 'none' });
       await comprobarActualizacionSilenciosa(registro);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacionSilenciosa(registro); });
     } catch (error) {

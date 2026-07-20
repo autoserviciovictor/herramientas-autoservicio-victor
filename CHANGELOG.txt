@@ -1,3 +1,15 @@
+V7.1 Beta
+- Módulo Precios corregido e integrado al diseño de Inventario, Vencimientos y Lista.
+- Escáner reutiliza el enfoque y selección de cámara compartidos.
+- Búsqueda manual con hasta 5 coincidencias.
+- Último consultado rediseñado.
+
+V6.1.18 Beta
+- Nuevo módulo Precios en carpeta beta.
+- Escáner e ingreso manual por nombre o código.
+- Último consultado privado por dispositivo.
+- Catálogo completo con precios.
+
 V6.1.17 Beta
 - Contadores exclusivos 7/15/30/Vencidos con total de productos y cantidad en oferta.
 - Cantidad más visible en Próximos y Vencidos.
@@ -45,3 +57,10 @@ V6.1.16.1 Beta - Entrega 5
 - Últimos agregados utiliza la misma carga inmediata.
 - Marcar y desmarcar productos responde al primer toque sin esperar al servidor.
 - Los cambios de estado se sincronizan en cola para conservar el último toque realizado.
+
+
+V7.1 Beta - Fuente única de catálogo
+- Stock queda reservado exclusivamente al módulo Inventario.
+- Precios, Lista, Vencimientos y panel Administrador usan la hoja Productos.
+- La importación XLS agrega y actualiza únicamente Productos; Stock no se modifica.
+- La búsqueda manual de Vencimientos ahora usa el catálogo completo de Productos.

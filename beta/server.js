@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.8 Beta";
+const APP_VERSION = "7.1 Beta";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -478,11 +478,19 @@ app.use((req, res, next) => {
 
 app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
   try {
-    const [productos, vencimientos] = await Promise.all([obtenerProductos(), obtenerVencimientos()]);
+    // El panel general cuenta el catálogo maestro de la hoja Productos.
+    // La hoja Stock queda reservada exclusivamente para el módulo Inventario.
+    const [productosCatalogo, productosInventario, vencimientos] = await Promise.all([
+      obtenerProductosMaestros(),
+      obtenerProductos(),
+      obtenerVencimientos()
+    ]);
     res.json({
       ok: true,
       version: APP_VERSION,
-      productos: productos.length,
+      productos: productosCatalogo.length,
+      productosCatalogo: productosCatalogo.length,
+      productosInventario: productosInventario.length,
       vencimientos: vencimientos.length,
       servidor: "conectado"
     });

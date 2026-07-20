@@ -22,7 +22,7 @@ function limpiarTemporizadoresEnfoque() {
 }
 
 function detenerStreamsVideo() {
-    ["video", "videoVencimientos", "videoReposicion"].forEach(videoId => {
+    ["video", "videoVencimientos", "videoReposicion", "videoPrecios"].forEach(videoId => {
         const video = document.getElementById(videoId);
         const stream = video?.srcObject;
         if (stream?.getTracks) stream.getTracks().forEach(track => track.stop());

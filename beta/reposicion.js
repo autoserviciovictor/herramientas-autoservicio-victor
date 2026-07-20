@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=61161-quota-fix";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=61161-quota-fix";
-import { ordenarPorBusqueda } from "./search.js?v=61161-quota-fix";
+import { API_BASE_URL } from "./config.js?v=71-productos-source";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-productos-source";
+import { ordenarPorBusqueda } from "./search.js?v=71-productos-source";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

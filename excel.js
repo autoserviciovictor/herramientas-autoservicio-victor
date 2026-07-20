@@ -1,7 +1,9 @@
-import { API_BASE_URL } from "./config.js?v=61161-quota-fix";
-import { ordenarPorBusqueda } from "./search.js?v=61161-quota-fix";
+import { API_BASE_URL } from "./config.js?v=71-productos-source";
+import { ordenarPorBusqueda } from "./search.js?v=71-productos-source";
 
 let datos = [];
+let catalogoMaestro = [];
+let catalogoMaestroCargado = false;
 let contador = 0;
 let ultimosEscaneados = [];
 const CLAVE_MODIFICACIONES = "inventario_modificaciones_v1";
@@ -132,6 +134,35 @@ export async function cargarProductosDesdeServidor() {
     }));
 
     return datos.length;
+}
+
+
+export async function cargarCatalogoMaestroDesdeServidor({ forzar = false } = {}) {
+    if (catalogoMaestroCargado && !forzar) return catalogoMaestro.length;
+    const data = await pedirJson("/productos-maestro");
+    catalogoMaestro = (data.productos || []).map(producto => ({
+        filaGoogle: producto.filaGoogle,
+        codigo: normalizarTexto(producto.codigo),
+        articulo: normalizarTexto(producto.articulo) || "Sin descripción",
+        precio: Number(producto.precio) || 0
+    }));
+    catalogoMaestroCargado = true;
+    return catalogoMaestro.length;
+}
+
+export function buscarProductoMaestroLocalPorCodigo(codigoBuscado) {
+    const codigo = normalizarTexto(codigoBuscado);
+    const producto = catalogoMaestro.find(item => normalizarTexto(item.codigo) === codigo);
+    return producto ? { encontrado: true, producto } : { encontrado: false };
+}
+
+export function buscarProductosMaestrosPorTexto(texto, limite = 5) {
+    const consulta = String(texto || "").trim();
+    if (!consulta) return catalogoMaestro.slice(0, limite);
+    return ordenarPorBusqueda(catalogoMaestro, consulta, {
+        limite,
+        campos: ["articulo", "codigo"]
+    });
 }
 
 export async function sincronizarProductosDesdeServidor() {

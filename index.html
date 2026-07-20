@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6117-venc-rangos">
+    <link rel="stylesheet" href="style.css?v=71-productos-source">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -44,7 +44,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.16.1 Beta</p>
+    <p>Herramientas V7.1 Beta</p>
 </div>
 
 <div class="app">
@@ -90,6 +90,12 @@
                 <small>Reposición</small>
             </button>
 
+            <button type="button" class="module-card module-precios" data-modulo="precios">
+                <span class="module-icon">🏷️</span>
+                <strong>Precios</strong>
+                <small>Consultar precios</small>
+            </button>
+
             <button id="btnAbrirAdminHome" type="button" class="module-card module-administrador admin-module-card oculto">
                 <span class="module-icon">🔐</span>
                 <strong>Administrador</strong>
@@ -107,7 +113,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.16.1 Beta</strong>
+            <strong>V7.1 Beta</strong>
         </section>
     </main>
 
@@ -353,6 +359,46 @@
     </main>
 
 
+    <main id="pantallaPrecios" class="pantalla precios-screen">
+        <section id="preciosConsultarVista" class="precios-vista">
+            <section id="preciosActionsCard" class="venc-actions-card precios-actions-card">
+                <button type="button" id="btnPrecioAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
+                <button type="button" id="btnPrecioManualToggle" class="manual-link-btn">Ingresar producto manual</button>
+                <div id="precioManualPanel" class="manual-panel oculto">
+                    <input type="text" id="precioManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
+                    <button type="button" id="btnPrecioBuscarManual">Buscar</button>
+                    <div id="precioManualSugerencias" class="manual-suggestions oculto"></div>
+                </div>
+            </section>
+
+            <section id="precioCameraCard" class="camera-card oculto">
+                <div class="scanner-topbar"><strong>Escáner de precios</strong><button id="btnPrecioCerrarScanner" type="button">✕ Cerrar</button></div>
+                <video id="videoPrecios" autoplay muted playsinline></video>
+                <div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div>
+            </section>
+
+            <section class="venc-list-card precio-ultimo-card">
+                <div class="venc-list-head"><h2>Último consultado</h2></div>
+                <div id="precioUltimoResultado" class="precio-ultimo-vacio">
+                    <span class="precio-empty-icon">🏷️</span><strong>Todavía no consultaste productos</strong><small>Escaneá o buscá un producto para comenzar.</small>
+                </div>
+            </section>
+        </section>
+
+        <section id="preciosProductosVista" class="precios-vista oculto">
+            <section class="search-card precio-search-card">
+                <input type="search" id="precioBuscadorProductos" placeholder="Buscar por nombre o código...">
+            </section>
+            <p id="precioResumenProductos" class="list-summary">Cargando productos...</p>
+            <section id="precioListaProductos" class="precio-product-list"></section>
+        </section>
+
+        <nav class="venc-bottom-nav precios-bottom-nav app-bottom-nav" aria-label="Navegación de precios">
+            <button type="button" class="activo" data-precio-tab="consultar"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>Consultar</span></button>
+            <button type="button" data-precio-tab="productos"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg><span>Productos</span></button>
+        </nav>
+    </main>
+
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
         <section id="repoCargaVista">
             <div class="repo-list-selector" role="group" aria-label="Lista para agregar productos">
@@ -502,7 +548,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.16.1 Beta</span>
+            <span id="adminVersion" class="admin-version">V7.1 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -673,13 +719,14 @@
 
 </div>
 
-<script src="./release-channel.js?v=6117-venc-rangos"></script>
-<script src="./pwa.js?v=6117-venc-rangos" defer></script>
-<script type="module" src="./auth.js?v=6117-venc-rangos"></script>
+<script src="./release-channel.js?v=71-productos-source"></script>
+<script src="./pwa.js?v=71-productos-source" defer></script>
+<script type="module" src="./auth.js?v=71-productos-source"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6117-venc-rangos"></script>
-<script type="module" src="./notifications.js?v=6117-venc-rangos"></script>
-<script type="module" src="./app.js?v=6117-venc-rangos"></script>
+<script type="module" src="./admin.js?v=71-productos-source"></script>
+<script type="module" src="./notifications.js?v=71-productos-source"></script>
+<script type="module" src="./prices.js?v=71-productos-source"></script>
+<script type="module" src="./app.js?v=71-productos-source"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

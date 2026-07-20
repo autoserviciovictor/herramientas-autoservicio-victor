@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=61161-quota-fix";
+import { APP_VERSION } from "./config.js?v=71-productos-source";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -15,16 +15,19 @@ import {
     obtenerConteosUbicacion,
     listarVencimientos,
     guardarVencimiento,
+    cargarCatalogoMaestroDesdeServidor,
+    buscarProductoMaestroLocalPorCodigo,
+    buscarProductosMaestrosPorTexto,
     buscarProductoMaestroPorCodigo,
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=61161-quota-fix";
+} from "./excel.js?v=71-productos-source";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=61161-quota-fix";
+} from "./scanner.js?v=71-productos-source";
 
 import {
     ocultarSplash,
@@ -47,10 +50,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=61161-quota-fix";
+} from "./ui.js?v=71-productos-source";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=61161-quota-fix";
-import { coincideBusqueda } from "./search.js?v=61161-quota-fix";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=71-productos-source";
+import { coincideBusqueda } from "./search.js?v=71-productos-source";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -215,6 +218,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     }
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
+    if (nombre !== "precios") window.PreciosModule?.desactivar?.();
 
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
@@ -234,6 +238,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     }
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
+    if (nombre === "precios") await window.PreciosModule?.activar?.();
     if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) { cambiarPantalla("inicio"); }
 }
 
@@ -493,13 +498,19 @@ function limpiarSugerenciasManual(tipo) {
     contenedor.classList.add("oculto");
 }
 
-function renderSugerenciasManual(tipo) {
+async function renderSugerenciasManual(tipo) {
     const input = tipo === "vencimientos" ? elementos.vencCodigoManualInput : elementos.codigoManualInput;
     const contenedor = tipo === "vencimientos" ? elementos.vencManualSugerencias : elementos.manualSugerencias;
     if (!input || !contenedor) return;
     const consulta = String(input.value || "").trim();
     if (consulta.length < 2) { limpiarSugerenciasManual(tipo); return; }
-    const resultados = buscarProductosPorTexto(consulta, 5, false);
+    let resultados = [];
+    if (tipo === "vencimientos") {
+        try { await cargarCatalogoMaestroDesdeServidor(); } catch (error) { console.warn("No se pudo cargar Productos para Vencimientos", error); }
+        resultados = buscarProductosMaestrosPorTexto(consulta, 5);
+    } else {
+        resultados = buscarProductosPorTexto(consulta, 5, false);
+    }
     contenedor.innerHTML = "";
     if (!resultados.length) {
         contenedor.innerHTML = '<div class="manual-no-results">No se encontraron productos.</div>';
@@ -872,12 +883,16 @@ async function procesarCodigoManualVencimientos() {
         mostrarMensaje("Ingresá un código o nombre", "error");
         return;
     }
-    const exacto = buscarProductoPorCodigo(consulta);
+    try { await cargarCatalogoMaestroDesdeServidor(); } catch (error) {
+        mostrarMensaje("No se pudo cargar el catálogo Productos", "error");
+        return;
+    }
+    const exacto = buscarProductoMaestroLocalPorCodigo(consulta);
     let codigo = consulta;
     if (!exacto.encontrado) {
-        const resultados = buscarProductosPorTexto(consulta, 5, false);
+        const resultados = buscarProductosMaestrosPorTexto(consulta, 5);
         if (resultados.length !== 1) {
-            renderSugerenciasManual("vencimientos");
+            await renderSugerenciasManual("vencimientos");
             mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
             return;
         }

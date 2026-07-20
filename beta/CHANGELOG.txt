@@ -57,3 +57,10 @@ V6.1.16.1 Beta - Entrega 5
 - Últimos agregados utiliza la misma carga inmediata.
 - Marcar y desmarcar productos responde al primer toque sin esperar al servidor.
 - Los cambios de estado se sincronizan en cola para conservar el último toque realizado.
+
+
+V7.1 Beta - Fuente única de catálogo
+- Stock queda reservado exclusivamente al módulo Inventario.
+- Precios, Lista, Vencimientos y panel Administrador usan la hoja Productos.
+- La importación XLS agrega y actualiza únicamente Productos; Stock no se modifica.
+- La búsqueda manual de Vencimientos ahora usa el catálogo completo de Productos.

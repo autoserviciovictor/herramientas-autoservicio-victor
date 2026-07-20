@@ -3227,3 +3227,106 @@ body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(2,1fr)!important}
   .venc-card-qty{min-width:82px;padding:7px 8px!important}
   .venc-card-qty strong{font-size:22px!important}
 }
+
+/* V6.1.18 — módulo Precios, basado en Lista */
+.module-precios { border-color: #f1b9bc; background: #fff7f7; }
+.module-precios .module-icon { display:grid;place-items:center;width:58px;height:58px;margin:auto;border-radius:18px;background:#ef5960;color:#fff;font-size:30px;font-weight:900; }
+body.en-precios .bottom-nav { display:none !important; }
+.precios-screen { padding-bottom:110px; }
+.precios-actions-card { margin-bottom:20px; }
+.precio-ultimo-card { margin-top:20px; }
+.precio-ultimo-vacio { min-height:190px; border-radius:24px; background:#f7f7f5; display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;gap:8px;color:#676760; }
+.precio-ultimo-vacio .empty-icon { width:62px;height:62px;border-radius:20px;background:#fce6e7;color:#d52e37;display:grid;place-items:center;font-size:34px;font-weight:900; }
+.precio-ultimo-vacio strong { font-size:22px; }
+.precio-ultimo-vacio small { font-size:16px; }
+.precio-ultimo-producto { border-radius:24px;background:linear-gradient(135deg,#fff5f5,#fde1e3);border:1px solid #f2bdc0;padding:25px;text-align:center;display:flex;flex-direction:column;gap:7px; }
+.precio-ultimo-producto>strong { font-size:25px;color:#161616; }
+.precio-ultimo-producto>small { color:#727272;font-size:17px; }
+.precio-valor { margin-top:10px;padding-top:18px;border-top:1px solid #eab5b8;color:#d72f38;font-size:44px;font-weight:900;line-height:1; }
+.precio-valor.sin-precio { font-size:25px;color:#8a5f60; }
+.precios-bottom-nav { z-index:70; }
+.precio-search-card { margin-bottom:10px; }
+.precio-product-list { display:flex;flex-direction:column;gap:10px;padding-bottom:15px; }
+.precio-product-row { width:100%;border:1px solid #ead7d8;background:#fff;border-radius:18px;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;box-shadow:0 5px 14px rgba(38,22,22,.05); }
+.precio-product-row span { min-width:0;display:flex;flex-direction:column;gap:3px; }
+.precio-product-row strong { font-size:17px;color:#191919;white-space:normal; }
+.precio-product-row small { color:#777;font-size:14px; }
+.precio-product-row b { color:#d52e37;font-size:18px;white-space:nowrap; }
+.precio-product-row b.sin-precio { color:#888;font-size:13px;max-width:100px;text-align:right; }
+#precioManualSugerencias button { background:#ef777d;color:#fff; }
+#precioManualSugerencias button small { color:rgba(255,255,255,.8); }
+@media (min-width: 760px){ .precios-screen{max-width:760px;margin:0 auto;} }
+.precio-mostrar-mas { width:100%;border:0;border-radius:16px;background:#f8e7e8;color:#b62730;font-weight:800;font-size:16px;padding:15px; }
+body.en-precios .precios-bottom-nav { display:grid !important; grid-template-columns:repeat(2,1fr) !important; }
+body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !important; }
+
+/* === V7.1 Beta · módulo Precios integrado con el diseño existente === */
+.module-precios{
+  border-color:#efc4c7!important;
+  background:#fffafa!important;
+  text-align:center!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.module-precios .module-icon{
+  width:auto!important;
+  height:auto!important;
+  margin:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:inherit!important;
+  font-size:38px!important;
+  font-weight:400!important;
+  line-height:1!important;
+}
+.module-precios strong,.module-precios small{width:100%;text-align:center!important}
+
+#preciosActionsCard.oculto{display:none!important}
+.precios-actions-card{transition:opacity .18s ease,transform .18s ease}
+#precioCameraCard{height:330px!important;margin-top:0!important}
+#precioCameraCard video{object-fit:cover!important}
+#precioCameraCard .corner{border-color:rgba(255,255,255,.72)!important}
+
+#precioManualSugerencias{
+  max-height:none!important;
+  overflow:hidden!important;
+}
+#precioManualSugerencias .manual-suggestion-item{
+  background:#ef7d84!important;
+  color:#fff!important;
+}
+#precioManualSugerencias .manual-suggestion-item strong{color:#fff!important}
+#precioManualSugerencias .manual-suggestion-item span{color:rgba(255,255,255,.84)!important}
+
+.precio-ultimo-card{margin-top:18px!important}
+.precio-ultimo-producto{
+  min-height:220px;
+  border-radius:22px!important;
+  background:#fff!important;
+  border:1px solid #efd6d8!important;
+  padding:22px 20px!important;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:14px!important;
+  box-shadow:0 6px 18px rgba(57,31,34,.05);
+}
+.precio-ultimo-info{display:flex;flex-direction:column;align-items:center;gap:7px}
+.precio-ultimo-info strong{font-size:23px;line-height:1.18;color:#1b1b1b;overflow-wrap:anywhere}
+.precio-ultimo-info small{font-size:14px;color:#747474;font-weight:750}
+.precio-ultimo-divider{height:1px;width:82%;margin:0 auto;background:#efd3d5}
+.precio-ultimo-precio{display:flex;flex-direction:column;align-items:center;gap:4px}
+.precio-ultimo-precio span{font-size:14px;color:#8e5d60;font-weight:850;text-transform:uppercase;letter-spacing:.04em}
+.precio-ultimo-precio b{font-size:40px;line-height:1;color:#d72f38;font-weight:950}
+.precio-ultimo-precio.sin-precio b{font-size:21px;color:#8a5f60}
+.precio-ultimo-vacio{min-height:220px!important}
+.precio-empty-icon{font-size:42px;line-height:1}
+.precio-lista-vacia{min-height:150px;display:grid;place-items:center;background:#fff;border-radius:18px;color:#777}
+
+@media(max-width:420px){
+  #precioCameraCard{height:300px!important}
+  .precio-ultimo-producto{min-height:205px;padding:20px 16px!important}
+  .precio-ultimo-info strong{font-size:21px}
+  .precio-ultimo-precio b{font-size:36px}
+}
