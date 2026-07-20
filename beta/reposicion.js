@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=6113-entrega2";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=6113-entrega2";
-import { ordenarPorBusqueda } from "./search.js?v=6113-entrega2";
+import { API_BASE_URL } from "./config.js?v=61131-manual";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=61131-manual";
+import { ordenarPorBusqueda } from "./search.js?v=61131-manual";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -10,6 +10,7 @@ let iniciado = false;
 let operacionEnCurso = false;
 let temporizadorToast = null;
 let elementoFocoAntesDelModal = null;
+let productosMaestroCache = [];
 let listaActual = "1";
 let modoEdicion = false;
 let borradorEdicion = [];
@@ -57,12 +58,13 @@ export function inicializarReposicion(){
     const abierto=panel?.classList.contains("oculto");
     panel?.classList.toggle("oculto", !abierto);
     const boton=$("btnRepoManualToggle");
-    if(boton) boton.textContent=abierto?"Cancelar código manual":"Ingresar código manualmente";
+    if(boton) boton.textContent=abierto?"Cancelar ingreso manual":"Ingresar producto manual";
     if(abierto) $("repoCodigoManualInput")?.focus();
-    else if($("repoCodigoManualInput")) $("repoCodigoManualInput").value="";
+    else if($("repoCodigoManualInput")) { $("repoCodigoManualInput").value=""; limpiarSugerenciasRepo(); }
   });
   $("btnRepoBuscarManual")?.addEventListener("click",procesarManual);
   $("repoCodigoManualInput")?.addEventListener("keydown",e=>{if(e.key==="Enter")procesarManual();});
+  $("repoCodigoManualInput")?.addEventListener("input",renderSugerenciasRepo);
   $("btnRepoMenos")?.addEventListener("click",()=>cambiarCantidad(-1));
   $("btnRepoMas")?.addEventListener("click",()=>cambiarCantidad(1));
   $("btnRepoGuardar")?.addEventListener("click",guardar);
@@ -93,6 +95,7 @@ export function inicializarReposicion(){
 
 export function prepararReposicion(){
   actualizarUsuarioReposicion();
+  cargarProductosMaestroRepo();
   seleccionarLista("1", { refrescar: false });
   cambiarTab("cargar");
 }
@@ -154,7 +157,48 @@ async function abrirScanner(){
   catch(e){ $("repoCameraCard")?.classList.add("oculto"); $("repoActionsCard")?.classList.remove("oculto"); toast("No se pudo abrir la cámara","error"); }
 }
 function cerrarScanner(){ detenerScanner(); $("repoCameraCard")?.classList.add("oculto"); if(!productoActual) $("repoActionsCard")?.classList.remove("oculto"); }
-function procesarManual(){ const c=$("repoCodigoManualInput")?.value.trim(); if(!c)return; $("repoCodigoManualInput").value=""; $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar código manualmente"; buscarProducto(c); }
+async function cargarProductosMaestroRepo(){
+  if(productosMaestroCache.length) return productosMaestroCache;
+  try {
+    const data=await pedir("/productos-maestro");
+    productosMaestroCache=Array.isArray(data.productos)?data.productos:[];
+  } catch(e) { console.warn("No se pudo cargar el catálogo para búsqueda manual",e); }
+  return productosMaestroCache;
+}
+function limpiarSugerenciasRepo(){
+  const c=$("repoManualSugerencias"); if(!c)return;
+  c.innerHTML=""; c.classList.add("oculto");
+}
+async function renderSugerenciasRepo(){
+  const input=$("repoCodigoManualInput"), c=$("repoManualSugerencias"); if(!input||!c)return;
+  const consulta=String(input.value||"").trim();
+  if(consulta.length<2){limpiarSugerenciasRepo();return;}
+  await cargarProductosMaestroRepo();
+  const resultados=ordenarPorBusqueda(productosMaestroCache,consulta,{limite:5,campos:["articulo","codigo"]});
+  c.innerHTML="";
+  if(!resultados.length){c.innerHTML='<div class="manual-no-results">No se encontraron productos.</div>';c.classList.remove("oculto");return;}
+  resultados.forEach(producto=>{
+    const b=document.createElement("button"); b.type="button"; b.className="manual-suggestion-item";
+    b.innerHTML=`<strong>${escapar(producto.articulo)}</strong><span>${escapar(producto.codigo||"Sin código")}</span>`;
+    b.addEventListener("click",()=>{input.value=producto.codigo;limpiarSugerenciasRepo();procesarManual();});
+    c.appendChild(b);
+  });
+  c.classList.remove("oculto");
+}
+async function procesarManual(){
+  const consulta=$("repoCodigoManualInput")?.value.trim(); if(!consulta)return;
+  await cargarProductosMaestroRepo();
+  const exacto=productosMaestroCache.find(p=>String(p.codigo||"").trim()===consulta);
+  let codigo=exacto?.codigo||"";
+  if(!codigo){
+    const resultados=ordenarPorBusqueda(productosMaestroCache,consulta,{limite:5,campos:["articulo","codigo"]});
+    if(resultados.length!==1){renderSugerenciasRepo();toast(resultados.length?"Seleccioná un producto":"Producto no encontrado","error");return;}
+    codigo=resultados[0].codigo;
+  }
+  $("repoCodigoManualInput").value=""; limpiarSugerenciasRepo(); $("repoManualPanel")?.classList.add("oculto");
+  if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar producto manual";
+  buscarProducto(codigo);
+}
 async function buscarProducto(codigo){
   try{
     const data=await pedir(`/producto-maestro/${encodeURIComponent(codigo)}`);
@@ -178,7 +222,7 @@ async function guardar(){
   }catch(e){toast(e.message,"error");}
   finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton) boton.disabled=false; }
 }
-function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar código manualmente"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
+function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; limpiarSugerenciasRepo(); $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar producto manual"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
 function actualizarEncabezadoRepo(esCarga){
   const titulo=$("modulePageTitle");
   const subtitulo=$("modulePageSubtitle");

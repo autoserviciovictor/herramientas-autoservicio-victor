@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=6113-entrega2";
+import { APP_VERSION } from "./config.js?v=61131-manual";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=6113-entrega2";
+} from "./excel.js?v=61131-manual";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=6113-entrega2";
+} from "./scanner.js?v=61131-manual";
 
 import {
     ocultarSplash,
@@ -47,10 +47,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=6113-entrega2";
+} from "./ui.js?v=61131-manual";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=6113-entrega2";
-import { coincideBusqueda } from "./search.js?v=6113-entrega2";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=61131-manual";
+import { coincideBusqueda } from "./search.js?v=61131-manual";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -498,7 +498,7 @@ function renderSugerenciasManual(tipo) {
     if (!input || !contenedor) return;
     const consulta = String(input.value || "").trim();
     if (consulta.length < 2) { limpiarSugerenciasManual(tipo); return; }
-    const resultados = buscarProductosPorTexto(consulta, 8, false);
+    const resultados = buscarProductosPorTexto(consulta, 5, false);
     contenedor.innerHTML = "";
     if (!resultados.length) {
         contenedor.innerHTML = '<div class="manual-no-results">No se encontraron productos.</div>';
@@ -524,9 +524,9 @@ function renderSugerenciasManual(tipo) {
 function alternarCargaManual() {
     const abrir = elementos.manualPanel.classList.contains("oculto");
     elementos.manualPanel.classList.toggle("oculto", !abrir);
-    elementos.btnCodigoManualToggle.textContent = abrir ? "Cancelar código manual" : "Ingresar código manualmente";
+    elementos.btnCodigoManualToggle.textContent = abrir ? "Cancelar ingreso manual" : "Ingresar producto manual";
     if (abrir) elementos.codigoManualInput.focus();
-    else elementos.codigoManualInput.value = "";
+    else { elementos.codigoManualInput.value = ""; limpiarSugerenciasManual("inventario"); }
 }
 
 async function procesarCodigoManual() {
@@ -538,7 +538,7 @@ async function procesarCodigoManual() {
     const exacto = buscarProductoPorCodigo(consulta);
     let codigo = consulta;
     if (!exacto.encontrado) {
-        const resultados = buscarProductosPorTexto(consulta, 8, false);
+        const resultados = buscarProductosPorTexto(consulta, 5, false);
         if (resultados.length !== 1) {
             renderSugerenciasManual("inventario");
             mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
@@ -549,7 +549,7 @@ async function procesarCodigoManual() {
     elementos.codigoManualInput.value = "";
     limpiarSugerenciasManual("inventario");
     elementos.manualPanel.classList.add("oculto");
-    elementos.btnCodigoManualToggle.textContent = "Ingresar código manualmente";
+    elementos.btnCodigoManualToggle.textContent = "Ingresar producto manual";
     await manejarCodigoEscaneado(codigo);
 }
 
@@ -860,9 +860,9 @@ async function sincronizarEnSegundoPlano() {
 function alternarCargaManualVencimientos() {
     const abrir = elementos.vencManualPanel?.classList.contains("oculto");
     elementos.vencManualPanel?.classList.toggle("oculto", !abrir);
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = abrir ? "Cancelar código manual" : "Ingresar código manualmente";
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = abrir ? "Cancelar ingreso manual" : "Ingresar producto manual";
     if (abrir) elementos.vencCodigoManualInput?.focus();
-    else if (elementos.vencCodigoManualInput) elementos.vencCodigoManualInput.value = "";
+    else if (elementos.vencCodigoManualInput) { elementos.vencCodigoManualInput.value = ""; limpiarSugerenciasManual("vencimientos"); }
 }
 
 async function procesarCodigoManualVencimientos() {
@@ -874,7 +874,7 @@ async function procesarCodigoManualVencimientos() {
     const exacto = buscarProductoPorCodigo(consulta);
     let codigo = consulta;
     if (!exacto.encontrado) {
-        const resultados = buscarProductosPorTexto(consulta, 8, false);
+        const resultados = buscarProductosPorTexto(consulta, 5, false);
         if (resultados.length !== 1) {
             renderSugerenciasManual("vencimientos");
             mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
@@ -885,7 +885,7 @@ async function procesarCodigoManualVencimientos() {
     elementos.vencCodigoManualInput.value = "";
     limpiarSugerenciasManual("vencimientos");
     elementos.vencManualPanel?.classList.add("oculto");
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar código manualmente";
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
     await manejarCodigoVencimiento(codigo);
 }
 
@@ -916,7 +916,7 @@ function mostrarAccionesVencimientos() {
 function reiniciarFormularioVencimientos() {
     productoVencimientoActual = null;
     elementos.vencManualPanel?.classList.add("oculto");
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar código manualmente";
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
     if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
     if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
     if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;

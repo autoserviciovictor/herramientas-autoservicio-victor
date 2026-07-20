@@ -1,1 +1,1 @@
-6.1.13 Beta - Entrega 2 Inventario
+6.1.13.1 Beta - Corrección ingreso manual

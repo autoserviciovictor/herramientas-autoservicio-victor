@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6113-entrega2">
+    <link rel="stylesheet" href="style.css?v=61131-manual">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -127,9 +127,9 @@
 
         <section id="scanPanel" class="scan-panel">
             <button type="button" id="btnAbrirScanner" class="scan-open-btn">📷 Abrir escáner</button>
-            <button type="button" id="btnCodigoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <button type="button" id="btnCodigoManualToggle" class="manual-link-btn">Ingresar producto manual</button>
             <div id="manualPanel" class="manual-panel oculto">
-                <input type="text" id="codigoManualInput" inputmode="numeric" placeholder="Código o nombre del artículo">
+                <input type="text" id="codigoManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
                 <button type="button" id="btnBuscarManual">Buscar</button>
                 <div id="manualSugerencias" class="manual-suggestions oculto"></div>
             </div>
@@ -265,9 +265,9 @@
 
         <section class="venc-actions-card">
             <button type="button" id="btnVencAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
-            <button type="button" id="btnVencManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+            <button type="button" id="btnVencManualToggle" class="manual-link-btn">Ingresar producto manual</button>
             <div id="vencManualPanel" class="manual-panel oculto">
-                <input type="text" id="vencCodigoManualInput" inputmode="numeric" placeholder="Código o nombre del artículo">
+                <input type="text" id="vencCodigoManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
                 <button type="button" id="btnVencBuscarManual">Buscar</button>
                 <div id="vencManualSugerencias" class="manual-suggestions oculto"></div>
             </div>
@@ -361,10 +361,11 @@
             </div>
             <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
                 <button type="button" id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
-                <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
+                <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar producto manual</button>
                 <div id="repoManualPanel" class="manual-panel oculto">
-                    <input id="repoCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
+                    <input id="repoCodigoManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
                     <button id="btnRepoBuscarManual" type="button">Buscar</button>
+                    <div id="repoManualSugerencias" class="manual-suggestions oculto"></div>
                 </div>
             </section>
 
@@ -668,13 +669,13 @@
 
 </div>
 
-<script src="./release-channel.js?v=6113-entrega2"></script>
-<script src="./pwa.js?v=6113-entrega2" defer></script>
-<script type="module" src="./auth.js?v=6113-entrega2"></script>
+<script src="./release-channel.js?v=61131-manual"></script>
+<script src="./pwa.js?v=61131-manual" defer></script>
+<script type="module" src="./auth.js?v=61131-manual"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6113-entrega2"></script>
-<script type="module" src="./notifications.js?v=6113-entrega2"></script>
-<script type="module" src="./app.js?v=6113-entrega2"></script>
+<script type="module" src="./admin.js?v=61131-manual"></script>
+<script type="module" src="./notifications.js?v=61131-manual"></script>
+<script type="module" src="./app.js?v=61131-manual"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
