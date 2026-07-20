@@ -1332,28 +1332,37 @@ async function obtenerSheetId(nombreHoja) {
 // V6.1.7 - Reposición persistente en Google Sheets, individual y con dos listas por usuario.
 const LISTAS_SHEET_NAME = "Listas";
 const LISTAS_HEADERS = ["ID", "Usuario", "Lista", "Código", "Artículo", "Cantidad", "Estado", "Orden", "Actualizado"];
+let promesaHojaListasLista = null;
 
 function normalizarNumeroLista(valor) { return String(valor) === "2" ? "2" : "1"; }
 function crearIdReposicion() { return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`; }
 
 async function asegurarHojaListas() {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some(s => s.properties?.title === LISTAS_SHEET_NAME);
-  if (!existe) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: LISTAS_SHEET_NAME } } }] }
-    });
-  }
-  const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A1:I1` });
-  if (!(respuesta.data.values || []).length) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${LISTAS_SHEET_NAME}!A1:I1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [LISTAS_HEADERS] }
-    });
-  }
+  if (promesaHojaListasLista) return promesaHojaListasLista;
+  promesaHojaListasLista = (async () => {
+    const meta = await leerConCache("metadata-hoja-listas", CACHE_TTL.metadata, async () =>
+      sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID })
+    );
+    const existe = (meta.data.sheets || []).some(s => s.properties?.title === LISTAS_SHEET_NAME);
+    if (!existe) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title: LISTAS_SHEET_NAME } } }] }
+      });
+      invalidarCache("metadata-hoja-listas");
+    }
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A1:I1` });
+    if (!(respuesta.data.values || []).length) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${LISTAS_SHEET_NAME}!A1:I1`,
+        valueInputOption: "RAW",
+        requestBody: { values: [LISTAS_HEADERS] }
+      });
+    }
+    return true;
+  })().catch(error => { promesaHojaListasLista = null; throw error; });
+  return promesaHojaListasLista;
 }
 
 function filaARegistroReposicion(fila = []) {
@@ -1369,8 +1378,11 @@ function registroAFilaReposicion(r) {
 }
 async function leerTodasLasListas() {
   await asegurarHojaListas();
-  const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
-  return (respuesta.data.values || []).map(filaARegistroReposicion).filter(r => r.id && r.usuario && r.codigo);
+  const registros = await leerConCache("listas-reposicion", 120000, async () => {
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
+    return (respuesta.data.values || []).map(filaARegistroReposicion).filter(r => r.id && r.usuario && r.codigo);
+  });
+  return registros.map(r => ({ ...r }));
 }
 async function escribirTodasLasListas(registros) {
   await asegurarHojaListas();
@@ -1381,7 +1393,7 @@ async function escribirTodasLasListas(registros) {
       valueInputOption: "RAW", requestBody: { values: registros.map(registroAFilaReposicion) }
     });
   }
-  invalidarCache("listas-reposicion");
+  cacheLecturas.set("listas-reposicion", { fecha: Date.now(), valor: registros.map(r => ({ ...r })) });
 }
 async function obtenerListaReposicionPersistente(usuario, numeroLista) {
   const claveUsuario = normalizarUsuario(usuario); const lista = normalizarNumeroLista(numeroLista);

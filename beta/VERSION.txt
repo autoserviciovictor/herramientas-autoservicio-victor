@@ -1,1 +1,1 @@
-6.1.16 Beta - Entrega 5 Navegación y optimización de Mi lista
+6.1.16.1 Beta - Corrección de cuota y velocidad de Mi lista

@@ -1,4 +1,12 @@
-6.1.16 Beta — Entrega 4 Lista y pulido general
+V6.1.16.1 Beta - Corrección Mi lista
+
+- Reduce drásticamente las lecturas a Google Sheets mediante caché del servidor.
+- Empezar nueva lista responde inmediatamente y restaura los datos si falla la sincronización.
+- Agregar productos ya no vuelve a descargar toda la lista.
+- Los errores de cuota no se muestran en inglés.
+- Reintentos de sincronización limitados para evitar saturar Google Sheets.
+
+6.1.16.1 Beta — Entrega 4 Lista y pulido general
 - Eliminado el texto “Lista de usuario”.
 - Selectores y estados vacíos de Lista simplificados.
 - Mi lista más compacta y cantidades mejor alineadas.
@@ -25,7 +33,7 @@ V6.1.13 Beta - Entrega 1
 - Configuracion simplificada: Sonidos, Vibracion, Permitir notificaciones y Version instalada.
 - Version mostrada automaticamente desde config.js.
 
-V6.1.16 Beta - Entrega 5
+V6.1.16.1 Beta - Entrega 5
 - Navegación inferior unificada con iconos SVG minimalistas en Inventario, Vencimientos y Lista.
 - Misma altura, espaciado y estado activo en todas las barras inferiores.
 - Mi lista muestra inmediatamente la última copia local y sincroniza Google Sheets en segundo plano.

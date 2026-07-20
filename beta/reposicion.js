@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=6116-final";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=6116-final";
-import { ordenarPorBusqueda } from "./search.js?v=6116-final";
+import { API_BASE_URL } from "./config.js?v=61161-quota-fix";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=61161-quota-fix";
+import { ordenarPorBusqueda } from "./search.js?v=61161-quota-fix";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -57,7 +57,11 @@ async function pedir(ruta, opciones={}){
     throw new Error("No se pudo conectar con el servidor");
   } finally { clearTimeout(temporizador); }
   const data = await r.json().catch(()=>null);
-  if(!r.ok || !data?.ok) throw new Error(data?.mensaje || "No se pudo conectar");
+  if(!r.ok || !data?.ok) {
+    const mensaje=String(data?.mensaje||"");
+    if(/quota exceeded|read requests|sheets\.googleapis\.com/i.test(mensaje)) throw new Error("El servidor está ocupado. Esperá unos segundos y volvé a intentar.");
+    throw new Error(mensaje || "No se pudo conectar");
+  }
   return data;
 }
 function toast(texto, tipo="ok"){
@@ -243,13 +247,24 @@ function cambiarCantidad(delta){ const i=$("repoCantidadInput"); i.value=Math.ma
 async function guardar(){
   if(!productoActual || operacionEnCurso) return;
   const cantidad=Math.max(1,numero($("repoCantidadInput").value));
+  const producto={...productoActual};
+  const listaGuardada=listaActual;
   try{
     operacionEnCurso=true;
-    const boton=$("btnRepoGuardar"); if(boton) boton.disabled=true;
-    await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:productoActual.codigo,articulo:productoActual.articulo,cantidad,lista:listaActual})});
-    toast(`Producto agregado a Lista ${listaActual}`); limpiar(); await refrescarReposicion({mostrarCarga:false});
+    const boton=$("btnRepoGuardar"); if(boton){ boton.disabled=true; boton.textContent="Guardando..."; }
+    const data=await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:producto.codigo,articulo:producto.articulo,cantidad,lista:listaGuardada})});
+    const recibido=data.registro;
+    if(recibido){
+      const i=registros.findIndex(r=>String(r.codigo)===String(recibido.codigo));
+      const normalizado={...recibido,lista:String(recibido.lista||listaGuardada)==="2"?"2":"1"};
+      if(i>=0) registros[i]=normalizado; else registros.push(normalizado);
+      guardarCacheRepo(listaGuardada);
+      render();
+    }
+    toast(`Producto agregado a Lista ${listaGuardada}`);
+    limpiar();
   }catch(e){toast(e.message,"error");}
-  finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton) boton.disabled=false; }
+  finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton){ boton.disabled=false; boton.textContent="Guardar"; } }
 }
 function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; limpiarSugerenciasRepo(); $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar producto manual"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
 function actualizarEncabezadoRepo(esCarga){
@@ -420,20 +435,24 @@ function cerrarModalNuevaLista(){
 
 async function confirmarNuevaLista(){
   if(operacionEnCurso || !registros.length) return;
+  const listaAVaciar=listaActual;
+  const respaldo=registros.map(r=>({...r}));
   try {
     operacionEnCurso=true;
     const boton=$("btnRepoConfirmarNuevaLista"); if(boton){ boton.disabled=true; boton.textContent="Comenzando..."; }
     const botonLista=$("btnRepoVaciarLista"); if(botonLista) botonLista.disabled=true;
-    await pedir(`/reposicion?lista=${listaActual}`,{method:"DELETE"});
-    registros=[]; guardarCacheRepo(listaActual); render();
+    registros=[]; guardarCacheRepo(listaAVaciar); render();
     const modal=$("repoNuevaListaModal");
     modal?.classList.add("oculto");
     modal?.setAttribute("aria-hidden","true");
     document.body.classList.remove("modal-abierto");
     elementoFocoAntesDelModal=null;
-    toast(`Lista ${listaActual} lista para comenzar`);
-  } catch(error){ toast(error.message,"error"); }
-  finally {
+    await pedir(`/reposicion?lista=${listaAVaciar}`,{method:"DELETE"});
+    toast(`Lista ${listaAVaciar} lista para comenzar`);
+  } catch(error){
+    if(listaActual===listaAVaciar){ registros=respaldo; guardarCacheRepo(listaAVaciar); render(); }
+    toast(error.message,"error");
+  } finally {
     operacionEnCurso=false;
     const boton=$("btnRepoConfirmarNuevaLista"); if(boton){ boton.disabled=false; boton.textContent="Empezar nueva lista"; }
     const botonLista=$("btnRepoVaciarLista"); if(botonLista) botonLista.disabled=!registros.length;
@@ -498,10 +517,17 @@ function encolarSincronizacionEstado(id,listaRegistro){
         method:"PUT",
         body:JSON.stringify({cantidad:numero(actual.cantidad),estado:estadoAEnviar,lista:listaRegistro,codigo:actual.codigo})
       });
+      actual._intentosSync=0;
       guardarCacheRepo(listaRegistro);
     }catch(err){
-      toast("No se pudo sincronizar el cambio. Reintentando...","error");
-      setTimeout(()=>encolarSincronizacionEstado(id,listaRegistro),1200);
+      const intentos=Number(actual._intentosSync||0)+1;
+      actual._intentosSync=intentos;
+      if(intentos<=2){
+        toast("No se pudo sincronizar. Reintentando...","error");
+        setTimeout(()=>encolarSincronizacionEstado(id,listaRegistro),2500*intentos);
+      }else{
+        toast("Cambio guardado en el teléfono. Se sincronizará más tarde.","error");
+      }
     }finally{
       const actualBoton=document.querySelector(`[data-repo-accion][data-id="${CSS.escape(String(id))}"]`);
       actualBoton?.classList.remove("sincronizando");
