@@ -1,3 +1,9 @@
+V7.1 Beta
+- Módulo Precios corregido e integrado al diseño de Inventario, Vencimientos y Lista.
+- Escáner reutiliza el enfoque y selección de cámara compartidos.
+- Búsqueda manual con hasta 5 coincidencias.
+- Último consultado rediseñado.
+
 V6.1.18 Beta
 - Nuevo módulo Precios en carpeta beta.
 - Escáner e ingreso manual por nombre o código.

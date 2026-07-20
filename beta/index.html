@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6118-precios">
+    <link rel="stylesheet" href="style.css?v=71-precios-fix">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -44,7 +44,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.18 Beta</p>
+    <p>Herramientas V7.1 Beta</p>
 </div>
 
 <div class="app">
@@ -91,7 +91,7 @@
             </button>
 
             <button type="button" class="module-card module-precios" data-modulo="precios">
-                <span class="module-icon">$</span>
+                <span class="module-icon">🏷️</span>
                 <strong>Precios</strong>
                 <small>Consultar precios</small>
             </button>
@@ -113,7 +113,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.18 Beta</strong>
+            <strong>V7.1 Beta</strong>
         </section>
     </main>
 
@@ -361,8 +361,8 @@
 
     <main id="pantallaPrecios" class="pantalla precios-screen">
         <section id="preciosConsultarVista" class="precios-vista">
-            <section class="venc-actions-card precios-actions-card">
-                <button type="button" id="btnPrecioAbrirScanner" class="scan-open-btn">Escanear código</button>
+            <section id="preciosActionsCard" class="venc-actions-card precios-actions-card">
+                <button type="button" id="btnPrecioAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
                 <button type="button" id="btnPrecioManualToggle" class="manual-link-btn">Ingresar producto manual</button>
                 <div id="precioManualPanel" class="manual-panel oculto">
                     <input type="text" id="precioManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
@@ -380,7 +380,7 @@
             <section class="venc-list-card precio-ultimo-card">
                 <div class="venc-list-head"><h2>Último consultado</h2></div>
                 <div id="precioUltimoResultado" class="precio-ultimo-vacio">
-                    <span class="empty-icon">$</span><strong>Todavía no consultaste productos.</strong><small>Escaneá o buscá un producto para comenzar.</small>
+                    <span class="precio-empty-icon">🏷️</span><strong>Todavía no consultaste productos</strong><small>Escaneá o buscá un producto para comenzar.</small>
                 </div>
             </section>
         </section>
@@ -548,7 +548,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.18 Beta</span>
+            <span id="adminVersion" class="admin-version">V7.1 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -719,14 +719,14 @@
 
 </div>
 
-<script src="./release-channel.js?v=6118-precios"></script>
-<script src="./pwa.js?v=6118-precios" defer></script>
-<script type="module" src="./auth.js?v=6118-precios"></script>
+<script src="./release-channel.js?v=71-precios-fix"></script>
+<script src="./pwa.js?v=71-precios-fix" defer></script>
+<script type="module" src="./auth.js?v=71-precios-fix"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6118-precios"></script>
-<script type="module" src="./notifications.js?v=6118-precios"></script>
-<script type="module" src="./prices.js?v=6118-precios"></script>
-<script type="module" src="./app.js?v=6118-precios"></script>
+<script type="module" src="./admin.js?v=71-precios-fix"></script>
+<script type="module" src="./notifications.js?v=71-precios-fix"></script>
+<script type="module" src="./prices.js?v=71-precios-fix"></script>
+<script type="module" src="./app.js?v=71-precios-fix"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

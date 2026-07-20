@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=6118-precios";
+import { APP_VERSION } from "./config.js?v=71-precios-fix";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -19,12 +19,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=6118-precios";
+} from "./excel.js?v=71-precios-fix";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=6118-precios";
+} from "./scanner.js?v=71-precios-fix";
 
 import {
     ocultarSplash,
@@ -47,10 +47,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=6118-precios";
+} from "./ui.js?v=71-precios-fix";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=6118-precios";
-import { coincideBusqueda } from "./search.js?v=6118-precios";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=71-precios-fix";
+import { coincideBusqueda } from "./search.js?v=71-precios-fix";
 
 let ubicacionActual = "salon";
 let productoActual = null;

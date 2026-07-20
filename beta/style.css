@@ -3259,3 +3259,74 @@ body.en-precios .bottom-nav { display:none !important; }
 .precio-mostrar-mas { width:100%;border:0;border-radius:16px;background:#f8e7e8;color:#b62730;font-weight:800;font-size:16px;padding:15px; }
 body.en-precios .precios-bottom-nav { display:grid !important; grid-template-columns:repeat(2,1fr) !important; }
 body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !important; }
+
+/* === V7.1 Beta · módulo Precios integrado con el diseño existente === */
+.module-precios{
+  border-color:#efc4c7!important;
+  background:#fffafa!important;
+  text-align:center!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.module-precios .module-icon{
+  width:auto!important;
+  height:auto!important;
+  margin:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:inherit!important;
+  font-size:38px!important;
+  font-weight:400!important;
+  line-height:1!important;
+}
+.module-precios strong,.module-precios small{width:100%;text-align:center!important}
+
+#preciosActionsCard.oculto{display:none!important}
+.precios-actions-card{transition:opacity .18s ease,transform .18s ease}
+#precioCameraCard{height:330px!important;margin-top:0!important}
+#precioCameraCard video{object-fit:cover!important}
+#precioCameraCard .corner{border-color:rgba(255,255,255,.72)!important}
+
+#precioManualSugerencias{
+  max-height:none!important;
+  overflow:hidden!important;
+}
+#precioManualSugerencias .manual-suggestion-item{
+  background:#ef7d84!important;
+  color:#fff!important;
+}
+#precioManualSugerencias .manual-suggestion-item strong{color:#fff!important}
+#precioManualSugerencias .manual-suggestion-item span{color:rgba(255,255,255,.84)!important}
+
+.precio-ultimo-card{margin-top:18px!important}
+.precio-ultimo-producto{
+  min-height:220px;
+  border-radius:22px!important;
+  background:#fff!important;
+  border:1px solid #efd6d8!important;
+  padding:22px 20px!important;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:14px!important;
+  box-shadow:0 6px 18px rgba(57,31,34,.05);
+}
+.precio-ultimo-info{display:flex;flex-direction:column;align-items:center;gap:7px}
+.precio-ultimo-info strong{font-size:23px;line-height:1.18;color:#1b1b1b;overflow-wrap:anywhere}
+.precio-ultimo-info small{font-size:14px;color:#747474;font-weight:750}
+.precio-ultimo-divider{height:1px;width:82%;margin:0 auto;background:#efd3d5}
+.precio-ultimo-precio{display:flex;flex-direction:column;align-items:center;gap:4px}
+.precio-ultimo-precio span{font-size:14px;color:#8e5d60;font-weight:850;text-transform:uppercase;letter-spacing:.04em}
+.precio-ultimo-precio b{font-size:40px;line-height:1;color:#d72f38;font-weight:950}
+.precio-ultimo-precio.sin-precio b{font-size:21px;color:#8a5f60}
+.precio-ultimo-vacio{min-height:220px!important}
+.precio-empty-icon{font-size:42px;line-height:1}
+.precio-lista-vacia{min-height:150px;display:grid;place-items:center;background:#fff;border-radius:18px;color:#777}
+
+@media(max-width:420px){
+  #precioCameraCard{height:300px!important}
+  .precio-ultimo-producto{min-height:205px;padding:20px 16px!important}
+  .precio-ultimo-info strong{font-size:21px}
+  .precio-ultimo-precio b{font-size:36px}
+}
