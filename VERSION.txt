@@ -1,1 +1,1 @@
-6.1.17 Beta - Vencimientos: contadores por rango y cantidad destacada
+6.1.11 Beta

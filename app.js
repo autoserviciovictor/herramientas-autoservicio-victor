@@ -1,4 +1,3 @@
-import { APP_VERSION } from "./config.js?v=61161-quota-fix";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -19,12 +18,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=61161-quota-fix";
+} from "./excel.js?v=611-rol-beta";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=61161-quota-fix";
+} from "./scanner.js?v=611-rol-beta";
 
 import {
     ocultarSplash,
@@ -47,10 +46,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=61161-quota-fix";
+} from "./ui.js?v=611-rol-beta";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=61161-quota-fix";
-import { coincideBusqueda } from "./search.js?v=61161-quota-fix";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion } from "./reposicion.js?v=611-rol-beta";
+import { coincideBusqueda } from "./search.js?v=611-rol-beta";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -70,10 +69,6 @@ let busquedaVencimientos = "";
 let vencimientoSeleccionado = null;
 let vencTabActual = "cargar";
 const INTERVALO_SINCRONIZACION = 7000;
-let pantallaActualApp = "inicio";
-let snapshotProductoEditando = null;
-let snapshotVencimientoEditando = null;
-let resolucionCambiosPendientes = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -85,7 +80,6 @@ const elementos = {
     manualPanel: $("manualPanel"),
     codigoManualInput: $("codigoManualInput"),
     btnBuscarManual: $("btnBuscarManual"),
-    manualSugerencias: $("manualSugerencias"),
     scanPanel: $("scanPanel"),
     cameraCard: $("cameraCard"),
     btnSalon: $("btnSalon"),
@@ -113,7 +107,6 @@ const elementos = {
     vencManualPanel: $("vencManualPanel"),
     vencCodigoManualInput: $("vencCodigoManualInput"),
     btnVencBuscarManual: $("btnVencBuscarManual"),
-    vencManualSugerencias: $("vencManualSugerencias"),
     vencCameraCard: $("vencCameraCard"),
     vencProductoCard: $("vencProductoCard"),
     vencEstadoProducto: $("vencEstadoProducto"),
@@ -142,7 +135,6 @@ const elementos = {
     btnVencModalCerrar: $("btnVencModalCerrar"),
     btnVencEditarAbrir: $("btnVencEditarAbrir"),
     btnVencEliminarAbrir: $("btnVencEliminarAbrir"),
-    btnVencEliminarDesdeVista: $("btnVencEliminarDesdeVista"),
     btnVencGuardarEdicion: $("btnVencGuardarEdicion"),
     btnVencCancelarEdicion: $("btnVencCancelarEdicion"),
     btnVencConfirmarEliminar: $("btnVencConfirmarEliminar"),
@@ -160,26 +152,9 @@ const elementos = {
 
 inicializar();
 
-function fechaHoyLocalIso() {
-    try {
-        const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
-        const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
-        return `${mapa.year}-${mapa.month}-${mapa.day}`;
-    } catch (_) {
-        return new Date().toISOString().slice(0, 10);
-    }
-}
-
-function configurarFechasMinimasVencimientos() {
-    const hoy = fechaHoyLocalIso();
-    if (elementos.vencFechaInput) elementos.vencFechaInput.min = hoy;
-    if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.min = hoy;
-}
-
 async function inicializar() {
     ocultarSplash();
     cambiarPantalla("inicio");
-    pantallaActualApp = "inicio";
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
     actualizarContador(0);
@@ -190,29 +165,13 @@ async function inicializar() {
     limpiarProducto();
     desactivarModoCantidad();
     configurarFeedback({ sonidos: true, vibracion: true });
-    actualizarVersionConfiguracion();
     configurarEventos();
-    configurarFechasMinimasVencimientos();
     inicializarReposicion();
 
     await cargarProductos();
 }
 
-async function entrarPantalla(nombre, opciones = {}) {
-    if (!opciones.forzar) {
-        if (pantallaActualApp === "anotar" && nombre !== "anotar") {
-            resolverSalidaReposicion(() => entrarPantalla(nombre, { forzar: true }));
-            return;
-        }
-        if (productoEditando && nombre !== "editarProducto") {
-            resolverSalidaProducto(() => entrarPantalla(nombre, { forzar: true }));
-            return;
-        }
-        if (estaEditandoVencimiento() && nombre !== "vencimientos") {
-            resolverSalidaVencimiento(() => entrarPantalla(nombre, { forzar: true }));
-            return;
-        }
-    }
+async function entrarPantalla(nombre) {
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
 
@@ -225,9 +184,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     }
 
     cambiarPantalla(nombre);
-    pantallaActualApp = nombre;
 
-    if (nombre === "productos" || nombre === "cargados") mostrarCargandoEn($("resultadoBusqueda"), "Cargando productos...");
     if (["inventario", "productos", "cargados", "ajustes"].includes(nombre)) {
         await sincronizarEnSegundoPlano();
         if (nombre === "productos" || nombre === "cargados") refrescarProductos();
@@ -239,11 +196,6 @@ async function entrarPantalla(nombre, opciones = {}) {
 
 window.AutoservicioNavigate = entrarPantalla;
 
-function actualizarVersionConfiguracion() {
-    const version = document.getElementById("settingsAppVersion");
-    if (version) version.textContent = APP_VERSION;
-}
-
 function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => entrarPantalla(btn.dataset.pantalla));
@@ -253,7 +205,7 @@ function configurarEventos() {
         btn.addEventListener("click", () => entrarPantalla(btn.dataset.modulo));
     });
 
-    elementos.btnActualizarProductos?.addEventListener("click", cargarProductos);
+    elementos.btnActualizarProductos.addEventListener("click", cargarProductos);
     elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
     elementos.btnCerrarScanner.addEventListener("click", () => cerrarScanner(true));
     elementos.btnCodigoManualToggle.addEventListener("click", alternarCargaManual);
@@ -261,7 +213,6 @@ function configurarEventos() {
     elementos.codigoManualInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") procesarCodigoManual();
     });
-    elementos.codigoManualInput.addEventListener("input", () => renderSugerenciasManual("inventario"));
     elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
     elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
 
@@ -273,9 +224,9 @@ function configurarEventos() {
     elementos.btnMenosCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, -1, 1));
     elementos.btnMasCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, 1, 1));
 
-    elementos.checkSonidos?.addEventListener("change", actualizarPreferenciasFeedback);
-    elementos.checkVibracion?.addEventListener("change", actualizarPreferenciasFeedback);
-    elementos.btnReiniciar?.addEventListener("click", manejarReinicio);
+    elementos.checkSonidos.addEventListener("change", actualizarPreferenciasFeedback);
+    elementos.checkVibracion.addEventListener("change", actualizarPreferenciasFeedback);
+    elementos.btnReiniciar.addEventListener("click", manejarReinicio);
 
     elementos.buscadorProducto.addEventListener("input", refrescarProductos);
     elementos.btnVolverProductos.addEventListener("click", cancelarEdicionProducto);
@@ -296,7 +247,6 @@ function configurarEventos() {
     elementos.vencCodigoManualInput?.addEventListener("keydown", (e) => {
         if (e.key === "Enter") procesarCodigoManualVencimientos();
     });
-    elementos.vencCodigoManualInput?.addEventListener("input", () => renderSugerenciasManual("vencimientos"));
     elementos.vencSalonInput?.addEventListener("input", actualizarTotalVencimiento);
     elementos.vencDepositoInput?.addEventListener("input", actualizarTotalVencimiento);
     elementos.btnVencMenosSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencSalonInput, -1, 0, actualizarTotalVencimiento));
@@ -326,12 +276,11 @@ function configurarEventos() {
     });
     elementos.vencListado?.addEventListener("click", manejarClickListadoVencimientos);
     elementos.vencResumen?.addEventListener("click", manejarClickResumenVencimientos);
-    elementos.btnVencModalCerrar?.addEventListener("click", () => resolverSalidaVencimiento(cerrarModalVencimiento));
-    elementos.vencModal?.addEventListener("click", (e) => { if (e.target === elementos.vencModal) resolverSalidaVencimiento(cerrarModalVencimiento); });
+    elementos.btnVencModalCerrar?.addEventListener("click", cerrarModalVencimiento);
+    elementos.vencModal?.addEventListener("click", (e) => { if (e.target === elementos.vencModal) cerrarModalVencimiento(); });
     elementos.btnVencEditarAbrir?.addEventListener("click", mostrarEdicionVencimiento);
     elementos.btnVencEliminarAbrir?.addEventListener("click", mostrarConfirmacionEliminarVencimiento);
-    elementos.btnVencEliminarDesdeVista?.addEventListener("click", mostrarConfirmacionEliminarVencimiento);
-    elementos.btnVencCancelarEdicion?.addEventListener("click", () => resolverSalidaVencimiento(() => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado)));
+    elementos.btnVencCancelarEdicion?.addEventListener("click", () => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado));
     elementos.btnVencCancelarEliminar?.addEventListener("click", () => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado));
     elementos.btnVencGuardarEdicion?.addEventListener("click", guardarEdicionVencimiento);
     elementos.btnVencConfirmarEliminar?.addEventListener("click", confirmarEliminarVencimiento);
@@ -341,17 +290,14 @@ function configurarEventos() {
     elementos.btnVencEditMasSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencEditSalonInput, 1, 0, actualizarTotalEdicionVencimiento));
     elementos.btnVencEditMenosDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, -1, 0, actualizarTotalEdicionVencimiento));
     elementos.btnVencEditMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, 1, 0, actualizarTotalEdicionVencimiento));
-    $("btnCambiosContinuar")?.addEventListener("click", () => { cerrarModalCambiosPendientes(); resolucionCambiosPendientes?.continuar?.(); resolucionCambiosPendientes=null; });
-    $("btnCambiosDescartar")?.addEventListener("click", () => { const fn=resolucionCambiosPendientes?.descartar; cerrarModalCambiosPendientes(); resolucionCambiosPendientes=null; fn?.(); });
-    $("btnCambiosGuardar")?.addEventListener("click", async () => { const fn=resolucionCambiosPendientes?.guardar; cerrarModalCambiosPendientes(); resolucionCambiosPendientes=null; await fn?.(); });
 }
 
 function cambiarTabVencimientos(tab) {
     vencTabActual = tab || "cargar";
-    const titulos = { cargar: ["Vencimientos", "Control de fechas"], proximos: ["Próximos a vencer", "Control de fechas"], vencidos: ["Productos vencidos", "Vencidos"] };
+    const titulos = { cargar: ["Vencimientos", "Control de fechas"], proximos: ["Próximos a vencer", "Control de fechas"], vencidos: ["Productos vencidos", "Control de fechas"] };
     const actual = titulos[vencTabActual] || titulos.cargar;
-    if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
-    if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
+    if ($("brandHeaderTitulo")) $("brandHeaderTitulo").textContent = actual[0];
+    if ($("brandHeaderSubtitulo")) $("brandHeaderSubtitulo").textContent = actual[1];
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     busquedaVencimientos = "";
     filtroVencimientos = "todos";
@@ -379,13 +325,14 @@ function cambiarTabVencimientos(tab) {
 function actualizarVisibilidadPanelesVencimientos() {
     const enCarga = vencTabActual === "cargar";
     const enProximos = vencTabActual === "proximos";
-    const resumenCard = $("vencResumenCard");
+    const resumen = elementos.vencResumen || $("vencResumen");
     const filtros = document.querySelector(".venc-filter-toolbar");
     const buscador = elementos.vencBuscador;
 
-    resumenCard?.classList.toggle("oculto", !enCarga);
+    resumen?.classList.toggle("oculto", !enCarga);
+    // Un solo título: el encabezado rojo identifica la pantalla.
     const cabeceraLista = document.querySelector("#pantallaVencimientos .venc-list-head");
-    cabeceraLista?.classList.remove("oculto");
+    cabeceraLista?.classList.toggle("oculto", !enCarga);
     filtros?.classList.toggle("oculto", !enProximos);
     buscador?.classList.toggle("oculto", enCarga);
     if (buscador && enCarga) buscador.value = "";
@@ -486,71 +433,24 @@ function ocultarControlesEscaneo() {
     if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
 }
 
-function limpiarSugerenciasManual(tipo) {
-    const contenedor = tipo === "vencimientos" ? elementos.vencManualSugerencias : elementos.manualSugerencias;
-    if (!contenedor) return;
-    contenedor.innerHTML = "";
-    contenedor.classList.add("oculto");
-}
-
-function renderSugerenciasManual(tipo) {
-    const input = tipo === "vencimientos" ? elementos.vencCodigoManualInput : elementos.codigoManualInput;
-    const contenedor = tipo === "vencimientos" ? elementos.vencManualSugerencias : elementos.manualSugerencias;
-    if (!input || !contenedor) return;
-    const consulta = String(input.value || "").trim();
-    if (consulta.length < 2) { limpiarSugerenciasManual(tipo); return; }
-    const resultados = buscarProductosPorTexto(consulta, 5, false);
-    contenedor.innerHTML = "";
-    if (!resultados.length) {
-        contenedor.innerHTML = '<div class="manual-no-results">No se encontraron productos.</div>';
-        contenedor.classList.remove("oculto");
-        return;
-    }
-    resultados.forEach(producto => {
-        const boton = document.createElement("button");
-        boton.type = "button";
-        boton.className = "manual-suggestion-item";
-        boton.innerHTML = `<strong>${producto.articulo}</strong><span>${producto.codigo || "Sin código"}</span>`;
-        boton.addEventListener("click", async () => {
-            input.value = producto.codigo;
-            limpiarSugerenciasManual(tipo);
-            if (tipo === "vencimientos") await procesarCodigoManualVencimientos();
-            else await procesarCodigoManual();
-        });
-        contenedor.appendChild(boton);
-    });
-    contenedor.classList.remove("oculto");
-}
-
 function alternarCargaManual() {
     const abrir = elementos.manualPanel.classList.contains("oculto");
     elementos.manualPanel.classList.toggle("oculto", !abrir);
-    elementos.btnCodigoManualToggle.textContent = abrir ? "Cancelar ingreso manual" : "Ingresar producto manual";
+    elementos.btnCodigoManualToggle.textContent = abrir ? "Cancelar código manual" : "Ingresar código manualmente";
     if (abrir) elementos.codigoManualInput.focus();
-    else { elementos.codigoManualInput.value = ""; limpiarSugerenciasManual("inventario"); }
+    else elementos.codigoManualInput.value = "";
 }
 
 async function procesarCodigoManual() {
-    const consulta = String(elementos.codigoManualInput.value || "").trim();
-    if (!consulta) {
-        mostrarMensaje("Ingresá un código o nombre", "error");
+    const codigo = String(elementos.codigoManualInput.value || "").trim();
+    if (!codigo) {
+        mostrarMensaje("Ingresá un código", "error");
         return;
     }
-    const exacto = buscarProductoPorCodigo(consulta);
-    let codigo = consulta;
-    if (!exacto.encontrado) {
-        const resultados = buscarProductosPorTexto(consulta, 5, false);
-        if (resultados.length !== 1) {
-            renderSugerenciasManual("inventario");
-            mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
-            return;
-        }
-        codigo = resultados[0].codigo;
-    }
+
     elementos.codigoManualInput.value = "";
-    limpiarSugerenciasManual("inventario");
     elementos.manualPanel.classList.add("oculto");
-    elementos.btnCodigoManualToggle.textContent = "Ingresar producto manual";
+    elementos.btnCodigoManualToggle.textContent = "Ingresar código manualmente";
     await manejarCodigoEscaneado(codigo);
 }
 
@@ -734,23 +634,15 @@ function refrescarProductos() {
 
 function seleccionarProductoParaEditar(producto) {
     productoEditando = producto;
-    snapshotProductoEditando = { salon: Number(producto.salon)||0, deposito: Number(producto.deposito)||0 };
     mostrarEditorStock(producto);
-    pantallaActualApp = "editarProducto";
     const volver = $("brandBackBtn");
     if (volver) volver.dataset.modulo = tabProductosActual === "cargados" ? "cargados" : "productos";
 }
 
 function cancelarEdicionProducto() {
-    if (productoEditando && hayCambiosProducto()) { resolverSalidaProducto(() => cancelarEdicionProductoForzado()); return; }
-    cancelarEdicionProductoForzado();
-}
-function cancelarEdicionProductoForzado() {
     productoEditando = null;
-    snapshotProductoEditando = null;
     const destino = tabProductosActual === "cargados" ? "cargados" : "productos";
     cambiarPantalla(destino);
-    pantallaActualApp = destino;
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     refrescarProductos();
     sincronizarEnSegundoPlano();
@@ -773,10 +665,7 @@ async function guardarCorreccion() {
         const producto = await modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
 
         productoEditando = null;
-        snapshotProductoEditando = null;
-        const destinoEdicion = tabProductosActual === "cargados" ? "cargados" : "productos";
-        cambiarPantalla(destinoEdicion);
-        pantallaActualApp = destinoEdicion;
+        cambiarPantalla(tabProductosActual === "cargados" ? "cargados" : "productos");
         refrescarProductos();
         sincronizarEnSegundoPlano();
 
@@ -787,11 +676,9 @@ async function guardarCorreccion() {
 
         mostrarMensaje("Stock corregido", "ok");
         reproducirConfirmacion("guardado");
-        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
-        return false;
     } finally {
         corrigiendo = false;
         elementos.btnGuardarCorreccion.disabled = false;
@@ -861,32 +748,20 @@ async function sincronizarEnSegundoPlano() {
 function alternarCargaManualVencimientos() {
     const abrir = elementos.vencManualPanel?.classList.contains("oculto");
     elementos.vencManualPanel?.classList.toggle("oculto", !abrir);
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = abrir ? "Cancelar ingreso manual" : "Ingresar producto manual";
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = abrir ? "Cancelar código manual" : "Ingresar código manualmente";
     if (abrir) elementos.vencCodigoManualInput?.focus();
-    else if (elementos.vencCodigoManualInput) { elementos.vencCodigoManualInput.value = ""; limpiarSugerenciasManual("vencimientos"); }
+    else if (elementos.vencCodigoManualInput) elementos.vencCodigoManualInput.value = "";
 }
 
 async function procesarCodigoManualVencimientos() {
-    const consulta = String(elementos.vencCodigoManualInput?.value || "").trim();
-    if (!consulta) {
-        mostrarMensaje("Ingresá un código o nombre", "error");
+    const codigo = String(elementos.vencCodigoManualInput?.value || "").trim();
+    if (!codigo) {
+        mostrarMensaje("Ingresá un código", "error");
         return;
     }
-    const exacto = buscarProductoPorCodigo(consulta);
-    let codigo = consulta;
-    if (!exacto.encontrado) {
-        const resultados = buscarProductosPorTexto(consulta, 5, false);
-        if (resultados.length !== 1) {
-            renderSugerenciasManual("vencimientos");
-            mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
-            return;
-        }
-        codigo = resultados[0].codigo;
-    }
     elementos.vencCodigoManualInput.value = "";
-    limpiarSugerenciasManual("vencimientos");
     elementos.vencManualPanel?.classList.add("oculto");
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar código manualmente";
     await manejarCodigoVencimiento(codigo);
 }
 
@@ -917,7 +792,7 @@ function mostrarAccionesVencimientos() {
 function reiniciarFormularioVencimientos() {
     productoVencimientoActual = null;
     elementos.vencManualPanel?.classList.add("oculto");
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
+    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar código manualmente";
     if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
     if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
     if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;
@@ -1018,11 +893,6 @@ async function guardarVencimientoActual() {
             elementos.vencFechaInput.focus();
             return;
         }
-        if (vencimiento < fechaHoyLocalIso()) {
-            mostrarMensaje("La fecha no puede ser anterior a hoy", "error");
-            elementos.vencFechaInput.focus();
-            return;
-        }
         if (salon + deposito <= 0) {
             mostrarMensaje("Cargá salón o depósito", "error");
             return;
@@ -1046,7 +916,6 @@ async function guardarVencimientoActual() {
         await cargarListadoVencimientos();
         mostrarMensaje("Vencimiento guardado", "ok");
         reproducirConfirmacion("guardado");
-        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -1059,7 +928,7 @@ async function guardarVencimientoActual() {
 async function cargarListadoVencimientos() {
     try {
         if (!elementos.vencListado) return;
-        mostrarCargandoEn(elementos.vencListado, "Cargando vencimientos...");
+        elementos.vencListado.textContent = "Cargando vencimientos...";
         vencimientosCache = await listarVencimientos();
         renderListadoVencimientos();
     } catch (error) {
@@ -1117,42 +986,9 @@ function bucketVencimiento(item) {
     return "30";
 }
 
-function fechaHoyArgentina() {
-    try {
-        const partes = new Intl.DateTimeFormat("en-CA", {
-            timeZone: "America/Argentina/Buenos_Aires",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit"
-        }).formatToParts(new Date());
-        const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
-        return `${mapa.year}-${mapa.month}-${mapa.day}`;
-    } catch (_) {
-        const ahora = new Date();
-        const desplazada = new Date(ahora.getTime() - (3 * 60 * 60 * 1000));
-        return desplazada.toISOString().slice(0, 10);
-    }
-}
-
-function fechaCargaVencimiento(item) {
-    const valor = String(item?.fecha_carga || item?.fechaCarga || "").trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
-    const matchLatino = valor.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-    if (matchLatino) {
-        const [, dia, mes, anio] = matchLatino;
-        return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
-    }
-    return "";
-}
-
-function fueCargadoHoy(item) {
-    return fechaCargaVencimiento(item) === fechaHoyArgentina();
-}
-
 function filtrarVencimientos() {
     const q = vencTabActual === "cargar" ? "" : String(busquedaVencimientos || "").trim().toLowerCase();
     return vencimientosCache.filter(item => {
-        if (vencTabActual === "cargar" && !fueCargadoHoy(item)) return false;
         const bucket = bucketVencimiento(item);
 
         if (vencTabActual === "proximos" && !["7", "15", "30"].includes(bucket)) return false;
@@ -1172,33 +1008,20 @@ function filtrarVencimientos() {
 }
 
 function renderResumenVencimientos() {
-    const contarRango = (bucket) => {
-        const items = vencimientosCache.filter(item => bucketVencimiento(item) === bucket);
-        return {
-            total: items.length,
-            oferta: items.filter(tieneOferta).length,
-        };
-    };
     const resumen = {
-        siete: contarRango("7"),
-        quince: contarRango("15"),
-        treinta: contarRango("30"),
-        vencidos: contarRango("vencidos"),
+        vencidos: vencimientosCache.filter(item => bucketVencimiento(item) === "vencidos").length,
+        siete: vencimientosCache.filter(item => bucketVencimiento(item) === "7").length,
+        quince: vencimientosCache.filter(item => bucketVencimiento(item) === "15").length,
+        treinta: vencimientosCache.filter(item => bucketVencimiento(item) === "30").length,
     };
     const el = elementos.vencResumen || $("vencResumen");
     if (!el) return;
-    const fila = (clase, filtro, titulo, datos) => `
-        <button type="button" class="venc-resumen-card ${clase}" data-venc-resumen="${filtro}">
-            <span class="venc-resumen-rango">${titulo}</span>
-            <span class="venc-resumen-datos"><strong>${datos.total}</strong><small>productos</small></span>
-            <span class="venc-resumen-oferta"><strong>${datos.oferta}</strong><small>en oferta</small></span>
-        </button>`;
-    el.innerHTML = [
-        fila("venc-resumen-7", "7", "7 días", resumen.siete),
-        fila("venc-resumen-15", "15", "15 días", resumen.quince),
-        fila("venc-resumen-30", "30", "30 días", resumen.treinta),
-        fila("venc-resumen-vencidos", "vencidos", "Vencidos", resumen.vencidos),
-    ].join("");
+    el.innerHTML = `
+        <button type="button" class="venc-resumen-card venc-resumen-7" data-venc-resumen="7"><span>7 días</span><strong>${resumen.siete}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-15" data-venc-resumen="15"><span>15 días</span><strong>${resumen.quince}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-30" data-venc-resumen="30"><span>30 días</span><strong>${resumen.treinta}</strong></button>
+        <button type="button" class="venc-resumen-card venc-resumen-vencidos" data-venc-resumen="vencidos"><span>Vencidos</span><strong>${resumen.vencidos}</strong></button>
+    `;
 }
 
 function renderListadoVencimientos() {
@@ -1208,15 +1031,15 @@ function renderListadoVencimientos() {
 
     if (elementos.vencListadoTitulo) {
         elementos.vencListadoTitulo.textContent = vencTabActual === "cargar"
-            ? "Registros cargados hoy"
+            ? "Últimos registros cargados"
             : (vencTabActual === "vencidos" ? "Productos vencidos" : "Próximos a vencer");
     }
 
-    const limite = vencTabActual === "cargar" ? 3 : 80;
+    const limite = vencTabActual === "cargar" ? 6 : 80;
     const baseLista = filtrarVencimientos();
     const ordenada = [...baseLista].sort((a, b) => {
         if (vencTabActual === "cargar") {
-            return String(b.id || b.fecha_carga || b.fechaCarga || "").localeCompare(String(a.id || a.fecha_carga || a.fechaCarga || ""));
+            return String(b.id || b.fechaCarga || "").localeCompare(String(a.id || a.fechaCarga || ""));
         }
         return diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento);
     });
@@ -1224,11 +1047,7 @@ function renderListadoVencimientos() {
 
     if (!lista.length) {
         elementos.vencListado.className = "venc-list-empty";
-        if (vencTabActual === "cargar") {
-            elementos.vencListado.textContent = "Todavía no se cargaron vencimientos hoy.";
-        } else {
-            elementos.vencListado.textContent = vencimientosCache.length ? "No hay registros con ese filtro." : "Todavía no hay vencimientos cargados.";
-        }
+        elementos.vencListado.textContent = vencimientosCache.length ? "No hay registros con ese filtro." : "Todavía no hay vencimientos cargados.";
         return;
     }
 
@@ -1261,35 +1080,45 @@ function renderListadoVencimientos() {
 
         if (vencTabActual === "vencidos") {
             return `
-                <article class="venc-item venc-item-vencido-registro venc-vencido" data-id="${item.id}" tabindex="0">
-                    <div class="venc-card-heading">
+                <article class="venc-item venc-item-vencido-registro venc-vencido" data-id="${item.id}">
+                    <div class="venc-vencido-body">
                         <strong>${articulo}</strong>
                         <span class="venc-code">Código: ${codigo}</span>
+                        <div class="venc-vencido-fecha"><span>📅 Venció: <b>${fecha}</b></span><em>${estado}</em></div>
+                        <div class="venc-vencido-grid">
+                            <span><small>Salón</small><b>${salon}</b></span>
+                            <span><small>Depósito</small><b>${deposito}</b></span>
+                            <span><small>Total</small><b>${cantidad}</b></span>
+                        </div>
                     </div>
-                    <div class="venc-days-hero venc-vencido-hero">${estado}</div>
-                    <div class="venc-card-summary">
-                        <span class="venc-card-date">Fecha: ${fecha}</span>
-                        <span class="venc-card-qty"><strong>${cantidad}</strong><small>${cantidad === 1 ? "unidad" : "unidades"}</small></span>
-                    </div>
+                    <button type="button" class="venc-card-action danger venc-delete-only" data-venc-accion="eliminar">Eliminar</button>
                 </article>
             `;
         }
 
         return `
-            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""}" data-id="${item.id}" tabindex="0">
-                <div class="venc-card-topline">
-                    <span class="venc-offer-tag ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "🏷️ Oferta activa" : "Sin oferta"}</span>
+            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""}" data-id="${item.id}">
+                <div class="venc-offer-top ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "🏷️ OFERTA ACTIVA" : "Sin oferta"}</div>
+                <div class="venc-item-main venc-proximo-main">
+                    <div>
+                        <strong>${articulo}</strong>
+                        <span class="venc-code">Código: ${codigo}</span>
+                    </div>
                 </div>
-                <div class="venc-card-heading">
-                    <strong>${articulo}</strong>
-                    <span class="venc-code">Código: ${codigo}</span>
+                <div class="venc-proximo-fecha-row">
+                    <span class="venc-date-pill">📅 ${fecha}</span>
+                    <b class="venc-state-pill ${clase}">${estado}</b>
                 </div>
-                <div class="venc-days-hero ${clase}">${estado}</div>
-                <div class="venc-card-summary">
-                    <span class="venc-card-date">Fecha: ${fecha}</span>
-                    <span class="venc-card-qty"><strong>${cantidad}</strong><small>${cantidad === 1 ? "unidad" : "unidades"}</small></span>
+                <div class="venc-proximo-grid">
+                    <span><small>Salón</small><b>${salon}</b></span>
+                    <span><small>Depósito</small><b>${deposito}</b></span>
+                    <span><small>Total</small><b>${cantidad}</b></span>
                 </div>
-                <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>
+                <div class="venc-proximo-actions venc-proximo-actions-3">
+                    <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>
+                    <button type="button" class="venc-card-action" data-venc-accion="editar">Editar</button>
+                    <button type="button" class="venc-card-action danger" data-venc-accion="eliminar">Eliminar</button>
+                </div>
             </article>
         `;
     }).join("");
@@ -1299,23 +1128,22 @@ function manejarClickListadoVencimientos(event) {
     const card = event.target.closest(".venc-item");
     if (!card) return;
     const accion = event.target.closest("[data-venc-accion]")?.dataset.vencAccion;
+    if (!accion) return;
     const item = vencimientosCache.find(registro => String(registro.id) === String(card.dataset.id));
     if (!item) return;
     vencimientoSeleccionado = item;
-
     if (accion === "oferta" && vencTabActual === "proximos") {
         alternarOfertaVencimiento(item);
         return;
     }
-
+    if (accion === "editar" && vencTabActual === "proximos") {
+        abrirDetalleVencimiento(item);
+        mostrarEdicionVencimiento();
+        return;
+    }
     if (accion === "eliminar") {
         abrirDetalleVencimiento(item);
         mostrarConfirmacionEliminarVencimiento();
-        return;
-    }
-
-    if (!accion && (vencTabActual === "proximos" || vencTabActual === "vencidos")) {
-        abrirDetalleVencimiento(item);
     }
 }
 
@@ -1328,7 +1156,6 @@ async function alternarOfertaVencimiento(item) {
         await cargarListadoVencimientos();
         mostrarMensaje(nuevaOferta ? "Oferta marcada" : "Oferta quitada", "ok");
         reproducirConfirmacion("guardado");
-        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -1354,8 +1181,6 @@ function abrirDetalleVencimiento(item) {
         estado.textContent = textoEstadoVencimiento(item);
         estado.className = `venc-modal-status ${claseEstadoVencimiento(item)}`;
     }
-    const esVencido = bucketVencimiento(item) === "vencidos";
-    elementos.btnVencEditarAbrir?.classList.toggle("oculto", esVencido);
     mostrarPanelModal(elementos.vencModalVista);
     elementos.vencModal?.classList.remove("oculto");
     elementos.vencModal?.setAttribute("aria-hidden", "false");
@@ -1365,7 +1190,6 @@ function cerrarModalVencimiento() {
     elementos.vencModal?.classList.add("oculto");
     elementos.vencModal?.setAttribute("aria-hidden", "true");
     vencimientoSeleccionado = null;
-    snapshotVencimientoEditando = null;
 }
 
 function mostrarEdicionVencimiento() {
@@ -1376,7 +1200,6 @@ function mostrarEdicionVencimiento() {
     if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.value = item.vencimiento || "";
     if (elementos.vencEditSalonInput) elementos.vencEditSalonInput.value = item.salon || 0;
     if (elementos.vencEditDepositoInput) elementos.vencEditDepositoInput.value = item.deposito || 0;
-    snapshotVencimientoEditando = { vencimiento: item.vencimiento || "", salon: Number(item.salon)||0, deposito: Number(item.deposito)||0 };
     actualizarTotalEdicionVencimiento();
     mostrarPanelModal(elementos.vencModalEditar);
 }
@@ -1394,22 +1217,18 @@ async function guardarEdicionVencimiento() {
     const salon = Number(elementos.vencEditSalonInput?.value) || 0;
     const deposito = Number(elementos.vencEditDepositoInput?.value) || 0;
     if (!vencimiento) { mostrarMensaje("Cargá la fecha de vencimiento", "error"); return; }
-    if (vencimiento !== item.vencimiento && vencimiento < fechaHoyLocalIso()) { mostrarMensaje("La nueva fecha no puede ser anterior a hoy", "error"); elementos.vencEditFechaInput?.focus(); return; }
     if (salon + deposito <= 0) { mostrarMensaje("Cargá salón o depósito", "error"); return; }
     try {
         elementos.btnVencGuardarEdicion.disabled = true;
         mostrarMensaje("Actualizando registro...", "ok");
         await actualizarVencimiento(item.id, { vencimiento, salon, deposito });
         await cargarListadoVencimientos();
-        snapshotVencimientoEditando = null;
         cerrarModalVencimiento();
         mostrarMensaje("Registro actualizado", "ok");
         reproducirConfirmacion("guardado");
-        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
-        return false;
     } finally {
         if (elementos.btnVencGuardarEdicion) elementos.btnVencGuardarEdicion.disabled = false;
     }
@@ -1434,7 +1253,6 @@ async function confirmarEliminarVencimiento() {
         cerrarModalVencimiento();
         mostrarMensaje("Registro eliminado", "ok");
         reproducirConfirmacion("guardado");
-        return true;
     } catch (error) {
         mostrarMensaje(error.message, "error");
         reproducirConfirmacion("error");
@@ -1443,65 +1261,8 @@ async function confirmarEliminarVencimiento() {
     }
 }
 
-
-function mostrarCargandoEn(contenedor, texto = "Cargando...") {
-    if (!contenedor) return;
-    contenedor.innerHTML = `<div class="app-loading"><span class="app-spinner" aria-hidden="true"></span><strong>${texto}</strong></div>`;
-}
-function hayCambiosProducto() {
-    if (!productoEditando || !snapshotProductoEditando) return false;
-    const valores = obtenerValoresEditor();
-    return Number(valores.salon)!==snapshotProductoEditando.salon || Number(valores.deposito)!==snapshotProductoEditando.deposito;
-}
-function estaEditandoVencimiento() {
-    return Boolean(snapshotVencimientoEditando && elementos.vencModalEditar && !elementos.vencModalEditar.classList.contains("oculto"));
-}
-function hayCambiosVencimiento() {
-    if (!estaEditandoVencimiento()) return false;
-    return (elementos.vencEditFechaInput?.value||"")!==snapshotVencimientoEditando.vencimiento ||
-        (Number(elementos.vencEditSalonInput?.value)||0)!==snapshotVencimientoEditando.salon ||
-        (Number(elementos.vencEditDepositoInput?.value)||0)!==snapshotVencimientoEditando.deposito;
-}
-function abrirModalCambiosPendientes({ titulo, texto, guardar, descartar, continuar }) {
-    resolucionCambiosPendientes = { guardar, descartar, continuar };
-    $("cambiosPendientesTitulo").textContent = titulo;
-    $("cambiosPendientesTexto").textContent = texto;
-    $("cambiosPendientesModal")?.classList.remove("oculto");
-    document.body.classList.add("modal-abierto");
-}
-function cerrarModalCambiosPendientes() {
-    $("cambiosPendientesModal")?.classList.add("oculto");
-    document.body.classList.remove("modal-abierto");
-}
-function resolverSalidaProducto(continuar) {
-    if (!productoEditando) { continuar?.(); return; }
-    if (!hayCambiosProducto()) { productoEditando=null; snapshotProductoEditando=null; continuar?.(); return; }
-    abrirModalCambiosPendientes({
-        titulo: "Cambios sin guardar",
-        texto: "¿Querés guardar los cambios del producto antes de salir?",
-        guardar: async () => { const ok=await guardarCorreccion(); if(ok) continuar?.(); },
-        descartar: () => { productoEditando=null; snapshotProductoEditando=null; continuar?.(); },
-        continuar: () => {}
-    });
-}
-function resolverSalidaVencimiento(continuar) {
-    if (!estaEditandoVencimiento()) { continuar?.(); return; }
-    if (!hayCambiosVencimiento()) { snapshotVencimientoEditando=null; continuar?.(); return; }
-    abrirModalCambiosPendientes({
-        titulo: "Cambios sin guardar",
-        texto: "¿Querés guardar los cambios del vencimiento antes de salir?",
-        guardar: async () => { const ok=await guardarEdicionVencimiento(); if(ok) continuar?.(); },
-        descartar: () => { snapshotVencimientoEditando=null; cerrarModalVencimiento(); continuar?.(); },
-        continuar: () => {}
-    });
-}
-
-window.addEventListener("beforeunload", (event) => {
+window.addEventListener("beforeunload", () => {
     detenerScanner();
-    if (hayCambiosProducto() || hayCambiosVencimiento()) {
-        event.preventDefault();
-        event.returnValue = "";
-    }
 });
 
 

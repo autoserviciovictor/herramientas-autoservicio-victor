@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "6.1.8 Beta";
+const APP_VERSION = "6.1.11";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1327,6 +1327,7 @@ async function obtenerSheetId(nombreHoja) {
   if (!hoja) throw new Error(`No existe la hoja ${nombreHoja}`);
   return hoja.properties.sheetId;
 }
+
 
 
 // V6.1.7 - Reposición persistente en Google Sheets, individual y con dos listas por usuario.

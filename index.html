@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Autoservicio — Herramientas</title>
+    <title>Herramientas Autoservicio Victor V6.1.1</title>
 
-    <meta name="theme-color" content="#ef393f">
-    <meta name="application-name" content="Autoservicio">
+    <meta name="theme-color" content="#b24444">
+    <meta name="application-name" content="Autoservicio Victor">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Autoservicio">
+    <meta name="apple-mobile-web-app-title" content="Autoservicio Victor">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="icon" href="./icons/favicon.png" type="image/png">
+    <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6117-venc-rangos">
+    <link rel="stylesheet" href="style.css?v=611-rol-beta">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -21,30 +21,22 @@
 
 <div id="loginOverlay" class="login-overlay" aria-hidden="false">
   <div class="login-card">
-    <img class="login-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
-    <h1>Autoservicio</h1>
+    <div class="login-logo">🏪</div>
+    <h1>Autoservicio Victor</h1>
     <p>Ingresá para continuar</p>
-    <div class="login-input-wrap">
-      <span class="login-input-icon" aria-hidden="true">👤</span>
-      <input id="loginUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario" aria-label="Usuario">
-    </div>
-    <div class="login-input-wrap">
-      <span class="login-input-icon" aria-hidden="true">🔒</span>
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
-    </div>
-    <label class="login-remember">
-      <input id="loginRecordarme" type="checkbox">
-      <span>Recordarme</span>
-    </label>
+    <label for="loginUsuario">Usuario</label>
+    <input id="loginUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario">
+    <label for="loginPassword">Contraseña</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña">
     <div id="loginEstado" class="login-status"></div>
-    <button id="btnLoginIngresar" type="button" class="login-button"><span>Ingresar</span><i class="login-button-spinner" aria-hidden="true"></i></button>
+    <button id="btnLoginIngresar" type="button" class="login-button">Ingresar</button>
   </div>
 </div>
 
 <div id="splash" class="splash">
-    <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
-    <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.16.1 Beta</p>
+    <div class="splash-logo">🏪</div>
+    <h1>Autoservicio Victor</h1>
+    <p>Herramientas V6.1.1</p>
 </div>
 
 <div class="app">
@@ -53,24 +45,26 @@
         <button id="brandMenuBtn" class="brand-menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">☰</button>
         <button id="brandBackBtn" class="brand-back-btn oculto" data-modulo="inicio" type="button" aria-label="Volver">‹</button>
         <div class="brand-header-text">
-            <span id="brandHeaderTitulo">Autoservicio</span>
+            <span id="brandHeaderTitulo">🏪 Autoservicio Victor</span>
+            <small id="brandHeaderSubtitulo">Herramientas</small>
         </div>
         <div id="userDropdown" class="user-dropdown oculto" aria-hidden="true">
             <div class="user-dropdown-profile">
                 <span class="user-dropdown-avatar">👤</span>
                 <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Repositor</small></div>
             </div>
-            <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><strong>Configuración</strong></button>
-            <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><strong>Cerrar sesión</strong></button>
+            <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><div><strong>Configuración</strong><small>Ajustes de la aplicación</small></div></button>
+            <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><div><strong>Cerrar sesión</strong><small>Salir de este usuario</small></div></button>
         </div>
     </div>
 
-    <section id="modulePageHeader" class="module-page-header" aria-live="polite">
-        <h1 id="modulePageTitle">Herramientas</h1>
-        <p id="modulePageSubtitle">Elegí el módulo que querés usar</p>
-    </section>
-
+    
     <main id="pantallaInicio" class="pantalla pantalla-inicio activa">
+        <header class="home-header">
+            <h1>Herramientas</h1>
+            <p>Elegí el módulo que querés usar</p>
+        </header>
+
         <section class="module-grid">
             <button type="button" class="module-card module-inventario" data-modulo="inventario">
                 <span class="module-icon">📦</span>
@@ -97,17 +91,9 @@
             </button>
         </section>
 
-        <section id="pwaInstallCard" class="pwa-install-card settings-card oculto" aria-live="polite">
-            <div class="pwa-install-copy">
-                <strong>Instalar Autoservicio</strong>
-                <span id="estadoInstalacionApp">Instalá la aplicación para abrirla más rápido desde este dispositivo.</span>
-            </div>
-            <button type="button" id="btnInstalarApp" class="setting-btn">Instalar aplicación</button>
-        </section>
-
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.16.1 Beta</strong>
+            <strong>V6.1.1</strong>
         </section>
     </main>
 
@@ -127,11 +113,10 @@
 
         <section id="scanPanel" class="scan-panel">
             <button type="button" id="btnAbrirScanner" class="scan-open-btn">📷 Abrir escáner</button>
-            <button type="button" id="btnCodigoManualToggle" class="manual-link-btn">Ingresar producto manual</button>
+            <button type="button" id="btnCodigoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
             <div id="manualPanel" class="manual-panel oculto">
-                <input type="text" id="codigoManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
+                <input type="text" id="codigoManualInput" inputmode="numeric" placeholder="Código de barras">
                 <button type="button" id="btnBuscarManual">Buscar</button>
-                <div id="manualSugerencias" class="manual-suggestions oculto"></div>
             </div>
         </section>
 
@@ -236,28 +221,40 @@
     </main>
 
     <main id="pantallaAjustes" class="pantalla">
-        <section class="settings-card settings-preferences-card">
+        <header class="header-simple">
+            <h1>Ajustes</h1>
+            <p>Configuración del inventario</p>
+        </header>
+
+        <section class="settings-card">
+            <div id="estadoExcelAjustes" class="excel-status-card">Conectando con Google Sheets...</div>
+            <button type="button" id="btnActualizarProductos" class="setting-btn">🔄 Actualizar productos</button>
+        </section>
+
+        <section class="settings-card">
             <div class="switch-row">
-                <div><strong>Sonidos</strong><span>Reproducir sonido al escanear y guardar</span></div>
+                <div><strong>Sonidos</strong><span>Confirmación al escanear y guardar</span></div>
                 <input type="checkbox" id="checkSonidos" checked>
             </div>
             <div class="switch-row">
-                <div><strong>Vibración</strong><span>Vibrar al confirmar una acción</span></div>
+                <div><strong>Vibración</strong><span>Vibración corta al confirmar</span></div>
                 <input type="checkbox" id="checkVibracion" checked>
             </div>
         </section>
 
-        <section class="settings-card notification-settings-card">
+        <section class="settings-card pwa-install-card">
             <div class="pwa-install-copy">
-                <strong>Permitir notificaciones</strong>
-                <span id="estadoNotificaciones">Preparando notificaciones…</span>
+                <strong>Instalar aplicación</strong>
+                <span id="estadoInstalacionApp">Preparando instalación...</span>
             </div>
-            <button type="button" id="btnActivarNotificaciones" class="setting-btn">Permitir notificaciones</button>
+            <button type="button" id="btnInstalarApp" class="setting-btn">⬇ Instalar aplicación</button>
         </section>
 
-        <section class="settings-card settings-version-card">
-            <span>Versión instalada</span>
-            <strong id="settingsAppVersion">6.1.16.1 Beta</strong>
+
+
+        <section class="settings-card danger-zone">
+            <button type="button" id="btnReiniciar" class="danger-btn">🔄 Reiniciar contador local</button>
+            <p>No borra Google Sheets. Solo reinicia los contadores de esta app.</p>
         </section>
     </main>
 
@@ -265,11 +262,10 @@
 
         <section class="venc-actions-card">
             <button type="button" id="btnVencAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
-            <button type="button" id="btnVencManualToggle" class="manual-link-btn">Ingresar producto manual</button>
+            <button type="button" id="btnVencManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
             <div id="vencManualPanel" class="manual-panel oculto">
-                <input type="text" id="vencCodigoManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
+                <input type="text" id="vencCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
                 <button type="button" id="btnVencBuscarManual">Buscar</button>
-                <div id="vencManualSugerencias" class="manual-suggestions oculto"></div>
             </div>
         </section>
 
@@ -297,7 +293,7 @@
 
         <section id="vencFormCard" class="venc-form-card oculto">
             <label>Fecha de vencimiento</label>
-            <input type="date" id="vencFechaInput" min="">
+            <input type="date" id="vencFechaInput">
 
             <div class="venc-grid venc-qty-grid">
                 <div class="venc-qty-box venc-qty-salon">
@@ -325,15 +321,13 @@
             </div>
         </section>
 
-        <section id="vencResumenCard" class="venc-summary-card">
-            <h2>Contador de vencimientos</h2>
-            <div id="vencResumen" class="venc-resumen"></div>
-        </section>
-
-        <section id="vencListadoCard" class="venc-list-card">
+        <section class="venc-list-card">
             <div class="venc-list-head">
-                <h2 id="vencListadoTitulo">Registros cargados hoy</h2>
+                <h2 id="vencListadoTitulo">Registros recientes</h2>
+                
             </div>
+
+            <div id="vencResumen" class="venc-resumen"></div>
 
             <input id="vencBuscador" class="venc-search" type="search" placeholder="Buscar por código o producto...">
 
@@ -345,27 +339,25 @@
             <div id="vencListado" class="venc-list-empty">Todavía no hay vencimientos cargados.</div>
         </section>
 
-        <nav class="venc-bottom-nav app-bottom-nav" aria-label="Navegación vencimientos">
-            <button type="button" class="activo" data-venc-tab="cargar"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Cargar</span></button>
-            <button type="button" data-venc-tab="proximos"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3M16 2v3M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z"/><path d="M12 13v4l2 1"/></svg><span>Próximos</span></button>
-            <button type="button" data-venc-tab="vencidos"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.7 20h18.6L12 3Z"/><path d="M12 9v5M12 17.5v.01"/></svg><span>Vencidos</span></button>
+        <nav class="venc-bottom-nav" aria-label="Navegación vencimientos">
+            <button type="button" class="activo" data-venc-tab="cargar">➕<span>Cargar</span></button>
+            <button type="button" data-venc-tab="proximos">📅<span>Próximos</span></button>
+            <button type="button" data-venc-tab="vencidos">⚠️<span>Vencidos</span></button>
         </nav>
     </main>
 
 
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
+        <section class="repo-user-strip" aria-label="Lista personal">
+            <span>Lista de</span><strong id="repoUsuarioActual">Mi usuario</strong>
+        </section>
         <section id="repoCargaVista">
-            <div class="repo-list-selector" role="group" aria-label="Lista para agregar productos">
-                <button type="button" class="activo" data-repo-lista="1" data-repo-lista-contexto="cargar">Lista 1</button>
-                <button type="button" data-repo-lista="2" data-repo-lista-contexto="cargar">Lista 2</button>
-            </div>
             <section id="repoActionsCard" class="venc-actions-card repo-actions-card">
                 <button type="button" id="btnRepoAbrirScanner" class="scan-open-btn">📷 Escanear código</button>
-                <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar producto manual</button>
+                <button type="button" id="btnRepoManualToggle" class="manual-link-btn">Ingresar código manualmente</button>
                 <div id="repoManualPanel" class="manual-panel oculto">
-                    <input id="repoCodigoManualInput" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo">
+                    <input id="repoCodigoManualInput" inputmode="numeric" placeholder="Código de barras">
                     <button id="btnRepoBuscarManual" type="button">Buscar</button>
-                    <div id="repoManualSugerencias" class="manual-suggestions oculto"></div>
                 </div>
             </section>
 
@@ -400,79 +392,36 @@
         </section>
 
         <section id="repoRegistroVista" class="oculto">
-            <div class="repo-list-selector" role="group" aria-label="Lista para consultar">
-                <button type="button" class="activo" data-repo-lista="1" data-repo-lista-contexto="registro">Lista 1</button>
-                <button type="button" data-repo-lista="2" data-repo-lista-contexto="registro">Lista 2</button>
-            </div>
             <section class="venc-list-card repo-registro-card">
                 <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
-                <div class="repo-list-toolbar repo-list-toolbar-clean"><div class="repo-list-toolbar-actions"><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button><button id="btnRepoEditarLista" type="button" disabled>Editar lista</button></div></div>
+                <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button></div>
 
                 <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
 
             </section>
         </section>
 
-        <nav class="venc-bottom-nav repo-bottom-nav app-bottom-nav" aria-label="Navegación de lista">
-            <button type="button" class="activo" data-repo-tab="cargar"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Agregar</span></button>
-            <button type="button" data-repo-tab="registro"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="m3 6 1 1 2-2M3 12h3M3 18h3"/></svg><span>Mi lista</span></button>
+        <nav class="venc-bottom-nav repo-bottom-nav">
+            <button type="button" class="activo" data-repo-tab="cargar">➕<span>Agregar</span></button>
+            <button type="button" data-repo-tab="registro">☷<span>Mi lista</span></button>
         </nav>
     </main>
 
-    <nav class="bottom-nav app-bottom-nav" aria-label="Navegación de inventario">
-        <button type="button" class="nav-btn" data-pantalla="inventario"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8"/></svg><span>Inventario</span></button>
-        <button type="button" class="nav-btn" data-pantalla="productos"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg><span>Productos</span></button>
-        <button type="button" class="nav-btn" data-pantalla="cargados"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m8 12 2.5 2.5L16 9"/></svg><span>Cargados</span></button>
+    <nav class="bottom-nav" aria-label="Navegación de inventario">
+        <button type="button" class="nav-btn" data-pantalla="inventario">🏠<span>Inventario</span></button>
+        <button type="button" class="nav-btn" data-pantalla="productos">📦<span>Productos</span></button>
+        <button type="button" class="nav-btn" data-pantalla="cargados">✅<span>Cargados</span></button>
     </nav>
 
-
-    <div id="repoGuardarEdicionModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
-        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoGuardarEdicionTitulo">
-            <div class="repo-confirm-icon" aria-hidden="true">✏️</div>
-            <h2 id="repoGuardarEdicionTitulo">Guardar cambios</h2>
-            <p id="repoGuardarEdicionTexto">¿Querés guardar los cambios realizados?</p>
-            <div class="repo-confirm-actions">
-                <button id="btnRepoSeguirEditando" type="button" class="cancel-btn">Seguir editando</button>
-                <button id="btnRepoConfirmarEdicion" type="button" class="save-btn">Guardar cambios</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="repoDescartarEdicionModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
-        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoDescartarEdicionTitulo">
-            <div class="repo-confirm-icon" aria-hidden="true">↩️</div>
-            <h2 id="repoDescartarEdicionTitulo">Descartar cambios</h2>
-            <p>Los cambios realizados no se guardarán.</p>
-            <div class="repo-confirm-actions repo-confirm-actions-triple">
-                <button id="btnRepoContinuarEdicion" type="button" class="cancel-btn">Continuar editando</button>
-                <button id="btnRepoConfirmarDescarte" type="button" class="danger-btn">Descartar cambios</button>
-                <button id="btnRepoGuardarAntesSalir" type="button" class="save-btn">Guardar cambios</button>
-            </div>
-        </div>
-    </div>
 
     <div id="repoNuevaListaModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
         <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoNuevaListaTitulo" aria-describedby="repoNuevaListaTexto">
             <div class="repo-confirm-icon" aria-hidden="true">📝</div>
             <h2 id="repoNuevaListaTitulo">Empezar nueva lista</h2>
-            <p id="repoNuevaListaTexto">Se eliminarán todos los productos de <strong id="repoModalListaNombre">Lista 1</strong>.</p>
+            <p id="repoNuevaListaTexto">Se eliminarán todos los productos de tu lista actual.</p>
             <div class="repo-confirm-actions">
                 <button id="btnRepoCancelarNuevaLista" type="button" class="cancel-btn">Cancelar</button>
                 <button id="btnRepoConfirmarNuevaLista" type="button" class="danger-btn">Empezar nueva lista</button>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="cambiosPendientesModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
-        <div class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="cambiosPendientesTitulo">
-            <div class="repo-confirm-icon" aria-hidden="true">✏️</div>
-            <h2 id="cambiosPendientesTitulo">Cambios sin guardar</h2>
-            <p id="cambiosPendientesTexto">¿Qué querés hacer con los cambios?</p>
-            <div class="repo-confirm-actions repo-confirm-actions-triple">
-                <button id="btnCambiosContinuar" type="button" class="cancel-btn">Seguir editando</button>
-                <button id="btnCambiosDescartar" type="button" class="danger-btn">Descartar</button>
-                <button id="btnCambiosGuardar" type="button" class="save-btn">Guardar</button>
             </div>
         </div>
     </div>
@@ -502,7 +451,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.16.1 Beta</span>
+            <span id="adminVersion" class="admin-version">V6.1.1</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -559,16 +508,9 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">6.1.16.1 Beta</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.0.2.1</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
-            <div class="admin-import-card">
-                <div class="admin-import-head"><div><strong>Importar catálogo del sistema</strong><span>Acepta “Stock _ Inventario Valuado.xls”: agrega productos nuevos y actualiza artículos y precios. Ignora Stock y Sub Total.</span></div></div>
-                <input id="adminImportarArchivo" type="file" accept=".xls,.xlsx" class="oculto">
-                <button id="btnAdminImportarArchivo" type="button" class="setting-btn">Seleccionar archivo XLS</button>
-                <div id="adminImportarEstado" class="admin-import-status" aria-live="polite"></div>
-            </div>
-
         </section>
     </main>
 
@@ -586,28 +528,6 @@
       </div>
     </div>
 
-
-    <div id="adminImportarPreviewModal" class="modal-overlay oculto" aria-hidden="true">
-      <div class="modal-card admin-import-preview-modal" role="dialog" aria-modal="true" aria-labelledby="adminImportarPreviewTitulo">
-        <button id="btnAdminCerrarImportacion" class="modal-close" type="button">×</button>
-        <div class="modal-kicker">Vista previa</div>
-        <h2 id="adminImportarPreviewTitulo">Confirmar importación</h2>
-        <p class="admin-import-preview-file">Archivo: <strong id="adminImportarPreviewArchivo">—</strong></p>
-        <div class="admin-import-preview-grid">
-          <div><span>Productos leídos</span><strong id="adminImportarPreviewProcesados">0</strong></div>
-          <div><span>Productos nuevos</span><strong id="adminImportarPreviewNuevos">0</strong></div>
-          <div><span>Nombres a actualizar</span><strong id="adminImportarPreviewNombres">0</strong></div>
-          <div><span>Precios a actualizar</span><strong id="adminImportarPreviewPrecios">0</strong></div>
-          <div><span>Sin cambios</span><strong id="adminImportarPreviewSinCambios">0</strong></div>
-        </div>
-        <div class="admin-import-warning"><strong>No se modificarán:</strong> Stock, Salón ni Depósito. La columna Sub Total será ignorada.</div>
-        <div class="modal-actions">
-          <button id="btnAdminCancelarImportacion" type="button" class="cancel-btn">Cancelar</button>
-          <button id="btnAdminConfirmarImportacion" type="button" class="save-btn">Importar y guardar</button>
-        </div>
-      </div>
-    </div>
-
     <div id="vencModal" class="modal-overlay oculto" aria-hidden="true">
         <div class="modal-card venc-modal-card" role="dialog" aria-modal="true" aria-labelledby="vencModalTitulo">
             <button id="btnVencModalCerrar" class="modal-close" type="button">×</button>
@@ -622,9 +542,9 @@
                     <div><span>Depósito</span><strong id="vencModalDeposito">0</strong></div>
                     <div><span>Total</span><strong id="vencModalTotal">0</strong></div>
                 </div>
-                <div class="modal-actions venc-view-actions">
-                    <button id="btnVencEditarAbrir" class="save-btn" type="button">Modificar</button>
-                    <button id="btnVencEliminarDesdeVista" class="danger-btn-soft" type="button">Eliminar</button>
+                <div class="modal-actions">
+                    <button id="btnVencEditarAbrir" class="secondary-btn" type="button">✏️ Editar</button>
+                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">🗑 Eliminar</button>
                 </div>
             </div>
 
@@ -632,7 +552,7 @@
                 <div class="modal-kicker">Editar vencimiento</div>
                 <h2 id="vencEditarTitulo">Producto</h2>
                 <label>Fecha de vencimiento</label>
-                <input type="date" id="vencEditFechaInput" min="">
+                <input type="date" id="vencEditFechaInput">
                 <div class="venc-grid venc-qty-grid">
                     <div class="venc-qty-box venc-qty-salon">
                         <label>Salón</label>
@@ -652,9 +572,8 @@
                     </div>
                 </div>
                 <div class="venc-total"><span>Total</span><strong id="vencEditTotalTexto">0</strong></div>
-                <div class="modal-actions venc-edit-actions">
+                <div class="modal-actions">
                     <button id="btnVencGuardarEdicion" class="save-btn" type="button">Guardar cambios</button>
-                    <button id="btnVencEliminarAbrir" class="danger-btn-soft" type="button">Eliminar</button>
                     <button id="btnVencCancelarEdicion" class="secondary-btn" type="button">Cancelar</button>
                 </div>
             </div>
@@ -673,30 +592,11 @@
 
 </div>
 
-<script src="./release-channel.js?v=6117-venc-rangos"></script>
-<script src="./pwa.js?v=6117-venc-rangos" defer></script>
-<script type="module" src="./auth.js?v=6117-venc-rangos"></script>
-<script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6117-venc-rangos"></script>
-<script type="module" src="./notifications.js?v=6117-venc-rangos"></script>
-<script type="module" src="./app.js?v=6117-venc-rangos"></script>
+<script src="./release-channel.js?v=611-rol-beta"></script>
+<script src="./pwa.js?v=611-rol-beta" defer></script>
+<script type="module" src="./auth.js?v=611-rol-beta"></script>
+<script type="module" src="./admin.js?v=611-rol-beta"></script>
+<script type="module" src="./app.js?v=611-rol-beta"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
-
-    <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
-      <div class="modal-card repo-confirm-card ios-install-modal" role="dialog" aria-modal="true" aria-labelledby="iosInstallTitulo">
-        <div class="modal-kicker">Instalar en iPhone o iPad</div>
-        <h3 id="iosInstallTitulo">Agregá Autoservicio a la pantalla de inicio</h3>
-        <ol class="ios-install-steps">
-          <li>Abrí esta página en <strong>Safari</strong>.</li>
-          <li>Tocá el botón <strong>Compartir</strong> de Safari.</li>
-          <li>Elegí <strong>Agregar a pantalla de inicio</strong>.</li>
-          <li>Confirmá tocando <strong>Agregar</strong>.</li>
-        </ol>
-        <p id="iosInstallBrowserWarning" class="ios-install-warning oculto">Estás usando otro navegador. Copiá el enlace y abrilo en Safari para poder instalar la app.</p>
-        <div class="modal-actions">
-          <button type="button" id="btnCerrarIosInstall" class="save-btn">Entendido</button>
-        </div>
-      </div>
-    </div>
 </body>
 </html>

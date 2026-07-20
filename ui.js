@@ -51,42 +51,25 @@ export function ocultarSplash() {
 }
 
 function actualizarEncabezadoModulo(nombre) {
-    const tituloMarca = document.getElementById("brandHeaderTitulo");
-    const tituloPagina = document.getElementById("modulePageTitle");
-    const subtituloPagina = document.getElementById("modulePageSubtitle");
+    const titulo = document.getElementById("brandHeaderTitulo");
+    const subtitulo = document.getElementById("brandHeaderSubtitulo");
     const volver = document.getElementById("brandBackBtn");
-
-    const modulos = {
-        inicio: "Autoservicio",
-        inventario: "Inventario",
-        productos: "Inventario",
-        cargados: "Inventario",
-        editarProducto: "Inventario",
-        ajustes: "Configuración",
-        vencimientos: "Vencimientos",
-        anotar: "Lista",
-        admin: "Administrador"
-    };
-    if (tituloMarca) tituloMarca.textContent = modulos[nombre] || "Autoservicio";
+    if (!titulo || !subtitulo) return;
 
     const encabezados = {
-        inicio: ["Herramientas", "Elegí el módulo que querés usar"],
+        inicio: ["🏪 Autoservicio Victor", "Herramientas"],
         inventario: ["Inventario", "Control de stock"],
         productos: ["Productos", "Lista completa"],
         cargados: ["Cargados", "Productos con stock"],
         editarProducto: ["Editar producto", "Inventario"],
-        ajustes: ["Configuración", ""],
+        ajustes: ["Ajustes", "Configuración general"],
         vencimientos: ["Vencimientos", "Control de fechas"],
-        anotar: ["Lista", "Agregar productos"],
-        admin: ["Administrador", "Usuarios e historial"]
+        anotar: ["Lista", "Reposición de salón"],
+        admin: ["Administración", "Usuarios e historial"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
-    if (tituloPagina) tituloPagina.textContent = textoTitulo;
-    if (subtituloPagina) {
-        subtituloPagina.textContent = textoSubtitulo;
-        subtituloPagina.hidden = !textoSubtitulo;
-    }
-
+    titulo.textContent = textoTitulo;
+    subtitulo.textContent = textoSubtitulo;
     if (volver) {
         const destinos = { editarProducto: "productos" };
         volver.dataset.modulo = destinos[nombre] || "inicio";
@@ -243,20 +226,8 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
     else elementos.resumenProductos.textContent = consulta ? `Resultados para “${consulta}”` : `${total} productos`;
 
     if (!lista.length) {
-        if (tab === "cargados") {
-            elementos.resultadoBusqueda.innerHTML = `
-                <div class="result-empty result-empty-large">
-                    <span class="empty-state-icon" aria-hidden="true">📦</span>
-                    <strong>Todavía no hay productos con stock cargado</strong>
-                    <small>Los productos que cargues aparecerán acá.</small>
-                </div>`;
-        } else {
-            elementos.resultadoBusqueda.innerHTML = `
-                <div class="result-empty">
-                    <strong>No se encontraron productos</strong>
-                    <small>Probá con otro nombre o código.</small>
-                </div>`;
-        }
+        const mensaje = tab === "cargados" ? "Todavía no hay productos con stock cargado." : "No se encontraron productos.";
+        elementos.resultadoBusqueda.innerHTML = `<div class="result-empty"><strong>${mensaje}</strong></div>`;
         return;
     }
 

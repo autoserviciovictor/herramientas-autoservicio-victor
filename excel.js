@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=61161-quota-fix";
-import { ordenarPorBusqueda } from "./search.js?v=61161-quota-fix";
+import { API_BASE_URL } from "./config.js?v=611-rol-beta";
+import { ordenarPorBusqueda } from "./search.js?v=611-rol-beta";
 
 let datos = [];
 let contador = 0;

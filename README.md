@@ -1,1 +1,1 @@
-Autoservicio V6.1.17 Beta — Contadores de vencimientos por rango y cantidad destacada.
+Autoservicio V6.1.11 Beta consolidada. Backend compatible con notificaciones completas y limpieza automática de vencimientos.

@@ -43,23 +43,22 @@ function distanciaLimitada(a, b, limite = 2) {
 
 function puntuarToken(token, palabras, textoCompleto, textoCompacto) {
   if (!token) return 0;
-  if (textoCompleto === token) return 140;
-  if (textoCompleto.startsWith(token)) return 110;
-  if (textoCompleto.includes(token)) return 95;
+  if (textoCompleto === token) return 120;
+  if (textoCompleto.startsWith(token)) return 95;
+  if (textoCompleto.includes(token)) return 75;
 
   const tokenCompacto = token.replace(/\s+/g, "");
-  if (tokenCompacto && textoCompacto.includes(tokenCompacto)) return 90;
+  if (tokenCompacto && textoCompacto.includes(tokenCompacto)) return 72;
 
   let mejor = 0;
   for (const palabra of palabras) {
-    if (palabra === token) return 125;
-    if (palabra.startsWith(token)) mejor = Math.max(mejor, 105);
-    else if (token.length >= 4 && palabra.includes(token)) mejor = Math.max(mejor, 88);
-    else if (token.length >= 4 && palabra.length >= 4) {
-      const limite = token.length >= 8 ? 2 : 1;
+    if (palabra === token) return 100;
+    if (palabra.startsWith(token) || token.startsWith(palabra)) mejor = Math.max(mejor, 82);
+    else if (palabra.includes(token) || token.includes(palabra)) mejor = Math.max(mejor, 68);
+    else if (token.length >= 3 && palabra.length >= 3) {
+      const limite = token.length >= 7 ? 2 : 1;
       const distancia = distanciaLimitada(token, palabra, limite);
-      const proporcion = distancia / Math.max(token.length, palabra.length);
-      if (distancia <= limite && proporcion <= 0.24) mejor = Math.max(mejor, 72 - distancia * 8);
+      if (distancia <= limite) mejor = Math.max(mejor, 58 - distancia * 8);
     }
   }
   return mejor;
@@ -94,8 +93,7 @@ export function puntuarBusqueda(consulta, item, campos = ["articulo", "codigo"])
   if (texto.startsWith(q)) total += 120;
   else if (texto.includes(q)) total += 85;
 
-  const minimo = tokens.length === 1 ? 70 : tokens.length * 70;
-  return total >= minimo ? total : 0;
+  return total;
 }
 
 export function ordenarPorBusqueda(items, consulta, opciones = {}) {
