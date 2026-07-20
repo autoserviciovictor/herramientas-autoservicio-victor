@@ -2882,3 +2882,164 @@ body.en-ajustes .module-page-header p{display:none!important}
   .venc-days-hero{font-size:19px;padding:11px 8px}
   .venc-card-heading strong{font-size:16px!important}
 }
+
+
+/* === V6.1.15 Beta · Entrega 4: Lista y pulido general === */
+:root{
+  --ui-space-xs:6px;
+  --ui-space-sm:10px;
+  --ui-space-md:14px;
+  --ui-space-lg:18px;
+  --ui-radius-sm:12px;
+  --ui-radius-md:16px;
+  --ui-radius-lg:20px;
+  --ui-shadow:0 5px 16px rgba(53,35,29,.065);
+  --ui-border:#ebe4df;
+  --ui-brand-pastel:#ef7d84;
+}
+
+/* Lista: sacar identidad redundante y compactar selectores */
+.repo-user-strip{display:none!important}
+.repo-list-selector{
+  max-width:620px!important;
+  margin:0 auto 10px!important;
+  padding:3px!important;
+  gap:4px!important;
+  border-radius:13px!important;
+  background:#f7eeee!important;
+  border-color:#ecd9da!important;
+}
+.repo-list-selector button{
+  min-height:38px!important;
+  border-radius:10px!important;
+  font-size:13px!important;
+}
+.repo-list-toolbar-clean{
+  justify-content:flex-end!important;
+  margin:8px 0 12px!important;
+}
+.repo-list-toolbar-clean .repo-list-toolbar-actions{
+  width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.repo-list-toolbar-clean button{
+  min-height:42px!important;
+  border-radius:12px!important;
+  padding:8px 10px!important;
+}
+.repo-recent-card,.repo-registro-card{
+  border-radius:var(--ui-radius-lg)!important;
+  box-shadow:var(--ui-shadow)!important;
+  border:1px solid var(--ui-border)!important;
+}
+.repo-recent-card .venc-list-head{align-items:center!important;gap:10px!important}
+.repo-recent-card .venc-list-head h2{font-size:19px!important;margin:0!important}
+.repo-recent-card .venc-list-head button{
+  min-height:38px!important;padding:8px 12px!important;border-radius:11px!important;
+}
+.repo-mini-card{
+  min-height:54px!important;
+  padding:9px 11px!important;
+  border-radius:12px!important;
+  box-shadow:none!important;
+  border:1px solid #eee8e3!important;
+}
+.repo-mini-card strong{font-size:14px!important;line-height:1.2!important}
+.repo-mini-card small{font-size:11px!important}
+.repo-mini-card>b{font-size:20px!important;min-width:36px;text-align:center}
+
+/* Mi lista compacta */
+.repo-simple-list{display:grid!important;gap:8px!important}
+.repo-simple-item{
+  min-height:64px!important;
+  padding:9px 11px!important;
+  border-radius:14px!important;
+  border:1px solid #ebe5e0!important;
+  box-shadow:0 3px 10px rgba(53,35,29,.045)!important;
+  gap:9px!important;
+}
+.repo-simple-copy{gap:2px!important;min-width:0}
+.repo-simple-copy strong{font-size:14px!important;line-height:1.18!important}
+.repo-simple-copy small{font-size:11px!important;color:#777!important}
+.repo-simple-qty{
+  min-width:48px!important;height:44px!important;border-radius:12px!important;
+  display:flex!important;align-items:center;justify-content:center;
+  background:#fff4f4!important;border:1px solid #f1d1d3!important;
+  font-size:22px!important;color:#c63139!important;
+}
+.repo-simple-item.completado .repo-simple-qty{background:#effaf3!important;border-color:#c3e6cf!important;color:#168447!important}
+.repo-check{width:40px!important;height:40px!important;border-radius:11px!important}
+.repo-edit-item{grid-template-columns:auto minmax(0,1fr) auto!important}
+.repo-delete-edit{width:38px!important;height:38px!important;border-radius:11px!important}
+.repo-qty-editor{gap:5px!important}
+.repo-qty-editor button{width:38px!important;height:38px!important;border-radius:10px!important}
+.repo-qty-editor b{min-width:34px!important;font-size:20px!important}
+
+/* Estados vacíos uniformes */
+#repoRecientes.venc-list-empty,#repoListado.venc-list-empty{
+  min-height:180px!important;
+  padding:24px 16px!important;
+  border:1px dashed #ded7d2!important;
+  border-radius:16px!important;
+  background:#faf9f7!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  text-align:center!important;gap:7px!important;
+}
+#repoListado.venc-list-empty{min-height:230px!important}
+#repoRecientes .empty-icon,#repoListado .empty-icon{font-size:32px!important;line-height:1!important}
+#repoRecientes strong,#repoListado strong{font-size:16px!important;margin:0!important}
+#repoRecientes small,#repoListado small{font-size:12px!important;color:#777!important}
+
+/* Menú compacto final */
+.user-dropdown{
+  width:min(224px,calc(100vw - 22px))!important;
+  padding:8px!important;
+  border-radius:15px!important;
+  border:1px solid rgba(122,63,67,.10)!important;
+  box-shadow:0 12px 28px rgba(61,31,33,.17)!important;
+}
+.user-dropdown-profile{padding:8px 9px 10px!important;gap:9px!important}
+.user-dropdown-avatar{width:34px!important;height:34px!important;font-size:17px!important}
+.user-dropdown-profile strong{font-size:13px!important}
+.user-dropdown-profile small{font-size:10px!important}
+.user-dropdown-action{
+  min-height:42px!important;padding:8px 10px!important;border-radius:10px!important;gap:9px!important;
+}
+.user-dropdown-action strong{font-size:13px!important}
+.user-dropdown-action span{font-size:16px!important}
+
+/* Configuración compacta y consistente */
+#pantallaAjustes{max-width:680px;margin:0 auto;padding:0 14px 28px!important}
+.settings-card{
+  border-radius:var(--ui-radius-lg)!important;
+  border:1px solid var(--ui-border)!important;
+  box-shadow:var(--ui-shadow)!important;
+  margin:12px 0!important;
+}
+.settings-preferences-card{padding:4px 18px!important}
+.switch-row{min-height:70px!important;padding:13px 0!important}
+.switch-row strong{font-size:15px!important}
+.switch-row span{font-size:11px!important;margin-top:3px!important}
+.notification-settings-card{padding:16px 18px!important;gap:12px!important}
+.notification-settings-card .setting-btn{min-height:42px!important;border-radius:12px!important}
+.settings-version-card{min-height:62px!important;padding:14px 18px!important}
+
+/* Pulido global sin alterar la lógica */
+.venc-actions-card,.camera-card,.repo-product-card,.repo-form-card,.admin-card,.module-page-header{
+  border-radius:var(--ui-radius-lg)!important;
+  box-shadow:var(--ui-shadow)!important;
+  border-color:var(--ui-border)!important;
+}
+button,.save-btn,.cancel-btn,.danger-btn,.secondary-btn,.setting-btn{
+  transition:transform .12s ease,filter .12s ease,box-shadow .12s ease!important;
+}
+button:active,.save-btn:active,.cancel-btn:active,.danger-btn:active,.secondary-btn:active,.setting-btn:active{transform:scale(.985)}
+.save-btn,.danger-btn,.cancel-btn,.secondary-btn,.setting-btn{min-height:46px;border-radius:13px!important}
+
+@media(max-width:520px){
+  .repo-list-selector{margin-left:14px!important;margin-right:14px!important}
+  .repo-list-toolbar-clean .repo-list-toolbar-actions{grid-template-columns:1fr 1fr}
+  .repo-simple-item{min-height:60px!important;padding:8px 9px!important}
+  .repo-simple-copy strong{font-size:13.5px!important}
+  .repo-simple-qty{min-width:44px!important;height:42px!important;font-size:20px!important}
+  .user-dropdown{right:8px!important;width:min(220px,calc(100vw - 16px))!important}
+}

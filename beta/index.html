@@ -13,7 +13,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icons/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css?v=6114-venc">
+    <link rel="stylesheet" href="style.css?v=6115-final">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -44,7 +44,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V6.1.14 Beta</p>
+    <p>Herramientas V6.1.15 Beta</p>
 </div>
 
 <div class="app">
@@ -107,7 +107,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V6.1.14 Beta</strong>
+            <strong>V6.1.15 Beta</strong>
         </section>
     </main>
 
@@ -257,7 +257,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">6.1.14 Beta</strong>
+            <strong id="settingsAppVersion">6.1.15 Beta</strong>
         </section>
     </main>
 
@@ -354,9 +354,6 @@
 
 
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
-        <section class="repo-user-strip" aria-label="Lista personal">
-            <span>Lista de</span><strong id="repoUsuarioActual">Mi usuario</strong>
-        </section>
         <section id="repoCargaVista">
             <div class="repo-list-selector" role="group" aria-label="Lista para agregar productos">
                 <button type="button" class="activo" data-repo-lista="1" data-repo-lista-contexto="cargar">Lista 1</button>
@@ -409,7 +406,7 @@
             </div>
             <section class="venc-list-card repo-registro-card">
                 <div class="repo-search-row"><input id="repoBuscador" class="venc-search" type="search" placeholder="Buscar producto..."></div>
-                <div class="repo-list-toolbar"><span>Solo vos podés ver y modificar esta lista.</span><div class="repo-list-toolbar-actions"><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button><button id="btnRepoEditarLista" type="button" disabled>Editar lista</button></div></div>
+                <div class="repo-list-toolbar repo-list-toolbar-clean"><div class="repo-list-toolbar-actions"><button id="btnRepoVaciarLista" type="button" disabled>Empezar nueva lista</button><button id="btnRepoEditarLista" type="button" disabled>Editar lista</button></div></div>
 
                 <div id="repoListado" class="venc-list-empty"><span class="empty-icon">📦</span><strong>No hay productos pendientes.</strong><small>Los productos anotados aparecerán acá.</small></div>
 
@@ -505,7 +502,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V6.1.14 Beta</span>
+            <span id="adminVersion" class="admin-version">V6.1.15 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -562,7 +559,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">6.1.14 Beta</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">6.1.15 Beta</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
@@ -676,13 +673,13 @@
 
 </div>
 
-<script src="./release-channel.js?v=6114-venc"></script>
-<script src="./pwa.js?v=6114-venc" defer></script>
-<script type="module" src="./auth.js?v=6114-venc"></script>
+<script src="./release-channel.js?v=6115-final"></script>
+<script src="./pwa.js?v=6115-final" defer></script>
+<script type="module" src="./auth.js?v=6115-final"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=6114-venc"></script>
-<script type="module" src="./notifications.js?v=6114-venc"></script>
-<script type="module" src="./app.js?v=6114-venc"></script>
+<script type="module" src="./admin.js?v=6115-final"></script>
+<script type="module" src="./notifications.js?v=6115-final"></script>
+<script type="module" src="./app.js?v=6115-final"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

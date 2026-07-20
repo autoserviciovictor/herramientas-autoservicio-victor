@@ -1,3 +1,12 @@
+6.1.15 Beta — Entrega 4 Lista y pulido general
+- Eliminado el texto “Lista de usuario”.
+- Selectores y estados vacíos de Lista simplificados.
+- Mi lista más compacta y cantidades mejor alineadas.
+- Menú de usuario refinado y compacto.
+- Configuración limitada a sonidos, vibración, notificaciones y versión.
+- Márgenes, sombras, botones, radios y rojo pastel unificados.
+- Opción de instalación mantenida de forma contextual en navegador.
+
 V6.1.14 Beta - Entrega 3 Vencimientos
 - Resultados manuales en rojo pastel con texto blanco.
 - Contador de vencimientos separado de registros cargados hoy.

@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=6114-venc";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=6114-venc";
-import { ordenarPorBusqueda } from "./search.js?v=6114-venc";
+import { API_BASE_URL } from "./config.js?v=6115-final";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=6115-final";
+import { ordenarPorBusqueda } from "./search.js?v=6115-final";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -250,7 +250,7 @@ function renderRecientes(){
   if(cargandoRegistros){ c.className="venc-list-empty"; c.innerHTML=htmlCargando("Cargando productos..."); return; }
   const items=registros.slice(0,3);
   c.className=items.length?"repo-list":"venc-list-empty";
-  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no hay productos anotados en Lista ${listaActual}.</strong><small>Escaneá un producto para comenzar.</small>`;
+  c.innerHTML=items.length?items.map(r=>`<article class="repo-mini-card"><div><strong>${escapar(r.articulo)}</strong><small>${fechaCorta(r.fecha)}</small></div><b>${r.cantidad}</b></article>`).join(""):`<span class="empty-icon">📝</span><strong>Todavía no agregaste productos.</strong><small>Escaneá un producto para comenzar.</small>`;
   const ver=$('btnRepoVerRegistro'); if(ver) ver.disabled=!registros.length;
 }
 function registrosVista(){ return modoEdicion ? borradorEdicion : registros; }
@@ -358,7 +358,7 @@ function renderListado(){
       <div class="repo-simple-copy"><strong>${escapar(r.articulo)}</strong><small>${escapar(r.codigo)}${completado?' · Listo':''}</small></div>
       <b class="repo-simple-qty">${numero(r.cantidad)}</b>
     </article>`;
-  }).join(""):`<span class="empty-icon">📦</span><strong>No hay productos en Lista ${listaActual}.</strong><small>Los productos anotados aparecerán acá.</small>`;
+  }).join(""):`<span class="empty-icon">📦</span><strong>No hay productos anotados.</strong><small>Los productos que agregues aparecerán acá.</small>`;
 }
 
 function ocultarToast(){
