@@ -1,4 +1,4 @@
-6.1.15 Beta — Entrega 4 Lista y pulido general
+6.1.16 Beta — Entrega 4 Lista y pulido general
 - Eliminado el texto “Lista de usuario”.
 - Selectores y estados vacíos de Lista simplificados.
 - Mi lista más compacta y cantidades mejor alineadas.
@@ -24,3 +24,11 @@ V6.1.13 Beta - Entrega 1
 - Menu de usuario compacto debajo del boton hamburguesa.
 - Configuracion simplificada: Sonidos, Vibracion, Permitir notificaciones y Version instalada.
 - Version mostrada automaticamente desde config.js.
+
+V6.1.16 Beta - Entrega 5
+- Navegación inferior unificada con iconos SVG minimalistas en Inventario, Vencimientos y Lista.
+- Misma altura, espaciado y estado activo en todas las barras inferiores.
+- Mi lista muestra inmediatamente la última copia local y sincroniza Google Sheets en segundo plano.
+- Últimos agregados utiliza la misma carga inmediata.
+- Marcar y desmarcar productos responde al primer toque sin esperar al servidor.
+- Los cambios de estado se sincronizan en cola para conservar el último toque realizado.

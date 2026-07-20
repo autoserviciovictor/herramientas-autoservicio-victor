@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=6115-final";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=6115-final";
-import { ordenarPorBusqueda } from "./search.js?v=6115-final";
+import { API_BASE_URL } from "./config.js?v=6116-final";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=6116-final";
+import { ordenarPorBusqueda } from "./search.js?v=6116-final";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -19,6 +19,31 @@ let cargandoRegistros = false;
 let accionPendienteTrasEdicion = null;
 let secuenciaCargaLista = 0;
 let listaEdicion = "1";
+const colasEstado = new Map();
+
+function usuarioCacheRepo(){
+  const u=window.AutoservicioAuth?.getUsuario?.();
+  return String(u?.usuario||u?.nombre||"anonimo").trim().toLowerCase().replace(/[^a-z0-9_-]+/g,"_")||"anonimo";
+}
+function claveCacheRepo(lista=listaActual){ return `autoservicio_repo_${usuarioCacheRepo()}_lista_${String(lista)==="2"?"2":"1"}`; }
+function leerCacheRepo(lista=listaActual){
+  try{
+    const raw=localStorage.getItem(claveCacheRepo(lista));
+    const data=raw?JSON.parse(raw):null;
+    return Array.isArray(data?.registros)?data.registros:[];
+  }catch{return [];}
+}
+function guardarCacheRepo(lista=listaActual){
+  try{
+    localStorage.setItem(claveCacheRepo(lista),JSON.stringify({actualizado:Date.now(),registros:registros.filter(r=>String(r.lista||lista)===String(lista))}));
+  }catch{}
+}
+function aplicarCacheRepo(lista=listaActual){
+  const cache=leerCacheRepo(lista);
+  if(!cache.length)return false;
+  registros=cache.map(item=>({...item,lista:String(item.lista||lista)==="2"?"2":"1"}));
+  return true;
+}
 
 function apiUrl(ruta){ return `${String(API_BASE_URL||"").replace(/\/$/,"")}${ruta}`; }
 async function pedir(ruta, opciones={}){
@@ -129,19 +154,23 @@ async function seleccionarLista(valor,{refrescar=true}={}){
   productoActual=null;
   limpiar();
   registros=[];
+  const habiaCache=aplicarCacheRepo(nueva);
   sincronizarSelectorListas();
   render();
-  if(refrescar) await refrescarReposicion();
+  if(refrescar) await refrescarReposicion({mostrarCarga:!habiaCache});
 }
 
-export async function refrescarReposicion(){
+export async function refrescarReposicion({mostrarCarga=true}={}){
   const listaSolicitada = listaActual;
   const secuencia = ++secuenciaCargaLista;
-  cargandoRegistros=true; render();
+  const habiaCache=registros.length>0 || aplicarCacheRepo(listaSolicitada);
+  cargandoRegistros=mostrarCarga && !habiaCache;
+  render();
   try {
     const data=await pedir(`/reposicion?lista=${listaSolicitada}`);
     if(secuencia !== secuenciaCargaLista || listaActual !== listaSolicitada) return;
     registros=(data.registros||[]).map(item=>({...item,lista:String(item.lista||listaSolicitada)==="2"?"2":"1"}));
+    guardarCacheRepo(listaSolicitada);
     actualizarUsuarioReposicion();
   }
   catch(e){ if(secuencia === secuenciaCargaLista) toast(e.message,"error"); }
@@ -218,7 +247,7 @@ async function guardar(){
     operacionEnCurso=true;
     const boton=$("btnRepoGuardar"); if(boton) boton.disabled=true;
     await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:productoActual.codigo,articulo:productoActual.articulo,cantidad,lista:listaActual})});
-    toast(`Producto agregado a Lista ${listaActual}`); limpiar(); await refrescarReposicion();
+    toast(`Producto agregado a Lista ${listaActual}`); limpiar(); await refrescarReposicion({mostrarCarga:false});
   }catch(e){toast(e.message,"error");}
   finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton) boton.disabled=false; }
 }
@@ -332,7 +361,7 @@ async function confirmarEdicion(){
   try{
     operacionEnCurso=true; const b=$("btnRepoConfirmarEdicion"); if(b){b.disabled=true;b.textContent="Guardando...";}
     const data=await pedir("/reposicion",{method:"PATCH",body:JSON.stringify({lista:listaEdicion,cambios})});
-    registros=data.registros||[]; cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados"); return true;
+    registros=(data.registros||[]).map(item=>({...item,lista:String(item.lista||listaEdicion)==="2"?"2":"1"})); guardarCacheRepo(listaEdicion); cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados"); return true;
   }catch(e){toast(e.message,"error"); return false;}
   finally{operacionEnCurso=false;const b=$("btnRepoConfirmarEdicion");if(b){b.disabled=false;b.textContent="Guardar cambios";} actualizarControlesEdicion();}
 }
@@ -396,7 +425,7 @@ async function confirmarNuevaLista(){
     const boton=$("btnRepoConfirmarNuevaLista"); if(boton){ boton.disabled=true; boton.textContent="Comenzando..."; }
     const botonLista=$("btnRepoVaciarLista"); if(botonLista) botonLista.disabled=true;
     await pedir(`/reposicion?lista=${listaActual}`,{method:"DELETE"});
-    registros=[]; render();
+    registros=[]; guardarCacheRepo(listaActual); render();
     const modal=$("repoNuevaListaModal");
     modal?.classList.add("oculto");
     modal?.setAttribute("aria-hidden","true");
@@ -413,7 +442,7 @@ async function confirmarNuevaLista(){
 
 async function manejarAccion(e){
   const b=e.target.closest("[data-repo-accion]");
-  if(!b || operacionEnCurso) return;
+  if(!b) return;
 
   const id=String(b.dataset.id||"");
   const r=registros.find(x=>String(x.id)===id);
@@ -426,51 +455,59 @@ async function manejarAccion(e){
     if(accion==="eliminar-edicion") return marcarEliminarEdicion(id);
     return;
   }
-  const estadoAnterior=r.estado||"pendiente";
+
   const listaRegistro=String(r.lista||listaActual)==="2"?"2":"1";
-
-  try{
-    operacionEnCurso=true;
-    b.disabled=true;
-
-    if(accion==="eliminar"){
-      if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
-      await pedir(`/reposicion/${encodeURIComponent(r.id)}?lista=${listaRegistro}&codigo=${encodeURIComponent(r.codigo||"")}`,{method:"DELETE"});
-      registros=registros.filter(item=>String(item.id)!==id);
-      render();
-      return;
-    }
-
-    if(accion==="editar"){
+  if(accion==="eliminar" || accion==="editar"){
+    if(operacionEnCurso) return;
+    try{
+      operacionEnCurso=true; b.disabled=true;
+      if(accion==="eliminar"){
+        if(!confirm(`¿Eliminar ${r.articulo}?`)) return;
+        await pedir(`/reposicion/${encodeURIComponent(r.id)}?lista=${listaRegistro}&codigo=${encodeURIComponent(r.codigo||"")}`,{method:"DELETE"});
+        registros=registros.filter(item=>String(item.id)!==id); guardarCacheRepo(listaRegistro); render(); return;
+      }
       const valor=prompt("Nueva cantidad",r.cantidad);
       if(valor===null) return;
       const cantidad=Number(valor);
       if(!Number.isInteger(cantidad)||cantidad<1) return toast("Cantidad inválida","error");
       await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{method:"PUT",body:JSON.stringify({cantidad,estado:r.estado||"pendiente",lista:listaRegistro,codigo:r.codigo})});
-      r.cantidad=cantidad;
-      render();
-      return;
-    }
-
-    const nuevoEstado=accion==="completar"?"completado":"pendiente";
-
-    // Cambio visual inmediato: la tarjeta cambia de color y se reordena sin esperar al servidor.
-    r.estado=nuevoEstado;
-    render();
-
-    await pedir(`/reposicion/${encodeURIComponent(r.id)}`,{
-      method:"PUT",
-      body:JSON.stringify({cantidad:numero(r.cantidad),estado:nuevoEstado,lista:listaRegistro,codigo:r.codigo})
-    });
-
-    toast(nuevoEstado==="completado"?"Producto marcado como listo":"Producto devuelto a pendientes");
-  }catch(err){
-    r.estado=estadoAnterior;
-    render();
-    toast(err.message,"error");
-  }finally{
-    operacionEnCurso=false;
-    const botonActual=document.querySelector(`[data-repo-accion][data-id="${CSS.escape(id)}"]`);
-    if(botonActual) botonActual.disabled=false;
+      r.cantidad=cantidad; guardarCacheRepo(listaRegistro); render();
+    }catch(err){toast(err.message,"error");}
+    finally{operacionEnCurso=false;const actual=document.querySelector(`[data-repo-accion][data-id="${CSS.escape(id)}"]`);if(actual)actual.disabled=false;}
+    return;
   }
+
+  if(accion!=="completar" && accion!=="pendiente") return;
+  const nuevoEstado=accion==="completar"?"completado":"pendiente";
+  r.estado=nuevoEstado;
+  guardarCacheRepo(listaRegistro);
+  render();
+  encolarSincronizacionEstado(id,listaRegistro);
 }
+
+function encolarSincronizacionEstado(id,listaRegistro){
+  const anterior=colasEstado.get(id)||Promise.resolve();
+  const siguiente=anterior.catch(()=>{}).then(async()=>{
+    const actual=registros.find(x=>String(x.id)===String(id));
+    if(!actual)return;
+    const estadoAEnviar=actual.estado||"pendiente";
+    const boton=document.querySelector(`[data-repo-accion][data-id="${CSS.escape(String(id))}"]`);
+    boton?.classList.add("sincronizando");
+    try{
+      await pedir(`/reposicion/${encodeURIComponent(actual.id)}`,{
+        method:"PUT",
+        body:JSON.stringify({cantidad:numero(actual.cantidad),estado:estadoAEnviar,lista:listaRegistro,codigo:actual.codigo})
+      });
+      guardarCacheRepo(listaRegistro);
+    }catch(err){
+      toast("No se pudo sincronizar el cambio. Reintentando...","error");
+      setTimeout(()=>encolarSincronizacionEstado(id,listaRegistro),1200);
+    }finally{
+      const actualBoton=document.querySelector(`[data-repo-accion][data-id="${CSS.escape(String(id))}"]`);
+      actualBoton?.classList.remove("sincronizando");
+    }
+  });
+  colasEstado.set(id,siguiente);
+  siguiente.finally(()=>{ if(colasEstado.get(id)===siguiente) colasEstado.delete(id); });
+}
+

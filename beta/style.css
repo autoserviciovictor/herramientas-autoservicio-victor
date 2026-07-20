@@ -2884,7 +2884,7 @@ body.en-ajustes .module-page-header p{display:none!important}
 }
 
 
-/* === V6.1.15 Beta · Entrega 4: Lista y pulido general === */
+/* === V6.1.16 Beta · Entrega 4: Lista y pulido general === */
 :root{
   --ui-space-xs:6px;
   --ui-space-sm:10px;
@@ -3043,3 +3043,63 @@ button:active,.save-btn:active,.cancel-btn:active,.danger-btn:active,.secondary-
   .repo-simple-qty{min-width:44px!important;height:42px!important;font-size:20px!important}
   .user-dropdown{right:8px!important;width:min(220px,calc(100vw - 16px))!important}
 }
+
+/* V6.1.16 - Navegación inferior unificada y minimalista */
+.app-bottom-nav{
+  min-height:70px;
+  gap:4px!important;
+  padding:7px 10px calc(7px + env(safe-area-inset-bottom))!important;
+  background:rgba(255,255,255,.97)!important;
+  border-top:1px solid #eee6e3!important;
+  box-shadow:0 -8px 24px rgba(65,38,30,.06);
+}
+.app-bottom-nav button,
+.app-bottom-nav .nav-btn{
+  min-width:0;
+  min-height:52px;
+  display:flex!important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  border-radius:14px!important;
+  padding:6px 4px!important;
+  font-family:inherit;
+  transition:background-color .16s ease,color .16s ease,transform .12s ease;
+}
+.app-bottom-nav button:active{transform:scale(.96)}
+.app-bottom-nav button span,
+.app-bottom-nav .nav-btn span{
+  display:block;
+  margin:0!important;
+  font-size:10.5px!important;
+  line-height:1.05;
+  font-weight:800!important;
+}
+.nav-icon{
+  width:22px;
+  height:22px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.9;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  pointer-events:none;
+}
+.app-bottom-nav button.activo,
+.app-bottom-nav .nav-btn.activo{
+  background:#fdebed!important;
+  color:#d7353d!important;
+}
+.app-bottom-nav .nav-btn[data-pantalla="productos"].activo{
+  background:#fdebed!important;
+  color:#d7353d!important;
+}
+body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(2,1fr)!important}
+
+/* Mi lista: respuesta inmediata y transiciones suaves */
+.repo-simple-item{transition:background-color .16s ease,border-color .16s ease,transform .18s ease,opacity .16s ease}
+.repo-check{touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background-color .12s ease,color .12s ease,border-color .12s ease,transform .1s ease}
+.repo-check:active{transform:scale(.9)}
+.repo-check.sincronizando{opacity:.72}
