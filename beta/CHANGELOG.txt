@@ -1,3 +1,11 @@
+V6.1.14 Beta - Entrega 3 Vencimientos
+- Resultados manuales en rojo pastel con texto blanco.
+- Contador de vencimientos separado de registros cargados hoy.
+- Próximos prioriza días restantes y total; mantiene oferta.
+- Vencidos prioriza antigüedad y total.
+- Ficha completa al tocar una tarjeta.
+- Editor compacto con Salón/Depósito centrados y Total rediseñado.
+
 V6.1.13 Beta - Entrega 1
 
 - Login renovado con iconos y placeholders dentro de los campos.

@@ -2758,3 +2758,127 @@ body.en-ajustes .module-page-header p{display:none!important}
 .manual-suggestion-item span{font-size:12px;color:rgba(255,255,255,.84);font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .manual-no-results{padding:14px;text-align:center;color:#8c5559;font-weight:800;font-size:13px;background:#fff5f5;border-radius:12px}
 @media(max-width:420px){.manual-suggestion-item{min-height:52px;padding:8px 11px}.manual-suggestion-item strong{font-size:14px}}
+
+/* === V6.1.14 Entrega 3: Vencimientos y búsqueda manual === */
+.manual-suggestions{
+  max-height:360px!important;
+  overflow:hidden!important;
+  padding:8px!important;
+  gap:7px!important;
+}
+.manual-suggestion-item,
+.manual-suggestions .manual-suggestion-item{
+  background:#ef7d84!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:0 5px 14px rgba(161,54,62,.16)!important;
+}
+.manual-suggestion-item strong{color:#fff!important}
+.manual-suggestion-item span{color:rgba(255,255,255,.82)!important}
+.manual-no-results{padding:16px;text-align:center;font-weight:800;color:#777}
+
+#pantallaVencimientos .venc-summary-card,
+#pantallaVencimientos .venc-list-card{
+  background:#fff;
+  border:1px solid rgba(180,53,62,.09);
+  border-radius:22px!important;
+  box-shadow:0 10px 26px rgba(63,38,24,.08);
+  padding:18px;
+  margin:16px 18px;
+}
+#pantallaVencimientos .venc-summary-card>h2,
+#pantallaVencimientos .venc-list-head h2{
+  margin:0 0 14px;
+  font-size:22px;
+  line-height:1.15;
+  color:#222;
+}
+#pantallaVencimientos .venc-resumen{margin:0!important}
+#pantallaVencimientos .venc-list-card{padding:18px!important}
+#pantallaVencimientos .venc-list-head{margin:0!important}
+#pantallaVencimientos .venc-list{gap:10px!important}
+
+/* Carga: registros recientes más compactos */
+.venc-item-reciente{
+  min-height:76px!important;
+  padding:11px 14px!important;
+  border-left-width:5px!important;
+  border-radius:16px!important;
+}
+.venc-item-reciente .venc-reciente-info strong{font-size:15px!important;line-height:1.2}
+.venc-item-reciente> b{font-size:18px!important}
+
+/* Próximos y vencidos: jerarquía por días y total */
+.venc-list-proximos .venc-item-proximo,
+.venc-list-vencidos .venc-item-vencido-registro{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  padding:14px!important;
+  border:1px solid #eadfda!important;
+  border-radius:18px!important;
+  background:#fff!important;
+  box-shadow:0 7px 18px rgba(57,36,25,.07)!important;
+  cursor:pointer;
+}
+.venc-list-proximos .venc-item-proximo.venc-con-oferta{
+  border-color:#70c591!important;
+  box-shadow:0 0 0 2px rgba(31,153,83,.10),0 7px 18px rgba(57,36,25,.07)!important;
+}
+.venc-card-topline{display:flex;justify-content:flex-end;min-height:24px}
+.venc-offer-tag{
+  display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;
+  font-size:11px;font-weight:900;line-height:1;
+}
+.venc-offer-tag.activa{background:#dcf8e6;color:#08743a}
+.venc-offer-tag.pendiente{background:#f1f3f5;color:#697078}
+.venc-card-heading{display:flex;flex-direction:column;gap:3px;min-width:0}
+.venc-card-heading strong{font-size:17px!important;line-height:1.18;color:#202124}
+.venc-card-heading .venc-code{font-size:12px!important;color:#7c7f83!important;margin:0!important}
+.venc-days-hero{
+  width:100%;text-align:center;border-radius:14px;padding:12px 10px;
+  font-size:21px;font-weight:950;text-transform:none;line-height:1.05;
+}
+.venc-days-hero.venc-7{background:#fee2e2;color:#b91c1c}
+.venc-days-hero.venc-15{background:#fef3c7;color:#a16207}
+.venc-days-hero.venc-30{background:#dbeafe;color:#1d4ed8}
+.venc-days-hero.venc-vencido,.venc-vencido-hero{background:#ffe0e0!important;color:#b42318!important}
+.venc-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#74777a;font-size:12px}
+.venc-card-footer b{font-size:16px;color:#202124;white-space:nowrap}
+.venc-list-proximos .venc-card-action.offer{
+  width:100%;min-height:42px;border-radius:13px!important;margin:0!important;
+  background:#f2fff6!important;color:#08743a!important;border:1px solid #b9e5c9!important;
+  font-weight:900!important;
+}
+.venc-list-proximos .venc-card-action.offer.active{background:#dff8e8!important}
+
+/* Modal de detalle y editor */
+.venc-view-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin-top:16px!important}
+.venc-modal-info{grid-template-columns:1fr 1fr!important}
+.venc-modal-info div:last-child{grid-column:1/-1;background:#e9fbef;border-color:#b8e3c6}
+.venc-modal-info div:last-child span,.venc-modal-info div:last-child strong{color:#08743a}
+.venc-modal-editar .venc-qty-box{padding:12px!important;border-radius:18px!important}
+.venc-modal-editar .venc-qty-box>label{
+  display:block!important;text-align:center!important;margin:0 0 8px!important;
+  font-weight:900!important;text-transform:uppercase;letter-spacing:.02em;
+}
+.venc-modal-editar .venc-qty-control{gap:10px!important}
+.venc-modal-editar .venc-qty-control button{width:58px!important;min-width:58px!important;height:56px!important}
+.venc-modal-editar .venc-qty-control input{height:56px!important;font-size:28px!important}
+.venc-modal-editar .venc-total{
+  min-height:112px!important;display:flex!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;gap:2px!important;
+  padding:14px!important;border:1.5px solid #65b681!important;background:#ecfbf1!important;
+}
+.venc-modal-editar .venc-total span{font-size:16px!important;font-weight:900!important;color:#08743a!important}
+.venc-modal-editar .venc-total strong{font-size:46px!important;line-height:1!important;color:#07803b!important}
+.venc-edit-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+.venc-edit-actions .secondary-btn{grid-column:1/-1!important}
+.venc-edit-actions button{min-height:54px!important;border-radius:15px!important;font-weight:900!important}
+
+@media(max-width:420px){
+  #pantallaVencimientos .venc-summary-card,#pantallaVencimientos .venc-list-card{margin:12px 14px;padding:14px!important}
+  #pantallaVencimientos .venc-summary-card>h2,#pantallaVencimientos .venc-list-head h2{font-size:20px}
+  .venc-days-hero{font-size:19px;padding:11px 8px}
+  .venc-card-heading strong{font-size:16px!important}
+}
