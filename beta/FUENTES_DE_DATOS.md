@@ -19,3 +19,12 @@ Esta entrega cambia solamente el origen de lectura de los módulos. No modifica 
 ## Importación inteligente (7.1 Beta - Entrega 2)
 
 El XLS se compara por código contra `Productos`. Los existentes actualizan artículo/precio y los nuevos se agregan. `Stock` nunca se escribe durante esta operación.
+
+## Lista y notificaciones (7.1 Beta - Entrega 3)
+
+- La hoja `Listas` conserva un campo `Orden` independiente por usuario y por Lista 1/2.
+- Los productos pendientes se muestran primero y los completados al final, siempre respetando su orden original.
+- La hoja `Vencimientos` se revisa diariamente a las 08:00 de Argentina.
+- Se notifican 15, 7, 3 y 1 día antes, el día del vencimiento y una vez al quedar vencido.
+- Los productos en oferta reciben un aviso adicional 3 días antes.
+- El endpoint protegido `/notificaciones/cron` queda disponible para un Cron Job externo programado a las 08:00 (America/Argentina/Buenos_Aires), necesario si el servidor se suspende.

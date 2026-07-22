@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega2-importacion";
-import { ordenarPorBusqueda } from "./search.js?v=71-entrega2-importacion";
+import { API_BASE_URL } from "./config.js?v=71-entrega3-lista-notificaciones";
+import { ordenarPorBusqueda } from "./search.js?v=71-entrega3-lista-notificaciones";
 
 let datos = [];
 let catalogoMaestro = [];

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega2-importacion";
+import { API_BASE_URL } from "./config.js?v=71-entrega3-lista-notificaciones";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

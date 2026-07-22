@@ -1,3 +1,12 @@
+7.1 Beta - Entrega 3 (Lista y notificaciones)
+- Lista respeta el orden cronológico de carga.
+- Productos completados bajan al final sin perder su posición original.
+- Al desmarcar, el producto vuelve a su lugar original.
+- Orden independiente para Lista 1 y Lista 2, persistido en caché y Google Sheets.
+- Avisos diarios de vencimientos programados para las 08:00 de Argentina.
+- Nuevo aviso específico para productos que vencen hoy.
+- Se mantienen avisos de 15, 7, 3 y 1 día, vencidos y ofertas.
+
 VERSIÓN 7.1 BETA — ENTREGA 2: IMPORTACIÓN INTELIGENTE
 
 - Importa exclusivamente en la hoja Productos; Stock no se modifica.

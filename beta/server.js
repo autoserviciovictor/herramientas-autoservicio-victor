@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "7.1 Beta";
+const APP_VERSION = "7.1 Beta - Entrega 3";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1030,6 +1030,8 @@ function payloadAlertaVencimiento(registro, dias, tipo) {
     };
   }
   if (tipo === "vencido") return { title: "Producto vencido", body: `${registro.articulo} · ${total} ${total === 1 ? "unidad vencida" : "unidades vencidas"}`, tag: `venc-${registro.id}-vencido`, data: { url: "./" } };
+  if (tipo === "hoy") return { title: "Vence hoy", body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-hoy`, data: { url: "./" } };
+  if (tipo === "oferta-3") return { title: "Oferta próxima a vencer", body: `${registro.articulo} · ${unidades} · vence en 3 días`, tag: `venc-${registro.id}-oferta-3`, data: { url: "./" } };
   const textoDias = dias === 1 ? "Vence mañana" : `Vence en ${dias} días`;
   return { title: textoDias, body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
 }
@@ -1110,14 +1112,17 @@ async function procesarAlertasVencimientos() {
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
       if (dias === null) continue;
-      let tipo = null;
-      if ([15, 7, 3, 1].includes(dias)) tipo = String(dias);
-      else if (dias < 0) tipo = "vencido";
-      if (!tipo) continue;
-      const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
-      if (enviadas.has(clave)) continue;
-      await enviarAlertaRegistro(registro, dias, tipo, clave);
-      enviadas.add(clave);
+      const tipos = [];
+      if ([15, 7, 3, 1].includes(dias)) tipos.push(String(dias));
+      else if (dias === 0) tipos.push("hoy");
+      else if (dias < 0) tipos.push("vencido");
+      if (dias === 3 && normalizarOfertaVencimiento(registro.oferta) === "Sí") tipos.push("oferta-3");
+      for (const tipo of tipos) {
+        const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
+        if (enviadas.has(clave)) continue;
+        await enviarAlertaRegistro(registro, dias, tipo, clave);
+        enviadas.add(clave);
+      }
     }
   } catch (error) {
     console.error("Error procesando alertas de vencimientos:", error);
@@ -1132,8 +1137,7 @@ app.post("/notificaciones/suscribir", async (req, res) => {
   try {
     if (!PUSH_CONFIGURED) return res.status(503).json({ ok: false, mensaje: "Las notificaciones todavía no están configuradas en Render" });
     await guardarSuscripcionPush(req);
-    setImmediate(() => procesarAlertasVencimientos());
-    res.json({ ok: true, mensaje: "Notificaciones activadas" });
+    res.json({ ok: true, mensaje: "Notificaciones activadas. Los avisos diarios se envían a las 08:00." });
   } catch (error) { res.status(400).json({ ok: false, mensaje: error.message || "No se pudo guardar la suscripción" }); }
 });
 
@@ -1382,12 +1386,12 @@ async function asegurarHojaListas() {
   return promesaHojaListasLista;
 }
 
-function filaARegistroReposicion(fila = []) {
+function filaARegistroReposicion(fila = [], indice = 0) {
   return {
     id: normalizarTexto(fila[0]), usuario: normalizarUsuario(fila[1]), lista: normalizarNumeroLista(fila[2]),
     codigo: normalizarCodigo(fila[3]), articulo: normalizarTexto(fila[4]), cantidad: enteroPositivo(fila[5]) || 1,
     estado: normalizarTexto(fila[6]).toLowerCase() === "completado" ? "completado" : "pendiente",
-    orden: Number.isFinite(Number(fila[7])) ? Number(fila[7]) : 0, actualizado: normalizarTexto(fila[8])
+    orden: Number.isFinite(Number(fila[7])) && Number(fila[7]) > 0 ? Number(fila[7]) : indice + 1, actualizado: normalizarTexto(fila[8])
   };
 }
 function registroAFilaReposicion(r) {
@@ -1397,7 +1401,7 @@ async function leerTodasLasListas() {
   await asegurarHojaListas();
   const registros = await leerConCache("listas-reposicion", 120000, async () => {
     const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
-    return (respuesta.data.values || []).map(filaARegistroReposicion).filter(r => r.id && r.usuario && r.codigo);
+    return (respuesta.data.values || []).map((fila, indice) => filaARegistroReposicion(fila, indice)).filter(r => r.id && r.usuario && r.codigo);
   });
   return registros.map(r => ({ ...r }));
 }
@@ -1421,7 +1425,7 @@ async function obtenerListaReposicionPersistente(usuario, numeroLista) {
 function limpiarRegistroReposicion(registro, numeroLista = "1") {
   return { id:registro.id, fecha:registro.actualizado, codigo:registro.codigo, articulo:registro.articulo,
     cantidad:enteroPositivo(registro.cantidad)||1, estado:registro.estado === "completado" ? "completado":"pendiente",
-    actualizado:registro.actualizado, usuario:registro.usuario, lista:normalizarNumeroLista(numeroLista) };
+    actualizado:registro.actualizado, usuario:registro.usuario, lista:normalizarNumeroLista(numeroLista), orden:Number(registro.orden)||0 };
 }
 function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
   let i = lista.findIndex(x => normalizarTexto(x.id) === normalizarTexto(id));
@@ -1499,8 +1503,22 @@ app.delete("/reposicion", async(req,res)=>{
 });
 
 
-setInterval(() => procesarAlertasVencimientos(), 60 * 60 * 1000);
-setTimeout(() => procesarAlertasVencimientos(), 15000);
+let ultimaEjecucionDiariaNotificaciones = "";
+function horaMinutoArgentina(fecha = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(fecha);
+  const valor = tipo => Number(partes.find(parte => parte.type === tipo)?.value || 0);
+  return { hora: valor("hour"), minuto: valor("minute") };
+}
+async function ejecutarNotificacionesDiariasSiCorresponde() {
+  const hoy = fechaArgentina();
+  const { hora } = horaMinutoArgentina();
+  if (hora !== 8 || ultimaEjecucionDiariaNotificaciones === hoy) return;
+  ultimaEjecucionDiariaNotificaciones = hoy;
+  await procesarAlertasVencimientos();
+}
+// Revisión frecuente, pero los avisos diarios solo se procesan a las 08:00 de Argentina.
+setInterval(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error en horario diario de notificaciones:", error)), 60 * 1000);
+setTimeout(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error inicializando horario diario de notificaciones:", error)), 5000);
 
 app.listen(PORT, () => {
   console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
