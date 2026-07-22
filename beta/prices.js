@@ -1,6 +1,6 @@
-import { API_BASE_URL } from './config.js?v=71-entrega1-catalogo';
-import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=71-entrega1-catalogo';
-import { ordenarPorBusqueda } from './search.js?v=71-entrega1-catalogo';
+import { API_BASE_URL } from './config.js?v=71-entrega2-importacion';
+import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=71-entrega2-importacion';
+import { ordenarPorBusqueda } from './search.js?v=71-entrega2-importacion';
 
 const $ = id => document.getElementById(id);
 const LAST_KEY = 'autoservicio-precios-ultimo-v2';

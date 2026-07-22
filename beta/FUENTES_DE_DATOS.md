@@ -15,3 +15,7 @@
 ## Alcance de esta entrega
 
 Esta entrega cambia solamente el origen de lectura de los módulos. No modifica el diseño, el escáner ni el orden de Lista.
+
+## Importación inteligente (7.1 Beta - Entrega 2)
+
+El XLS se compara por código contra `Productos`. Los existentes actualizan artículo/precio y los nuevos se agregan. `Stock` nunca se escribe durante esta operación.

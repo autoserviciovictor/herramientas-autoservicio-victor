@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega1-catalogo";
+import { API_BASE_URL } from "./config.js?v=71-entrega2-importacion";
 
 const $ = id => document.getElementById(id);
 let usuarios = [];
@@ -366,6 +366,24 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   $("adminImportarPreviewNombres").textContent = resumen.nombresActualizados ?? 0;
   $("adminImportarPreviewPrecios").textContent = resumen.preciosActualizados ?? 0;
   $("adminImportarPreviewSinCambios").textContent = resumen.sinCambios ?? 0;
+  $("adminImportarPreviewTotal").textContent = resumen.totalCatalogo ?? 0;
+
+  const advertencias = [];
+  if (resumen.duplicadosArchivo) advertencias.push(`${resumen.duplicadosArchivo} código(s) duplicado(s) dentro del archivo`);
+  if (resumen.sinCodigo) advertencias.push(`${resumen.sinCodigo} fila(s) sin código`);
+  if (resumen.sinArticulo) advertencias.push(`${resumen.sinArticulo} fila(s) sin artículo`);
+  if (resumen.codigosInvalidos) advertencias.push(`${resumen.codigosInvalidos} código(s) inválido(s)`);
+  if (resumen.preciosInvalidos) advertencias.push(`${resumen.preciosInvalidos} precio(s) inválido(s), que no serán actualizados`);
+  if (resumen.duplicadosCatalogo) advertencias.push(`${resumen.duplicadosCatalogo} código(s) ya duplicado(s) en Productos; no se crearán duplicados nuevos`);
+
+  const cajaAdvertencias = $("adminImportarPreviewAdvertencias");
+  if (cajaAdvertencias) {
+    cajaAdvertencias.innerHTML = advertencias.length
+      ? `<strong>Revisar:</strong><ul>${advertencias.map(texto => `<li>${escaparHtml(texto)}</li>`).join("")}</ul>`
+      : "<strong>Archivo correcto:</strong> no se detectaron filas problemáticas.";
+    cajaAdvertencias.classList.toggle("sin-advertencias", advertencias.length === 0);
+  }
+
   const modal=$("adminImportarPreviewModal");
   modal?.classList.remove("oculto"); modal?.setAttribute("aria-hidden","false");
 }
@@ -377,17 +395,37 @@ function cerrarVistaPreviaImportacion() {
 
 function extraerProductosImportacion(filas, columnas) {
   const mapa=new Map();
-  let filasIgnoradas=0;
+  const estadisticas={
+    filasVacias:0,
+    sinCodigo:0,
+    sinArticulo:0,
+    codigosInvalidos:0,
+    preciosInvalidos:0,
+    duplicadosArchivo:0,
+    filasIgnoradas:0
+  };
+
   for (let i=columnas.fila+1;i<filas.length;i++) {
     const fila=filas[i]||[];
+    const tieneDatos=fila.some(valor => valor !== null && valor !== undefined && String(valor).trim() !== "");
+    if (!tieneDatos) { estadisticas.filasVacias++; continue; }
+
     const codigo=limpiarCodigoImportacion(leerCampoImportacion(fila,columnas.rangos.codigo));
     const articulo=String(leerCampoImportacion(fila,columnas.rangos.articulo)??"").trim();
-    // Stock y Sub Total se leen deliberadamente solo para reconocer el formato, pero nunca se importan.
-    const precio=columnas.rangos.precio ? parsearPrecioImportacion(leerCampoImportacion(fila,columnas.rangos.precio)) : null;
-    if (!codigo || !articulo || !/^\d{4,}$/.test(codigo)) { filasIgnoradas++; continue; }
+    const precioOriginal=columnas.rangos.precio ? leerCampoImportacion(fila,columnas.rangos.precio) : "";
+    const precio=columnas.rangos.precio ? parsearPrecioImportacion(precioOriginal) : null;
+
+    if (!codigo) { estadisticas.sinCodigo++; estadisticas.filasIgnoradas++; continue; }
+    if (!articulo) { estadisticas.sinArticulo++; estadisticas.filasIgnoradas++; continue; }
+    if (!/^\d{4,}$/.test(codigo)) { estadisticas.codigosInvalidos++; estadisticas.filasIgnoradas++; continue; }
+    if (columnas.rangos.precio && String(precioOriginal ?? "").trim() !== "" && precio === null) estadisticas.preciosInvalidos++;
+    if (mapa.has(codigo)) estadisticas.duplicadosArchivo++;
+
+    // Ante códigos repetidos en el archivo se conserva la última aparición,
+    // que normalmente corresponde al dato más actualizado de la exportación.
     mapa.set(codigo,{codigo,articulo,precio});
   }
-  return { productos:[...mapa.values()], filasIgnoradas };
+  return { productos:[...mapa.values()], ...estadisticas };
 }
 
 async function importarArchivoCatalogo(archivo) {
@@ -398,19 +436,32 @@ async function importarArchivoCatalogo(archivo) {
   const libro=window.XLSX.read(datos,{type:"array",raw:true});
   let filas=[], columnas=null, hojaNombre="";
   for (const nombre of libro.SheetNames) {
-    const actuales=window.XLSX.utils.sheet_to_json(libro.Sheets[nombre],{header:1,defval:"",raw:true});
+    // raw:false conserva códigos con ceros iniciales cuando el XLS trae formato numérico.
+    const actuales=window.XLSX.utils.sheet_to_json(libro.Sheets[nombre],{header:1,defval:"",raw:false});
     const detectadas=detectarColumnasImportacion(actuales);
     if (detectadas) { filas=actuales; columnas=detectadas; hojaNombre=nombre; break; }
   }
   if (!columnas) throw new Error("No encontré las columnas Código y Artículo en el archivo");
   const extraidos=extraerProductosImportacion(filas,columnas);
   if (!extraidos.productos.length) throw new Error("No encontré productos válidos para importar");
-  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre};
+  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre, estadisticas:extraidos};
   estado.textContent=`Analizando ${extraidos.productos.length} productos…`;
   const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:extraidos.productos,confirmar:false})});
-  const resumen={...(data.resumen||{}),filasIgnoradas:extraidos.filasIgnoradas};
+  const resumen={...(data.resumen||{}),...extraidos};
+  // El array solo se conserva en importacionPendiente, no dentro del resumen visual.
+  delete resumen.productos;
+  importacionResumenPendiente=resumen;
   estado.textContent="Vista previa lista. Confirmá para guardar los cambios.";
   abrirVistaPreviaImportacion(resumen,archivo.name);
+}
+
+function construirResumenImportacionFinal(r) {
+  const advertencias = [];
+  if (r.duplicadosArchivo) advertencias.push(`${r.duplicadosArchivo} duplicado(s) en el archivo`);
+  if (r.filasIgnoradas) advertencias.push(`${r.filasIgnoradas} fila(s) ignorada(s)`);
+  if (r.preciosInvalidos) advertencias.push(`${r.preciosInvalidos} precio(s) inválido(s)`);
+  const detalleAdvertencias = advertencias.length ? `<br><span>Advertencias: ${advertencias.join(" · ")}.</span>` : "";
+  return `<strong>Catálogo actualizado</strong><span>Productos nuevos: ${r.nuevos||0} · Nombres actualizados: ${r.nombresActualizados||0} · Precios actualizados: ${r.preciosActualizados||0} · Sin cambios: ${r.sinCambios||0}.</span><span>Total catálogo: ${r.totalCatalogo||0} productos.</span>${detalleAdvertencias}<span>La hoja Stock no fue modificada.</span>`;
 }
 
 async function confirmarImportacionCatalogo() {
@@ -420,9 +471,10 @@ async function confirmarImportacionCatalogo() {
   boton.disabled=true; boton.textContent="Importando…";
   try {
     const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:importacionPendiente.productos,confirmar:true})});
-    const r=data.resumen||{};
+    const r={...(data.resumen||{}),...(importacionPendiente.estadisticas||{})};
+    delete r.productos;
     cerrarVistaPreviaImportacion();
-    estado.innerHTML=`<strong>Importación finalizada</strong><span>${r.nuevos||0} productos nuevos · ${r.nombresActualizados||0} nombres actualizados · ${r.preciosActualizados||0} precios actualizados. La hoja Stock no fue modificada. Stock, Salón, Depósito y Sub Total fueron ignorados.</span>`;
+    estado.innerHTML=construirResumenImportacionFinal(r);
     importacionPendiente=null; importacionResumenPendiente=null;
     mensaje("Catálogo actualizado", "ok");
     await cargarResumen();

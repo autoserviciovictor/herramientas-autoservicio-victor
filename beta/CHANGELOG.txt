@@ -1,3 +1,15 @@
+VERSIÓN 7.1 BETA — ENTREGA 2: IMPORTACIÓN INTELIGENTE
+
+- Importa exclusivamente en la hoja Productos; Stock no se modifica.
+- Actualiza artículo y precio cuando el código ya existe.
+- Agrega productos nuevos sin crear códigos duplicados.
+- Los códigos se escriben como texto mediante RAW para conservar su valor.
+- La vista previa no modifica Google Sheets.
+- Informa productos nuevos, nombres y precios actualizados, sin cambios y total del catálogo.
+- Detecta filas sin código o artículo, códigos inválidos, precios inválidos y duplicados dentro del XLS.
+- Si Productos ya contiene códigos duplicados, los informa y evita crear duplicados adicionales.
+- La versión estable de la raíz no fue modificada.
+
 VERSIÓN 7.1 BETA — ENTREGA 1: CATÁLOGO MAESTRO
 
 - La hoja Stock queda reservada exclusivamente para Inventario.

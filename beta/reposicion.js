@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega1-catalogo";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-entrega1-catalogo";
-import { ordenarPorBusqueda } from "./search.js?v=71-entrega1-catalogo";
+import { API_BASE_URL } from "./config.js?v=71-entrega2-importacion";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-entrega2-importacion";
+import { ordenarPorBusqueda } from "./search.js?v=71-entrega2-importacion";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;

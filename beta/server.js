@@ -290,7 +290,7 @@ async function asegurarHojaUsuarios() {
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USUARIOS_SHEET_NAME}!A:F`,
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
         requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso()]] }
       });
@@ -588,16 +588,23 @@ async function asegurarColumnasCatalogo() {
 }
 
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
-  await asegurarColumnasCatalogo();
+  // La vista previa es de solo lectura: no modifica ninguna hoja.
+  if (aplicarCambios) await asegurarColumnasCatalogo();
   const maestroResp = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${PRODUCTOS_SHEET_NAME}!A:C`
   });
   const maestroFilas = maestroResp.data.values || [];
   const maestroMapa = new Map();
+  let duplicadosCatalogo = 0;
   maestroFilas.slice(1).forEach((fila, i) => {
     const codigo = normalizarCodigo(fila[0]);
-    if (codigo) maestroMapa.set(codigo, { fila: i + 2, datos: fila });
+    if (!codigo) return;
+    if (maestroMapa.has(codigo)) {
+      duplicadosCatalogo++;
+      return;
+    }
+    maestroMapa.set(codigo, { fila: i + 2, datos: fila });
   });
 
   const updates = [];
@@ -645,7 +652,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
       await sheets.spreadsheets.values.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
         requestBody: {
-          valueInputOption: "USER_ENTERED",
+          valueInputOption: "RAW",
           data: updates.slice(i, i + 500)
         }
       });
@@ -655,7 +662,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
         requestBody: { values: nuevosMaestro }
       });
@@ -671,7 +678,9 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     nombresActualizados,
     preciosActualizados,
     sinCambios,
-    incluyePrecios
+    incluyePrecios,
+    duplicadosCatalogo,
+    totalCatalogo: maestroMapa.size + nuevos
   };
 }
 
