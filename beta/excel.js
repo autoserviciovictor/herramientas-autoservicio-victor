@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=71-productos-source";
-import { ordenarPorBusqueda } from "./search.js?v=71-productos-source";
+import { API_BASE_URL } from "./config.js?v=71-entrega1-catalogo";
+import { ordenarPorBusqueda } from "./search.js?v=71-entrega1-catalogo";
 
 let datos = [];
 let catalogoMaestro = [];

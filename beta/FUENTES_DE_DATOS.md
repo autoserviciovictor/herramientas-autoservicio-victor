@@ -1,5 +1,17 @@
-# Fuentes de datos — Versión 7.1 Beta
+# Fuentes de datos — 7.1 Beta Entrega 1
 
-- **Stock**: uso exclusivo del módulo Inventario. Sus filas pueden eliminarse durante el conteo y nunca se completan desde la importación del catálogo.
-- **Productos**: catálogo maestro para Precios, Lista, Vencimientos, búsquedas manuales y resumen del Administrador.
-- **Importación XLS**: agrega productos nuevos y actualiza nombres/precios únicamente en Productos. Ignora Stock, Salón, Depósito y Sub Total.
+## Catálogo maestro
+
+- **Productos** es la fuente del catálogo general.
+- Lo usan: Precios, Lista, Vencimientos, búsquedas manuales y el contador general del Administrador.
+- Sus columnas esperadas son: Código, Artículo y Precio.
+
+## Inventario
+
+- **Stock** queda reservado exclusivamente para el módulo Inventario.
+- Inventario conserva sus columnas y funcionamiento actual: Código, Artículo, Stock, Salón y Depósito.
+- Eliminar o modificar filas durante un inventario no afecta al catálogo maestro de Productos.
+
+## Alcance de esta entrega
+
+Esta entrega cambia solamente el origen de lectura de los módulos. No modifica el diseño, el escáner ni el orden de Lista.

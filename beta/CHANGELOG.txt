@@ -1,3 +1,14 @@
+VERSIÓN 7.1 BETA — ENTREGA 1: CATÁLOGO MAESTRO
+
+- La hoja Stock queda reservada exclusivamente para Inventario.
+- Precios obtiene artículos y precios desde Productos.
+- Lista busca y agrega artículos desde Productos.
+- Vencimientos busca artículos desde Productos.
+- Los buscadores manuales generales usan Productos, salvo los propios del módulo Inventario.
+- El contador de productos del Administrador usa el total de Productos.
+- No se modifica el escáner, el diseño ni el orden de los productos de Lista.
+- La versión estable ubicada en la raíz no fue modificada.
+
 V7.1 Beta
 - Módulo Precios corregido e integrado al diseño de Inventario, Vencimientos y Lista.
 - Escáner reutiliza el enfoque y selección de cámara compartidos.
