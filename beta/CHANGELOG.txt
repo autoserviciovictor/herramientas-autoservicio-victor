@@ -1,3 +1,12 @@
+V7.1 Beta - Entrega 5.2: compatibilidad iPhone y cámara
+- Preparación del video con playsinline para Safari y PWA de iOS.
+- Reintentos de autofocus demorados solo en iPhone/iPad.
+- Liberación segura de la cámara al mandar la PWA de iOS a segundo plano.
+- Selección y fallback de cámara conservados para no alterar Android.
+- Apple touch icon con fondo sólido para evitar bordes blancos.
+- Icono maskable ajustado a la zona segura.
+- Caché y versión de la PWA actualizados.
+
 7.1 Beta - Entrega 5.1
 - Actualización silenciosa y segura: la versión nueva queda preparada y se activa en el siguiente inicio.
 - Se evita reemplazar archivos mientras la aplicación está en uso.

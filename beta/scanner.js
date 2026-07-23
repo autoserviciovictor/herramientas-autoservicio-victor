@@ -8,6 +8,20 @@ let sesionScanner = 0;
 let iniciandoScanner = false;
 let temporizadoresEnfoque = [];
 
+function esDispositivoIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function prepararVideoParaIOS(videoId) {
+    const video = document.getElementById(videoId);
+    if (!video) return;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.muted = true;
+    video.autoplay = true;
+}
+
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -151,6 +165,7 @@ export async function iniciarScanner(videoId, callbackCodigo) {
     if (camaraActiva) detenerScanner();
 
     iniciandoScanner = true;
+    prepararVideoParaIOS(videoId);
     const sesion = ++sesionScanner;
     videoActivoId = videoId;
     ultimoCodigoLeido = "";
@@ -193,6 +208,12 @@ export async function iniciarScanner(videoId, callbackCodigo) {
         camaraActiva = true;
         temporizadoresEnfoque.push(setTimeout(() => mejorarEnfoque(videoId, sesion), 350));
         temporizadoresEnfoque.push(setTimeout(() => mejorarEnfoque(videoId, sesion), 1100));
+        // Safari puede tardar más en exponer el autofocus después de abrir la cámara.
+        // Los reintentos adicionales se aplican únicamente en iPhone/iPad.
+        if (esDispositivoIOS()) {
+            temporizadoresEnfoque.push(setTimeout(() => mejorarEnfoque(videoId, sesion), 2200));
+            temporizadoresEnfoque.push(setTimeout(() => mejorarEnfoque(videoId, sesion), 4000));
+        }
     } catch (error) {
         detenerScanner();
         throw crearErrorCamara(error);
@@ -216,4 +237,15 @@ export function detenerScanner() {
 
 export function obtenerCamaraActual() {
     return dispositivoActualId;
+}
+
+
+// iOS puede conservar la cámara bloqueada al mandar la PWA a segundo plano.
+// Se libera el stream al ocultar o cerrar la aplicación; no se reinicia solo.
+if (!globalThis.__autoservicioScannerLifecycle) {
+    globalThis.__autoservicioScannerLifecycle = true;
+    window.addEventListener("pagehide", detenerScanner);
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden" && esDispositivoIOS()) detenerScanner();
+    });
 }
