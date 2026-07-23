@@ -3506,3 +3506,38 @@ body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !
   .mi-horario-hero { padding: 20px; }
   .mi-horario-hero strong { font-size: 29px; }
 }
+
+
+/* Horarios — Entrega 2 */
+.horarios-month-nav .horarios-hoy-btn{width:auto;min-width:48px;padding:0 10px;font-size:12px;font-weight:800;background:#ffe9ea;color:#d92c33}
+.horarios-bottom-grid{grid-template-columns:1fr}
+.horarios-table-wrap{scroll-behavior:smooth;overscroll-behavior-x:contain}
+.horarios-table th.dia-hoy,.horarios-table td.dia-hoy{background:#fff5f5 !important}
+.horarios-table th.dia-hoy{box-shadow:inset 0 3px #ef393f}
+.horarios-table .dia-seleccionado{background-color:#fffafa}
+.horarios-table .dia-activo{box-shadow:none}
+.cobertura-mini{display:flex!important;justify-content:center;gap:3px;margin-top:3px;font-size:7px!important;color:#777!important;line-height:1}
+.cobertura-mini b{font-weight:800;white-space:nowrap}
+.empleado-titulo-corto{display:none}
+.horarios-table.empleados-compactos .empleado-col{width:56px;min-width:56px;padding-left:8px;padding-right:8px;justify-content:center}
+.horarios-table.empleados-compactos tbody .empleado-col strong{display:none}
+.horarios-table.empleados-compactos .empleado-titulo-completo{display:none}
+.horarios-table.empleados-compactos .empleado-titulo-corto{display:block;font-size:9px}
+.horarios-table .empleado-col{transition:width .2s ease,min-width .2s ease,padding .2s ease}
+.horarios-table tbody .empleado-col strong{transition:opacity .14s ease}
+.horario-cell{position:relative}
+@media (hover:hover) and (pointer:fine){
+  .horario-cell::after{content:attr(data-tooltip);position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,5px);white-space:pre;min-width:145px;background:#fff;color:#25272d;border:1px solid #e1e4ea;border-radius:10px;padding:9px 11px;box-shadow:0 12px 30px rgba(20,25,40,.18);font-size:11px;font-weight:700;opacity:0;pointer-events:none;z-index:30;transition:.15s}
+  .horario-cell:hover::after{opacity:1;transform:translate(-50%,0)}
+}
+.horarios-editor{animation:horariosEditorIn .18s ease-out}
+@keyframes horariosEditorIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+#btnGuardarHorario.guardado{background:#1f9d58}
+.mi-horario-saludo{font-size:15px!important;font-weight:800;opacity:1!important;margin-bottom:6px}
+@media(max-width:700px){
+  .horarios-table{min-width:1320px}
+  .horarios-table .empleado-col{width:116px;min-width:116px}
+  .horarios-table.empleados-compactos .empleado-col{width:52px;min-width:52px}
+  .cobertura-mini{display:none!important}
+  .horarios-month-nav .horarios-hoy-btn{display:inline-flex;align-items:center;justify-content:center}
+}

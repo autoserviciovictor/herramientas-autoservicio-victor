@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=71-entrega53-reemplazo-catalogo">
+    <link rel="stylesheet" href="style.css?v=72-horarios-entrega2">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -412,10 +412,10 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
-                <button type="button" class="horarios-side-btn activo" data-horarios-vista="equipo">👥 <span>Todo el equipo</span></button>
+                <button type="button" class="horarios-side-btn activo" data-horarios-vista="equipo">👥 <span>Equipo</span></button>
                 <button type="button" class="horarios-side-btn" data-horarios-vista="mio">👤 <span>Mi horario</span></button>
-                <button type="button" class="horarios-side-btn" id="btnHorariosHoy">📅 <span>Ir a hoy</span></button>
-                <div class="horarios-sidebar-note"><strong>Entrega 1</strong><span>Diseño y edición de prueba. Todavía no guarda en Google Sheets.</span></div>
+                <button type="button" class="horarios-side-btn" id="btnHorariosHoy">📅 <span>Hoy</span></button>
+                <div class="horarios-sidebar-note"><strong>Entrega 2</strong><span>Interfaz optimizada. Todavía no guarda en Google Sheets.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -427,6 +427,7 @@
                     <div class="horarios-month-nav">
                         <button id="btnHorariosMesAnterior" type="button" aria-label="Mes anterior">‹</button>
                         <strong id="horariosMesTexto">Mes</strong>
+                        <button id="btnHorariosHoyToolbar" class="horarios-hoy-btn" type="button">Hoy</button>
                         <button id="btnHorariosMesSiguiente" type="button" aria-label="Mes siguiente">›</button>
                     </div>
                 </header>
@@ -457,16 +458,13 @@
                             </div>
                             <div id="horariosResumenDia" class="horarios-summary-list"></div>
                         </article>
-                        <article class="horarios-legend-card">
-                            <div class="horarios-card-heading"><div><span>Referencias</span><strong>Turnos disponibles</strong></div></div>
-                            <div id="horariosLeyenda" class="horarios-legend"></div>
-                        </article>
+
                     </section>
                 </div>
 
                 <div id="horariosMioView" class="horarios-mio-view oculto">
                     <section class="mi-horario-hero">
-                        <div><span>Próximo turno</span><strong id="miHorarioProximo">—</strong><small id="miHorarioProximoFecha">—</small></div>
+                        <div><span class="mi-horario-saludo">Hola, Agustín</span><span>Próximo turno</span><strong id="miHorarioProximo">—</strong><small id="miHorarioProximoFecha">—</small></div>
                         <div class="mi-horario-avatar">👤</div>
                     </section>
                     <section id="miHorarioLista" class="mi-horario-list"></section>
@@ -816,7 +814,7 @@
 <script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./app.js?v=71-entrega53-reemplazo-catalogo"></script>
-<script type="module" src="./horarios.js?v=71-horarios-entrega1"></script>
+<script type="module" src="./horarios.js?v=72-horarios-entrega2"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

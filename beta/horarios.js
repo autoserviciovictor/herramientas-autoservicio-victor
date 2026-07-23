@@ -14,6 +14,7 @@ let fechaVista = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let vistaActual = "equipo";
 let diaSeleccionado = new Date().getDate();
 let edicionActual = null;
+let restaurarBottomNav = [];
 const datos = new Map();
 
 const $ = id => document.getElementById(id);
@@ -57,16 +58,57 @@ function nombreDia(dia) {
     .toUpperCase();
 }
 
+function esMesActual() {
+  const hoy = new Date();
+  return fechaVista.getFullYear() === hoy.getFullYear() && fechaVista.getMonth() === hoy.getMonth();
+}
+
+function esHoy(dia) {
+  return esMesActual() && dia === new Date().getDate();
+}
+
+function coberturaDia(dia) {
+  let manana = 0;
+  let tarde = 0;
+  empleados.forEach(emp => {
+    const id = obtenerTurno(emp, dia);
+    if (["8-16", "8-13", "9-14", "10-16"].includes(id)) manana += 1;
+    if (["14-22", "16-22", "8-16"].includes(id)) tarde += 1;
+  });
+  return { manana, tarde };
+}
+
+function desplazarAlDia(dia, comportamiento = "smooth") {
+  requestAnimationFrame(() => {
+    const wrap = document.querySelector("#horariosEquipoView .horarios-table-wrap");
+    const celda = document.querySelector(`#horariosTablaHead [data-horarios-dia="${dia}"]`);
+    if (!wrap || !celda) return;
+    const empleado = document.querySelector("#horariosTablaHead .empleado-col");
+    const destino = Math.max(0, celda.offsetLeft - (empleado?.offsetWidth || 0) - 12);
+    wrap.scrollTo({ left: destino, behavior: comportamiento });
+  });
+}
+
+function actualizarColumnaEmpleados() {
+  const wrap = document.querySelector("#horariosEquipoView .horarios-table-wrap");
+  const tabla = document.querySelector("#horariosEquipoView .horarios-table");
+  if (!wrap || !tabla) return;
+  tabla.classList.toggle("empleados-compactos", wrap.scrollLeft > 32);
+}
+
 function renderTabla() {
   const head = $("horariosTablaHead");
   const body = $("horariosTablaBody");
   if (!head || !body) return;
 
   const totalDias = diasDelMes();
-  head.innerHTML = `<tr><th class="empleado-col">Empleado</th>${Array.from({ length: totalDias }, (_, i) => {
+  head.innerHTML = `<tr><th class="empleado-col"><span class="empleado-titulo-completo">Empleado</span><span class="empleado-titulo-corto">Emp.</span></th>${Array.from({ length: totalDias }, (_, i) => {
     const dia = i + 1;
-    const finde = [0, 6].includes(new Date(fechaVista.getFullYear(), fechaVista.getMonth(), dia).getDay());
-    return `<th class="${finde ? "fin-semana" : ""} ${dia === diaSeleccionado ? "dia-activo" : ""}" data-horarios-dia="${dia}"><span>${nombreDia(dia)}</span><strong>${dia}</strong></th>`;
+    const fecha = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), dia);
+    const finde = [0, 6].includes(fecha.getDay());
+    const hoy = esHoy(dia);
+    const cobertura = coberturaDia(dia);
+    return `<th class="${finde ? "fin-semana" : ""} ${hoy ? "dia-hoy" : ""} ${dia === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${dia}"><span>${nombreDia(dia)}</span><strong>${dia}</strong><small class="cobertura-mini" title="Cobertura: mañana ${cobertura.manana}, tarde ${cobertura.tarde}"><b>☀ ${cobertura.manana}</b><b>☾ ${cobertura.tarde}</b></small></th>`;
   }).join("")}</tr>`;
 
   body.innerHTML = empleados.map((empleado, indice) => `
@@ -75,24 +117,28 @@ function renderTabla() {
       ${Array.from({ length: totalDias }, (_, i) => {
         const dia = i + 1;
         const turno = obtenerDefinicion(obtenerTurno(empleado, dia));
-        return `<td class="${dia === diaSeleccionado ? "dia-activo" : ""}" data-empleado="${empleado}" data-dia="${dia}"><button type="button" class="horario-cell ${turno.clase}" title="${empleado} · ${dia} · ${turno.label}">${turno.label}</button></td>`;
+        return `<td class="${esHoy(dia) ? "dia-hoy" : ""} ${dia === diaSeleccionado ? "dia-seleccionado" : ""}" data-empleado="${empleado}" data-dia="${dia}"><button type="button" class="horario-cell ${turno.clase}" aria-label="${empleado}, día ${dia}, ${turno.label}" data-tooltip="${empleado}|${nombreDia(dia)} ${dia}|${turno.label}">${turno.label}</button></td>`;
       }).join("")}
     </tr>`).join("");
 
   head.querySelectorAll("[data-horarios-dia]").forEach(el => el.addEventListener("click", () => seleccionarDia(Number(el.dataset.horariosDia))));
   body.querySelectorAll("td[data-empleado]").forEach(td => td.addEventListener("click", () => abrirEditor(td.dataset.empleado, Number(td.dataset.dia))));
+
+  const wrap = document.querySelector("#horariosEquipoView .horarios-table-wrap");
+  if (wrap && !wrap.dataset.scrollConfigurado) {
+    wrap.dataset.scrollConfigurado = "1";
+    wrap.addEventListener("scroll", actualizarColumnaEmpleados, { passive: true });
+  }
+  actualizarColumnaEmpleados();
 }
 
-function renderLeyenda() {
-  const cont = $("horariosLeyenda");
-  if (!cont) return;
-  cont.innerHTML = TURNOS.map(turno => `<span><i class="${turno.clase}"></i>${turno.label}</span>`).join("");
-}
+function renderLeyenda() {}
 
 function seleccionarDia(dia) {
   diaSeleccionado = Math.max(1, Math.min(diasDelMes(), dia));
   renderTabla();
   renderResumen();
+  desplazarAlDia(dia, "smooth");
 }
 
 function renderResumen() {
@@ -148,6 +194,8 @@ function guardarEdicion() {
   const personalizado = $("horariosTurnoPersonalizado")?.value.trim();
   const turno = personalizado || edicionActual.turno;
   datos.set(clave(edicionActual.empleado, edicionActual.dia), turno);
+  const guardar = $("btnGuardarHorario");
+  if (guardar) { guardar.textContent = "✓ Aplicado"; guardar.classList.add("guardado"); }
   cerrarEditor();
   renderTabla();
   renderResumen();
@@ -184,7 +232,7 @@ function cambiarVista(vista) {
 
 function cambiarMes(delta) {
   fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + delta, 1);
-  diaSeleccionado = 1;
+  diaSeleccionado = esMesActual() ? new Date().getDate() : 1;
   renderTodo();
 }
 
@@ -192,7 +240,9 @@ function irAHoy() {
   const hoy = new Date();
   fechaVista = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   diaSeleccionado = hoy.getDate();
+  cambiarVista("equipo");
   renderTodo();
+  desplazarAlDia(diaSeleccionado, "smooth");
 }
 
 function renderTodo() {
@@ -207,19 +257,34 @@ function configurarEventos() {
   $("btnHorariosMesAnterior")?.addEventListener("click", () => cambiarMes(-1));
   $("btnHorariosMesSiguiente")?.addEventListener("click", () => cambiarMes(1));
   $("btnHorariosHoy")?.addEventListener("click", irAHoy);
+  $("btnHorariosHoyToolbar")?.addEventListener("click", irAHoy);
   $("btnCerrarHorariosEditor")?.addEventListener("click", cerrarEditor);
   $("btnCancelarHorario")?.addEventListener("click", cerrarEditor);
   $("btnGuardarHorario")?.addEventListener("click", guardarEdicion);
   document.querySelectorAll("[data-horarios-vista]").forEach(btn => btn.addEventListener("click", () => cambiarVista(btn.dataset.horariosVista)));
+  $("horariosEditor")?.addEventListener("click", e => e.stopPropagation());
+  document.addEventListener("pointerdown", e => {
+    const editor = $("horariosEditor");
+    if (!editor || editor.classList.contains("oculto")) return;
+    if (!editor.contains(e.target) && !e.target.closest("td[data-empleado]")) cerrarEditor();
+  });
 }
 
 function activar() {
+  restaurarBottomNav = [];
+  document.querySelectorAll(".app-bottom-nav").forEach(nav => {
+    restaurarBottomNav.push([nav, nav.style.display]);
+    nav.style.display = "none";
+  });
   renderTodo();
   cambiarVista(vistaActual);
+  if (esMesActual()) desplazarAlDia(new Date().getDate(), "auto");
 }
 
 function desactivar() {
   cerrarEditor();
+  restaurarBottomNav.forEach(([nav, display]) => { nav.style.display = display; });
+  restaurarBottomNav = [];
 }
 
 configurarEventos();
