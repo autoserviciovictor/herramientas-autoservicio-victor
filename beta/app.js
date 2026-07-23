@@ -219,6 +219,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
     if (nombre !== "precios") window.PreciosModule?.desactivar?.();
+    if (nombre !== "horarios") window.HorariosModule?.desactivar?.();
 
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
@@ -239,6 +240,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
     if (nombre === "precios") await window.PreciosModule?.activar?.();
+    if (nombre === "horarios") window.HorariosModule?.activar?.();
     if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) { cambiarPantalla("inicio"); }
 }
 

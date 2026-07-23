@@ -3375,3 +3375,134 @@ body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !
 .admin-import-validation.error{background:#fff0f1;color:#9a2630;border:1px solid #f1c4c8;}
 .admin-import-validation.error span{background:#dc3545;color:#fff;}
 #btnAdminConfirmarImportacion:disabled{opacity:.58;cursor:not-allowed;filter:grayscale(.15);}
+
+/* =========================================================
+   HORARIOS · ENTREGA 1
+   Interfaz responsive con datos de demostración.
+   ========================================================= */
+.module-card.module-horarios { background: linear-gradient(145deg, #fff, #fff7f7); }
+.module-card.module-horarios .module-icon { background: #ffe7e8; }
+
+.horarios-screen { max-width: none !important; padding: 0 !important; }
+.horarios-shell { min-height: calc(100vh - 126px); display: grid; grid-template-columns: 210px minmax(0, 1fr); background: #f5f6fa; position: relative; }
+.horarios-sidebar { background: #fff; border-right: 1px solid #e8e9ee; padding: 18px 14px; display: flex; flex-direction: column; gap: 8px; }
+.horarios-sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 8px 10px 18px; font-size: 18px; }
+.horarios-sidebar-brand span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #ffe5e6; }
+.horarios-side-btn { border: 0; background: transparent; border-radius: 10px; padding: 12px; display: flex; gap: 10px; align-items: center; text-align: left; color: #4a4d58; font-weight: 700; cursor: pointer; }
+.horarios-side-btn:hover, .horarios-side-btn.activo { background: #ffe9ea; color: #d92c33; }
+.horarios-sidebar-note { margin-top: auto; background: #fff6f6; border: 1px solid #ffd7d9; border-radius: 12px; padding: 12px; display: grid; gap: 5px; }
+.horarios-sidebar-note strong { font-size: 13px; color: #d92c33; }
+.horarios-sidebar-note span { font-size: 11px; line-height: 1.4; color: #6d7079; }
+
+.horarios-content { min-width: 0; padding: 22px; }
+.horarios-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+.horarios-toolbar h2 { margin: 0; font-size: 24px; color: #22242a; }
+.horarios-toolbar p { margin: 4px 0 0; color: #777b85; font-size: 13px; }
+.horarios-month-nav { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e5e7ec; border-radius: 12px; padding: 6px; box-shadow: 0 4px 16px rgba(30,34,45,.05); }
+.horarios-month-nav strong { min-width: 150px; text-align: center; text-transform: capitalize; }
+.horarios-month-nav button { width: 34px; height: 34px; border: 0; border-radius: 9px; background: #f4f5f7; font-size: 24px; cursor: pointer; }
+.horarios-month-nav button:hover { background: #ffe6e7; color: #d92c33; }
+
+.horarios-status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.horarios-status-row > div:first-child { display: flex; align-items: center; gap: 7px; color: #4b4e56; }
+.horarios-status-row small { color: #9699a1; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #30b76b; box-shadow: 0 0 0 4px rgba(48,183,107,.12); }
+.horarios-view-switch { display: none; background: #fff; border: 1px solid #e6e7eb; border-radius: 10px; padding: 3px; }
+.horarios-view-switch button { border: 0; background: transparent; border-radius: 7px; padding: 8px 12px; font-weight: 700; }
+.horarios-view-switch button.activo { background: #ef393f; color: #fff; }
+
+.horarios-board-card, .horarios-summary-card, .horarios-legend-card { background: #fff; border: 1px solid #e6e8ed; border-radius: 14px; box-shadow: 0 6px 24px rgba(24,31,45,.06); }
+.horarios-table-wrap { overflow: auto; max-height: 490px; border-radius: 14px; }
+.horarios-table { border-collapse: separate; border-spacing: 0; min-width: 1540px; width: 100%; table-layout: fixed; }
+.horarios-table th, .horarios-table td { border-right: 1px solid #eceef2; border-bottom: 1px solid #eceef2; padding: 4px; height: 54px; text-align: center; }
+.horarios-table thead th { position: sticky; top: 0; z-index: 3; background: #fafbfc; color: #777b83; font-size: 10px; }
+.horarios-table thead th span { display: block; font-size: 9px; font-weight: 700; }
+.horarios-table thead th strong { display: block; font-size: 13px; color: #30323a; margin-top: 2px; }
+.horarios-table .empleado-col { position: sticky; left: 0; z-index: 4; width: 132px; min-width: 132px; background: #fff; text-align: left; padding: 8px 10px; }
+.horarios-table thead .empleado-col { z-index: 5; background: #fafbfc; }
+.horarios-table tbody .empleado-col { display: flex; align-items: center; gap: 8px; }
+.empleado-avatar { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: #f0f1f4; color: #555964; font-size: 12px; }
+.horarios-table th.fin-semana { background: #fff4f4; }
+.horarios-table .dia-activo { box-shadow: inset 2px 0 #ef393f, inset -2px 0 #ef393f; }
+.horario-cell { width: 100%; min-height: 38px; border: 0; border-radius: 7px; font-weight: 800; font-size: 11px; cursor: pointer; color: #292b31; transition: transform .12s, filter .12s; }
+.horario-cell:hover { transform: translateY(-1px) scale(1.02); filter: brightness(.97); }
+
+.turno-naranja { background: #ffc78b !important; }
+.turno-amarillo { background: #ffe78a !important; }
+.turno-azul { background: #9edaf3 !important; }
+.turno-celeste { background: #b8e8ec !important; }
+.turno-rojo { background: #ffaaa7 !important; }
+.turno-violeta { background: #c8b2ee !important; }
+.turno-franco { background: #eceef2 !important; color: #727680 !important; }
+.turno-verde { background: #9fe1b5 !important; }
+.turno-personalizado { background: #d9dce3 !important; }
+
+.horarios-bottom-grid { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); gap: 14px; }
+.horarios-summary-card, .horarios-legend-card { padding: 16px; }
+.horarios-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.horarios-card-heading > div { display: grid; gap: 2px; }
+.horarios-card-heading span { color: #8a8e97; font-size: 12px; }
+.horarios-card-heading strong { text-transform: capitalize; }
+.horarios-coverage-badge { background: #e7f7ed; color: #21884d !important; border-radius: 999px; padding: 7px 10px; font-weight: 800; white-space: nowrap; }
+.horarios-coverage-badge.alerta { background: #fff0d9; color: #a56800 !important; }
+.horarios-summary-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 8px; }
+.horarios-summary-list div { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid #eceef2; border-radius: 10px; }
+.horarios-summary-list span, .horarios-legend span { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.horarios-summary-list i, .horarios-legend i { width: 13px; height: 13px; border-radius: 4px; display: inline-block; }
+.horarios-summary-list strong { font-size: 11px; color: #555964; }
+.horarios-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+
+.horarios-editor { position: fixed; right: 18px; top: 90px; z-index: 80; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 110px); overflow: auto; background: #fff; border-radius: 16px; border: 1px solid #e5e7ec; box-shadow: 0 24px 70px rgba(20,25,40,.24); padding: 18px; }
+.horarios-editor-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.horarios-editor-head > div { display: grid; gap: 2px; }
+.horarios-editor-head span { color: #d92c33; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.horarios-editor-head strong { font-size: 20px; }
+.horarios-editor-head small { color: #7d8089; text-transform: capitalize; }
+.horarios-editor-head button { width: 34px; height: 34px; border: 0; border-radius: 9px; background: #f1f2f5; cursor: pointer; }
+.horarios-turnos-opciones { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.horarios-turno-option { min-height: 48px; border: 2px solid transparent; border-radius: 10px; padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.horarios-turno-option span { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,.75); border: 1px solid rgba(0,0,0,.12); }
+.horarios-turno-option.seleccionado { border-color: #20222a; box-shadow: 0 0 0 2px rgba(32,34,42,.08); }
+.horarios-custom-field { display: grid; gap: 6px; margin-top: 14px; font-size: 12px; font-weight: 800; color: #555963; }
+.horarios-custom-field input { height: 42px; border: 1px solid #dfe1e6; border-radius: 10px; padding: 0 12px; font: inherit; }
+.horarios-editor-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+
+.mi-horario-hero { background: linear-gradient(135deg, #ef393f, #c9272d); color: #fff; border-radius: 18px; padding: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 12px 30px rgba(220,45,53,.22); }
+.mi-horario-hero > div:first-child { display: grid; gap: 4px; }
+.mi-horario-hero span { font-size: 12px; opacity: .85; }
+.mi-horario-hero strong { font-size: 34px; }
+.mi-horario-hero small { text-transform: capitalize; }
+.mi-horario-avatar { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 18px; background: rgba(255,255,255,.17); font-size: 28px; }
+.mi-horario-list { display: grid; gap: 10px; margin-top: 14px; }
+.mi-horario-list article { background: #fff; border: 1px solid #e6e8ed; border-radius: 13px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.mi-horario-list article > div { display: grid; gap: 3px; }
+.mi-horario-list span { color: #868a93; text-transform: capitalize; font-size: 12px; }
+.mi-turno-pill { color: #292b31 !important; font-weight: 900; border-radius: 999px; padding: 8px 13px; min-width: 78px; text-align: center; }
+
+@media (max-width: 900px) {
+  .horarios-shell { display: block; }
+  .horarios-sidebar { display: none; }
+  .horarios-content { padding: 14px; }
+  .horarios-view-switch { display: flex; }
+  .horarios-status-row > div:first-child { display: none; }
+  .horarios-status-row { justify-content: flex-end; }
+  .horarios-bottom-grid { grid-template-columns: 1fr; }
+  .horarios-toolbar { align-items: flex-start; }
+  .horarios-toolbar h2 { font-size: 21px; }
+}
+
+@media (max-width: 600px) {
+  .horarios-toolbar { flex-direction: column; }
+  .horarios-month-nav { width: 100%; justify-content: space-between; }
+  .horarios-month-nav strong { min-width: 0; }
+  .horarios-table-wrap { max-height: 58vh; }
+  .horarios-table { min-width: 1380px; }
+  .horarios-table .empleado-col { width: 108px; min-width: 108px; }
+  .horarios-bottom-grid { display: block; }
+  .horarios-legend-card { margin-top: 12px; }
+  .horarios-summary-list { grid-template-columns: 1fr 1fr; }
+  .horarios-editor { top: auto; right: 8px; left: 8px; bottom: 8px; width: auto; max-height: 82vh; border-radius: 18px; }
+  .horarios-turnos-opciones { grid-template-columns: repeat(2, 1fr); }
+  .mi-horario-hero { padding: 20px; }
+  .mi-horario-hero strong { font-size: 29px; }
+}

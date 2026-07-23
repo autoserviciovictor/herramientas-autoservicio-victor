@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-71-entrega531-validacion-catalogo';
+const CACHE_VERSION = 'autoservicio-beta-71-horarios-entrega1';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
@@ -19,6 +19,7 @@ const APP_SHELL = [
   './auth.js?v=71-entrega53-reemplazo-catalogo',
   './notifications.js?v=71-entrega53-reemplazo-catalogo',
   './prices.js?v=71-entrega53-reemplazo-catalogo',
+  './horarios.js?v=71-horarios-entrega1',
   './api-cache.js?v=71-entrega53-reemplazo-catalogo',
   './manifest.webmanifest',
   './icons/icon-96.png',

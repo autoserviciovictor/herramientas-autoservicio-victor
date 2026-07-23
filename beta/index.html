@@ -98,6 +98,12 @@
                 <small>Consultar precios</small>
             </button>
 
+            <button type="button" class="module-card module-horarios" data-modulo="horarios">
+                <span class="module-icon">🕒</span>
+                <strong>Horarios</strong>
+                <small>Turnos del equipo</small>
+            </button>
+
             <button id="btnAbrirAdminHome" type="button" class="module-card module-administrador admin-module-card oculto">
                 <span class="module-icon">🔐</span>
                 <strong>Administrador</strong>
@@ -399,6 +405,87 @@
             <button type="button" class="activo" data-precio-tab="consultar"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>Consultar</span></button>
             <button type="button" data-precio-tab="productos"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg><span>Productos</span></button>
         </nav>
+    </main>
+
+
+    <main id="pantallaHorarios" class="pantalla horarios-screen">
+        <section class="horarios-shell">
+            <aside class="horarios-sidebar" aria-label="Navegación de horarios">
+                <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
+                <button type="button" class="horarios-side-btn activo" data-horarios-vista="equipo">👥 <span>Todo el equipo</span></button>
+                <button type="button" class="horarios-side-btn" data-horarios-vista="mio">👤 <span>Mi horario</span></button>
+                <button type="button" class="horarios-side-btn" id="btnHorariosHoy">📅 <span>Ir a hoy</span></button>
+                <div class="horarios-sidebar-note"><strong>Entrega 1</strong><span>Diseño y edición de prueba. Todavía no guarda en Google Sheets.</span></div>
+            </aside>
+
+            <section class="horarios-content">
+                <header class="horarios-toolbar">
+                    <div>
+                        <h2 id="horariosTituloVista">Horario del equipo</h2>
+                        <p id="horariosSubtituloVista">Vista mensual de todos los empleados</p>
+                    </div>
+                    <div class="horarios-month-nav">
+                        <button id="btnHorariosMesAnterior" type="button" aria-label="Mes anterior">‹</button>
+                        <strong id="horariosMesTexto">Mes</strong>
+                        <button id="btnHorariosMesSiguiente" type="button" aria-label="Mes siguiente">›</button>
+                    </div>
+                </header>
+
+                <section class="horarios-status-row">
+                    <div><span class="status-dot"></span><strong>Vista de diseño</strong><small>Datos de ejemplo</small></div>
+                    <div class="horarios-view-switch" role="group" aria-label="Cambiar vista">
+                        <button type="button" class="activo" data-horarios-vista="equipo">Equipo</button>
+                        <button type="button" data-horarios-vista="mio">Mi horario</button>
+                    </div>
+                </section>
+
+                <div id="horariosEquipoView" class="horarios-equipo-view">
+                    <section class="horarios-board-card">
+                        <div class="horarios-table-wrap">
+                            <table class="horarios-table" aria-label="Horario mensual del equipo">
+                                <thead id="horariosTablaHead"></thead>
+                                <tbody id="horariosTablaBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="horarios-bottom-grid">
+                        <article class="horarios-summary-card">
+                            <div class="horarios-card-heading">
+                                <div><span>Resumen del día</span><strong id="horariosDiaSeleccionado">Seleccioná un día</strong></div>
+                                <span id="horariosCoberturaEstado" class="horarios-coverage-badge">Cobertura</span>
+                            </div>
+                            <div id="horariosResumenDia" class="horarios-summary-list"></div>
+                        </article>
+                        <article class="horarios-legend-card">
+                            <div class="horarios-card-heading"><div><span>Referencias</span><strong>Turnos disponibles</strong></div></div>
+                            <div id="horariosLeyenda" class="horarios-legend"></div>
+                        </article>
+                    </section>
+                </div>
+
+                <div id="horariosMioView" class="horarios-mio-view oculto">
+                    <section class="mi-horario-hero">
+                        <div><span>Próximo turno</span><strong id="miHorarioProximo">—</strong><small id="miHorarioProximoFecha">—</small></div>
+                        <div class="mi-horario-avatar">👤</div>
+                    </section>
+                    <section id="miHorarioLista" class="mi-horario-list"></section>
+                </div>
+            </section>
+
+            <aside id="horariosEditor" class="horarios-editor oculto" aria-hidden="true">
+                <div class="horarios-editor-head">
+                    <div><span>Editar turno</span><strong id="horariosEditorEmpleado">Empleado</strong><small id="horariosEditorFecha">Fecha</small></div>
+                    <button id="btnCerrarHorariosEditor" type="button" aria-label="Cerrar">✕</button>
+                </div>
+                <div id="horariosTurnosOpciones" class="horarios-turnos-opciones"></div>
+                <label class="horarios-custom-field">Horario personalizado<input id="horariosTurnoPersonalizado" type="text" placeholder="Ej. 11-19" maxlength="11"></label>
+                <div class="horarios-editor-actions">
+                    <button id="btnCancelarHorario" type="button" class="secondary-btn">Cancelar</button>
+                    <button id="btnGuardarHorario" type="button" class="save-btn">Aplicar en vista</button>
+                </div>
+            </aside>
+        </section>
     </main>
 
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
@@ -729,6 +816,7 @@
 <script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./app.js?v=71-entrega53-reemplazo-catalogo"></script>
+<script type="module" src="./horarios.js?v=71-horarios-entrega1"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
