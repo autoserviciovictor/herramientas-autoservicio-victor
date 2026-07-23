@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "7.1 Beta - Entrega 5.2.1";
+const APP_VERSION = "7.1 Beta - Entrega 5.2.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -632,28 +632,42 @@ async function asegurarColumnasCatalogo() {
 }
 
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
-  // La vista previa es de solo lectura: no modifica ninguna hoja.
+  // La vista previa es de solo lectura. Al confirmar, la hoja Productos se
+  // reconstruye a partir de códigos únicos para impedir duplicados existentes
+  // y nuevos, incluso cuando el archivo se importa varias veces.
   if (aplicarCambios) await asegurarColumnasCatalogo();
+
   const maestroResp = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-    valueRenderOption: "UNFORMATTED_VALUE"
+    // FORMATTED_VALUE conserva el texto visible y los ceros iniciales.
+    valueRenderOption: "FORMATTED_VALUE"
   });
   const maestroFilas = maestroResp.data.values || [];
+  const catalogoOrden = [];
   const maestroMapa = new Map();
   let duplicadosCatalogo = 0;
-  maestroFilas.slice(1).forEach((fila, i) => {
+
+  maestroFilas.slice(1).forEach((fila) => {
     const codigo = normalizarCodigo(fila[0]);
     if (!codigo) return;
-    if (maestroMapa.has(codigo)) {
-      duplicadosCatalogo++;
+    const articulo = normalizarTexto(fila[1]);
+    const precio = numeroPrecio(fila[2]);
+    const existente = maestroMapa.get(codigo);
+    if (!existente) {
+      const registro = { codigo, articulo, precio };
+      maestroMapa.set(codigo, registro);
+      catalogoOrden.push(codigo);
       return;
     }
-    maestroMapa.set(codigo, { fila: i + 2, datos: fila });
+
+    // Si el catálogo ya contenía filas duplicadas, conservar una sola fila y
+    // aprovechar el dato no vacío más reciente antes de limpiar la hoja.
+    duplicadosCatalogo++;
+    if (articulo) existente.articulo = articulo;
+    if (precio !== null) existente.precio = precio;
   });
 
-  const updates = [];
-  const nuevosMaestro = [];
   let nuevos = 0;
   let nombresActualizados = 0;
   let preciosActualizados = 0;
@@ -661,64 +675,66 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
   let incluyePrecios = false;
 
   for (const item of items) {
-    const codigoNormalizado = normalizarCodigo(item.codigo);
-    if (item.precio !== null) incluyePrecios = true;
-    const maestro = maestroMapa.get(codigoNormalizado);
+    const codigo = normalizarCodigo(item.codigo);
+    if (!codigo) continue;
+    const articulo = normalizarTexto(item.articulo);
+    const precio = numeroPrecio(item.precio);
+    if (precio !== null) incluyePrecios = true;
+    const maestro = maestroMapa.get(codigo);
 
     if (!maestro) {
-      nuevosMaestro.push([codigoNormalizado, item.articulo, item.precio ?? ""]);
+      maestroMapa.set(codigo, { codigo, articulo, precio });
+      catalogoOrden.push(codigo);
       nuevos++;
       continue;
     }
 
     let cambio = false;
-    if (normalizarTexto(maestro.datos[1]) !== item.articulo) {
-      updates.push({
-        range: `${PRODUCTOS_SHEET_NAME}!B${maestro.fila}`,
-        values: [[item.articulo]]
-      });
+    if (articulo && maestro.articulo !== articulo) {
+      maestro.articulo = articulo;
       nombresActualizados++;
       cambio = true;
     }
-
-    if (item.precio !== null && numeroPrecio(maestro.datos[2]) !== item.precio) {
-      updates.push({
-        range: `${PRODUCTOS_SHEET_NAME}!C${maestro.fila}`,
-        values: [[item.precio]]
-      });
+    if (precio !== null && maestro.precio !== precio) {
+      maestro.precio = precio;
       preciosActualizados++;
       cambio = true;
     }
-
     if (!cambio) sinCambios++;
   }
 
   if (aplicarCambios) {
-    for (let i = 0; i < updates.length; i += 500) {
-      await sheets.spreadsheets.values.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: {
-          valueInputOption: "RAW",
-          data: updates.slice(i, i + 500)
-        }
-      });
+    const filasFinales = [["codigo", "articulo", "precio"]];
+    for (const codigo of catalogoOrden) {
+      const producto = maestroMapa.get(codigo);
+      if (!producto) continue;
+      filasFinales.push([
+        String(producto.codigo),
+        producto.articulo || "",
+        producto.precio ?? ""
+      ]);
     }
 
-    if (nuevosMaestro.length) {
-      await sheets.spreadsheets.values.append({
+    // Reescritura controlada: elimina duplicados históricos y evita append
+    // ciego. Stock nunca se toca.
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+      requestBody: {}
+    });
+    for (let i = 0; i < filasFinales.length; i += 5000) {
+      const bloque = filasFinales.slice(i, i + 5000);
+      const filaInicio = i + 1;
+      await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+        range: `${PRODUCTOS_SHEET_NAME}!A${filaInicio}:C${filaInicio + bloque.length - 1}`,
         valueInputOption: "RAW",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: { values: nuevosMaestro }
+        requestBody: { values: bloque }
       });
     }
-
-    // No invalidamos ni modificamos la caché de Stock.
     invalidarCache("productosMaestros");
   }
 
-  const totalCatalogo = maestroMapa.size + nuevos;
   return {
     procesados: items.length,
     nuevos,
@@ -727,7 +743,8 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     sinCambios,
     incluyePrecios,
     duplicadosCatalogo,
-    totalCatalogo
+    duplicadosEliminados: aplicarCambios ? duplicadosCatalogo : 0,
+    totalCatalogo: maestroMapa.size
   };
 }
 

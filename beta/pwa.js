@@ -5,7 +5,7 @@ const textoInstalacion = document.getElementById('estadoInstalacionApp');
 const iosModal = document.getElementById('iosInstallModal');
 const iosWarning = document.getElementById('iosInstallBrowserWarning');
 const installCard = document.getElementById('pwaInstallCard');
-const SW_VERSION = '71-entrega521-importacion-codigos';
+const SW_VERSION = '71-entrega522-deduplicacion-real';
 const SW_RELOAD_KEY = `autoservicio-sw-reload-${SW_VERSION}`;
 
 function estaInstalada() {

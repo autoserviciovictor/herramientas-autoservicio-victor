@@ -393,7 +393,7 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   if (resumen.sinArticulo) advertencias.push(`${resumen.sinArticulo} fila(s) sin artículo`);
   if (resumen.codigosInvalidos) advertencias.push(`${resumen.codigosInvalidos} código(s) inválido(s)`);
   if (resumen.preciosInvalidos) advertencias.push(`${resumen.preciosInvalidos} precio(s) inválido(s), que no serán actualizados`);
-  if (resumen.duplicadosCatalogo) advertencias.push(`${resumen.duplicadosCatalogo} código(s) ya duplicado(s) en Productos; no se crearán duplicados nuevos`);
+  if (resumen.duplicadosCatalogo) advertencias.push(`${resumen.duplicadosCatalogo} fila(s) duplicada(s) ya existentes en Productos; se eliminarán al confirmar`);
 
   const cajaAdvertencias = $("adminImportarPreviewAdvertencias");
   if (cajaAdvertencias) {
@@ -436,7 +436,7 @@ function extraerProductosImportacion(filas, columnas) {
 
     if (!codigo) { estadisticas.sinCodigo++; estadisticas.filasIgnoradas++; continue; }
     if (!articulo) { estadisticas.sinArticulo++; estadisticas.filasIgnoradas++; continue; }
-    if (!/^\d{4,}$/.test(codigo)) { estadisticas.codigosInvalidos++; estadisticas.filasIgnoradas++; continue; }
+    if (!/^\d+$/.test(codigo)) { estadisticas.codigosInvalidos++; estadisticas.filasIgnoradas++; continue; }
     if (columnas.rangos.precio && String(precioOriginal ?? "").trim() !== "" && precio === null) estadisticas.preciosInvalidos++;
     if (mapa.has(codigo)) estadisticas.duplicadosArchivo++;
 
@@ -479,6 +479,7 @@ function construirResumenImportacionFinal(r) {
   if (r.duplicadosArchivo) advertencias.push(`${r.duplicadosArchivo} duplicado(s) en el archivo`);
   if (r.filasIgnoradas) advertencias.push(`${r.filasIgnoradas} fila(s) ignorada(s)`);
   if (r.preciosInvalidos) advertencias.push(`${r.preciosInvalidos} precio(s) inválido(s)`);
+  if (r.duplicadosEliminados) advertencias.push(`${r.duplicadosEliminados} duplicado(s) eliminado(s) del catálogo`);
   const detalleAdvertencias = advertencias.length ? `<br><span>Advertencias: ${advertencias.join(" · ")}.</span>` : "";
   return `<strong>Catálogo actualizado</strong><span>Productos nuevos: ${r.nuevos||0} · Nombres actualizados: ${r.nombresActualizados||0} · Precios actualizados: ${r.preciosActualizados||0} · Sin cambios: ${r.sinCambios||0}.</span><span>Total catálogo: ${r.totalCatalogo||0} productos.</span>${detalleAdvertencias}<span>La hoja Stock no fue modificada.</span>`;
 }

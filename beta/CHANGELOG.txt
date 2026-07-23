@@ -1,3 +1,10 @@
+7.1 Beta - Entrega 5.2.2
+- Corrección definitiva del importador: acepta códigos internos de cualquier longitud.
+- Deduplicación de Productos por código normalizado.
+- Limpieza automática de duplicados históricos al confirmar.
+- Escritura consolidada del catálogo sin append ciego.
+- Total del catálogo calculado sobre códigos únicos.
+
 7.1 Beta - Entrega 5.2.1
 - Hotfix de importación idempotente del catálogo.
 - Códigos normalizados igual en Excel y Google Sheets.
