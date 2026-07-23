@@ -1,6 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=71-productos-source";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-productos-source";
-import { ordenarPorBusqueda } from "./search.js?v=71-productos-source";
+import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-entrega4-rendimiento-sync";
+import { ordenarPorBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=71-entrega4-rendimiento-sync";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -19,7 +20,27 @@ let cargandoRegistros = false;
 let accionPendienteTrasEdicion = null;
 let secuenciaCargaLista = 0;
 let listaEdicion = "1";
+let ultimaSincronizacionAutomatica = 0;
 const colasEstado = new Map();
+
+function ordenRegistro(item, indice = 0){
+  const valor=Number(item?.orden);
+  return Number.isFinite(valor)&&valor>0?valor:indice+1;
+}
+function normalizarOrdenRegistros(items=[]){
+  return items.map((item,indice)=>({...item,orden:ordenRegistro(item,indice)}));
+}
+function compararOrden(a,b){
+  return ordenRegistro(a)-ordenRegistro(b);
+}
+function normalizarBusquedaLista(valor){
+  return String(valor??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+}
+function coincideBusquedaLista(item,consulta){
+  const q=normalizarBusquedaLista(consulta);
+  if(!q)return true;
+  return normalizarBusquedaLista(item?.articulo).includes(q)||normalizarBusquedaLista(item?.codigo).includes(q);
+}
 
 function usuarioCacheRepo(){
   const u=window.AutoservicioAuth?.getUsuario?.();
@@ -41,7 +62,7 @@ function guardarCacheRepo(lista=listaActual){
 function aplicarCacheRepo(lista=listaActual){
   const cache=leerCacheRepo(lista);
   if(!cache.length)return false;
-  registros=cache.map(item=>({...item,lista:String(item.lista||lista)==="2"?"2":"1"}));
+  registros=normalizarOrdenRegistros(cache.map(item=>({...item,lista:String(item.lista||lista)==="2"?"2":"1"})));
   return true;
 }
 
@@ -119,6 +140,9 @@ export function inicializarReposicion(){
     if (event.key === "Escape" && !$("repoNuevaListaModal")?.classList.contains("oculto")) cerrarModalNuevaLista();
   });
   window.addEventListener("autoservicio:sesion", actualizarUsuarioReposicion);
+  window.addEventListener("online", sincronizarReposicionAlVolver);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizarReposicionAlVolver(); });
+  precargarCatalogo();
   sincronizarSelectorListas();
 }
 
@@ -173,7 +197,7 @@ export async function refrescarReposicion({mostrarCarga=true}={}){
   try {
     const data=await pedir(`/reposicion?lista=${listaSolicitada}`);
     if(secuencia !== secuenciaCargaLista || listaActual !== listaSolicitada) return;
-    registros=(data.registros||[]).map(item=>({...item,lista:String(item.lista||listaSolicitada)==="2"?"2":"1"}));
+    registros=normalizarOrdenRegistros((data.registros||[]).map(item=>({...item,lista:String(item.lista||listaSolicitada)==="2"?"2":"1"})));
     guardarCacheRepo(listaSolicitada);
     actualizarUsuarioReposicion();
   }
@@ -190,13 +214,20 @@ async function abrirScanner(){
   catch(e){ $("repoCameraCard")?.classList.add("oculto"); $("repoActionsCard")?.classList.remove("oculto"); toast("No se pudo abrir la cámara","error"); }
 }
 function cerrarScanner(){ detenerScanner(); $("repoCameraCard")?.classList.add("oculto"); if(!productoActual) $("repoActionsCard")?.classList.remove("oculto"); }
-async function cargarProductosMaestroRepo(){
-  if(productosMaestroCache.length) return productosMaestroCache;
+async function cargarProductosMaestroRepo({forzar=false}={}){
+  if(productosMaestroCache.length && !forzar) return productosMaestroCache;
   try {
-    const data=await pedir("/productos-maestro");
+    const data=await obtenerJsonCacheado("/productos-maestro",{ttl:5*60*1000,forzar});
     productosMaestroCache=Array.isArray(data.productos)?data.productos:[];
   } catch(e) { console.warn("No se pudo cargar el catálogo para búsqueda manual",e); }
   return productosMaestroCache;
+}
+async function sincronizarReposicionAlVolver(){
+  if(document.hidden || !navigator.onLine || modoEdicion || operacionEnCurso) return;
+  const ahora=Date.now();
+  if(ahora-ultimaSincronizacionAutomatica<30000) return;
+  ultimaSincronizacionAutomatica=ahora;
+  await Promise.allSettled([refrescarReposicion({mostrarCarga:false}),cargarProductosMaestroRepo()]);
 }
 function limpiarSugerenciasRepo(){
   const c=$("repoManualSugerencias"); if(!c)return;
@@ -256,7 +287,7 @@ async function guardar(){
     const recibido=data.registro;
     if(recibido){
       const i=registros.findIndex(r=>String(r.codigo)===String(recibido.codigo));
-      const normalizado={...recibido,lista:String(recibido.lista||listaGuardada)==="2"?"2":"1"};
+      const normalizado={...recibido,lista:String(recibido.lista||listaGuardada)==="2"?"2":"1",orden:ordenRegistro(recibido,registros.length)};
       if(i>=0) registros[i]=normalizado; else registros.push(normalizado);
       guardarCacheRepo(listaGuardada);
       render();
@@ -376,7 +407,7 @@ async function confirmarEdicion(){
   try{
     operacionEnCurso=true; const b=$("btnRepoConfirmarEdicion"); if(b){b.disabled=true;b.textContent="Guardando...";}
     const data=await pedir("/reposicion",{method:"PATCH",body:JSON.stringify({lista:listaEdicion,cambios})});
-    registros=(data.registros||[]).map(item=>({...item,lista:String(item.lista||listaEdicion)==="2"?"2":"1"})); guardarCacheRepo(listaEdicion); cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados"); return true;
+    registros=normalizarOrdenRegistros((data.registros||[]).map(item=>({...item,lista:String(item.lista||listaEdicion)==="2"?"2":"1"}))); guardarCacheRepo(listaEdicion); cerrarModalGuardarEdicion(); salirModoEdicionSilencioso(); render(); toast("Cambios guardados"); return true;
   }catch(e){toast(e.message,"error"); return false;}
   finally{operacionEnCurso=false;const b=$("btnRepoConfirmarEdicion");if(b){b.disabled=false;b.textContent="Guardar cambios";} actualizarControlesEdicion();}
 }
@@ -385,9 +416,10 @@ function renderListado(){
   if(cargandoRegistros){ c.className="venc-list-empty"; c.innerHTML=htmlCargando("Cargando lista..."); actualizarControlesEdicion(); return; }
   const q=($("repoBuscador")?.value||"").trim();
   const fuente=registrosVista().filter(r=>!r._eliminar || modoEdicion);
-  const pendientes=fuente.filter(r=>r.estado!=="completado");
-  const completados=fuente.filter(r=>r.estado==="completado");
-  const items=q ? [...ordenarPorBusqueda(pendientes,q,{limite:200,campos:["articulo","codigo"]}),...ordenarPorBusqueda(completados,q,{limite:200,campos:["articulo","codigo"]})] : [...pendientes,...completados];
+  const visibles=(q?fuente.filter(r=>coincideBusquedaLista(r,q)):fuente).slice();
+  const pendientes=visibles.filter(r=>r.estado!=="completado").sort(compararOrden);
+  const completados=visibles.filter(r=>r.estado==="completado").sort(compararOrden);
+  const items=[...pendientes,...completados];
   c.className=items.length?"repo-list repo-simple-list":"venc-list-empty";
   actualizarControlesEdicion();
   c.innerHTML=items.length?items.map(r=>{

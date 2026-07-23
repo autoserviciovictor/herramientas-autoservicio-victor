@@ -1,5 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=71-productos-source";
-import { ordenarPorBusqueda } from "./search.js?v=71-productos-source";
+import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { ordenarPorBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
+import { obtenerJsonCacheado } from "./api-cache.js?v=71-entrega4-rendimiento-sync";
 
 let datos = [];
 let catalogoMaestro = [];
@@ -139,7 +140,7 @@ export async function cargarProductosDesdeServidor() {
 
 export async function cargarCatalogoMaestroDesdeServidor({ forzar = false } = {}) {
     if (catalogoMaestroCargado && !forzar) return catalogoMaestro.length;
-    const data = await pedirJson("/productos-maestro");
+    const data = await obtenerJsonCacheado("/productos-maestro", { ttl: 5 * 60 * 1000, forzar });
     catalogoMaestro = (data.productos || []).map(producto => ({
         filaGoogle: producto.filaGoogle,
         codigo: normalizarTexto(producto.codigo),

@@ -1,17 +1,25 @@
 {
+  "id": "./",
   "name": "Autoservicio Beta",
   "short_name": "Autoservicio",
-  "description": "Inventario, vencimientos y listas de reposición.",
+  "description": "Inventario, vencimientos, precios y listas de reposición.",
   "lang": "es-AR",
+  "dir": "ltr",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
   "background_color": "#f5f5f5",
   "theme_color": "#ef393f",
   "categories": [
     "business",
-    "productivity"
+    "productivity",
+    "utilities"
   ],
   "icons": [
     {
@@ -31,6 +39,47 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Inventario",
+      "short_name": "Inventario",
+      "description": "Abrir el módulo de inventario",
+      "url": "./?source=pwa&modulo=inventario",
+      "icons": [
+        {
+          "src": "./icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Vencimientos",
+      "short_name": "Vencimientos",
+      "description": "Abrir el control de vencimientos",
+      "url": "./?source=pwa&modulo=vencimientos",
+      "icons": [
+        {
+          "src": "./icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Lista",
+      "short_name": "Lista",
+      "description": "Abrir la lista de reposición",
+      "url": "./?source=pwa&modulo=anotar",
+      "icons": [
+        {
+          "src": "./icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

@@ -1,3 +1,92 @@
+7.1 Beta - Entrega 5.3
+- Importación XLSX por reemplazo completo de Productos.
+- Stock permanece sin cambios.
+- Vista previa simplificada y confirmación explícita.
+
+7.1 Beta - Entrega 5.2.3
+- Corrección de duplicados por ceros iniciales en códigos internos.
+- 00663, 663 y 000663 se comparan como el mismo producto.
+- El código visible original se conserva al guardar en Productos.
+- La vista previa también deduplica códigos equivalentes dentro del Excel.
+- Al confirmar, se limpian duplicados históricos equivalentes sin tocar Stock.
+
+7.1 Beta - Entrega 5.2.2
+- Corrección definitiva del importador: acepta códigos internos de cualquier longitud.
+- Deduplicación de Productos por código normalizado.
+- Limpieza automática de duplicados históricos al confirmar.
+- Escritura consolidada del catálogo sin append ciego.
+- Total del catálogo calculado sobre códigos únicos.
+
+7.1 Beta - Entrega 5.2.1
+- Hotfix de importación idempotente del catálogo.
+- Códigos normalizados igual en Excel y Google Sheets.
+- La columna codigo de Productos se fuerza a formato texto.
+- Lectura sin formato para evitar notación científica y conversiones visuales.
+- Corrección del total del catálogo en la vista previa.
+- Reimportar el mismo archivo ya guardado no debe crear productos nuevos.
+- Stock, Salón y Depósito permanecen sin modificaciones.
+
+V7.1 Beta - Entrega 5.2: compatibilidad iPhone y cámara
+- Preparación del video con playsinline para Safari y PWA de iOS.
+- Reintentos de autofocus demorados solo en iPhone/iPad.
+- Liberación segura de la cámara al mandar la PWA de iOS a segundo plano.
+- Selección y fallback de cámara conservados para no alterar Android.
+- Apple touch icon con fondo sólido para evitar bordes blancos.
+- Icono maskable ajustado a la zona segura.
+- Caché y versión de la PWA actualizados.
+
+7.1 Beta - Entrega 5.1
+- Actualización silenciosa y segura: la versión nueva queda preparada y se activa en el siguiente inicio.
+- Se evita reemplazar archivos mientras la aplicación está en uso.
+- Service Worker con instalación tolerante a fallos de recursos secundarios.
+- Navegación offline con tiempo de espera y respaldo del último inicio válido.
+- Limpieza automática de cachés anteriores al activar una versión.
+- Manifest mejorado para Android y escritorio: identidad, orientación flexible y accesos directos.
+- Mejoras de adaptación para PC, teclado, mouse y modo instalado.
+- El escáner y la configuración de cámara no fueron modificados.
+
+V7.1 Beta - Entrega 4 (Rendimiento y sincronización)
+- Caché persistente del catálogo Productos con vencimiento de 5 minutos.
+- Deduplicación de solicitudes simultáneas al catálogo.
+- Revalidación ETag: el servidor responde 304 cuando el catálogo no cambió.
+- Precios, Lista e Inventario reutilizan el catálogo local.
+- Búsqueda disponible con el último catálogo guardado cuando no hay conexión.
+- Lista se refresca al recuperar Internet y al volver a primer plano.
+- Service worker con actualización en segundo plano de recursos estáticos.
+- Sin cambios en escáner, diseño ni versión estable.
+
+7.1 Beta - Entrega 3 (Lista y notificaciones)
+- Lista respeta el orden cronológico de carga.
+- Productos completados bajan al final sin perder su posición original.
+- Al desmarcar, el producto vuelve a su lugar original.
+- Orden independiente para Lista 1 y Lista 2, persistido en caché y Google Sheets.
+- Avisos diarios de vencimientos programados para las 08:00 de Argentina.
+- Nuevo aviso específico para productos que vencen hoy.
+- Se mantienen avisos de 15, 7, 3 y 1 día, vencidos y ofertas.
+
+VERSIÓN 7.1 BETA — ENTREGA 2: IMPORTACIÓN INTELIGENTE
+
+- Importa exclusivamente en la hoja Productos; Stock no se modifica.
+- Actualiza artículo y precio cuando el código ya existe.
+- Agrega productos nuevos sin crear códigos duplicados.
+- Los códigos se escriben como texto mediante RAW para conservar su valor.
+- La vista previa no modifica Google Sheets.
+- Informa productos nuevos, nombres y precios actualizados, sin cambios y total del catálogo.
+- Detecta filas sin código o artículo, códigos inválidos, precios inválidos y duplicados dentro del XLS.
+- Si Productos ya contiene códigos duplicados, los informa y evita crear duplicados adicionales.
+- La versión estable de la raíz no fue modificada.
+
+VERSIÓN 7.1 BETA — ENTREGA 1: CATÁLOGO MAESTRO
+
+- La hoja Stock queda reservada exclusivamente para Inventario.
+- Precios obtiene artículos y precios desde Productos.
+- Lista busca y agrega artículos desde Productos.
+- Vencimientos busca artículos desde Productos.
+- Los buscadores manuales generales usan Productos, salvo los propios del módulo Inventario.
+- El contador de productos del Administrador usa el total de Productos.
+- No se modifica el escáner, el diseño ni el orden de los productos de Lista.
+- La versión estable ubicada en la raíz no fue modificada.
+
 V7.1 Beta
 - Módulo Precios corregido e integrado al diseño de Inventario, Vencimientos y Lista.
 - Escáner reutiliza el enfoque y selección de cámara compartidos.

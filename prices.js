@@ -1,6 +1,7 @@
-import { API_BASE_URL } from './config.js?v=71-productos-source';
-import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=71-productos-source';
-import { ordenarPorBusqueda } from './search.js?v=71-productos-source';
+import { API_BASE_URL } from './config.js?v=71-entrega4-rendimiento-sync';
+import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=71-entrega4-rendimiento-sync';
+import { ordenarPorBusqueda } from './search.js?v=71-entrega4-rendimiento-sync';
+import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=71-entrega4-rendimiento-sync';
 
 const $ = id => document.getElementById(id);
 const LAST_KEY = 'autoservicio-precios-ultimo-v2';
@@ -41,16 +42,12 @@ function esc(v) {
   }[c]));
 }
 
-async function cargarProductos() {
-  if (cargados) return productos;
+async function cargarProductos({ forzar = false } = {}) {
+  if (cargados && !forzar) return productos;
   if (cargando) return cargando;
 
-  cargando = fetch(`${API_BASE_URL}/productos-maestro`, { cache: 'no-store' })
-    .then(async response => {
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.ok) throw new Error(data?.mensaje || 'No se pudieron cargar los productos');
-      return (data.productos || []).map(normalizarProducto);
-    })
+  cargando = obtenerJsonCacheado('/productos-maestro', { ttl: 5 * 60 * 1000, forzar })
+    .then(data => (data.productos || []).map(normalizarProducto))
     .then(lista => {
       productos = lista;
       cargados = true;

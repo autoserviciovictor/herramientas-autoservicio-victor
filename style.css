@@ -3330,3 +3330,39 @@ body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !
   .precio-ultimo-info strong{font-size:21px}
   .precio-ultimo-precio b{font-size:36px}
 }
+
+
+/* =========================================================
+   V7.1 Beta · Entrega 5.1 — PWA y compatibilidad segura
+   No modifica el escáner ni la configuración de cámara.
+   ========================================================= */
+@media (min-width: 900px) {
+  html { background:#eef1ed; }
+  body { min-width:900px; }
+  .app { margin:0 auto; }
+  .pantalla { padding-left:clamp(28px,4vw,56px);padding-right:clamp(28px,4vw,56px); }
+  .module-grid { grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); }
+  .module-card { cursor:pointer; }
+  .settings-card,.search-card,.scan-panel,.camera-card,.product-card,.quantity-card,.edit-card,
+  .venc-actions-card,.venc-form-card,.venc-list-card,.repo-product-card,.repo-form-card {
+    width:min(100%,960px);
+  }
+  input,select,textarea,button { font-size:max(16px,1rem); }
+}
+
+@media (hover:hover) and (pointer:fine) {
+  button,.module-card,.nav-btn,.product-result,.precio-product-row { cursor:pointer; }
+  button:not(:disabled):focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline:3px solid rgba(239,57,63,.32);
+    outline-offset:3px;
+  }
+}
+
+@media (display-mode: standalone) {
+  body { overscroll-behavior-y:none; }
+  .brand-header { padding-top:max(0px,env(safe-area-inset-top)); }
+}

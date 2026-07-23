@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "7.1 Beta";
+const APP_VERSION = "7.1 Beta - Entrega 5.2.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -126,8 +126,41 @@ function normalizarTexto(valor) {
   return String(valor ?? "").trim();
 }
 
+function expandirNotacionCientificaCodigo(texto) {
+  const coincidencia = String(texto).match(/^([+-]?)(\d+)(?:[.,](\d+))?[eE]([+-]?\d+)$/);
+  if (!coincidencia) return String(texto);
+  const signo = coincidencia[1] === "-" ? "-" : "";
+  const enteros = coincidencia[2];
+  const decimales = coincidencia[3] || "";
+  const exponente = Number(coincidencia[4]);
+  if (!Number.isInteger(exponente) || Math.abs(exponente) > 100) return String(texto);
+  const digitos = enteros + decimales;
+  const posicion = enteros.length + exponente;
+  if (posicion <= 0) return signo + "0".repeat(-posicion) + digitos;
+  if (posicion >= digitos.length) return signo + digitos + "0".repeat(posicion - digitos.length);
+  return signo + digitos.slice(0, posicion) + "." + digitos.slice(posicion);
+}
+
 function normalizarCodigo(codigo) {
-  return normalizarTexto(codigo);
+  if (codigo === null || codigo === undefined) return "";
+  let texto = String(codigo)
+    .replace(/\u00a0/g, " ")
+    .trim()
+    .replace(/^'+/, "")
+    .replace(/\s+/g, "");
+  if (!texto) return "";
+  texto = expandirNotacionCientificaCodigo(texto);
+  texto = texto.replace(/^(\d+)[.,]0+$/, "$1");
+  return texto;
+}
+
+function claveCodigo(codigo) {
+  const texto = normalizarCodigo(codigo);
+  if (!texto) return "";
+  // Para comparar códigos exclusivamente numéricos, ignorar ceros iniciales.
+  // El código original se conserva para mostrarlo y escribirlo en Productos.
+  if (/^\d+$/.test(texto)) return texto.replace(/^0+(?=\d)/, "");
+  return texto;
 }
 
 function numero(valor) {
@@ -290,7 +323,7 @@ async function asegurarHojaUsuarios() {
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USUARIOS_SHEET_NAME}!A:F`,
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
         requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso()]] }
       });
@@ -577,101 +610,118 @@ function normalizarProductoImportado(item) {
 }
 
 async function asegurarColumnasCatalogo() {
-  // La importación del catálogo nunca debe modificar la hoja Stock.
-  // Solo mantenemos el catálogo maestro permanente en la hoja Productos.
+  // La importación del catálogo nunca modifica la hoja Stock.
+  // La columna A de Productos se fuerza a TEXTO para preservar códigos y ceros iniciales.
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
     valueInputOption: "RAW",
     requestBody: { values: [["codigo", "articulo", "precio"]] }
   });
+
+  const metadata = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: "sheets(properties(sheetId,title))"
+  });
+  const hoja = (metadata.data.sheets || []).find(item => item.properties?.title === PRODUCTOS_SHEET_NAME);
+  if (!hoja) throw new Error(`No existe la hoja ${PRODUCTOS_SHEET_NAME}`);
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: {
+      requests: [{
+        repeatCell: {
+          range: { sheetId: hoja.properties.sheetId, startColumnIndex: 0, endColumnIndex: 1 },
+          cell: { userEnteredFormat: { numberFormat: { type: "TEXT" } } },
+          fields: "userEnteredFormat.numberFormat"
+        }
+      }]
+    }
+  });
 }
 
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
-  await asegurarColumnasCatalogo();
-  const maestroResp = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${PRODUCTOS_SHEET_NAME}!A:C`
-  });
-  const maestroFilas = maestroResp.data.values || [];
-  const maestroMapa = new Map();
-  maestroFilas.slice(1).forEach((fila, i) => {
-    const codigo = normalizarCodigo(fila[0]);
-    if (codigo) maestroMapa.set(codigo, { fila: i + 2, datos: fila });
-  });
-
-  const updates = [];
-  const nuevosMaestro = [];
-  let nuevos = 0;
-  let nombresActualizados = 0;
-  let preciosActualizados = 0;
-  let sinCambios = 0;
-  let incluyePrecios = false;
+  // El archivo importado pasa a ser la fuente completa del catálogo.
+  // No se comparan altas ni modificaciones: Productos se reemplaza entero.
+  const catalogo = [];
+  const codigosVistos = new Set();
+  let duplicadosArchivo = 0;
 
   for (const item of items) {
-    if (item.precio !== null) incluyePrecios = true;
-    const maestro = maestroMapa.get(item.codigo);
+    const producto = normalizarProductoImportado(item);
+    if (!producto) continue;
 
-    if (!maestro) {
-      nuevosMaestro.push([item.codigo, item.articulo, item.precio ?? ""]);
-      nuevos++;
+    // Se conserva exactamente el código normalizado del archivo. Solo se
+    // eliminan duplicados exactos dentro del mismo archivo, conservando la
+    // última aparición.
+    const clave = producto.codigo;
+    if (codigosVistos.has(clave)) {
+      duplicadosArchivo++;
+      const indice = catalogo.findIndex(actual => actual.codigo === clave);
+      if (indice >= 0) catalogo[indice] = producto;
       continue;
     }
-
-    let cambio = false;
-    if (normalizarTexto(maestro.datos[1]) !== item.articulo) {
-      updates.push({
-        range: `${PRODUCTOS_SHEET_NAME}!B${maestro.fila}`,
-        values: [[item.articulo]]
-      });
-      nombresActualizados++;
-      cambio = true;
-    }
-
-    if (item.precio !== null && numeroPrecio(maestro.datos[2]) !== item.precio) {
-      updates.push({
-        range: `${PRODUCTOS_SHEET_NAME}!C${maestro.fila}`,
-        values: [[item.precio]]
-      });
-      preciosActualizados++;
-      cambio = true;
-    }
-
-    if (!cambio) sinCambios++;
+    codigosVistos.add(clave);
+    catalogo.push(producto);
   }
 
+  if (!catalogo.length) throw new Error("No se encontraron productos válidos para reemplazar el catálogo");
+
   if (aplicarCambios) {
-    for (let i = 0; i < updates.length; i += 500) {
-      await sheets.spreadsheets.values.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: {
-          valueInputOption: "USER_ENTERED",
-          data: updates.slice(i, i + 500)
-        }
+    await asegurarColumnasCatalogo();
+
+    const actualResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+      valueRenderOption: "FORMATTED_VALUE"
+    });
+    const filasActuales = (actualResp.data.values || []).length;
+
+    const filasFinales = [
+      ["codigo", "articulo", "precio"],
+      ...catalogo.map(producto => [
+        String(producto.codigo),
+        producto.articulo || "",
+        producto.precio ?? ""
+      ])
+    ];
+
+    // Primero se escribe el catálogo completo en una única operación lógica.
+    // Solo después se limpian posibles filas sobrantes del catálogo anterior.
+    const data = [];
+    for (let i = 0; i < filasFinales.length; i += 5000) {
+      const bloque = filasFinales.slice(i, i + 5000);
+      const filaInicio = i + 1;
+      data.push({
+        range: `${PRODUCTOS_SHEET_NAME}!A${filaInicio}:C${filaInicio + bloque.length - 1}`,
+        values: bloque
       });
     }
 
-    if (nuevosMaestro.length) {
-      await sheets.spreadsheets.values.append({
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        valueInputOption: "RAW",
+        data
+      }
+    });
+
+    if (filasActuales > filasFinales.length) {
+      await sheets.spreadsheets.values.clear({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-        valueInputOption: "USER_ENTERED",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: { values: nuevosMaestro }
+        range: `${PRODUCTOS_SHEET_NAME}!A${filasFinales.length + 1}:C${filasActuales}`,
+        requestBody: {}
       });
     }
 
-    // No invalidamos ni modificamos la caché de Stock.
     invalidarCache("productosMaestros");
   }
 
   return {
-    procesados: items.length,
-    nuevos,
-    nombresActualizados,
-    preciosActualizados,
-    sinCambios,
-    incluyePrecios
+    procesados: catalogo.length,
+    totalCatalogo: catalogo.length,
+    duplicadosArchivo,
+    reemplazoCompleto: true
   };
 }
 
@@ -680,19 +730,17 @@ app.post("/admin/importar-productos", requerirAdministrador, async (req,res)=>{
     const entrada=Array.isArray(req.body?.productos)?req.body.productos:[];
     if (!entrada.length) return res.status(400).json({ok:false,mensaje:"El archivo no contiene productos válidos"});
     if (entrada.length>IMPORTACION_MAX_FILAS) return res.status(400).json({ok:false,mensaje:`El archivo supera el máximo de ${IMPORTACION_MAX_FILAS} productos`});
-    const mapa=new Map();
-    entrada.forEach(raw=>{const p=normalizarProductoImportado(raw); if(p) mapa.set(p.codigo,p);});
-    const items=[...mapa.values()];
+    const items=entrada.map(normalizarProductoImportado).filter(Boolean);
     if(!items.length) return res.status(400).json({ok:false,mensaje:"No se encontraron códigos y artículos válidos"});
     const confirmar = req.body?.confirmar === true;
     if (!confirmar) {
       const resumen = await ejecutarImportacionProductos(items, false);
-      return res.json({ok:true,mensaje:"Vista previa calculada",vistaPrevia:true,resumen});
+      return res.json({ok:true,mensaje:"Vista previa del reemplazo calculada",vistaPrevia:true,resumen});
     }
     const tarea=importacionProductosEnCurso.catch(()=>{}).then(()=>ejecutarImportacionProductos(items, true));
     importacionProductosEnCurso=tarea.catch(()=>{});
     const resumen=await tarea;
-    res.json({ok:true,mensaje:"Importación finalizada",resumen});
+    res.json({ok:true,mensaje:"Catálogo reemplazado correctamente",resumen});
   } catch(error) {
     console.error("Error importando productos:",error);
     res.status(500).json({ok:false,mensaje:error.message||"No se pudo importar el archivo"});
@@ -729,6 +777,10 @@ app.get("/producto/:codigo", async (req, res) => {
 app.get("/productos-maestro", async (req, res) => {
   try {
     const productos = await obtenerProductosMaestros();
+    const etag = `"${crypto.createHash("sha1").update(JSON.stringify(productos)).digest("hex")}"`;
+    res.set("ETag", etag);
+    res.set("Cache-Control", "private, max-age=0, must-revalidate");
+    if (req.headers["if-none-match"] === etag) return res.status(304).end();
     res.json({ ok: true, total: productos.length, productos });
   } catch (error) {
     console.error("Error en /productos-maestro:", error);
@@ -1021,6 +1073,8 @@ function payloadAlertaVencimiento(registro, dias, tipo) {
     };
   }
   if (tipo === "vencido") return { title: "Producto vencido", body: `${registro.articulo} · ${total} ${total === 1 ? "unidad vencida" : "unidades vencidas"}`, tag: `venc-${registro.id}-vencido`, data: { url: "./" } };
+  if (tipo === "hoy") return { title: "Vence hoy", body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-hoy`, data: { url: "./" } };
+  if (tipo === "oferta-3") return { title: "Oferta próxima a vencer", body: `${registro.articulo} · ${unidades} · vence en 3 días`, tag: `venc-${registro.id}-oferta-3`, data: { url: "./" } };
   const textoDias = dias === 1 ? "Vence mañana" : `Vence en ${dias} días`;
   return { title: textoDias, body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
 }
@@ -1101,14 +1155,17 @@ async function procesarAlertasVencimientos() {
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
       if (dias === null) continue;
-      let tipo = null;
-      if ([15, 7, 3, 1].includes(dias)) tipo = String(dias);
-      else if (dias < 0) tipo = "vencido";
-      if (!tipo) continue;
-      const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
-      if (enviadas.has(clave)) continue;
-      await enviarAlertaRegistro(registro, dias, tipo, clave);
-      enviadas.add(clave);
+      const tipos = [];
+      if ([15, 7, 3, 1].includes(dias)) tipos.push(String(dias));
+      else if (dias === 0) tipos.push("hoy");
+      else if (dias < 0) tipos.push("vencido");
+      if (dias === 3 && normalizarOfertaVencimiento(registro.oferta) === "Sí") tipos.push("oferta-3");
+      for (const tipo of tipos) {
+        const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
+        if (enviadas.has(clave)) continue;
+        await enviarAlertaRegistro(registro, dias, tipo, clave);
+        enviadas.add(clave);
+      }
     }
   } catch (error) {
     console.error("Error procesando alertas de vencimientos:", error);
@@ -1123,8 +1180,7 @@ app.post("/notificaciones/suscribir", async (req, res) => {
   try {
     if (!PUSH_CONFIGURED) return res.status(503).json({ ok: false, mensaje: "Las notificaciones todavía no están configuradas en Render" });
     await guardarSuscripcionPush(req);
-    setImmediate(() => procesarAlertasVencimientos());
-    res.json({ ok: true, mensaje: "Notificaciones activadas" });
+    res.json({ ok: true, mensaje: "Notificaciones activadas. Los avisos diarios se envían a las 08:00." });
   } catch (error) { res.status(400).json({ ok: false, mensaje: error.message || "No se pudo guardar la suscripción" }); }
 });
 
@@ -1373,12 +1429,12 @@ async function asegurarHojaListas() {
   return promesaHojaListasLista;
 }
 
-function filaARegistroReposicion(fila = []) {
+function filaARegistroReposicion(fila = [], indice = 0) {
   return {
     id: normalizarTexto(fila[0]), usuario: normalizarUsuario(fila[1]), lista: normalizarNumeroLista(fila[2]),
     codigo: normalizarCodigo(fila[3]), articulo: normalizarTexto(fila[4]), cantidad: enteroPositivo(fila[5]) || 1,
     estado: normalizarTexto(fila[6]).toLowerCase() === "completado" ? "completado" : "pendiente",
-    orden: Number.isFinite(Number(fila[7])) ? Number(fila[7]) : 0, actualizado: normalizarTexto(fila[8])
+    orden: Number.isFinite(Number(fila[7])) && Number(fila[7]) > 0 ? Number(fila[7]) : indice + 1, actualizado: normalizarTexto(fila[8])
   };
 }
 function registroAFilaReposicion(r) {
@@ -1388,7 +1444,7 @@ async function leerTodasLasListas() {
   await asegurarHojaListas();
   const registros = await leerConCache("listas-reposicion", 120000, async () => {
     const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
-    return (respuesta.data.values || []).map(filaARegistroReposicion).filter(r => r.id && r.usuario && r.codigo);
+    return (respuesta.data.values || []).map((fila, indice) => filaARegistroReposicion(fila, indice)).filter(r => r.id && r.usuario && r.codigo);
   });
   return registros.map(r => ({ ...r }));
 }
@@ -1412,7 +1468,7 @@ async function obtenerListaReposicionPersistente(usuario, numeroLista) {
 function limpiarRegistroReposicion(registro, numeroLista = "1") {
   return { id:registro.id, fecha:registro.actualizado, codigo:registro.codigo, articulo:registro.articulo,
     cantidad:enteroPositivo(registro.cantidad)||1, estado:registro.estado === "completado" ? "completado":"pendiente",
-    actualizado:registro.actualizado, usuario:registro.usuario, lista:normalizarNumeroLista(numeroLista) };
+    actualizado:registro.actualizado, usuario:registro.usuario, lista:normalizarNumeroLista(numeroLista), orden:Number(registro.orden)||0 };
 }
 function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
   let i = lista.findIndex(x => normalizarTexto(x.id) === normalizarTexto(id));
@@ -1490,8 +1546,22 @@ app.delete("/reposicion", async(req,res)=>{
 });
 
 
-setInterval(() => procesarAlertasVencimientos(), 60 * 60 * 1000);
-setTimeout(() => procesarAlertasVencimientos(), 15000);
+let ultimaEjecucionDiariaNotificaciones = "";
+function horaMinutoArgentina(fecha = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(fecha);
+  const valor = tipo => Number(partes.find(parte => parte.type === tipo)?.value || 0);
+  return { hora: valor("hour"), minuto: valor("minute") };
+}
+async function ejecutarNotificacionesDiariasSiCorresponde() {
+  const hoy = fechaArgentina();
+  const { hora } = horaMinutoArgentina();
+  if (hora !== 8 || ultimaEjecucionDiariaNotificaciones === hoy) return;
+  ultimaEjecucionDiariaNotificaciones = hoy;
+  await procesarAlertasVencimientos();
+}
+// Revisión frecuente, pero los avisos diarios solo se procesan a las 08:00 de Argentina.
+setInterval(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error en horario diario de notificaciones:", error)), 60 * 1000);
+setTimeout(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error inicializando horario diario de notificaciones:", error)), 5000);
 
 app.listen(PORT, () => {
   console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
