@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "7.1 Beta - Entrega 4";
+const APP_VERSION = "7.1 Beta - Entrega 5.2.1";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -126,8 +126,32 @@ function normalizarTexto(valor) {
   return String(valor ?? "").trim();
 }
 
+function expandirNotacionCientificaCodigo(texto) {
+  const coincidencia = String(texto).match(/^([+-]?)(\d+)(?:[.,](\d+))?[eE]([+-]?\d+)$/);
+  if (!coincidencia) return String(texto);
+  const signo = coincidencia[1] === "-" ? "-" : "";
+  const enteros = coincidencia[2];
+  const decimales = coincidencia[3] || "";
+  const exponente = Number(coincidencia[4]);
+  if (!Number.isInteger(exponente) || Math.abs(exponente) > 100) return String(texto);
+  const digitos = enteros + decimales;
+  const posicion = enteros.length + exponente;
+  if (posicion <= 0) return signo + "0".repeat(-posicion) + digitos;
+  if (posicion >= digitos.length) return signo + digitos + "0".repeat(posicion - digitos.length);
+  return signo + digitos.slice(0, posicion) + "." + digitos.slice(posicion);
+}
+
 function normalizarCodigo(codigo) {
-  return normalizarTexto(codigo);
+  if (codigo === null || codigo === undefined) return "";
+  let texto = String(codigo)
+    .replace(/\u00a0/g, " ")
+    .trim()
+    .replace(/^'+/, "")
+    .replace(/\s+/g, "");
+  if (!texto) return "";
+  texto = expandirNotacionCientificaCodigo(texto);
+  texto = texto.replace(/^(\d+)[.,]0+$/, "$1");
+  return texto;
 }
 
 function numero(valor) {
@@ -577,13 +601,33 @@ function normalizarProductoImportado(item) {
 }
 
 async function asegurarColumnasCatalogo() {
-  // La importación del catálogo nunca debe modificar la hoja Stock.
-  // Solo mantenemos el catálogo maestro permanente en la hoja Productos.
+  // La importación del catálogo nunca modifica la hoja Stock.
+  // La columna A de Productos se fuerza a TEXTO para preservar códigos y ceros iniciales.
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
     valueInputOption: "RAW",
     requestBody: { values: [["codigo", "articulo", "precio"]] }
+  });
+
+  const metadata = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: "sheets(properties(sheetId,title))"
+  });
+  const hoja = (metadata.data.sheets || []).find(item => item.properties?.title === PRODUCTOS_SHEET_NAME);
+  if (!hoja) throw new Error(`No existe la hoja ${PRODUCTOS_SHEET_NAME}`);
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: {
+      requests: [{
+        repeatCell: {
+          range: { sheetId: hoja.properties.sheetId, startColumnIndex: 0, endColumnIndex: 1 },
+          cell: { userEnteredFormat: { numberFormat: { type: "TEXT" } } },
+          fields: "userEnteredFormat.numberFormat"
+        }
+      }]
+    }
   });
 }
 
@@ -592,7 +636,8 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
   if (aplicarCambios) await asegurarColumnasCatalogo();
   const maestroResp = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${PRODUCTOS_SHEET_NAME}!A:C`
+    range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+    valueRenderOption: "UNFORMATTED_VALUE"
   });
   const maestroFilas = maestroResp.data.values || [];
   const maestroMapa = new Map();
@@ -616,11 +661,12 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
   let incluyePrecios = false;
 
   for (const item of items) {
+    const codigoNormalizado = normalizarCodigo(item.codigo);
     if (item.precio !== null) incluyePrecios = true;
-    const maestro = maestroMapa.get(item.codigo);
+    const maestro = maestroMapa.get(codigoNormalizado);
 
     if (!maestro) {
-      nuevosMaestro.push([item.codigo, item.articulo, item.precio ?? ""]);
+      nuevosMaestro.push([codigoNormalizado, item.articulo, item.precio ?? ""]);
       nuevos++;
       continue;
     }
@@ -672,6 +718,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     invalidarCache("productosMaestros");
   }
 
+  const totalCatalogo = maestroMapa.size + nuevos;
   return {
     procesados: items.length,
     nuevos,
@@ -680,7 +727,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     sinCambios,
     incluyePrecios,
     duplicadosCatalogo,
-    totalCatalogo: maestroMapa.size + nuevos
+    totalCatalogo
   };
 }
 

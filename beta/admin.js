@@ -340,12 +340,27 @@ function leerCampoImportacion(fila, rango) {
   return "";
 }
 
+function expandirNotacionCientificaImportacion(texto) {
+  const coincidencia=String(texto).match(/^([+-]?)(\d+)(?:[.,](\d+))?[eE]([+-]?\d+)$/);
+  if (!coincidencia) return String(texto);
+  const signo=coincidencia[1] === "-" ? "-" : "";
+  const enteros=coincidencia[2];
+  const decimales=coincidencia[3] || "";
+  const exponente=Number(coincidencia[4]);
+  if (!Number.isInteger(exponente) || Math.abs(exponente)>100) return String(texto);
+  const digitos=enteros+decimales;
+  const posicion=enteros.length+exponente;
+  if (posicion<=0) return signo+"0".repeat(-posicion)+digitos;
+  if (posicion>=digitos.length) return signo+digitos+"0".repeat(posicion-digitos.length);
+  return signo+digitos.slice(0,posicion)+"."+digitos.slice(posicion);
+}
+
 function limpiarCodigoImportacion(valor) {
   if (valor === null || valor === undefined || valor === "") return "";
-  if (typeof valor === "number") return Number.isSafeInteger(valor) ? String(valor) : String(valor).replace(/\.0+$/, "");
-  const texto=String(valor).trim();
-  if (/^\d+(\.0+)?$/.test(texto)) return texto.replace(/\.0+$/, "");
-  return texto;
+  let texto=String(valor).replace(/\u00a0/g," ").trim().replace(/^'+/,"").replace(/\s+/g,"");
+  if (!texto) return "";
+  texto=expandirNotacionCientificaImportacion(texto);
+  return texto.replace(/^(\d+)[.,]0+$/, "$1");
 }
 
 function parsearPrecioImportacion(valor) {
@@ -366,7 +381,11 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   $("adminImportarPreviewNombres").textContent = resumen.nombresActualizados ?? 0;
   $("adminImportarPreviewPrecios").textContent = resumen.preciosActualizados ?? 0;
   $("adminImportarPreviewSinCambios").textContent = resumen.sinCambios ?? 0;
-  $("adminImportarPreviewTotal").textContent = resumen.totalCatalogo ?? 0;
+  const totalActual=Number($("adminProductos")?.textContent || 0);
+  const totalCalculado=Number.isFinite(Number(resumen.totalCatalogo)) && Number(resumen.totalCatalogo)>0
+    ? Number(resumen.totalCatalogo)
+    : totalActual + Number(resumen.nuevos || 0);
+  $("adminImportarPreviewTotal").textContent = totalCalculado;
 
   const advertencias = [];
   if (resumen.duplicadosArchivo) advertencias.push(`${resumen.duplicadosArchivo} código(s) duplicado(s) dentro del archivo`);

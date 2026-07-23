@@ -1,3 +1,12 @@
+7.1 Beta - Entrega 5.2.1
+- Hotfix de importación idempotente del catálogo.
+- Códigos normalizados igual en Excel y Google Sheets.
+- La columna codigo de Productos se fuerza a formato texto.
+- Lectura sin formato para evitar notación científica y conversiones visuales.
+- Corrección del total del catálogo en la vista previa.
+- Reimportar el mismo archivo ya guardado no debe crear productos nuevos.
+- Stock, Salón y Depósito permanecen sin modificaciones.
+
 V7.1 Beta - Entrega 5.2: compatibilidad iPhone y cámara
 - Preparación del video con playsinline para Safari y PWA de iOS.
 - Reintentos de autofocus demorados solo en iPhone/iPad.
