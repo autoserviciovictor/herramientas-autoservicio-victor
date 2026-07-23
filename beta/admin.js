@@ -363,6 +363,12 @@ function limpiarCodigoImportacion(valor) {
   return texto.replace(/^(\d+)[.,]0+$/, "$1");
 }
 
+function claveCodigoImportacion(valor) {
+  const codigo = limpiarCodigoImportacion(valor);
+  if (!codigo) return "";
+  return /^\d+$/.test(codigo) ? codigo.replace(/^0+(?=\d)/, "") : codigo;
+}
+
 function parsearPrecioImportacion(valor) {
   if (valor === null || valor === undefined || valor === "") return null;
   if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
@@ -438,11 +444,12 @@ function extraerProductosImportacion(filas, columnas) {
     if (!articulo) { estadisticas.sinArticulo++; estadisticas.filasIgnoradas++; continue; }
     if (!/^\d+$/.test(codigo)) { estadisticas.codigosInvalidos++; estadisticas.filasIgnoradas++; continue; }
     if (columnas.rangos.precio && String(precioOriginal ?? "").trim() !== "" && precio === null) estadisticas.preciosInvalidos++;
-    if (mapa.has(codigo)) estadisticas.duplicadosArchivo++;
+    const clave=claveCodigoImportacion(codigo);
+    if (mapa.has(clave)) estadisticas.duplicadosArchivo++;
 
-    // Ante códigos repetidos en el archivo se conserva la última aparición,
-    // que normalmente corresponde al dato más actualizado de la exportación.
-    mapa.set(codigo,{codigo,articulo,precio});
+    // Los códigos numéricos con y sin ceros iniciales representan el mismo
+    // producto (por ejemplo 00663 y 663). Se conserva la última aparición.
+    mapa.set(clave,{codigo,articulo,precio});
   }
   return { productos:[...mapa.values()], ...estadisticas };
 }

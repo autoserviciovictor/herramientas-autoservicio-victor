@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-71-entrega522-deduplicacion-real';
+const CACHE_VERSION = 'autoservicio-beta-71-entrega523-ceros-iniciales';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

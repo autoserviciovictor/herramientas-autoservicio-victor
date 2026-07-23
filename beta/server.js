@@ -154,6 +154,15 @@ function normalizarCodigo(codigo) {
   return texto;
 }
 
+function claveCodigo(codigo) {
+  const texto = normalizarCodigo(codigo);
+  if (!texto) return "";
+  // Para comparar códigos exclusivamente numéricos, ignorar ceros iniciales.
+  // El código original se conserva para mostrarlo y escribirlo en Productos.
+  if (/^\d+$/.test(texto)) return texto.replace(/^0+(?=\d)/, "");
+  return texto;
+}
+
 function numero(valor) {
   const n = Number(valor);
   return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -650,14 +659,15 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
 
   maestroFilas.slice(1).forEach((fila) => {
     const codigo = normalizarCodigo(fila[0]);
-    if (!codigo) return;
+    const clave = claveCodigo(codigo);
+    if (!clave) return;
     const articulo = normalizarTexto(fila[1]);
     const precio = numeroPrecio(fila[2]);
-    const existente = maestroMapa.get(codigo);
+    const existente = maestroMapa.get(clave);
     if (!existente) {
       const registro = { codigo, articulo, precio };
-      maestroMapa.set(codigo, registro);
-      catalogoOrden.push(codigo);
+      maestroMapa.set(clave, registro);
+      catalogoOrden.push(clave);
       return;
     }
 
@@ -676,15 +686,16 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
 
   for (const item of items) {
     const codigo = normalizarCodigo(item.codigo);
-    if (!codigo) continue;
+    const clave = claveCodigo(codigo);
+    if (!clave) continue;
     const articulo = normalizarTexto(item.articulo);
     const precio = numeroPrecio(item.precio);
     if (precio !== null) incluyePrecios = true;
-    const maestro = maestroMapa.get(codigo);
+    const maestro = maestroMapa.get(clave);
 
     if (!maestro) {
-      maestroMapa.set(codigo, { codigo, articulo, precio });
-      catalogoOrden.push(codigo);
+      maestroMapa.set(clave, { codigo, articulo, precio });
+      catalogoOrden.push(clave);
       nuevos++;
       continue;
     }
@@ -705,8 +716,8 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
 
   if (aplicarCambios) {
     const filasFinales = [["codigo", "articulo", "precio"]];
-    for (const codigo of catalogoOrden) {
-      const producto = maestroMapa.get(codigo);
+    for (const clave of catalogoOrden) {
+      const producto = maestroMapa.get(clave);
       if (!producto) continue;
       filasFinales.push([
         String(producto.codigo),
