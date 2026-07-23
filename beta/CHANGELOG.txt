@@ -1,3 +1,13 @@
+7.1 Beta - Entrega 5.1
+- Actualización silenciosa y segura: la versión nueva queda preparada y se activa en el siguiente inicio.
+- Se evita reemplazar archivos mientras la aplicación está en uso.
+- Service Worker con instalación tolerante a fallos de recursos secundarios.
+- Navegación offline con tiempo de espera y respaldo del último inicio válido.
+- Limpieza automática de cachés anteriores al activar una versión.
+- Manifest mejorado para Android y escritorio: identidad, orientación flexible y accesos directos.
+- Mejoras de adaptación para PC, teclado, mouse y modo instalado.
+- El escáner y la configuración de cámara no fueron modificados.
+
 V7.1 Beta - Entrega 4 (Rendimiento y sincronización)
 - Caché persistente del catálogo Productos con vencimiento de 5 minutos.
 - Deduplicación de solicitudes simultáneas al catálogo.

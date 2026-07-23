@@ -1,25 +1,27 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-71-entrega4-rendimiento-sync';
+const CACHE_VERSION = 'autoservicio-beta-71-entrega51-pwa-compatibilidad';
+const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=71-entrega4-rendimiento-sync',
-  './app.js?v=71-entrega4-rendimiento-sync',
-  './config.js?v=71-entrega4-rendimiento-sync',
-  './excel.js?v=71-entrega4-rendimiento-sync',
-  './scanner.js?v=71-entrega4-rendimiento-sync',
-  './reposicion.js?v=71-entrega4-rendimiento-sync',
-  './ui.js?v=71-entrega4-rendimiento-sync',
-  './release-channel.js?v=71-entrega4-rendimiento-sync',
-  './pwa.js?v=71-entrega4-rendimiento-sync',
-  './search.js?v=71-entrega4-rendimiento-sync',
-  './admin.js?v=71-entrega4-rendimiento-sync',
-  './auth.js?v=71-entrega4-rendimiento-sync',
-  './notifications.js?v=71-entrega4-rendimiento-sync',
-  './prices.js?v=71-entrega4-rendimiento-sync',
-  './api-cache.js?v=71-entrega4-rendimiento-sync',
+  './style.css?v=71-entrega51-pwa-compatibilidad',
+  './app.js?v=71-entrega51-pwa-compatibilidad',
+  './config.js?v=71-entrega51-pwa-compatibilidad',
+  './excel.js?v=71-entrega51-pwa-compatibilidad',
+  './scanner.js?v=71-entrega51-pwa-compatibilidad',
+  './reposicion.js?v=71-entrega51-pwa-compatibilidad',
+  './ui.js?v=71-entrega51-pwa-compatibilidad',
+  './release-channel.js?v=71-entrega51-pwa-compatibilidad',
+  './pwa.js?v=71-entrega51-pwa-compatibilidad',
+  './search.js?v=71-entrega51-pwa-compatibilidad',
+  './admin.js?v=71-entrega51-pwa-compatibilidad',
+  './auth.js?v=71-entrega51-pwa-compatibilidad',
+  './notifications.js?v=71-entrega51-pwa-compatibilidad',
+  './prices.js?v=71-entrega51-pwa-compatibilidad',
+  './api-cache.js?v=71-entrega51-pwa-compatibilidad',
   './manifest.webmanifest',
+  './icons/icon-96.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
@@ -29,57 +31,116 @@ const APP_SHELL = [
   './icons/favicon.png'
 ];
 
+async function guardarAppShell() {
+  const cache = await caches.open(CACHE_VERSION);
+  const resultados = await Promise.allSettled(APP_SHELL.map(async recurso => {
+    const respuesta = await fetch(recurso, { cache: 'reload' });
+    if (!respuesta.ok) throw new Error(`${recurso}: ${respuesta.status}`);
+    await cache.put(recurso, respuesta);
+  }));
+  const correctos = resultados.filter(resultado => resultado.status === 'fulfilled').length;
+  if (!correctos) throw new Error('No se pudo guardar ningún recurso de la aplicación.');
+}
+
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil(guardarAppShell());
+  // No se usa skipWaiting aquí: la versión nueva queda preparada y no
+  // reemplaza archivos mientras la aplicación está abierta.
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_VERSION).map(key => caches.delete(key))))
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_VERSION)
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
+
+async function conTiempoLimite(promesa, milisegundos) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Tiempo de red agotado')), milisegundos);
+  });
+  try {
+    return await Promise.race([promesa, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function navegacionSegura(request) {
+  const cache = await caches.open(CACHE_VERSION);
+  try {
+    const respuesta = await conTiempoLimite(fetch(request), 4500);
+    if (respuesta?.ok) await cache.put(OFFLINE_DOCUMENT, respuesta.clone());
+    return respuesta;
+  } catch {
+    return (await cache.match(OFFLINE_DOCUMENT)) || (await caches.match('./')) || Response.error();
+  }
+}
+
+async function cachePrimero(request) {
+  const cache = await caches.open(CACHE_VERSION);
+  const guardado = await cache.match(request);
+  if (guardado) return guardado;
+  const respuesta = await fetch(request);
+  if (respuesta?.ok) await cache.put(request, respuesta.clone());
+  return respuesta;
+}
+
+async function actualizarEnSegundoPlano(request, event) {
+  const cache = await caches.open(CACHE_VERSION);
+  const guardado = await cache.match(request);
+  const actualizacion = fetch(request).then(async respuesta => {
+    if (respuesta?.ok) await cache.put(request, respuesta.clone());
+    return respuesta;
+  });
+  if (guardado) {
+    event.waitUntil(actualizacion.catch(() => undefined));
+    return guardado;
+  }
+  return actualizacion;
+}
 
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
+
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put('./index.html', copy));
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(navegacionSegura(request));
     return;
   }
 
   if (url.origin === self.location.origin) {
-    event.respondWith((async () => {
-      const cached = await caches.match(request);
-      const network = fetch(request).then(response => {
-        if (response && response.ok) caches.open(CACHE_VERSION).then(cache => cache.put(request, response.clone()));
-        return response;
-      }).catch(() => cached);
-      return cached || network;
-    })());
+    const esArchivoVersionado = url.searchParams.has('v');
+    const esImagen = request.destination === 'image';
+    if (esArchivoVersionado || esImagen) {
+      event.respondWith(cachePrimero(request));
+    } else {
+      event.respondWith(actualizarEnSegundoPlano(request, event));
+    }
     return;
   }
 
-  event.respondWith(
-    fetch(request).then(response => {
-      const copy = response.clone();
-      caches.open(CACHE_VERSION).then(cache => cache.put(request, copy));
-      return response;
-    }).catch(() => caches.match(request))
-  );
+  // Recursos externos (por ejemplo ZXing): red primero y último respaldo en caché.
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    try {
+      const respuesta = await fetch(request);
+      if (respuesta?.ok) await cache.put(request, respuesta.clone());
+      return respuesta;
+    } catch {
+      return (await cache.match(request)) || Response.error();
+    }
+  })());
 });
-
 
 self.addEventListener('push', event => {
   let data = {};
@@ -87,9 +148,12 @@ self.addEventListener('push', event => {
   const title = data.title || 'Vencimientos';
   const options = {
     body: data.body || 'Tenés una alerta de vencimiento.',
+    icon: './icons/icon-192.png',
     badge: './icons/notification-badge-96.png',
-    tag: data.tag || `vencimiento-${Date.now()}`, renotify: false,
-    data: data.data || { url: './' }, vibrate: [150, 80, 150]
+    tag: data.tag || `vencimiento-${Date.now()}`,
+    renotify: false,
+    data: data.data || { url: './' },
+    vibrate: [150, 80, 150]
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
@@ -98,7 +162,12 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   const destino = event.notification.data?.url || './';
   event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ventanas => {
-    for (const ventana of ventanas) { if ('focus' in ventana) { ventana.navigate(destino).catch(() => {}); return ventana.focus(); } }
+    for (const ventana of ventanas) {
+      if ('focus' in ventana) {
+        ventana.navigate(destino).catch(() => {});
+        return ventana.focus();
+      }
+    }
     return clients.openWindow ? clients.openWindow(destino) : undefined;
   }));
 });

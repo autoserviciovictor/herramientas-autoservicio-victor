@@ -5,6 +5,8 @@ const textoInstalacion = document.getElementById('estadoInstalacionApp');
 const iosModal = document.getElementById('iosInstallModal');
 const iosWarning = document.getElementById('iosInstallBrowserWarning');
 const installCard = document.getElementById('pwaInstallCard');
+const SW_VERSION = '71-entrega51-pwa-compatibilidad';
+const SW_RELOAD_KEY = `autoservicio-sw-reload-${SW_VERSION}`;
 
 function estaInstalada() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -32,7 +34,7 @@ function cerrarGuiaIOS() {
 }
 
 document.getElementById('btnCerrarIosInstall')?.addEventListener('click', cerrarGuiaIOS);
-iosModal?.addEventListener('click', e => { if (e.target === iosModal) cerrarGuiaIOS(); });
+iosModal?.addEventListener('click', event => { if (event.target === iosModal) cerrarGuiaIOS(); });
 
 function actualizarEstadoInstalacion() {
   if (!btnInstalar || !textoInstalacion) return;
@@ -85,17 +87,61 @@ btnInstalar?.addEventListener('click', async () => {
 
 if ('serviceWorker' in navigator) {
   let ultimoControlActualizacion = 0;
-  async function comprobarActualizacionSilenciosa(registro) {
-    const ahora = Date.now();
-    if (!registro || ahora - ultimoControlActualizacion < 15 * 60 * 1000) return;
-    ultimoControlActualizacion = ahora;
-    try { await registro.update(); } catch (error) { console.debug('Actualización PWA pendiente:', error?.message || error); }
+  let registroActivo = null;
+
+  function activarWorkerEnEspera(registro) {
+    if (!registro?.waiting) return false;
+    registro.waiting.postMessage({ type: 'SKIP_WAITING' });
+    return true;
   }
+
+  async function comprobarActualizacionSilenciosa(registro, forzar = false) {
+    const ahora = Date.now();
+    if (!registro || (!forzar && ahora - ultimoControlActualizacion < 15 * 60 * 1000)) return;
+    ultimoControlActualizacion = ahora;
+    try {
+      await registro.update();
+    } catch (error) {
+      console.debug('Actualización PWA pendiente:', error?.message || error);
+    }
+  }
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (sessionStorage.getItem(SW_RELOAD_KEY) === '1') return;
+    sessionStorage.setItem(SW_RELOAD_KEY, '1');
+    window.location.reload();
+  });
+
   window.addEventListener('load', async () => {
     try {
-      const registro = await navigator.serviceWorker.register('./service-worker.js?v=71-entrega4-rendimiento-sync', { scope: './', updateViaCache: 'none' });
-      await comprobarActualizacionSilenciosa(registro);
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarActualizacionSilenciosa(registro); });
+      const registro = await navigator.serviceWorker.register(`./service-worker.js?v=${SW_VERSION}`, {
+        scope: './',
+        updateViaCache: 'none'
+      });
+      registroActivo = registro;
+
+      // Una versión que quedó esperando se activa recién al iniciar nuevamente la app.
+      // Así no reemplaza archivos mientras el usuario está trabajando.
+      if (!activarWorkerEnEspera(registro)) {
+        await comprobarActualizacionSilenciosa(registro, true);
+      }
+
+      registro.addEventListener('updatefound', () => {
+        const instalando = registro.installing;
+        if (!instalando) return;
+        instalando.addEventListener('statechange', () => {
+          if (instalando.state === 'installed' && navigator.serviceWorker.controller) {
+            // La nueva versión queda esperando y se aplicará silenciosamente
+            // la próxima vez que se abra o recargue la aplicación.
+            console.debug('Nueva versión preparada para el próximo inicio.');
+          }
+        });
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') comprobarActualizacionSilenciosa(registroActivo);
+      });
+      window.addEventListener('online', () => comprobarActualizacionSilenciosa(registroActivo, true));
     } catch (error) {
       console.error('No se pudo registrar el service worker:', error);
       if (textoInstalacion) textoInstalacion.textContent = 'No se pudo preparar la instalación. Actualizá la página e intentá nuevamente.';
