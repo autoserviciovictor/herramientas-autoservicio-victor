@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=72-horarios-entrega3">
+    <link rel="stylesheet" href="style.css?v=72-horarios-entrega4">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -412,16 +412,13 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
-                <button type="button" class="horarios-side-btn activo" data-horarios-vista="equipo">👥 <span>Equipo</span></button>
-                <button type="button" class="horarios-side-btn" data-horarios-vista="mio">👤 <span>Mi horario</span></button>
-                <button type="button" class="horarios-side-btn" id="btnHorariosHoy">📅 <span>Hoy</span></button>
-                <div class="horarios-sidebar-note"><strong>Entrega 3</strong><span>Edición rápida, selección múltiple y herramientas de productividad. Todavía no guarda en Google Sheets.</span></div>
+                <div class="horarios-sidebar-note"><strong>Entrega 4</strong><span>Calendario completo para todos. Edición exclusiva para supervisor.</span></div>
             </aside>
 
             <section class="horarios-content">
                 <header class="horarios-toolbar">
                     <div>
-                        <h2 id="horariosTituloVista">Horario del equipo</h2>
+                        <h2 id="horariosTituloVista">Calendario</h2>
                         <p id="horariosSubtituloVista">Vista mensual de todos los empleados</p>
                     </div>
                     <div class="horarios-month-nav">
@@ -434,10 +431,6 @@
 
                 <section class="horarios-status-row">
                     <div><span class="status-dot"></span><strong>Vista de diseño</strong><small>Datos de ejemplo</small></div>
-                    <div class="horarios-view-switch" role="group" aria-label="Cambiar vista">
-                        <button type="button" class="activo" data-horarios-vista="equipo">Equipo</button>
-                        <button type="button" data-horarios-vista="mio">Mi horario</button>
-                    </div>
                 </section>
 
                 <div id="horariosEquipoView" class="horarios-equipo-view">
@@ -484,6 +477,10 @@
                 </div>
             </aside>
         </section>
+        <nav class="app-bottom-nav horarios-bottom-nav" aria-label="Navegación de horarios">
+            <button type="button" class="activo" data-horarios-vista="equipo"><span class="horarios-nav-icon">▦</span><span>Calendario</span></button>
+            <button type="button" data-horarios-vista="mio"><span class="horarios-nav-icon">◷</span><span>Mi horario</span></button>
+        </nav>
     </main>
 
     <main id="pantallaAnotar" class="pantalla reposicion-screen">
@@ -814,7 +811,7 @@
 <script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./app.js?v=71-entrega53-reemplazo-catalogo"></script>
-<script type="module" src="./horarios.js?v=72-horarios-entrega3"></script>
+<script type="module" src="./horarios.js?v=72-horarios-entrega4"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

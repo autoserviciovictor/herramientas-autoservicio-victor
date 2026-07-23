@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-72-horarios-entrega3';
+const CACHE_VERSION = 'autoservicio-beta-72-horarios-entrega4';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=72-horarios-entrega3',
+  './style.css?v=72-horarios-entrega4',
   './app.js?v=71-entrega53-reemplazo-catalogo',
   './config.js?v=71-entrega53-reemplazo-catalogo',
   './excel.js?v=71-entrega53-reemplazo-catalogo',
@@ -19,7 +19,7 @@ const APP_SHELL = [
   './auth.js?v=71-entrega53-reemplazo-catalogo',
   './notifications.js?v=71-entrega53-reemplazo-catalogo',
   './prices.js?v=71-entrega53-reemplazo-catalogo',
-  './horarios.js?v=72-horarios-entrega3',
+  './horarios.js?v=72-horarios-entrega4',
   './api-cache.js?v=71-entrega53-reemplazo-catalogo',
   './manifest.webmanifest',
   './icons/icon-96.png',
