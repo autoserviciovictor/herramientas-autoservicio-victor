@@ -3366,3 +3366,12 @@ body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !
   body { overscroll-behavior-y:none; }
   .brand-header { padding-top:max(0px,env(safe-area-inset-top)); }
 }
+
+.admin-import-validations{display:grid;gap:7px;margin:12px 0;}
+.admin-import-validation{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:11px;font-size:.85rem;}
+.admin-import-validation span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-weight:900;flex:0 0 22px;}
+.admin-import-validation.ok{background:#eaf8ef;color:#176b3a;border:1px solid #bfe7cc;}
+.admin-import-validation.ok span{background:#198754;color:#fff;}
+.admin-import-validation.error{background:#fff0f1;color:#9a2630;border:1px solid #f1c4c8;}
+.admin-import-validation.error span{background:#dc3545;color:#fff;}
+#btnAdminConfirmarImportacion:disabled{opacity:.58;cursor:not-allowed;filter:grayscale(.15);}

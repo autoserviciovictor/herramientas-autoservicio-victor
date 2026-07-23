@@ -9,6 +9,9 @@ let historialBusquedaTimer = null;
 let importacionPendiente = null;
 let importacionResumenPendiente = null;
 
+const IMPORTACION_HOJA_ESPERADA = "RptStockInventarioValuado";
+const IMPORTACION_MIN_PRODUCTOS = 1000;
+
 function mensaje(texto, tipo = "") {
   const el = $("adminMensaje");
   if (!el) return;
@@ -385,6 +388,23 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   $("adminImportarPreviewProcesados").textContent = resumen.procesados ?? 0;
   $("adminImportarPreviewTotal").textContent = resumen.totalCatalogo ?? resumen.procesados ?? 0;
 
+  const validaciones = Array.isArray(resumen.validaciones) ? resumen.validaciones : [];
+  const cajaValidaciones = $("adminImportarPreviewValidaciones");
+  if (cajaValidaciones) {
+    cajaValidaciones.innerHTML = validaciones.map(item => `
+      <div class="admin-import-validation ${item.ok ? "ok" : "error"}">
+        <span aria-hidden="true">${item.ok ? "✓" : "✕"}</span>
+        <strong>${escaparHtml(item.texto)}</strong>
+      </div>`).join("");
+  }
+
+  const importacionValida = resumen.importacionValida !== false && validaciones.every(item => item.ok !== false);
+  const botonConfirmar = $("btnAdminConfirmarImportacion");
+  if (botonConfirmar) {
+    botonConfirmar.disabled = !importacionValida;
+    botonConfirmar.textContent = importacionValida ? "Reemplazar catálogo" : "Archivo no válido";
+  }
+
   const advertencias = [];
   if (resumen.duplicadosArchivo) advertencias.push(`${resumen.duplicadosArchivo} código(s) duplicado(s) exacto(s) dentro del archivo; se conservará la última aparición`);
   if (resumen.sinCodigo) advertencias.push(`${resumen.sinCodigo} fila(s) sin código`);
@@ -448,27 +468,49 @@ function extraerProductosImportacion(filas, columnas) {
 async function importarArchivoCatalogo(archivo) {
   if (!window.XLSX) throw new Error("No se pudo cargar el lector de Excel");
   const estado=$("adminImportarEstado");
-  estado.textContent="Leyendo archivo…";
+  estado.textContent="Validando archivo…";
+
+  const extensionValida = /\.xlsx$/i.test(archivo.name || "");
   const datos=await archivo.arrayBuffer();
   const libro=window.XLSX.read(datos,{type:"array",raw:true});
-  let filas=[], columnas=null, hojaNombre="";
-  for (const nombre of libro.SheetNames) {
-    // raw:false conserva códigos con ceros iniciales cuando el XLS trae formato numérico.
-    const actuales=window.XLSX.utils.sheet_to_json(libro.Sheets[nombre],{header:1,defval:"",raw:false});
-    const detectadas=detectarColumnasImportacion(actuales);
-    if (detectadas) { filas=actuales; columnas=detectadas; hojaNombre=nombre; break; }
+  const hojaNombre = libro.SheetNames.find(nombre => normalizarEncabezadoImportacion(nombre) === normalizarEncabezadoImportacion(IMPORTACION_HOJA_ESPERADA)) || "";
+  const hojaEncontrada = Boolean(hojaNombre);
+  const filas = hojaEncontrada
+    ? window.XLSX.utils.sheet_to_json(libro.Sheets[hojaNombre],{header:1,defval:"",raw:false})
+    : [];
+  const columnas = hojaEncontrada ? detectarColumnasImportacion(filas) : null;
+  const tieneCodigo = Boolean(columnas?.rangos?.codigo);
+  const tieneArticulo = Boolean(columnas?.rangos?.articulo);
+  const tienePrecio = Boolean(columnas?.rangos?.precio);
+  const extraidos = columnas ? extraerProductosImportacion(filas,columnas) : {productos:[], filasVacias:0, sinCodigo:0, sinArticulo:0, codigosInvalidos:0, preciosInvalidos:0, duplicadosArchivo:0, filasIgnoradas:0};
+  const cantidadSuficiente = extraidos.productos.length >= IMPORTACION_MIN_PRODUCTOS;
+
+  const validaciones = [
+    {ok:extensionValida, texto:"Formato XLSX válido"},
+    {ok:hojaEncontrada, texto:`Hoja ${IMPORTACION_HOJA_ESPERADA} encontrada`},
+    {ok:tieneCodigo, texto:"Columna Código encontrada"},
+    {ok:tieneArticulo, texto:"Columna Artículo encontrada"},
+    {ok:tienePrecio, texto:"Columna Precio encontrada"},
+    {ok:cantidadSuficiente, texto:cantidadSuficiente ? `${extraidos.productos.length} productos detectados` : `Se requieren al menos ${IMPORTACION_MIN_PRODUCTOS} productos válidos`}
+  ];
+  const importacionValida = validaciones.every(item => item.ok);
+
+  if (!importacionValida) {
+    importacionPendiente = null;
+    const resumen = {...extraidos, procesados:extraidos.productos.length, totalCatalogo:extraidos.productos.length, validaciones, importacionValida:false};
+    delete resumen.productos;
+    estado.textContent="El archivo no cumple la estructura requerida. No se modificó ningún dato.";
+    abrirVistaPreviaImportacion(resumen,archivo.name);
+    return;
   }
-  if (!columnas) throw new Error("No encontré las columnas Código y Artículo en el archivo");
-  const extraidos=extraerProductosImportacion(filas,columnas);
-  if (!extraidos.productos.length) throw new Error("No encontré productos válidos para importar");
-  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre, estadisticas:extraidos};
+
+  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre, estadisticas:{...extraidos,validaciones,importacionValida:true}};
   estado.textContent=`Analizando ${extraidos.productos.length} productos…`;
   const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:extraidos.productos,confirmar:false})});
-  const resumen={...(data.resumen||{}),...extraidos};
-  // El array solo se conserva en importacionPendiente, no dentro del resumen visual.
+  const resumen={...(data.resumen||{}),...extraidos,validaciones,importacionValida:true};
   delete resumen.productos;
   importacionResumenPendiente=resumen;
-  estado.textContent="Vista previa lista. Confirmá para reemplazar completamente Productos.";
+  estado.textContent="Archivo validado. Confirmá para reemplazar completamente Productos.";
   abrirVistaPreviaImportacion(resumen,archivo.name);
 }
 
