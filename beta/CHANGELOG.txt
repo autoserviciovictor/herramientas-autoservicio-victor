@@ -1,3 +1,8 @@
+7.1 Beta - Entrega 5.3
+- Importación XLSX por reemplazo completo de Productos.
+- Stock permanece sin cambios.
+- Vista previa simplificada y confirmación explícita.
+
 7.1 Beta - Entrega 5.2.3
 - Corrección de duplicados por ceros iniciales en códigos internos.
 - 00663, 663 y 000663 se comparan como el mismo producto.

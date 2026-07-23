@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=71-entrega522-deduplicacion-real">
+    <link rel="stylesheet" href="style.css?v=71-entrega53-reemplazo-catalogo">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -265,7 +265,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">7.1 Beta - Entrega 4</strong>
+            <strong id="settingsAppVersion">7.1 Beta - Entrega 5.3</strong>
         </section>
     </main>
 
@@ -607,13 +607,13 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">7.1 Beta - Entrega 4</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">7.1 Beta - Entrega 5.3</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
-                <div class="admin-import-head"><div><strong>Importar catálogo del sistema</strong><span>Acepta “Stock _ Inventario Valuado.xls”: agrega productos nuevos y actualiza artículos y precios. Ignora Stock y Sub Total.</span></div></div>
-                <input id="adminImportarArchivo" type="file" accept=".xls,.xlsx" class="oculto">
-                <button id="btnAdminImportarArchivo" type="button" class="setting-btn">Seleccionar archivo XLS</button>
+                <div class="admin-import-head"><div><strong>Importar catálogo del sistema</strong><span>Importá el archivo convertido a XLSX. El contenido reemplazará completamente la hoja Productos. Stock y Sub Total se ignoran.</span></div></div>
+                <input id="adminImportarArchivo" type="file" accept=".xlsx" class="oculto">
+                <button id="btnAdminImportarArchivo" type="button" class="setting-btn">Seleccionar archivo XLSX</button>
                 <div id="adminImportarEstado" class="admin-import-status" aria-live="polite"></div>
             </div>
 
@@ -642,18 +642,15 @@
         <h2 id="adminImportarPreviewTitulo">Confirmar importación</h2>
         <p class="admin-import-preview-file">Archivo: <strong id="adminImportarPreviewArchivo">—</strong></p>
         <div class="admin-import-preview-grid">
-          <div><span>Productos leídos</span><strong id="adminImportarPreviewProcesados">0</strong></div>
-          <div><span>Productos nuevos</span><strong id="adminImportarPreviewNuevos">0</strong></div>
-          <div><span>Nombres a actualizar</span><strong id="adminImportarPreviewNombres">0</strong></div>
-          <div><span>Precios a actualizar</span><strong id="adminImportarPreviewPrecios">0</strong></div>
-          <div><span>Sin cambios</span><strong id="adminImportarPreviewSinCambios">0</strong></div>
-          <div><span>Total del catálogo</span><strong id="adminImportarPreviewTotal">0</strong></div>
+          <div><span>Productos válidos</span><strong id="adminImportarPreviewProcesados">0</strong></div>
+          <div><span>Total resultante</span><strong id="adminImportarPreviewTotal">0</strong></div>
         </div>
+        <div class="admin-import-warning"><strong>Atención:</strong> al confirmar, la hoja Productos será reemplazada completamente por este archivo.</div>
         <div id="adminImportarPreviewAdvertencias" class="admin-import-warning"></div>
         <div class="admin-import-warning admin-import-safe"><strong>No se modificarán:</strong> Stock, Salón ni Depósito. La columna Sub Total será ignorada.</div>
         <div class="modal-actions">
           <button id="btnAdminCancelarImportacion" type="button" class="cancel-btn">Cancelar</button>
-          <button id="btnAdminConfirmarImportacion" type="button" class="save-btn">Importar y guardar</button>
+          <button id="btnAdminConfirmarImportacion" type="button" class="save-btn">Reemplazar catálogo</button>
         </div>
       </div>
     </div>
@@ -723,14 +720,14 @@
 
 </div>
 
-<script src="./release-channel.js?v=71-entrega522-deduplicacion-real"></script>
-<script src="./pwa.js?v=71-entrega522-deduplicacion-real" defer></script>
-<script type="module" src="./auth.js?v=71-entrega522-deduplicacion-real"></script>
+<script src="./release-channel.js?v=71-entrega53-reemplazo-catalogo"></script>
+<script src="./pwa.js?v=71-entrega53-reemplazo-catalogo" defer></script>
+<script type="module" src="./auth.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=71-entrega522-deduplicacion-real"></script>
-<script type="module" src="./notifications.js?v=71-entrega522-deduplicacion-real"></script>
-<script type="module" src="./prices.js?v=71-entrega522-deduplicacion-real"></script>
-<script type="module" src="./app.js?v=71-entrega522-deduplicacion-real"></script>
+<script type="module" src="./admin.js?v=71-entrega53-reemplazo-catalogo"></script>
+<script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
+<script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
+<script type="module" src="./app.js?v=71-entrega53-reemplazo-catalogo"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

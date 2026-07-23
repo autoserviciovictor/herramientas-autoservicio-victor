@@ -641,121 +641,87 @@ async function asegurarColumnasCatalogo() {
 }
 
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
-  // La vista previa es de solo lectura. Al confirmar, la hoja Productos se
-  // reconstruye a partir de códigos únicos para impedir duplicados existentes
-  // y nuevos, incluso cuando el archivo se importa varias veces.
-  if (aplicarCambios) await asegurarColumnasCatalogo();
-
-  const maestroResp = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-    // FORMATTED_VALUE conserva el texto visible y los ceros iniciales.
-    valueRenderOption: "FORMATTED_VALUE"
-  });
-  const maestroFilas = maestroResp.data.values || [];
-  const catalogoOrden = [];
-  const maestroMapa = new Map();
-  let duplicadosCatalogo = 0;
-
-  maestroFilas.slice(1).forEach((fila) => {
-    const codigo = normalizarCodigo(fila[0]);
-    const clave = claveCodigo(codigo);
-    if (!clave) return;
-    const articulo = normalizarTexto(fila[1]);
-    const precio = numeroPrecio(fila[2]);
-    const existente = maestroMapa.get(clave);
-    if (!existente) {
-      const registro = { codigo, articulo, precio };
-      maestroMapa.set(clave, registro);
-      catalogoOrden.push(clave);
-      return;
-    }
-
-    // Si el catálogo ya contenía filas duplicadas, conservar una sola fila y
-    // aprovechar el dato no vacío más reciente antes de limpiar la hoja.
-    duplicadosCatalogo++;
-    if (articulo) existente.articulo = articulo;
-    if (precio !== null) existente.precio = precio;
-  });
-
-  let nuevos = 0;
-  let nombresActualizados = 0;
-  let preciosActualizados = 0;
-  let sinCambios = 0;
-  let incluyePrecios = false;
+  // El archivo importado pasa a ser la fuente completa del catálogo.
+  // No se comparan altas ni modificaciones: Productos se reemplaza entero.
+  const catalogo = [];
+  const codigosVistos = new Set();
+  let duplicadosArchivo = 0;
 
   for (const item of items) {
-    const codigo = normalizarCodigo(item.codigo);
-    const clave = claveCodigo(codigo);
-    if (!clave) continue;
-    const articulo = normalizarTexto(item.articulo);
-    const precio = numeroPrecio(item.precio);
-    if (precio !== null) incluyePrecios = true;
-    const maestro = maestroMapa.get(clave);
+    const producto = normalizarProductoImportado(item);
+    if (!producto) continue;
 
-    if (!maestro) {
-      maestroMapa.set(clave, { codigo, articulo, precio });
-      catalogoOrden.push(clave);
-      nuevos++;
+    // Se conserva exactamente el código normalizado del archivo. Solo se
+    // eliminan duplicados exactos dentro del mismo archivo, conservando la
+    // última aparición.
+    const clave = producto.codigo;
+    if (codigosVistos.has(clave)) {
+      duplicadosArchivo++;
+      const indice = catalogo.findIndex(actual => actual.codigo === clave);
+      if (indice >= 0) catalogo[indice] = producto;
       continue;
     }
-
-    let cambio = false;
-    if (articulo && maestro.articulo !== articulo) {
-      maestro.articulo = articulo;
-      nombresActualizados++;
-      cambio = true;
-    }
-    if (precio !== null && maestro.precio !== precio) {
-      maestro.precio = precio;
-      preciosActualizados++;
-      cambio = true;
-    }
-    if (!cambio) sinCambios++;
+    codigosVistos.add(clave);
+    catalogo.push(producto);
   }
 
+  if (!catalogo.length) throw new Error("No se encontraron productos válidos para reemplazar el catálogo");
+
   if (aplicarCambios) {
-    const filasFinales = [["codigo", "articulo", "precio"]];
-    for (const clave of catalogoOrden) {
-      const producto = maestroMapa.get(clave);
-      if (!producto) continue;
-      filasFinales.push([
+    await asegurarColumnasCatalogo();
+
+    const actualResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+      valueRenderOption: "FORMATTED_VALUE"
+    });
+    const filasActuales = (actualResp.data.values || []).length;
+
+    const filasFinales = [
+      ["codigo", "articulo", "precio"],
+      ...catalogo.map(producto => [
         String(producto.codigo),
         producto.articulo || "",
         producto.precio ?? ""
-      ]);
-    }
+      ])
+    ];
 
-    // Reescritura controlada: elimina duplicados históricos y evita append
-    // ciego. Stock nunca se toca.
-    await sheets.spreadsheets.values.clear({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-      requestBody: {}
-    });
+    // Primero se escribe el catálogo completo en una única operación lógica.
+    // Solo después se limpian posibles filas sobrantes del catálogo anterior.
+    const data = [];
     for (let i = 0; i < filasFinales.length; i += 5000) {
       const bloque = filasFinales.slice(i, i + 5000);
       const filaInicio = i + 1;
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
+      data.push({
         range: `${PRODUCTOS_SHEET_NAME}!A${filaInicio}:C${filaInicio + bloque.length - 1}`,
-        valueInputOption: "RAW",
-        requestBody: { values: bloque }
+        values: bloque
       });
     }
+
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        valueInputOption: "RAW",
+        data
+      }
+    });
+
+    if (filasActuales > filasFinales.length) {
+      await sheets.spreadsheets.values.clear({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${PRODUCTOS_SHEET_NAME}!A${filasFinales.length + 1}:C${filasActuales}`,
+        requestBody: {}
+      });
+    }
+
     invalidarCache("productosMaestros");
   }
 
   return {
-    procesados: items.length,
-    nuevos,
-    nombresActualizados,
-    preciosActualizados,
-    sinCambios,
-    incluyePrecios,
-    duplicadosCatalogo,
-    duplicadosEliminados: aplicarCambios ? duplicadosCatalogo : 0,
-    totalCatalogo: maestroMapa.size
+    procesados: catalogo.length,
+    totalCatalogo: catalogo.length,
+    duplicadosArchivo,
+    reemplazoCompleto: true
   };
 }
 
@@ -764,19 +730,17 @@ app.post("/admin/importar-productos", requerirAdministrador, async (req,res)=>{
     const entrada=Array.isArray(req.body?.productos)?req.body.productos:[];
     if (!entrada.length) return res.status(400).json({ok:false,mensaje:"El archivo no contiene productos válidos"});
     if (entrada.length>IMPORTACION_MAX_FILAS) return res.status(400).json({ok:false,mensaje:`El archivo supera el máximo de ${IMPORTACION_MAX_FILAS} productos`});
-    const mapa=new Map();
-    entrada.forEach(raw=>{const p=normalizarProductoImportado(raw); if(p) mapa.set(p.codigo,p);});
-    const items=[...mapa.values()];
+    const items=entrada.map(normalizarProductoImportado).filter(Boolean);
     if(!items.length) return res.status(400).json({ok:false,mensaje:"No se encontraron códigos y artículos válidos"});
     const confirmar = req.body?.confirmar === true;
     if (!confirmar) {
       const resumen = await ejecutarImportacionProductos(items, false);
-      return res.json({ok:true,mensaje:"Vista previa calculada",vistaPrevia:true,resumen});
+      return res.json({ok:true,mensaje:"Vista previa del reemplazo calculada",vistaPrevia:true,resumen});
     }
     const tarea=importacionProductosEnCurso.catch(()=>{}).then(()=>ejecutarImportacionProductos(items, true));
     importacionProductosEnCurso=tarea.catch(()=>{});
     const resumen=await tarea;
-    res.json({ok:true,mensaje:"Importación finalizada",resumen});
+    res.json({ok:true,mensaje:"Catálogo reemplazado correctamente",resumen});
   } catch(error) {
     console.error("Error importando productos:",error);
     res.status(500).json({ok:false,mensaje:error.message||"No se pudo importar el archivo"});

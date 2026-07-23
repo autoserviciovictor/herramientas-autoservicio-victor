@@ -383,23 +383,14 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   importacionResumenPendiente = resumen;
   $("adminImportarPreviewArchivo").textContent = archivoNombre;
   $("adminImportarPreviewProcesados").textContent = resumen.procesados ?? 0;
-  $("adminImportarPreviewNuevos").textContent = resumen.nuevos ?? 0;
-  $("adminImportarPreviewNombres").textContent = resumen.nombresActualizados ?? 0;
-  $("adminImportarPreviewPrecios").textContent = resumen.preciosActualizados ?? 0;
-  $("adminImportarPreviewSinCambios").textContent = resumen.sinCambios ?? 0;
-  const totalActual=Number($("adminProductos")?.textContent || 0);
-  const totalCalculado=Number.isFinite(Number(resumen.totalCatalogo)) && Number(resumen.totalCatalogo)>0
-    ? Number(resumen.totalCatalogo)
-    : totalActual + Number(resumen.nuevos || 0);
-  $("adminImportarPreviewTotal").textContent = totalCalculado;
+  $("adminImportarPreviewTotal").textContent = resumen.totalCatalogo ?? resumen.procesados ?? 0;
 
   const advertencias = [];
-  if (resumen.duplicadosArchivo) advertencias.push(`${resumen.duplicadosArchivo} código(s) duplicado(s) dentro del archivo`);
+  if (resumen.duplicadosArchivo) advertencias.push(`${resumen.duplicadosArchivo} código(s) duplicado(s) exacto(s) dentro del archivo; se conservará la última aparición`);
   if (resumen.sinCodigo) advertencias.push(`${resumen.sinCodigo} fila(s) sin código`);
   if (resumen.sinArticulo) advertencias.push(`${resumen.sinArticulo} fila(s) sin artículo`);
   if (resumen.codigosInvalidos) advertencias.push(`${resumen.codigosInvalidos} código(s) inválido(s)`);
-  if (resumen.preciosInvalidos) advertencias.push(`${resumen.preciosInvalidos} precio(s) inválido(s), que no serán actualizados`);
-  if (resumen.duplicadosCatalogo) advertencias.push(`${resumen.duplicadosCatalogo} fila(s) duplicada(s) ya existentes en Productos; se eliminarán al confirmar`);
+  if (resumen.preciosInvalidos) advertencias.push(`${resumen.preciosInvalidos} precio(s) inválido(s); se guardarán vacíos`);
 
   const cajaAdvertencias = $("adminImportarPreviewAdvertencias");
   if (cajaAdvertencias) {
@@ -477,18 +468,17 @@ async function importarArchivoCatalogo(archivo) {
   // El array solo se conserva en importacionPendiente, no dentro del resumen visual.
   delete resumen.productos;
   importacionResumenPendiente=resumen;
-  estado.textContent="Vista previa lista. Confirmá para guardar los cambios.";
+  estado.textContent="Vista previa lista. Confirmá para reemplazar completamente Productos.";
   abrirVistaPreviaImportacion(resumen,archivo.name);
 }
 
 function construirResumenImportacionFinal(r) {
   const advertencias = [];
-  if (r.duplicadosArchivo) advertencias.push(`${r.duplicadosArchivo} duplicado(s) en el archivo`);
+  if (r.duplicadosArchivo) advertencias.push(`${r.duplicadosArchivo} duplicado(s) exacto(s) resuelto(s) dentro del archivo`);
   if (r.filasIgnoradas) advertencias.push(`${r.filasIgnoradas} fila(s) ignorada(s)`);
   if (r.preciosInvalidos) advertencias.push(`${r.preciosInvalidos} precio(s) inválido(s)`);
-  if (r.duplicadosEliminados) advertencias.push(`${r.duplicadosEliminados} duplicado(s) eliminado(s) del catálogo`);
   const detalleAdvertencias = advertencias.length ? `<br><span>Advertencias: ${advertencias.join(" · ")}.</span>` : "";
-  return `<strong>Catálogo actualizado</strong><span>Productos nuevos: ${r.nuevos||0} · Nombres actualizados: ${r.nombresActualizados||0} · Precios actualizados: ${r.preciosActualizados||0} · Sin cambios: ${r.sinCambios||0}.</span><span>Total catálogo: ${r.totalCatalogo||0} productos.</span>${detalleAdvertencias}<span>La hoja Stock no fue modificada.</span>`;
+  return `<strong>Catálogo reemplazado</strong><span>Se guardaron ${r.totalCatalogo||r.procesados||0} productos.</span>${detalleAdvertencias}<span>La hoja Stock no fue modificada.</span>`;
 }
 
 async function confirmarImportacionCatalogo() {
@@ -503,10 +493,10 @@ async function confirmarImportacionCatalogo() {
     cerrarVistaPreviaImportacion();
     estado.innerHTML=construirResumenImportacionFinal(r);
     importacionPendiente=null; importacionResumenPendiente=null;
-    mensaje("Catálogo actualizado", "ok");
+    mensaje("Catálogo reemplazado", "ok");
     await cargarResumen();
   } finally {
-    boton.disabled=false; boton.textContent="Importar y guardar";
+    boton.disabled=false; boton.textContent="Reemplazar catálogo";
   }
 }
 
