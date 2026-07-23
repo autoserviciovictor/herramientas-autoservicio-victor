@@ -1,3 +1,13 @@
+V7.1 Beta - Entrega 4 (Rendimiento y sincronización)
+- Caché persistente del catálogo Productos con vencimiento de 5 minutos.
+- Deduplicación de solicitudes simultáneas al catálogo.
+- Revalidación ETag: el servidor responde 304 cuando el catálogo no cambió.
+- Precios, Lista e Inventario reutilizan el catálogo local.
+- Búsqueda disponible con el último catálogo guardado cuando no hay conexión.
+- Lista se refresca al recuperar Internet y al volver a primer plano.
+- Service worker con actualización en segundo plano de recursos estáticos.
+- Sin cambios en escáner, diseño ni versión estable.
+
 7.1 Beta - Entrega 3 (Lista y notificaciones)
 - Lista respeta el orden cronológico de carga.
 - Productos completados bajan al final sin perder su posición original.

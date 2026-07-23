@@ -28,3 +28,11 @@ El XLS se compara por código contra `Productos`. Los existentes actualizan art�
 - Se notifican 15, 7, 3 y 1 día antes, el día del vencimiento y una vez al quedar vencido.
 - Los productos en oferta reciben un aviso adicional 3 días antes.
 - El endpoint protegido `/notificaciones/cron` queda disponible para un Cron Job externo programado a las 08:00 (America/Argentina/Buenos_Aires), necesario si el servidor se suspende.
+
+
+## Entrega 4 — Rendimiento y sincronización
+- Catálogo maestro con caché local de 5 minutos, revalidación ETag y deduplicación de solicitudes.
+- Precios, Lista e Inventario comparten la misma estrategia de caché para `Productos`.
+- Lista se actualiza al recuperar conexión o volver a la app, con límite para evitar consultas repetidas.
+- Service worker usa caché inmediata y actualización en segundo plano para archivos estáticos.
+- Si no hay conexión, las búsquedas pueden usar el último catálogo guardado.

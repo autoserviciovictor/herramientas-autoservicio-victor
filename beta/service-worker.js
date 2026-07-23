@@ -1,23 +1,24 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-71-entrega3-lista-notificaciones';
+const CACHE_VERSION = 'autoservicio-beta-71-entrega4-rendimiento-sync';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=71-entrega3-lista-notificaciones',
-  './app.js?v=71-entrega3-lista-notificaciones',
-  './config.js?v=71-entrega3-lista-notificaciones',
-  './excel.js?v=71-entrega3-lista-notificaciones',
-  './scanner.js?v=71-entrega3-lista-notificaciones',
-  './reposicion.js?v=71-entrega3-lista-notificaciones',
-  './ui.js?v=71-entrega3-lista-notificaciones',
-  './release-channel.js?v=71-entrega3-lista-notificaciones',
-  './pwa.js?v=71-entrega3-lista-notificaciones',
-  './search.js?v=71-entrega3-lista-notificaciones',
-  './admin.js?v=71-entrega3-lista-notificaciones',
-  './auth.js?v=71-entrega3-lista-notificaciones',
-  './notifications.js?v=71-entrega3-lista-notificaciones',
-  './prices.js?v=71-entrega3-lista-notificaciones',
+  './style.css?v=71-entrega4-rendimiento-sync',
+  './app.js?v=71-entrega4-rendimiento-sync',
+  './config.js?v=71-entrega4-rendimiento-sync',
+  './excel.js?v=71-entrega4-rendimiento-sync',
+  './scanner.js?v=71-entrega4-rendimiento-sync',
+  './reposicion.js?v=71-entrega4-rendimiento-sync',
+  './ui.js?v=71-entrega4-rendimiento-sync',
+  './release-channel.js?v=71-entrega4-rendimiento-sync',
+  './pwa.js?v=71-entrega4-rendimiento-sync',
+  './search.js?v=71-entrega4-rendimiento-sync',
+  './admin.js?v=71-entrega4-rendimiento-sync',
+  './auth.js?v=71-entrega4-rendimiento-sync',
+  './notifications.js?v=71-entrega4-rendimiento-sync',
+  './prices.js?v=71-entrega4-rendimiento-sync',
+  './api-cache.js?v=71-entrega4-rendimiento-sync',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -59,15 +60,14 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(request).then(cached => cached || fetch(request).then(response => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(request, copy));
-        }
+    event.respondWith((async () => {
+      const cached = await caches.match(request);
+      const network = fetch(request).then(response => {
+        if (response && response.ok) caches.open(CACHE_VERSION).then(cache => cache.put(request, response.clone()));
         return response;
-      }))
-    );
+      }).catch(() => cached);
+      return cached || network;
+    })());
     return;
   }
 

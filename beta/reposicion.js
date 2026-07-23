@@ -1,6 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega3-lista-notificaciones";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-entrega3-lista-notificaciones";
-import { ordenarPorBusqueda } from "./search.js?v=71-entrega3-lista-notificaciones";
+import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-entrega4-rendimiento-sync";
+import { ordenarPorBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=71-entrega4-rendimiento-sync";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -19,6 +20,7 @@ let cargandoRegistros = false;
 let accionPendienteTrasEdicion = null;
 let secuenciaCargaLista = 0;
 let listaEdicion = "1";
+let ultimaSincronizacionAutomatica = 0;
 const colasEstado = new Map();
 
 function ordenRegistro(item, indice = 0){
@@ -138,6 +140,9 @@ export function inicializarReposicion(){
     if (event.key === "Escape" && !$("repoNuevaListaModal")?.classList.contains("oculto")) cerrarModalNuevaLista();
   });
   window.addEventListener("autoservicio:sesion", actualizarUsuarioReposicion);
+  window.addEventListener("online", sincronizarReposicionAlVolver);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizarReposicionAlVolver(); });
+  precargarCatalogo();
   sincronizarSelectorListas();
 }
 
@@ -209,13 +214,20 @@ async function abrirScanner(){
   catch(e){ $("repoCameraCard")?.classList.add("oculto"); $("repoActionsCard")?.classList.remove("oculto"); toast("No se pudo abrir la cámara","error"); }
 }
 function cerrarScanner(){ detenerScanner(); $("repoCameraCard")?.classList.add("oculto"); if(!productoActual) $("repoActionsCard")?.classList.remove("oculto"); }
-async function cargarProductosMaestroRepo(){
-  if(productosMaestroCache.length) return productosMaestroCache;
+async function cargarProductosMaestroRepo({forzar=false}={}){
+  if(productosMaestroCache.length && !forzar) return productosMaestroCache;
   try {
-    const data=await pedir("/productos-maestro");
+    const data=await obtenerJsonCacheado("/productos-maestro",{ttl:5*60*1000,forzar});
     productosMaestroCache=Array.isArray(data.productos)?data.productos:[];
   } catch(e) { console.warn("No se pudo cargar el catálogo para búsqueda manual",e); }
   return productosMaestroCache;
+}
+async function sincronizarReposicionAlVolver(){
+  if(document.hidden || !navigator.onLine || modoEdicion || operacionEnCurso) return;
+  const ahora=Date.now();
+  if(ahora-ultimaSincronizacionAutomatica<30000) return;
+  ultimaSincronizacionAutomatica=ahora;
+  await Promise.allSettled([refrescarReposicion({mostrarCarga:false}),cargarProductosMaestroRepo()]);
 }
 function limpiarSugerenciasRepo(){
   const c=$("repoManualSugerencias"); if(!c)return;

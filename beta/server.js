@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "7.1 Beta - Entrega 3";
+const APP_VERSION = "7.1 Beta - Entrega 4";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -738,6 +738,10 @@ app.get("/producto/:codigo", async (req, res) => {
 app.get("/productos-maestro", async (req, res) => {
   try {
     const productos = await obtenerProductosMaestros();
+    const etag = `"${crypto.createHash("sha1").update(JSON.stringify(productos)).digest("hex")}"`;
+    res.set("ETag", etag);
+    res.set("Cache-Control", "private, max-age=0, must-revalidate");
+    if (req.headers["if-none-match"] === etag) return res.status(304).end();
     res.json({ ok: true, total: productos.length, productos });
   } catch (error) {
     console.error("Error en /productos-maestro:", error);
