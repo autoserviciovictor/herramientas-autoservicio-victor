@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "8.1.2 Beta - Migración automática de Google Sheets";
+const APP_VERSION = "8.1.3 Beta - Integración completa de usuarios";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -760,34 +760,109 @@ app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo registrar la auditoría" });
   }
 });
-async function vincularSupervisorConSector(usuarioClave, sectorId) {
-  const clave = normalizarUsuario(usuarioClave);
-  if (!clave) return;
-  const usuarios = await obtenerUsuarios();
-  const usuario = usuarios.find(u => u.usuario === clave);
-  if (!usuario) throw new Error("El supervisor seleccionado no existe");
-  if (!usuario.activo) throw new Error("El supervisor seleccionado está inactivo");
-  const rol = usuario.rol === "administrador" ? "administrador" : "supervisor";
+async function actualizarFilaUsuario(usuario, cambios = {}) {
+  const rol = cambios.rol ?? usuario.rol;
+  const sector = cambios.sector ?? (usuario.sector || "");
+  const activo = cambios.activo ?? usuario.activo;
+  const permisos = cambios.permisos ?? usuario.permisos;
+  const nombre = cambios.nombre ?? usuario.nombre;
+  const passwordHash = cambios.passwordHash ?? usuario.passwordHash;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:H${usuario.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[usuario.usuario, usuario.nombre, usuario.passwordHash, rol, usuario.activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(usuario.permisos, rol), sectorId]] }
+    requestBody: { values: [[usuario.usuario, nombre, passwordHash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector]] }
   });
-  invalidarCache("usuarios");
 }
 
-async function sincronizarSupervisorEnSector(usuarioClave, rol, sectorId) {
-  if (rol !== "supervisor" || !sectorId) return;
-  const sectores = await obtenerSectores();
-  const sector = sectores.find(s => s.id === sectorId && s.activo);
-  if (!sector) throw new Error("El sector seleccionado no existe o está inactivo");
+async function actualizarFilaSector(sector, cambios = {}) {
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SECTORES_SHEET_NAME}!A${sector.filaGoogle}:E${sector.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[sector.id, sector.nombre, sector.color, usuarioClave, sector.activo ? "Sí" : "No"]] }
+    requestBody: { values: [[
+      sector.id,
+      cambios.nombre ?? sector.nombre,
+      cambios.color ?? sector.color,
+      cambios.supervisor ?? sector.supervisor ?? "",
+      (cambios.activo ?? sector.activo) ? "Sí" : "No"
+    ]] }
   });
+}
+
+async function quitarSupervisionDeUsuario(usuarioClave, exceptoSectorId = "") {
+  const clave = normalizarUsuario(usuarioClave);
+  if (!clave) return;
+  const sectores = await obtenerSectores();
+  for (const sector of sectores.filter(s => s.supervisor === clave && s.id !== exceptoSectorId)) {
+    await actualizarFilaSector(sector, { supervisor: "" });
+  }
+}
+
+async function reconciliarSupervisorAnterior(usuarioClave, sectorPreferido = "") {
+  const clave = normalizarUsuario(usuarioClave);
+  if (!clave) return;
+  invalidarCache("usuarios");
+  const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), obtenerSectores()]);
+  const usuario = usuarios.find(u => u.usuario === clave);
+  if (!usuario || usuario.rol === "administrador") return;
+  const sigueSupervisando = sectores.some(s => s.supervisor === clave && s.activo);
+  if (!sigueSupervisando && usuario.rol === "supervisor") {
+    await actualizarFilaUsuario(usuario, { rol: "repositor", sector: sectorPreferido || usuario.sector || "" });
+    invalidarCache("usuarios");
+  }
+}
+
+async function asignarSupervisorASector(usuarioClave, sectorId) {
+  const clave = normalizarUsuario(usuarioClave);
+  if (!clave) return;
+  const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), obtenerSectores()]);
+  const usuario = usuarios.find(u => u.usuario === clave);
+  const sector = sectores.find(s => s.id === sectorId);
+  if (!usuario) throw new Error("El supervisor seleccionado no existe");
+  if (!usuario.activo) throw new Error("El supervisor seleccionado está inactivo");
+  if (!sector || !sector.activo) throw new Error("El sector seleccionado no existe o está inactivo");
+
+  // Un supervisor solo puede administrar un sector. Si estaba en otro, se libera.
+  await quitarSupervisionDeUsuario(clave, sectorId);
+
+  const rol = usuario.rol === "administrador" ? "administrador" : "supervisor";
+  await actualizarFilaUsuario(usuario, { rol, sector: sectorId });
+  invalidarCache("usuarios");
+}
+
+async function sincronizarUsuarioSupervisor(usuarioClave, rol, sectorId, activo = true) {
+  const clave = normalizarUsuario(usuarioClave);
+  const sectores = await obtenerSectores();
+  const supervisadosAntes = sectores.filter(s => s.supervisor === clave);
+
+  if (rol === "supervisor") {
+    if (!activo) throw new Error("Un usuario inactivo no puede ser supervisor");
+    if (!sectorId) throw new Error("Asigná un sector al supervisor");
+    const destino = sectores.find(s => s.id === sectorId && s.activo);
+    if (!destino) throw new Error("El sector seleccionado no existe o está inactivo");
+    for (const sector of supervisadosAntes.filter(s => s.id !== sectorId)) {
+      await actualizarFilaSector(sector, { supervisor: "" });
+    }
+    const supervisorAnteriorDestino = normalizarUsuario(destino.supervisor);
+    await actualizarFilaSector(destino, { supervisor: clave });
+    if (supervisorAnteriorDestino && supervisorAnteriorDestino !== clave) {
+      await reconciliarSupervisorAnterior(supervisorAnteriorDestino, destino.id);
+    }
+  } else {
+    for (const sector of supervisadosAntes) {
+      await actualizarFilaSector(sector, { supervisor: "" });
+    }
+  }
+}
+
+async function sincronizarSectorSupervisor(sector, nuevoSupervisor) {
+  const anterior = normalizarUsuario(sector.supervisor);
+  const nuevo = normalizarUsuario(nuevoSupervisor);
+  if (nuevo) await asignarSupervisorASector(nuevo, sector.id);
+  await actualizarFilaSector(sector, { supervisor: nuevo });
+  if (anterior && anterior !== nuevo) await reconciliarSupervisorAnterior(anterior, sector.id);
+  invalidarCache("usuarios");
 }
 
 app.get("/admin/sectores", requerirAdministrador, async (req,res) => {
@@ -803,8 +878,10 @@ app.post("/admin/sectores", requerirAdministrador, async (req,res) => {
     if(ss.some(s=>s.id===id||s.nombre.toLowerCase()===nombre.toLowerCase())) return res.status(409).json({ok:false,mensaje:"Ese sector ya existe"});
     const color=/^#[0-9a-f]{6}$/i.test(req.body?.color||"")?req.body.color:"#b72e35";
     const supervisor=normalizarUsuario(req.body?.supervisor);
-    if (supervisor) await vincularSupervisorConSector(supervisor, id);
-    await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A:E`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:[[id,nombre,color,supervisor,"Sí"]]}});
+    await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A:E`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:[[id,nombre,color,"","Sí"]]}});
+    const creado=(await obtenerSectores()).find(s=>s.id===id);
+    if (supervisor && creado) await sincronizarSectorSupervisor(creado, supervisor);
+    invalidarCache("usuarios");
     res.json({ok:true, sector:{id,nombre,color,supervisor,activo:true}});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo crear el sector"}); }
 });
@@ -817,8 +894,9 @@ app.put("/admin/sectores/:id", requerirAdministrador, async (req,res) => {
     const color=/^#[0-9a-f]{6}$/i.test(req.body?.color||"")?req.body.color:s.color;
     const supervisor=normalizarUsuario(req.body?.supervisor);
     const activo=req.body?.activo===undefined?s.activo:Boolean(req.body.activo);
-    if (supervisor) await vincularSupervisorConSector(supervisor, s.id);
-    await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A${s.filaGoogle}:E${s.filaGoogle}`,valueInputOption:"USER_ENTERED",requestBody:{values:[[s.id,nombre,color,supervisor,activo?"Sí":"No"]]}});
+    if (!activo && supervisor) return res.status(400).json({ok:false,mensaje:"Un sector inactivo no puede conservar supervisor"});
+    await actualizarFilaSector(s,{nombre,color,activo,supervisor:s.supervisor});
+    await sincronizarSectorSupervisor({...s,nombre,color,activo}, supervisor);
     res.json({ok:true, sector:{id:s.id,nombre,color,supervisor,activo}});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo actualizar el sector"}); }
 });
@@ -858,7 +936,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
       requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector]] }
     });
     invalidarCache("usuarios");
-    await sincronizarSupervisorEnSector(usuario, rol, sector);
+    await sincronizarUsuarioSupervisor(usuario, rol, sector, true);
     res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true, permisos, sector } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo crear el usuario" });
@@ -895,7 +973,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector]] }
     });
     invalidarCache("usuarios");
-    await sincronizarSupervisorEnSector(clave, rol, sector);
+    await sincronizarUsuarioSupervisor(clave, rol, sector, activo);
     res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo, permisos, sector } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });
@@ -1905,6 +1983,6 @@ app.post("/admin/migrar-horarios", requerirAdministrador, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
   migrarEstructuraHorariosV812()
-    .then(r => console.log("Migración 8.1.2 lista:", r.hojas.join(", ")))
-    .catch(error => console.error("No se pudo ejecutar la migración automática 8.1.2:", error));
+    .then(r => console.log("Migración 8.1.3 lista:", r.hojas.join(", ")))
+    .catch(error => console.error("No se pudo ejecutar la migración automática 8.1.3:", error));
 });
