@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "8.1 Beta - Correcciones de integración";
+const APP_VERSION = "8.1.2 Beta - Migración automática de Google Sheets";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1871,6 +1871,40 @@ async function ejecutarNotificacionesDiariasSiCorresponde() {
 setInterval(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error en horario diario de notificaciones:", error)), 60 * 1000);
 setTimeout(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error inicializando horario diario de notificaciones:", error)), 5000);
 
+async function migrarEstructuraHorariosV812() {
+  validarConfiguracion();
+  await asegurarHojaUsuarios();
+  await asegurarHojaSectores();
+  await asegurarHojasHorarios();
+  await asegurarHojaAuditoriaHorarios();
+  limpiarCache("usuarios");
+  return {
+    hojas: [
+      USUARIOS_SHEET_NAME,
+      SECTORES_SHEET_NAME,
+      CALENDARIO_HORARIOS_SHEET_NAME,
+      TURNOS_HORARIOS_SHEET_NAME,
+      DETALLES_HORARIOS_SHEET_NAME,
+      REEMPLAZOS_HORARIOS_SHEET_NAME,
+      AUDITORIA_HORARIOS_SHEET_NAME
+    ],
+    columnasUsuarios: ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector"]
+  };
+}
+
+app.post("/admin/migrar-horarios", requerirAdministrador, async (req, res) => {
+  try {
+    const resultado = await migrarEstructuraHorariosV812();
+    res.json({ ok:true, mensaje:"Migración de Google Sheets completada", ...resultado });
+  } catch (error) {
+    console.error("Error en migración de horarios:", error);
+    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo migrar Google Sheets" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
+  migrarEstructuraHorariosV812()
+    .then(r => console.log("Migración 8.1.2 lista:", r.hojas.join(", ")))
+    .catch(error => console.error("No se pudo ejecutar la migración automática 8.1.2:", error));
 });
