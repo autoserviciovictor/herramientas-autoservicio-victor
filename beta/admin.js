@@ -582,3 +582,89 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.detail?.rol !== "administrador") ocultarPanelAdmin();
   });
 });
+
+// Entrega 6.3: administración local de turnos configurables.
+let adminHorarioEditando = null;
+function horariosConfig() { return window.AutoservicioHorariosConfig; }
+function turnosConfigurados() { return horariosConfig()?.cargar?.() || []; }
+function colorContraste(hex) {
+  const n = parseInt(String(hex).replace('#',''), 16);
+  const r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  return (r*299+g*587+b*114)/1000 > 150 ? '#111827' : '#ffffff';
+}
+function renderAdminHorarios() {
+  const cont = $("adminHorariosLista");
+  if (!cont) return;
+  const items = turnosConfigurados();
+  cont.innerHTML = items.map(t => `
+    <article class="admin-shift-card" data-horario-id="${t.id}">
+      <span class="admin-shift-swatch" style="background:${t.color};color:${colorContraste(t.color)}">${t.inicio.slice(0,2)}</span>
+      <div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${t.color.toUpperCase()}</span></div>
+      <button type="button" class="btn-admin-editar-horario">Editar</button>
+    </article>`).join('');
+  cont.querySelectorAll('.btn-admin-editar-horario').forEach(btn => btn.addEventListener('click', () => {
+    const id=btn.closest('[data-horario-id]')?.dataset.horarioId;
+    const turno=items.find(t=>t.id===id);
+    if(turno) abrirHorarioModal(turno);
+  }));
+}
+function abrirHorarioModal(turno=null) {
+  adminHorarioEditando=turno;
+  $("adminHorarioModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';
+  $("adminHorarioOriginal").value=turno?.id||'';
+  $("adminHorarioInicio").value=turno?.inicio||'08:00';
+  $("adminHorarioFin").value=turno?.fin||'16:00';
+  $("adminHorarioColor").value=turno?.color||'#f59e0b';
+  $("adminHorarioColorTexto").textContent=(turno?.color||'#f59e0b').toUpperCase();
+  $("btnAdminEliminarHorario").classList.toggle('oculto',!turno);
+  $("adminHorarioModal").classList.remove('oculto');
+  $("adminHorarioModal").setAttribute('aria-hidden','false');
+}
+function cerrarHorarioModal(){
+  $("adminHorarioModal")?.classList.add('oculto');
+  $("adminHorarioModal")?.setAttribute('aria-hidden','true');
+  adminHorarioEditando=null;
+}
+function mensajeHorarios(texto,tipo='ok'){
+  const el=$("adminHorariosMensaje"); if(!el)return;
+  el.textContent=texto; el.className=`admin-message ${tipo}`;
+  clearTimeout(mensajeHorarios.timer); mensajeHorarios.timer=setTimeout(()=>{el.textContent='';el.className='admin-message';},3500);
+}
+function guardarHorarioConfig(){
+  const inicio=$("adminHorarioInicio").value;
+  const fin=$("adminHorarioFin").value;
+  const color=$("adminHorarioColor").value;
+  if(!inicio||!fin) return mensajeHorarios('Completá la hora de inicio y finalización.','error');
+  if(inicio===fin) return mensajeHorarios('El inicio y el final no pueden ser iguales.','error');
+  const items=turnosConfigurados();
+  const original=$("adminHorarioOriginal").value;
+  const duplicado=items.find(t=>t.inicio===inicio&&t.fin===fin&&t.id!==original);
+  if(duplicado) return mensajeHorarios('Ese horario ya existe.','error');
+  if(original){
+    const i=items.findIndex(t=>t.id===original);
+    if(i>=0) items[i]={...items[i],inicio,fin,color};
+  } else {
+    items.push({id:horariosConfig().idDesdeHoras(inicio,fin),inicio,fin,color});
+  }
+  try { horariosConfig().guardar(items); renderAdminHorarios(); cerrarHorarioModal(); mensajeHorarios(original?'Horario actualizado.':'Horario creado.'); }
+  catch(e){ mensajeHorarios(e.message,'error'); }
+}
+async function eliminarHorarioConfig(){
+  const id=$("adminHorarioOriginal").value;
+  if(!id)return;
+  const usados=window.HorariosApp?.turnosEnUso?.()||[];
+  if(usados.includes(id)) return mensajeHorarios('No se puede eliminar porque está asignado en el calendario visible. Reemplazalo primero.','error');
+  const items=turnosConfigurados().filter(t=>t.id!==id);
+  if(!items.length) return mensajeHorarios('Debe existir al menos un horario.','error');
+  horariosConfig().guardar(items); renderAdminHorarios(); cerrarHorarioModal(); mensajeHorarios('Horario eliminado.');
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  $("btnAdminNuevoHorario")?.addEventListener('click',()=>abrirHorarioModal());
+  $("btnAdminGuardarHorario")?.addEventListener('click',guardarHorarioConfig);
+  $("btnAdminEliminarHorario")?.addEventListener('click',eliminarHorarioConfig);
+  $("btnAdminCancelarHorario")?.addEventListener('click',cerrarHorarioModal);
+  $("adminHorarioColor")?.addEventListener('input',e=>$("adminHorarioColorTexto").textContent=e.target.value.toUpperCase());
+  $("adminHorarioModal")?.addEventListener('click',e=>{if(e.target.id==='adminHorarioModal')cerrarHorarioModal();});
+  document.querySelector('[data-admin-tab="horarios"]')?.addEventListener('click',renderAdminHorarios);
+  renderAdminHorarios();
+});

@@ -1,33 +1,37 @@
 const empleados = ["Mica", "Agustín", "Maxi", "Ariana", "Joaquín", "Bruno"];
-const TURNOS = [
-  { id: "8-16", label: "8-16", clase: "turno-naranja" },
-  { id: "8-13", label: "8-13", clase: "turno-amarillo" },
-  { id: "9-14", label: "9-14", clase: "turno-azul" },
-  { id: "10-16", label: "10-16", clase: "turno-celeste" },
-  { id: "14-22", label: "14-22", clase: "turno-rojo" },
-  { id: "16-22", label: "16-22", clase: "turno-violeta" },
-  { id: "franco", label: "Franco", clase: "turno-franco" },
-  { id: "vacaciones", label: "Vacaciones", clase: "turno-verde" },
-  { id: "personalizado", label: "Personalizado", clase: "turno-personalizado" }
-];
+let TURNOS = [];
+function cargarTurnosConfigurados() {
+  const configurados = window.AutoservicioHorariosConfig?.cargar?.() || [];
+  TURNOS = configurados.map(t => ({
+    ...t,
+    label: `${t.inicio} - ${t.fin}`,
+    clase: 'turno-configurable',
+    estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`
+  })).concat([
+    { id: 'franco', label: 'Franco', clase: 'turno-franco', estilo: '' },
+    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-verde', estilo: '' }
+  ]);
+  if (!TURNOS.some(t => t.id === turnoPincel)) turnoPincel = TURNOS.find(t => !['franco','vacaciones'].includes(t.id))?.id || 'franco';
+}
+
 
 let fechaVista = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let vistaActual = "equipo";
 let diaSeleccionado = new Date().getDate();
 let edicionActual = null;
 let restaurarBottomNav = [];
-let modoPincel = false;
 let turnoPincel = "8-16";
 let arrastrando = false;
 let seleccionInicio = null;
+let seleccionBaseArrastre = new Set();
+let punteroSeleccion = null;
 let historial = [];
 let estadoInicialEdicion = null;
-let pinturaMovimientoActivo = false;
-let pinturaCeldas = new Set();
 let seleccion = new Set();
 let modoEdicion = false;
 let portapapelesMes = null;
-let portapapelesPersona = null;
+
+cargarTurnosConfigurados();
 
 const datos = new Map();
 const $ = id => document.getElementById(id);
@@ -50,7 +54,7 @@ function turnoEjemplo(i, d) {
 }
 function obtenerTurnoEn(fecha, e, d) { return datos.get(claveMes(fecha, e, d)) || turnoEjemplo(empleados.indexOf(e), d); }
 function obtenerTurno(e, d) { return obtenerTurnoEn(fechaVista, e, d); }
-function obtenerDefinicion(id) { return TURNOS.find(t => t.id === id) || { id, label: id || "—", clase: "turno-personalizado" }; }
+function obtenerDefinicion(id) { return TURNOS.find(t => t.id === id) || { id, label: id || '—', clase: 'turno-personalizado', estilo: '' }; }
 function diasDelMes(fecha = fechaVista) { return new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate(); }
 function nombreMes() { return fechaVista.toLocaleDateString("es-AR", { month: "long", year: "numeric" }); }
 function nombreDia(d) { return new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d).toLocaleDateString("es-AR", { weekday: "short" }).replace(".", "").toUpperCase(); }
@@ -116,17 +120,23 @@ function descartarMovimientoSiNoCambio() {
 function deshacerUltimo() {
   if (!modoEdicion || !historial.length) return;
   restaurarDatos(historial.pop());
-  seleccion.clear();
   renderTodo();
 }
-function cancelarTodoCambios() {
+async function cancelarTodoCambios() {
   if (!modoEdicion || !hayCambiosPendientes()) return salirModoEdicion(true);
-  if (!confirm(`¿Cancelar todos los cambios realizados en esta edición?\n\nEl calendario volverá al estado que tenía al tocar Editar.`)) return;
+  const ok = await dialogoHorarios({
+    titulo: "Cancelar todos los cambios",
+    mensaje: "El calendario volverá al estado que tenía al tocar Editar.",
+    confirmar: "Cancelar cambios",
+    peligro: true
+  });
+  if (!ok) return;
   restaurarDatos(estadoInicialEdicion);
   historial = [];
   seleccion.clear();
   salirModoEdicion(true);
   renderTodo();
+  avisoHorarios("Cambios descartados");
 }
 function confirmarGuardado() {
   if (!modoEdicion || !hayCambiosPendientes()) return;
@@ -135,6 +145,7 @@ function confirmarGuardado() {
   seleccion.clear();
   salirModoEdicion(true);
   renderTodo();
+  avisoHorarios("Cambios guardados");
 }
 function actualizarAcciones() {
   const pendientes = hayCambiosPendientes();
@@ -144,7 +155,11 @@ function actualizarAcciones() {
   if ($("horariosSaveChanges")) $("horariosSaveChanges").disabled = !pendientes;
   if ($("horariosCancelAll")) $("horariosCancelAll").disabled = !pendientes;
   const c = $("horariosSeleccionCount");
-  if (c) c.textContent = seleccion.size ? `${seleccion.size} seleccionada${seleccion.size > 1 ? "s" : ""}` : "";
+  if (c) c.textContent = seleccion.size ? `${seleccion.size} casilla${seleccion.size > 1 ? "s" : ""} seleccionada${seleccion.size > 1 ? "s" : ""}` : "Seleccioná una o más casillas";
+  const aplicar = $("horariosPaint");
+  if (aplicar) aplicar.disabled = !seleccion.size || !modoEdicion;
+  const limpiar = $("horariosClearSelection");
+  if (limpiar) limpiar.classList.toggle("oculto", !seleccion.size);
 }
 function aplicarTurnoASeleccion(turno) {
   if (!seleccion.size || !puedeEditar() || !modoEdicion) return;
@@ -157,23 +172,61 @@ function aplicarTurnoASeleccion(turno) {
 function etiquetaMes(fecha) {
   return fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 }
-function elegirEmpleado(mensaje, sugerido = empleados[0]) {
-  const nombre = prompt(`${mensaje}\n\n${empleados.join("\n")}`, sugerido);
-  if (nombre === null) return null;
-  const limpio = String(nombre).trim().toLowerCase();
-  const encontrado = empleados.find(e => e.toLowerCase() === limpio);
-  if (!encontrado) {
-    alert("No se encontró ese empleado. Escribí el nombre tal como aparece en la lista.");
-    return null;
-  }
-  return encontrado;
+function avisoHorarios(texto, tipo = "ok") {
+  const toast = $("toast");
+  if (!toast) return;
+  toast.textContent = texto;
+  toast.className = `toast mostrar ${tipo}`;
+  clearTimeout(avisoHorarios.timer);
+  avisoHorarios.timer = setTimeout(() => { toast.className = "toast"; }, 2200);
+}
+function asegurarDialogoHorarios() {
+  if ($("horariosDialogo")) return;
+  const modal = document.createElement("div");
+  modal.id = "horariosDialogo";
+  modal.className = "horarios-dialogo-overlay oculto";
+  modal.setAttribute("aria-hidden", "true");
+  modal.innerHTML = `
+    <div class="horarios-dialogo-card" role="dialog" aria-modal="true" aria-labelledby="horariosDialogoTitulo">
+      <span class="horarios-dialogo-kicker">Horarios</span>
+      <h3 id="horariosDialogoTitulo">Confirmar acción</h3>
+      <p id="horariosDialogoMensaje"></p>
+      <div class="horarios-dialogo-actions">
+        <button id="horariosDialogoConfirmar" type="button" class="primario">Confirmar</button>
+        <button id="horariosDialogoCancelar" type="button">Volver</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+function dialogoHorarios({ titulo, mensaje, confirmar = "Confirmar", peligro = false }) {
+  asegurarDialogoHorarios();
+  const modal = $("horariosDialogo");
+  const btnConfirmar = $("horariosDialogoConfirmar");
+  const btnCancelar = $("horariosDialogoCancelar");
+  $("horariosDialogoTitulo").textContent = titulo;
+  $("horariosDialogoMensaje").textContent = mensaje;
+  btnConfirmar.textContent = confirmar;
+  btnConfirmar.classList.toggle("peligro", peligro);
+  modal.classList.remove("oculto");
+  modal.setAttribute("aria-hidden", "false");
+  return new Promise(resolve => {
+    const cerrar = valor => {
+      modal.classList.add("oculto");
+      modal.setAttribute("aria-hidden", "true");
+      btnConfirmar.onclick = null;
+      btnCancelar.onclick = null;
+      modal.onclick = null;
+      resolve(valor);
+    };
+    btnConfirmar.onclick = () => cerrar(true);
+    btnCancelar.onclick = () => cerrar(false);
+    modal.onclick = e => { if (e.target === modal) cerrar(false); };
+  });
 }
 function capturarMesEmpleado(fecha, empleado) {
   return Array.from({ length: diasDelMes(fecha) }, (_, i) => obtenerTurnoEn(fecha, empleado, i + 1));
 }
 function turnoCopiadoParaDia(turnos, dia) {
-  // Cuando el mes destino tiene más días que el de origen, los días adicionales
-  // quedan como franco para que el pegado reemplace el mes completo de forma previsible.
   return turnos[dia - 1] ?? "franco";
 }
 function copiarMesEquipo() {
@@ -186,12 +239,17 @@ function copiarMesEquipo() {
     empleados: Object.fromEntries(empleados.map(e => [e, capturarMesEmpleado(origen, e)]))
   };
   actualizarPortapapeles();
-  alert(`Se copió ${etiquetaMes(origen)} completo para todo el equipo.`);
+  avisoHorarios(`Se copió ${etiquetaMes(origen)} completo`);
 }
-function pegarMesEquipo() {
+async function pegarMesEquipo() {
   if (!puedeEditar() || !modoEdicion || !portapapelesMes) return;
   const destino = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
-  if (!confirm(`¿Pegar ${etiquetaMes(portapapelesMes.origen)} sobre ${etiquetaMes(destino)}?\n\nSe reemplazarán todos los días de todos los empleados del mes actual.`)) return;
+  const ok = await dialogoHorarios({
+    titulo: "Pegar mes completo",
+    mensaje: `Se reemplazarán todos los horarios de ${etiquetaMes(destino)} con la copia de ${etiquetaMes(portapapelesMes.origen)}.`,
+    confirmar: "Pegar mes"
+  });
+  if (!ok) return;
   iniciarMovimiento();
   empleados.forEach(e => {
     const turnos = portapapelesMes.empleados[e] || [];
@@ -201,64 +259,29 @@ function pegarMesEquipo() {
   });
   descartarMovimientoSiNoCambio();
   seleccion.clear();
+  portapapelesMes = null;
   renderTodo();
-  alert("Mes pegado correctamente.");
-}
-function copiarMesPersona() {
-  if (!puedeEditar() || !modoEdicion) return;
-  const empleado = elegirEmpleado("Escribí el nombre de la persona cuyo mes querés copiar:");
-  if (!empleado) return;
-  const origen = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
-  portapapelesPersona = {
-    tipo: "persona",
-    origen,
-    empleadoOrigen: empleado,
-    dias: diasDelMes(origen),
-    turnos: capturarMesEmpleado(origen, empleado)
-  };
   actualizarPortapapeles();
-  alert(`Se copió el mes completo de ${empleado} (${etiquetaMes(origen)}).`);
+  avisoHorarios("Mes pegado correctamente");
 }
-function pegarMesPersona() {
-  if (!puedeEditar() || !modoEdicion || !portapapelesPersona) return;
-  const empleadoDestino = elegirEmpleado(
-    `Escribí el nombre de la persona a la que querés pegar el mes copiado de ${portapapelesPersona.empleadoOrigen}:`,
-    portapapelesPersona.empleadoOrigen
-  );
-  if (!empleadoDestino) return;
-  const destino = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
-  if (!confirm(`¿Pegar el mes completo de ${portapapelesPersona.empleadoOrigen} (${etiquetaMes(portapapelesPersona.origen)}) en ${empleadoDestino} para ${etiquetaMes(destino)}?\n\nSe reemplazarán todos los días de ${empleadoDestino} en el mes actual.`)) return;
-  iniciarMovimiento();
-  for (let d = 1; d <= diasDelMes(destino); d++) {
-    datos.set(claveMes(destino, empleadoDestino, d), turnoCopiadoParaDia(portapapelesPersona.turnos, d));
-  }
-  descartarMovimientoSiNoCambio();
-  seleccion.clear();
-  renderTodo();
-  alert(`Mes de ${empleadoDestino} pegado correctamente.`);
+function ejecutarCopiarPegarMes() {
+  return portapapelesMes ? pegarMesEquipo() : copiarMesEquipo();
 }
 function actualizarPortapapeles() {
-  const pegarMes = $("btnHorariosPegarMes");
-  const pegarPersona = $("btnHorariosPegarPersona");
-  if (pegarMes) {
-    pegarMes.disabled = !portapapelesMes;
-    pegarMes.title = portapapelesMes
-      ? `Pegar ${etiquetaMes(portapapelesMes.origen)} para todo el equipo`
-      : "Primero copiá un mes completo";
-  }
-  if (pegarPersona) {
-    pegarPersona.disabled = !portapapelesPersona;
-    pegarPersona.title = portapapelesPersona
-      ? `Pegar el mes copiado de ${portapapelesPersona.empleadoOrigen}`
-      : "Primero copiá el mes de una persona";
+  const boton = $("btnHorariosCopiarPegarMes");
+  if (boton) {
+    boton.textContent = portapapelesMes ? "Pegar mes" : "Copiar mes";
+    boton.classList.toggle("listo-para-pegar", !!portapapelesMes);
+    boton.title = portapapelesMes
+      ? `Pegar ${etiquetaMes(portapapelesMes.origen)} sobre el mes visible`
+      : "Copiar el mes completo del equipo";
   }
   const estado = $("horariosCopiaEstado");
   if (estado) {
-    const mensajes = [];
-    if (portapapelesMes) mensajes.push(`Equipo: ${etiquetaMes(portapapelesMes.origen)}`);
-    if (portapapelesPersona) mensajes.push(`${portapapelesPersona.empleadoOrigen}: ${etiquetaMes(portapapelesPersona.origen)}`);
-    estado.textContent = mensajes.length ? `Copiado · ${mensajes.join(" · ")}` : "Todavía no hay ningún mes copiado";
-    estado.classList.toggle("tiene-copia", mensajes.length > 0);
+    estado.textContent = portapapelesMes
+      ? `Mes copiado: ${etiquetaMes(portapapelesMes.origen)} · disponible para pegar una vez`
+      : "La copia se habilita para un único pegado";
+    estado.classList.toggle("tiene-copia", !!portapapelesMes);
   }
 }
 
@@ -277,37 +300,34 @@ function crearPanelEdicion() {
         <button id="btnHorariosCerrarEdicion" type="button" aria-label="Cerrar edición">✕</button>
       </div>
       <div class="horarios-panel-tools">
-        <button id="btnHorariosCopiarMes" type="button">Copiar mes</button>
-        <button id="btnHorariosPegarMes" type="button" disabled title="Primero copiá un mes completo">Pegar mes</button>
-        <button id="btnHorariosCopiarPersona" type="button">Copiar mes de una persona</button>
-        <button id="btnHorariosPegarPersona" type="button" disabled title="Primero copiá el mes de una persona">Pegar mes de una persona</button>
+        <button id="btnHorariosCopiarPegarMes" type="button">Copiar mes</button>
       </div>
-      <small id="horariosCopiaEstado" class="horarios-copia-estado">Todavía no hay ningún mes copiado</small>
+      <small id="horariosCopiaEstado" class="horarios-copia-estado">La copia se habilita para un único pegado</small>
       <div class="horarios-pintar-control">
-        <button id="horariosPaint" type="button" aria-pressed="false">Pintar</button>
         <label><span>Pintar con</span><select id="horariosPaintTurno">${TURNOS.filter(t => t.id !== "personalizado").map(t => `<option value="${t.id}">${t.label}</option>`).join("")}</select></label>
+        <button id="horariosPaint" type="button" disabled>Aplicar</button>
+      </div>
+      <div class="horarios-seleccion-info">
+        <small id="horariosSeleccionCount" class="horarios-seleccion-count">Seleccioná una o más casillas</small>
+        <button id="horariosClearSelection" type="button" class="horarios-limpiar-seleccion oculto">Limpiar selección</button>
       </div>
       <div id="horariosCambiosAcciones" class="horarios-cambios-acciones oculto">
         <button id="horariosSaveChanges" type="button" class="primario">Guardar</button>
         <button id="horariosUndoOne" type="button">Deshacer</button>
         <button id="horariosCancelAll" type="button" class="peligro">Cancelar todo</button>
       </div>
-      <small id="horariosSeleccionCount" class="horarios-seleccion-count"></small>
     </div>`;
   document.querySelector(".horarios-status-row")?.after(marco);
   $("btnHorariosEditar").onclick = entrarModoEdicion;
   $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
-  $("btnHorariosCopiarMes").onclick = copiarMesEquipo;
-  $("btnHorariosPegarMes").onclick = pegarMesEquipo;
-  $("btnHorariosCopiarPersona").onclick = copiarMesPersona;
-  $("btnHorariosPegarPersona").onclick = pegarMesPersona;
-  $("horariosPaint").onclick = () => {
-    if (!modoEdicion) return;
-    modoPincel = !modoPincel;
-    $("horariosPaint").classList.toggle("activo", modoPincel);
-    $("horariosPaint").setAttribute("aria-pressed", String(modoPincel));
-  };
+  $("btnHorariosCopiarPegarMes").onclick = ejecutarCopiarPegarMes;
+  $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
   $("horariosPaintTurno").onchange = e => turnoPincel = e.target.value;
+  $("horariosClearSelection").onclick = () => {
+    seleccion.clear();
+    renderTabla();
+    actualizarAcciones();
+  };
   $("horariosSaveChanges").onclick = confirmarGuardado;
   $("horariosUndoOne").onclick = deshacerUltimo;
   $("horariosCancelAll").onclick = cancelarTodoCambios;
@@ -320,8 +340,9 @@ function entrarModoEdicion() {
   modoEdicion = true;
   estadoInicialEdicion = clonarDatos();
   historial = [];
-  pinturaMovimientoActivo = false;
-  pinturaCeldas.clear();
+  arrastrando = false;
+  punteroSeleccion = null;
+  seleccionBaseArrastre.clear();
   document.body.classList.add("horarios-modo-edicion");
   $("horariosConsultaAcciones")?.classList.add("oculto");
   $("horariosPanelEdicion")?.classList.remove("oculto");
@@ -330,22 +351,26 @@ function entrarModoEdicion() {
   actualizarPortapapeles();
   renderTabla();
 }
-function salirModoEdicion(forzar = false) {
+async function salirModoEdicion(forzar = false) {
   if (!forzar && hayCambiosPendientes()) {
-    if (!confirm("Hay cambios sin guardar. ¿Querés descartarlos y salir del modo edición?")) return false;
+    const ok = await dialogoHorarios({
+      titulo: "Salir sin guardar",
+      mensaje: "Hay cambios pendientes. Si salís ahora, se descartarán.",
+      confirmar: "Descartar y salir",
+      peligro: true
+    });
+    if (!ok) return false;
     restaurarDatos(estadoInicialEdicion);
   }
   modoEdicion = false;
-  modoPincel = false;
-  pinturaMovimientoActivo = false;
-  pinturaCeldas.clear();
+  arrastrando = false;
+  punteroSeleccion = null;
+  seleccionBaseArrastre.clear();
   historial = [];
   estadoInicialEdicion = null;
   seleccion.clear();
   cerrarEditor();
   document.body.classList.remove("horarios-modo-edicion");
-  $("horariosPaint")?.classList.remove("activo");
-  $("horariosPaint")?.setAttribute("aria-pressed", "false");
   $("horariosConsultaAcciones")?.classList.remove("oculto");
   $("horariosPanelEdicion")?.classList.add("oculto");
   $("horariosPanelEdicion")?.setAttribute("aria-hidden", "true");
@@ -380,20 +405,25 @@ function actualizarColumnaEmpleados() {
   t.classList.toggle("empleados-compactos", w.scrollLeft > 32);
   t.classList.toggle("empleados-minimos", w.scrollLeft > 240);
 }
-function seleccionarCelda(e, d, agregar = false) {
+function alternarCelda(e, d) {
   if (!puedeEditar() || !modoEdicion) return;
-  if (!agregar) seleccion.clear();
-  seleccion.add(keyCelda(e, d));
+  const k = keyCelda(e, d);
+  if (seleccion.has(k)) seleccion.delete(k); else seleccion.add(k);
   renderTabla();
   actualizarAcciones();
 }
 function seleccionarRango(e2, d2) {
   if (!seleccionInicio || !puedeEditar() || !modoEdicion) return;
   const i1 = empleados.indexOf(seleccionInicio.empleado), i2 = empleados.indexOf(e2), d1 = seleccionInicio.dia;
-  seleccion.clear();
-  for (let i = Math.min(i1, i2); i <= Math.max(i1, i2); i++) for (let d = Math.min(d1, d2); d <= Math.max(d1, d2); d++) seleccion.add(keyCelda(empleados[i], d));
+  seleccion = new Set(seleccionBaseArrastre);
+  for (let i = Math.min(i1, i2); i <= Math.max(i1, i2); i++) {
+    for (let d = Math.min(d1, d2); d <= Math.max(d1, d2); d++) seleccion.add(keyCelda(empleados[i], d));
+  }
   renderTabla();
   actualizarAcciones();
+}
+function celdaDesdePunto(x, y) {
+  return document.elementFromPoint(x, y)?.closest?.("#horariosTablaBody td[data-empleado]") || null;
 }
 function renderTabla() {
   const head = $("horariosTablaHead"), body = $("horariosTablaBody");
@@ -404,55 +434,50 @@ function renderTabla() {
   }).join("")}</tr>`;
   body.innerHTML = empleados.map(e => `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from({ length: diasDelMes() }, (_, i) => {
     const d = i + 1, id = obtenerTurno(e, d), t = obtenerDefinicion(id), sel = seleccion.has(keyCelda(e, d));
-    return `<td class="${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}"><button type="button" class="horario-cell ${t.clase}" data-tooltip="${t.label}">${formatoCelda(id)}</button></td>`;
+    return `<td class="${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}"><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ''}" data-tooltip="${t.label}">${formatoCelda(id)}</button></td>`;
   }).join("")}</tr>`).join("");
   head.querySelectorAll("[data-horarios-dia]").forEach(x => x.onclick = () => { diaSeleccionado = Number(x.dataset.horariosDia); renderTabla(); renderResumen(); });
   body.querySelectorAll("td[data-empleado]").forEach(td => {
-    td.onpointerdown = e => {
-      if (!puedeEditar() || !modoEdicion) return;
-      e.preventDefault();
-      const emp = td.dataset.empleado, d = Number(td.dataset.dia);
-      if (modoPincel) {
-        pinturaMovimientoActivo = true;
-        pinturaCeldas.clear();
-        iniciarMovimiento();
-        pintarCelda(td, emp, d);
-        return;
-      }
-      arrastrando = true; seleccionInicio = { empleado: emp, dia: d }; seleccionarCelda(emp, d, e.ctrlKey || e.metaKey);
+    td.onpointerdown = ev => {
+      if (!puedeEditar() || !modoEdicion || (ev.pointerType === "mouse" && ev.button !== 0)) return;
+      const emp = td.dataset.empleado, dia = Number(td.dataset.dia);
+      punteroSeleccion = { id: ev.pointerId, tipo: ev.pointerType, x: ev.clientX, y: ev.clientY, empleado: emp, dia, movio: false };
+      seleccionInicio = { empleado: emp, dia };
+      seleccionBaseArrastre = (ev.ctrlKey || ev.metaKey) ? new Set(seleccion) : new Set();
+      arrastrando = ev.pointerType !== "touch";
+      if (arrastrando) ev.preventDefault();
     };
-    td.onpointerenter = () => {
-      if (pinturaMovimientoActivo && modoPincel) pintarCelda(td, td.dataset.empleado, Number(td.dataset.dia));
-      else if (arrastrando) seleccionarRango(td.dataset.empleado, Number(td.dataset.dia));
-    };
-    td.ondblclick = () => { if (puedeEditar() && modoEdicion && !modoPincel) abrirEditor(td.dataset.empleado, Number(td.dataset.dia)); };
+    td.ondblclick = () => { if (puedeEditar() && modoEdicion) abrirEditor(td.dataset.empleado, Number(td.dataset.dia)); };
   });
   const w = document.querySelector("#horariosEquipoView .horarios-table-wrap");
   if (w && !w.dataset.cfg) { w.dataset.cfg = "1"; w.addEventListener("scroll", actualizarColumnaEmpleados, { passive: true }); }
   actualizarColumnaEmpleados();
 }
-function pintarCelda(td, empleado, dia) {
-  const k = keyCelda(empleado, dia);
-  if (pinturaCeldas.has(k)) return;
-  pinturaCeldas.add(k);
-  datos.set(clave(empleado, dia), turnoPincel);
-  const btn = td.querySelector(".horario-cell");
-  const def = obtenerDefinicion(turnoPincel);
-  if (btn) {
-    btn.className = `horario-cell ${def.clase}`;
-    btn.dataset.tooltip = def.label;
-    btn.innerHTML = formatoCelda(turnoPincel);
-  }
-  actualizarAcciones();
-}
-document.addEventListener("pointerup", () => {
+document.addEventListener("pointermove", ev => {
+  if (!punteroSeleccion || ev.pointerId !== punteroSeleccion.id || !modoEdicion) return;
+  const distancia = Math.hypot(ev.clientX - punteroSeleccion.x, ev.clientY - punteroSeleccion.y);
+  if (distancia < 6) return;
+  punteroSeleccion.movio = true;
+  if (punteroSeleccion.tipo === "touch") return;
+  arrastrando = true;
+  ev.preventDefault();
+  const td = celdaDesdePunto(ev.clientX, ev.clientY);
+  if (td) seleccionarRango(td.dataset.empleado, Number(td.dataset.dia));
+}, { passive: false });
+document.addEventListener("pointerup", ev => {
+  if (!punteroSeleccion || ev.pointerId !== punteroSeleccion.id) return;
+  const p = punteroSeleccion;
+  if (!p.movio) alternarCelda(p.empleado, p.dia);
   arrastrando = false;
-  if (pinturaMovimientoActivo) {
-    pinturaMovimientoActivo = false;
-    descartarMovimientoSiNoCambio();
-    pinturaCeldas.clear();
-    renderTodo();
-  }
+  punteroSeleccion = null;
+  seleccionInicio = null;
+  seleccionBaseArrastre.clear();
+});
+document.addEventListener("pointercancel", () => {
+  arrastrando = false;
+  punteroSeleccion = null;
+  seleccionInicio = null;
+  seleccionBaseArrastre.clear();
 });
 
 function renderResumen() {
@@ -462,7 +487,7 @@ function renderResumen() {
   t.textContent = f.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
   const m = new Map();
   empleados.forEach(e => { const id = obtenerTurno(e, diaSeleccionado); m.set(id, (m.get(id) || 0) + 1); });
-  c.innerHTML = [...m].map(([id, n]) => { const x = obtenerDefinicion(id); return `<div><span><i class="${x.clase}"></i>${x.label}</span><strong>${n} ${n === 1 ? "persona" : "personas"}</strong></div>`; }).join("");
+  c.innerHTML = [...m].map(([id, n]) => { const x = obtenerDefinicion(id); return `<div><span><i class="${x.clase}" style="${x.estilo || ''}"></i>${x.label}</span><strong>${n} ${n === 1 ? "persona" : "personas"}</strong></div>`; }).join("");
   const cv = coberturaDia(diaSeleccionado), b = $("horariosCoberturaEstado");
   if (b) { b.textContent = `Mañana ${cv.manana} · Tarde ${cv.tarde}`; b.classList.toggle("alerta", cv.manana < 2 || cv.tarde < 2); }
 }
@@ -472,7 +497,7 @@ function abrirEditor(e, d) {
   $("horariosEditorEmpleado").textContent = seleccion.size > 1 ? `${seleccion.size} turnos` : e;
   $("horariosEditorFecha").textContent = seleccion.size > 1 ? "Aplicar a la selección" : new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
   const o = $("horariosTurnosOpciones");
-  o.innerHTML = TURNOS.map(t => `<button type="button" class="horarios-turno-option ${t.clase} ${t.id === edicionActual.turno ? "seleccionado" : ""}" data-turno="${t.id}"><span></span><strong>${t.label}</strong></button>`).join("");
+  o.innerHTML = TURNOS.map(t => `<button type="button" class="horarios-turno-option ${t.clase} ${t.id === edicionActual.turno ? "seleccionado" : ""}" style="${t.estilo || ''}" data-turno="${t.id}"><span></span><strong>${t.label}</strong></button>`).join("");
   o.querySelectorAll("[data-turno]").forEach(btn => btn.onclick = () => {
     edicionActual.turno = btn.dataset.turno;
     o.querySelectorAll("[data-turno]").forEach(b => b.classList.toggle("seleccionado", b === btn));
@@ -524,7 +549,7 @@ function renderMiHorario() {
   let stats = $("miHorarioStats");
   if (!stats) { stats = document.createElement("section"); stats.id = "miHorarioStats"; stats.className = "mi-horario-stats"; lista.before(stats); }
   stats.innerHTML = `<article><strong>${horas}</strong><span>Horas del mes</span></article><article><strong>${francos}</strong><span>Francos</span></article><article><strong>${vac}</strong><span>Vacaciones</span></article>`;
-  lista.innerHTML = dias.map(d => { const id = obtenerTurno(e, d), tr = obtenerDefinicion(id), f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d); return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${d} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}">${formatoAmPm(id)}</span></article>`; }).join("");
+  lista.innerHTML = dias.map(d => { const id = obtenerTurno(e, d), tr = obtenerDefinicion(id), f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d); return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${d} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ''}">${formatoAmPm(id)}</span></article>`; }).join("");
   const proximo = encontrarProximoTurno(e);
   $("miHorarioProximo").textContent = proximo ? formatoAmPm(proximo.id) : "Sin turnos próximos";
   $("miHorarioProximoFecha").textContent = proximo ? proximo.fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) : "—";
@@ -566,3 +591,20 @@ function desactivar() { if (hayCambiosPendientes()) restaurarDatos(estadoInicial
 
 configurarEventos();
 window.HorariosModule = { activar, desactivar };
+
+
+window.HorariosApp = {
+  turnosEnUso() {
+    const usados = new Set();
+    for (let d = 1; d <= diasDelMes(); d++) empleados.forEach(e => usados.add(obtenerTurno(e, d)));
+    return [...usados];
+  },
+  refrescarTurnos() {
+    cargarTurnosConfigurados();
+    renderTodo();
+  }
+};
+window.addEventListener('autoservicio:horarios-config', () => {
+  cargarTurnosConfigurados();
+  renderTodo();
+});

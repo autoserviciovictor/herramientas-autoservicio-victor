@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=72-horarios-entrega5-3">
+    <link rel="stylesheet" href="style.css?v=72-horarios-entrega6-3">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -412,7 +412,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>Entrega 5.1</strong><span>Modo consulta para todos. Edición exclusiva para supervisor.</span></div>
+                <div class="horarios-sidebar-note"><strong>Entrega 6.3</strong><span>Horarios configurables y colores personalizados.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -640,6 +640,7 @@
         <nav class="admin-tabs admin-tabs-clean">
             <button type="button" class="admin-tab activo" data-admin-tab="usuarios">👤 Usuarios</button>
             <button type="button" class="admin-tab" data-admin-tab="historial">📋 Historial</button>
+            <button type="button" class="admin-tab" data-admin-tab="horarios">🕒 Horarios</button>
             <button type="button" class="admin-tab" data-admin-tab="sistema">⚙️ Sistema</button>
         </nav>
 
@@ -681,6 +682,14 @@
             <div id="adminHistorialResumen" class="admin-history-summary" aria-live="polite"></div>
             <div id="adminHistorialLista" class="admin-history-list"></div>
             <button id="btnAdminHistorialMas" type="button" class="setting-btn admin-history-more oculto">Cargar movimientos anteriores</button>
+        </section>
+
+
+        <section id="adminTab-horarios" class="admin-tab-panel settings-card oculto">
+            <div class="admin-section-head"><div><strong>Horarios</strong><span>Creá, editá y asigná un color a cada turno</span></div><button id="btnAdminNuevoHorario" type="button">+ Nuevo horario</button></div>
+            <div id="adminHorariosMensaje" class="admin-message"></div>
+            <div id="adminHorariosLista" class="admin-shifts-list"></div>
+            <p class="admin-shifts-note">Franco y Vacaciones son estados especiales y no se modifican desde esta lista.</p>
         </section>
 
         <section id="adminTab-sistema" class="admin-tab-panel settings-card oculto">
@@ -803,15 +812,34 @@
 
 </div>
 
+    <div id="adminHorarioModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card admin-shift-modal" role="dialog" aria-modal="true" aria-labelledby="adminHorarioModalTitulo">
+        <div class="modal-kicker">Configuración de horarios</div>
+        <h2 id="adminHorarioModalTitulo">Nuevo horario</h2>
+        <input id="adminHorarioOriginal" type="hidden">
+        <div class="admin-shift-form">
+          <label>Hora de inicio<input id="adminHorarioInicio" type="time" required></label>
+          <label>Hora de finalización<input id="adminHorarioFin" type="time" required></label>
+          <label class="admin-shift-color-label">Color<input id="adminHorarioColor" type="color" value="#f59e0b"><span id="adminHorarioColorTexto">#F59E0B</span></label>
+        </div>
+        <div class="modal-actions">
+          <button id="btnAdminGuardarHorario" class="save-btn" type="button">Guardar horario</button>
+          <button id="btnAdminEliminarHorario" class="danger-btn-soft oculto" type="button">Eliminar</button>
+          <button id="btnAdminCancelarHorario" class="secondary-btn" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
 <script src="./release-channel.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script src="./pwa.js?v=71-entrega53-reemplazo-catalogo" defer></script>
 <script type="module" src="./auth.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script src="./xlsx.full.min.js"></script>
-<script type="module" src="./admin.js?v=71-entrega531-validacion-catalogo"></script>
+<script src="./horarios-config.js?v=72-horarios-entrega6-3"></script>
+<script type="module" src="./admin.js?v=72-horarios-entrega6-3"></script>
 <script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./app.js?v=71-entrega53-reemplazo-catalogo"></script>
-<script type="module" src="./horarios.js?v=72-horarios-entrega5-3"></script>
+<script type="module" src="./horarios.js?v=72-horarios-entrega6-3"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

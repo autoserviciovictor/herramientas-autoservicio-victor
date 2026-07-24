@@ -3647,3 +3647,110 @@ body.horarios-modo-edicion .horario-cell{touch-action:none}
   .horarios-cambios-acciones .peligro{grid-column:1/-1}
   .horarios-cambios-acciones button{width:100%}
 }
+
+/* Horarios · Entrega 6.1 */
+.horarios-panel-tools{grid-template-columns:minmax(180px,260px)}
+.horarios-panel-tools #btnHorariosCopiarPegarMes{width:100%}
+.horarios-panel-tools #btnHorariosCopiarPegarMes.listo-para-pegar{background:#202226;border-color:#202226;color:#fff}
+body.horarios-modo-edicion .horarios-bottom-grid{display:none!important}
+.horarios-cambios-acciones{position:sticky;bottom:0;z-index:4;background:#fff;padding:10px 0 2px}
+.horarios-dialogo-overlay{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:20px;background:rgba(20,22,27,.48)}
+.horarios-dialogo-overlay.oculto{display:none!important}
+.horarios-dialogo-card{width:min(420px,100%);background:#fff;border-radius:16px;padding:22px;box-shadow:0 22px 65px rgba(0,0,0,.28);border:1px solid #eceef2}
+.horarios-dialogo-kicker{display:block;margin-bottom:5px;color:#a9232b;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.horarios-dialogo-card h3{margin:0 0 8px;font-size:21px;color:#202226}
+.horarios-dialogo-card p{margin:0;color:#60636c;line-height:1.5}
+.horarios-dialogo-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}
+.horarios-dialogo-actions button{min-height:40px;border:1px solid #dfe2e8;border-radius:10px;background:#fff;padding:0 16px;font-weight:850;cursor:pointer}
+.horarios-dialogo-actions .primario{background:#202226;border-color:#202226;color:#fff}
+.horarios-dialogo-actions .primario.peligro{background:#a9232b;border-color:#a9232b;color:#fff}
+@media(min-width:851px){
+  .horarios-edicion-marco{max-width:620px;margin-left:auto}
+  .horarios-panel-edicion{gap:10px}
+  .horarios-pintar-control{display:grid;grid-template-columns:120px minmax(220px,1fr)}
+}
+@media(max-width:520px){
+  .horarios-panel-tools{grid-template-columns:1fr}
+  .horarios-dialogo-actions{display:grid;grid-template-columns:1fr}
+  .horarios-dialogo-actions button{width:100%}
+}
+
+
+/* Horarios · Entrega 6.2 */
+.horarios-pintar-control{
+  display:grid;
+  grid-template-columns:minmax(190px,1fr) 120px;
+  align-items:end;
+  gap:9px;
+}
+.horarios-pintar-control #horariosPaint{
+  min-height:40px;
+  background:#202226;
+  border-color:#202226;
+  color:#fff;
+  cursor:pointer;
+}
+.horarios-pintar-control #horariosPaint:disabled{
+  background:#eef0f3;
+  border-color:#e1e4e9;
+  color:#9a9da5;
+  cursor:not-allowed;
+}
+.horarios-seleccion-info{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:30px;
+  padding:2px 1px 6px;
+}
+.horarios-limpiar-seleccion{
+  border:0;
+  background:transparent;
+  color:#4e525b;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.horarios-table td.celda-seleccionada{
+  position:relative;
+  background:#eceef2!important;
+  box-shadow:inset 0 0 0 2px #202226!important;
+}
+.horarios-table td.celda-seleccionada::after{
+  content:"";
+  position:absolute;
+  top:4px;
+  right:4px;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#202226;
+  pointer-events:none;
+}
+.horarios-table td.celda-seleccionada .horario-cell{
+  transform:none!important;
+  filter:none!important;
+}
+body.horarios-modo-edicion .horario-cell{touch-action:manipulation}
+body.horarios-modo-edicion .horarios-table td{user-select:none;-webkit-user-select:none}
+@media(max-width:520px){
+  .horarios-pintar-control{grid-template-columns:1fr}
+  .horarios-pintar-control #horariosPaint{width:100%}
+  .horarios-seleccion-info{align-items:flex-start}
+}
+
+/* Horarios Entrega 6.3: turnos configurables */
+.turno-configurable{background:var(--turno-fondo)!important;border-color:var(--turno-borde)!important;color:var(--turno-color)!important}
+.horarios-summary-list i.turno-configurable{background:var(--turno-color)!important}
+.admin-shifts-list{display:grid;gap:10px;margin-top:16px}
+.admin-shift-card{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff}
+.admin-shift-swatch{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:13px}
+.admin-shift-info{display:flex;flex-direction:column;gap:3px}.admin-shift-info strong{font-size:15px}.admin-shift-info span{font-size:12px;color:#6b7280}
+.admin-shift-card button{border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:9px 13px;font-weight:700}
+.admin-shifts-note{margin:14px 2px 0;color:#6b7280;font-size:13px}
+.admin-shift-modal{max-width:430px}.admin-shift-form{display:grid;gap:14px;margin:18px 0}.admin-shift-form label{display:grid;gap:7px;font-weight:700;font-size:13px}.admin-shift-form input[type=time]{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px}
+.admin-shift-color-label{grid-template-columns:1fr auto auto;align-items:center}.admin-shift-color-label input{width:52px;height:38px;border:0;background:transparent;padding:0}.admin-shift-color-label span{font-family:monospace;color:#4b5563}
+@media(max-width:640px){.admin-shift-card{grid-template-columns:42px 1fr auto;padding:10px}.admin-shift-swatch{width:42px;height:42px}.admin-shift-card button{padding:8px 10px}}
