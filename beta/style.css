@@ -3584,3 +3584,66 @@ body.en-precios .app { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !
   .mi-horario-list article{align-items:flex-start}
   .mi-horario-list .mi-turno-pill{max-width:58%;font-size:11px}
 }
+
+/* Horarios · Entrega 5.1 */
+.horarios-edicion-marco{margin:-2px 0 12px;padding:10px;background:#fff;border:1px solid #e6e8ed;border-radius:12px;box-shadow:0 4px 14px rgba(24,31,45,.04)}
+.horarios-consulta-acciones{display:flex;justify-content:flex-end}
+.horarios-editar-btn{min-width:120px;height:40px;border:0;border-radius:10px;background:#202124;color:#fff;font-weight:850;cursor:pointer;padding:0 22px}
+.horarios-editar-btn:hover{background:#000}
+.horarios-panel-edicion{display:grid;gap:12px}
+.horarios-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid #eceef2}
+.horarios-panel-head>div{display:grid;gap:2px}.horarios-panel-head span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#777;font-weight:800}.horarios-panel-head strong{text-transform:capitalize;font-size:17px}
+.horarios-panel-head>button{width:34px;height:34px;border:0;border-radius:9px;background:#f1f2f5;cursor:pointer}
+.horarios-panel-tools{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:8px}
+.horarios-panel-tools button,.horarios-pintar-control button,.horarios-pintar-control select{min-height:38px;border:1px solid #dfe2e8;background:#fff;border-radius:9px;padding:0 11px;font-weight:750;color:#484b54}
+.horarios-panel-tools button:disabled{opacity:.42;cursor:not-allowed;background:#f6f7f8}
+.horarios-pintar-control{display:flex;align-items:end;gap:9px;flex-wrap:wrap}.horarios-pintar-control>button{cursor:pointer;min-width:100px}.horarios-pintar-control>button.activo{background:#202124;color:#fff;border-color:#202124}
+.horarios-pintar-control label{display:grid;gap:4px;min-width:190px}.horarios-pintar-control label span{font-size:11px;color:#777;font-weight:800;text-transform:uppercase}.horarios-pintar-control select{width:100%}
+.horarios-seleccion-count{color:#555;font-weight:750;min-height:16px}
+body:not(.horarios-modo-edicion) .horarios-editor{display:none!important}
+.horarios-turno-option.seleccionado span{background:#000!important;border-color:#000!important;box-shadow:none!important}
+.horarios-turno-option.seleccionado{border-color:transparent!important;box-shadow:none!important;transform:none!important}
+@media(min-width:1101px){body:not(.horarios-modo-edicion) .horarios-shell{grid-template-columns:180px minmax(0,1fr)!important}body.horarios-modo-edicion .horarios-shell{grid-template-columns:180px minmax(0,1fr) 350px!important}}
+@media(max-width:850px){.horarios-panel-tools{grid-template-columns:1fr 1fr}.horarios-edicion-marco{position:relative;z-index:8}.horarios-consulta-acciones{justify-content:stretch}.horarios-editar-btn{width:100%}}
+@media(max-width:520px){.horarios-panel-tools{grid-template-columns:1fr}.horarios-pintar-control{display:grid;grid-template-columns:1fr}.horarios-pintar-control>button,.horarios-pintar-control label{width:100%;min-width:0}}
+
+/* Horarios · Entrega 5.2 */
+.horarios-panel-tools button:not(:disabled){cursor:pointer}
+.horarios-panel-tools button:not(:disabled):hover{border-color:#aeb3bd;background:#f8f9fa}
+.horarios-copia-estado{display:block;min-height:18px;padding:0 2px;color:#777;font-size:12px;font-weight:700}
+.horarios-copia-estado.tiene-copia{color:#202124}
+
+/* Horarios · Entrega 5.3 */
+.horarios-cambios-acciones{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:8px;
+  padding-top:10px;
+  border-top:1px solid #eceef2;
+}
+.horarios-cambios-acciones button{
+  min-height:40px;
+  border:1px solid #dfe2e8;
+  border-radius:9px;
+  padding:0 16px;
+  background:#fff;
+  color:#343740;
+  font-weight:800;
+  cursor:pointer;
+}
+.horarios-cambios-acciones button:disabled{opacity:.42;cursor:not-allowed}
+.horarios-cambios-acciones .primario{background:#202226;border-color:#202226;color:#fff}
+.horarios-cambios-acciones .peligro{border-color:#d9a9ac;color:#a9232b;background:#fff8f8}
+.horarios-pintar-control #horariosPaint.activo{
+  background:#202226;
+  border-color:#202226;
+  color:#fff;
+  box-shadow:none;
+}
+body.horarios-modo-edicion .horario-cell{touch-action:none}
+@media(max-width:520px){
+  .horarios-cambios-acciones{display:grid;grid-template-columns:1fr 1fr}
+  .horarios-cambios-acciones .peligro{grid-column:1/-1}
+  .horarios-cambios-acciones button{width:100%}
+}

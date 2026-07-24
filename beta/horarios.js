@@ -21,7 +21,13 @@ let turnoPincel = "8-16";
 let arrastrando = false;
 let seleccionInicio = null;
 let historial = [];
+let estadoInicialEdicion = null;
+let pinturaMovimientoActivo = false;
+let pinturaCeldas = new Set();
 let seleccion = new Set();
+let modoEdicion = false;
+let portapapelesMes = null;
+let portapapelesPersona = null;
 
 const datos = new Map();
 const $ = id => document.getElementById(id);
@@ -86,82 +92,278 @@ function coberturaDia(d) {
   return { manana, tarde };
 }
 
-function guardarEstado() { historial.push(new Map(datos)); if (historial.length > 40) historial.shift(); actualizarAcciones(); }
-function deshacerTodo() {
-  if (!historial.length) return;
-  const primero = historial[0];
+function clonarDatos() { return new Map(datos); }
+function mapasIguales(a, b) {
+  if (!a || !b || a.size !== b.size) return false;
+  for (const [k, v] of a) if (b.get(k) !== v) return false;
+  return true;
+}
+function restaurarDatos(estado) {
   datos.clear();
-  primero.forEach((v, k) => datos.set(k, v));
+  estado?.forEach((v, k) => datos.set(k, v));
+}
+function hayCambiosPendientes() {
+  return !!(modoEdicion && estadoInicialEdicion && !mapasIguales(datos, estadoInicialEdicion));
+}
+function iniciarMovimiento() {
+  historial.push(clonarDatos());
+  if (historial.length > 80) historial.shift();
+}
+function descartarMovimientoSiNoCambio() {
+  const anterior = historial[historial.length - 1];
+  if (anterior && mapasIguales(datos, anterior)) historial.pop();
+}
+function deshacerUltimo() {
+  if (!modoEdicion || !historial.length) return;
+  restaurarDatos(historial.pop());
+  seleccion.clear();
+  renderTodo();
+}
+function cancelarTodoCambios() {
+  if (!modoEdicion || !hayCambiosPendientes()) return salirModoEdicion(true);
+  if (!confirm(`¿Cancelar todos los cambios realizados en esta edición?\n\nEl calendario volverá al estado que tenía al tocar Editar.`)) return;
+  restaurarDatos(estadoInicialEdicion);
   historial = [];
   seleccion.clear();
+  salirModoEdicion(true);
   renderTodo();
 }
 function confirmarGuardado() {
+  if (!modoEdicion || !hayCambiosPendientes()) return;
+  estadoInicialEdicion = clonarDatos();
   historial = [];
   seleccion.clear();
-  const btn = $("horariosSaveAll");
-  if (btn) { btn.textContent = "Guardado"; btn.classList.add("guardado"); setTimeout(() => { btn.textContent = "Guardar"; btn.classList.remove("guardado"); }, 1200); }
+  salirModoEdicion(true);
   renderTodo();
 }
 function actualizarAcciones() {
-  if ($("horariosUndoAll")) $("horariosUndoAll").disabled = !historial.length;
-  if ($("horariosSaveAll")) $("horariosSaveAll").disabled = !historial.length;
+  const pendientes = hayCambiosPendientes();
+  const acciones = $("horariosCambiosAcciones");
+  acciones?.classList.toggle("oculto", !pendientes);
+  if ($("horariosUndoOne")) $("horariosUndoOne").disabled = !historial.length;
+  if ($("horariosSaveChanges")) $("horariosSaveChanges").disabled = !pendientes;
+  if ($("horariosCancelAll")) $("horariosCancelAll").disabled = !pendientes;
   const c = $("horariosSeleccionCount");
   if (c) c.textContent = seleccion.size ? `${seleccion.size} seleccionada${seleccion.size > 1 ? "s" : ""}` : "";
 }
 function aplicarTurnoASeleccion(turno) {
-  if (!seleccion.size || !puedeEditar()) return;
-  guardarEstado();
+  if (!seleccion.size || !puedeEditar() || !modoEdicion) return;
+  iniciarMovimiento();
   seleccion.forEach(k => { const [e, d] = k.split("::"); datos.set(clave(e, Number(d)), turno); });
+  descartarMovimientoSiNoCambio();
   renderTodo();
 }
 
-function copiarMesCompleto() {
-  if (!puedeEditar()) return;
-  const modo = prompt("Escribí 1 para copiar un empleado o 2 para copiar todo el equipo:", "2");
-  if (modo !== "1" && modo !== "2") return;
-  let lista = empleados;
-  if (modo === "1") {
-    const nombre = prompt(`¿Qué empleado querés copiar?\n${empleados.join(", ")}`, empleados[0]);
-    const encontrado = empleados.find(e => e.toLowerCase() === String(nombre || "").trim().toLowerCase());
-    if (!encontrado) return alert("No se encontró ese empleado.");
-    lista = [encontrado];
+function etiquetaMes(fecha) {
+  return fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+}
+function elegirEmpleado(mensaje, sugerido = empleados[0]) {
+  const nombre = prompt(`${mensaje}\n\n${empleados.join("\n")}`, sugerido);
+  if (nombre === null) return null;
+  const limpio = String(nombre).trim().toLowerCase();
+  const encontrado = empleados.find(e => e.toLowerCase() === limpio);
+  if (!encontrado) {
+    alert("No se encontró ese empleado. Escribí el nombre tal como aparece en la lista.");
+    return null;
   }
-  const destino = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + 1, 1);
-  const detalle = modo === "1" ? lista[0] : "todo el equipo";
-  if (!confirm(`Se copiarán los horarios de ${detalle} de ${nombreMes()} a ${destino.toLocaleDateString("es-AR", { month: "long", year: "numeric" })}.\n\nLos horarios existentes del mes destino serán reemplazados. ¿Continuar?`)) return;
-  guardarEstado();
-  lista.forEach(e => {
+  return encontrado;
+}
+function capturarMesEmpleado(fecha, empleado) {
+  return Array.from({ length: diasDelMes(fecha) }, (_, i) => obtenerTurnoEn(fecha, empleado, i + 1));
+}
+function turnoCopiadoParaDia(turnos, dia) {
+  // Cuando el mes destino tiene más días que el de origen, los días adicionales
+  // quedan como franco para que el pegado reemplace el mes completo de forma previsible.
+  return turnos[dia - 1] ?? "franco";
+}
+function copiarMesEquipo() {
+  if (!puedeEditar() || !modoEdicion) return;
+  const origen = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
+  portapapelesMes = {
+    tipo: "equipo",
+    origen,
+    dias: diasDelMes(origen),
+    empleados: Object.fromEntries(empleados.map(e => [e, capturarMesEmpleado(origen, e)]))
+  };
+  actualizarPortapapeles();
+  alert(`Se copió ${etiquetaMes(origen)} completo para todo el equipo.`);
+}
+function pegarMesEquipo() {
+  if (!puedeEditar() || !modoEdicion || !portapapelesMes) return;
+  const destino = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
+  if (!confirm(`¿Pegar ${etiquetaMes(portapapelesMes.origen)} sobre ${etiquetaMes(destino)}?\n\nSe reemplazarán todos los días de todos los empleados del mes actual.`)) return;
+  iniciarMovimiento();
+  empleados.forEach(e => {
+    const turnos = portapapelesMes.empleados[e] || [];
     for (let d = 1; d <= diasDelMes(destino); d++) {
-      const origenDia = Math.min(d, diasDelMes(fechaVista));
-      datos.set(claveMes(destino, e, d), obtenerTurnoEn(fechaVista, e, origenDia));
+      datos.set(claveMes(destino, e, d), turnoCopiadoParaDia(turnos, d));
     }
   });
-  alert("Mes copiado correctamente.");
-  actualizarAcciones();
+  descartarMovimientoSiNoCambio();
+  seleccion.clear();
+  renderTodo();
+  alert("Mes pegado correctamente.");
+}
+function copiarMesPersona() {
+  if (!puedeEditar() || !modoEdicion) return;
+  const empleado = elegirEmpleado("Escribí el nombre de la persona cuyo mes querés copiar:");
+  if (!empleado) return;
+  const origen = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
+  portapapelesPersona = {
+    tipo: "persona",
+    origen,
+    empleadoOrigen: empleado,
+    dias: diasDelMes(origen),
+    turnos: capturarMesEmpleado(origen, empleado)
+  };
+  actualizarPortapapeles();
+  alert(`Se copió el mes completo de ${empleado} (${etiquetaMes(origen)}).`);
+}
+function pegarMesPersona() {
+  if (!puedeEditar() || !modoEdicion || !portapapelesPersona) return;
+  const empleadoDestino = elegirEmpleado(
+    `Escribí el nombre de la persona a la que querés pegar el mes copiado de ${portapapelesPersona.empleadoOrigen}:`,
+    portapapelesPersona.empleadoOrigen
+  );
+  if (!empleadoDestino) return;
+  const destino = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
+  if (!confirm(`¿Pegar el mes completo de ${portapapelesPersona.empleadoOrigen} (${etiquetaMes(portapapelesPersona.origen)}) en ${empleadoDestino} para ${etiquetaMes(destino)}?\n\nSe reemplazarán todos los días de ${empleadoDestino} en el mes actual.`)) return;
+  iniciarMovimiento();
+  for (let d = 1; d <= diasDelMes(destino); d++) {
+    datos.set(claveMes(destino, empleadoDestino, d), turnoCopiadoParaDia(portapapelesPersona.turnos, d));
+  }
+  descartarMovimientoSiNoCambio();
+  seleccion.clear();
+  renderTodo();
+  alert(`Mes de ${empleadoDestino} pegado correctamente.`);
+}
+function actualizarPortapapeles() {
+  const pegarMes = $("btnHorariosPegarMes");
+  const pegarPersona = $("btnHorariosPegarPersona");
+  if (pegarMes) {
+    pegarMes.disabled = !portapapelesMes;
+    pegarMes.title = portapapelesMes
+      ? `Pegar ${etiquetaMes(portapapelesMes.origen)} para todo el equipo`
+      : "Primero copiá un mes completo";
+  }
+  if (pegarPersona) {
+    pegarPersona.disabled = !portapapelesPersona;
+    pegarPersona.title = portapapelesPersona
+      ? `Pegar el mes copiado de ${portapapelesPersona.empleadoOrigen}`
+      : "Primero copiá el mes de una persona";
+  }
+  const estado = $("horariosCopiaEstado");
+  if (estado) {
+    const mensajes = [];
+    if (portapapelesMes) mensajes.push(`Equipo: ${etiquetaMes(portapapelesMes.origen)}`);
+    if (portapapelesPersona) mensajes.push(`${portapapelesPersona.empleadoOrigen}: ${etiquetaMes(portapapelesPersona.origen)}`);
+    estado.textContent = mensajes.length ? `Copiado · ${mensajes.join(" · ")}` : "Todavía no hay ningún mes copiado";
+    estado.classList.toggle("tiene-copia", mensajes.length > 0);
+  }
 }
 
-function crearBarraProductividad() {
-  if ($("horariosProductividad")) return;
-  const div = document.createElement("div");
-  div.id = "horariosProductividad";
-  div.className = "horarios-productividad";
-  div.innerHTML = `<button id="horariosSaveAll">Guardar</button><button id="horariosUndoAll">Deshacer todo</button><button id="horariosPaint" title="Pintar">🖌 <span>Pintar</span></button><select id="horariosPaintTurno">${TURNOS.filter(t => t.id !== "personalizado").map(t => `<option value="${t.id}">${t.label}</option>`).join("")}</select><button id="horariosCopyMonth">Copiar mes</button><button id="horariosClearSel">Limpiar selección</button><small id="horariosSeleccionCount"></small>`;
-  document.querySelector(".horarios-status-row")?.after(div);
-  $("horariosSaveAll").onclick = confirmarGuardado;
-  $("horariosUndoAll").onclick = deshacerTodo;
-  $("horariosPaint").onclick = () => { modoPincel = !modoPincel; $("horariosPaint").classList.toggle("activo", modoPincel); };
+function crearPanelEdicion() {
+  if ($("horariosEdicionMarco")) return;
+  const marco = document.createElement("section");
+  marco.id = "horariosEdicionMarco";
+  marco.className = "horarios-edicion-marco";
+  marco.innerHTML = `
+    <div id="horariosConsultaAcciones" class="horarios-consulta-acciones">
+      <button id="btnHorariosEditar" type="button" class="horarios-editar-btn">Editar</button>
+    </div>
+    <div id="horariosPanelEdicion" class="horarios-panel-edicion oculto" aria-hidden="true">
+      <div class="horarios-panel-head">
+        <div><span>Modo edición</span><strong id="horariosPanelMes">Editar mes</strong></div>
+        <button id="btnHorariosCerrarEdicion" type="button" aria-label="Cerrar edición">✕</button>
+      </div>
+      <div class="horarios-panel-tools">
+        <button id="btnHorariosCopiarMes" type="button">Copiar mes</button>
+        <button id="btnHorariosPegarMes" type="button" disabled title="Primero copiá un mes completo">Pegar mes</button>
+        <button id="btnHorariosCopiarPersona" type="button">Copiar mes de una persona</button>
+        <button id="btnHorariosPegarPersona" type="button" disabled title="Primero copiá el mes de una persona">Pegar mes de una persona</button>
+      </div>
+      <small id="horariosCopiaEstado" class="horarios-copia-estado">Todavía no hay ningún mes copiado</small>
+      <div class="horarios-pintar-control">
+        <button id="horariosPaint" type="button" aria-pressed="false">Pintar</button>
+        <label><span>Pintar con</span><select id="horariosPaintTurno">${TURNOS.filter(t => t.id !== "personalizado").map(t => `<option value="${t.id}">${t.label}</option>`).join("")}</select></label>
+      </div>
+      <div id="horariosCambiosAcciones" class="horarios-cambios-acciones oculto">
+        <button id="horariosSaveChanges" type="button" class="primario">Guardar</button>
+        <button id="horariosUndoOne" type="button">Deshacer</button>
+        <button id="horariosCancelAll" type="button" class="peligro">Cancelar todo</button>
+      </div>
+      <small id="horariosSeleccionCount" class="horarios-seleccion-count"></small>
+    </div>`;
+  document.querySelector(".horarios-status-row")?.after(marco);
+  $("btnHorariosEditar").onclick = entrarModoEdicion;
+  $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
+  $("btnHorariosCopiarMes").onclick = copiarMesEquipo;
+  $("btnHorariosPegarMes").onclick = pegarMesEquipo;
+  $("btnHorariosCopiarPersona").onclick = copiarMesPersona;
+  $("btnHorariosPegarPersona").onclick = pegarMesPersona;
+  $("horariosPaint").onclick = () => {
+    if (!modoEdicion) return;
+    modoPincel = !modoPincel;
+    $("horariosPaint").classList.toggle("activo", modoPincel);
+    $("horariosPaint").setAttribute("aria-pressed", String(modoPincel));
+  };
   $("horariosPaintTurno").onchange = e => turnoPincel = e.target.value;
-  $("horariosCopyMonth").onclick = copiarMesCompleto;
-  $("horariosClearSel").onclick = () => { seleccion.clear(); renderTabla(); actualizarAcciones(); };
+  $("horariosSaveChanges").onclick = confirmarGuardado;
+  $("horariosUndoOne").onclick = deshacerUltimo;
+  $("horariosCancelAll").onclick = cancelarTodoCambios;
   actualizarPermisos();
   actualizarAcciones();
+  actualizarPortapapeles();
 }
+function entrarModoEdicion() {
+  if (!puedeEditar()) return;
+  modoEdicion = true;
+  estadoInicialEdicion = clonarDatos();
+  historial = [];
+  pinturaMovimientoActivo = false;
+  pinturaCeldas.clear();
+  document.body.classList.add("horarios-modo-edicion");
+  $("horariosConsultaAcciones")?.classList.add("oculto");
+  $("horariosPanelEdicion")?.classList.remove("oculto");
+  $("horariosPanelEdicion")?.setAttribute("aria-hidden", "false");
+  actualizarPanelMes();
+  actualizarPortapapeles();
+  renderTabla();
+}
+function salirModoEdicion(forzar = false) {
+  if (!forzar && hayCambiosPendientes()) {
+    if (!confirm("Hay cambios sin guardar. ¿Querés descartarlos y salir del modo edición?")) return false;
+    restaurarDatos(estadoInicialEdicion);
+  }
+  modoEdicion = false;
+  modoPincel = false;
+  pinturaMovimientoActivo = false;
+  pinturaCeldas.clear();
+  historial = [];
+  estadoInicialEdicion = null;
+  seleccion.clear();
+  cerrarEditor();
+  document.body.classList.remove("horarios-modo-edicion");
+  $("horariosPaint")?.classList.remove("activo");
+  $("horariosPaint")?.setAttribute("aria-pressed", "false");
+  $("horariosConsultaAcciones")?.classList.remove("oculto");
+  $("horariosPanelEdicion")?.classList.add("oculto");
+  $("horariosPanelEdicion")?.setAttribute("aria-hidden", "true");
+  renderTabla();
+  actualizarAcciones();
+  return true;
+}
+function actualizarPanelMes() {
+  const el = $("horariosPanelMes");
+  if (el) el.textContent = `Editar ${nombreMes()}`;
+}
+
 function actualizarPermisos() {
   const editable = puedeEditar();
   document.body.classList.toggle("horarios-solo-lectura", !editable);
-  $("horariosProductividad")?.classList.toggle("oculto", !editable || vistaActual !== "equipo");
+  $("horariosEdicionMarco")?.classList.toggle("oculto", !editable || vistaActual !== "equipo");
   $("horariosEditor")?.classList.toggle("sin-permiso", !editable);
+  if (!editable && modoEdicion) salirModoEdicion();
 }
 
 function desplazarAlDia(d, behavior = "smooth") {
@@ -179,14 +381,14 @@ function actualizarColumnaEmpleados() {
   t.classList.toggle("empleados-minimos", w.scrollLeft > 240);
 }
 function seleccionarCelda(e, d, agregar = false) {
-  if (!puedeEditar()) return;
+  if (!puedeEditar() || !modoEdicion) return;
   if (!agregar) seleccion.clear();
   seleccion.add(keyCelda(e, d));
   renderTabla();
   actualizarAcciones();
 }
 function seleccionarRango(e2, d2) {
-  if (!seleccionInicio || !puedeEditar()) return;
+  if (!seleccionInicio || !puedeEditar() || !modoEdicion) return;
   const i1 = empleados.indexOf(seleccionInicio.empleado), i2 = empleados.indexOf(e2), d1 = seleccionInicio.dia;
   seleccion.clear();
   for (let i = Math.min(i1, i2); i <= Math.max(i1, i2); i++) for (let d = Math.min(d1, d2); d <= Math.max(d1, d2); d++) seleccion.add(keyCelda(empleados[i], d));
@@ -207,20 +409,51 @@ function renderTabla() {
   head.querySelectorAll("[data-horarios-dia]").forEach(x => x.onclick = () => { diaSeleccionado = Number(x.dataset.horariosDia); renderTabla(); renderResumen(); });
   body.querySelectorAll("td[data-empleado]").forEach(td => {
     td.onpointerdown = e => {
-      if (!puedeEditar()) return;
+      if (!puedeEditar() || !modoEdicion) return;
       e.preventDefault();
       const emp = td.dataset.empleado, d = Number(td.dataset.dia);
-      if (modoPincel) { seleccion = new Set([keyCelda(emp, d)]); aplicarTurnoASeleccion(turnoPincel); return; }
+      if (modoPincel) {
+        pinturaMovimientoActivo = true;
+        pinturaCeldas.clear();
+        iniciarMovimiento();
+        pintarCelda(td, emp, d);
+        return;
+      }
       arrastrando = true; seleccionInicio = { empleado: emp, dia: d }; seleccionarCelda(emp, d, e.ctrlKey || e.metaKey);
     };
-    td.onpointerenter = () => { if (arrastrando) seleccionarRango(td.dataset.empleado, Number(td.dataset.dia)); };
-    td.ondblclick = () => { if (puedeEditar()) abrirEditor(td.dataset.empleado, Number(td.dataset.dia)); };
+    td.onpointerenter = () => {
+      if (pinturaMovimientoActivo && modoPincel) pintarCelda(td, td.dataset.empleado, Number(td.dataset.dia));
+      else if (arrastrando) seleccionarRango(td.dataset.empleado, Number(td.dataset.dia));
+    };
+    td.ondblclick = () => { if (puedeEditar() && modoEdicion && !modoPincel) abrirEditor(td.dataset.empleado, Number(td.dataset.dia)); };
   });
   const w = document.querySelector("#horariosEquipoView .horarios-table-wrap");
   if (w && !w.dataset.cfg) { w.dataset.cfg = "1"; w.addEventListener("scroll", actualizarColumnaEmpleados, { passive: true }); }
   actualizarColumnaEmpleados();
 }
-document.addEventListener("pointerup", () => arrastrando = false);
+function pintarCelda(td, empleado, dia) {
+  const k = keyCelda(empleado, dia);
+  if (pinturaCeldas.has(k)) return;
+  pinturaCeldas.add(k);
+  datos.set(clave(empleado, dia), turnoPincel);
+  const btn = td.querySelector(".horario-cell");
+  const def = obtenerDefinicion(turnoPincel);
+  if (btn) {
+    btn.className = `horario-cell ${def.clase}`;
+    btn.dataset.tooltip = def.label;
+    btn.innerHTML = formatoCelda(turnoPincel);
+  }
+  actualizarAcciones();
+}
+document.addEventListener("pointerup", () => {
+  arrastrando = false;
+  if (pinturaMovimientoActivo) {
+    pinturaMovimientoActivo = false;
+    descartarMovimientoSiNoCambio();
+    pinturaCeldas.clear();
+    renderTodo();
+  }
+});
 
 function renderResumen() {
   const t = $("horariosDiaSeleccionado"), c = $("horariosResumenDia");
@@ -234,7 +467,7 @@ function renderResumen() {
   if (b) { b.textContent = `Mañana ${cv.manana} · Tarde ${cv.tarde}`; b.classList.toggle("alerta", cv.manana < 2 || cv.tarde < 2); }
 }
 function abrirEditor(e, d) {
-  if (!puedeEditar()) return;
+  if (!puedeEditar() || !modoEdicion) return;
   edicionActual = { empleado: e, dia: d, turno: obtenerTurno(e, d) };
   $("horariosEditorEmpleado").textContent = seleccion.size > 1 ? `${seleccion.size} turnos` : e;
   $("horariosEditorFecha").textContent = seleccion.size > 1 ? "Aplicar a la selección" : new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
@@ -252,11 +485,16 @@ function abrirEditor(e, d) {
 }
 function cerrarEditor() { $("horariosEditor")?.classList.add("oculto"); $("horariosEditor")?.setAttribute("aria-hidden", "true"); edicionActual = null; }
 function guardarEdicion() {
-  if (!edicionActual || !puedeEditar()) return;
+  if (!edicionActual || !puedeEditar() || !modoEdicion) return;
   let turno = edicionActual.turno;
   if (turno === "personalizado") { turno = $("horariosTurnoPersonalizado").value.trim(); if (!parsearTurno(turno)) return $("horariosTurnoPersonalizado").focus(); }
   if (seleccion.size > 1) aplicarTurnoASeleccion(turno);
-  else { guardarEstado(); datos.set(clave(edicionActual.empleado, edicionActual.dia), turno); renderTodo(); }
+  else {
+    iniciarMovimiento();
+    datos.set(clave(edicionActual.empleado, edicionActual.dia), turno);
+    descartarMovimientoSiNoCambio();
+    renderTodo();
+  }
   cerrarEditor();
 }
 
@@ -300,15 +538,15 @@ function cambiarVista(v) {
   $("horariosTituloVista").textContent = eq ? "Calendario" : "Mi horario";
   $("horariosSubtituloVista").textContent = eq ? "Vista mensual de todos los empleados" : "Tus próximos turnos, francos y vacaciones";
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.classList.toggle("activo", b.dataset.horariosVista === v));
-  $("horariosProductividad")?.classList.toggle("oculto", !eq || !puedeEditar());
+  $("horariosEdicionMarco")?.classList.toggle("oculto", !eq || !puedeEditar());
   $("horariosEditor")?.classList.toggle("oculto", !eq || !edicionActual);
   if (!eq) { cerrarEditor(); renderMiHorario(); }
 }
 function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); renderTodo(); }
 function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); renderTodo(); desplazarAlDia(diaSeleccionado); }
-function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); }
+function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); actualizarPanelMes(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
 function configurarEventos() {
-  crearBarraProductividad();
+  crearPanelEdicion();
   $("btnHorariosMesAnterior")?.addEventListener("click", () => cambiarMes(-1));
   $("btnHorariosMesSiguiente")?.addEventListener("click", () => cambiarMes(1));
   $("btnHorariosHoyToolbar")?.addEventListener("click", irAHoy);
@@ -316,7 +554,7 @@ function configurarEventos() {
   $("btnCancelarHorario")?.addEventListener("click", cerrarEditor);
   $("btnGuardarHorario")?.addEventListener("click", guardarEdicion);
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.horariosVista)));
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { modoPincel = false; $("horariosPaint")?.classList.remove("activo"); cerrarEditor(); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { if (edicionActual) cerrarEditor(); else if (modoEdicion) salirModoEdicion(); } });
   window.addEventListener("autoservicio:sesion", () => { actualizarPermisos(); renderMiHorario(); });
 }
 function activar() {
@@ -324,7 +562,7 @@ function activar() {
   document.querySelectorAll(".app-bottom-nav:not(.horarios-bottom-nav)").forEach(n => { restaurarBottomNav.push([n, n.style.display]); n.style.display = "none"; });
   renderTodo(); cambiarVista(vistaActual); if (esMesActual()) desplazarAlDia(new Date().getDate(), "auto");
 }
-function desactivar() { cerrarEditor(); restaurarBottomNav.forEach(([n, d]) => n.style.display = d); restaurarBottomNav = []; }
+function desactivar() { if (hayCambiosPendientes()) restaurarDatos(estadoInicialEdicion); salirModoEdicion(true); restaurarBottomNav.forEach(([n, d]) => n.style.display = d); restaurarBottomNav = []; }
 
 configurarEventos();
 window.HorariosModule = { activar, desactivar };
