@@ -1,27 +1,27 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-80-gestion-personal';
+const CACHE_VERSION = 'autoservicio-beta-81-integracion';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=80-gestion-personal',
-  './app.js?v=73-permisos-modulos',
-  './config.js?v=71-entrega53-reemplazo-catalogo',
-  './excel.js?v=71-entrega53-reemplazo-catalogo',
-  './scanner.js?v=71-entrega53-reemplazo-catalogo',
-  './reposicion.js?v=71-entrega53-reemplazo-catalogo',
-  './ui.js?v=71-entrega53-reemplazo-catalogo',
-  './release-channel.js?v=71-entrega53-reemplazo-catalogo',
-  './pwa.js?v=71-entrega53-reemplazo-catalogo',
-  './search.js?v=71-entrega53-reemplazo-catalogo',
-  './horarios-config.js?v=73-permisos-modulos',
-  './admin.js?v=74-sectores',
-  './auth.js?v=73-permisos-modulos',
-  './notifications.js?v=71-entrega53-reemplazo-catalogo',
-  './prices.js?v=71-entrega53-reemplazo-catalogo',
-  './horarios.js?v=80-gestion-personal',
-  './api-cache.js?v=71-entrega53-reemplazo-catalogo',
+  './style.css?v=81-integracion',
+  './app.js?v=81-integracion',
+  './config.js?v=81-integracion',
+  './excel.js?v=81-integracion',
+  './scanner.js?v=81-integracion',
+  './reposicion.js?v=81-integracion',
+  './ui.js?v=81-integracion',
+  './release-channel.js?v=81-integracion',
+  './pwa.js?v=81-integracion',
+  './search.js?v=81-integracion',
+  './horarios-config.js?v=81-integracion',
+  './admin.js?v=81-integracion',
+  './auth.js?v=81-integracion',
+  './notifications.js?v=81-integracion',
+  './prices.js?v=81-integracion',
+  './horarios.js?v=81-integracion',
+  './api-cache.js?v=81-integracion',
   './manifest.webmanifest',
   './icons/icon-96.png',
   './icons/icon-192.png',
@@ -124,7 +124,7 @@ self.addEventListener('fetch', event => {
     const esArchivoVersionado = url.searchParams.has('v');
     const esImagen = request.destination === 'image';
     if (esArchivoVersionado || esImagen) {
-      event.respondWith(cachePrimero(request));
+      event.respondWith(actualizarEnSegundoPlano(request, event));
     } else {
       event.respondWith(actualizarEnSegundoPlano(request, event));
     }

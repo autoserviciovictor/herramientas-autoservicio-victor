@@ -111,10 +111,11 @@ function poblarSupervisoresSector(actual=''){
  const candidatos=usuarios.filter(u=>u.activo && (u.rol==='supervisor'||u.rol==='administrador'));
  sel.innerHTML='<option value="">Sin supervisor</option>'+candidatos.map(u=>`<option value="${u.usuario}">${escaparHtml(u.nombre)} (@${u.usuario})</option>`).join(''); sel.value=actual||'';
 }
-function abrirSectorModal(sec=null){
- $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; $("adminSectorColor").value=sec?.color||'#b72e35'; $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto');
+async function abrirSectorModal(sec=null){
+ if (!usuarios.length) await cargarUsuarios().catch(()=>{});
+ $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; $("adminSectorColor").value=sec?.color||'#b72e35'; $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto'); document.body.classList.add("modal-abierto");
 }
-function cerrarSectorModal(){ $("adminSectorModal")?.classList.add('oculto'); }
+function cerrarSectorModal(){ $("adminSectorModal")?.classList.add('oculto'); document.body.classList.remove("modal-abierto"); }
 function mensajeSectores(t,tipo='ok'){const e=$("adminSectoresMensaje");if(!e)return;e.textContent=t;e.className=`admin-message ${tipo}`;clearTimeout(mensajeSectores.timer);mensajeSectores.timer=setTimeout(()=>{e.textContent='';e.className='admin-message'},3500)}
 async function guardarSector(){
  const original=$("adminSectorOriginal").value; const payload={nombre:$("adminSectorNombre").value.trim(),color:$("adminSectorColor").value,supervisor:$("adminSectorSupervisor").value,activo:$("adminSectorActivo").checked}; if(!payload.nombre)return mensajeSectores('Ingresá el nombre del sector.','error');
@@ -139,7 +140,8 @@ function renderUsuarios() {
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
 }
 
-function abrirNuevoUsuario() {
+async function abrirNuevoUsuario() {
+  if (!sectores.length) await cargarSectores().catch(()=>{});
   $("adminUsuarioModalTitulo").textContent = "Crear usuario";
   $("adminUsuarioOriginal").value = "";
   $("adminUsuarioNombre").value = "";
@@ -153,6 +155,7 @@ function abrirNuevoUsuario() {
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
+  document.body.classList.add("modal-abierto");
 }
 
 function abrirEditarUsuario(clave) {
@@ -170,9 +173,10 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
+  document.body.classList.add("modal-abierto");
 }
 
-function cerrarUsuarioModal() { $("adminUsuarioModal")?.classList.add("oculto"); }
+function cerrarUsuarioModal() { $("adminUsuarioModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
 
 async function guardarUsuario() {
   const original = $("adminUsuarioOriginal").value;
@@ -189,7 +193,7 @@ async function guardarUsuario() {
   try {
     if (original) await api(`/admin/usuarios/${encodeURIComponent(original)}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
     else await api("/admin/usuarios", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
-    cerrarUsuarioModal(); mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok"); await cargarUsuarios();
+    cerrarUsuarioModal(); mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok"); await Promise.all([cargarUsuarios(), cargarSectores()]);
   } catch(e) { mensaje(e.message, "error"); }
   finally { btn.disabled = false; }
 }

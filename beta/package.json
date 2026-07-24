@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "8.0.0",
-  "description": "Autoservicio 8.0 Beta - Gestión avanzada de personal",
+  "version": "8.1.0",
+  "description": "Autoservicio 8.1 Beta - Correcciones de integración",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
