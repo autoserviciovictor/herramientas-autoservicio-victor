@@ -46,7 +46,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V8.1.2 Beta</p>
+    <p>Herramientas V8.1.4 Beta</p>
 </div>
 
 <div class="app">
@@ -60,7 +60,7 @@
         <div id="userDropdown" class="user-dropdown oculto" aria-hidden="true">
             <div class="user-dropdown-profile">
                 <span class="user-dropdown-avatar">👤</span>
-                <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Repositor</small></div>
+                <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Personal</small></div>
             </div>
             <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><strong>Configuración</strong></button>
             <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><strong>Cerrar sesión</strong></button>
@@ -121,7 +121,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V8.1.2 Beta</strong>
+            <strong>V8.1.4 Beta</strong>
         </section>
     </main>
 
@@ -271,7 +271,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">8.1.2 Beta - Migración automática de Google Sheets</strong>
+            <strong id="settingsAppVersion">8.1.4 Beta - Permisos y administración completa</strong>
         </section>
     </main>
 
@@ -636,7 +636,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V8.1.2 Beta</span>
+            <span id="adminVersion" class="admin-version">V8.1.4 Beta</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -711,7 +711,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">8.1.2 Beta - Migración automática de Google Sheets</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">8.1.4 Beta - Permisos y administración completa</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
@@ -732,7 +732,7 @@
         <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
         <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
         <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
-        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="supervisor">Supervisor</option><option value="administrador">Administrador</option></select></label>
+        <label>Rol<select id="adminUsuarioRol"><option value="personal">Personal</option><option value="supervisor">Supervisor</option><option value="administrador">Administrador</option></select></label>
         <label>Sector<select id="adminUsuarioSector"><option value="">Sin sector</option></select></label>
         <fieldset id="adminUsuarioPermisos" class="admin-permissions-fieldset">
           <legend>Módulos visibles</legend>
@@ -762,7 +762,7 @@
         <label>Color<input id="adminSectorColor" type="color" value="#b72e35"></label>
         <label>Supervisor<select id="adminSectorSupervisor"><option value="">Sin supervisor</option></select></label>
         <label id="adminSectorActivoFila" class="admin-active-row oculto"><input id="adminSectorActivo" type="checkbox" checked> Sector activo</label>
-        <div class="admin-modal-actions"><button id="btnAdminCancelarSector" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarSector" type="button" class="save-btn">Guardar</button></div>
+        <button id="btnAdminEliminarSector" type="button" class="danger-btn-soft oculto">Eliminar sector</button><div class="admin-modal-actions"><button id="btnAdminCancelarSector" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarSector" type="button" class="save-btn">Guardar</button></div>
       </div>
     </div>
 

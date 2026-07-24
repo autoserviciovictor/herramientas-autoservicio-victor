@@ -24,8 +24,9 @@ async function cargarContextoHorarios() {
     sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
     permisoEdicionServidor = data.puedeEditar === true;
     const usuario = usuarioHorarios();
-    const preferido = esAdministradorHorarios()
-      ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : sectoresHorarios[0]?.id)
+    const puedeElegirSector = ["administrador","supervisor"].includes(usuario.rol);
+    const preferido = puedeElegirSector
+      ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : (usuario.sector || sectoresHorarios[0]?.id))
       : (usuario.sector || sectoresHorarios[0]?.id);
     sectorActual = preferido || "";
     empleados = empleadosDelSector();
@@ -80,7 +81,7 @@ function renderSelectorSector() {
   if ($("horariosSectorColor")) $("horariosSectorColor").style.background = sector?.color || "#b72e35";
   const wrap = $("horariosSectorSelectorWrap");
   const select = $("horariosSectorSelector");
-  if (wrap) wrap.classList.toggle("oculto", !esAdministradorHorarios() || sectoresHorarios.length < 2);
+  if (wrap) wrap.classList.toggle("oculto", !["administrador","supervisor"].includes(usuarioHorarios().rol) || sectoresHorarios.length < 2);
   if (select) {
     select.innerHTML = sectoresHorarios.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("");
     select.value = sectorActual;

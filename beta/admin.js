@@ -3,7 +3,7 @@ import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
 const NOMBRES_MODULO = { inventario:"Inventario", vencimientos:"Vencimientos", anotar:"Lista", precios:"Precios", horarios:"Horarios" };
-function permisosCompatibles(permisos, rol="repositor") {
+function permisosCompatibles(permisos, rol="personal") {
   if (rol === "administrador") return Object.fromEntries(MODULOS_PERMISO.map(m => [m,true]));
   const valor = permisos && typeof permisos === "object" ? permisos : {};
   return Object.fromEntries(MODULOS_PERMISO.map(m => [m, valor[m] !== false]));
@@ -11,7 +11,7 @@ function permisosCompatibles(permisos, rol="repositor") {
 function leerPermisosModal() {
   return Object.fromEntries(MODULOS_PERMISO.map(m => [m, Boolean(document.querySelector(`[data-permiso-modulo="${m}"]`)?.checked)]));
 }
-function aplicarPermisosModal(permisos, rol="repositor") {
+function aplicarPermisosModal(permisos, rol="personal") {
   const valores = permisosCompatibles(permisos, rol);
   document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.checked = valores[input.dataset.permisoModulo] !== false; });
   actualizarEstadoPermisosPorRol();
@@ -108,15 +108,20 @@ function renderSectores(){
 }
 function poblarSupervisoresSector(actual=''){
  const sel=$("adminSectorSupervisor"); if(!sel)return;
- const candidatos=usuarios.filter(u=>u.activo && (u.rol==='supervisor'||u.rol==='administrador'));
+ const candidatos=usuarios.filter(u=>u.activo);
  sel.innerHTML='<option value="">Sin supervisor</option>'+candidatos.map(u=>`<option value="${u.usuario}">${escaparHtml(u.nombre)} (@${u.usuario})</option>`).join(''); sel.value=actual||'';
 }
 async function abrirSectorModal(sec=null){
  if (!usuarios.length) await cargarUsuarios().catch(()=>{});
- $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; $("adminSectorColor").value=sec?.color||'#b72e35'; $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto'); document.body.classList.add("modal-abierto");
+ $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; $("adminSectorColor").value=sec?.color||'#b72e35'; $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); $("btnAdminEliminarSector")?.classList.toggle("oculto",!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto'); document.body.classList.add("modal-abierto");
 }
 function cerrarSectorModal(){ $("adminSectorModal")?.classList.add('oculto'); document.body.classList.remove("modal-abierto"); }
 function mensajeSectores(t,tipo='ok'){const e=$("adminSectoresMensaje");if(!e)return;e.textContent=t;e.className=`admin-message ${tipo}`;clearTimeout(mensajeSectores.timer);mensajeSectores.timer=setTimeout(()=>{e.textContent='';e.className='admin-message'},3500)}
+async function eliminarSectorActual(){
+ const id=$("adminSectorOriginal").value; if(!id)return; const sec=sectorPorId(id);
+ if(!confirm(`¿Eliminar definitivamente el sector ${sec?.nombre || id}?`))return;
+ try{await api(`/admin/sectores/${encodeURIComponent(id)}`,{method:"DELETE"}); cerrarSectorModal(); await Promise.all([cargarSectores(),cargarUsuarios()]); mensajeSectores("Sector eliminado.");}catch(e){mensajeSectores(e.message,"error");}
+}
 async function guardarSector(){
  const original=$("adminSectorOriginal").value; const payload={nombre:$("adminSectorNombre").value.trim(),color:$("adminSectorColor").value,supervisor:$("adminSectorSupervisor").value,activo:$("adminSectorActivo").checked}; if(!payload.nombre)return mensajeSectores('Ingresá el nombre del sector.','error');
  try{ if(original) await api(`/admin/sectores/${encodeURIComponent(original)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); else await api('/admin/sectores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); cerrarSectorModal(); await cargarSectores(); mensajeSectores(original?'Sector actualizado.':'Sector creado.'); }catch(e){mensajeSectores(e.message,'error')}
@@ -134,10 +139,17 @@ function renderUsuarios() {
   if (!usuarios.length) { cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>'; return; }
   cont.innerHTML = usuarios.map(u => `
     <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "supervisor" ? "Supervisor" : "Repositor")} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
-      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button></div>
+      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "supervisor" ? "Supervisor" : "Personal")} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
+      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button><button type="button" class="btn-eliminar-usuario danger-btn-soft">Eliminar</button></div>
     </article>`).join("");
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+  cont.querySelectorAll(".btn-eliminar-usuario").forEach(btn => btn.addEventListener("click", () => eliminarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+}
+
+async function eliminarUsuario(clave) {
+  const u=usuarios.find(x=>x.usuario===clave); if(!u)return;
+  if(!confirm(`¿Eliminar definitivamente a ${u.nombre || u.usuario}?`))return;
+  try{await api(`/admin/usuarios/${encodeURIComponent(clave)}`,{method:"DELETE"}); await Promise.all([cargarUsuarios(),cargarSectores()]); mensaje("Usuario eliminado");}catch(e){mensaje(e.message,"error");}
 }
 
 async function abrirNuevoUsuario() {
@@ -149,9 +161,9 @@ async function abrirNuevoUsuario() {
   $("adminUsuarioUsuario").disabled = false;
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Mínimo 4 caracteres";
-  $("adminUsuarioRol").value = "repositor";
+  $("adminUsuarioRol").value = "personal";
   poblarSectoresUsuario(); $("adminUsuarioSector").value = "";
-  aplicarPermisosModal(null, "repositor");
+  aplicarPermisosModal(null, "personal");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
@@ -627,6 +639,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
+  $("btnAdminEliminarSector")?.addEventListener("click", eliminarSectorActual);
   $("adminUsuarioRol")?.addEventListener("change", actualizarEstadoPermisosPorRol);
   document.querySelectorAll(".admin-tab").forEach(btn => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)));
   document.querySelectorAll(".admin-period-btn").forEach(btn => btn.addEventListener("click", () => {

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-81-integracion';
+const CACHE_VERSION = 'autoservicio-v813-integracion-usuarios';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
