@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-72-horarios-entrega6-3';
+const CACHE_VERSION = 'autoservicio-beta-73-permisos-modulos';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=72-horarios-entrega6-3',
-  './app.js?v=71-entrega53-reemplazo-catalogo',
+  './style.css?v=73-permisos-modulos',
+  './app.js?v=73-permisos-modulos',
   './config.js?v=71-entrega53-reemplazo-catalogo',
   './excel.js?v=71-entrega53-reemplazo-catalogo',
   './scanner.js?v=71-entrega53-reemplazo-catalogo',
@@ -15,12 +15,12 @@ const APP_SHELL = [
   './release-channel.js?v=71-entrega53-reemplazo-catalogo',
   './pwa.js?v=71-entrega53-reemplazo-catalogo',
   './search.js?v=71-entrega53-reemplazo-catalogo',
-  './horarios-config.js?v=72-horarios-entrega6-3',
-  './admin.js?v=72-horarios-entrega6-3',
-  './auth.js?v=71-entrega53-reemplazo-catalogo',
+  './horarios-config.js?v=73-permisos-modulos',
+  './admin.js?v=73-permisos-modulos',
+  './auth.js?v=73-permisos-modulos',
   './notifications.js?v=71-entrega53-reemplazo-catalogo',
   './prices.js?v=71-entrega53-reemplazo-catalogo',
-  './horarios.js?v=72-horarios-entrega6-3',
+  './horarios.js?v=73-permisos-modulos',
   './api-cache.js?v=71-entrega53-reemplazo-catalogo',
   './manifest.webmanifest',
   './icons/icon-96.png',

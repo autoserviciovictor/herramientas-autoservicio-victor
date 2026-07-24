@@ -9,6 +9,20 @@ let usuarioActual = null;
 try { usuarioActual = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch {}
 
 const $ = id => document.getElementById(id);
+const MODULOS_DISPONIBLES = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
+
+function permisosUsuario(usuario = usuarioActual) {
+  if (usuario?.rol === "administrador") return Object.fromEntries(MODULOS_DISPONIBLES.map(m => [m, true]));
+  const recibidos = usuario?.permisos && typeof usuario.permisos === "object" ? usuario.permisos : {};
+  return Object.fromEntries(MODULOS_DISPONIBLES.map(m => [m, recibidos[m] !== false]));
+}
+
+function puedeVerModulo(modulo, usuario = usuarioActual) {
+  if (["inicio", "ajustes"].includes(modulo)) return true;
+  if (modulo === "admin") return usuario?.rol === "administrador";
+  return permisosUsuario(usuario)[modulo] !== false;
+}
+
 
 function esApi(url) {
   try { return new URL(typeof url === "string" ? url : url.url, location.href).origin === new URL(API_BASE_URL).origin; }
@@ -120,6 +134,9 @@ function actualizarInterfazUsuario() {
   if ($("menuSesionNombre")) $("menuSesionNombre").textContent = nombre || "Usuario";
   if ($("menuSesionRol")) $("menuSesionRol").textContent = textoRol;
   const esAdministrador = usuarioActual?.rol === "administrador";
+  document.querySelectorAll(".module-card[data-modulo]").forEach(card => {
+    card.classList.toggle("oculto", !puedeVerModulo(card.dataset.modulo));
+  });
   const adminModule = document.querySelector(".admin-module-card");
   if (adminModule) adminModule.classList.toggle("oculto", !esAdministrador);
   const adminPanel = $("pantallaAdmin");
@@ -205,6 +222,8 @@ window.AutoservicioAuth = {
   getToken: () => token,
   getUsuario: () => usuarioActual,
   esAdmin: () => usuarioActual?.rol === "administrador",
+  puedeVerModulo,
+  getPermisos: () => permisosUsuario(),
   cerrarSesion,
   sincronizarOffline: sincronizarColaOffline,
   pendientesOffline: () => leerColaOffline().length

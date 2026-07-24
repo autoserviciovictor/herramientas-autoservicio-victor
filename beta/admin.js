@@ -1,6 +1,28 @@
 import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
 
 const $ = id => document.getElementById(id);
+const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
+const NOMBRES_MODULO = { inventario:"Inventario", vencimientos:"Vencimientos", anotar:"Lista", precios:"Precios", horarios:"Horarios" };
+function permisosCompatibles(permisos, rol="repositor") {
+  if (rol === "administrador") return Object.fromEntries(MODULOS_PERMISO.map(m => [m,true]));
+  const valor = permisos && typeof permisos === "object" ? permisos : {};
+  return Object.fromEntries(MODULOS_PERMISO.map(m => [m, valor[m] !== false]));
+}
+function leerPermisosModal() {
+  return Object.fromEntries(MODULOS_PERMISO.map(m => [m, Boolean(document.querySelector(`[data-permiso-modulo="${m}"]`)?.checked)]));
+}
+function aplicarPermisosModal(permisos, rol="repositor") {
+  const valores = permisosCompatibles(permisos, rol);
+  document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.checked = valores[input.dataset.permisoModulo] !== false; });
+  actualizarEstadoPermisosPorRol();
+}
+function actualizarEstadoPermisosPorRol() {
+  const esAdmin = $("adminUsuarioRol")?.value === "administrador";
+  document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.disabled = esAdmin; if (esAdmin) input.checked = true; });
+  $("adminPermisosAdminAviso")?.classList.toggle("oculto", !esAdmin);
+  $("adminUsuarioPermisos")?.classList.toggle("es-admin", esAdmin);
+}
+
 let usuarios = [];
 let historialVencimientos = [];
 let historialPeriodo = "hoy";
@@ -72,7 +94,7 @@ function renderUsuarios() {
   if (!usuarios.length) { cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>'; return; }
   cont.innerHTML = usuarios.map(u => `
     <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : "Repositor"}</span></div></div>
+      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : "Repositor"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
       <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button></div>
     </article>`).join("");
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
@@ -87,6 +109,7 @@ function abrirNuevoUsuario() {
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Mínimo 4 caracteres";
   $("adminUsuarioRol").value = "repositor";
+  aplicarPermisosModal(null, "repositor");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
@@ -102,6 +125,7 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Dejar vacío para no cambiar";
   $("adminUsuarioRol").value = u.rol;
+  aplicarPermisosModal(u.permisos, u.rol);
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
@@ -116,6 +140,7 @@ async function guardarUsuario() {
     usuario: $("adminUsuarioUsuario").value.trim(),
     password: $("adminUsuarioPassword").value,
     rol: $("adminUsuarioRol").value,
+    permisos: leerPermisosModal(),
     activo: $("adminUsuarioActivo").checked
   };
   const btn = $("btnAdminGuardarUsuario"); btn.disabled = true;
@@ -550,6 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
+  $("adminUsuarioRol")?.addEventListener("change", actualizarEstadoPermisosPorRol);
   document.querySelectorAll(".admin-tab").forEach(btn => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)));
   document.querySelectorAll(".admin-period-btn").forEach(btn => btn.addEventListener("click", () => {
     historialPeriodo = btn.dataset.periodo || "hoy";

@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "7.1 Beta - Entrega 5.2.2";
+const APP_VERSION = "7.3 Beta - Permisos por módulo";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -293,6 +293,17 @@ function verificarPassword(password, guardado) {
 
 let hojaUsuariosAsegurada = false;
 let promesaHojaUsuarios = null;
+const MODULOS_PERMITIDOS = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
+function permisosPorDefecto() { return Object.fromEntries(MODULOS_PERMITIDOS.map(m => [m, true])); }
+function normalizarPermisos(valor, rol = "repositor") {
+  if (rol === "administrador") return permisosPorDefecto();
+  let entrada = valor;
+  if (typeof valor === "string" && valor.trim()) { try { entrada = JSON.parse(valor); } catch { entrada = {}; } }
+  if (!entrada || typeof entrada !== "object" || Array.isArray(entrada)) entrada = {};
+  return Object.fromEntries(MODULOS_PERMITIDOS.map(m => [m, entrada[m] !== false]));
+}
+function serializarPermisos(permisos, rol) { return JSON.stringify(normalizarPermisos(permisos, rol)); }
+
 async function asegurarHojaUsuarios() {
   if (hojaUsuariosAsegurada) return;
   if (promesaHojaUsuarios) return promesaHojaUsuarios;
@@ -306,13 +317,13 @@ async function asegurarHojaUsuarios() {
         requestBody: { requests: [{ addSheet: { properties: { title: USUARIOS_SHEET_NAME } } }] }
       });
     }
-    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado"];
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:F2` });
+    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos"];
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:G2` });
     const filas = respuesta.data.values || [];
-    if (!filas[0] || filas[0][0] !== "Usuario") {
+    if (!filas[0] || encabezados.some((titulo, i) => filas[0][i] !== titulo)) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A1:F1`,
+        range: `${USUARIOS_SHEET_NAME}!A1:G1`,
         valueInputOption: "USER_ENTERED",
         requestBody: { values: [encabezados] }
       });
@@ -322,10 +333,10 @@ async function asegurarHojaUsuarios() {
       if (!ADMIN_KEY) throw new Error("Configurá ADMIN_KEY en Render para crear el primer usuario administrador");
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A:F`,
+        range: `${USUARIOS_SHEET_NAME}!A:G`,
         valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
-        requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso()]] }
+        requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso(), serializarPermisos(null, "administrador")]] }
       });
     }
     hojaUsuariosAsegurada = true;
@@ -343,14 +354,15 @@ function filaAUsuario(fila, index) {
     nombre: normalizarTexto(fila[1]) || normalizarTexto(fila[0]),
     passwordHash: normalizarTexto(fila[2]),
     rol: normalizarTexto(fila[3]).toLowerCase() === "administrador" ? "administrador" : "repositor",
-    activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto)
+    activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto),
+    permisos: normalizarPermisos(fila[6], normalizarTexto(fila[3]).toLowerCase() === "administrador" ? "administrador" : "repositor")
   };
 }
 
 async function obtenerUsuarios() {
   await asegurarHojaUsuarios();
   return leerConCache("usuarios", CACHE_TTL.usuarios, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:F` });
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:G` });
     const filas = respuesta.data.values || [];
     return filas.slice(1).map(filaAUsuario).filter(u => u.usuario);
   });
@@ -363,7 +375,7 @@ async function requerirSesion(req, res, next) {
     const usuarios = await obtenerUsuarios();
     const usuario = usuarios.find(u => u.usuario === sesion.usuario);
     if (!usuario || !usuario.activo) return res.status(401).json({ ok: false, mensaje: "Usuario inexistente o desactivado" });
-    req.usuario = { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol };
+    req.usuario = { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos };
     next();
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo validar la sesión" });
@@ -492,7 +504,7 @@ app.post("/auth/login", async (req, res) => {
     const ahora = Date.now();
     const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
     const token = firmarTokenAdmin({ usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, iat: ahora, exp });
-    res.json({ ok: true, token, usuario: { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol }, expira: new Date(exp).toISOString() });
+    res.json({ ok: true, token, usuario: { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos }, expira: new Date(exp).toISOString() });
   } catch (error) {
     console.error("Error en /auth/login:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo iniciar sesión" });
@@ -548,19 +560,20 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
     const nombre = normalizarTexto(req.body?.nombre) || usuario;
     const password = String(req.body?.password || "");
     const rol = normalizarTexto(req.body?.rol).toLowerCase() === "administrador" ? "administrador" : "repositor";
+    const permisos = normalizarPermisos(req.body?.permisos, rol);
     if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return res.status(400).json({ ok:false, mensaje:"El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo" });
     if (password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
     const usuarios = await obtenerUsuarios();
     if (usuarios.some(item => item.usuario === usuario)) return res.status(409).json({ ok:false, mensaje:"Ese usuario ya existe" });
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A:F`,
+      range: `${USUARIOS_SHEET_NAME}!A:G`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso()]] }
+      requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol)]] }
     });
     invalidarCache("usuarios");
-    res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true } });
+    res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true, permisos } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo crear el usuario" });
   }
@@ -575,6 +588,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     const nombre = normalizarTexto(req.body?.nombre) || actual.nombre;
     const rol = req.body?.rol === undefined ? actual.rol : (normalizarTexto(req.body.rol).toLowerCase() === "administrador" ? "administrador" : "repositor");
     const activo = req.body?.activo === undefined ? actual.activo : Boolean(req.body.activo);
+    const permisos = req.body?.permisos === undefined ? normalizarPermisos(actual.permisos, rol) : normalizarPermisos(req.body.permisos, rol);
     const password = String(req.body?.password || "");
     if (clave === req.usuario.usuario && (!activo || rol !== "administrador")) {
       return res.status(400).json({ ok:false, mensaje:"No podés desactivar tu propia cuenta ni quitarte el rol de administrador" });
@@ -583,12 +597,12 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     const hash = password ? hashPassword(password) : actual.passwordHash;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:F${actual.filaGoogle}`,
+      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:G${actual.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso()]] }
+      requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol)]] }
     });
     invalidarCache("usuarios");
-    res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo } });
+    res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo, permisos } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });
   }

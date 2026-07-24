@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=72-horarios-entrega6-3">
+    <link rel="stylesheet" href="style.css?v=73-permisos-modulos">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -720,6 +720,18 @@
         <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
         <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
         <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="administrador">Administrador</option></select></label>
+        <fieldset id="adminUsuarioPermisos" class="admin-permissions-fieldset">
+          <legend>Módulos visibles</legend>
+          <p>Elegí qué herramientas aparecerán para este usuario.</p>
+          <div class="admin-permissions-grid">
+            <label><input type="checkbox" data-permiso-modulo="inventario" checked><span>📦 Inventario</span></label>
+            <label><input type="checkbox" data-permiso-modulo="vencimientos" checked><span>📅 Vencimientos</span></label>
+            <label><input type="checkbox" data-permiso-modulo="anotar" checked><span>📝 Lista</span></label>
+            <label><input type="checkbox" data-permiso-modulo="precios" checked><span>🏷️ Precios</span></label>
+            <label><input type="checkbox" data-permiso-modulo="horarios" checked><span>🕒 Horarios</span></label>
+          </div>
+          <small id="adminPermisosAdminAviso" class="admin-permissions-note oculto">Los administradores tienen acceso completo a todos los módulos.</small>
+        </fieldset>
         <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked> Usuario activo</label>
         <div class="admin-modal-actions"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar</button></div>
       </div>
@@ -832,14 +844,14 @@
 
 <script src="./release-channel.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script src="./pwa.js?v=71-entrega53-reemplazo-catalogo" defer></script>
-<script type="module" src="./auth.js?v=71-entrega53-reemplazo-catalogo"></script>
+<script type="module" src="./auth.js?v=73-permisos-modulos"></script>
 <script src="./xlsx.full.min.js"></script>
 <script src="./horarios-config.js?v=72-horarios-entrega6-3"></script>
-<script type="module" src="./admin.js?v=72-horarios-entrega6-3"></script>
+<script type="module" src="./admin.js?v=73-permisos-modulos"></script>
 <script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
-<script type="module" src="./app.js?v=71-entrega53-reemplazo-catalogo"></script>
-<script type="module" src="./horarios.js?v=72-horarios-entrega6-3"></script>
+<script type="module" src="./app.js?v=73-permisos-modulos"></script>
+<script type="module" src="./horarios.js?v=73-permisos-modulos"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

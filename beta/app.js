@@ -202,6 +202,10 @@ async function inicializar() {
 }
 
 async function entrarPantalla(nombre, opciones = {}) {
+    if (!window.AutoservicioAuth?.puedeVerModulo?.(nombre)) {
+        window.AutoservicioDialog?.alert?.({ title: "Sin permiso", message: "Este módulo no está habilitado para tu usuario." });
+        nombre = "inicio";
+    }
     if (!opciones.forzar) {
         if (pantallaActualApp === "anotar" && nombre !== "anotar") {
             resolverSalidaReposicion(() => entrarPantalla(nombre, { forzar: true }));

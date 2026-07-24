@@ -3754,3 +3754,17 @@ body.horarios-modo-edicion .horarios-table td{user-select:none;-webkit-user-sele
 .admin-shift-modal{max-width:430px}.admin-shift-form{display:grid;gap:14px;margin:18px 0}.admin-shift-form label{display:grid;gap:7px;font-weight:700;font-size:13px}.admin-shift-form input[type=time]{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px}
 .admin-shift-color-label{grid-template-columns:1fr auto auto;align-items:center}.admin-shift-color-label input{width:52px;height:38px;border:0;background:transparent;padding:0}.admin-shift-color-label span{font-family:monospace;color:#4b5563}
 @media(max-width:640px){.admin-shift-card{grid-template-columns:42px 1fr auto;padding:10px}.admin-shift-swatch{width:42px;height:42px}.admin-shift-card button{padding:8px 10px}}
+
+
+/* Entrega 7.0: permisos por módulo */
+.admin-permissions-fieldset{border:1px solid #e5e7eb;border-radius:16px;padding:14px;margin:4px 0 2px;background:#fafafa}
+.admin-permissions-fieldset legend{padding:0 6px;font-weight:800;color:#111827}
+.admin-permissions-fieldset>p{margin:0 0 12px;color:#6b7280;font-size:.9rem}
+.admin-permissions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.admin-permissions-grid label{display:flex;align-items:center;gap:9px;padding:11px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-weight:700;cursor:pointer}
+.admin-permissions-grid input{width:19px;height:19px;accent-color:#111827}
+.admin-permissions-fieldset.es-admin{opacity:.72}
+.admin-permissions-note{display:block;margin-top:10px;color:#7f1d1d;font-weight:700}
+.admin-user-permission-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.admin-user-permission-chips em{font-style:normal;font-size:.72rem;line-height:1;padding:5px 7px;border-radius:999px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb}
+@media(max-width:560px){.admin-permissions-grid{grid-template-columns:1fr}.admin-user-permission-chips{max-width:230px}}
