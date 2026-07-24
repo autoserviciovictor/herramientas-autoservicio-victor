@@ -1,13 +1,39 @@
 import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
 
 const $ = id => document.getElementById(id);
+const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
+const NOMBRES_MODULO = { inventario:"Inventario", vencimientos:"Vencimientos", anotar:"Lista", precios:"Precios", horarios:"Horarios" };
+function permisosCompatibles(permisos, rol="repositor") {
+  if (rol === "administrador") return Object.fromEntries(MODULOS_PERMISO.map(m => [m,true]));
+  const valor = permisos && typeof permisos === "object" ? permisos : {};
+  return Object.fromEntries(MODULOS_PERMISO.map(m => [m, valor[m] !== false]));
+}
+function leerPermisosModal() {
+  return Object.fromEntries(MODULOS_PERMISO.map(m => [m, Boolean(document.querySelector(`[data-permiso-modulo="${m}"]`)?.checked)]));
+}
+function aplicarPermisosModal(permisos, rol="repositor") {
+  const valores = permisosCompatibles(permisos, rol);
+  document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.checked = valores[input.dataset.permisoModulo] !== false; });
+  actualizarEstadoPermisosPorRol();
+}
+function actualizarEstadoPermisosPorRol() {
+  const esAdmin = $("adminUsuarioRol")?.value === "administrador";
+  document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.disabled = esAdmin; if (esAdmin) input.checked = true; });
+  $("adminPermisosAdminAviso")?.classList.toggle("oculto", !esAdmin);
+  $("adminUsuarioPermisos")?.classList.toggle("es-admin", esAdmin);
+}
+
 let usuarios = [];
+let sectores = [];
 let historialVencimientos = [];
 let historialPeriodo = "hoy";
 let historialLimite = 20;
 let historialBusquedaTimer = null;
 let importacionPendiente = null;
 let importacionResumenPendiente = null;
+
+const IMPORTACION_HOJA_ESPERADA = "RptStockInventarioValuado";
+const IMPORTACION_MIN_PRODUCTOS = 1000;
 
 function mensaje(texto, tipo = "") {
   const el = $("adminMensaje");
@@ -57,6 +83,45 @@ async function cargarResumen() {
   if ($("adminVersionSistema")) $("adminVersionSistema").textContent = data.version;
 }
 
+
+async function cargarSectores() {
+  const data = await api("/admin/sectores");
+  sectores = data.sectores || [];
+  renderSectores();
+  poblarSectoresUsuario();
+}
+function sectorPorId(id){ return sectores.find(s => s.id === id); }
+function poblarSectoresUsuario(){
+  const sel=$("adminUsuarioSector"); if(!sel)return; const actual=sel.value;
+  sel.innerHTML=`<option value="">Sin sector</option>`+sectores.filter(s=>s.activo).map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}</option>`).join("");
+  sel.value=actual;
+}
+function renderSectores(){
+  const cont=$("adminSectoresLista"); if(!cont)return;
+  if(!sectores.length){cont.innerHTML=`<div class="empty-state">No hay sectores.</div>`;return;}
+  cont.innerHTML=sectores.map(s=>`<article class="admin-sector-card ${s.activo?'':'inactivo'}" data-sector-id="${s.id}">
+    <span class="admin-sector-color" style="background:${s.color}"></span>
+    <div class="admin-sector-info"><strong>${escaparHtml(s.nombre)}</strong><span>Supervisor: ${escaparHtml(s.supervisorNombre||'Sin asignar')}</span></div>
+    <div class="admin-user-actions"><span class="user-status ${s.activo?'activo':'inactivo'}">${s.activo?'Activo':'Inactivo'}</span><button type="button" class="btn-editar-sector">Editar</button></div>
+  </article>`).join('');
+  cont.querySelectorAll('.btn-editar-sector').forEach(b=>b.addEventListener('click',()=>abrirSectorModal(sectorPorId(b.closest('[data-sector-id]').dataset.sectorId))));
+}
+function poblarSupervisoresSector(actual=''){
+ const sel=$("adminSectorSupervisor"); if(!sel)return;
+ const candidatos=usuarios.filter(u=>u.activo && (u.rol==='supervisor'||u.rol==='administrador'));
+ sel.innerHTML='<option value="">Sin supervisor</option>'+candidatos.map(u=>`<option value="${u.usuario}">${escaparHtml(u.nombre)} (@${u.usuario})</option>`).join(''); sel.value=actual||'';
+}
+async function abrirSectorModal(sec=null){
+ if (!usuarios.length) await cargarUsuarios().catch(()=>{});
+ $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; $("adminSectorColor").value=sec?.color||'#b72e35'; $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto'); document.body.classList.add("modal-abierto");
+}
+function cerrarSectorModal(){ $("adminSectorModal")?.classList.add('oculto'); document.body.classList.remove("modal-abierto"); }
+function mensajeSectores(t,tipo='ok'){const e=$("adminSectoresMensaje");if(!e)return;e.textContent=t;e.className=`admin-message ${tipo}`;clearTimeout(mensajeSectores.timer);mensajeSectores.timer=setTimeout(()=>{e.textContent='';e.className='admin-message'},3500)}
+async function guardarSector(){
+ const original=$("adminSectorOriginal").value; const payload={nombre:$("adminSectorNombre").value.trim(),color:$("adminSectorColor").value,supervisor:$("adminSectorSupervisor").value,activo:$("adminSectorActivo").checked}; if(!payload.nombre)return mensajeSectores('Ingresá el nombre del sector.','error');
+ try{ if(original) await api(`/admin/sectores/${encodeURIComponent(original)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); else await api('/admin/sectores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); cerrarSectorModal(); await cargarSectores(); mensajeSectores(original?'Sector actualizado.':'Sector creado.'); }catch(e){mensajeSectores(e.message,'error')}
+}
+
 async function cargarUsuarios() {
   const data = await api("/admin/usuarios");
   usuarios = data.usuarios || [];
@@ -69,13 +134,14 @@ function renderUsuarios() {
   if (!usuarios.length) { cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>'; return; }
   cont.innerHTML = usuarios.map(u => `
     <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : "Repositor"}</span></div></div>
+      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "supervisor" ? "Supervisor" : "Repositor")} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
       <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button></div>
     </article>`).join("");
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
 }
 
-function abrirNuevoUsuario() {
+async function abrirNuevoUsuario() {
+  if (!sectores.length) await cargarSectores().catch(()=>{});
   $("adminUsuarioModalTitulo").textContent = "Crear usuario";
   $("adminUsuarioOriginal").value = "";
   $("adminUsuarioNombre").value = "";
@@ -84,9 +150,12 @@ function abrirNuevoUsuario() {
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Mínimo 4 caracteres";
   $("adminUsuarioRol").value = "repositor";
+  poblarSectoresUsuario(); $("adminUsuarioSector").value = "";
+  aplicarPermisosModal(null, "repositor");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
+  document.body.classList.add("modal-abierto");
 }
 
 function abrirEditarUsuario(clave) {
@@ -99,12 +168,15 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Dejar vacío para no cambiar";
   $("adminUsuarioRol").value = u.rol;
+  poblarSectoresUsuario(); $("adminUsuarioSector").value = u.sector || "";
+  aplicarPermisosModal(u.permisos, u.rol);
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
+  document.body.classList.add("modal-abierto");
 }
 
-function cerrarUsuarioModal() { $("adminUsuarioModal")?.classList.add("oculto"); }
+function cerrarUsuarioModal() { $("adminUsuarioModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
 
 async function guardarUsuario() {
   const original = $("adminUsuarioOriginal").value;
@@ -113,13 +185,15 @@ async function guardarUsuario() {
     usuario: $("adminUsuarioUsuario").value.trim(),
     password: $("adminUsuarioPassword").value,
     rol: $("adminUsuarioRol").value,
+    permisos: leerPermisosModal(),
+    sector: $("adminUsuarioSector")?.value || "",
     activo: $("adminUsuarioActivo").checked
   };
   const btn = $("btnAdminGuardarUsuario"); btn.disabled = true;
   try {
     if (original) await api(`/admin/usuarios/${encodeURIComponent(original)}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
     else await api("/admin/usuarios", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
-    cerrarUsuarioModal(); mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok"); await cargarUsuarios();
+    cerrarUsuarioModal(); mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok"); await Promise.all([cargarUsuarios(), cargarSectores()]);
   } catch(e) { mensaje(e.message, "error"); }
   finally { btn.disabled = false; }
 }
@@ -284,7 +358,7 @@ async function cargarHistorialVencimientos() {
 
 async function cargarTodo() {
   $("adminServidorEstado").textContent = "Consultando servidor…";
-  try { await Promise.all([cargarResumen(), cargarUsuarios(), cargarHistorialVencimientos()]); }
+  try { await cargarUsuarios(); await Promise.all([cargarResumen(), cargarSectores(), cargarHistorialVencimientos()]); }
   catch(e) { $("adminServidorEstado").textContent = e.message; mensaje(e.message, "error"); }
 }
 
@@ -385,6 +459,23 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   $("adminImportarPreviewProcesados").textContent = resumen.procesados ?? 0;
   $("adminImportarPreviewTotal").textContent = resumen.totalCatalogo ?? resumen.procesados ?? 0;
 
+  const validaciones = Array.isArray(resumen.validaciones) ? resumen.validaciones : [];
+  const cajaValidaciones = $("adminImportarPreviewValidaciones");
+  if (cajaValidaciones) {
+    cajaValidaciones.innerHTML = validaciones.map(item => `
+      <div class="admin-import-validation ${item.ok ? "ok" : "error"}">
+        <span aria-hidden="true">${item.ok ? "✓" : "✕"}</span>
+        <strong>${escaparHtml(item.texto)}</strong>
+      </div>`).join("");
+  }
+
+  const importacionValida = resumen.importacionValida !== false && validaciones.every(item => item.ok !== false);
+  const botonConfirmar = $("btnAdminConfirmarImportacion");
+  if (botonConfirmar) {
+    botonConfirmar.disabled = !importacionValida;
+    botonConfirmar.textContent = importacionValida ? "Reemplazar catálogo" : "Archivo no válido";
+  }
+
   const advertencias = [];
   if (resumen.duplicadosArchivo) advertencias.push(`${resumen.duplicadosArchivo} código(s) duplicado(s) exacto(s) dentro del archivo; se conservará la última aparición`);
   if (resumen.sinCodigo) advertencias.push(`${resumen.sinCodigo} fila(s) sin código`);
@@ -448,27 +539,49 @@ function extraerProductosImportacion(filas, columnas) {
 async function importarArchivoCatalogo(archivo) {
   if (!window.XLSX) throw new Error("No se pudo cargar el lector de Excel");
   const estado=$("adminImportarEstado");
-  estado.textContent="Leyendo archivo…";
+  estado.textContent="Validando archivo…";
+
+  const extensionValida = /\.xlsx$/i.test(archivo.name || "");
   const datos=await archivo.arrayBuffer();
   const libro=window.XLSX.read(datos,{type:"array",raw:true});
-  let filas=[], columnas=null, hojaNombre="";
-  for (const nombre of libro.SheetNames) {
-    // raw:false conserva códigos con ceros iniciales cuando el XLS trae formato numérico.
-    const actuales=window.XLSX.utils.sheet_to_json(libro.Sheets[nombre],{header:1,defval:"",raw:false});
-    const detectadas=detectarColumnasImportacion(actuales);
-    if (detectadas) { filas=actuales; columnas=detectadas; hojaNombre=nombre; break; }
+  const hojaNombre = libro.SheetNames.find(nombre => normalizarEncabezadoImportacion(nombre) === normalizarEncabezadoImportacion(IMPORTACION_HOJA_ESPERADA)) || "";
+  const hojaEncontrada = Boolean(hojaNombre);
+  const filas = hojaEncontrada
+    ? window.XLSX.utils.sheet_to_json(libro.Sheets[hojaNombre],{header:1,defval:"",raw:false})
+    : [];
+  const columnas = hojaEncontrada ? detectarColumnasImportacion(filas) : null;
+  const tieneCodigo = Boolean(columnas?.rangos?.codigo);
+  const tieneArticulo = Boolean(columnas?.rangos?.articulo);
+  const tienePrecio = Boolean(columnas?.rangos?.precio);
+  const extraidos = columnas ? extraerProductosImportacion(filas,columnas) : {productos:[], filasVacias:0, sinCodigo:0, sinArticulo:0, codigosInvalidos:0, preciosInvalidos:0, duplicadosArchivo:0, filasIgnoradas:0};
+  const cantidadSuficiente = extraidos.productos.length >= IMPORTACION_MIN_PRODUCTOS;
+
+  const validaciones = [
+    {ok:extensionValida, texto:"Formato XLSX válido"},
+    {ok:hojaEncontrada, texto:`Hoja ${IMPORTACION_HOJA_ESPERADA} encontrada`},
+    {ok:tieneCodigo, texto:"Columna Código encontrada"},
+    {ok:tieneArticulo, texto:"Columna Artículo encontrada"},
+    {ok:tienePrecio, texto:"Columna Precio encontrada"},
+    {ok:cantidadSuficiente, texto:cantidadSuficiente ? `${extraidos.productos.length} productos detectados` : `Se requieren al menos ${IMPORTACION_MIN_PRODUCTOS} productos válidos`}
+  ];
+  const importacionValida = validaciones.every(item => item.ok);
+
+  if (!importacionValida) {
+    importacionPendiente = null;
+    const resumen = {...extraidos, procesados:extraidos.productos.length, totalCatalogo:extraidos.productos.length, validaciones, importacionValida:false};
+    delete resumen.productos;
+    estado.textContent="El archivo no cumple la estructura requerida. No se modificó ningún dato.";
+    abrirVistaPreviaImportacion(resumen,archivo.name);
+    return;
   }
-  if (!columnas) throw new Error("No encontré las columnas Código y Artículo en el archivo");
-  const extraidos=extraerProductosImportacion(filas,columnas);
-  if (!extraidos.productos.length) throw new Error("No encontré productos válidos para importar");
-  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre, estadisticas:extraidos};
+
+  importacionPendiente={productos:extraidos.productos, archivoNombre:archivo.name, hojaNombre, estadisticas:{...extraidos,validaciones,importacionValida:true}};
   estado.textContent=`Analizando ${extraidos.productos.length} productos…`;
   const data=await api("/admin/importar-productos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productos:extraidos.productos,confirmar:false})});
-  const resumen={...(data.resumen||{}),...extraidos};
-  // El array solo se conserva en importacionPendiente, no dentro del resumen visual.
+  const resumen={...(data.resumen||{}),...extraidos,validaciones,importacionValida:true};
   delete resumen.productos;
   importacionResumenPendiente=resumen;
-  estado.textContent="Vista previa lista. Confirmá para reemplazar completamente Productos.";
+  estado.textContent="Archivo validado. Confirmá para reemplazar completamente Productos.";
   abrirVistaPreviaImportacion(resumen,archivo.name);
 }
 
@@ -505,9 +618,16 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);
   $("btnAdminActualizar")?.addEventListener("click", cargarTodo);
   $("btnAdminNuevoUsuario")?.addEventListener("click", abrirNuevoUsuario);
+  $("btnAdminNuevoSector")?.addEventListener("click",()=>abrirSectorModal());
+  $("btnAdminCerrarSector")?.addEventListener("click",cerrarSectorModal);
+  $("btnAdminCancelarSector")?.addEventListener("click",cerrarSectorModal);
+  $("btnAdminGuardarSector")?.addEventListener("click",guardarSector);
+  $("adminSectorModal")?.addEventListener("click",e=>{if(e.target.id==="adminSectorModal")cerrarSectorModal()});
+  document.querySelector('[data-admin-tab="sectores"]')?.addEventListener("click",cargarSectores);
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
+  $("adminUsuarioRol")?.addEventListener("change", actualizarEstadoPermisosPorRol);
   document.querySelectorAll(".admin-tab").forEach(btn => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)));
   document.querySelectorAll(".admin-period-btn").forEach(btn => btn.addEventListener("click", () => {
     historialPeriodo = btn.dataset.periodo || "hoy";
@@ -539,4 +659,103 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("autoservicio:sesion", (event) => {
     if (event.detail?.rol !== "administrador") ocultarPanelAdmin();
   });
+});
+
+// Entrega 7.7: horarios configurables y persistentes por sector.
+let adminHorarioEditando = null;
+let adminHorarioSectorActual = "";
+function horariosConfig() { return window.AutoservicioHorariosConfig; }
+function turnosConfigurados() { return horariosConfig()?.cargar?.(adminHorarioSectorActual) || []; }
+function colorContraste(hex) {
+  const n = parseInt(String(hex).replace('#',''), 16);
+  const r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  return (r*299+g*587+b*114)/1000 > 150 ? '#111827' : '#ffffff';
+}
+async function cargarAdminHorariosSector(preferido = adminHorarioSectorActual) {
+  if (!sectores.length) await cargarSectores();
+  const activos = sectores.filter(s => s.activo);
+  adminHorarioSectorActual = activos.some(s => s.id === preferido) ? preferido : (activos[0]?.id || "");
+  const sel = $("adminHorarioSector");
+  if (sel) {
+    sel.innerHTML = activos.map(s => `<option value="${s.id}">${escaparHtml(s.nombre)}</option>`).join("");
+    sel.value = adminHorarioSectorActual;
+  }
+  if (adminHorarioSectorActual) await horariosConfig()?.cargarRemoto?.(adminHorarioSectorActual);
+  renderAdminHorarios();
+}
+function renderAdminHorarios() {
+  const cont = $("adminHorariosLista");
+  if (!cont) return;
+  const items = turnosConfigurados();
+  cont.innerHTML = items.map(t => `
+    <article class="admin-shift-card" data-horario-id="${t.id}">
+      <span class="admin-shift-swatch" style="background:${t.color};color:${colorContraste(t.color)}">${t.inicio.slice(0,2)}</span>
+      <div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${t.color.toUpperCase()}</span></div>
+      <button type="button" class="btn-admin-editar-horario">Editar</button>
+    </article>`).join('');
+  cont.querySelectorAll('.btn-admin-editar-horario').forEach(btn => btn.addEventListener('click', () => {
+    const id=btn.closest('[data-horario-id]')?.dataset.horarioId;
+    const turno=items.find(t=>t.id===id);
+    if(turno) abrirHorarioModal(turno);
+  }));
+}
+function abrirHorarioModal(turno=null) {
+  adminHorarioEditando=turno;
+  $("adminHorarioModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';
+  $("adminHorarioOriginal").value=turno?.id||'';
+  $("adminHorarioInicio").value=turno?.inicio||'08:00';
+  $("adminHorarioFin").value=turno?.fin||'16:00';
+  $("adminHorarioColor").value=turno?.color||'#f59e0b';
+  $("adminHorarioColorTexto").textContent=(turno?.color||'#f59e0b').toUpperCase();
+  $("btnAdminEliminarHorario").classList.toggle('oculto',!turno);
+  $("adminHorarioModal").classList.remove('oculto');
+  $("adminHorarioModal").setAttribute('aria-hidden','false');
+}
+function cerrarHorarioModal(){
+  $("adminHorarioModal")?.classList.add('oculto');
+  $("adminHorarioModal")?.setAttribute('aria-hidden','true');
+  adminHorarioEditando=null;
+}
+function mensajeHorarios(texto,tipo='ok'){
+  const el=$("adminHorariosMensaje"); if(!el)return;
+  el.textContent=texto; el.className=`admin-message ${tipo}`;
+  clearTimeout(mensajeHorarios.timer); mensajeHorarios.timer=setTimeout(()=>{el.textContent='';el.className='admin-message';},3500);
+}
+async function guardarHorarioConfig(){
+  const inicio=$("adminHorarioInicio").value;
+  const fin=$("adminHorarioFin").value;
+  const color=$("adminHorarioColor").value;
+  if(!inicio||!fin) return mensajeHorarios('Completá la hora de inicio y finalización.','error');
+  if(inicio===fin) return mensajeHorarios('El inicio y el final no pueden ser iguales.','error');
+  const items=turnosConfigurados();
+  const original=$("adminHorarioOriginal").value;
+  const duplicado=items.find(t=>t.inicio===inicio&&t.fin===fin&&t.id!==original);
+  if(duplicado) return mensajeHorarios('Ese horario ya existe.','error');
+  if(original){
+    const i=items.findIndex(t=>t.id===original);
+    if(i>=0) items[i]={...items[i],inicio,fin,color};
+  } else {
+    items.push({id:horariosConfig().idDesdeHoras(inicio,fin),inicio,fin,color});
+  }
+  try { await horariosConfig().guardar(items,adminHorarioSectorActual); renderAdminHorarios(); cerrarHorarioModal(); mensajeHorarios(original?'Horario actualizado.':'Horario creado.'); }
+  catch(e){ mensajeHorarios(e.message,'error'); }
+}
+async function eliminarHorarioConfig(){
+  const id=$("adminHorarioOriginal").value;
+  if(!id)return;
+  const usados=window.HorariosApp?.turnosEnUso?.()||[];
+  if(usados.includes(id)) return mensajeHorarios('No se puede eliminar porque está asignado en el calendario visible. Reemplazalo primero.','error');
+  const items=turnosConfigurados().filter(t=>t.id!==id);
+  if(!items.length) return mensajeHorarios('Debe existir al menos un horario.','error');
+  try { await horariosConfig().guardar(items,adminHorarioSectorActual); renderAdminHorarios(); cerrarHorarioModal(); mensajeHorarios('Horario eliminado.'); } catch(e) { mensajeHorarios(e.message,'error'); }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  $("btnAdminNuevoHorario")?.addEventListener('click',()=>abrirHorarioModal());
+  $("btnAdminGuardarHorario")?.addEventListener('click',guardarHorarioConfig);
+  $("btnAdminEliminarHorario")?.addEventListener('click',eliminarHorarioConfig);
+  $("btnAdminCancelarHorario")?.addEventListener('click',cerrarHorarioModal);
+  $("adminHorarioColor")?.addEventListener('input',e=>$("adminHorarioColorTexto").textContent=e.target.value.toUpperCase());
+  $("adminHorarioModal")?.addEventListener('click',e=>{if(e.target.id==='adminHorarioModal')cerrarHorarioModal();});
+  document.querySelector('[data-admin-tab="horarios"]')?.addEventListener('click',()=>cargarAdminHorariosSector());
+  $("adminHorarioSector")?.addEventListener('change',e=>cargarAdminHorariosSector(e.target.value));
 });

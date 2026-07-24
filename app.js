@@ -202,6 +202,10 @@ async function inicializar() {
 }
 
 async function entrarPantalla(nombre, opciones = {}) {
+    if (!window.AutoservicioAuth?.puedeVerModulo?.(nombre)) {
+        window.AutoservicioDialog?.alert?.({ title: "Sin permiso", message: "Este módulo no está habilitado para tu usuario." });
+        nombre = "inicio";
+    }
     if (!opciones.forzar) {
         if (pantallaActualApp === "anotar" && nombre !== "anotar") {
             resolverSalidaReposicion(() => entrarPantalla(nombre, { forzar: true }));
@@ -219,6 +223,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
     if (nombre !== "precios") window.PreciosModule?.desactivar?.();
+    if (nombre !== "horarios") window.HorariosModule?.desactivar?.();
 
     if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
@@ -239,6 +244,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
     if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
     if (nombre === "precios") await window.PreciosModule?.activar?.();
+    if (nombre === "horarios") window.HorariosModule?.activar?.();
     if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) { cambiarPantalla("inicio"); }
 }
 

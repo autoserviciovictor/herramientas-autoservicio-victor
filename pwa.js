@@ -5,7 +5,7 @@ const textoInstalacion = document.getElementById('estadoInstalacionApp');
 const iosModal = document.getElementById('iosInstallModal');
 const iosWarning = document.getElementById('iosInstallBrowserWarning');
 const installCard = document.getElementById('pwaInstallCard');
-const SW_VERSION = '71-entrega522-deduplicacion-real';
+const SW_VERSION = '81-integracion';
 const SW_RELOAD_KEY = `autoservicio-sw-reload-${SW_VERSION}`;
 
 function estaInstalada() {
@@ -131,9 +131,8 @@ if ('serviceWorker' in navigator) {
         if (!instalando) return;
         instalando.addEventListener('statechange', () => {
           if (instalando.state === 'installed' && navigator.serviceWorker.controller) {
-            // La nueva versión queda esperando y se aplicará silenciosamente
-            // la próxima vez que se abra o recargue la aplicación.
-            console.debug('Nueva versión preparada para el próximo inicio.');
+            activarWorkerEnEspera(registro);
+            console.debug('Nueva versión activada automáticamente.');
           }
         });
       });
