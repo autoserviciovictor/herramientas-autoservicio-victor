@@ -1,4 +1,96 @@
-const empleados = ["Mica", "Agustín", "Maxi", "Ariana", "Joaquín", "Bruno"];
+import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+
+let empleados = [];
+let sectoresHorarios = [];
+let sectorActual = "";
+let contextoHorariosCargado = false;
+let permisoEdicionServidor = false;
+const detalles = new Map();
+let reemplazos = [];
+let metadatosModificados = false;
+
+function usuarioHorarios() { return window.AutoservicioAuth?.getUsuario?.() || {}; }
+function esAdministradorHorarios() { return usuarioHorarios().rol === "administrador"; }
+function sectorSeleccionado() { return sectoresHorarios.find(s => s.id === sectorActual) || null; }
+function empleadosDelSector(id = sectorActual) {
+  const sector = sectoresHorarios.find(s => s.id === id);
+  return Array.isArray(sector?.empleados) ? sector.empleados : [];
+}
+async function cargarContextoHorarios() {
+  try {
+    const r = await fetch(`${API_BASE_URL}/horarios/contexto`);
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudieron cargar los sectores");
+    sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
+    permisoEdicionServidor = data.puedeEditar === true;
+    const usuario = usuarioHorarios();
+    const preferido = esAdministradorHorarios()
+      ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : sectoresHorarios[0]?.id)
+      : (usuario.sector || sectoresHorarios[0]?.id);
+    sectorActual = preferido || "";
+    empleados = empleadosDelSector();
+    await window.AutoservicioHorariosConfig?.cargarRemoto?.(sectorActual);
+    cargarTurnosConfigurados();
+    await cargarCalendarioActual();
+    contextoHorariosCargado = true;
+    renderSelectorSector();
+    renderTodo();
+  } catch (error) {
+    sectoresHorarios = [];
+    permisoEdicionServidor = false;
+    sectorActual = "";
+    empleados = [];
+    contextoHorariosCargado = true;
+    renderSelectorSector();
+    renderTodo();
+    avisoHorarios(error.message || "No se pudo acceder a Horarios.", "error");
+  }
+}
+function crearSelectorSector() {
+  if ($("horariosSectorBar")) return;
+  const bar = document.createElement("section");
+  bar.id = "horariosSectorBar";
+  bar.className = "horarios-sector-bar";
+  bar.innerHTML = `
+    <div class="horarios-sector-identidad"><i id="horariosSectorColor"></i><div><span>Sector</span><strong id="horariosSectorNombre">—</strong></div></div>
+    <label id="horariosSectorSelectorWrap" class="horarios-sector-selector oculto"><span>Cambiar sector</span><select id="horariosSectorSelector"></select></label>`;
+  document.querySelector(".horarios-toolbar")?.after(bar);
+  $("horariosSectorSelector").addEventListener("change", async e => {
+    if (modoEdicion) {
+      const salio = await salirModoEdicion();
+      if (!salio) { e.target.value = sectorActual; return; }
+    }
+    sectorActual = e.target.value;
+    empleados = empleadosDelSector();
+    seleccion.clear();
+    portapapelesMes = null;
+    diaSeleccionado = Math.min(diaSeleccionado, diasDelMes());
+    await window.AutoservicioHorariosConfig?.cargarRemoto?.(sectorActual);
+    cargarTurnosConfigurados();
+    await cargarCalendarioActual();
+    renderSelectorSector();
+    renderTodo();
+    desplazarAlDia(esMesActual() ? new Date().getDate() : 1, "auto");
+  });
+}
+function renderSelectorSector() {
+  crearSelectorSector();
+  const sector = sectorSeleccionado();
+  if ($("horariosSectorNombre")) $("horariosSectorNombre").textContent = sector?.nombre || "Sin sector";
+  if ($("horariosSectorColor")) $("horariosSectorColor").style.background = sector?.color || "#b72e35";
+  const wrap = $("horariosSectorSelectorWrap");
+  const select = $("horariosSectorSelector");
+  if (wrap) wrap.classList.toggle("oculto", !esAdministradorHorarios() || sectoresHorarios.length < 2);
+  if (select) {
+    select.innerHTML = sectoresHorarios.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("");
+    select.value = sectorActual;
+  }
+  const subtitulo = $("horariosSubtituloVista");
+  if (subtitulo) subtitulo.textContent = vistaActual === "equipo"
+    ? `Calendario mensual de ${sector?.nombre || "este sector"}`
+    : `Tus próximos turnos en ${sector?.nombre || "tu sector"}`;
+}
+
 let TURNOS = [];
 function cargarTurnosConfigurados() {
   const configurados = window.AutoservicioHorariosConfig?.cargar?.() || [];
@@ -9,7 +101,9 @@ function cargarTurnosConfigurados() {
     estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`
   })).concat([
     { id: 'franco', label: 'Franco', clase: 'turno-franco', estilo: '' },
-    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-verde', estilo: '' }
+    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-verde', estilo: '' },
+    { id: 'ausente', label: 'Ausente', clase: 'turno-ausente', estilo: '' },
+    { id: 'licencia', label: 'Licencia', clase: 'turno-licencia', estilo: '' }
   ]);
   if (!TURNOS.some(t => t.id === turnoPincel)) turnoPincel = TURNOS.find(t => !['franco','vacaciones'].includes(t.id))?.id || 'franco';
 }
@@ -38,21 +132,35 @@ const $ = id => document.getElementById(id);
 const keyCelda = (empleado, dia) => `${empleado}::${dia}`;
 
 function claveMes(fecha, empleado, dia) {
-  return `${fecha.getFullYear()}-${fecha.getMonth()}-${dia}-${empleado}`;
+  return `${sectorActual || "general"}|${fecha.getFullYear()}-${fecha.getMonth()}-${dia}-${empleado}`;
 }
 function clave(empleado, dia) { return claveMes(fechaVista, empleado, dia); }
-function turnoEjemplo(i, d) {
-  const s = [
-    ["8-16","8-16","franco","16-22","16-22","8-13","franco"],
-    ["8-13","8-13","8-16","franco","16-22","16-22","franco"],
-    ["16-22","16-22","franco","8-16","8-16","14-22","franco"],
-    ["14-22","14-22","8-16","8-16","franco","16-22","franco"],
-    ["9-14","9-14","vacaciones","vacaciones","vacaciones","franco","franco"],
-    ["10-16","10-16","franco","14-22","14-22","8-16","franco"]
-  ];
-  return s[i][(d - 1) % 7];
+function mesClave(fecha = fechaVista) { return `${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,"0")}`; }
+function limpiarMesDatos(sector = sectorActual, fecha = fechaVista) {
+  const prefijo = `${sector || "general"}|${fecha.getFullYear()}-${fecha.getMonth()}-`;
+  for (const k of [...datos.keys()]) if (k.startsWith(prefijo)) datos.delete(k);
 }
-function obtenerTurnoEn(fecha, e, d) { return datos.get(claveMes(fecha, e, d)) || turnoEjemplo(empleados.indexOf(e), d); }
+async function cargarCalendarioActual() {
+  if (!sectorActual) return;
+  limpiarMesDatos();
+  try {
+    const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesClave()}`);
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cargar el calendario");
+    (data.celdas || []).forEach(c => datos.set(clave(String(c.empleado), Number(c.dia)), String(c.turno)));
+    detalles.clear();
+    (data.detalles || []).forEach(x => detalles.set(keyCelda(String(x.empleado), Number(x.dia)), { tipo:x.tipo || "", motivo:x.motivo || "", observacion:x.observacion || "" }));
+    reemplazos = Array.isArray(data.reemplazos) ? data.reemplazos : [];
+    metadatosModificados = false;
+    if (Array.isArray(data.turnos) && data.turnos.length) {
+      window.AutoservicioHorariosConfig?.guardarLocal?.(data.turnos, sectorActual);
+      cargarTurnosConfigurados();
+    }
+  } catch (error) {
+    avisoHorarios(error.message || "No se pudo cargar el calendario", "error");
+  }
+}
+function obtenerTurnoEn(fecha, e, d) { return datos.get(claveMes(fecha, e, d)) || ""; }
 function obtenerTurno(e, d) { return obtenerTurnoEn(fechaVista, e, d); }
 function obtenerDefinicion(id) { return TURNOS.find(t => t.id === id) || { id, label: id || '—', clase: 'turno-personalizado', estilo: '' }; }
 function diasDelMes(fecha = fechaVista) { return new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate(); }
@@ -60,7 +168,12 @@ function nombreMes() { return fechaVista.toLocaleDateString("es-AR", { month: "l
 function nombreDia(d) { return new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d).toLocaleDateString("es-AR", { weekday: "short" }).replace(".", "").toUpperCase(); }
 function esMesActual() { const h = new Date(); return fechaVista.getFullYear() === h.getFullYear() && fechaVista.getMonth() === h.getMonth(); }
 function esHoy(d) { return esMesActual() && d === new Date().getDate(); }
-function puedeEditar() { const rol = window.AutoservicioAuth?.getUsuario?.()?.rol; return rol === "administrador" || rol === "supervisor"; }
+function puedeEditar() {
+  const usuario = usuarioHorarios();
+  if (!permisoEdicionServidor) return false;
+  if (usuario.rol === "administrador") return true;
+  return usuario.rol === "supervisor" && Boolean(usuario.sector) && usuario.sector === sectorActual;
+}
 
 function parsearTurno(id) {
   const m = String(id || "").match(/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?$/);
@@ -69,8 +182,11 @@ function parsearTurno(id) {
 }
 function hora24(h, m = 0) { return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; }
 function formatoCelda(id) {
+  if (!id) return "—";
   if (id === "franco") return "F";
   if (id === "vacaciones") return "V";
+  if (id === "ausente") return "A";
+  if (id === "licencia") return "L";
   const p = parsearTurno(id);
   return p ? `<span>${hora24(p.inicioH, p.inicioM)}</span><span>${hora24(p.finH, p.finM)}</span>` : id;
 }
@@ -80,8 +196,11 @@ function horaAmPm(h, m = 0) {
   return `${String(hora).padStart(2, "0")}:${String(m).padStart(2, "0")} ${sufijo}`;
 }
 function formatoAmPm(id) {
+  if (!id) return "Sin asignar";
   if (id === "franco") return "Franco";
   if (id === "vacaciones") return "Vacaciones";
+  if (id === "ausente") return "Ausente";
+  if (id === "licencia") return "Licencia";
   const p = parsearTurno(id);
   return p ? `${horaAmPm(p.inicioH, p.inicioM)} - ${horaAmPm(p.finH, p.finM)}` : id;
 }
@@ -107,7 +226,7 @@ function restaurarDatos(estado) {
   estado?.forEach((v, k) => datos.set(k, v));
 }
 function hayCambiosPendientes() {
-  return !!(modoEdicion && estadoInicialEdicion && !mapasIguales(datos, estadoInicialEdicion));
+  return !!(modoEdicion && ((estadoInicialEdicion && !mapasIguales(datos, estadoInicialEdicion)) || metadatosModificados));
 }
 function iniciarMovimiento() {
   historial.push(clonarDatos());
@@ -138,14 +257,34 @@ async function cancelarTodoCambios() {
   renderTodo();
   avisoHorarios("Cambios descartados");
 }
-function confirmarGuardado() {
-  if (!modoEdicion || !hayCambiosPendientes()) return;
-  estadoInicialEdicion = clonarDatos();
-  historial = [];
-  seleccion.clear();
-  salirModoEdicion(true);
-  renderTodo();
-  avisoHorarios("Cambios guardados");
+async function confirmarGuardado() {
+  if (!modoEdicion || !hayCambiosPendientes() || !puedeEditar()) return;
+  const boton = $("horariosSaveChanges");
+  if (boton) boton.disabled = true;
+  try {
+    const celdas = [];
+    for (let d = 1; d <= diasDelMes(); d++) empleados.forEach(empleado => {
+      const turno = datos.get(clave(empleado, d)) || "";
+      if (turno) celdas.push({ empleado, dia:d, turno });
+    });
+    const respuesta = await fetch(`${API_BASE_URL}/horarios/calendario`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sector: sectorActual, mes: mesClave(), celdas, detalles:[...detalles].map(([k,v])=>{const [empleado,dia]=k.split("::");return {empleado,dia:Number(dia),...v}}), reemplazos })
+    });
+    const data = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok || !data.ok) throw new Error(data.mensaje || "No se pudo validar el guardado");
+    estadoInicialEdicion = clonarDatos();
+    metadatosModificados = false;
+    historial = [];
+    seleccion.clear();
+    await salirModoEdicion(true);
+    renderTodo();
+    avisoHorarios("Cambios guardados");
+  } catch (error) {
+    avisoHorarios(error.message || "No se pudieron guardar los cambios", "error");
+    actualizarAcciones();
+  }
 }
 function actualizarAcciones() {
   const pendientes = hayCambiosPendientes();
@@ -236,6 +375,7 @@ function copiarMesEquipo() {
     tipo: "equipo",
     origen,
     dias: diasDelMes(origen),
+    sector: sectorActual,
     empleados: Object.fromEntries(empleados.map(e => [e, capturarMesEmpleado(origen, e)]))
   };
   actualizarPortapapeles();
@@ -388,6 +528,7 @@ function actualizarPermisos() {
   document.body.classList.toggle("horarios-solo-lectura", !editable);
   $("horariosEdicionMarco")?.classList.toggle("oculto", !editable || vistaActual !== "equipo");
   $("horariosEditor")?.classList.toggle("sin-permiso", !editable);
+  document.querySelector(".horarios-personal-actions")?.classList.toggle("oculto", !editable || vistaActual !== "equipo");
   if (!editable && modoEdicion) salirModoEdicion();
 }
 
@@ -432,10 +573,13 @@ function renderTabla() {
     const d = i + 1, f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d), finde = [0, 6].includes(f.getDay()), c = coberturaDia(d);
     return `<th class="${finde ? "fin-semana" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${d}"><span>${nombreDia(d)}</span><strong>${d}</strong><small class="cobertura-mini"><b>☀${c.manana}</b><b>☾${c.tarde}</b></small></th>`;
   }).join("")}</tr>`;
-  body.innerHTML = empleados.map(e => `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from({ length: diasDelMes() }, (_, i) => {
+  body.innerHTML = empleados.length ? empleados.map(e => `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from({ length: diasDelMes() }, (_, i) => {
     const d = i + 1, id = obtenerTurno(e, d), t = obtenerDefinicion(id), sel = seleccion.has(keyCelda(e, d));
-    return `<td class="${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}"><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ''}" data-tooltip="${t.label}">${formatoCelda(id)}</button></td>`;
-  }).join("")}</tr>`).join("");
+    const detalle = detalles.get(keyCelda(e,d));
+    const reemplazo = reemplazos.find(r => r.empleadoOriginal === e && d >= r.desde && d <= r.hasta);
+    const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ''}${reemplazo ? '<i class="horario-reemplazo-dot" title="Reemplazo: '+reemplazo.reemplazante+'">R</i>' : ''}`;
+    return `<td class="${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}"><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ''}" data-tooltip="${t.label}">${formatoCelda(id)}${marcas}</button></td>`;
+  }).join("")}</tr>`).join("") : `<tr><td colspan="${diasDelMes() + 1}" class="horarios-sin-empleados"><strong>No hay empleados asignados a este sector</strong><span>Asigná usuarios desde Administrador → Usuarios.</span></td></tr>`;
   head.querySelectorAll("[data-horarios-dia]").forEach(x => x.onclick = () => { diaSeleccionado = Number(x.dataset.horariosDia); renderTabla(); renderResumen(); });
   body.querySelectorAll("td[data-empleado]").forEach(td => {
     td.onpointerdown = ev => {
@@ -490,6 +634,13 @@ function renderResumen() {
   c.innerHTML = [...m].map(([id, n]) => { const x = obtenerDefinicion(id); return `<div><span><i class="${x.clase}" style="${x.estilo || ''}"></i>${x.label}</span><strong>${n} ${n === 1 ? "persona" : "personas"}</strong></div>`; }).join("");
   const cv = coberturaDia(diaSeleccionado), b = $("horariosCoberturaEstado");
   if (b) { b.textContent = `Mañana ${cv.manana} · Tarde ${cv.tarde}`; b.classList.toggle("alerta", cv.manana < 2 || cv.tarde < 2); }
+  renderEstadisticasSector();
+}
+function renderEstadisticasSector(){
+  const box=$("horariosEstadisticas"); if(!box) return;
+  let horas=0,francos=0,vacaciones=0,licencias=0,ausencias=0;
+  empleados.forEach(e=>{for(let d=1;d<=diasDelMes();d++){const id=obtenerTurno(e,d),p=parsearTurno(id);if(p)horas+=(p.finH+p.finM/60)-(p.inicioH+p.inicioM/60);else if(id==="franco")francos++;else if(id==="vacaciones")vacaciones++;else if(id==="licencia")licencias++;else if(id==="ausente")ausencias++;}});
+  box.innerHTML=`<article><strong>${empleados.length}</strong><span>Empleados</span></article><article><strong>${Math.round(horas)}</strong><span>Horas</span></article><article><strong>${francos}</strong><span>Francos</span></article><article><strong>${vacaciones}</strong><span>Vacaciones</span></article><article><strong>${licencias}</strong><span>Licencias</span></article><article><strong>${ausencias}</strong><span>Ausencias</span></article>`;
 }
 function abrirEditor(e, d) {
   if (!puedeEditar() || !modoEdicion) return;
@@ -502,9 +653,14 @@ function abrirEditor(e, d) {
     edicionActual.turno = btn.dataset.turno;
     o.querySelectorAll("[data-turno]").forEach(b => b.classList.toggle("seleccionado", b === btn));
     $("horariosCustomWrap").classList.toggle("oculto", btn.dataset.turno !== "personalizado");
+    $("horariosLicenciaWrap").classList.toggle("oculto", btn.dataset.turno !== "licencia");
   });
   $("horariosCustomWrap").classList.toggle("oculto", edicionActual.turno !== "personalizado" && TURNOS.some(t => t.id === edicionActual.turno));
   $("horariosTurnoPersonalizado").value = TURNOS.some(t => t.id === edicionActual.turno) ? "" : edicionActual.turno;
+  const det = detalles.get(keyCelda(e,d)) || {};
+  $("horariosLicenciaMotivo").value = det.motivo || "";
+  $("horariosObservacion").value = det.observacion || "";
+  $("horariosLicenciaWrap").classList.toggle("oculto", edicionActual.turno !== "licencia");
   $("horariosEditor").classList.remove("oculto");
   $("horariosEditor").setAttribute("aria-hidden", "false");
 }
@@ -513,10 +669,16 @@ function guardarEdicion() {
   if (!edicionActual || !puedeEditar() || !modoEdicion) return;
   let turno = edicionActual.turno;
   if (turno === "personalizado") { turno = $("horariosTurnoPersonalizado").value.trim(); if (!parsearTurno(turno)) return $("horariosTurnoPersonalizado").focus(); }
-  if (seleccion.size > 1) aplicarTurnoASeleccion(turno);
-  else {
+  const detalleNuevo = { tipo: turno, motivo: turno === "licencia" ? $("horariosLicenciaMotivo").value : "", observacion: $("horariosObservacion").value.trim() };
+  if (seleccion.size > 1) {
+    aplicarTurnoASeleccion(turno);
+    seleccion.forEach(k => detalles.set(k, {...detalleNuevo}));
+    metadatosModificados = true;
+  } else {
     iniciarMovimiento();
     datos.set(clave(edicionActual.empleado, edicionActual.dia), turno);
+    if (detalleNuevo.motivo || detalleNuevo.observacion || ["licencia","ausente","vacaciones"].includes(turno)) detalles.set(keyCelda(edicionActual.empleado,edicionActual.dia), detalleNuevo); else detalles.delete(keyCelda(edicionActual.empleado,edicionActual.dia));
+    metadatosModificados = true;
     descartarMovimientoSiNoCambio();
     renderTodo();
   }
@@ -537,7 +699,7 @@ function encontrarProximoTurno(empleado) {
 }
 function renderMiHorario() {
   const usuario = window.AutoservicioAuth?.getUsuario?.();
-  const e = empleados.find(x => x.toLowerCase() === String(usuario?.nombre || "").toLowerCase()) || "Agustín";
+  const e = empleados.find(x => x.toLowerCase() === String(usuario?.nombre || "").toLowerCase()) || empleados[0] || String(usuario?.nombre || "");
   const lista = $("miHorarioLista"); if (!lista) return;
   const inicio = esMesActual() ? new Date().getDate() : 1;
   const dias = Array.from({ length: Math.min(10, diasDelMes() - inicio + 1) }, (_, i) => inicio + i);
@@ -555,29 +717,50 @@ function renderMiHorario() {
   $("miHorarioProximoFecha").textContent = proximo ? proximo.fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) : "—";
   const saludo = document.querySelector(".mi-horario-saludo"); if (saludo) saludo.textContent = `Hola, ${usuario?.nombre || e}`;
 }
+
+function abrirVacacionesRango(){
+  if(!puedeEditar()||!modoEdicion) return; asegurarGestionPersonal();
+  $("gestionPersonalTitulo").textContent="Programar vacaciones";
+  $("gestionPersonalContenido").innerHTML=`<label>Empleado<select id="gpEmpleado">${empleados.map(e=>`<option>${e}</option>`).join("")}</select></label><div class="gp-grid"><label>Desde<input id="gpDesde" type="number" min="1" max="${diasDelMes()}" value="1"></label><label>Hasta<input id="gpHasta" type="number" min="1" max="${diasDelMes()}" value="${diasDelMes()}"></label></div>`;
+  $("gestionPersonalGuardar").onclick=()=>{const e=$("gpEmpleado").value,a=Number($("gpDesde").value),b=Number($("gpHasta").value);if(a<1||b<a||b>diasDelMes())return;iniciarMovimiento();for(let d=a;d<=b;d++){datos.set(clave(e,d),"vacaciones");detalles.set(keyCelda(e,d),{tipo:"vacaciones",motivo:"",observacion:"Vacaciones programadas"});}metadatosModificados=true;cerrarGestionPersonal();renderTodo();}; abrirGestionPersonal();
+}
+function abrirReemplazo(){
+  if(!puedeEditar()||!modoEdicion||empleados.length<2) return; asegurarGestionPersonal();
+  $("gestionPersonalTitulo").textContent="Registrar reemplazo";
+  const opts=empleados.map(e=>`<option>${e}</option>`).join("");
+  $("gestionPersonalContenido").innerHTML=`<label>Empleado original<select id="gpOriginal">${opts}</select></label><label>Reemplazante<select id="gpReemplazante">${opts}</select></label><div class="gp-grid"><label>Desde<input id="gpDesde" type="number" min="1" max="${diasDelMes()}" value="1"></label><label>Hasta<input id="gpHasta" type="number" min="1" max="${diasDelMes()}" value="1"></label></div><label>Observación<textarea id="gpObs" maxlength="300"></textarea></label>`;
+  $("gestionPersonalGuardar").onclick=()=>{const empleadoOriginal=$("gpOriginal").value,reemplazante=$("gpReemplazante").value,desde=Number($("gpDesde").value),hasta=Number($("gpHasta").value);if(empleadoOriginal===reemplazante||desde<1||hasta<desde)return;reemplazos.push({empleadoOriginal,reemplazante,desde,hasta,observacion:$("gpObs").value.trim()});metadatosModificados=true;cerrarGestionPersonal();renderTodo();}; abrirGestionPersonal();
+}
+function asegurarGestionPersonal(){if($("gestionPersonalModal"))return;const m=document.createElement("div");m.id="gestionPersonalModal";m.className="horarios-dialogo-overlay oculto";m.innerHTML=`<div class="horarios-dialogo-card gestion-personal-card"><h3 id="gestionPersonalTitulo"></h3><div id="gestionPersonalContenido" class="gestion-personal-form"></div><div class="horarios-dialogo-actions"><button id="gestionPersonalGuardar" class="primario" type="button">Aplicar</button><button id="gestionPersonalCancelar" type="button">Cancelar</button></div></div>`;document.body.appendChild(m);$("gestionPersonalCancelar").onclick=cerrarGestionPersonal;}
+function abrirGestionPersonal(){$("gestionPersonalModal").classList.remove("oculto");}
+function cerrarGestionPersonal(){$("gestionPersonalModal")?.classList.add("oculto");}
+
 function cambiarVista(v) {
   vistaActual = v;
   const eq = v === "equipo";
   $("horariosEquipoView")?.classList.toggle("oculto", !eq);
   $("horariosMioView")?.classList.toggle("oculto", eq);
   $("horariosTituloVista").textContent = eq ? "Calendario" : "Mi horario";
-  $("horariosSubtituloVista").textContent = eq ? "Vista mensual de todos los empleados" : "Tus próximos turnos, francos y vacaciones";
+  renderSelectorSector();
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.classList.toggle("activo", b.dataset.horariosVista === v));
   $("horariosEdicionMarco")?.classList.toggle("oculto", !eq || !puedeEditar());
   $("horariosEditor")?.classList.toggle("oculto", !eq || !edicionActual);
   if (!eq) { cerrarEditor(); renderMiHorario(); }
 }
-function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); renderTodo(); }
-function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); renderTodo(); desplazarAlDia(diaSeleccionado); }
-function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); actualizarPanelMes(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
+async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); renderTodo(); }
+async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); renderTodo(); desplazarAlDia(diaSeleccionado); }
+function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
 function configurarEventos() {
   crearPanelEdicion();
+  crearSelectorSector();
   $("btnHorariosMesAnterior")?.addEventListener("click", () => cambiarMes(-1));
   $("btnHorariosMesSiguiente")?.addEventListener("click", () => cambiarMes(1));
   $("btnHorariosHoyToolbar")?.addEventListener("click", irAHoy);
   $("btnCerrarHorariosEditor")?.addEventListener("click", cerrarEditor);
   $("btnCancelarHorario")?.addEventListener("click", cerrarEditor);
   $("btnGuardarHorario")?.addEventListener("click", guardarEdicion);
+  $("btnHorariosVacaciones")?.addEventListener("click", abrirVacacionesRango);
+  $("btnHorariosReemplazo")?.addEventListener("click", abrirReemplazo);
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.horariosVista)));
   document.addEventListener("keydown", e => { if (e.key === "Escape") { if (edicionActual) cerrarEditor(); else if (modoEdicion) salirModoEdicion(); } });
   window.addEventListener("autoservicio:sesion", () => { actualizarPermisos(); renderMiHorario(); });
@@ -590,6 +773,7 @@ function activar() {
 function desactivar() { if (hayCambiosPendientes()) restaurarDatos(estadoInicialEdicion); salirModoEdicion(true); restaurarBottomNav.forEach(([n, d]) => n.style.display = d); restaurarBottomNav = []; }
 
 configurarEventos();
+cargarContextoHorarios();
 window.HorariosModule = { activar, desactivar };
 
 
@@ -604,7 +788,10 @@ window.HorariosApp = {
     renderTodo();
   }
 };
-window.addEventListener('autoservicio:horarios-config', () => {
+window.addEventListener('autoservicio:horarios-config', (event) => {
+  if (event.detail?.sector && event.detail.sector !== sectorActual) return;
   cargarTurnosConfigurados();
   renderTodo();
 });
+
+window.addEventListener("autoservicio:sesion", () => { contextoHorariosCargado = false; cargarContextoHorarios(); });

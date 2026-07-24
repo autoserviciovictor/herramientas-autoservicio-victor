@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-beta-73-permisos-modulos';
+const CACHE_VERSION = 'autoservicio-beta-80-gestion-personal';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=73-permisos-modulos',
+  './style.css?v=80-gestion-personal',
   './app.js?v=73-permisos-modulos',
   './config.js?v=71-entrega53-reemplazo-catalogo',
   './excel.js?v=71-entrega53-reemplazo-catalogo',
@@ -16,11 +16,11 @@ const APP_SHELL = [
   './pwa.js?v=71-entrega53-reemplazo-catalogo',
   './search.js?v=71-entrega53-reemplazo-catalogo',
   './horarios-config.js?v=73-permisos-modulos',
-  './admin.js?v=73-permisos-modulos',
+  './admin.js?v=74-sectores',
   './auth.js?v=73-permisos-modulos',
   './notifications.js?v=71-entrega53-reemplazo-catalogo',
   './prices.js?v=71-entrega53-reemplazo-catalogo',
-  './horarios.js?v=73-permisos-modulos',
+  './horarios.js?v=80-gestion-personal',
   './api-cache.js?v=71-entrega53-reemplazo-catalogo',
   './manifest.webmanifest',
   './icons/icon-96.png',

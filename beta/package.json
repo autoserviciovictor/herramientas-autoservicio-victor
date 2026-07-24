@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "7.1.5",
-  "description": "Autoservicio 7.1 Beta - Entrega 5.1: PWA, actualización segura y compatibilidad",
+  "version": "8.0.0",
+  "description": "Autoservicio 8.0 Beta - Gestión avanzada de personal",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

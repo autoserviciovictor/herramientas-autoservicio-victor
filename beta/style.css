@@ -3768,3 +3768,24 @@ body.horarios-modo-edicion .horarios-table td{user-select:none;-webkit-user-sele
 .admin-user-permission-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .admin-user-permission-chips em{font-style:normal;font-size:.72rem;line-height:1;padding:5px 7px;border-radius:999px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb}
 @media(max-width:560px){.admin-permissions-grid{grid-template-columns:1fr}.admin-user-permission-chips{max-width:230px}}
+
+/* V7.4 Sectores */
+.admin-sectors-list{display:flex;flex-direction:column;gap:10px}.admin-sector-card{display:flex;align-items:center;gap:12px;border:1px solid #e6e0da;border-radius:16px;padding:12px;background:#fff}.admin-sector-card.inactivo{opacity:.62;background:#f5f5f5}.admin-sector-color{width:14px;height:48px;border-radius:999px;flex:none}.admin-sector-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}.admin-sector-info strong{font-size:1rem}.admin-sector-info span{font-size:.78rem;color:#777}.btn-editar-sector{border:1px solid #ddd;background:#fff;border-radius:10px;padding:7px 9px;font-weight:700}@media(max-width:560px){.admin-sector-card{align-items:flex-start}.admin-sector-card .admin-user-actions{flex-direction:column;align-items:flex-end}.admin-tabs-clean{grid-template-columns:1fr 1fr}}
+
+
+/* Entrega 7.5: calendarios independientes por sector */
+.horarios-sector-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:12px 16px;border:1px solid #e7e7e7;border-radius:16px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.045)}
+.horarios-sector-identidad{display:flex;align-items:center;gap:11px;min-width:0}.horarios-sector-identidad>i{width:12px;height:42px;border-radius:999px;background:#b72e35;box-shadow:0 0 0 4px rgba(0,0,0,.04)}
+.horarios-sector-identidad div{display:grid;gap:2px}.horarios-sector-identidad span,.horarios-sector-selector span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#777}.horarios-sector-identidad strong{font-size:18px;color:#171717}
+.horarios-sector-selector{display:grid;gap:4px;min-width:210px}.horarios-sector-selector select{min-height:42px;border:1px solid #d8d8d8;border-radius:12px;background:#fff;padding:0 38px 0 12px;font:inherit;font-weight:700;color:#222}
+.horarios-sin-empleados{height:180px!important;text-align:center!important;vertical-align:middle!important;background:#fafafa!important;color:#555!important}.horarios-sin-empleados strong,.horarios-sin-empleados span{display:block}.horarios-sin-empleados strong{font-size:15px;margin-bottom:6px}.horarios-sin-empleados span{font-size:12px;color:#777}
+@media(max-width:720px){.horarios-sector-bar{align-items:stretch;flex-direction:column;padding:11px 12px}.horarios-sector-selector{width:100%;min-width:0}.horarios-sector-identidad>i{height:36px}.horarios-sector-identidad strong{font-size:16px}}
+
+/* V7.7 - configuración de turnos por sector */
+.admin-shift-sector{display:grid;gap:6px;max-width:360px;margin:4px 0 16px;font-weight:700;color:#374151}
+.admin-shift-sector select{min-height:44px;border:1px solid #d1d5db;border-radius:12px;background:#fff;padding:0 12px;font:inherit;color:#111827}
+
+/* V8.0 Gestión avanzada de personal */
+.turno-ausente{--turno-color:#dc2626;--turno-fondo:#fee2e2;--turno-borde:#fca5a5}.turno-licencia{--turno-color:#7c3aed;--turno-fondo:#ede9fe;--turno-borde:#c4b5fd}
+.horario-cell{position:relative}.horario-nota-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:#111}.horario-reemplazo-dot{position:absolute;left:2px;bottom:2px;font-size:8px;font-style:normal;font-weight:900;background:#111;color:#fff;border-radius:4px;padding:1px 3px}
+.horarios-personal-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}.horarios-personal-actions button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700}.horarios-estadisticas{display:grid;grid-template-columns:repeat(6,minmax(90px,1fr));gap:8px;margin:12px 0}.horarios-estadisticas article{background:#fff;border:1px solid #eee;border-radius:12px;padding:10px;text-align:center}.horarios-estadisticas strong{display:block;font-size:20px}.horarios-estadisticas span{font-size:11px;color:#666}.horarios-custom-field textarea,.gestion-personal-form textarea{min-height:72px;resize:vertical}.gestion-personal-form{display:grid;gap:10px}.gestion-personal-form label{display:grid;gap:5px;font-weight:700}.gestion-personal-form input,.gestion-personal-form select,.gestion-personal-form textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:9px}.gp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:800px){.horarios-estadisticas{grid-template-columns:repeat(3,1fr)}.horarios-personal-actions button{flex:1}}

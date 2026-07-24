@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=73-permisos-modulos">
+    <link rel="stylesheet" href="style.css?v=76-permisos-sector">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -271,7 +271,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">7.1 Beta - Entrega 5.3</strong>
+            <strong id="settingsAppVersion">8.0 Beta - Gestión avanzada de personal</strong>
         </section>
     </main>
 
@@ -412,7 +412,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>Entrega 6.3</strong><span>Horarios configurables y colores personalizados.</span></div>
+                <div class="horarios-sidebar-note"><strong>Versión 8.0</strong><span>Ausencias, licencias, vacaciones, reemplazos y auditoría detallada.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -428,9 +428,10 @@
                         <button id="btnHorariosMesSiguiente" type="button" aria-label="Mes siguiente">›</button>
                     </div>
                 </header>
+                <section class="horarios-personal-actions"><button id="btnHorariosVacaciones" type="button">🏖️ Programar vacaciones</button><button id="btnHorariosReemplazo" type="button">⇄ Reemplazo</button></section>
 
                 <section class="horarios-status-row">
-                    <div><span class="status-dot"></span><strong>Vista de diseño</strong><small>Datos de ejemplo</small></div>
+                    <div><span class="status-dot"></span><strong>Sincronizado con Google Sheets</strong><small>Gestión por sector</small></div>
                 </section>
 
                 <div id="horariosEquipoView" class="horarios-equipo-view">
@@ -443,6 +444,7 @@
                         </div>
                     </section>
 
+                    <section id="horariosEstadisticas" class="horarios-estadisticas"></section>
                     <section class="horarios-bottom-grid">
                         <article class="horarios-summary-card">
                             <div class="horarios-card-heading">
@@ -470,6 +472,8 @@
                     <button id="btnCerrarHorariosEditor" type="button" aria-label="Cerrar">✕</button>
                 </div>
                 <div id="horariosTurnosOpciones" class="horarios-turnos-opciones"></div>
+                <label id="horariosLicenciaWrap" class="horarios-custom-field oculto">Motivo de licencia<select id="horariosLicenciaMotivo"><option value="enfermedad">Enfermedad</option><option value="accidente">Accidente</option><option value="estudio">Estudio</option><option value="otro">Otro</option></select></label>
+                <label class="horarios-custom-field">Observación<textarea id="horariosObservacion" maxlength="300" placeholder="Capacitación, horas extras, cambio de turno..."></textarea></label>
                 <label id="horariosCustomWrap" class="horarios-custom-field oculto">Horario personalizado<input id="horariosTurnoPersonalizado" type="text" placeholder="Ej. 11-19" maxlength="11"></label>
                 <div class="horarios-editor-actions">
                     <button id="btnCancelarHorario" type="button" class="secondary-btn">Cancelar</button>
@@ -639,6 +643,7 @@
 
         <nav class="admin-tabs admin-tabs-clean">
             <button type="button" class="admin-tab activo" data-admin-tab="usuarios">👤 Usuarios</button>
+            <button type="button" class="admin-tab" data-admin-tab="sectores">🏬 Sectores</button>
             <button type="button" class="admin-tab" data-admin-tab="historial">📋 Historial</button>
             <button type="button" class="admin-tab" data-admin-tab="horarios">🕒 Horarios</button>
             <button type="button" class="admin-tab" data-admin-tab="sistema">⚙️ Sistema</button>
@@ -647,6 +652,13 @@
         <section id="adminTab-usuarios" class="admin-tab-panel settings-card">
             <div class="admin-section-head"><div><strong>Usuarios</strong><span>Crear, editar y desactivar cuentas</span></div><button id="btnAdminNuevoUsuario" type="button">+ Crear</button></div>
             <div id="adminUsuariosLista" class="admin-users-list"></div>
+        </section>
+
+
+        <section id="adminTab-sectores" class="admin-tab-panel settings-card oculto">
+            <div class="admin-section-head"><div><strong>Sectores</strong><span>Organizá áreas, colores y supervisores</span></div><button id="btnAdminNuevoSector" type="button">+ Nuevo sector</button></div>
+            <div id="adminSectoresMensaje" class="admin-message"></div>
+            <div id="adminSectoresLista" class="admin-sectors-list"></div>
         </section>
 
         <section id="adminTab-historial" class="admin-tab-panel settings-card oculto">
@@ -687,6 +699,7 @@
 
         <section id="adminTab-horarios" class="admin-tab-panel settings-card oculto">
             <div class="admin-section-head"><div><strong>Horarios</strong><span>Creá, editá y asigná un color a cada turno</span></div><button id="btnAdminNuevoHorario" type="button">+ Nuevo horario</button></div>
+            <label class="admin-shift-sector">Sector<select id="adminHorarioSector"></select></label>
             <div id="adminHorariosMensaje" class="admin-message"></div>
             <div id="adminHorariosLista" class="admin-shifts-list"></div>
             <p class="admin-shifts-note">Franco y Vacaciones son estados especiales y no se modifican desde esta lista.</p>
@@ -698,7 +711,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">7.1 Beta - Entrega 5.3</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">8.0 Beta - Gestión avanzada de personal</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
@@ -719,7 +732,8 @@
         <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
         <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
         <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
-        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="administrador">Administrador</option></select></label>
+        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="supervisor">Supervisor</option><option value="administrador">Administrador</option></select></label>
+        <label>Sector<select id="adminUsuarioSector"><option value="">Sin sector</option></select></label>
         <fieldset id="adminUsuarioPermisos" class="admin-permissions-fieldset">
           <legend>Módulos visibles</legend>
           <p>Elegí qué herramientas aparecerán para este usuario.</p>
@@ -737,6 +751,20 @@
       </div>
     </div>
 
+
+
+    <div id="adminSectorModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card admin-user-modal" role="dialog" aria-modal="true">
+        <button id="btnAdminCerrarSector" class="modal-close" type="button">×</button>
+        <h2 id="adminSectorModalTitulo">Nuevo sector</h2>
+        <input id="adminSectorOriginal" type="hidden">
+        <label>Nombre<input id="adminSectorNombre" type="text" maxlength="50" autocomplete="off" placeholder="Ej.: Caja"></label>
+        <label>Color<input id="adminSectorColor" type="color" value="#b72e35"></label>
+        <label>Supervisor<select id="adminSectorSupervisor"><option value="">Sin supervisor</option></select></label>
+        <label id="adminSectorActivoFila" class="admin-active-row oculto"><input id="adminSectorActivo" type="checkbox" checked> Sector activo</label>
+        <div class="admin-modal-actions"><button id="btnAdminCancelarSector" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarSector" type="button" class="save-btn">Guardar</button></div>
+      </div>
+    </div>
 
     <div id="adminImportarPreviewModal" class="modal-overlay oculto" aria-hidden="true">
       <div class="modal-card admin-import-preview-modal" role="dialog" aria-modal="true" aria-labelledby="adminImportarPreviewTitulo">
@@ -846,12 +874,12 @@
 <script src="./pwa.js?v=71-entrega53-reemplazo-catalogo" defer></script>
 <script type="module" src="./auth.js?v=73-permisos-modulos"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=72-horarios-entrega6-3"></script>
-<script type="module" src="./admin.js?v=73-permisos-modulos"></script>
+<script src="./horarios-config.js?v=77-sheets-sector"></script>
+<script type="module" src="./admin.js?v=77-sheets-sector"></script>
 <script type="module" src="./notifications.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./prices.js?v=71-entrega53-reemplazo-catalogo"></script>
 <script type="module" src="./app.js?v=73-permisos-modulos"></script>
-<script type="module" src="./horarios.js?v=73-permisos-modulos"></script>
+<script type="module" src="./horarios.js?v=77-sheets-sector"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

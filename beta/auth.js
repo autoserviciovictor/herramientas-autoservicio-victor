@@ -129,7 +129,7 @@ function actualizarInterfazUsuario() {
   if (usuarioActual?.rol && window.AutoservicioReleaseChannel?.syncForRole?.(usuarioActual.rol)) return;
   const nombre = usuarioActual?.nombre || usuarioActual?.usuario || "";
   if ($("sesionNombre")) $("sesionNombre").textContent = nombre;
-  const textoRol = usuarioActual?.rol === "administrador" ? "Administrador" : "Repositor";
+  const textoRol = usuarioActual?.rol === "administrador" ? "Administrador" : (usuarioActual?.rol === "supervisor" ? "Supervisor" : "Repositor");
   if ($("sesionRol")) $("sesionRol").textContent = textoRol;
   if ($("menuSesionNombre")) $("menuSesionNombre").textContent = nombre || "Usuario";
   if ($("menuSesionRol")) $("menuSesionRol").textContent = textoRol;
