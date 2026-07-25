@@ -8,10 +8,20 @@ const DEFAULTS = [
   { id:'16-22', inicio:'16:00', fin:'22:00', color:'#8b5cf6' }
 ];
 let sectorActual = '';
+function hora24(valor){
+  const texto=String(valor||'').trim().toUpperCase();
+  const m=texto.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/);
+  if(!m)return '';
+  let h=Number(m[1]),min=Number(m[2]);
+  if(m[3]==='PM'&&h<12)h+=12;
+  if(m[3]==='AM'&&h===12)h=0;
+  if(h<0||h>23||min<0||min>59)return '';
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+}
 function normalizar(items){
-  return (Array.isArray(items)?items:[]).filter(x=>x&&x.id&&x.inicio&&x.fin).map(x=>({
-    id:String(x.id), inicio:String(x.inicio).slice(0,5), fin:String(x.fin).slice(0,5), color:/^#[0-9a-f]{6}$/i.test(x.color||'')?x.color:'#64748b'
-  }));
+  return (Array.isArray(items)?items:[]).filter(x=>x&&x.id).map(x=>({
+    id:String(x.id), inicio:hora24(x.inicio), fin:hora24(x.fin), color:/^#[0-9a-f]{6}$/i.test(x.color||'')?x.color:'#64748b'
+  })).filter(x=>x.inicio&&x.fin);
 }
 function clave(sector=sectorActual){ return STORAGE_PREFIX + (sector || 'general'); }
 function seleccionarSector(sector){ sectorActual=String(sector||''); return cargar(); }
