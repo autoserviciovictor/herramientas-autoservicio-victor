@@ -3787,7 +3787,7 @@ body.horarios-modo-edicion .horarios-table td{user-select:none;-webkit-user-sele
 
 /* V8.0 Gestión avanzada de personal */
 .turno-ausente{--turno-color:#dc2626;--turno-fondo:#fee2e2;--turno-borde:#fca5a5}.turno-licencia{--turno-color:#7c3aed;--turno-fondo:#ede9fe;--turno-borde:#c4b5fd}
-.horario-cell{position:relative}.horario-nota-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:#111}
+.horario-cell{position:relative}.horario-nota-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:#111}.horario-reemplazo-dot{position:absolute;left:2px;bottom:2px;font-size:8px;font-style:normal;font-weight:900;background:#111;color:#fff;border-radius:4px;padding:1px 3px}
 .horarios-personal-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}.horarios-personal-actions button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700}.horarios-estadisticas{display:grid;grid-template-columns:repeat(6,minmax(90px,1fr));gap:8px;margin:12px 0}.horarios-estadisticas article{background:#fff;border:1px solid #eee;border-radius:12px;padding:10px;text-align:center}.horarios-estadisticas strong{display:block;font-size:20px}.horarios-estadisticas span{font-size:11px;color:#666}.horarios-custom-field textarea,.gestion-personal-form textarea{min-height:72px;resize:vertical}.gestion-personal-form{display:grid;gap:10px}.gestion-personal-form label{display:grid;gap:5px;font-weight:700}.gestion-personal-form input,.gestion-personal-form select,.gestion-personal-form textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:9px}.gp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:800px){.horarios-estadisticas{grid-template-columns:repeat(3,1fr)}.horarios-personal-actions button{flex:1}}
 
 
@@ -3796,79 +3796,3 @@ body.horarios-modo-edicion .horarios-table td{user-select:none;-webkit-user-sele
 #adminUsuarioModal .admin-user-modal,#adminSectorModal .admin-user-modal{max-height:calc(100dvh - 36px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:auto;width:min(560px,100%)}
 #adminUsuarioModal .admin-modal-actions,#adminSectorModal .admin-modal-actions{position:sticky;bottom:-1px;background:#fff;padding:12px 0 max(2px,env(safe-area-inset-bottom));z-index:3}
 @media(max-width:560px){#adminUsuarioModal,#adminSectorModal{padding:0;align-items:flex-end}#adminUsuarioModal .admin-user-modal,#adminSectorModal .admin-user-modal{width:100%;max-width:none;max-height:calc(100dvh - env(safe-area-inset-top));border-radius:26px 26px 0 0;padding-bottom:max(12px,env(safe-area-inset-bottom))}.admin-permissions-grid{grid-template-columns:1fr 1fr!important}.admin-permissions-grid label{min-height:92px!important;padding:12px 8px!important}.admin-permissions-grid label span{font-size:16px!important}}
-
-
-/* Horarios v8.1.5 · Entrega 1 */
-.module-card.module-horarios .module-icon{background:transparent!important;box-shadow:none!important;border-radius:0!important}
-.horarios-table tbody .empleado-avatar{display:none}
-.horarios-table.empleados-compactos tbody .empleado-avatar,
-.horarios-table.empleados-minimos tbody .empleado-avatar{display:grid}
-.horarios-table.empleados-compactos tbody .empleado-col strong,
-.horarios-table.empleados-minimos tbody .empleado-col strong{display:none}
-.horarios-turno-option.seleccionado span{background:#6f737a!important;border-color:#6f737a!important;box-shadow:none!important}
-body:not(.horarios-modo-edicion) .horarios-table td[data-empleado]{user-select:none}
-
-/* v8.1.5 Entrega 2: diálogos propios de Administración */
-.app-dialog-overlay{position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.58);backdrop-filter:blur(3px)}
-.app-dialog-overlay.oculto{display:none!important}
-.app-dialog-card{position:relative;width:min(430px,100%);border-radius:20px;background:#fff;padding:24px;box-shadow:0 24px 70px rgba(15,23,42,.28);border:1px solid rgba(148,163,184,.28)}
-.app-dialog-card h3{margin:0 38px 10px 0;font-size:1.22rem;color:#111827}
-.app-dialog-card p{margin:0;color:#4b5563;line-height:1.5;white-space:pre-line}
-.app-dialog-close{position:absolute;top:12px;right:14px;border:0;background:transparent;font-size:1.75rem;line-height:1;color:#6b7280;cursor:pointer}
-.app-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
-.app-dialog-actions button{min-width:110px}
-.app-dialog-actions .dialog-danger{background:#b4232a!important;border-color:#b4232a!important;color:#fff!important}
-#appDialogInputWrap{margin-top:16px}
-#appDialogInput{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;font:inherit}
-@media(max-width:520px){.app-dialog-card{padding:21px 18px}.app-dialog-actions{flex-direction:column-reverse}.app-dialog-actions button{width:100%}}
-
-
-/* v8.1.5 Entrega 3 — pulido visual y selectores de color */
-.module-card.module-horarios{background:#fff!important;border-color:rgba(183,46,53,.22)!important}
-.module-card.module-horarios .module-icon{background:transparent!important;box-shadow:none!important;border-radius:0!important}
-.admin-tab-panel.settings-card{border:1px solid #ece6e1;box-shadow:0 8px 24px rgba(49,38,31,.06)}
-.admin-section-head{padding-bottom:12px;border-bottom:1px solid #eee8e3}
-.admin-section-head button{min-height:42px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;box-shadow:0 5px 12px rgba(25,135,84,.14)}
-.admin-user-card,.admin-sector-card,.admin-shift-card{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
-.admin-user-card:hover,.admin-sector-card:hover,.admin-shift-card:hover{border-color:#d9cec6;box-shadow:0 7px 18px rgba(49,38,31,.07)}
-.admin-user-modal,.admin-shift-modal{border-radius:22px;padding:22px}
-.admin-user-modal h2,.admin-shift-modal h2{margin:4px 0 16px}
-.admin-user-modal label,.admin-shift-form label{color:#342f2c;font-size:13px;letter-spacing:.01em}
-.admin-user-modal input:not([type=checkbox]):not([type=hidden]),.admin-user-modal select,.admin-shift-form input[type=time]{min-height:48px;border:1px solid #dcd5cf;border-radius:13px;background:#fff;padding:12px 13px;box-shadow:inset 0 1px 1px rgba(0,0,0,.02)}
-.admin-user-modal input:focus,.admin-user-modal select:focus,.admin-shift-form input:focus{outline:3px solid rgba(183,46,53,.12);border-color:#b72e35}
-.admin-modal-actions .save-btn,.admin-modal-actions .cancel-btn,.modal-actions .save-btn,.modal-actions .secondary-btn{min-height:46px;border-radius:13px}
-.admin-color-picker{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid #e4ddd7;border-radius:16px;background:#faf8f6}
-.admin-color-picker-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.admin-color-picker-head>span{font-size:13px;font-weight:800;color:#3f3935}
-.admin-color-picker-head>strong{font-size:12px;color:#77706a;font-weight:800}
-.admin-color-palette{display:grid;grid-template-columns:repeat(6,minmax(38px,1fr));gap:9px}
-.admin-color-option{position:relative;display:grid;place-items:center;min-width:0;height:42px;padding:0;border:1px solid transparent;border-radius:12px;background:#fff;cursor:pointer;transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
-.admin-color-option span{display:block;width:25px;height:25px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
-.admin-color-option:hover{transform:translateY(-1px);border-color:#d6cec8}
-.admin-color-option.seleccionado{border-color:#25211f;box-shadow:0 0 0 2px rgba(37,33,31,.09)}
-.admin-color-option.seleccionado::after{content:'✓';position:absolute;right:3px;top:1px;width:14px;height:14px;border-radius:50%;background:#25211f;color:#fff;font-size:9px;display:grid;place-items:center;font-weight:900}
-.admin-shift-color-picker{margin:0}
-.admin-shift-info span{font-family:inherit!important;color:#6b7280}
-.admin-shift-swatch{box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
-@media(max-width:560px){
- .admin-section-head{gap:10px}.admin-section-head button{padding:9px 11px;font-size:13px}
- .admin-color-palette{grid-template-columns:repeat(6,1fr);gap:6px}.admin-color-option{height:38px;border-radius:10px}.admin-color-option span{width:23px;height:23px}
- .admin-user-modal,.admin-shift-modal{padding:18px;border-radius:20px}
-}
-
-
-/* v8.1.5 Entrega 5 — cierre y simplificación final */
-.horarios-summary-list .horarios-resumen-persona{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(15,23,42,.08)}
-.horarios-summary-list .horarios-resumen-persona:last-child{border-bottom:0}
-.horarios-resumen-persona>span{display:flex;align-items:center;gap:9px;min-width:0}
-.horarios-resumen-persona>span strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.horarios-resumen-persona>b{font-size:.9rem;text-align:right;white-space:nowrap;color:#334155}
-.horarios-resumen-vacio{padding:16px 0;color:#64748b;text-align:center}
-@media(max-width:560px){.horarios-resumen-persona{align-items:flex-start!important;flex-direction:column}.horarios-resumen-persona>b{padding-left:25px}}
-
-
-/* v8.1.5 Entrega 5: Mi horario simplificado y cierre visual */
-.horarios-mio-view .mi-horario-stats{display:none!important}
-.horarios-sidebar-note span{line-height:1.35}
-.horarios-summary-list article,.mi-horario-list article{min-height:52px}
-@media (max-width:700px){.horarios-sidebar-note{display:none}.horarios-content{padding-top:6px}}
