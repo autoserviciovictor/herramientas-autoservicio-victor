@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v815-entrega5-final';
+const CACHE_VERSION = 'autoservicio-v815-canal-beta-1';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
@@ -12,7 +12,7 @@ const APP_SHELL = [
   './scanner.js?v=815-entrega5',
   './reposicion.js?v=815-entrega5',
   './ui.js?v=815-entrega5',
-  './release-channel.js?v=815-entrega5',
+  './release-channel.js?v=815-canal-beta-1',
   './pwa.js?v=815-entrega5',
   './search.js?v=815-entrega5',
   './horarios-config.js?v=815-entrega5',
@@ -23,6 +23,7 @@ const APP_SHELL = [
   './horarios.js?v=815-entrega5',
   './api-cache.js?v=815-entrega5',
   './manifest.webmanifest',
+  './version.json',
   './icons/icon-96.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
