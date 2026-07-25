@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { API_BASE_URL } from "./config.js?v=815-entrega5";
 
 let empleados = [];
 let sectoresHorarios = [];
@@ -6,11 +6,13 @@ let sectorActual = "";
 let contextoHorariosCargado = false;
 let permisoEdicionServidor = false;
 const detalles = new Map();
-let reemplazos = [];
 let metadatosModificados = false;
+let resumenHoyDatos = new Map();
+let resumenHoyClave = "";
 
 function usuarioHorarios() { return window.AutoservicioAuth?.getUsuario?.() || {}; }
-function esAdministradorHorarios() { return usuarioHorarios().rol === "administrador"; }
+function rolHorarios() { return String(usuarioHorarios().rol || "").trim().toLowerCase(); }
+function esAdministradorHorarios() { return rolHorarios() === "administrador"; }
 function sectorSeleccionado() { return sectoresHorarios.find(s => s.id === sectorActual) || null; }
 function empleadosDelSector(id = sectorActual) {
   const sector = sectoresHorarios.find(s => s.id === id);
@@ -24,14 +26,16 @@ async function cargarContextoHorarios() {
     sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
     permisoEdicionServidor = data.puedeEditar === true;
     const usuario = usuarioHorarios();
-    const preferido = esAdministradorHorarios()
-      ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : sectoresHorarios[0]?.id)
+    const puedeElegirSector = ["administrador","supervisor"].includes(String(usuario.rol || "").trim().toLowerCase());
+    const preferido = puedeElegirSector
+      ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : (usuario.sector || sectoresHorarios[0]?.id))
       : (usuario.sector || sectoresHorarios[0]?.id);
     sectorActual = preferido || "";
     empleados = empleadosDelSector();
     await window.AutoservicioHorariosConfig?.cargarRemoto?.(sectorActual);
     cargarTurnosConfigurados();
     await cargarCalendarioActual();
+    await cargarResumenHoy(true);
     contextoHorariosCargado = true;
     renderSelectorSector();
     renderTodo();
@@ -68,6 +72,7 @@ function crearSelectorSector() {
     await window.AutoservicioHorariosConfig?.cargarRemoto?.(sectorActual);
     cargarTurnosConfigurados();
     await cargarCalendarioActual();
+    await cargarResumenHoy(true);
     renderSelectorSector();
     renderTodo();
     desplazarAlDia(esMesActual() ? new Date().getDate() : 1, "auto");
@@ -80,7 +85,7 @@ function renderSelectorSector() {
   if ($("horariosSectorColor")) $("horariosSectorColor").style.background = sector?.color || "#b72e35";
   const wrap = $("horariosSectorSelectorWrap");
   const select = $("horariosSectorSelector");
-  if (wrap) wrap.classList.toggle("oculto", !esAdministradorHorarios() || sectoresHorarios.length < 2);
+  if (wrap) wrap.classList.toggle("oculto", !["administrador","supervisor"].includes(rolHorarios()) || sectoresHorarios.length < 2);
   if (select) {
     select.innerHTML = sectoresHorarios.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("");
     select.value = sectorActual;
@@ -136,6 +141,31 @@ function claveMes(fecha, empleado, dia) {
 }
 function clave(empleado, dia) { return claveMes(fechaVista, empleado, dia); }
 function mesClave(fecha = fechaVista) { return `${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,"0")}`; }
+function claveResumenHoy(empleado) { return String(empleado || "").trim(); }
+async function cargarResumenHoy(forzar = false) {
+  if (!sectorActual) { resumenHoyDatos = new Map(); resumenHoyClave = ""; return; }
+  const hoy = new Date();
+  const mesHoy = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,"0")}`;
+  const claveCarga = `${sectorActual}|${mesHoy}|${hoy.getDate()}`;
+  if (!forzar && resumenHoyClave === claveCarga) return;
+  try {
+    if (mesClave() === mesHoy) {
+      resumenHoyDatos = new Map(empleados.map(e => [claveResumenHoy(e), obtenerTurno(e, hoy.getDate())]));
+    } else {
+      const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesHoy}`);
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cargar el resumen de hoy");
+      const mapa = new Map();
+      (data.celdas || []).filter(c => Number(c.dia) === hoy.getDate()).forEach(c => mapa.set(claveResumenHoy(c.empleado), String(c.turno || "")));
+      resumenHoyDatos = mapa;
+    }
+    resumenHoyClave = claveCarga;
+  } catch (error) {
+    console.warn("Horarios: no se pudo actualizar el resumen de hoy", error);
+    resumenHoyDatos = new Map();
+    resumenHoyClave = claveCarga;
+  }
+}
 function limpiarMesDatos(sector = sectorActual, fecha = fechaVista) {
   const prefijo = `${sector || "general"}|${fecha.getFullYear()}-${fecha.getMonth()}-`;
   for (const k of [...datos.keys()]) if (k.startsWith(prefijo)) datos.delete(k);
@@ -150,7 +180,6 @@ async function cargarCalendarioActual() {
     (data.celdas || []).forEach(c => datos.set(clave(String(c.empleado), Number(c.dia)), String(c.turno)));
     detalles.clear();
     (data.detalles || []).forEach(x => detalles.set(keyCelda(String(x.empleado), Number(x.dia)), { tipo:x.tipo || "", motivo:x.motivo || "", observacion:x.observacion || "" }));
-    reemplazos = Array.isArray(data.reemplazos) ? data.reemplazos : [];
     metadatosModificados = false;
     if (Array.isArray(data.turnos) && data.turnos.length) {
       window.AutoservicioHorariosConfig?.guardarLocal?.(data.turnos, sectorActual);
@@ -171,8 +200,9 @@ function esHoy(d) { return esMesActual() && d === new Date().getDate(); }
 function puedeEditar() {
   const usuario = usuarioHorarios();
   if (!permisoEdicionServidor) return false;
-  if (usuario.rol === "administrador") return true;
-  return usuario.rol === "supervisor" && Boolean(usuario.sector) && usuario.sector === sectorActual;
+  const rol = String(usuario.rol || "").trim().toLowerCase();
+  if (rol === "administrador") return true;
+  return rol === "supervisor" && Boolean(usuario.sector) && usuario.sector === sectorActual;
 }
 
 function parsearTurno(id) {
@@ -190,19 +220,14 @@ function formatoCelda(id) {
   const p = parsearTurno(id);
   return p ? `<span>${hora24(p.inicioH, p.inicioM)}</span><span>${hora24(p.finH, p.finM)}</span>` : id;
 }
-function horaAmPm(h, m = 0) {
-  const sufijo = h >= 12 ? "PM" : "AM";
-  const hora = h % 12 || 12;
-  return `${String(hora).padStart(2, "0")}:${String(m).padStart(2, "0")} ${sufijo}`;
-}
-function formatoAmPm(id) {
+function formatoHorario24(id) {
   if (!id) return "Sin asignar";
   if (id === "franco") return "Franco";
   if (id === "vacaciones") return "Vacaciones";
   if (id === "ausente") return "Ausente";
   if (id === "licencia") return "Licencia";
   const p = parsearTurno(id);
-  return p ? `${horaAmPm(p.inicioH, p.inicioM)} - ${horaAmPm(p.finH, p.finM)}` : id;
+  return p ? `${hora24(p.inicioH, p.inicioM)} - ${hora24(p.finH, p.finM)}` : id;
 }
 function coberturaDia(d) {
   let manana = 0, tarde = 0;
@@ -270,7 +295,7 @@ async function confirmarGuardado() {
     const respuesta = await fetch(`${API_BASE_URL}/horarios/calendario`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sector: sectorActual, mes: mesClave(), celdas, detalles:[...detalles].map(([k,v])=>{const [empleado,dia]=k.split("::");return {empleado,dia:Number(dia),...v}}), reemplazos })
+      body: JSON.stringify({ sector: sectorActual, mes: mesClave(), celdas, detalles:[...detalles].map(([k,v])=>{const [empleado,dia]=k.split("::");return {empleado,dia:Number(dia),...v}}) })
     });
     const data = await respuesta.json().catch(() => ({}));
     if (!respuesta.ok || !data.ok) throw new Error(data.mensaje || "No se pudo validar el guardado");
@@ -279,6 +304,7 @@ async function confirmarGuardado() {
     historial = [];
     seleccion.clear();
     await salirModoEdicion(true);
+    await cargarResumenHoy(true);
     renderTodo();
     avisoHorarios("Cambios guardados");
   } catch (error) {
@@ -576,8 +602,7 @@ function renderTabla() {
   body.innerHTML = empleados.length ? empleados.map(e => `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from({ length: diasDelMes() }, (_, i) => {
     const d = i + 1, id = obtenerTurno(e, d), t = obtenerDefinicion(id), sel = seleccion.has(keyCelda(e, d));
     const detalle = detalles.get(keyCelda(e,d));
-    const reemplazo = reemplazos.find(r => r.empleadoOriginal === e && d >= r.desde && d <= r.hasta);
-    const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ''}${reemplazo ? '<i class="horario-reemplazo-dot" title="Reemplazo: '+reemplazo.reemplazante+'">R</i>' : ''}`;
+    const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ''}`;
     return `<td class="${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}"><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ''}" data-tooltip="${t.label}">${formatoCelda(id)}${marcas}</button></td>`;
   }).join("")}</tr>`).join("") : `<tr><td colspan="${diasDelMes() + 1}" class="horarios-sin-empleados"><strong>No hay empleados asignados a este sector</strong><span>Asigná usuarios desde Administrador → Usuarios.</span></td></tr>`;
   head.querySelectorAll("[data-horarios-dia]").forEach(x => x.onclick = () => { diaSeleccionado = Number(x.dataset.horariosDia); renderTabla(); renderResumen(); });
@@ -591,7 +616,7 @@ function renderTabla() {
       arrastrando = ev.pointerType !== "touch";
       if (arrastrando) ev.preventDefault();
     };
-    td.ondblclick = () => { if (puedeEditar() && modoEdicion) abrirEditor(td.dataset.empleado, Number(td.dataset.dia)); };
+    td.ondblclick = ev => { ev.preventDefault(); ev.stopPropagation(); };
   });
   const w = document.querySelector("#horariosEquipoView .horarios-table-wrap");
   if (w && !w.dataset.cfg) { w.dataset.cfg = "1"; w.addEventListener("scroll", actualizarColumnaEmpleados, { passive: true }); }
@@ -627,13 +652,24 @@ document.addEventListener("pointercancel", () => {
 function renderResumen() {
   const t = $("horariosDiaSeleccionado"), c = $("horariosResumenDia");
   if (!t || !c) return;
-  const f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), diaSeleccionado);
-  t.textContent = f.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
-  const m = new Map();
-  empleados.forEach(e => { const id = obtenerTurno(e, diaSeleccionado); m.set(id, (m.get(id) || 0) + 1); });
-  c.innerHTML = [...m].map(([id, n]) => { const x = obtenerDefinicion(id); return `<div><span><i class="${x.clase}" style="${x.estilo || ''}"></i>${x.label}</span><strong>${n} ${n === 1 ? "persona" : "personas"}</strong></div>`; }).join("");
-  const cv = coberturaDia(diaSeleccionado), b = $("horariosCoberturaEstado");
-  if (b) { b.textContent = `Mañana ${cv.manana} · Tarde ${cv.tarde}`; b.classList.toggle("alerta", cv.manana < 2 || cv.tarde < 2); }
+  const hoy = new Date();
+  t.textContent = hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const filas = empleados.map(e => {
+    const id = resumenHoyDatos.get(claveResumenHoy(e)) || "";
+    const x = obtenerDefinicion(id);
+    return `<div class="horarios-resumen-persona"><span><i class="${x.clase}" style="${x.estilo || ''}"></i><strong>${e}</strong></span><b>${formatoHorario24(id)}</b></div>`;
+  });
+  c.innerHTML = filas.length ? filas.join("") : '<div class="horarios-resumen-vacio">No hay personal asignado a este sector.</div>';
+  let manana = 0, tarde = 0;
+  empleados.forEach(e => {
+    const p = parsearTurno(resumenHoyDatos.get(claveResumenHoy(e)) || "");
+    if (!p) return;
+    const inicio = p.inicioH + p.inicioM / 60, fin = p.finH + p.finM / 60;
+    if (inicio < 14 && fin > 8) manana++;
+    if (inicio < 22 && fin > 14) tarde++;
+  });
+  const b = $("horariosCoberturaEstado");
+  if (b) { b.textContent = `Mañana ${manana} · Tarde ${tarde}`; b.classList.toggle("alerta", manana < 2 || tarde < 2); }
   renderEstadisticasSector();
 }
 function renderEstadisticasSector(){
@@ -703,37 +739,14 @@ function renderMiHorario() {
   const lista = $("miHorarioLista"); if (!lista) return;
   const inicio = esMesActual() ? new Date().getDate() : 1;
   const dias = Array.from({ length: Math.min(10, diasDelMes() - inicio + 1) }, (_, i) => inicio + i);
-  let horas = 0, francos = 0, vac = 0;
-  for (let d = 1; d <= diasDelMes(); d++) {
-    const id = obtenerTurno(e, d), p = parsearTurno(id);
-    if (id === "franco") francos++; else if (id === "vacaciones") vac++; else if (p) horas += (p.finH + p.finM / 60) - (p.inicioH + p.inicioM / 60);
-  }
-  let stats = $("miHorarioStats");
-  if (!stats) { stats = document.createElement("section"); stats.id = "miHorarioStats"; stats.className = "mi-horario-stats"; lista.before(stats); }
-  stats.innerHTML = `<article><strong>${horas}</strong><span>Horas del mes</span></article><article><strong>${francos}</strong><span>Francos</span></article><article><strong>${vac}</strong><span>Vacaciones</span></article>`;
-  lista.innerHTML = dias.map(d => { const id = obtenerTurno(e, d), tr = obtenerDefinicion(id), f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d); return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${d} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ''}">${formatoAmPm(id)}</span></article>`; }).join("");
+  $("miHorarioStats")?.remove();
+  lista.innerHTML = dias.map(d => { const id = obtenerTurno(e, d), tr = obtenerDefinicion(id), f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d); return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${d} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ''}">${formatoHorario24(id)}</span></article>`; }).join("");
   const proximo = encontrarProximoTurno(e);
-  $("miHorarioProximo").textContent = proximo ? formatoAmPm(proximo.id) : "Sin turnos próximos";
+  $("miHorarioProximo").textContent = proximo ? formatoHorario24(proximo.id) : "Sin turnos próximos";
   $("miHorarioProximoFecha").textContent = proximo ? proximo.fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) : "—";
   const saludo = document.querySelector(".mi-horario-saludo"); if (saludo) saludo.textContent = `Hola, ${usuario?.nombre || e}`;
 }
 
-function abrirVacacionesRango(){
-  if(!puedeEditar()||!modoEdicion) return; asegurarGestionPersonal();
-  $("gestionPersonalTitulo").textContent="Programar vacaciones";
-  $("gestionPersonalContenido").innerHTML=`<label>Empleado<select id="gpEmpleado">${empleados.map(e=>`<option>${e}</option>`).join("")}</select></label><div class="gp-grid"><label>Desde<input id="gpDesde" type="number" min="1" max="${diasDelMes()}" value="1"></label><label>Hasta<input id="gpHasta" type="number" min="1" max="${diasDelMes()}" value="${diasDelMes()}"></label></div>`;
-  $("gestionPersonalGuardar").onclick=()=>{const e=$("gpEmpleado").value,a=Number($("gpDesde").value),b=Number($("gpHasta").value);if(a<1||b<a||b>diasDelMes())return;iniciarMovimiento();for(let d=a;d<=b;d++){datos.set(clave(e,d),"vacaciones");detalles.set(keyCelda(e,d),{tipo:"vacaciones",motivo:"",observacion:"Vacaciones programadas"});}metadatosModificados=true;cerrarGestionPersonal();renderTodo();}; abrirGestionPersonal();
-}
-function abrirReemplazo(){
-  if(!puedeEditar()||!modoEdicion||empleados.length<2) return; asegurarGestionPersonal();
-  $("gestionPersonalTitulo").textContent="Registrar reemplazo";
-  const opts=empleados.map(e=>`<option>${e}</option>`).join("");
-  $("gestionPersonalContenido").innerHTML=`<label>Empleado original<select id="gpOriginal">${opts}</select></label><label>Reemplazante<select id="gpReemplazante">${opts}</select></label><div class="gp-grid"><label>Desde<input id="gpDesde" type="number" min="1" max="${diasDelMes()}" value="1"></label><label>Hasta<input id="gpHasta" type="number" min="1" max="${diasDelMes()}" value="1"></label></div><label>Observación<textarea id="gpObs" maxlength="300"></textarea></label>`;
-  $("gestionPersonalGuardar").onclick=()=>{const empleadoOriginal=$("gpOriginal").value,reemplazante=$("gpReemplazante").value,desde=Number($("gpDesde").value),hasta=Number($("gpHasta").value);if(empleadoOriginal===reemplazante||desde<1||hasta<desde)return;reemplazos.push({empleadoOriginal,reemplazante,desde,hasta,observacion:$("gpObs").value.trim()});metadatosModificados=true;cerrarGestionPersonal();renderTodo();}; abrirGestionPersonal();
-}
-function asegurarGestionPersonal(){if($("gestionPersonalModal"))return;const m=document.createElement("div");m.id="gestionPersonalModal";m.className="horarios-dialogo-overlay oculto";m.innerHTML=`<div class="horarios-dialogo-card gestion-personal-card"><h3 id="gestionPersonalTitulo"></h3><div id="gestionPersonalContenido" class="gestion-personal-form"></div><div class="horarios-dialogo-actions"><button id="gestionPersonalGuardar" class="primario" type="button">Aplicar</button><button id="gestionPersonalCancelar" type="button">Cancelar</button></div></div>`;document.body.appendChild(m);$("gestionPersonalCancelar").onclick=cerrarGestionPersonal;}
-function abrirGestionPersonal(){$("gestionPersonalModal").classList.remove("oculto");}
-function cerrarGestionPersonal(){$("gestionPersonalModal")?.classList.add("oculto");}
 
 function cambiarVista(v) {
   vistaActual = v;
@@ -747,8 +760,8 @@ function cambiarVista(v) {
   $("horariosEditor")?.classList.toggle("oculto", !eq || !edicionActual);
   if (!eq) { cerrarEditor(); renderMiHorario(); }
 }
-async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); renderTodo(); }
-async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); renderTodo(); desplazarAlDia(diaSeleccionado); }
+async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); await cargarResumenHoy(); renderTodo(); }
+async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); await cargarResumenHoy(true); renderTodo(); desplazarAlDia(diaSeleccionado); }
 function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
 function configurarEventos() {
   crearPanelEdicion();
@@ -759,8 +772,6 @@ function configurarEventos() {
   $("btnCerrarHorariosEditor")?.addEventListener("click", cerrarEditor);
   $("btnCancelarHorario")?.addEventListener("click", cerrarEditor);
   $("btnGuardarHorario")?.addEventListener("click", guardarEdicion);
-  $("btnHorariosVacaciones")?.addEventListener("click", abrirVacacionesRango);
-  $("btnHorariosReemplazo")?.addEventListener("click", abrirReemplazo);
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.horariosVista)));
   document.addEventListener("keydown", e => { if (e.key === "Escape") { if (edicionActual) cerrarEditor(); else if (modoEdicion) salirModoEdicion(); } });
   window.addEventListener("autoservicio:sesion", () => { actualizarPermisos(); renderMiHorario(); });
@@ -776,6 +787,18 @@ configurarEventos();
 cargarContextoHorarios();
 window.HorariosModule = { activar, desactivar };
 
+
+
+let fechaResumenProgramada = new Date().toDateString();
+setInterval(async () => {
+  const actual = new Date().toDateString();
+  if (actual !== fechaResumenProgramada) {
+    fechaResumenProgramada = actual;
+    resumenHoyClave = "";
+    await cargarResumenHoy(true);
+    renderResumen();
+  }
+}, 60000);
 
 window.HorariosApp = {
   turnosEnUso() {

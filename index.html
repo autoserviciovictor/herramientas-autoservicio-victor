@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=81-integracion">
+    <link rel="stylesheet" href="style.css?v=815-entrega5">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -46,7 +46,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V8.1.3 Beta</p>
+    <p>Herramientas V8.1.5 Beta - Entrega 1</p>
 </div>
 
 <div class="app">
@@ -60,7 +60,7 @@
         <div id="userDropdown" class="user-dropdown oculto" aria-hidden="true">
             <div class="user-dropdown-profile">
                 <span class="user-dropdown-avatar">👤</span>
-                <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Repositor</small></div>
+                <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Personal</small></div>
             </div>
             <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span>⚙️</span><strong>Configuración</strong></button>
             <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span>🚪</span><strong>Cerrar sesión</strong></button>
@@ -121,7 +121,7 @@
 
         <section class="home-status">
             <span>✅ Sistema conectado</span>
-            <strong>V8.1.3 Beta</strong>
+            <strong>V8.1.5 Beta - Entrega 1</strong>
         </section>
     </main>
 
@@ -271,7 +271,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">8.1.3 Beta - Integración completa de usuarios</strong>
+            <strong id="settingsAppVersion">8.1.5 - Entrega 5 Final</strong>
         </section>
     </main>
 
@@ -412,7 +412,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>Versión 8.0</strong><span>Ausencias, licencias, vacaciones, reemplazos y auditoría detallada.</span></div>
+                <div class="horarios-sidebar-note"><strong>Versión 8.1.5</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -428,9 +428,7 @@
                         <button id="btnHorariosMesSiguiente" type="button" aria-label="Mes siguiente">›</button>
                     </div>
                 </header>
-                <section class="horarios-personal-actions"><button id="btnHorariosVacaciones" type="button">🏖️ Programar vacaciones</button><button id="btnHorariosReemplazo" type="button">⇄ Reemplazo</button></section>
-
-                <section class="horarios-status-row">
+<section class="horarios-status-row">
                     <div><span class="status-dot"></span><strong>Sincronizado con Google Sheets</strong><small>Gestión por sector</small></div>
                 </section>
 
@@ -448,7 +446,7 @@
                     <section class="horarios-bottom-grid">
                         <article class="horarios-summary-card">
                             <div class="horarios-card-heading">
-                                <div><span>Resumen del día</span><strong id="horariosDiaSeleccionado">Seleccioná un día</strong></div>
+                                <div><span>Resumen del día</span><strong id="horariosDiaSeleccionado">Hoy</strong></div>
                                 <span id="horariosCoberturaEstado" class="horarios-coverage-badge">Cobertura</span>
                             </div>
                             <div id="horariosResumenDia" class="horarios-summary-list"></div>
@@ -636,7 +634,7 @@
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
         <section class="admin-welcome-card">
             <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V8.1.3 Beta</span>
+            <span id="adminVersion" class="admin-version">V8.1.5 Beta - Entrega 1</span>
         </section>
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -711,7 +709,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">8.1.3 Beta - Integración completa de usuarios</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">8.1.5 - Entrega 5 Final</strong></div>
             </div>
             <button id="btnAdminActualizar" type="button" class="setting-btn">🔄 Actualizar productos y datos</button>
             <div class="admin-import-card">
@@ -732,7 +730,7 @@
         <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
         <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
         <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
-        <label>Rol<select id="adminUsuarioRol"><option value="repositor">Repositor</option><option value="supervisor">Supervisor</option><option value="administrador">Administrador</option></select></label>
+        <label>Rol<select id="adminUsuarioRol"><option value="personal">Personal</option><option value="supervisor">Supervisor</option><option value="administrador">Administrador</option></select></label>
         <label>Sector<select id="adminUsuarioSector"><option value="">Sin sector</option></select></label>
         <fieldset id="adminUsuarioPermisos" class="admin-permissions-fieldset">
           <legend>Módulos visibles</legend>
@@ -759,10 +757,15 @@
         <h2 id="adminSectorModalTitulo">Nuevo sector</h2>
         <input id="adminSectorOriginal" type="hidden">
         <label>Nombre<input id="adminSectorNombre" type="text" maxlength="50" autocomplete="off" placeholder="Ej.: Caja"></label>
-        <label>Color<input id="adminSectorColor" type="color" value="#b72e35"></label>
+        
+<div class="admin-color-picker" data-color-picker="sector" aria-label="Elegir color del sector">
+  <input id="adminSectorColor" type="hidden" value="#b72e35">
+  <div class="admin-color-picker-head"><span>Color</span><strong id="adminSectorColorNombre">Rojo</strong></div>
+  <div id="adminSectorColorPalette" class="admin-color-palette" role="radiogroup" aria-label="Colores disponibles"></div>
+</div>
         <label>Supervisor<select id="adminSectorSupervisor"><option value="">Sin supervisor</option></select></label>
         <label id="adminSectorActivoFila" class="admin-active-row oculto"><input id="adminSectorActivo" type="checkbox" checked> Sector activo</label>
-        <div class="admin-modal-actions"><button id="btnAdminCancelarSector" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarSector" type="button" class="save-btn">Guardar</button></div>
+        <button id="btnAdminEliminarSector" type="button" class="danger-btn-soft oculto">Eliminar sector</button><div class="admin-modal-actions"><button id="btnAdminCancelarSector" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarSector" type="button" class="save-btn">Guardar</button></div>
       </div>
     </div>
 
@@ -860,7 +863,12 @@
         <div class="admin-shift-form">
           <label>Hora de inicio<input id="adminHorarioInicio" type="time" required></label>
           <label>Hora de finalización<input id="adminHorarioFin" type="time" required></label>
-          <label class="admin-shift-color-label">Color<input id="adminHorarioColor" type="color" value="#f59e0b"><span id="adminHorarioColorTexto">#F59E0B</span></label>
+          
+<div class="admin-color-picker admin-shift-color-picker" data-color-picker="horario" aria-label="Elegir color del horario">
+  <input id="adminHorarioColor" type="hidden" value="#f59e0b">
+  <div class="admin-color-picker-head"><span>Color del turno</span><strong id="adminHorarioColorNombre">Naranja</strong></div>
+  <div id="adminHorarioColorPalette" class="admin-color-palette" role="radiogroup" aria-label="Colores disponibles"></div>
+</div>
         </div>
         <div class="modal-actions">
           <button id="btnAdminGuardarHorario" class="save-btn" type="button">Guardar horario</button>
@@ -870,16 +878,17 @@
       </div>
     </div>
 
-<script src="./release-channel.js?v=81-integracion"></script>
-<script src="./pwa.js?v=81-integracion" defer></script>
-<script type="module" src="./auth.js?v=81-integracion"></script>
+<script src="./dialog.js?v=815-entrega5"></script>
+<script src="./release-channel.js?v=815-entrega5"></script>
+<script src="./pwa.js?v=815-entrega5" defer></script>
+<script type="module" src="./auth.js?v=815-entrega5"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=81-integracion"></script>
-<script type="module" src="./admin.js?v=81-integracion"></script>
-<script type="module" src="./notifications.js?v=81-integracion"></script>
-<script type="module" src="./prices.js?v=81-integracion"></script>
-<script type="module" src="./app.js?v=81-integracion"></script>
-<script type="module" src="./horarios.js?v=81-integracion"></script>
+<script src="./horarios-config.js?v=815-entrega5"></script>
+<script type="module" src="./admin.js?v=815-entrega5"></script>
+<script type="module" src="./notifications.js?v=815-entrega5"></script>
+<script type="module" src="./prices.js?v=815-entrega5"></script>
+<script type="module" src="./app.js?v=815-entrega5"></script>
+<script type="module" src="./horarios.js?v=815-entrega5"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
@@ -895,6 +904,19 @@
         <p id="iosInstallBrowserWarning" class="ios-install-warning oculto">Estás usando otro navegador. Copiá el enlace y abrilo en Safari para poder instalar la app.</p>
         <div class="modal-actions">
           <button type="button" id="btnCerrarIosInstall" class="save-btn">Entendido</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="appDialogOverlay" class="app-dialog-overlay oculto" aria-hidden="true">
+      <div class="app-dialog-card" role="dialog" aria-modal="true" aria-labelledby="appDialogTitulo">
+        <button id="appDialogCerrar" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
+        <h3 id="appDialogTitulo">Confirmar</h3>
+        <p id="appDialogMensaje"></p>
+        <div id="appDialogInputWrap" class="oculto"><input id="appDialogInput" type="text"></div>
+        <div class="app-dialog-actions">
+          <button id="appDialogCancelar" class="cancel-btn" type="button">Cancelar</button>
+          <button id="appDialogConfirmar" class="save-btn" type="button">Aceptar</button>
         </div>
       </div>
     </div>

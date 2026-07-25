@@ -1,9 +1,9 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { API_BASE_URL } from "./config.js?v=815-entrega2";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
 const NOMBRES_MODULO = { inventario:"Inventario", vencimientos:"Vencimientos", anotar:"Lista", precios:"Precios", horarios:"Horarios" };
-function permisosCompatibles(permisos, rol="repositor") {
+function permisosCompatibles(permisos, rol="personal") {
   if (rol === "administrador") return Object.fromEntries(MODULOS_PERMISO.map(m => [m,true]));
   const valor = permisos && typeof permisos === "object" ? permisos : {};
   return Object.fromEntries(MODULOS_PERMISO.map(m => [m, valor[m] !== false]));
@@ -11,7 +11,7 @@ function permisosCompatibles(permisos, rol="repositor") {
 function leerPermisosModal() {
   return Object.fromEntries(MODULOS_PERMISO.map(m => [m, Boolean(document.querySelector(`[data-permiso-modulo="${m}"]`)?.checked)]));
 }
-function aplicarPermisosModal(permisos, rol="repositor") {
+function aplicarPermisosModal(permisos, rol="personal") {
   const valores = permisosCompatibles(permisos, rol);
   document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.checked = valores[input.dataset.permisoModulo] !== false; });
   actualizarEstadoPermisosPorRol();
@@ -31,6 +31,8 @@ let historialLimite = 20;
 let historialBusquedaTimer = null;
 let importacionPendiente = null;
 let importacionResumenPendiente = null;
+let usuarioModalInicial = "";
+let sectorModalInicial = "";
 
 const IMPORTACION_HOJA_ESPERADA = "RptStockInventarioValuado";
 const IMPORTACION_MIN_PRODUCTOS = 1000;
@@ -91,10 +93,47 @@ async function cargarSectores() {
   poblarSectoresUsuario();
 }
 function sectorPorId(id){ return sectores.find(s => s.id === id); }
-function poblarSectoresUsuario(){
-  const sel=$("adminUsuarioSector"); if(!sel)return; const actual=sel.value;
-  sel.innerHTML=`<option value="">Sin sector</option>`+sectores.filter(s=>s.activo).map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}</option>`).join("");
-  sel.value=actual;
+const COLORES_ADMIN = [
+  {valor:'#b72e35',nombre:'Rojo'}, {valor:'#ef4444',nombre:'Rojo claro'},
+  {valor:'#f97316',nombre:'Naranja'}, {valor:'#f59e0b',nombre:'Ámbar'},
+  {valor:'#eab308',nombre:'Amarillo'}, {valor:'#22c55e',nombre:'Verde'},
+  {valor:'#14b8a6',nombre:'Turquesa'}, {valor:'#0ea5e9',nombre:'Celeste'},
+  {valor:'#2563eb',nombre:'Azul'}, {valor:'#7c3aed',nombre:'Violeta'},
+  {valor:'#db2777',nombre:'Rosa'}, {valor:'#64748b',nombre:'Gris'}
+];
+function normalizarColor(valor, respaldo='#b72e35'){
+  const v=String(valor||'').trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(v)?v:respaldo;
+}
+function nombreColor(valor){
+  const v=normalizarColor(valor);
+  return COLORES_ADMIN.find(c=>c.valor===v)?.nombre || 'Color personalizado';
+}
+function renderPaletaColor(tipo, valor){
+  const esSector=tipo==='sector';
+  const input=$(esSector?'adminSectorColor':'adminHorarioColor');
+  const cont=$(esSector?'adminSectorColorPalette':'adminHorarioColorPalette');
+  const nombre=$(esSector?'adminSectorColorNombre':'adminHorarioColorNombre');
+  if(!input||!cont)return;
+  const actual=normalizarColor(valor,esSector?'#b72e35':'#f59e0b');
+  input.value=actual;
+  const opciones=[...COLORES_ADMIN];
+  if(!opciones.some(c=>c.valor===actual)) opciones.unshift({valor:actual,nombre:'Color actual'});
+  cont.innerHTML=opciones.map(c=>`<button type="button" class="admin-color-option ${c.valor===actual?'seleccionado':''}" data-color="${c.valor}" role="radio" aria-checked="${c.valor===actual}" aria-label="${c.nombre}" title="${c.nombre}"><span style="background:${c.valor}"></span></button>`).join('');
+  if(nombre)nombre.textContent=nombreColor(actual);
+  cont.querySelectorAll('.admin-color-option').forEach(btn=>btn.addEventListener('click',()=>{
+    const elegido=normalizarColor(btn.dataset.color,actual); input.value=elegido;
+    cont.querySelectorAll('.admin-color-option').forEach(x=>{const activo=x===btn;x.classList.toggle('seleccionado',activo);x.setAttribute('aria-checked',String(activo));});
+    if(nombre)nombre.textContent=nombreColor(elegido);
+  }));
+}
+
+function poblarSectoresUsuario(valorPreferido = null){
+  const sel=$("adminUsuarioSector"); if(!sel)return;
+  const actual = valorPreferido === null ? sel.value : String(valorPreferido || "");
+  const opciones = sectores.filter(s => s.activo || s.id === actual);
+  sel.innerHTML=`<option value="">Sin sector</option>`+opciones.map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}${s.activo ? "" : " (inactivo)"}</option>`).join("");
+  sel.value = opciones.some(s => s.id === actual) ? actual : "";
 }
 function renderSectores(){
   const cont=$("adminSectoresLista"); if(!cont)return;
@@ -113,13 +152,31 @@ function poblarSupervisoresSector(actual=''){
 }
 async function abrirSectorModal(sec=null){
  if (!usuarios.length) await cargarUsuarios().catch(()=>{});
- $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; $("adminSectorColor").value=sec?.color||'#b72e35'; $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto'); document.body.classList.add("modal-abierto");
+ $("adminSectorModalTitulo").textContent=sec?'Editar sector':'Nuevo sector'; $("adminSectorOriginal").value=sec?.id||''; $("adminSectorNombre").value=sec?.nombre||''; renderPaletaColor("sector",sec?.color||"#b72e35"); $("adminSectorActivo").checked=sec?.activo!==false; $("adminSectorActivoFila").classList.toggle('oculto',!sec); $("btnAdminEliminarSector")?.classList.toggle("oculto",!sec); poblarSupervisoresSector(sec?.supervisor||''); $("adminSectorModal").classList.remove('oculto'); document.body.classList.add("modal-abierto");
+ sectorModalInicial = estadoSectorModal();
 }
-function cerrarSectorModal(){ $("adminSectorModal")?.classList.add('oculto'); document.body.classList.remove("modal-abierto"); }
+function estadoSectorModal(){return JSON.stringify({nombre:$("adminSectorNombre")?.value||"",color:$("adminSectorColor")?.value||"",supervisor:$("adminSectorSupervisor")?.value||"",activo:Boolean($("adminSectorActivo")?.checked)});}
+function cerrarSectorModalDirecto(){ $("adminSectorModal")?.classList.add('oculto'); document.body.classList.remove("modal-abierto"); sectorModalInicial=""; }
+async function cerrarSectorModal(){
+ if(!$("adminSectorModal") || $("adminSectorModal").classList.contains("oculto")) return;
+ if(sectorModalInicial && estadoSectorModal()!==sectorModalInicial){
+   const salir=await window.AppDialog?.confirm({titulo:"Descartar cambios",mensaje:"Hay cambios sin guardar en el sector. ¿Querés descartarlos?",confirmarTexto:"Descartar",cancelarTexto:"Seguir editando",peligro:true});
+   if(!salir)return;
+ }
+ cerrarSectorModalDirecto();
+}
 function mensajeSectores(t,tipo='ok'){const e=$("adminSectoresMensaje");if(!e)return;e.textContent=t;e.className=`admin-message ${tipo}`;clearTimeout(mensajeSectores.timer);mensajeSectores.timer=setTimeout(()=>{e.textContent='';e.className='admin-message'},3500)}
+async function eliminarSectorActual(){
+ const id=$("adminSectorOriginal").value; if(!id)return; const sec=sectorPorId(id);
+ const confirmado=await window.AppDialog?.confirm({titulo:"Eliminar sector",mensaje:`Se eliminará definitivamente el sector ${sec?.nombre || id}. Esta acción no se puede deshacer.`,confirmarTexto:"Eliminar sector",cancelarTexto:"Cancelar",peligro:true});
+ if(!confirmado)return;
+ const boton=$("btnAdminEliminarSector"); if(boton)boton.disabled=true;
+ try{await api(`/admin/sectores/${encodeURIComponent(id)}`,{method:"DELETE"}); cerrarSectorModalDirecto(); await Promise.all([cargarSectores(),cargarUsuarios()]); mensajeSectores("Sector eliminado.");}catch(e){mensajeSectores(e.message,"error");}finally{if(boton)boton.disabled=false;}
+}
 async function guardarSector(){
  const original=$("adminSectorOriginal").value; const payload={nombre:$("adminSectorNombre").value.trim(),color:$("adminSectorColor").value,supervisor:$("adminSectorSupervisor").value,activo:$("adminSectorActivo").checked}; if(!payload.nombre)return mensajeSectores('Ingresá el nombre del sector.','error');
- try{ if(original) await api(`/admin/sectores/${encodeURIComponent(original)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); else await api('/admin/sectores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); cerrarSectorModal(); await cargarSectores(); mensajeSectores(original?'Sector actualizado.':'Sector creado.'); }catch(e){mensajeSectores(e.message,'error')}
+ const boton=$("btnAdminGuardarSector"); if(boton)boton.disabled=true;
+ try{ if(original) await api(`/admin/sectores/${encodeURIComponent(original)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); else await api('/admin/sectores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); cerrarSectorModalDirecto(); await Promise.all([cargarSectores(),cargarUsuarios()]); mensajeSectores(original?'Sector actualizado.':'Sector creado.'); }catch(e){mensajeSectores(e.message,'error')}finally{if(boton)boton.disabled=false;}
 }
 
 async function cargarUsuarios() {
@@ -134,10 +191,19 @@ function renderUsuarios() {
   if (!usuarios.length) { cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>'; return; }
   cont.innerHTML = usuarios.map(u => `
     <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "supervisor" ? "Supervisor" : "Repositor")} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
-      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button></div>
+      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "supervisor" ? "Supervisor" : "Personal")} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
+      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button><button type="button" class="btn-eliminar-usuario danger-btn-soft">Eliminar</button></div>
     </article>`).join("");
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+  cont.querySelectorAll(".btn-eliminar-usuario").forEach(btn => btn.addEventListener("click", () => eliminarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+}
+
+async function eliminarUsuario(clave) {
+  const u=usuarios.find(x=>x.usuario===clave); if(!u)return;
+  const confirmado=await window.AppDialog?.confirm({titulo:"Eliminar usuario",mensaje:`Se eliminará definitivamente a ${u.nombre || u.usuario}. Esta acción no se puede deshacer.`,confirmarTexto:"Eliminar usuario",cancelarTexto:"Cancelar",peligro:true});
+  if(!confirmado)return;
+  const tarjeta=document.querySelector(`[data-usuario="${CSS.escape(clave)}"]`); const botones=tarjeta?.querySelectorAll("button")||[]; botones.forEach(b=>b.disabled=true);
+  try{await api(`/admin/usuarios/${encodeURIComponent(clave)}`,{method:"DELETE"}); await Promise.all([cargarUsuarios(),cargarSectores()]); mensaje("Usuario eliminado","ok");}catch(e){mensaje(e.message,"error"); botones.forEach(b=>b.disabled=false);}
 }
 
 async function abrirNuevoUsuario() {
@@ -149,13 +215,14 @@ async function abrirNuevoUsuario() {
   $("adminUsuarioUsuario").disabled = false;
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Mínimo 4 caracteres";
-  $("adminUsuarioRol").value = "repositor";
-  poblarSectoresUsuario(); $("adminUsuarioSector").value = "";
-  aplicarPermisosModal(null, "repositor");
+  $("adminUsuarioRol").value = "personal";
+  poblarSectoresUsuario("");
+  aplicarPermisosModal(null, "personal");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
+  usuarioModalInicial = estadoUsuarioModal();
 }
 
 function abrirEditarUsuario(clave) {
@@ -167,16 +234,27 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioUsuario").disabled = true;
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Dejar vacío para no cambiar";
-  $("adminUsuarioRol").value = u.rol;
-  poblarSectoresUsuario(); $("adminUsuarioSector").value = u.sector || "";
-  aplicarPermisosModal(u.permisos, u.rol);
+  const rol = ["administrador","supervisor","personal"].includes(String(u.rol||"").toLowerCase()) ? String(u.rol).toLowerCase() : "personal";
+  $("adminUsuarioRol").value = rol;
+  poblarSectoresUsuario(u.sector || "");
+  aplicarPermisosModal(u.permisos, rol);
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
+  usuarioModalInicial = estadoUsuarioModal();
 }
 
-function cerrarUsuarioModal() { $("adminUsuarioModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); }
+function estadoUsuarioModal(){return JSON.stringify({nombre:$("adminUsuarioNombre")?.value||"",usuario:$("adminUsuarioUsuario")?.value||"",rol:$("adminUsuarioRol")?.value||"",sector:$("adminUsuarioSector")?.value||"",activo:Boolean($("adminUsuarioActivo")?.checked),permisos:leerPermisosModal(),password:$("adminUsuarioPassword")?.value||""});}
+function cerrarUsuarioModalDirecto() { $("adminUsuarioModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); usuarioModalInicial=""; }
+async function cerrarUsuarioModal() {
+  if(!$("adminUsuarioModal") || $("adminUsuarioModal").classList.contains("oculto")) return;
+  if(usuarioModalInicial && estadoUsuarioModal()!==usuarioModalInicial){
+    const salir=await window.AppDialog?.confirm({titulo:"Descartar cambios",mensaje:"Hay cambios sin guardar en el usuario. ¿Querés descartarlos?",confirmarTexto:"Descartar",cancelarTexto:"Seguir editando",peligro:true});
+    if(!salir)return;
+  }
+  cerrarUsuarioModalDirecto();
+}
 
 async function guardarUsuario() {
   const original = $("adminUsuarioOriginal").value;
@@ -193,7 +271,7 @@ async function guardarUsuario() {
   try {
     if (original) await api(`/admin/usuarios/${encodeURIComponent(original)}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
     else await api("/admin/usuarios", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
-    cerrarUsuarioModal(); mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok"); await Promise.all([cargarUsuarios(), cargarSectores()]);
+    cerrarUsuarioModalDirecto(); mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok"); await Promise.all([cargarUsuarios(), cargarSectores()]);
   } catch(e) { mensaje(e.message, "error"); }
   finally { btn.disabled = false; }
 }
@@ -627,6 +705,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
+  $("adminUsuarioModal")?.addEventListener("click",e=>{if(e.target.id==="adminUsuarioModal")cerrarUsuarioModal()});
+  $("btnAdminEliminarSector")?.addEventListener("click", eliminarSectorActual);
   $("adminUsuarioRol")?.addEventListener("change", actualizarEstadoPermisosPorRol);
   document.querySelectorAll(".admin-tab").forEach(btn => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)));
   document.querySelectorAll(".admin-period-btn").forEach(btn => btn.addEventListener("click", () => {
@@ -690,7 +770,7 @@ function renderAdminHorarios() {
   cont.innerHTML = items.map(t => `
     <article class="admin-shift-card" data-horario-id="${t.id}">
       <span class="admin-shift-swatch" style="background:${t.color};color:${colorContraste(t.color)}">${t.inicio.slice(0,2)}</span>
-      <div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${t.color.toUpperCase()}</span></div>
+      <div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${nombreColor(t.color)}</span></div>
       <button type="button" class="btn-admin-editar-horario">Editar</button>
     </article>`).join('');
   cont.querySelectorAll('.btn-admin-editar-horario').forEach(btn => btn.addEventListener('click', () => {
@@ -699,14 +779,23 @@ function renderAdminHorarios() {
     if(turno) abrirHorarioModal(turno);
   }));
 }
+function normalizarHora24Valor(valor, respaldo="") {
+  const texto=String(valor||"").trim().toUpperCase();
+  let m=texto.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/);
+  if(!m) return respaldo;
+  let h=Number(m[1]), min=Number(m[2]);
+  if(m[3]==="PM"&&h<12)h+=12;
+  if(m[3]==="AM"&&h===12)h=0;
+  if(h<0||h>23||min<0||min>59)return respaldo;
+  return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`;
+}
 function abrirHorarioModal(turno=null) {
   adminHorarioEditando=turno;
   $("adminHorarioModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';
   $("adminHorarioOriginal").value=turno?.id||'';
-  $("adminHorarioInicio").value=turno?.inicio||'08:00';
-  $("adminHorarioFin").value=turno?.fin||'16:00';
-  $("adminHorarioColor").value=turno?.color||'#f59e0b';
-  $("adminHorarioColorTexto").textContent=(turno?.color||'#f59e0b').toUpperCase();
+  $("adminHorarioInicio").value=normalizarHora24Valor(turno?.inicio,"08:00");
+  $("adminHorarioFin").value=normalizarHora24Valor(turno?.fin,"16:00");
+  renderPaletaColor("horario",turno?.color||"#f59e0b");
   $("btnAdminEliminarHorario").classList.toggle('oculto',!turno);
   $("adminHorarioModal").classList.remove('oculto');
   $("adminHorarioModal").setAttribute('aria-hidden','false');
@@ -722,8 +811,8 @@ function mensajeHorarios(texto,tipo='ok'){
   clearTimeout(mensajeHorarios.timer); mensajeHorarios.timer=setTimeout(()=>{el.textContent='';el.className='admin-message';},3500);
 }
 async function guardarHorarioConfig(){
-  const inicio=$("adminHorarioInicio").value;
-  const fin=$("adminHorarioFin").value;
+  const inicio=normalizarHora24Valor($("adminHorarioInicio").value);
+  const fin=normalizarHora24Valor($("adminHorarioFin").value);
   const color=$("adminHorarioColor").value;
   if(!inicio||!fin) return mensajeHorarios('Completá la hora de inicio y finalización.','error');
   if(inicio===fin) return mensajeHorarios('El inicio y el final no pueden ser iguales.','error');
@@ -754,7 +843,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   $("btnAdminGuardarHorario")?.addEventListener('click',guardarHorarioConfig);
   $("btnAdminEliminarHorario")?.addEventListener('click',eliminarHorarioConfig);
   $("btnAdminCancelarHorario")?.addEventListener('click',cerrarHorarioModal);
-  $("adminHorarioColor")?.addEventListener('input',e=>$("adminHorarioColorTexto").textContent=e.target.value.toUpperCase());
   $("adminHorarioModal")?.addEventListener('click',e=>{if(e.target.id==='adminHorarioModal')cerrarHorarioModal();});
   document.querySelector('[data-admin-tab="horarios"]')?.addEventListener('click',()=>cargarAdminHorariosSector());
   $("adminHorarioSector")?.addEventListener('change',e=>cargarAdminHorariosSector(e.target.value));
