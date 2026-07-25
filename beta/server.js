@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "8.1.4 Beta - Permisos y administración completa";
+const APP_VERSION = "8.1.5 Beta - Entrega 2 Administración";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -71,7 +71,8 @@ const CACHE_TTL = {
   metadata: 300000,
   usuarios: 15000,
   sectores: 20000,
-  turnosHorarios: 20000
+  turnosHorarios: 20000,
+  calendarioHorarios: 15000
 };
 
 async function leerConCache(clave, ttl, lector) {
@@ -613,11 +614,13 @@ function mesHorariosValido(valor) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(normal
 function turnoHorarioValido(valor) { return ["franco","vacaciones","ausente","licencia"].includes(valor) || /^\d{1,2}(?::\d{2})?\s*-\s*\d{1,2}(?::\d{2})?$/.test(valor) || /^[a-z0-9_-]{3,80}$/i.test(valor); }
 async function obtenerTurnosSector(sector) {
   await asegurarHojasHorarios();
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A:G` });
-  const items = (r.data.values || []).slice(1).filter(f => normalizarTexto(f[0]) === sector && !["no","false","0","inactivo"].includes(normalizarTexto(f[5]).toLowerCase())).map(f => ({
-    id:normalizarTexto(f[1]), inicio:normalizarTexto(f[2]), fin:normalizarTexto(f[3]), color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b"
-  })).filter(t => t.id && /^\d{2}:\d{2}$/.test(t.inicio) && /^\d{2}:\d{2}$/.test(t.fin));
-  return items.length ? items : TURNOS_HORARIOS_DEFAULT.map(t => ({...t}));
+  return leerConCache(`turnosHorarios:${sector}`, CACHE_TTL.turnosHorarios, async () => {
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A:G` });
+    const items = (r.data.values || []).slice(1).filter(f => normalizarTexto(f[0]) === sector && !["no","false","0","inactivo"].includes(normalizarTexto(f[5]).toLowerCase())).map(f => ({
+      id:normalizarTexto(f[1]), inicio:normalizarTexto(f[2]), fin:normalizarTexto(f[3]), color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b"
+    })).filter(t => t.id && /^\d{2}:\d{2}$/.test(t.inicio) && /^\d{2}:\d{2}$/.test(t.fin));
+    return items.length ? items : TURNOS_HORARIOS_DEFAULT.map(t => ({...t}));
+  });
 }
 async function registrarAuditoriaHorario(usuario, sectorNombre, mes, accion) {
   await asegurarHojaAuditoriaHorarios();
@@ -647,6 +650,7 @@ app.put("/horarios/turnos", requerirAdministrador, async (req,res) => {
       await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:G`});
       if(otras.length+nuevas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:G${otras.length+nuevas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otras,...nuevas]}});
     });
+    invalidarCache(`turnosHorarios:${sector}`);
     res.json({ok:true,turnos});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudieron guardar los horarios"}); }
 });
@@ -656,15 +660,16 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
     if(!puedeAccederSectorHorarios(req.usuario,sector)) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
     if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
     await asegurarHojasHorarios();
-    const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`});
-    const celdas=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
-    const [dr, rr] = await Promise.all([
-      sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`}),
-      sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${REEMPLAZOS_HORARIOS_SHEET_NAME}!A:I`})
-    ]);
-    const detalles=(dr.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])})).filter(x=>x.empleado&&x.dia>=1&&x.dia<=31);
-    const reemplazos=(rr.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleadoOriginal:normalizarTexto(f[2]),reemplazante:normalizarTexto(f[3]),desde:Number(f[4]),hasta:Number(f[5]),observacion:normalizarTexto(f[6])})).filter(x=>x.empleadoOriginal&&x.reemplazante&&x.desde>=1&&x.hasta>=x.desde);
-    res.json({ok:true,sector,mes,celdas,detalles,reemplazos,turnos:await obtenerTurnosSector(sector)});
+    const contenido = await leerConCache(`calendarioHorarios:${sector}:${mes}`, CACHE_TTL.calendarioHorarios, async () => {
+      const [r, dr] = await Promise.all([
+        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
+        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
+      ]);
+      const celdas=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
+      const detalles=(dr.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])})).filter(x=>x.empleado&&x.dia>=1&&x.dia<=31);
+      return {celdas,detalles,reemplazos:[]};
+    });
+    res.json({ok:true,sector,mes,...contenido,turnos:await obtenerTurnosSector(sector)});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo cargar el calendario"}); }
 });
 app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
@@ -678,33 +683,27 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
     const empleadosPermitidos=new Set(usuarios.filter(u=>u.activo&&u.sector===sector).map(u=>u.nombre||u.usuario));
     const celdas=(Array.isArray(req.body?.celdas)?req.body.celdas:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
     const detalles=(Array.isArray(req.body?.detalles)?req.body.detalles:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),tipo:normalizarTexto(x.tipo).slice(0,30),motivo:normalizarTexto(x.motivo).slice(0,80),observacion:normalizarTexto(x.observacion).slice(0,300)})).filter(x=>x.empleado&&x.dia>=1&&x.dia<=31&&(x.tipo||x.motivo||x.observacion));
-    const reemplazos=(Array.isArray(req.body?.reemplazos)?req.body.reemplazos:[]).map(x=>({empleadoOriginal:normalizarTexto(x.empleadoOriginal),reemplazante:normalizarTexto(x.reemplazante),desde:Number(x.desde),hasta:Number(x.hasta),observacion:normalizarTexto(x.observacion).slice(0,300)})).filter(x=>x.empleadoOriginal&&x.reemplazante&&x.desde>=1&&x.hasta>=x.desde&&x.hasta<=31);
-    if(celdas.some(x=>!empleadosPermitidos.has(x.empleado)) || detalles.some(x=>!empleadosPermitidos.has(x.empleado)) || reemplazos.some(x=>!empleadosPermitidos.has(x.empleadoOriginal)||!empleadosPermitidos.has(x.reemplazante))) return res.status(400).json({ok:false,mensaje:"El calendario contiene empleados que no pertenecen al sector"});
+    if(celdas.some(x=>!empleadosPermitidos.has(x.empleado)) || detalles.some(x=>!empleadosPermitidos.has(x.empleado))) return res.status(400).json({ok:false,mensaje:"El calendario contiene empleados que no pertenecen al sector"});
     if(celdas.some(x=>!turnoHorarioValido(x.turno))) return res.status(400).json({ok:false,mensaje:"El calendario contiene un turno inválido"});
     await asegurarHojasHorarios();
     await ejecutarEnCola("calendario-horarios", async()=>{
-      const [r,dr,rr]=await Promise.all([
+      const [r,dr]=await Promise.all([
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
-        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`}),
-        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${REEMPLAZOS_HORARIOS_SHEET_NAME}!A:I`})
+        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
       ]);
       const filasAnteriores=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
       const anterior=new Map(filasAnteriores.map(f=>[`${normalizarTexto(f[2])}::${Number(f[3])}`,normalizarTexto(f[4])]));
       const otras=(r.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
       const otrasDetalles=(dr.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
-      const otrosReemplazos=(rr.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
       const ahora=fechaHoraArgentinaIso();
       const nuevas=celdas.map(x=>[sector,mes,x.empleado,x.dia,x.turno,ahora,req.usuario.usuario,req.usuario.nombre]);
       const nuevasDetalles=detalles.map(x=>[sector,mes,x.empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
-      const nuevosReemplazos=reemplazos.map(x=>[sector,mes,x.empleadoOriginal,x.reemplazante,x.desde,x.hasta,x.observacion,ahora,req.usuario.usuario]);
       await Promise.all([
         sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H`}),
-        sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I`}),
-        sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${REEMPLAZOS_HORARIOS_SHEET_NAME}!A2:I`})
+        sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I`})
       ]);
       if(otras.length+nuevas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${otras.length+nuevas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otras,...nuevas]}});
       if(otrasDetalles.length+nuevasDetalles.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I${otrasDetalles.length+nuevasDetalles.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otrasDetalles,...nuevasDetalles]}});
-      if(otrosReemplazos.length+nuevosReemplazos.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${REEMPLAZOS_HORARIOS_SHEET_NAME}!A2:I${otrosReemplazos.length+nuevosReemplazos.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otrosReemplazos,...nuevosReemplazos]}});
       const nuevoMapa=new Map(celdas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
       const claves=new Set([...anterior.keys(),...nuevoMapa.keys()]);
       const cambios=[...claves].filter(k=>(anterior.get(k)||"")!==(nuevoMapa.get(k)||""));
@@ -715,6 +714,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
       }
     });
     await registrarAuditoriaHorario(req.usuario,sec.nombre,mes,"Guardó calendario del sector");
+    invalidarCache(`calendarioHorarios:${sector}:${mes}`);
     res.json({ok:true,guardadas:celdas.length});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo guardar el calendario"}); }
 });
@@ -743,7 +743,15 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
       nombre: s.nombre,
       color: s.color,
       activo: s.activo,
-      empleados: usuarios.filter(u => u.activo && u.sector === s.id).map(u => u.nombre || u.usuario)
+      empleados: usuarios
+        .filter(u => u.activo && u.sector === s.id)
+        .sort((a, b) => {
+          const aSupervisor = normalizarUsuario(a.usuario) === normalizarUsuario(s.supervisor) || a.rol === "supervisor";
+          const bSupervisor = normalizarUsuario(b.usuario) === normalizarUsuario(s.supervisor) || b.rol === "supervisor";
+          if (aSupervisor !== bSupervisor) return aSupervisor ? 1 : -1;
+          return String(a.nombre || a.usuario).localeCompare(String(b.nombre || b.usuario), "es", { sensitivity:"base" });
+        })
+        .map(u => u.nombre || u.usuario)
     }));
     res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
   } catch (error) {
