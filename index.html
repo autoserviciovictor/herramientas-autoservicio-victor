@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=815-entrega5">
+    <link rel="stylesheet" href="style.css?v=84-entrega8">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -32,7 +32,7 @@
     </div>
     <div class="login-input-wrap">
       <span class="login-input-icon" aria-hidden="true">🔒</span>
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña"><button id="btnTogglePassword" class="login-password-toggle" type="button" aria-label="Mostrar contraseña" aria-pressed="false">👁</button>
     </div>
     <label class="login-remember">
       <input id="loginRecordarme" type="checkbox">
@@ -46,7 +46,7 @@
 <div id="splash" class="splash">
     <img class="splash-brand-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor">
     <h1>Autoservicio</h1>
-    <p>Herramientas V8.1.5 Beta - Entrega 1</p>
+    <p>Herramientas</p>
 </div>
 
 <div class="app">
@@ -119,10 +119,7 @@
             <button type="button" id="btnInstalarApp" class="setting-btn">Instalar aplicación</button>
         </section>
 
-        <section class="home-status">
-            <span>✅ Sistema conectado</span>
-            <strong>V8.1.5 Beta - Entrega 1</strong>
-        </section>
+        <section class="home-status"><strong>8.4</strong></section>
     </main>
 
     <main id="pantallaInventario" class="pantalla">
@@ -271,7 +268,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">8.1.5 - Entrega 5 Final</strong>
+            <strong id="settingsAppVersion">8.4</strong>
         </section>
     </main>
 
@@ -412,7 +409,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span>🕒</span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>Versión 8.1.5</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
+                <div class="horarios-sidebar-note"><strong>8.4</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -632,10 +629,6 @@
 
 
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
-        <section class="admin-welcome-card">
-            <div><span class="admin-lock">🔐</span><div><strong>Administrador</strong><p>Usuarios e historial de vencimientos</p></div></div>
-            <span id="adminVersion" class="admin-version">V8.1.5 Beta - Entrega 1</span>
-        </section>
 
         <div id="adminMensaje" class="admin-message"></div>
 
@@ -709,7 +702,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">8.1.5 - Entrega 5 Final</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">8.4</strong></div>
             </div>
             <div id="adminReleaseChannelCard" class="admin-import-card oculto">
                 <div class="admin-import-head"><div><strong>Versión beta activa</strong><span>Este dispositivo está usando la versión de prueba. Podés volver a la versión estable cuando quieras.</span></div></div>
@@ -734,8 +727,8 @@
         <label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label>
         <label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label>
         <label>Contraseña<input id="adminUsuarioPassword" type="password" maxlength="80" autocomplete="new-password"></label>
-        <label>Rol<select id="adminUsuarioRol"><option value="personal">Personal</option><option value="supervisor">Supervisor</option><option value="administrador">Administrador</option></select></label>
-        <label>Sector<select id="adminUsuarioSector"><option value="">Sin sector</option></select></label>
+        <label>Rol<select id="adminUsuarioRol"><option value="personal">Personal</option><option value="supervisor">Supervisor</option><option value="administracion">Administración</option><option value="administrador">Administrador</option></select></label>
+        <label>Sector personal<select id="adminUsuarioSector"><option value="">Sin sector</option></select></label><fieldset id="adminUsuarioSectoresCargo" class="admin-permissions-fieldset oculto"><legend>Sectores a cargo</legend><p>El supervisor podrá administrar los horarios de todos los sectores seleccionados.</p><div id="adminUsuarioSectoresGrid" class="admin-permissions-grid"></div></fieldset>
         <fieldset id="adminUsuarioPermisos" class="admin-permissions-fieldset">
           <legend>Módulos visibles</legend>
           <p>Elegí qué herramientas aparecerán para este usuario.</p>
@@ -749,6 +742,7 @@
           <small id="adminPermisosAdminAviso" class="admin-permissions-note oculto">Los administradores tienen acceso completo a todos los módulos.</small>
         </fieldset>
         <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked> Usuario activo</label>
+        <button id="btnAdminEliminarUsuario" type="button" class="danger-btn-soft oculto">Eliminar usuario</button>
         <div class="admin-modal-actions"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar</button></div>
       </div>
     </div>
@@ -882,17 +876,17 @@
       </div>
     </div>
 
-<script src="./dialog.js?v=815-entrega5"></script>
-<script src="./release-channel.js?v=815-canal-beta-1"></script>
-<script src="./pwa.js?v=815-entrega5" defer></script>
-<script type="module" src="./auth.js?v=815-entrega5"></script>
+<script src="./dialog.js?v=84-entrega8"></script>
+<script src="./release-channel.js?v=82-canal-beta-1"></script>
+<script src="./pwa.js?v=84-entrega8" defer></script>
+<script type="module" src="./auth.js?v=84-entrega8"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=815-entrega5"></script>
-<script type="module" src="./admin.js?v=815-entrega5"></script>
-<script type="module" src="./notifications.js?v=815-entrega5"></script>
-<script type="module" src="./prices.js?v=815-entrega5"></script>
-<script type="module" src="./app.js?v=815-entrega5"></script>
-<script type="module" src="./horarios.js?v=815-entrega5"></script>
+<script src="./horarios-config.js?v=84-entrega8"></script>
+<script type="module" src="./admin.js?v=84-entrega8"></script>
+<script type="module" src="./notifications.js?v=84-entrega8"></script>
+<script type="module" src="./prices.js?v=84-entrega8"></script>
+<script type="module" src="./app.js?v=84-entrega8"></script>
+<script type="module" src="./horarios.js?v=84-entrega8"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

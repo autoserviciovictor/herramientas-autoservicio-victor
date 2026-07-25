@@ -1,6 +1,6 @@
 {
   "channel": "beta",
-  "version": "8.1.5-beta.1",
-  "label": "V8.1.5 Beta - Entrega 5",
-  "build": 81501
+  "version": "8.4",
+  "label": "8.4",
+  "build": 84000
 }

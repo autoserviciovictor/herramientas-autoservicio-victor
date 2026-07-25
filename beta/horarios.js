@@ -1,6 +1,7 @@
-import { API_BASE_URL } from "./config.js?v=815-entrega5";
+import { API_BASE_URL } from "./config.js?v=82-entrega6";
 
 let empleados = [];
+let empleadosInfo = new Map();
 let sectoresHorarios = [];
 let sectorActual = "";
 let contextoHorariosCargado = false;
@@ -16,8 +17,10 @@ function esAdministradorHorarios() { return rolHorarios() === "administrador"; }
 function sectorSeleccionado() { return sectoresHorarios.find(s => s.id === sectorActual) || null; }
 function empleadosDelSector(id = sectorActual) {
   const sector = sectoresHorarios.find(s => s.id === id);
+  empleadosInfo = new Map((sector?.empleadosInfo || []).map(x=>[x.nombre,x]));
   return Array.isArray(sector?.empleados) ? sector.empleados : [];
 }
+function puedeEditarEmpleado(nombre){ const rol=rolHorarios(); const info=empleadosInfo.get(nombre)||{}; if(rol==="administrador") return true; if(rol==="administracion") return info.rol==="supervisor"; if(rol==="supervisor") return info.rol!=="supervisor" && info.usuario!==usuarioHorarios().usuario; return false; }
 async function cargarContextoHorarios() {
   try {
     const r = await fetch(`${API_BASE_URL}/horarios/contexto`);
@@ -26,7 +29,7 @@ async function cargarContextoHorarios() {
     sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
     permisoEdicionServidor = data.puedeEditar === true;
     const usuario = usuarioHorarios();
-    const puedeElegirSector = ["administrador","supervisor"].includes(String(usuario.rol || "").trim().toLowerCase());
+    const puedeElegirSector = ["administrador","administracion","supervisor"].includes(String(usuario.rol || "").trim().toLowerCase());
     const preferido = puedeElegirSector
       ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : (usuario.sector || sectoresHorarios[0]?.id))
       : (usuario.sector || sectoresHorarios[0]?.id);
@@ -85,7 +88,7 @@ function renderSelectorSector() {
   if ($("horariosSectorColor")) $("horariosSectorColor").style.background = sector?.color || "#b72e35";
   const wrap = $("horariosSectorSelectorWrap");
   const select = $("horariosSectorSelector");
-  if (wrap) wrap.classList.toggle("oculto", !["administrador","supervisor"].includes(rolHorarios()) || sectoresHorarios.length < 2);
+  if (wrap) wrap.classList.toggle("oculto", vistaActual !== "equipo" || !["administrador","administracion","supervisor"].includes(rolHorarios()) || sectoresHorarios.length < 2);
   if (select) {
     select.innerHTML = sectoresHorarios.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("");
     select.value = sectorActual;
@@ -201,8 +204,8 @@ function puedeEditar() {
   const usuario = usuarioHorarios();
   if (!permisoEdicionServidor) return false;
   const rol = String(usuario.rol || "").trim().toLowerCase();
-  if (rol === "administrador") return true;
-  return rol === "supervisor" && Boolean(usuario.sector) && usuario.sector === sectorActual;
+  if (["administrador","administracion"].includes(rol)) return true;
+  return rol === "supervisor" && Array.isArray(usuario.sectores) && usuario.sectores.includes(sectorActual);
 }
 
 function parsearTurno(id) {
@@ -584,7 +587,7 @@ function seleccionarRango(e2, d2) {
   const i1 = empleados.indexOf(seleccionInicio.empleado), i2 = empleados.indexOf(e2), d1 = seleccionInicio.dia;
   seleccion = new Set(seleccionBaseArrastre);
   for (let i = Math.min(i1, i2); i <= Math.max(i1, i2); i++) {
-    for (let d = Math.min(d1, d2); d <= Math.max(d1, d2); d++) seleccion.add(keyCelda(empleados[i], d));
+    for (let d = Math.min(d1, d2); d <= Math.max(d1, d2); d++) if (puedeEditarEmpleado(empleados[i])) seleccion.add(keyCelda(empleados[i], d));
   }
   renderTabla();
   actualizarAcciones();
@@ -791,6 +794,7 @@ window.HorariosModule = { activar, desactivar };
 
 let fechaResumenProgramada = new Date().toDateString();
 setInterval(async () => {
+  if (document.hidden) return;
   const actual = new Date().toDateString();
   if (actual !== fechaResumenProgramada) {
     fechaResumenProgramada = actual;
@@ -799,6 +803,17 @@ setInterval(async () => {
     renderResumen();
   }
 }, 60000);
+
+document.addEventListener("visibilitychange", async () => {
+  if (document.hidden) return;
+  const actual = new Date().toDateString();
+  if (actual !== fechaResumenProgramada) {
+    fechaResumenProgramada = actual;
+    resumenHoyClave = "";
+    await cargarResumenHoy(true);
+    renderResumen();
+  }
+});
 
 window.HorariosApp = {
   turnosEnUso() {

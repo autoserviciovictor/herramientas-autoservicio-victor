@@ -17,7 +17,9 @@ function aplicarPermisosModal(permisos, rol="personal") {
   actualizarEstadoPermisosPorRol();
 }
 function actualizarEstadoPermisosPorRol() {
-  const esAdmin = $("adminUsuarioRol")?.value === "administrador";
+  const rolActual = $("adminUsuarioRol")?.value || "personal";
+  const esAdmin = rolActual === "administrador";
+  $("adminUsuarioSectoresCargo")?.classList.toggle("oculto", rolActual !== "supervisor");
   document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.disabled = esAdmin; if (esAdmin) input.checked = true; });
   $("adminPermisosAdminAviso")?.classList.toggle("oculto", !esAdmin);
   $("adminUsuarioPermisos")?.classList.toggle("es-admin", esAdmin);
@@ -78,7 +80,6 @@ function mostrarPanel() {
 
 async function cargarResumen() {
   const data = await api("/admin/resumen");
-  $("adminVersion").textContent = `V${data.version}`;
   $("adminProductos").textContent = data.productos;
   $("adminVencimientos").textContent = data.vencimientos;
   $("adminServidorEstado").textContent = "● Servidor conectado";
@@ -128,12 +129,17 @@ function renderPaletaColor(tipo, valor){
   }));
 }
 
-function poblarSectoresUsuario(valorPreferido = null){
+function poblarSectoresUsuario(valorPreferido = null, sectoresCargoPreferidos = null){
   const sel=$("adminUsuarioSector"); if(!sel)return;
   const actual = valorPreferido === null ? sel.value : String(valorPreferido || "");
   const opciones = sectores.filter(s => s.activo || s.id === actual);
   sel.innerHTML=`<option value="">Sin sector</option>`+opciones.map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}${s.activo ? "" : " (inactivo)"}</option>`).join("");
   sel.value = opciones.some(s => s.id === actual) ? actual : "";
+  const grid=$("adminUsuarioSectoresGrid");
+  if(grid){
+    const actuales = new Set(Array.isArray(sectoresCargoPreferidos) ? sectoresCargoPreferidos : [...grid.querySelectorAll('input:checked')].map(i=>i.value));
+    grid.innerHTML=sectores.filter(s=>s.activo||actuales.has(s.id)).map(s=>`<label><input type="checkbox" value="${s.id}" ${actuales.has(s.id)?'checked':''}><span>${escaparHtml(s.nombre)}${s.activo?'':' (inactivo)'}</span></label>`).join('');
+  }
 }
 function renderSectores(){
   const cont=$("adminSectoresLista"); if(!cont)return;
@@ -191,11 +197,10 @@ function renderUsuarios() {
   if (!usuarios.length) { cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>'; return; }
   cont.innerHTML = usuarios.map(u => `
     <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "supervisor" ? "Supervisor" : "Personal")} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
-      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button><button type="button" class="btn-eliminar-usuario danger-btn-soft">Eliminar</button></div>
+      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "administracion" ? "Administración" : (u.rol === "supervisor" ? "Supervisor" : "Personal"))} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
+      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button></div>
     </article>`).join("");
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
-  cont.querySelectorAll(".btn-eliminar-usuario").forEach(btn => btn.addEventListener("click", () => eliminarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
 }
 
 async function eliminarUsuario(clave) {
@@ -220,6 +225,7 @@ async function abrirNuevoUsuario() {
   aplicarPermisosModal(null, "personal");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
+  $("btnAdminEliminarUsuario")?.classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
   usuarioModalInicial = estadoUsuarioModal();
@@ -234,18 +240,19 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioUsuario").disabled = true;
   $("adminUsuarioPassword").value = "";
   $("adminUsuarioPassword").placeholder = "Dejar vacío para no cambiar";
-  const rol = ["administrador","supervisor","personal"].includes(String(u.rol||"").toLowerCase()) ? String(u.rol).toLowerCase() : "personal";
+  const rol = ["administrador","administracion","supervisor","personal"].includes(String(u.rol||"").toLowerCase()) ? String(u.rol).toLowerCase() : "personal";
   $("adminUsuarioRol").value = rol;
-  poblarSectoresUsuario(u.sector || "");
+  poblarSectoresUsuario(u.sector || "", u.sectores || []);
   aplicarPermisosModal(u.permisos, rol);
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
+  $("btnAdminEliminarUsuario")?.classList.remove("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
   usuarioModalInicial = estadoUsuarioModal();
 }
 
-function estadoUsuarioModal(){return JSON.stringify({nombre:$("adminUsuarioNombre")?.value||"",usuario:$("adminUsuarioUsuario")?.value||"",rol:$("adminUsuarioRol")?.value||"",sector:$("adminUsuarioSector")?.value||"",activo:Boolean($("adminUsuarioActivo")?.checked),permisos:leerPermisosModal(),password:$("adminUsuarioPassword")?.value||""});}
+function estadoUsuarioModal(){return JSON.stringify({nombre:$("adminUsuarioNombre")?.value||"",usuario:$("adminUsuarioUsuario")?.value||"",rol:$("adminUsuarioRol")?.value||"",sector:$("adminUsuarioSector")?.value||"",sectores:[...document.querySelectorAll("#adminUsuarioSectoresGrid input:checked")].map(i=>i.value),activo:Boolean($("adminUsuarioActivo")?.checked),permisos:leerPermisosModal(),password:$("adminUsuarioPassword")?.value||""});}
 function cerrarUsuarioModalDirecto() { $("adminUsuarioModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); usuarioModalInicial=""; }
 async function cerrarUsuarioModal() {
   if(!$("adminUsuarioModal") || $("adminUsuarioModal").classList.contains("oculto")) return;
@@ -265,6 +272,7 @@ async function guardarUsuario() {
     rol: $("adminUsuarioRol").value,
     permisos: leerPermisosModal(),
     sector: $("adminUsuarioSector")?.value || "",
+    sectores: [...document.querySelectorAll("#adminUsuarioSectoresGrid input:checked")].map(i=>i.value),
     activo: $("adminUsuarioActivo").checked
   };
   const btn = $("btnAdminGuardarUsuario"); btn.disabled = true;
@@ -705,6 +713,12 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
+  $("btnAdminEliminarUsuario")?.addEventListener("click", async () => {
+    const usuario = $("adminUsuarioOriginal")?.value;
+    if (!usuario) return;
+    await eliminarUsuario(usuario);
+    if (!usuarios.some(u => u.usuario === usuario)) cerrarUsuarioModalDirecto();
+  });
   $("adminUsuarioModal")?.addEventListener("click",e=>{if(e.target.id==="adminUsuarioModal")cerrarUsuarioModal()});
   $("btnAdminEliminarSector")?.addEventListener("click", eliminarSectorActual);
   $("adminUsuarioRol")?.addEventListener("change", actualizarEstadoPermisosPorRol);

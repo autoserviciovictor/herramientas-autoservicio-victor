@@ -234,6 +234,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if ($("loginUsuario") && usuarioRecordado) $("loginUsuario").value = usuarioRecordado;
   if ($("loginRecordarme")) $("loginRecordarme").checked = Boolean(usuarioRecordado);
   $("btnLoginIngresar")?.addEventListener("click", iniciarSesion);
+  $("btnTogglePassword")?.addEventListener("click", () => {
+    const input = $("loginPassword");
+    const boton = $("btnTogglePassword");
+    if (!input || !boton) return;
+    const mostrar = input.type === "password";
+    input.type = mostrar ? "text" : "password";
+    boton.setAttribute("aria-pressed", String(mostrar));
+    boton.setAttribute("aria-label", mostrar ? "Ocultar contraseña" : "Mostrar contraseña");
+    boton.textContent = mostrar ? "🙈" : "👁";
+    input.focus();
+  });
+
   $("loginUsuario")?.addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword")?.focus(); });
   $("loginPassword")?.addEventListener("keydown", e => { if (e.key === "Enter") iniciarSesion(); });
   $("brandMenuBtn")?.addEventListener("click", event => { event.stopPropagation(); alternarMenuUsuario(); });

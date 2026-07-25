@@ -3872,3 +3872,40 @@ body:not(.horarios-modo-edicion) .horarios-table td[data-empleado]{user-select:n
 .horarios-sidebar-note span{line-height:1.35}
 .horarios-summary-list article,.mi-horario-list article{min-height:52px}
 @media (max-width:700px){.horarios-sidebar-note{display:none}.horarios-content{padding-top:6px}}
+
+/* V8.2 Entrega 6 */
+.login-input-wrap{position:relative}
+.login-input-wrap:has(#loginPassword) input{padding-right:52px!important}
+.login-password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:transparent;border-radius:10px;display:grid;place-items:center;font-size:20px;cursor:pointer}
+.login-password-toggle:active{background:#f2eeee}
+.login-button,.login-button:active{height:60px!important;min-height:60px!important;transform:none!important}
+.home-status{background:transparent!important;border:0!important;box-shadow:none!important;color:#000!important;text-align:center!important;justify-content:center!important;padding:10px!important}
+.home-status strong{color:#000!important;font-weight:700!important}
+.admin-welcome-card{display:none!important}
+#adminVersionSistema,#settingsAppVersion{color:#000!important}
+.horarios-bottom-nav button{min-height:58px;font-size:13px!important;padding:8px 14px!important}
+.horarios-nav-icon{font-size:27px!important;line-height:1!important}
+#adminUsuarioModal .modal-card{max-height:min(88vh,760px);overflow-y:auto;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+#adminUsuarioModal .admin-modal-actions{position:static!important;margin-top:14px!important;padding:0!important}
+#btnAdminEliminarUsuario{width:100%;margin-top:14px;min-height:44px}
+
+
+/* V8.4 Entrega 8 — pulido final, accesibilidad y adaptación */
+:root{--tap-min:44px}
+button,a,select,input{touch-action:manipulation}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid rgba(183,46,53,.25);outline-offset:2px}
+button:disabled{cursor:not-allowed;opacity:.55}
+.home-status strong{font-size:13px;letter-spacing:.02em;color:#000!important}
+.horarios-bottom-nav{padding-bottom:max(6px,env(safe-area-inset-bottom))}
+.horarios-bottom-nav button{min-width:112px;min-height:62px}
+.horarios-nav-icon{display:block;min-width:30px;min-height:30px}
+.horarios-table-wrap{overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
+.admin-user-card,.admin-sector-card,.admin-shift-card{content-visibility:auto;contain-intrinsic-size:72px}
+@media(max-width:700px){
+  .horarios-bottom-nav{gap:8px}
+  .horarios-bottom-nav button{flex:1;min-width:0;min-height:64px}
+  .horarios-nav-icon{font-size:29px!important}
+  .horarios-sector-bar{margin-bottom:10px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media(prefers-contrast:more){button,input,select,textarea,.admin-user-card,.admin-sector-card,.admin-shift-card{border-color:#555!important}}

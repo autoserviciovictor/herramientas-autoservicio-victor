@@ -1,6 +1,6 @@
 {
   "id": "./",
-  "name": "Autoservicio Beta",
+  "name": "Autoservicio – Herramientas",
   "short_name": "Autoservicio",
   "description": "Inventario, vencimientos, precios y listas de reposición.",
   "lang": "es-AR",
@@ -9,9 +9,7 @@
   "scope": "./",
   "display": "standalone",
   "display_override": [
-    "window-controls-overlay",
-    "standalone",
-    "minimal-ui"
+    "standalone"
   ],
   "orientation": "any",
   "background_color": "#f5f5f5",

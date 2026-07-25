@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "8.1.5 Beta - Entrega 2 Administración";
+const APP_VERSION = "8.4";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -303,7 +303,7 @@ function verificarPassword(password, guardado) {
 let hojaUsuariosAsegurada = false;
 let promesaHojaUsuarios = null;
 const MODULOS_PERMITIDOS = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
-function normalizarRol(valor) { const rol = normalizarTexto(valor).toLowerCase(); return rol === "repositor" ? "personal" : (["administrador","supervisor","personal"].includes(rol) ? rol : "personal"); }
+function normalizarRol(valor) { const rol = normalizarTexto(valor).toLowerCase(); return rol === "repositor" ? "personal" : (["administrador","administracion","supervisor","personal"].includes(rol) ? rol : "personal"); }
 function permisosPorDefecto() { return Object.fromEntries(MODULOS_PERMITIDOS.map(m => [m, true])); }
 function normalizarPermisos(valor, rol = "personal") {
   if (rol === "administrador") return permisosPorDefecto();
@@ -327,13 +327,13 @@ async function asegurarHojaUsuarios() {
         requestBody: { requests: [{ addSheet: { properties: { title: USUARIOS_SHEET_NAME } } }] }
       });
     }
-    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector"];
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:H2` });
+    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector", "Sectores a cargo"];
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:I2` });
     const filas = respuesta.data.values || [];
     if (!filas[0] || encabezados.some((titulo, i) => filas[0][i] !== titulo)) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A1:H1`,
+        range: `${USUARIOS_SHEET_NAME}!A1:I1`,
         valueInputOption: "USER_ENTERED",
         requestBody: { values: [encabezados] }
       });
@@ -343,10 +343,10 @@ async function asegurarHojaUsuarios() {
       if (!ADMIN_KEY) throw new Error("Configurá ADMIN_KEY en Render para crear el primer usuario administrador");
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A:H`,
+        range: `${USUARIOS_SHEET_NAME}!A:I`,
         valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
-        requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso(), serializarPermisos(null, "administrador"), ""]] }
+        requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso(), serializarPermisos(null, "administrador"), "", ""]] }
       });
     }
     hojaUsuariosAsegurada = true;
@@ -366,14 +366,15 @@ function filaAUsuario(fila, index) {
     rol: normalizarRol(fila[3]),
     activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto),
     permisos: normalizarPermisos(fila[6], normalizarRol(fila[3])),
-    sector: normalizarTexto(fila[7])
+    sector: normalizarTexto(fila[7]),
+    sectores: [...new Set(normalizarTexto(fila[8]).split(",").map(x=>x.trim()).filter(Boolean))]
   };
 }
 
 async function obtenerUsuarios() {
   await asegurarHojaUsuarios();
   return leerConCache("usuarios", CACHE_TTL.usuarios, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:H` });
+    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:I` });
     const filas = respuesta.data.values || [];
     return filas.slice(1).map(filaAUsuario).filter(u => u.usuario);
   });
@@ -386,7 +387,7 @@ async function requerirSesion(req, res, next) {
     const usuarios = await obtenerUsuarios();
     const usuario = usuarios.find(u => u.usuario === sesion.usuario);
     if (!usuario || !usuario.activo) return res.status(401).json({ ok: false, mensaje: "Usuario inexistente o desactivado" });
-    req.usuario = { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos, sector: usuario.sector || "" };
+    req.usuario = { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos, sector: usuario.sector || "", sectores: usuario.sectores || [] };
     next();
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo validar la sesión" });
@@ -515,7 +516,7 @@ app.post("/auth/login", async (req, res) => {
     const ahora = Date.now();
     const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
     const token = firmarTokenAdmin({ usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, iat: ahora, exp });
-    res.json({ ok: true, token, usuario: { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos, sector: usuario.sector || "" }, expira: new Date(exp).toISOString() });
+    res.json({ ok: true, token, usuario: { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos, sector: usuario.sector || "", sectores: usuario.sectores || [] }, expira: new Date(exp).toISOString() });
   } catch (error) {
     console.error("Error en /auth/login:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo iniciar sesión" });
@@ -569,13 +570,17 @@ async function obtenerSectores(){return leerConCache("sectores",CACHE_TTL.sector
 function usuarioPuedeVerHorarios(usuario) {
   return usuario?.rol === "administrador" || usuario?.permisos?.horarios !== false;
 }
+function sectoresACargo(usuario){ return Array.isArray(usuario?.sectores) ? usuario.sectores : []; }
 function puedeAccederSectorHorarios(usuario, sectorId) {
-  if (["administrador","supervisor"].includes(usuario?.rol)) return true;
-  return Boolean(usuario?.sector) && usuario.sector === normalizarTexto(sectorId);
+  const sector=normalizarTexto(sectorId);
+  if (["administrador","administracion"].includes(usuario?.rol)) return true;
+  if (usuario?.rol === "supervisor") return sectoresACargo(usuario).includes(sector) || usuario?.sector === sector;
+  return Boolean(usuario?.sector) && usuario.sector === sector;
 }
 function puedeModificarSectorHorarios(usuario, sectorId) {
-  if (usuario?.rol === "administrador") return true;
-  return usuario?.rol === "supervisor" && Boolean(usuario?.sector) && usuario.sector === normalizarTexto(sectorId);
+  const sector=normalizarTexto(sectorId);
+  if (["administrador","administracion"].includes(usuario?.rol)) return true;
+  return usuario?.rol === "supervisor" && sectoresACargo(usuario).includes(sector);
 }
 async function requerirAccesoHorarios(req, res, next) {
   await requerirSesion(req, res, () => {
@@ -647,8 +652,9 @@ app.put("/horarios/turnos", requerirAdministrador, async (req,res) => {
       const otras=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])!==sector);
       const ahora=fechaHoraArgentinaIso();
       const nuevas=turnos.map(t=>[sector,t.id,t.inicio,t.fin,t.color,"Sí",ahora]);
-      await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:G`});
-      if(otras.length+nuevas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:G${otras.length+nuevas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otras,...nuevas]}});
+      const todas=[...otras,...nuevas], filasPrevias=Math.max(0,(r.data.values||[]).length-1);
+      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:G${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
+      if(filasPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A${todas.length+2}:G${filasPrevias+1}`});
     });
     invalidarCache(`turnosHorarios:${sector}`);
     res.json({ok:true,turnos});
@@ -665,7 +671,7 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
       ]);
-      const celdas=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
+      const celdasMapa=new Map(); (r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno).forEach(x=>celdasMapa.set(`${x.empleado}::${x.dia}`,x)); const celdas=[...celdasMapa.values()];
       const detalles=(dr.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes).map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])})).filter(x=>x.empleado&&x.dia>=1&&x.dia<=31);
       return {celdas,detalles,reemplazos:[]};
     });
@@ -693,17 +699,23 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
       ]);
       const filasAnteriores=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
       const anterior=new Map(filasAnteriores.map(f=>[`${normalizarTexto(f[2])}::${Number(f[3])}`,normalizarTexto(f[4])]));
+      if(req.usuario.rol !== "administrador") {
+        const rolesPorNombre=new Map(usuarios.filter(u=>u.activo&&u.sector===sector).map(u=>[normalizarTexto(u.nombre||u.usuario),u.rol]));
+        const nuevoCompleto=new Map(celdas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
+        const protegidos=[...new Set([...anterior.keys(),...nuevoCompleto.keys()])].filter(k=>{const nombre=k.split("::")[0];const rolEmpleado=rolesPorNombre.get(nombre)||"personal";return req.usuario.rol==="administracion"?rolEmpleado!=="supervisor":rolEmpleado==="supervisor";});
+        if(protegidos.some(k=>(anterior.get(k)||"")!==(nuevoCompleto.get(k)||""))) return res.status(403).json({ok:false,mensaje:req.usuario.rol==="administracion"?"Administración solo puede modificar horarios de supervisores":"Los supervisores no pueden modificar su propio horario ni el de otros supervisores"});
+      }
       const otras=(r.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
       const otrasDetalles=(dr.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
       const ahora=fechaHoraArgentinaIso();
       const nuevas=celdas.map(x=>[sector,mes,x.empleado,x.dia,x.turno,ahora,req.usuario.usuario,req.usuario.nombre]);
       const nuevasDetalles=detalles.map(x=>[sector,mes,x.empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
-      await Promise.all([
-        sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H`}),
-        sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I`})
-      ]);
-      if(otras.length+nuevas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${otras.length+nuevas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otras,...nuevas]}});
-      if(otrasDetalles.length+nuevasDetalles.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I${otrasDetalles.length+nuevasDetalles.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:[...otrasDetalles,...nuevasDetalles]}});
+      const todas=[...otras,...nuevas], todosDetalles=[...otrasDetalles,...nuevasDetalles];
+      const filasCalendarioPrevias=Math.max(0,(r.data.values||[]).length-1), filasDetallesPrevias=Math.max(0,(dr.data.values||[]).length-1);
+      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
+      if(todosDetalles.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I${todosDetalles.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todosDetalles}});
+      if(filasCalendarioPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A${todas.length+2}:H${filasCalendarioPrevias+1}`});
+      if(filasDetallesPrevias>todosDetalles.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A${todosDetalles.length+2}:I${filasDetallesPrevias+1}`});
       const nuevoMapa=new Map(celdas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
       const claves=new Set([...anterior.keys(),...nuevoMapa.keys()]);
       const cambios=[...claves].filter(k=>(anterior.get(k)||"")!==(nuevoMapa.get(k)||""));
@@ -735,9 +747,9 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
   try {
     const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
     const activos = sectores.filter(s => s.activo);
-    if (req.usuario.rol !== "administrador" && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
-    const visibles = ["administrador","supervisor"].includes(req.usuario.rol) ? activos : activos.filter(s => s.id === req.usuario.sector);
-    if (!["administrador","supervisor"].includes(req.usuario.rol) && !visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
+    if (!["administrador","administracion","supervisor"].includes(req.usuario.rol) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
+    const visibles = ["administrador","administracion"].includes(req.usuario.rol) ? activos : (req.usuario.rol === "supervisor" ? activos.filter(s => sectoresACargo(req.usuario).includes(s.id) || s.id===req.usuario.sector) : activos.filter(s => s.id === req.usuario.sector));
+    if (!["administrador","administracion","supervisor"].includes(req.usuario.rol) && !visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
     const respuesta = visibles.map(s => ({
       id: s.id,
       nombre: s.nombre,
@@ -751,9 +763,10 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
           if (aSupervisor !== bSupervisor) return aSupervisor ? 1 : -1;
           return String(a.nombre || a.usuario).localeCompare(String(b.nombre || b.usuario), "es", { sensitivity:"base" });
         })
-        .map(u => u.nombre || u.usuario)
+        .map(u => u.nombre || u.usuario),
+      empleadosInfo: usuarios.filter(u=>u.activo&&u.sector===s.id).map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
     }));
-    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
+    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","administracion","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el contexto de horarios" });
   }
@@ -762,7 +775,7 @@ app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
     if (!puedeModificarSectorHorarios(req.usuario, sector)) return res.status(403).json({ ok:false, mensaje:"Solo el administrador o el supervisor asignado pueden modificar este sector" });
-    if (!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
+    if (!["administrador","administracion","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
     const sectores = await obtenerSectores();
     const sectorEncontrado = sectores.find(s => s.id === sector && s.activo);
     if (!sectorEncontrado) return res.status(404).json({ ok:false, mensaje:"Sector inexistente o inactivo" });
@@ -778,15 +791,16 @@ app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
 async function actualizarFilaUsuario(usuario, cambios = {}) {
   const rol = cambios.rol ?? usuario.rol;
   const sector = cambios.sector ?? (usuario.sector || "");
+  const sectoresCargo = cambios.sectores ?? (usuario.sectores || []);
   const activo = cambios.activo ?? usuario.activo;
   const permisos = cambios.permisos ?? usuario.permisos;
   const nombre = cambios.nombre ?? usuario.nombre;
   const passwordHash = cambios.passwordHash ?? usuario.passwordHash;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:H${usuario.filaGoogle}`,
+    range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:I${usuario.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[usuario.usuario, nombre, passwordHash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector]] }
+    requestBody: { values: [[usuario.usuario, nombre, passwordHash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
   });
 }
 
@@ -933,26 +947,28 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
     const rolEntrada = normalizarTexto(req.body?.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
     const sector = normalizarTexto(req.body?.sector);
+    const sectoresCargo = [...new Set((Array.isArray(req.body?.sectores)?req.body.sectores:[]).map(normalizarTexto).filter(Boolean))];
     const permisos = normalizarPermisos(req.body?.permisos, rol);
     if (sector) {
       const sectores = await obtenerSectores();
       if (!sectores.some(s => s.id === sector && s.activo)) return res.status(400).json({ ok:false, mensaje:"El sector seleccionado no existe o está inactivo" });
     }
-    if (rol === "supervisor" && !sector) return res.status(400).json({ ok:false, mensaje:"Asigná un sector al supervisor" });
+    if (rol === "supervisor" && !sectoresCargo.length) return res.status(400).json({ ok:false, mensaje:"Asigná al menos un sector a cargo del supervisor" });
+    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores a cargo no existe o está inactivo"}); }
     if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return res.status(400).json({ ok:false, mensaje:"El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo" });
     if (password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
     const usuarios = await obtenerUsuarios();
     if (usuarios.some(item => item.usuario === usuario)) return res.status(409).json({ ok:false, mensaje:"Ese usuario ya existe" });
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A:H`,
+      range: `${USUARIOS_SHEET_NAME}!A:I`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector]] }
+      requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
     });
     invalidarCache("usuarios");
     await sincronizarUsuarioSupervisor(usuario, rol, sector, true);
-    res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true, permisos, sector } });
+    res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true, permisos, sector, sectores:sectoresCargo } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo crear el usuario" });
   }
@@ -968,6 +984,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     const rolEntrada = req.body?.rol === undefined ? actual.rol : normalizarTexto(req.body.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
     const sector = req.body?.sector === undefined ? (actual.sector || "") : normalizarTexto(req.body.sector);
+    const sectoresCargo = req.body?.sectores === undefined ? (actual.sectores || []) : [...new Set((Array.isArray(req.body.sectores)?req.body.sectores:[]).map(normalizarTexto).filter(Boolean))];
     const activo = req.body?.activo === undefined ? actual.activo : Boolean(req.body.activo);
     const permisos = req.body?.permisos === undefined ? normalizarPermisos(actual.permisos, rol) : normalizarPermisos(req.body.permisos, rol);
     const password = String(req.body?.password || "");
@@ -975,7 +992,8 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       const sectores = await obtenerSectores();
       if (!sectores.some(s => s.id === sector && s.activo)) return res.status(400).json({ ok:false, mensaje:"El sector seleccionado no existe o está inactivo" });
     }
-    if (rol === "supervisor" && !sector) return res.status(400).json({ ok:false, mensaje:"Asigná un sector al supervisor" });
+    if (rol === "supervisor" && !sectoresCargo.length) return res.status(400).json({ ok:false, mensaje:"Asigná al menos un sector a cargo del supervisor" });
+    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores a cargo no existe o está inactivo"}); }
     if (clave === req.usuario.usuario && (!activo || rol !== "administrador")) {
       return res.status(400).json({ ok:false, mensaje:"No podés desactivar tu propia cuenta ni quitarte el rol de administrador" });
     }
@@ -985,11 +1003,11 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       spreadsheetId: SPREADSHEET_ID,
       range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:H${actual.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector]] }
+      requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
     });
     invalidarCache("usuarios");
     await sincronizarUsuarioSupervisor(clave, rol, sector, activo);
-    res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo, permisos, sector } });
+    res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo, permisos, sector, sectores:sectoresCargo } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });
   }
