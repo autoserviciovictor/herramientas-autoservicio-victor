@@ -696,18 +696,40 @@ function encontrarProximoTurno(empleado) {
   }
   return null;
 }
+function normalizarIdentidadHorario(valor) {
+  return String(valor || "").trim().toLocaleLowerCase("es-AR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function resolverEmpleadoSesion(usuario) {
+  const nombre = normalizarIdentidadHorario(usuario?.nombre);
+  const usuarioId = normalizarIdentidadHorario(usuario?.usuario);
+  return empleados.find(empleado => {
+    const info = empleadosInfo.get(empleado) || {};
+    return normalizarIdentidadHorario(empleado) === nombre
+      || normalizarIdentidadHorario(info.nombre) === nombre
+      || normalizarIdentidadHorario(info.usuario) === usuarioId;
+  }) || "";
+}
 function renderMiHorario() {
-  const usuario = window.AutoservicioAuth?.getUsuario?.();
-  const e = empleados.find(x => x.toLowerCase() === String(usuario?.nombre || "").toLowerCase()) || empleados[0] || String(usuario?.nombre || "");
+  const usuario = window.AutoservicioAuth?.getUsuario?.() || {};
+  const e = resolverEmpleadoSesion(usuario);
   const lista = $("miHorarioLista"); if (!lista) return;
+  $("miHorarioStats")?.remove();
+  const saludo = document.querySelector(".mi-horario-saludo");
+  if (saludo) saludo.textContent = `Hola, ${usuario?.nombre || usuario?.usuario || "Usuario"}`;
+
+  if (!e) {
+    lista.innerHTML = '<div class="mi-horario-vacio"><strong>Sin horarios asignados</strong><span>Tu usuario no tiene turnos cargados en este sector.</span></div>';
+    $("miHorarioProximo").textContent = "Sin turnos próximos";
+    $("miHorarioProximoFecha").textContent = "—";
+    return;
+  }
+
   const inicio = esMesActual() ? new Date().getDate() : 1;
   const dias = Array.from({ length: Math.min(10, diasDelMes() - inicio + 1) }, (_, i) => inicio + i);
-  $("miHorarioStats")?.remove();
   lista.innerHTML = dias.map(d => { const id = obtenerTurno(e, d), tr = obtenerDefinicion(id), f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d); return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${d} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ''}">${formatoHorario24(id)}</span></article>`; }).join("");
   const proximo = encontrarProximoTurno(e);
   $("miHorarioProximo").textContent = proximo ? formatoHorario24(proximo.id) : "Sin turnos próximos";
   $("miHorarioProximoFecha").textContent = proximo ? proximo.fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) : "—";
-  const saludo = document.querySelector(".mi-horario-saludo"); if (saludo) saludo.textContent = `Hola, ${usuario?.nombre || e}`;
 }
 
 
