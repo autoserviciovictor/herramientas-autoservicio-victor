@@ -573,8 +573,7 @@ function usuarioPuedeVerHorarios(usuario) {
 function sectoresACargo(usuario){ return Array.isArray(usuario?.sectores) ? usuario.sectores : []; }
 function puedeAccederSectorHorarios(usuario, sectorId) {
   const sector=normalizarTexto(sectorId);
-  if (["administrador","administracion"].includes(usuario?.rol)) return true;
-  if (usuario?.rol === "supervisor") return sectoresACargo(usuario).includes(sector) || usuario?.sector === sector;
+  if (["administrador","administracion","supervisor"].includes(usuario?.rol)) return true;
   return Boolean(usuario?.sector) && usuario.sector === sector;
 }
 async function puedeModificarSectorHorarios(usuario, sectorId) {
@@ -801,11 +800,9 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
       activos.filter(s => normalizarUsuario(s.supervisor) === normalizarUsuario(req.usuario.usuario)).forEach(s => sectoresSupervisor.add(s.id));
       if (req.usuario.sector) sectoresSupervisor.add(req.usuario.sector);
     }
-    const visibles = ["administrador","administracion"].includes(req.usuario.rol)
+    const visibles = ["administrador","administracion","supervisor"].includes(req.usuario.rol)
       ? activos
-      : (req.usuario.rol === "supervisor"
-        ? activos.filter(s => sectoresSupervisor.has(s.id))
-        : activos.filter(s => s.id === req.usuario.sector));
+      : activos.filter(s => s.id === req.usuario.sector);
     if (!["administrador","administracion","supervisor"].includes(req.usuario.rol) && !visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
     const respuesta = visibles.map(s => ({
       id: s.id,
@@ -814,7 +811,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
       activo: s.activo,
       puedeEditar: ["administrador","administracion"].includes(req.usuario.rol) || (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
       empleados: usuarios
-        .filter(u => u.activo && u.sector === s.id)
+        .filter(u => u.activo && (u.sector === s.id || normalizarUsuario(u.usuario) === normalizarUsuario(s.supervisor)))
         .sort((a, b) => {
           const aSupervisor = normalizarUsuario(a.usuario) === normalizarUsuario(s.supervisor) || a.rol === "supervisor";
           const bSupervisor = normalizarUsuario(b.usuario) === normalizarUsuario(s.supervisor) || b.rol === "supervisor";
@@ -822,7 +819,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
           return String(a.nombre || a.usuario).localeCompare(String(b.nombre || b.usuario), "es", { sensitivity:"base" });
         })
         .map(u => u.nombre || u.usuario),
-      empleadosInfo: usuarios.filter(u=>u.activo&&u.sector===s.id).map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
+      empleadosInfo: usuarios.filter(u=>u.activo&&(u.sector===s.id||normalizarUsuario(u.usuario)===normalizarUsuario(s.supervisor))).map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
     }));
     res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","administracion","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
   } catch (error) {
