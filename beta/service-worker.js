@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v872-mi-horario-iconos';
+const CACHE_VERSION = 'autoservicio-v873-paleta-iconos';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

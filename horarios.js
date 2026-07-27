@@ -756,10 +756,10 @@ async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), f
 async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); await cargarResumenHoy(true); renderTodo(); desplazarAlDia(diaSeleccionado); }
 function renderTodo() { $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion()); if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); }
 
-const COLORES_TURNOS=[['#dc2626','Rojo'],['#f97316','Naranja'],['#eab308','Amarillo'],['#16a34a','Verde'],['#2563eb','Azul'],['#7c3aed','Violeta'],['#0891b2','Cian']];
+const COLORES_TURNOS=[['#dc2626','Rojo'],['#f97316','Naranja'],['#f59e0b','Ámbar'],['#eab308','Amarillo'],['#65a30d','Lima'],['#16a34a','Verde'],['#0f766e','Verde azulado'],['#0891b2','Cian'],['#2563eb','Azul'],['#4f46e5','Índigo'],['#7c3aed','Violeta'],['#c026d3','Magenta']];
 const MAPA_COLORES_ANTERIORES={
-  '#f59e0b':'#f97316','#db2777':'#7c3aed','#64748b':'#2563eb','#92400e':'#f97316',
-  '#111827':'#2563eb','#84cc16':'#16a34a','#14b8a6':'#0891b2'
+  '#db2777':'#c026d3','#64748b':'#2563eb','#92400e':'#f97316',
+  '#111827':'#2563eb','#84cc16':'#65a30d','#14b8a6':'#0f766e'
 };
 function colorTurnoPermitido(color){
   const c=String(color||'').toLowerCase();

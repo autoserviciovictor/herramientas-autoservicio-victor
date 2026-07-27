@@ -3913,11 +3913,11 @@ button:disabled{cursor:not-allowed;opacity:.55}
 /* V8.7 Configuración de horarios por supervisor */
 .horarios-config-view{display:grid;gap:16px;padding-bottom:24px}.horarios-config-card{margin:0}.horarios-order-list{display:grid;gap:9px;margin-top:14px}.horarios-order-item{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff}.horarios-order-index{width:34px;height:34px;border-radius:10px;background:#f3efeb;display:grid;place-items:center;font-weight:900;color:#5f5751}.horarios-order-info{display:flex;flex-direction:column;min-width:0}.horarios-order-info strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.horarios-order-info span{font-size:12px;color:#777}.horarios-order-actions{display:flex;gap:6px}.horarios-order-actions button{width:38px;height:38px;border:1px solid #d7d0ca;border-radius:10px;background:#fff;font-size:18px;font-weight:900}.horarios-order-actions button:disabled{opacity:.35}.horarios-bottom-nav:has(#btnHorariosConfigNav:not(.oculto)){grid-template-columns:repeat(3,1fr)}@media(max-width:560px){.horarios-config-view{gap:12px}.horarios-config-card{padding:14px}.horarios-config-card .admin-section-head{flex-direction:column;align-items:stretch}.horarios-config-card .admin-section-head button{width:100%}.horarios-order-item{grid-template-columns:34px 1fr auto;padding:9px}.horarios-order-actions button{width:34px;height:34px}}
 
-/* V8.7.2: Mi horario seguro e iconos de navegación más visibles */
-.horarios-nav-icon{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;display:grid!important;place-items:center!important;font-size:0!important}
-.horarios-nav-icon svg{display:block;width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.horarios-bottom-nav button{min-height:70px!important;gap:4px!important}
+/* V8.7.3: navegación compacta y paleta ampliada */
+.horarios-nav-icon{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;display:grid!important;place-items:center!important;font-size:0!important}
+.horarios-nav-icon svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.horarios-bottom-nav button{min-height:52px!important;gap:3px!important;padding:6px 4px!important}
 .mi-horario-vacio{margin:18px 0;padding:24px 18px;border:1px dashed #d9dce3;border-radius:18px;background:#fff;text-align:center;display:grid;gap:7px;color:#6d717b}
 .mi-horario-vacio strong{font-size:18px;color:#292c33}
 .mi-horario-vacio span{font-size:14px}
-@media(max-width:560px){.horarios-nav-icon{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important}.horarios-nav-icon svg{width:33px;height:33px}.horarios-bottom-nav button{min-height:74px!important}}
+@media(max-width:560px){.horarios-nav-icon{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important}.horarios-nav-icon svg{width:22px;height:22px}.horarios-bottom-nav button{min-height:52px!important}}
