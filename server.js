@@ -1105,7 +1105,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     const hash = password ? hashPassword(password) : actual.passwordHash;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:H${actual.filaGoogle}`,
+      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:I${actual.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
     });
