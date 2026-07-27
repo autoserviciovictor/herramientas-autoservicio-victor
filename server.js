@@ -577,10 +577,22 @@ function puedeAccederSectorHorarios(usuario, sectorId) {
   if (usuario?.rol === "supervisor") return sectoresACargo(usuario).includes(sector) || usuario?.sector === sector;
   return Boolean(usuario?.sector) && usuario.sector === sector;
 }
-function puedeModificarSectorHorarios(usuario, sectorId) {
-  const sector=normalizarTexto(sectorId);
+async function puedeModificarSectorHorarios(usuario, sectorId) {
+  const sector = normalizarTexto(sectorId);
   if (["administrador","administracion"].includes(usuario?.rol)) return true;
-  return usuario?.rol === "supervisor" && sectoresACargo(usuario).includes(sector);
+  if (usuario?.rol !== "supervisor") return false;
+
+  const sectoresUsuario = sectoresACargo(usuario).map(normalizarTexto);
+  if (sectoresUsuario.includes(sector) || normalizarTexto(usuario?.sector) === sector) return true;
+
+  // La asignación oficial del supervisor se guarda en la hoja Sectores.
+  // La sesión puede no contener todavía esa asignación, por eso se valida
+  // también contra la configuración actual antes de rechazar el guardado.
+  const sectorConfigurado = (await obtenerSectores()).find(s => s.id === sector && s.activo);
+  return Boolean(
+    sectorConfigurado &&
+    normalizarUsuario(sectorConfigurado.supervisor) === normalizarUsuario(usuario?.usuario)
+  );
 }
 async function requerirAccesoHorarios(req, res, next) {
   await requerirSesion(req, res, () => {
@@ -689,7 +701,7 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
 app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector=normalizarTexto(req.body?.sector), mes=normalizarTexto(req.body?.mes);
-    if(!puedeModificarSectorHorarios(req.usuario,sector)) return res.status(403).json({ok:false,mensaje:"Solo el administrador o el supervisor asignado pueden modificar este calendario"});
+    if(!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"Solo el administrador o el supervisor asignado pueden modificar este calendario"});
     if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
     const sectores=await obtenerSectores(); const sec=sectores.find(s=>s.id===sector&&s.activo);
     if(!sec) return res.status(404).json({ok:false,mensaje:"Sector inexistente o inactivo"});
@@ -820,7 +832,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
 app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
-    if (!puedeModificarSectorHorarios(req.usuario, sector)) return res.status(403).json({ ok:false, mensaje:"Solo el administrador o el supervisor asignado pueden modificar este sector" });
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ ok:false, mensaje:"Solo el administrador o el supervisor asignado pueden modificar este sector" });
     if (!["administrador","administracion","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
     const sectores = await obtenerSectores();
     const sectorEncontrado = sectores.find(s => s.id === sector && s.activo);
