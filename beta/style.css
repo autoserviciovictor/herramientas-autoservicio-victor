@@ -3921,3 +3921,10 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .mi-horario-vacio strong{font-size:18px;color:#292c33}
 .mi-horario-vacio span{font-size:14px}
 @media(max-width:560px){.horarios-nav-icon{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important}.horarios-nav-icon svg{width:22px;height:22px}.horarios-bottom-nav button{min-height:52px!important}}
+
+
+/* V8.7.5 - horario cortado */
+.horarios-cortado-check{grid-column:1/-1;display:flex!important;align-items:center;gap:10px;font-weight:700;cursor:pointer}
+.horarios-cortado-check input{width:20px;height:20px;accent-color:#b72e35}
+.horarios-segundo-tramo{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}
+@media(max-width:560px){.horarios-segundo-tramo{grid-template-columns:1fr}}

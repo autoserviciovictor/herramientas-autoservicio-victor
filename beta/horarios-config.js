@@ -12,9 +12,14 @@ function hora24(valor){
   return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
 }
 function normalizar(items){
-  return (Array.isArray(items)?items:[]).filter(x=>x&&x.id).map(x=>({
-    id:String(x.id), inicio:hora24(x.inicio), fin:hora24(x.fin), color:/^#[0-9a-f]{6}$/i.test(x.color||'')?x.color:'#64748b'
-  })).filter(x=>x.inicio&&x.fin);
+  return (Array.isArray(items)?items:[]).filter(x=>x&&x.id).map(x=>{
+    const tipo=String(x.tipo||'continuo').toLowerCase()==='cortado'?'cortado':'continuo';
+    return {
+      id:String(x.id), tipo, inicio:hora24(x.inicio), fin:hora24(x.fin),
+      inicio2:tipo==='cortado'?hora24(x.inicio2):'', fin2:tipo==='cortado'?hora24(x.fin2):'',
+      color:/^#[0-9a-f]{6}$/i.test(x.color||'')?x.color:'#64748b'
+    };
+  }).filter(x=>x.inicio&&x.fin&&(x.tipo!=='cortado'||(x.inicio2&&x.fin2)));
 }
 function clave(sector=sectorActual){ return STORAGE_PREFIX + (sector || 'general'); }
 function seleccionarSector(sector){ sectorActual=String(sector||''); return cargar(); }

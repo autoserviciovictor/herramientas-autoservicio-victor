@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v874-proximo-turno';
+const CACHE_VERSION = 'autoservicio-v875-horario-cortado';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

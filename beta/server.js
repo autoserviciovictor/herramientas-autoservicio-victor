@@ -615,7 +615,7 @@ async function asegurarHojasHorarios() {
   if (!titulos.has(ORDEN_HORARIOS_SHEET_NAME)) requests.push({ addSheet:{ properties:{ title:ORDEN_HORARIOS_SHEET_NAME } } });
   if (requests.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId:SPREADSHEET_ID, requestBody:{ requests } });
   await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A1:H1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Mes","Empleado","Día","Turno","Actualizado","Usuario","Nombre"]] } });
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A1:G1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","ID","Inicio","Fin","Color","Activo","Actualizado"]] } });
+  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A1:J1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","ID","Inicio","Fin","Color","Activo","Actualizado","Tipo","Inicio 2","Fin 2"]] } });
   await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${DETALLES_HORARIOS_SHEET_NAME}!A1:I1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Mes","Empleado","Día","Tipo","Motivo","Observación","Actualizado","Usuario"]] } });
   await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${REEMPLAZOS_HORARIOS_SHEET_NAME}!A1:I1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Mes","Empleado original","Reemplazante","Desde","Hasta","Observación","Actualizado","Usuario"]] } });
   await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${ORDEN_HORARIOS_SHEET_NAME}!A1:D1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Empleado","Orden","Actualizado"]] } });
@@ -637,16 +637,18 @@ function normalizarHoraHorario(valor) {
 async function obtenerTurnosSector(sector) {
   await asegurarHojasHorarios();
   return leerConCache(`turnosHorarios:${sector}`, CACHE_TTL.turnosHorarios, async () => {
-    const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A:G` });
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A:J` });
     return (r.data.values || []).slice(1)
       .filter(f => normalizarTexto(f[0]) === sector && !["no","false","0","inactivo"].includes(normalizarTexto(f[5]).toLowerCase()))
       .map(f => ({
         id:normalizarTexto(f[1]),
         inicio:normalizarHoraHorario(f[2]),
         fin:normalizarHoraHorario(f[3]),
-        color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b"
+        color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b",
+        tipo:normalizarTexto(f[7]).toLowerCase()==='cortado'?'cortado':'continuo',
+        inicio2:normalizarHoraHorario(f[8]), fin2:normalizarHoraHorario(f[9])
       }))
-      .filter(t => t.id && t.inicio && t.fin);
+      .filter(t => t.id && t.inicio && t.fin && (t.tipo!=='cortado' || (t.inicio2 && t.fin2)));
   });
 }
 async function registrarAuditoriaHorario(usuario, sectorNombre, mes, accion) {
@@ -667,17 +669,17 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
     if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar los horarios de este sector"});
     const sectores = await obtenerSectores();
     if (!sectores.some(s => s.id === sector)) return res.status(404).json({ok:false,mensaje:"Sector inexistente"});
-    const turnos = Array.isArray(req.body?.turnos) ? req.body.turnos.map(t => ({ id:normalizarTexto(t.id), inicio:normalizarTexto(t.inicio).slice(0,5), fin:normalizarTexto(t.fin).slice(0,5), color:/^#[0-9a-f]{6}$/i.test(t.color||"")?t.color:"#64748b" })) : [];
-    if (!turnos.length || turnos.some(t => !t.id || !/^\d{2}:\d{2}$/.test(t.inicio) || !/^\d{2}:\d{2}$/.test(t.fin))) return res.status(400).json({ok:false,mensaje:"Configuración de horarios inválida"});
+    const turnos = Array.isArray(req.body?.turnos) ? req.body.turnos.map(t => ({ id:normalizarTexto(t.id), tipo:normalizarTexto(t.tipo).toLowerCase()==='cortado'?'cortado':'continuo', inicio:normalizarTexto(t.inicio).slice(0,5), fin:normalizarTexto(t.fin).slice(0,5), inicio2:normalizarTexto(t.inicio2).slice(0,5), fin2:normalizarTexto(t.fin2).slice(0,5), color:/^#[0-9a-f]{6}$/i.test(t.color||"")?t.color:"#64748b" })) : [];
+    if (!turnos.length || turnos.some(t => !t.id || !/^\d{2}:\d{2}$/.test(t.inicio) || !/^\d{2}:\d{2}$/.test(t.fin) || (t.tipo==='cortado' && (!/^\d{2}:\d{2}$/.test(t.inicio2) || !/^\d{2}:\d{2}$/.test(t.fin2))))) return res.status(400).json({ok:false,mensaje:"Configuración de horarios inválida"});
     await asegurarHojasHorarios();
     await ejecutarEnCola("turnos-horarios", async () => {
-      const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A:G`});
+      const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A:J`});
       const otras=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])!==sector);
       const ahora=fechaHoraArgentinaIso();
-      const nuevas=turnos.map(t=>[sector,t.id,t.inicio,t.fin,t.color,"Sí",ahora]);
+      const nuevas=turnos.map(t=>[sector,t.id,t.inicio,t.fin,t.color,"Sí",ahora,t.tipo,t.inicio2||"",t.fin2||""]);
       const todas=[...otras,...nuevas], filasPrevias=Math.max(0,(r.data.values||[]).length-1);
-      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:G${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
-      if(filasPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A${todas.length+2}:G${filasPrevias+1}`});
+      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:J${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
+      if(filasPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A${todas.length+2}:J${filasPrevias+1}`});
     });
     invalidarCache(`turnosHorarios:${sector}`);
     res.json({ok:true,turnos});
@@ -1140,7 +1142,7 @@ app.delete("/admin/sectores/:id", requerirAdministrador, async (req,res)=>{
     const asignados=usuarios.filter(u=>u.sector===id); if(asignados.length)return res.status(409).json({ok:false,mensaje:`No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s). Reasignalos primero.`});
     await asegurarHojasHorarios();
     await Promise.all([
-      eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME,id,"H"), eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME,id,"G"),
+      eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME,id,"H"), eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME,id,"J"),
       eliminarRegistrosSector(DETALLES_HORARIOS_SHEET_NAME,id,"I"), eliminarRegistrosSector(REEMPLAZOS_HORARIOS_SHEET_NAME,id,"I"), eliminarRegistrosSector(ORDEN_HORARIOS_SHEET_NAME,id,"D")
     ]);
     await eliminarFilaDeHoja(SECTORES_SHEET_NAME,sector.filaGoogle); hojaSectoresAsegurada=false; invalidarCache("usuarios","sectores");

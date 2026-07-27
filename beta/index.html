@@ -866,6 +866,11 @@
         <div class="admin-shift-form">
           <label>Hora de inicio<input id="horariosTurnoInicio" type="time" required></label>
           <label>Hora de finalización<input id="horariosTurnoFin" type="time" required></label>
+          <label class="horarios-cortado-check"><input id="horariosTurnoCortado" type="checkbox"><span>Horario cortado</span></label>
+          <div id="horariosTurnoSegundoTramo" class="horarios-segundo-tramo oculto">
+            <label>Segundo tramo desde<input id="horariosTurnoInicio2" type="time"></label>
+            <label>Segundo tramo hasta<input id="horariosTurnoFin2" type="time"></label>
+          </div>
           <div class="admin-color-picker admin-shift-color-picker" aria-label="Elegir color del horario">
             <input id="horariosTurnoColor" type="hidden" value="#f59e0b">
             <div class="admin-color-picker-head"><span>Color del turno</span><strong id="horariosTurnoColorNombre">Naranja</strong></div>
@@ -885,12 +890,12 @@
 <script src="./pwa.js?v=84-entrega8" defer></script>
 <script type="module" src="./auth.js?v=84-entrega8"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=871-ajustes-calendario"></script>
+<script src="./horarios-config.js?v=875-horario-cortado"></script>
 <script type="module" src="./admin.js?v=84-entrega8"></script>
 <script type="module" src="./notifications.js?v=84-entrega8"></script>
 <script type="module" src="./prices.js?v=84-entrega8"></script>
 <script type="module" src="./app.js?v=84-entrega8"></script>
-<script type="module" src="./horarios.js?v=872-mi-horario-iconos"></script>
+<script type="module" src="./horarios.js?v=875-horario-cortado"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

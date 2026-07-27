@@ -111,7 +111,7 @@ function cargarTurnosConfigurados() {
   const configurados = window.AutoservicioHorariosConfig?.cargar?.() || [];
   TURNOS = configurados.map(t => ({
     ...t,
-    label: `${t.inicio} - ${t.fin}`,
+    label: t.tipo === 'cortado' ? `${t.inicio} - ${t.fin} / ${t.inicio2} - ${t.fin2}` : `${t.inicio} - ${t.fin}`,
     clase: 'turno-configurable',
     estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`
   })).concat([
@@ -220,18 +220,26 @@ function parsearTurno(id) {
   return { inicioH: Number(m[1]), inicioM: Number(m[2] || 0), finH: Number(m[3]), finM: Number(m[4] || 0) };
 }
 function hora24(h, m = 0) { return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; }
-function horasDeTurno(id) {
-  const definicion = TURNOS.find(t => t.id === id);
-  if (definicion?.inicio && definicion?.fin) return { inicio: definicion.inicio, fin: definicion.fin };
+function definicionTurno(id){ return TURNOS.find(t => t.id === id) || null; }
+function segmentosDeTurno(id) {
+  const definicion = definicionTurno(id);
+  if (definicion?.inicio && definicion?.fin) {
+    const segmentos=[{inicio:definicion.inicio,fin:definicion.fin}];
+    if(definicion.tipo==='cortado'&&definicion.inicio2&&definicion.fin2) segmentos.push({inicio:definicion.inicio2,fin:definicion.fin2});
+    return segmentos;
+  }
   const p = parsearTurno(id);
-  return p ? { inicio: hora24(p.inicioH, p.inicioM), fin: hora24(p.finH, p.finM) } : null;
+  return p ? [{ inicio: hora24(p.inicioH, p.inicioM), fin: hora24(p.finH, p.finM) }] : [];
 }
+function horasDeTurno(id) { return segmentosDeTurno(id)[0] || null; }
+function esTurnoCortado(id){ return segmentosDeTurno(id).length > 1; }
 function formatoCelda(id) {
   if (!id) return "—";
   if (id === "franco") return "F";
   if (id === "vacaciones") return "V";
   if (id === "ausente") return "A";
   if (id === "licencia") return "L";
+  if (esTurnoCortado(id)) return "C";
   const horas = horasDeTurno(id);
   return horas ? `<span>${horas.inicio}</span><span>${horas.fin}</span>` : "—";
 }
@@ -241,16 +249,15 @@ function formatoHorario24(id) {
   if (id === "vacaciones") return "Vacaciones";
   if (id === "ausente") return "Ausente";
   if (id === "licencia") return "Licencia";
-  const horas = horasDeTurno(id);
-  return horas ? `${horas.inicio} - ${horas.fin}` : "Sin asignar";
+  const segmentos = segmentosDeTurno(id);
+  return segmentos.length ? segmentos.map(x=>`${x.inicio} - ${x.fin}`).join(" / ") : "Sin asignar";
 }
 function coberturaDia(d) {
   let manana = 0, tarde = 0;
   empleados.forEach(e => {
-    const id = obtenerTurno(e, d), p = parsearTurno(id);
-    if (!p) return;
-    if (p.inicioH < 14) manana++;
-    if (p.finH > 14) tarde++;
+    const segmentos = segmentosDeTurno(obtenerTurno(e, d));
+    if (segmentos.some(x=>Number(x.inicio.slice(0,2)) < 14 && Number(x.fin.slice(0,2)) >= 8)) manana++;
+    if (segmentos.some(x=>Number(x.inicio.slice(0,2)) < 22 && Number(x.fin.slice(0,2)) > 14)) tarde++;
   });
   return { manana, tarde };
 }
@@ -625,11 +632,9 @@ function renderResumen() {
   c.innerHTML = filas.length ? filas.join("") : '<div class="horarios-resumen-vacio">No hay personal asignado a este sector.</div>';
   let manana = 0, tarde = 0;
   empleados.forEach(e => {
-    const p = parsearTurno(resumenHoyDatos.get(claveResumenHoy(e)) || "");
-    if (!p) return;
-    const inicio = p.inicioH + p.inicioM / 60, fin = p.finH + p.finM / 60;
-    if (inicio < 14 && fin > 8) manana++;
-    if (inicio < 22 && fin > 14) tarde++;
+    const segmentos = segmentosDeTurno(resumenHoyDatos.get(claveResumenHoy(e)) || "");
+    if (segmentos.some(x=>Number(x.inicio.slice(0,2)) < 14 && Number(x.fin.slice(0,2)) >= 8)) manana++;
+    if (segmentos.some(x=>Number(x.inicio.slice(0,2)) < 22 && Number(x.fin.slice(0,2)) > 14)) tarde++;
   });
   const b = $("horariosCoberturaEstado");
   if (b) { b.textContent = `Mañana ${manana} · Tarde ${tarde}`; b.classList.toggle("alerta", manana < 2 || tarde < 2); }
@@ -638,7 +643,7 @@ function renderResumen() {
 function renderEstadisticasSector(){
   const box=$("horariosEstadisticas"); if(!box) return;
   let horas=0,francos=0,vacaciones=0,licencias=0,ausencias=0;
-  empleados.forEach(e=>{for(let d=1;d<=diasDelMes();d++){const id=obtenerTurno(e,d),p=parsearTurno(id);if(p)horas+=(p.finH+p.finM/60)-(p.inicioH+p.inicioM/60);else if(id==="franco")francos++;else if(id==="vacaciones")vacaciones++;else if(id==="licencia")licencias++;else if(id==="ausente")ausencias++;}});
+  empleados.forEach(e=>{for(let d=1;d<=diasDelMes();d++){const id=obtenerTurno(e,d),segmentos=segmentosDeTurno(id);if(segmentos.length)segmentos.forEach(x=>{const [ih,im]=x.inicio.split(':').map(Number),[fh,fm]=x.fin.split(':').map(Number);horas+=(fh+fm/60)-(ih+im/60)});else if(id==="franco")francos++;else if(id==="vacaciones")vacaciones++;else if(id==="licencia")licencias++;else if(id==="ausente")ausencias++;}});
   box.innerHTML=`<article><strong>${empleados.length}</strong><span>Empleados</span></article><article><strong>${Math.round(horas)}</strong><span>Horas</span></article><article><strong>${francos}</strong><span>Francos</span></article><article><strong>${vacaciones}</strong><span>Vacaciones</span></article><article><strong>${licencias}</strong><span>Licencias</span></article><article><strong>${ausencias}</strong><span>Ausencias</span></article>`;
 }
 function abrirEditor(e, d) {
@@ -690,11 +695,13 @@ function encontrarProximoTurno(empleado) {
     const fecha = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + offset);
     const mes = new Date(fecha.getFullYear(), fecha.getMonth(), 1), dia = fecha.getDate();
     const id = obtenerTurnoEn(mes, empleado, dia);
-    const horas = horasDeTurno(id);
-    if (!horas) continue;
-    const [inicioH, inicioM] = horas.inicio.split(":").map(Number);
-    const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), inicioH, inicioM || 0);
-    if (inicio > ahora) return { fecha, id };
+    const segmentos = segmentosDeTurno(id);
+    if (!segmentos.length) continue;
+    for (const tramo of segmentos) {
+      const [inicioH, inicioM] = tramo.inicio.split(":").map(Number);
+      const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), inicioH, inicioM || 0);
+      if (inicio > ahora) return { fecha, id, tramo };
+    }
   }
   return null;
 }
@@ -774,10 +781,12 @@ function mensajeConfig(id,texto,tipo='ok'){const el=$(id);if(!el)return;el.textC
 function nombreColorTurno(hex){return COLORES_TURNOS.find(x=>x[0].toLowerCase()===String(hex).toLowerCase())?.[1]||'Personalizado'}
 function contrasteTurno(hex){const n=parseInt(String(hex).replace('#',''),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#111827':'#fff'}
 function renderPaletaTurno(color){const pal=$("horariosTurnoColorPalette");if(!pal)return;$("horariosTurnoColor").value=color;$("horariosTurnoColorNombre").textContent=nombreColorTurno(color);pal.innerHTML=COLORES_TURNOS.map(([hex,n])=>`<button type="button" class="admin-color-option ${hex===color?'seleccionado':''}" data-color="${hex}" aria-label="${n}"><span style="background:${hex}"></span></button>`).join('');pal.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>renderPaletaTurno(b.dataset.color)))}
-function abrirTurnoConfig(turno=null){turnoConfigEditando=turno;$("horariosTurnoModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';$("horariosTurnoOriginal").value=turno?.id||'';$("horariosTurnoInicio").value=turno?.inicio||'08:00';$("horariosTurnoFin").value=turno?.fin||'16:00';renderPaletaTurno(colorTurnoPermitido(turno?.color));$("btnHorariosEliminarTurno").classList.toggle('oculto',!turno);$("horariosTurnoModal").classList.remove('oculto');$("horariosTurnoModal").setAttribute('aria-hidden','false')}
+function actualizarCamposTurnoCortado(){const cortado=$("horariosTurnoCortado")?.checked===true;$("horariosTurnoSegundoTramo")?.classList.toggle('oculto',!cortado);if(!cortado){$("horariosTurnoInicio2").value='';$("horariosTurnoFin2").value=''}}
+function abrirTurnoConfig(turno=null){turnoConfigEditando=turno;$("horariosTurnoModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';$("horariosTurnoOriginal").value=turno?.id||'';$("horariosTurnoInicio").value=turno?.inicio||'08:00';$("horariosTurnoFin").value=turno?.fin||'12:00';$("horariosTurnoCortado").checked=turno?.tipo==='cortado';$("horariosTurnoInicio2").value=turno?.inicio2||'16:00';$("horariosTurnoFin2").value=turno?.fin2||'20:00';actualizarCamposTurnoCortado();renderPaletaTurno(colorTurnoPermitido(turno?.color));$("btnHorariosEliminarTurno").classList.toggle('oculto',!turno);$("horariosTurnoModal").classList.remove('oculto');$("horariosTurnoModal").setAttribute('aria-hidden','false')}
 function cerrarTurnoConfig(){$("horariosTurnoModal")?.classList.add('oculto');$("horariosTurnoModal")?.setAttribute('aria-hidden','true');turnoConfigEditando=null}
-function renderListaTurnosConfig(){const cont=$("horariosConfigLista");if(!cont)return;const items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];cont.innerHTML=items.length?items.map(t=>`<article class="admin-shift-card" data-id="${t.id}"><span class="admin-shift-swatch" style="background:${t.color};color:${contrasteTurno(t.color)}">${t.inicio.slice(0,2)}</span><div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${nombreColorTurno(t.color)}</span></div><button type="button">Editar</button></article>`).join(''):'<div class="empty-state">Todavía no hay horarios configurados.</div>';cont.querySelectorAll('[data-id] button').forEach(b=>b.addEventListener('click',()=>abrirTurnoConfig(items.find(t=>t.id===b.closest('[data-id]').dataset.id))))}
-async function guardarTurnoConfig(){const inicio=$("horariosTurnoInicio").value,fin=$("horariosTurnoFin").value,color=$("horariosTurnoColor").value,original=$("horariosTurnoOriginal").value;let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(!inicio||!fin)return mensajeConfig('horariosConfigMensaje','Completá ambas horas.','error');if(inicio===fin)return mensajeConfig('horariosConfigMensaje','El inicio y el final no pueden ser iguales.','error');if(items.some(t=>t.inicio===inicio&&t.fin===fin&&t.id!==original))return mensajeConfig('horariosConfigMensaje','Ese horario ya existe.','error');if(original){items=items.map(t=>t.id===original?{...t,inicio,fin,color}:t)}else items.push({id:window.AutoservicioHorariosConfig.idDesdeHoras(inicio,fin),inicio,fin,color});try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje',original?'Horario actualizado.':'Horario agregado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
+function detalleTurnoConfig(t){return t.tipo==='cortado'?`${t.inicio} - ${t.fin} / ${t.inicio2} - ${t.fin2}`:`${t.inicio} - ${t.fin}`}
+function renderListaTurnosConfig(){const cont=$("horariosConfigLista");if(!cont)return;const items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];cont.innerHTML=items.length?items.map(t=>`<article class="admin-shift-card" data-id="${t.id}"><span class="admin-shift-swatch" style="background:${t.color};color:${contrasteTurno(t.color)}">${t.tipo==='cortado'?'C':t.inicio.slice(0,2)}</span><div class="admin-shift-info"><strong>${detalleTurnoConfig(t)}</strong><span>${t.tipo==='cortado'?'Horario cortado · ':''}${nombreColorTurno(t.color)}</span></div><button type="button">Editar</button></article>`).join(''):'<div class="empty-state">Todavía no hay horarios configurados.</div>';cont.querySelectorAll('[data-id] button').forEach(b=>b.addEventListener('click',()=>abrirTurnoConfig(items.find(t=>t.id===b.closest('[data-id]').dataset.id))))}
+async function guardarTurnoConfig(){const inicio=$("horariosTurnoInicio").value,fin=$("horariosTurnoFin").value,color=$("horariosTurnoColor").value,original=$("horariosTurnoOriginal").value,cortado=$("horariosTurnoCortado").checked,inicio2=cortado?$("horariosTurnoInicio2").value:'',fin2=cortado?$("horariosTurnoFin2").value:'';let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(!inicio||!fin)return mensajeConfig('horariosConfigMensaje','Completá el primer tramo.','error');if(inicio===fin)return mensajeConfig('horariosConfigMensaje','El inicio y el final no pueden ser iguales.','error');if(cortado&&(!inicio2||!fin2))return mensajeConfig('horariosConfigMensaje','Completá el segundo tramo.','error');if(cortado&&inicio2===fin2)return mensajeConfig('horariosConfigMensaje','El segundo tramo no puede comenzar y terminar a la misma hora.','error');if(cortado&&!(inicio<fin&&fin<inicio2&&inicio2<fin2))return mensajeConfig('horariosConfigMensaje','Los tramos deben estar ordenados y separados, por ejemplo 08:00–12:00 y 16:00–20:00.','error');if(!cortado&&inicio>=fin)return mensajeConfig('horariosConfigMensaje','La hora de finalización debe ser posterior al inicio.','error');if(items.some(t=>t.inicio===inicio&&t.fin===fin&&(t.inicio2||'')===inicio2&&(t.fin2||'')===fin2&&t.id!==original))return mensajeConfig('horariosConfigMensaje','Ese horario ya existe.','error');const nuevo={tipo:cortado?'cortado':'continuo',inicio,fin,inicio2,fin2,color};if(original){items=items.map(t=>t.id===original?{...t,...nuevo}:t)}else items.push({id:window.AutoservicioHorariosConfig.idDesdeHoras(inicio,cortado?fin2:fin),...nuevo});try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje',original?'Horario actualizado.':'Horario agregado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
 async function eliminarTurnoConfig(){const id=$("horariosTurnoOriginal").value;let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(window.HorariosApp?.turnosEnUso?.().includes(id))return mensajeConfig('horariosConfigMensaje','No se puede eliminar porque está asignado en el mes visible.','error');items=items.filter(t=>t.id!==id);if(!items.length)return mensajeConfig('horariosConfigMensaje','Debe quedar al menos un horario.','error');try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje','Horario eliminado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
 function ordenPersonalModificado(){return ordenSectorInicial===sectorActual && JSON.stringify(empleados)!==JSON.stringify(ordenPersonalInicial)}
 function actualizarBotonGuardarOrden(){const b=$("btnHorariosGuardarOrden");if(b)b.disabled=!ordenPersonalModificado()}
@@ -798,6 +807,7 @@ function configurarEventos() {
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.horariosVista)));
   $("btnHorariosNuevoTurno")?.addEventListener("click",()=>abrirTurnoConfig());
   $("btnHorariosGuardarTurno")?.addEventListener("click",guardarTurnoConfig);
+  $("horariosTurnoCortado")?.addEventListener("change",actualizarCamposTurnoCortado);
   $("btnHorariosEliminarTurno")?.addEventListener("click",eliminarTurnoConfig);
   $("btnHorariosCancelarTurno")?.addEventListener("click",cerrarTurnoConfig);
   $("btnHorariosGuardarOrden")?.addEventListener("click",guardarOrdenConfig);
