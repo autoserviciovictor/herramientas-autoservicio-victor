@@ -201,11 +201,11 @@ function nombreDia(d) { return new Date(fechaVista.getFullYear(), fechaVista.get
 function esMesActual() { const h = new Date(); return fechaVista.getFullYear() === h.getFullYear() && fechaVista.getMonth() === h.getMonth(); }
 function esHoy(d) { return esMesActual() && d === new Date().getDate(); }
 function puedeEditar() {
-  const usuario = usuarioHorarios();
   if (!permisoEdicionServidor) return false;
-  const rol = String(usuario.rol || "").trim().toLowerCase();
-  if (["administrador","administracion"].includes(rol)) return true;
-  return rol === "supervisor" && Array.isArray(usuario.sectores) && usuario.sectores.includes(sectorActual);
+  const sector = sectorSeleccionado();
+  // El servidor es la fuente de verdad. Esto evita que una sesión antigua,
+  // guardada antes de asignar varios sectores, oculte el botón Editar.
+  return sector?.puedeEditar === true;
 }
 
 function parsearTurno(id) {
@@ -285,20 +285,25 @@ async function cancelarTodoCambios() {
   renderTodo();
   avisoHorarios("Cambios descartados");
 }
+function serializarCeldasDesdeMapa(mapa) {
+  const salida = [];
+  for (let d = 1; d <= diasDelMes(); d++) empleados.forEach(empleado => {
+    const turno = mapa?.get?.(clave(empleado, d)) || "";
+    if (turno) salida.push({ empleado, dia:d, turno });
+  });
+  return salida;
+}
 async function confirmarGuardado() {
   if (!modoEdicion || !hayCambiosPendientes() || !puedeEditar()) return;
   const boton = $("horariosSaveChanges");
   if (boton) boton.disabled = true;
   try {
-    const celdas = [];
-    for (let d = 1; d <= diasDelMes(); d++) empleados.forEach(empleado => {
-      const turno = datos.get(clave(empleado, d)) || "";
-      if (turno) celdas.push({ empleado, dia:d, turno });
-    });
+    const celdas = serializarCeldasDesdeMapa(datos);
+    const baseCeldas = serializarCeldasDesdeMapa(estadoInicialEdicion || new Map());
     const respuesta = await fetch(`${API_BASE_URL}/horarios/calendario`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sector: sectorActual, mes: mesClave(), celdas, detalles:[...detalles].map(([k,v])=>{const [empleado,dia]=k.split("::");return {empleado,dia:Number(dia),...v}}) })
+      body: JSON.stringify({ sector: sectorActual, mes: mesClave(), celdas, baseCeldas, detalles:[...detalles].map(([k,v])=>{const [empleado,dia]=k.split("::");return {empleado,dia:Number(dia),...v}}) })
     });
     const data = await respuesta.json().catch(() => ({}));
     if (!respuesta.ok || !data.ok) throw new Error(data.mensaje || "No se pudo validar el guardado");

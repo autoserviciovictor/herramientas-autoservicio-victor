@@ -1,7 +1,7 @@
-# Entrega 8 — Versión 8.4
+# Entrega 8 — Versión 8.6
 
 ## Pulido final
-- Versión visible unificada como 8.4, sin nombres de canal en la interfaz.
+- Versión visible unificada como 8.6, sin nombres de canal en la interfaz.
 - Nombre instalado de la PWA unificado en ambos canales.
 - Caché del service worker renovada para evitar archivos mezclados de versiones anteriores.
 - Recursos estáticos versionados para forzar la actualización correcta.
