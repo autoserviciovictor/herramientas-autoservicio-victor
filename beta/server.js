@@ -573,12 +573,12 @@ function usuarioPuedeVerHorarios(usuario) {
 function sectoresACargo(usuario){ return Array.isArray(usuario?.sectores) ? usuario.sectores : []; }
 function puedeAccederSectorHorarios(usuario, sectorId) {
   const sector=normalizarTexto(sectorId);
-  if (["administrador","administracion","supervisor"].includes(usuario?.rol)) return true;
+  if (["administrador","supervisor"].includes(usuario?.rol)) return true;
   return Boolean(usuario?.sector) && usuario.sector === sector;
 }
 async function puedeModificarSectorHorarios(usuario, sectorId) {
   const sector = normalizarTexto(sectorId);
-  if (["administrador","administracion"].includes(usuario?.rol)) return true;
+  if (usuario?.rol === "administrador") return true;
   if (usuario?.rol !== "supervisor") return false;
 
   const sectoresUsuario = sectoresACargo(usuario).map(normalizarTexto);
@@ -685,12 +685,6 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
     if(!puedeAccederSectorHorarios(req.usuario,sector)) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
     if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
     await asegurarHojasHorarios();
-    const [sectoresConfigurados, usuariosConfigurados] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
-    const sectorConfigurado = sectoresConfigurados.find(s => s.id === sector);
-    const usuarioSupervisor = sector !== "administracion" && sectorConfigurado?.supervisor
-      ? usuariosConfigurados.find(u => normalizarUsuario(u.usuario) === normalizarUsuario(sectorConfigurado.supervisor))
-      : null;
-    const nombreSupervisor = normalizarTexto(usuarioSupervisor?.nombre || usuarioSupervisor?.usuario || "");
     const contenido = await leerConCache(`calendarioHorarios:${sector}:${mes}`, CACHE_TTL.calendarioHorarios, async () => {
       const [r, dr] = await Promise.all([
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
@@ -700,35 +694,19 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
       const filasDetalles=(dr.data.values||[]).slice(1);
       const propias=filasCalendario.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
       const propiosDetalles=filasDetalles.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
-      const fuenteSupervisor = nombreSupervisor
-        ? filasCalendario.filter(f=>normalizarTexto(f[0])==="administracion"&&normalizarTexto(f[1])===mes&&normalizarTexto(f[2])===nombreSupervisor)
-        : [];
-      const fuenteDetallesSupervisor = nombreSupervisor
-        ? filasDetalles.filter(f=>normalizarTexto(f[0])==="administracion"&&normalizarTexto(f[1])===mes&&normalizarTexto(f[2])===nombreSupervisor)
-        : [];
       const celdasMapa=new Map();
       propias
-        .filter(f=>!nombreSupervisor||normalizarTexto(f[2])!==nombreSupervisor)
-        .concat(fuenteSupervisor)
         .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])}))
         .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno)
         .forEach(x=>celdasMapa.set(`${x.empleado}::${x.dia}`,x));
       const detallesMapa=new Map();
       propiosDetalles
-        .filter(f=>!nombreSupervisor||normalizarTexto(f[2])!==nombreSupervisor)
-        .concat(fuenteDetallesSupervisor)
         .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])}))
         .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31)
         .forEach(x=>detallesMapa.set(`${x.empleado}::${x.dia}`,x));
       return {celdas:[...celdasMapa.values()],detalles:[...detallesMapa.values()],reemplazos:[]};
     });
-    let turnos;
-    if(sector === "administracion") {
-      const sectoresOrigen=sectoresConfigurados.filter(s=>s.activo&&s.id!=="administracion").map(s=>s.id);
-      const listas=await Promise.all(sectoresOrigen.map(id=>obtenerTurnosSector(id)));
-      const mapaTurnos=new Map(); listas.flat().forEach(t=>{if(t?.id&&!mapaTurnos.has(t.id)) mapaTurnos.set(t.id,t);});
-      turnos=[...mapaTurnos.values()];
-    } else turnos=await obtenerTurnosSector(sector);
+    const turnos=await obtenerTurnosSector(sector);
     res.json({ok:true,sector,mes,...contenido,turnos});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo cargar el calendario"}); }
 });
@@ -740,21 +718,12 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
     const sectores=await obtenerSectores(); const sec=sectores.find(s=>s.id===sector&&s.activo);
     if(!sec) return res.status(404).json({ok:false,mensaje:"Sector inexistente o inactivo"});
     const usuarios=await obtenerUsuarios();
-    const supervisoresActivos=sectores.filter(s=>s.activo&&s.id!=="administracion"&&s.supervisor).map(s=>usuarios.find(u=>u.activo&&normalizarUsuario(u.usuario)===normalizarUsuario(s.supervisor))).filter(Boolean);
-    const supervisorSector=sector!=="administracion"&&sec.supervisor?usuarios.find(u=>u.activo&&normalizarUsuario(u.usuario)===normalizarUsuario(sec.supervisor)):null;
-    const nombreSupervisorSector=normalizarTexto(supervisorSector?.nombre||supervisorSector?.usuario||"");
-    const empleadosBase=sector==="administracion"?supervisoresActivos:usuarios.filter(u=>u.activo&&u.sector===sector);
+    const empleadosBase=usuarios.filter(u=>u.activo&&(u.sector===sector||normalizarUsuario(u.usuario)===normalizarUsuario(sec.supervisor)));
     const empleadosPermitidos=new Set(empleadosBase.map(u=>u.nombre||u.usuario));
     let celdas=(Array.isArray(req.body?.celdas)?req.body.celdas:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
     let baseCeldas=(Array.isArray(req.body?.baseCeldas)?req.body.baseCeldas:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
     const clienteConBase=Array.isArray(req.body?.baseCeldas);
     let detalles=(Array.isArray(req.body?.detalles)?req.body.detalles:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),tipo:normalizarTexto(x.tipo).slice(0,30),motivo:normalizarTexto(x.motivo).slice(0,80),observacion:normalizarTexto(x.observacion).slice(0,300)})).filter(x=>x.empleado&&x.dia>=1&&x.dia<=31&&(x.tipo||x.motivo||x.observacion));
-    // En los calendarios de sector, la fila del supervisor es un reflejo de Administración y nunca se guarda aquí.
-    if(nombreSupervisorSector){
-      celdas=celdas.filter(x=>x.empleado!==nombreSupervisorSector);
-      baseCeldas=baseCeldas.filter(x=>x.empleado!==nombreSupervisorSector);
-      detalles=detalles.filter(x=>x.empleado!==nombreSupervisorSector);
-    }
     if(celdas.some(x=>!empleadosPermitidos.has(x.empleado)) || detalles.some(x=>!empleadosPermitidos.has(x.empleado))) return res.status(400).json({ok:false,mensaje:"El calendario contiene empleados que no pertenecen al sector"});
     if(celdas.some(x=>!turnoHorarioValido(x.turno))) return res.status(400).json({ok:false,mensaje:"El calendario contiene un turno inválido"});
     await asegurarHojasHorarios();
@@ -763,7 +732,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
       ]);
-      const filasAnteriores=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes&&(!nombreSupervisorSector||normalizarTexto(f[2])!==nombreSupervisorSector));
+      const filasAnteriores=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
       const anterior=new Map(filasAnteriores.map(f=>[`${normalizarTexto(f[2])}::${Number(f[3])}`,normalizarTexto(f[4])]));
       const enviado=new Map(celdas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
       const base=new Map(baseCeldas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
@@ -784,14 +753,6 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
       for(const k of clavesModificadas) {
         const valor=enviado.get(k)||"";
         if(valor) nuevoCompleto.set(k,valor); else nuevoCompleto.delete(k);
-      }
-      if(req.usuario.rol !== "administrador") {
-        const rolesPorNombre=new Map((sector==="administracion"?supervisoresActivos:usuarios.filter(u=>u.activo&&u.sector===sector)).map(u=>[normalizarTexto(u.nombre||u.usuario),u.rol]));
-        const protegidos=clavesModificadas.filter(k=>{const nombre=k.split("::")[0];const rolEmpleado=rolesPorNombre.get(nombre)||"personal";return req.usuario.rol==="administracion"?rolEmpleado!=="supervisor":rolEmpleado==="supervisor";});
-        if(protegidos.some(k=>(anterior.get(k)||"")!==(nuevoCompleto.get(k)||""))) {
-          const error=new Error(req.usuario.rol==="administracion"?"Administración solo puede modificar horarios de supervisores":"Los supervisores no pueden modificar su propio horario ni el de otros supervisores");
-          error.statusCode=403; throw error;
-        }
       }
       const celdasFusionadas=[...nuevoCompleto.entries()].map(([k,turno])=>{const pos=k.lastIndexOf("::");return {empleado:k.slice(0,pos),dia:Number(k.slice(pos+2)),turno};});
       const otras=(r.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
@@ -816,9 +777,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
     });
     await registrarAuditoriaHorario(req.usuario,sec.nombre,mes,"Guardó calendario del sector");
     invalidarCache(`calendarioHorarios:${sector}:${mes}`);
-    if (sector === "administracion") {
-      sectores.filter(s=>s.activo&&s.id!=="administracion").forEach(s=>invalidarCache(`calendarioHorarios:${s.id}:${mes}`));
-    }
+
     res.json({ok:true,guardadas:celdas.length});
   } catch(e) { res.status(e.statusCode || 500).json({ok:false,mensaje:e.message || "No se pudo guardar el calendario"}); }
 });
@@ -839,7 +798,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
   try {
     const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
     const activos = sectores.filter(s => s.activo);
-    if (!["administrador","administracion","supervisor"].includes(req.usuario.rol) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
+    if (!["administrador","supervisor"].includes(req.usuario.rol) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
     const sectoresSupervisor = new Set(sectoresACargo(req.usuario));
     // Compatibilidad: también reconoce sectores donde el usuario figura como
     // supervisor en la hoja Sectores. Así puede navegar todos sus calendarios
@@ -848,29 +807,25 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
       activos.filter(s => normalizarUsuario(s.supervisor) === normalizarUsuario(req.usuario.usuario)).forEach(s => sectoresSupervisor.add(s.id));
       if (req.usuario.sector) sectoresSupervisor.add(req.usuario.sector);
     }
-    const visibles = ["administrador","administracion","supervisor"].includes(req.usuario.rol)
+    const visibles = ["administrador","supervisor"].includes(req.usuario.rol)
       ? activos
       : activos.filter(s => s.id === req.usuario.sector);
-    if (!["administrador","administracion","supervisor"].includes(req.usuario.rol) && !visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
+    if (!["administrador","supervisor"].includes(req.usuario.rol) && !visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
     const respuesta = visibles.map(s => ({
       id: s.id,
       nombre: s.nombre,
       color: s.color,
       activo: s.activo,
-      puedeEditar: ["administrador","administracion"].includes(req.usuario.rol) || (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
-      empleados: (s.id === "administracion"
-        ? activos.filter(sec => sec.id !== "administracion" && sec.supervisor).map(sec => usuarios.find(u => u.activo && normalizarUsuario(u.usuario) === normalizarUsuario(sec.supervisor))).filter(Boolean)
-        : usuarios.filter(u => u.activo && (u.sector === s.id || normalizarUsuario(u.usuario) === normalizarUsuario(s.supervisor))))
+      puedeEditar: req.usuario.rol === "administrador" || (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
+      empleados: usuarios.filter(u => u.activo && (u.sector === s.id || normalizarUsuario(u.usuario) === normalizarUsuario(s.supervisor)))
         .filter((u, i, arr) => arr.findIndex(x => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario)) === i)
         .sort((a, b) => String(a.nombre || a.usuario).localeCompare(String(b.nombre || b.usuario), "es", { sensitivity:"base" }))
         .map(u => u.nombre || u.usuario),
-      empleadosInfo: (s.id === "administracion"
-        ? activos.filter(sec => sec.id !== "administracion" && sec.supervisor).map(sec => usuarios.find(u => u.activo && normalizarUsuario(u.usuario) === normalizarUsuario(sec.supervisor))).filter(Boolean)
-        : usuarios.filter(u=>u.activo&&(u.sector===s.id||normalizarUsuario(u.usuario)===normalizarUsuario(s.supervisor))))
+      empleadosInfo: usuarios.filter(u=>u.activo&&(u.sector===s.id||normalizarUsuario(u.usuario)===normalizarUsuario(s.supervisor)))
         .filter((u, i, arr) => arr.findIndex(x => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario)) === i)
-        .map(u=>({nombre:u.nombre||u.usuario,rol:s.id==="administracion"?"supervisor":u.rol,usuario:u.usuario}))
+        .map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
     }));
-    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","administracion","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
+    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el contexto de horarios" });
   }
@@ -879,7 +834,7 @@ app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
     if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ ok:false, mensaje:"Solo el administrador o el supervisor asignado pueden modificar este sector" });
-    if (!["administrador","administracion","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
+    if (!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
     const sectores = await obtenerSectores();
     const sectorEncontrado = sectores.find(s => s.id === sector && s.activo);
     if (!sectorEncontrado) return res.status(404).json({ ok:false, mensaje:"Sector inexistente o inactivo" });

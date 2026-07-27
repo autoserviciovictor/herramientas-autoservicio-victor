@@ -19,22 +19,21 @@ function empleadosDelSector(id = sectorActual) {
   const sector = sectoresHorarios.find(s => s.id === id);
   empleadosInfo = new Map((sector?.empleadosInfo || []).map(x=>[x.nombre,x]));
   const lista = Array.isArray(sector?.empleados) ? [...sector.empleados] : [];
-  if (id !== "administracion") {
-    lista.sort((a, b) => {
-      const aSupervisor = empleadosInfo.get(a)?.rol === "supervisor" ? 1 : 0;
-      const bSupervisor = empleadosInfo.get(b)?.rol === "supervisor" ? 1 : 0;
-      if (aSupervisor !== bSupervisor) return aSupervisor - bSupervisor;
-      return String(a).localeCompare(String(b), "es", { sensitivity: "base" });
-    });
-  }
+  lista.sort((a, b) => {
+    const aSupervisor = empleadosInfo.get(a)?.rol === "supervisor" ? 1 : 0;
+    const bSupervisor = empleadosInfo.get(b)?.rol === "supervisor" ? 1 : 0;
+    if (aSupervisor !== bSupervisor) return aSupervisor - bSupervisor;
+    return String(a).localeCompare(String(b), "es", { sensitivity: "base" });
+  });
   return lista;
 }
-function empleadosVisiblesEnTabla() {
-  if (!(modoEdicion && rolHorarios() === "supervisor")) return empleados;
-  const usuarioActual = String(usuarioHorarios().usuario || "").trim().toLowerCase();
-  return empleados.filter(nombre => String(empleadosInfo.get(nombre)?.usuario || "").trim().toLowerCase() !== usuarioActual);
+function empleadosVisiblesEnTabla() { return empleados; }
+function puedeEditarEmpleado(nombre){
+  const rol = rolHorarios();
+  if (rol === "administrador") return true;
+  if (rol === "supervisor") return puedeEditar();
+  return false;
 }
-function puedeEditarEmpleado(nombre){ const rol=rolHorarios(); const info=empleadosInfo.get(nombre)||{}; if(rol==="administrador") return true; if(rol==="administracion") return info.rol==="supervisor"; if(rol==="supervisor") return info.rol!=="supervisor" && info.usuario!==usuarioHorarios().usuario; return false; }
 async function cargarContextoHorarios() {
   try {
     const r = await fetch(`${API_BASE_URL}/horarios/contexto`);
@@ -43,7 +42,7 @@ async function cargarContextoHorarios() {
     sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
     permisoEdicionServidor = data.puedeEditar === true;
     const usuario = usuarioHorarios();
-    const puedeElegirSector = ["administrador","administracion","supervisor"].includes(String(usuario.rol || "").trim().toLowerCase());
+    const puedeElegirSector = ["administrador","supervisor"].includes(String(usuario.rol || "").trim().toLowerCase());
     const preferido = puedeElegirSector
       ? (sectorActual && sectoresHorarios.some(s => s.id === sectorActual) ? sectorActual : (usuario.sector || sectoresHorarios[0]?.id))
       : (usuario.sector || sectoresHorarios[0]?.id);
@@ -102,7 +101,7 @@ function renderSelectorSector() {
   if ($("horariosSectorColor")) $("horariosSectorColor").style.background = sector?.color || "#b72e35";
   const wrap = $("horariosSectorSelectorWrap");
   const select = $("horariosSectorSelector");
-  if (wrap) wrap.classList.toggle("oculto", vistaActual !== "equipo" || !["administrador","administracion","supervisor"].includes(rolHorarios()) || sectoresHorarios.length < 2);
+  if (wrap) wrap.classList.toggle("oculto", vistaActual !== "equipo" || !["administrador","supervisor"].includes(rolHorarios()) || sectoresHorarios.length < 2);
   if (select) {
     select.innerHTML = sectoresHorarios.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("");
     select.value = sectorActual;

@@ -20,7 +20,7 @@ const APP_SHELL = [
   './auth.js?v=84-entrega8',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=861-fix-supervisor-fila',
+  './horarios.js?v=861-supervisor-en-sector',
   './api-cache.js?v=84-entrega8',
   './manifest.webmanifest',
   './version.json',
