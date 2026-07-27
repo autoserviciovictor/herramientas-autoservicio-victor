@@ -689,9 +689,11 @@ function encontrarProximoTurno(empleado) {
   for (let offset = 0; offset < 370; offset++) {
     const fecha = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + offset);
     const mes = new Date(fecha.getFullYear(), fecha.getMonth(), 1), dia = fecha.getDate();
-    const id = obtenerTurnoEn(mes, empleado, dia), p = parsearTurno(id);
-    if (!p) continue;
-    const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), p.inicioH, p.inicioM);
+    const id = obtenerTurnoEn(mes, empleado, dia);
+    const horas = horasDeTurno(id);
+    if (!horas) continue;
+    const [inicioH, inicioM] = horas.inicio.split(":").map(Number);
+    const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), inicioH, inicioM || 0);
     if (inicio > ahora) return { fecha, id };
   }
   return null;

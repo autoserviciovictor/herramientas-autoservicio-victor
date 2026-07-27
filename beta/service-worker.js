@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v873-paleta-iconos';
+const CACHE_VERSION = 'autoservicio-v874-proximo-turno';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
