@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "8.6.1";
+const APP_VERSION = "8.6";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -580,9 +580,7 @@ function puedeAccederSectorHorarios(usuario, sectorId) {
 function puedeModificarSectorHorarios(usuario, sectorId) {
   const sector=normalizarTexto(sectorId);
   if (["administrador","administracion"].includes(usuario?.rol)) return true;
-  // Compatibilidad con supervisores que todavía tienen el sector principal en
-  // `sector`, además de las asignaciones múltiples guardadas en `sectores`.
-  return usuario?.rol === "supervisor" && (sectoresACargo(usuario).includes(sector) || usuario?.sector === sector);
+  return usuario?.rol === "supervisor" && sectoresACargo(usuario).includes(sector);
 }
 async function requerirAccesoHorarios(req, res, next) {
   await requerirSesion(req, res, () => {
@@ -732,43 +730,16 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
         }
       }
       const celdasFusionadas=[...nuevoCompleto.entries()].map(([k,turno])=>{const pos=k.lastIndexOf("::");return {empleado:k.slice(0,pos),dia:Number(k.slice(pos+2)),turno};});
-      const ahora=fechaHoraArgentinaIso();
-
-      // Guardado incremental: modificar únicamente las filas que cambiaron.
-      // Antes se reescribía la hoja completa, lo que podía pisar datos cuando dos
-      // instancias o dispositivos guardaban con pocos milisegundos de diferencia.
-      const filasCalendario=r.data.values||[];
-      const filasPorClave=new Map();
-      filasCalendario.slice(1).forEach((f,indice)=>{
-        if(normalizarTexto(f[0])!==sector || normalizarTexto(f[1])!==mes) return;
-        const claveFila=`${normalizarTexto(f[2])}::${Number(f[3])}`;
-        if(!filasPorClave.has(claveFila)) filasPorClave.set(claveFila,[]);
-        filasPorClave.get(claveFila).push(indice+2);
-      });
-      const actualizaciones=[], nuevasFilas=[], filasALimpiar=[];
-      for(const k of clavesModificadas){
-        const pos=k.lastIndexOf("::"), empleado=k.slice(0,pos), dia=Number(k.slice(pos+2));
-        const turno=nuevoCompleto.get(k)||"";
-        const filasExistentes=filasPorClave.get(k)||[];
-        if(turno){
-          const valores=[[sector,mes,empleado,dia,turno,ahora,req.usuario.usuario,req.usuario.nombre]];
-          if(filasExistentes.length){
-            actualizaciones.push({range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A${filasExistentes[0]}:H${filasExistentes[0]}`,values:valores});
-            filasALimpiar.push(...filasExistentes.slice(1));
-          } else nuevasFilas.push(valores[0]);
-        } else filasALimpiar.push(...filasExistentes);
-      }
-      if(actualizaciones.length) await sheets.spreadsheets.values.batchUpdate({spreadsheetId:SPREADSHEET_ID,requestBody:{valueInputOption:"USER_ENTERED",data:actualizaciones}});
-      if(nuevasFilas.length) await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:nuevasFilas}});
-      if(filasALimpiar.length) await sheets.spreadsheets.values.batchClear({spreadsheetId:SPREADSHEET_ID,requestBody:{ranges:[...new Set(filasALimpiar)].map(f=>`${CALENDARIO_HORARIOS_SHEET_NAME}!A${f}:H${f}`)}});
-
-      // Los detalles se conservan con reemplazo mensual, pero la operación está
-      // dentro de la misma cola que el calendario para mantener consistencia.
+      const otras=(r.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
       const otrasDetalles=(dr.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
+      const ahora=fechaHoraArgentinaIso();
+      const nuevas=celdasFusionadas.map(x=>[sector,mes,x.empleado,x.dia,x.turno,ahora,req.usuario.usuario,req.usuario.nombre]);
       const nuevasDetalles=detalles.map(x=>[sector,mes,x.empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
-      const todosDetalles=[...otrasDetalles,...nuevasDetalles];
-      const filasDetallesPrevias=Math.max(0,(dr.data.values||[]).length-1);
+      const todas=[...otras,...nuevas], todosDetalles=[...otrasDetalles,...nuevasDetalles];
+      const filasCalendarioPrevias=Math.max(0,(r.data.values||[]).length-1), filasDetallesPrevias=Math.max(0,(dr.data.values||[]).length-1);
+      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
       if(todosDetalles.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I${todosDetalles.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todosDetalles}});
+      if(filasCalendarioPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A${todas.length+2}:H${filasCalendarioPrevias+1}`});
       if(filasDetallesPrevias>todosDetalles.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A${todosDetalles.length+2}:I${filasDetallesPrevias+1}`});
       const nuevoMapa=nuevoCompleto;
       const claves=new Set([...anterior.keys(),...nuevoMapa.keys()]);

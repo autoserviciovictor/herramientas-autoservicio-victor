@@ -214,24 +214,14 @@ function parsearTurno(id) {
   return { inicioH: Number(m[1]), inicioM: Number(m[2] || 0), finH: Number(m[3]), finM: Number(m[4] || 0) };
 }
 function hora24(h, m = 0) { return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; }
-function horasDefinicionTurno(id) {
-  const definicion = TURNOS.find(t => t.id === id);
-  if (definicion && /^\d{2}:\d{2}$/.test(String(definicion.inicio || "")) && /^\d{2}:\d{2}$/.test(String(definicion.fin || ""))) {
-    return { inicio: definicion.inicio, fin: definicion.fin };
-  }
-  const p = parsearTurno(id);
-  return p ? { inicio: hora24(p.inicioH, p.inicioM), fin: hora24(p.finH, p.finM) } : null;
-}
 function formatoCelda(id) {
   if (!id) return "—";
   if (id === "franco") return "F";
   if (id === "vacaciones") return "V";
   if (id === "ausente") return "A";
   if (id === "licencia") return "L";
-  const horas = horasDefinicionTurno(id);
-  // Nunca mostrar IDs internos en el calendario. Los turnos configurados pueden
-  // tener identificadores aleatorios, pero visualmente siempre deben mostrar horas.
-  return horas ? `<span>${horas.inicio}</span><span>${horas.fin}</span>` : "—";
+  const p = parsearTurno(id);
+  return p ? `<span>${hora24(p.inicioH, p.inicioM)}</span><span>${hora24(p.finH, p.finM)}</span>` : id;
 }
 function formatoHorario24(id) {
   if (!id) return "Sin asignar";
@@ -239,8 +229,8 @@ function formatoHorario24(id) {
   if (id === "vacaciones") return "Vacaciones";
   if (id === "ausente") return "Ausente";
   if (id === "licencia") return "Licencia";
-  const horas = horasDefinicionTurno(id);
-  return horas ? `${horas.inicio} - ${horas.fin}` : "Sin asignar";
+  const p = parsearTurno(id);
+  return p ? `${hora24(p.inicioH, p.inicioM)} - ${hora24(p.finH, p.finM)}` : id;
 }
 function coberturaDia(d) {
   let manana = 0, tarde = 0;

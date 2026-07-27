@@ -3716,10 +3716,20 @@ body.horarios-modo-edicion .horarios-bottom-grid{display:none!important}
 }
 .horarios-table td.celda-seleccionada{
   position:relative;
-  background:inherit!important;
-  box-shadow:inset 0 0 0 2px #202226, 0 2px 7px rgba(32,34,38,.22)!important;
+  background:#eceef2!important;
+  box-shadow:inset 0 0 0 2px #202226!important;
 }
-.horarios-table td.celda-seleccionada::after{display:none!important}
+.horarios-table td.celda-seleccionada::after{
+  content:"";
+  position:absolute;
+  top:4px;
+  right:4px;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#202226;
+  pointer-events:none;
+}
 .horarios-table td.celda-seleccionada .horario-cell{
   transform:none!important;
   filter:none!important;
@@ -3899,7 +3909,3 @@ button:disabled{cursor:not-allowed;opacity:.55}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @media(prefers-contrast:more){button,input,select,textarea,.admin-user-card,.admin-sector-card,.admin-shift-card{border-color:#555!important}}
-
-/* V8.6.1 · Etapa 1: estabilidad de Horarios */
-.horario-cell{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;gap:2px!important;line-height:1.08!important;overflow:hidden}
-.horario-cell>span{display:block;width:100%;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}
