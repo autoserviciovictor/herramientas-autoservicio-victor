@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v86-beta-1';
+const CACHE_VERSION = 'autoservicio-v861-estable-editor-turnos';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
@@ -20,7 +20,7 @@ const APP_SHELL = [
   './auth.js?v=84-entrega8',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=84-entrega8',
+  './horarios.js?v=861-fix-editor-turnos',
   './api-cache.js?v=84-entrega8',
   './manifest.webmanifest',
   './version.json',

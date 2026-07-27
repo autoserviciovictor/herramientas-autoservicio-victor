@@ -214,14 +214,20 @@ function parsearTurno(id) {
   return { inicioH: Number(m[1]), inicioM: Number(m[2] || 0), finH: Number(m[3]), finM: Number(m[4] || 0) };
 }
 function hora24(h, m = 0) { return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; }
+function horasDeTurno(id) {
+  const definicion = TURNOS.find(t => t.id === id);
+  if (definicion?.inicio && definicion?.fin) return { inicio: definicion.inicio, fin: definicion.fin };
+  const p = parsearTurno(id);
+  return p ? { inicio: hora24(p.inicioH, p.inicioM), fin: hora24(p.finH, p.finM) } : null;
+}
 function formatoCelda(id) {
   if (!id) return "—";
   if (id === "franco") return "F";
   if (id === "vacaciones") return "V";
   if (id === "ausente") return "A";
   if (id === "licencia") return "L";
-  const p = parsearTurno(id);
-  return p ? `<span>${hora24(p.inicioH, p.inicioM)}</span><span>${hora24(p.finH, p.finM)}</span>` : id;
+  const horas = horasDeTurno(id);
+  return horas ? `<span>${horas.inicio}</span><span>${horas.fin}</span>` : "—";
 }
 function formatoHorario24(id) {
   if (!id) return "Sin asignar";
@@ -229,8 +235,8 @@ function formatoHorario24(id) {
   if (id === "vacaciones") return "Vacaciones";
   if (id === "ausente") return "Ausente";
   if (id === "licencia") return "Licencia";
-  const p = parsearTurno(id);
-  return p ? `${hora24(p.inicioH, p.inicioM)} - ${hora24(p.finH, p.finM)}` : id;
+  const horas = horasDeTurno(id);
+  return horas ? `${horas.inicio} - ${horas.fin}` : "Sin asignar";
 }
 function coberturaDia(d) {
   let manana = 0, tarde = 0;
@@ -459,6 +465,17 @@ function actualizarPortapapeles() {
   }
 }
 
+function actualizarSelectorTurnos() {
+  const select = $("horariosPaintTurno");
+  if (!select) return;
+  const opciones = TURNOS.filter(t => t.id !== "personalizado");
+  const valorAnterior = turnoPincel;
+  select.innerHTML = opciones.map(t => `<option value="${t.id}">${t.label}</option>`).join("");
+  if (opciones.some(t => t.id === valorAnterior)) turnoPincel = valorAnterior;
+  else turnoPincel = opciones[0]?.id || "franco";
+  select.value = turnoPincel;
+}
+
 function crearPanelEdicion() {
   if ($("horariosEdicionMarco")) return;
   const marco = document.createElement("section");
@@ -505,6 +522,7 @@ function crearPanelEdicion() {
   $("horariosSaveChanges").onclick = confirmarGuardado;
   $("horariosUndoOne").onclick = deshacerUltimo;
   $("horariosCancelAll").onclick = cancelarTodoCambios;
+  actualizarSelectorTurnos();
   actualizarPermisos();
   actualizarAcciones();
   actualizarPortapapeles();
@@ -770,7 +788,7 @@ function cambiarVista(v) {
 }
 async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); await cargarResumenHoy(); renderTodo(); }
 async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); await cargarResumenHoy(true); renderTodo(); desplazarAlDia(diaSeleccionado); }
-function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
+function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
 function configurarEventos() {
   crearPanelEdicion();
   crearSelectorSector();

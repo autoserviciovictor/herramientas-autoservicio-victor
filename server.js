@@ -589,14 +589,6 @@ async function requerirAccesoHorarios(req, res, next) {
   });
 }
 
-const TURNOS_HORARIOS_DEFAULT = [
-  { id:"8-16", inicio:"08:00", fin:"16:00", color:"#f59e0b" },
-  { id:"8-13", inicio:"08:00", fin:"13:00", color:"#facc15" },
-  { id:"9-14", inicio:"09:00", fin:"14:00", color:"#3b82f6" },
-  { id:"10-16", inicio:"10:00", fin:"16:00", color:"#38bdf8" },
-  { id:"14-22", inicio:"14:00", fin:"22:00", color:"#ef4444" },
-  { id:"16-22", inicio:"16:00", fin:"22:00", color:"#8b5cf6" }
-];
 let hojasHorariosAseguradas = false;
 async function asegurarHojasHorarios() {
   if (hojasHorariosAseguradas) return;
@@ -617,21 +609,30 @@ async function asegurarHojasHorarios() {
 }
 function mesHorariosValido(valor) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(normalizarTexto(valor)); }
 function turnoHorarioValido(valor) { return ["franco","vacaciones","ausente","licencia"].includes(valor) || /^\d{1,2}(?::\d{2})?\s*-\s*\d{1,2}(?::\d{2})?$/.test(valor) || /^[a-z0-9_-]{3,80}$/i.test(valor); }
-
-function normalizarHoraTurno(valor){
-  const m=String(valor??"").trim().match(/^(\d{1,2}):(\d{2})$/);
-  if(!m) return "";
-  return `${m[1].padStart(2,"0")}:${m[2]}`;
+function normalizarHoraHorario(valor) {
+  const texto = normalizarTexto(valor).toUpperCase();
+  const m = texto.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*([AP]M))?$/);
+  if (!m) return "";
+  let hora = Number(m[1]);
+  const minutos = Number(m[2]);
+  if (m[3] === "PM" && hora < 12) hora += 12;
+  if (m[3] === "AM" && hora === 12) hora = 0;
+  if (hora < 0 || hora > 23 || minutos < 0 || minutos > 59) return "";
+  return `${String(hora).padStart(2,"0")}:${String(minutos).padStart(2,"0")}`;
 }
-
 async function obtenerTurnosSector(sector) {
   await asegurarHojasHorarios();
   return leerConCache(`turnosHorarios:${sector}`, CACHE_TTL.turnosHorarios, async () => {
     const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A:G` });
-    const items = (r.data.values || []).slice(1).filter(f => normalizarTexto(f[0]) === sector && !["no","false","0","inactivo"].includes(normalizarTexto(f[5]).toLowerCase())).map(f => ({
-      id:normalizarTexto(f[1]), inicio:normalizarHoraTurno(f[2]), fin:normalizarHoraTurno(f[3]), color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b"
-    })).filter(t => t.id && t.inicio && t.fin);
-    return items.length ? items : TURNOS_HORARIOS_DEFAULT.map(t => ({...t}));
+    return (r.data.values || []).slice(1)
+      .filter(f => normalizarTexto(f[0]) === sector && !["no","false","0","inactivo"].includes(normalizarTexto(f[5]).toLowerCase()))
+      .map(f => ({
+        id:normalizarTexto(f[1]),
+        inicio:normalizarHoraHorario(f[2]),
+        fin:normalizarHoraHorario(f[3]),
+        color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b"
+      }))
+      .filter(t => t.id && t.inicio && t.fin);
   });
 }
 async function registrarAuditoriaHorario(usuario, sectorNombre, mes, accion) {
