@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v870-config-calendario';
+const CACHE_VERSION = 'autoservicio-v871-ajustes-calendario';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
@@ -15,12 +15,12 @@ const APP_SHELL = [
   './release-channel.js?v=82-canal-beta-1',
   './pwa.js?v=84-entrega8',
   './search.js?v=84-entrega8',
-  './horarios-config.js?v=84-entrega8',
+  './horarios-config.js?v=871-ajustes-calendario',
   './admin.js?v=84-entrega8',
   './auth.js?v=84-entrega8',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=861-supervisor-en-sector',
+  './horarios.js?v=871-ajustes-calendario',
   './api-cache.js?v=84-entrega8',
   './manifest.webmanifest',
   './version.json',

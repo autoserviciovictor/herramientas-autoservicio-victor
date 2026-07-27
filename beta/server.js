@@ -664,7 +664,7 @@ app.get("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
 app.put("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
-    if (req.usuario?.rol !== "supervisor" || !(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"Solo el supervisor responsable puede configurar los horarios de este sector"});
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar los horarios de este sector"});
     const sectores = await obtenerSectores();
     if (!sectores.some(s => s.id === sector)) return res.status(404).json({ok:false,mensaje:"Sector inexistente"});
     const turnos = Array.isArray(req.body?.turnos) ? req.body.turnos.map(t => ({ id:normalizarTexto(t.id), inicio:normalizarTexto(t.inicio).slice(0,5), fin:normalizarTexto(t.fin).slice(0,5), color:/^#[0-9a-f]{6}$/i.test(t.color||"")?t.color:"#64748b" })) : [];
@@ -852,7 +852,7 @@ app.get("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
 app.put("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector=normalizarTexto(req.body?.sector);
-    if(req.usuario?.rol!=="supervisor" || !(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"Solo el supervisor responsable puede ordenar el personal"});
+    if(!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para ordenar el personal de este sector"});
     const orden=(Array.isArray(req.body?.orden)?req.body.orden:[]).map(normalizarTexto).filter(Boolean);
     if(!orden.length || new Set(orden).size!==orden.length) return res.status(400).json({ok:false,mensaje:"Orden de personal inválido"});
     const sectores=await obtenerSectores(), usuarios=await obtenerUsuarios(), sec=sectores.find(s=>s.id===sector&&s.activo);

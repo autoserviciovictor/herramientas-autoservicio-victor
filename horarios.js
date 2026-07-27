@@ -78,7 +78,6 @@ function crearSelectorSector() {
     sectorActual = e.target.value;
     empleados = empleadosDelSector();
     seleccion.clear();
-    portapapelesMes = null;
     diaSeleccionado = Math.min(diaSeleccionado, diasDelMes());
     await window.AutoservicioHorariosConfig?.cargarRemoto?.(sectorActual);
     cargarTurnosConfigurados();
@@ -139,7 +138,6 @@ let historial = [];
 let estadoInicialEdicion = null;
 let seleccion = new Set();
 let modoEdicion = false;
-let portapapelesMes = null;
 
 cargarTurnosConfigurados();
 
@@ -410,69 +408,6 @@ function dialogoHorarios({ titulo, mensaje, confirmar = "Confirmar", peligro = f
     modal.onclick = e => { if (e.target === modal) cerrar(false); };
   });
 }
-function capturarMesEmpleado(fecha, empleado) {
-  return Array.from({ length: diasDelMes(fecha) }, (_, i) => obtenerTurnoEn(fecha, empleado, i + 1));
-}
-function turnoCopiadoParaDia(turnos, dia) {
-  return turnos[dia - 1] ?? "franco";
-}
-function copiarMesEquipo() {
-  if (!puedeEditar() || !modoEdicion) return;
-  const origen = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
-  portapapelesMes = {
-    tipo: "equipo",
-    origen,
-    dias: diasDelMes(origen),
-    sector: sectorActual,
-    empleados: Object.fromEntries(empleados.map(e => [e, capturarMesEmpleado(origen, e)]))
-  };
-  actualizarPortapapeles();
-  avisoHorarios(`Se copió ${etiquetaMes(origen)} completo`);
-}
-async function pegarMesEquipo() {
-  if (!puedeEditar() || !modoEdicion || !portapapelesMes) return;
-  const destino = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), 1);
-  const ok = await dialogoHorarios({
-    titulo: "Pegar mes completo",
-    mensaje: `Se reemplazarán todos los horarios de ${etiquetaMes(destino)} con la copia de ${etiquetaMes(portapapelesMes.origen)}.`,
-    confirmar: "Pegar mes"
-  });
-  if (!ok) return;
-  iniciarMovimiento();
-  empleados.forEach(e => {
-    const turnos = portapapelesMes.empleados[e] || [];
-    for (let d = 1; d <= diasDelMes(destino); d++) {
-      datos.set(claveMes(destino, e, d), turnoCopiadoParaDia(turnos, d));
-    }
-  });
-  descartarMovimientoSiNoCambio();
-  seleccion.clear();
-  portapapelesMes = null;
-  renderTodo();
-  actualizarPortapapeles();
-  avisoHorarios("Mes pegado correctamente");
-}
-function ejecutarCopiarPegarMes() {
-  return portapapelesMes ? pegarMesEquipo() : copiarMesEquipo();
-}
-function actualizarPortapapeles() {
-  const boton = $("btnHorariosCopiarPegarMes");
-  if (boton) {
-    boton.textContent = portapapelesMes ? "Pegar mes" : "Copiar mes";
-    boton.classList.toggle("listo-para-pegar", !!portapapelesMes);
-    boton.title = portapapelesMes
-      ? `Pegar ${etiquetaMes(portapapelesMes.origen)} sobre el mes visible`
-      : "Copiar el mes completo del equipo";
-  }
-  const estado = $("horariosCopiaEstado");
-  if (estado) {
-    estado.textContent = portapapelesMes
-      ? `Mes copiado: ${etiquetaMes(portapapelesMes.origen)} · disponible para pegar una vez`
-      : "La copia se habilita para un único pegado";
-    estado.classList.toggle("tiene-copia", !!portapapelesMes);
-  }
-}
-
 function actualizarSelectorTurnos() {
   const select = $("horariosPaintTurno");
   if (!select) return;
@@ -498,10 +433,6 @@ function crearPanelEdicion() {
         <div><span>Modo edición</span><strong id="horariosPanelMes">Editar mes</strong></div>
         <button id="btnHorariosCerrarEdicion" type="button" aria-label="Cerrar edición">✕</button>
       </div>
-      <div class="horarios-panel-tools">
-        <button id="btnHorariosCopiarPegarMes" type="button">Copiar mes</button>
-      </div>
-      <small id="horariosCopiaEstado" class="horarios-copia-estado">La copia se habilita para un único pegado</small>
       <div class="horarios-pintar-control">
         <label><span>Pintar con</span><select id="horariosPaintTurno">${TURNOS.filter(t => t.id !== "personalizado").map(t => `<option value="${t.id}">${t.label}</option>`).join("")}</select></label>
         <button id="horariosPaint" type="button" disabled>Aplicar</button>
@@ -519,7 +450,6 @@ function crearPanelEdicion() {
   document.querySelector(".horarios-status-row")?.after(marco);
   $("btnHorariosEditar").onclick = entrarModoEdicion;
   $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
-  $("btnHorariosCopiarPegarMes").onclick = ejecutarCopiarPegarMes;
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
   $("horariosPaintTurno").onchange = e => turnoPincel = e.target.value;
   $("horariosClearSelection").onclick = () => {
@@ -533,7 +463,6 @@ function crearPanelEdicion() {
   actualizarSelectorTurnos();
   actualizarPermisos();
   actualizarAcciones();
-  actualizarPortapapeles();
 }
 function entrarModoEdicion() {
   if (!puedeEditar()) return;
@@ -548,7 +477,6 @@ function entrarModoEdicion() {
   $("horariosPanelEdicion")?.classList.remove("oculto");
   $("horariosPanelEdicion")?.setAttribute("aria-hidden", "false");
   actualizarPanelMes();
-  actualizarPortapapeles();
   renderTabla();
 }
 async function salirModoEdicion(forzar = false) {
@@ -783,7 +711,7 @@ function renderMiHorario() {
 }
 
 
-function puedeVerConfiguracion(){ return rolHorarios()==="supervisor" && sectorSeleccionado()?.puedeEditar===true; }
+function puedeVerConfiguracion(){ return ["administrador","supervisor"].includes(rolHorarios()) && sectorSeleccionado()?.puedeEditar===true; }
 function cambiarVista(v) {
   if(v==="config" && !puedeVerConfiguracion()) v="equipo";
   vistaActual = v;
@@ -804,21 +732,34 @@ function cambiarVista(v) {
 }
 async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); await cargarResumenHoy(); renderTodo(); }
 async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); await cargarResumenHoy(true); renderTodo(); desplazarAlDia(diaSeleccionado); }
-function renderTodo() { $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion()); if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
+function renderTodo() { $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion()); if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); }
 
-const COLORES_TURNOS=[['#f59e0b','Naranja'],['#2563eb','Azul'],['#16a34a','Verde'],['#dc2626','Rojo'],['#7c3aed','Violeta'],['#db2777','Rosa'],['#0891b2','Celeste'],['#64748b','Gris'],['#92400e','Marrón'],['#111827','Negro'],['#84cc16','Lima'],['#14b8a6','Turquesa']];
+const COLORES_TURNOS=[['#dc2626','Rojo'],['#f97316','Naranja'],['#eab308','Amarillo'],['#16a34a','Verde'],['#2563eb','Azul'],['#7c3aed','Violeta'],['#0891b2','Cian']];
+const MAPA_COLORES_ANTERIORES={
+  '#f59e0b':'#f97316','#db2777':'#7c3aed','#64748b':'#2563eb','#92400e':'#f97316',
+  '#111827':'#2563eb','#84cc16':'#16a34a','#14b8a6':'#0891b2'
+};
+function colorTurnoPermitido(color){
+  const c=String(color||'').toLowerCase();
+  return COLORES_TURNOS.some(([hex])=>hex===c) ? c : (MAPA_COLORES_ANTERIORES[c] || '#f97316');
+}
 let turnoConfigEditando=null;
+let ordenPersonalInicial=[];
+let ordenSectorInicial="";
 function mensajeConfig(id,texto,tipo='ok'){const el=$(id);if(!el)return;el.textContent=texto;el.className=`admin-message ${tipo}`;clearTimeout(el._timer);el._timer=setTimeout(()=>{el.textContent='';el.className='admin-message';},3500)}
 function nombreColorTurno(hex){return COLORES_TURNOS.find(x=>x[0].toLowerCase()===String(hex).toLowerCase())?.[1]||'Personalizado'}
 function contrasteTurno(hex){const n=parseInt(String(hex).replace('#',''),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#111827':'#fff'}
 function renderPaletaTurno(color){const pal=$("horariosTurnoColorPalette");if(!pal)return;$("horariosTurnoColor").value=color;$("horariosTurnoColorNombre").textContent=nombreColorTurno(color);pal.innerHTML=COLORES_TURNOS.map(([hex,n])=>`<button type="button" class="admin-color-option ${hex===color?'seleccionado':''}" data-color="${hex}" aria-label="${n}"><span style="background:${hex}"></span></button>`).join('');pal.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>renderPaletaTurno(b.dataset.color)))}
-function abrirTurnoConfig(turno=null){turnoConfigEditando=turno;$("horariosTurnoModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';$("horariosTurnoOriginal").value=turno?.id||'';$("horariosTurnoInicio").value=turno?.inicio||'08:00';$("horariosTurnoFin").value=turno?.fin||'16:00';renderPaletaTurno(turno?.color||'#f59e0b');$("btnHorariosEliminarTurno").classList.toggle('oculto',!turno);$("horariosTurnoModal").classList.remove('oculto');$("horariosTurnoModal").setAttribute('aria-hidden','false')}
+function abrirTurnoConfig(turno=null){turnoConfigEditando=turno;$("horariosTurnoModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';$("horariosTurnoOriginal").value=turno?.id||'';$("horariosTurnoInicio").value=turno?.inicio||'08:00';$("horariosTurnoFin").value=turno?.fin||'16:00';renderPaletaTurno(colorTurnoPermitido(turno?.color));$("btnHorariosEliminarTurno").classList.toggle('oculto',!turno);$("horariosTurnoModal").classList.remove('oculto');$("horariosTurnoModal").setAttribute('aria-hidden','false')}
 function cerrarTurnoConfig(){$("horariosTurnoModal")?.classList.add('oculto');$("horariosTurnoModal")?.setAttribute('aria-hidden','true');turnoConfigEditando=null}
 function renderListaTurnosConfig(){const cont=$("horariosConfigLista");if(!cont)return;const items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];cont.innerHTML=items.length?items.map(t=>`<article class="admin-shift-card" data-id="${t.id}"><span class="admin-shift-swatch" style="background:${t.color};color:${contrasteTurno(t.color)}">${t.inicio.slice(0,2)}</span><div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${nombreColorTurno(t.color)}</span></div><button type="button">Editar</button></article>`).join(''):'<div class="empty-state">Todavía no hay horarios configurados.</div>';cont.querySelectorAll('[data-id] button').forEach(b=>b.addEventListener('click',()=>abrirTurnoConfig(items.find(t=>t.id===b.closest('[data-id]').dataset.id))))}
 async function guardarTurnoConfig(){const inicio=$("horariosTurnoInicio").value,fin=$("horariosTurnoFin").value,color=$("horariosTurnoColor").value,original=$("horariosTurnoOriginal").value;let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(!inicio||!fin)return mensajeConfig('horariosConfigMensaje','Completá ambas horas.','error');if(inicio===fin)return mensajeConfig('horariosConfigMensaje','El inicio y el final no pueden ser iguales.','error');if(items.some(t=>t.inicio===inicio&&t.fin===fin&&t.id!==original))return mensajeConfig('horariosConfigMensaje','Ese horario ya existe.','error');if(original){items=items.map(t=>t.id===original?{...t,inicio,fin,color}:t)}else items.push({id:window.AutoservicioHorariosConfig.idDesdeHoras(inicio,fin),inicio,fin,color});try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje',original?'Horario actualizado.':'Horario agregado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
 async function eliminarTurnoConfig(){const id=$("horariosTurnoOriginal").value;let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(window.HorariosApp?.turnosEnUso?.().includes(id))return mensajeConfig('horariosConfigMensaje','No se puede eliminar porque está asignado en el mes visible.','error');items=items.filter(t=>t.id!==id);if(!items.length)return mensajeConfig('horariosConfigMensaje','Debe quedar al menos un horario.','error');try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje','Horario eliminado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
-function renderOrdenConfig(){const cont=$("horariosOrdenLista");if(!cont)return;cont.innerHTML=empleados.map((e,i)=>`<article class="horarios-order-item" data-empleado="${e.replace(/"/g,'&quot;')}"><span class="horarios-order-index">${i+1}</span><div class="horarios-order-info"><strong>${e}</strong><span>${empleadosInfo.get(e)?.rol==='supervisor'?'Supervisor':'Empleado'}</span></div><div class="horarios-order-actions"><button type="button" data-dir="-1" ${i===0?'disabled':''} aria-label="Subir">↑</button><button type="button" data-dir="1" ${i===empleados.length-1?'disabled':''} aria-label="Bajar">↓</button></div></article>`).join('');cont.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>{const card=b.closest('[data-empleado]'),i=empleados.indexOf(card.dataset.empleado),j=i+Number(b.dataset.dir);if(i<0||j<0||j>=empleados.length)return;[empleados[i],empleados[j]]=[empleados[j],empleados[i]];renderOrdenConfig()}))}
-async function guardarOrdenConfig(){try{const r=await fetch(`${API_BASE_URL}/horarios/orden`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sector:sectorActual,orden:empleados})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.mensaje||'No se pudo guardar el orden');renderTabla();mensajeConfig('horariosOrdenMensaje','Orden guardado.')}catch(e){mensajeConfig('horariosOrdenMensaje',e.message,'error')}}
+function ordenPersonalModificado(){return ordenSectorInicial===sectorActual && JSON.stringify(empleados)!==JSON.stringify(ordenPersonalInicial)}
+function actualizarBotonGuardarOrden(){const b=$("btnHorariosGuardarOrden");if(b)b.disabled=!ordenPersonalModificado()}
+function prepararOrdenConfig(){if(ordenSectorInicial!==sectorActual){ordenSectorInicial=sectorActual;ordenPersonalInicial=[...empleados]}actualizarBotonGuardarOrden()}
+function renderOrdenConfig(){const cont=$("horariosOrdenLista");if(!cont)return;prepararOrdenConfig();cont.innerHTML=empleados.map((e,i)=>`<article class="horarios-order-item" data-empleado="${e.replace(/"/g,'&quot;')}"><span class="horarios-order-index">${i+1}</span><div class="horarios-order-info"><strong>${e}</strong><span>${empleadosInfo.get(e)?.rol==='supervisor'?'Supervisor':'Empleado'}</span></div><div class="horarios-order-actions"><button type="button" data-dir="-1" ${i===0?'disabled':''} aria-label="Subir">↑</button><button type="button" data-dir="1" ${i===empleados.length-1?'disabled':''} aria-label="Bajar">↓</button></div></article>`).join('');cont.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>{const card=b.closest('[data-empleado]'),i=empleados.indexOf(card.dataset.empleado),j=i+Number(b.dataset.dir);if(i<0||j<0||j>=empleados.length)return;[empleados[i],empleados[j]]=[empleados[j],empleados[i]];renderOrdenConfig();actualizarBotonGuardarOrden()}));actualizarBotonGuardarOrden()}
+async function guardarOrdenConfig(){if(!ordenPersonalModificado())return;const boton=$("btnHorariosGuardarOrden");if(boton)boton.disabled=true;try{const r=await fetch(`${API_BASE_URL}/horarios/orden`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sector:sectorActual,orden:empleados})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.mensaje||'No se pudo guardar el orden');ordenPersonalInicial=[...empleados];ordenSectorInicial=sectorActual;renderTabla();actualizarBotonGuardarOrden();mensajeConfig('horariosOrdenMensaje','Orden guardado correctamente.')}catch(e){actualizarBotonGuardarOrden();mensajeConfig('horariosOrdenMensaje',e.message,'error')}}
 function renderConfiguracionHorarios(){if(!puedeVerConfiguracion())return cambiarVista('equipo');renderListaTurnosConfig();renderOrdenConfig()}
 
 function configurarEventos() {
