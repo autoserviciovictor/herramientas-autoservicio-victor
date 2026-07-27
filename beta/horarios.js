@@ -18,7 +18,21 @@ function sectorSeleccionado() { return sectoresHorarios.find(s => s.id === secto
 function empleadosDelSector(id = sectorActual) {
   const sector = sectoresHorarios.find(s => s.id === id);
   empleadosInfo = new Map((sector?.empleadosInfo || []).map(x=>[x.nombre,x]));
-  return Array.isArray(sector?.empleados) ? sector.empleados : [];
+  const lista = Array.isArray(sector?.empleados) ? [...sector.empleados] : [];
+  if (id !== "administracion") {
+    lista.sort((a, b) => {
+      const aSupervisor = empleadosInfo.get(a)?.rol === "supervisor" ? 1 : 0;
+      const bSupervisor = empleadosInfo.get(b)?.rol === "supervisor" ? 1 : 0;
+      if (aSupervisor !== bSupervisor) return aSupervisor - bSupervisor;
+      return String(a).localeCompare(String(b), "es", { sensitivity: "base" });
+    });
+  }
+  return lista;
+}
+function empleadosVisiblesEnTabla() {
+  if (!(modoEdicion && rolHorarios() === "supervisor")) return empleados;
+  const usuarioActual = String(usuarioHorarios().usuario || "").trim().toLowerCase();
+  return empleados.filter(nombre => String(empleadosInfo.get(nombre)?.usuario || "").trim().toLowerCase() !== usuarioActual);
 }
 function puedeEditarEmpleado(nombre){ const rol=rolHorarios(); const info=empleadosInfo.get(nombre)||{}; if(rol==="administrador") return true; if(rol==="administracion") return info.rol==="supervisor"; if(rol==="supervisor") return info.rol!=="supervisor" && info.usuario!==usuarioHorarios().usuario; return false; }
 async function cargarContextoHorarios() {
@@ -625,7 +639,8 @@ function renderTabla() {
     const d = i + 1, f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d), finde = [0, 6].includes(f.getDay()), c = coberturaDia(d);
     return `<th class="${finde ? "fin-semana" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${d}"><span>${nombreDia(d)}</span><strong>${d}</strong><small class="cobertura-mini"><b>☀${c.manana}</b><b>☾${c.tarde}</b></small></th>`;
   }).join("")}</tr>`;
-  body.innerHTML = empleados.length ? empleados.map(e => `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from({ length: diasDelMes() }, (_, i) => {
+  const empleadosTabla = empleadosVisiblesEnTabla();
+  body.innerHTML = empleadosTabla.length ? empleadosTabla.map(e => `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from({ length: diasDelMes() }, (_, i) => {
     const d = i + 1, id = obtenerTurno(e, d), t = obtenerDefinicion(id), sel = seleccion.has(keyCelda(e, d));
     const detalle = detalles.get(keyCelda(e,d));
     const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ''}`;
