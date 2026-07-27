@@ -19,12 +19,7 @@ function empleadosDelSector(id = sectorActual) {
   const sector = sectoresHorarios.find(s => s.id === id);
   empleadosInfo = new Map((sector?.empleadosInfo || []).map(x=>[x.nombre,x]));
   const lista = Array.isArray(sector?.empleados) ? [...sector.empleados] : [];
-  lista.sort((a, b) => {
-    const aSupervisor = empleadosInfo.get(a)?.rol === "supervisor" ? 1 : 0;
-    const bSupervisor = empleadosInfo.get(b)?.rol === "supervisor" ? 1 : 0;
-    if (aSupervisor !== bSupervisor) return aSupervisor - bSupervisor;
-    return String(a).localeCompare(String(b), "es", { sensitivity: "base" });
-  });
+
   return lista;
 }
 function empleadosVisiblesEnTabla() { return empleados; }
@@ -788,21 +783,44 @@ function renderMiHorario() {
 }
 
 
+function puedeVerConfiguracion(){ return rolHorarios()==="supervisor" && sectorSeleccionado()?.puedeEditar===true; }
 function cambiarVista(v) {
+  if(v==="config" && !puedeVerConfiguracion()) v="equipo";
   vistaActual = v;
-  const eq = v === "equipo";
+  const eq = v === "equipo", mio=v === "mio", cfg=v === "config";
   $("horariosEquipoView")?.classList.toggle("oculto", !eq);
-  $("horariosMioView")?.classList.toggle("oculto", eq);
-  $("horariosTituloVista").textContent = eq ? "Calendario" : "Mi horario";
-  renderSelectorSector();
+  $("horariosMioView")?.classList.toggle("oculto", !mio);
+  $("horariosConfigView")?.classList.toggle("oculto", !cfg);
+  $("horariosTituloVista").textContent = eq ? "Calendario" : (mio ? "Mi horario" : "Configuración");
+  $("horariosSubtituloVista").textContent = cfg ? `Horarios y orden del personal de ${sectorSeleccionado()?.nombre || "tu sector"}` : $("horariosSubtituloVista").textContent;
+  $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion());
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.classList.toggle("activo", b.dataset.horariosVista === v));
+  renderSelectorSector();
   $("horariosEdicionMarco")?.classList.toggle("oculto", !eq || !puedeEditar());
   $("horariosEditor")?.classList.toggle("oculto", !eq || !edicionActual);
-  if (!eq) { cerrarEditor(); renderMiHorario(); }
+  if (!eq) cerrarEditor();
+  if(mio) renderMiHorario();
+  if(cfg) renderConfiguracionHorarios();
 }
 async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); await cargarResumenHoy(); renderTodo(); }
 async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); await cargarResumenHoy(true); renderTodo(); desplazarAlDia(diaSeleccionado); }
-function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
+function renderTodo() { $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion()); if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); actualizarPortapapeles(); }
+
+const COLORES_TURNOS=[['#f59e0b','Naranja'],['#2563eb','Azul'],['#16a34a','Verde'],['#dc2626','Rojo'],['#7c3aed','Violeta'],['#db2777','Rosa'],['#0891b2','Celeste'],['#64748b','Gris'],['#92400e','Marrón'],['#111827','Negro'],['#84cc16','Lima'],['#14b8a6','Turquesa']];
+let turnoConfigEditando=null;
+function mensajeConfig(id,texto,tipo='ok'){const el=$(id);if(!el)return;el.textContent=texto;el.className=`admin-message ${tipo}`;clearTimeout(el._timer);el._timer=setTimeout(()=>{el.textContent='';el.className='admin-message';},3500)}
+function nombreColorTurno(hex){return COLORES_TURNOS.find(x=>x[0].toLowerCase()===String(hex).toLowerCase())?.[1]||'Personalizado'}
+function contrasteTurno(hex){const n=parseInt(String(hex).replace('#',''),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#111827':'#fff'}
+function renderPaletaTurno(color){const pal=$("horariosTurnoColorPalette");if(!pal)return;$("horariosTurnoColor").value=color;$("horariosTurnoColorNombre").textContent=nombreColorTurno(color);pal.innerHTML=COLORES_TURNOS.map(([hex,n])=>`<button type="button" class="admin-color-option ${hex===color?'seleccionado':''}" data-color="${hex}" aria-label="${n}"><span style="background:${hex}"></span></button>`).join('');pal.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>renderPaletaTurno(b.dataset.color)))}
+function abrirTurnoConfig(turno=null){turnoConfigEditando=turno;$("horariosTurnoModalTitulo").textContent=turno?'Editar horario':'Nuevo horario';$("horariosTurnoOriginal").value=turno?.id||'';$("horariosTurnoInicio").value=turno?.inicio||'08:00';$("horariosTurnoFin").value=turno?.fin||'16:00';renderPaletaTurno(turno?.color||'#f59e0b');$("btnHorariosEliminarTurno").classList.toggle('oculto',!turno);$("horariosTurnoModal").classList.remove('oculto');$("horariosTurnoModal").setAttribute('aria-hidden','false')}
+function cerrarTurnoConfig(){$("horariosTurnoModal")?.classList.add('oculto');$("horariosTurnoModal")?.setAttribute('aria-hidden','true');turnoConfigEditando=null}
+function renderListaTurnosConfig(){const cont=$("horariosConfigLista");if(!cont)return;const items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];cont.innerHTML=items.length?items.map(t=>`<article class="admin-shift-card" data-id="${t.id}"><span class="admin-shift-swatch" style="background:${t.color};color:${contrasteTurno(t.color)}">${t.inicio.slice(0,2)}</span><div class="admin-shift-info"><strong>${t.inicio} - ${t.fin}</strong><span>${nombreColorTurno(t.color)}</span></div><button type="button">Editar</button></article>`).join(''):'<div class="empty-state">Todavía no hay horarios configurados.</div>';cont.querySelectorAll('[data-id] button').forEach(b=>b.addEventListener('click',()=>abrirTurnoConfig(items.find(t=>t.id===b.closest('[data-id]').dataset.id))))}
+async function guardarTurnoConfig(){const inicio=$("horariosTurnoInicio").value,fin=$("horariosTurnoFin").value,color=$("horariosTurnoColor").value,original=$("horariosTurnoOriginal").value;let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(!inicio||!fin)return mensajeConfig('horariosConfigMensaje','Completá ambas horas.','error');if(inicio===fin)return mensajeConfig('horariosConfigMensaje','El inicio y el final no pueden ser iguales.','error');if(items.some(t=>t.inicio===inicio&&t.fin===fin&&t.id!==original))return mensajeConfig('horariosConfigMensaje','Ese horario ya existe.','error');if(original){items=items.map(t=>t.id===original?{...t,inicio,fin,color}:t)}else items.push({id:window.AutoservicioHorariosConfig.idDesdeHoras(inicio,fin),inicio,fin,color});try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje',original?'Horario actualizado.':'Horario agregado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
+async function eliminarTurnoConfig(){const id=$("horariosTurnoOriginal").value;let items=window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[];if(window.HorariosApp?.turnosEnUso?.().includes(id))return mensajeConfig('horariosConfigMensaje','No se puede eliminar porque está asignado en el mes visible.','error');items=items.filter(t=>t.id!==id);if(!items.length)return mensajeConfig('horariosConfigMensaje','Debe quedar al menos un horario.','error');try{await window.AutoservicioHorariosConfig.guardar(items,sectorActual);cerrarTurnoConfig();renderListaTurnosConfig();cargarTurnosConfigurados();renderTodo();mensajeConfig('horariosConfigMensaje','Horario eliminado.')}catch(e){mensajeConfig('horariosConfigMensaje',e.message,'error')}}
+function renderOrdenConfig(){const cont=$("horariosOrdenLista");if(!cont)return;cont.innerHTML=empleados.map((e,i)=>`<article class="horarios-order-item" data-empleado="${e.replace(/"/g,'&quot;')}"><span class="horarios-order-index">${i+1}</span><div class="horarios-order-info"><strong>${e}</strong><span>${empleadosInfo.get(e)?.rol==='supervisor'?'Supervisor':'Empleado'}</span></div><div class="horarios-order-actions"><button type="button" data-dir="-1" ${i===0?'disabled':''} aria-label="Subir">↑</button><button type="button" data-dir="1" ${i===empleados.length-1?'disabled':''} aria-label="Bajar">↓</button></div></article>`).join('');cont.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>{const card=b.closest('[data-empleado]'),i=empleados.indexOf(card.dataset.empleado),j=i+Number(b.dataset.dir);if(i<0||j<0||j>=empleados.length)return;[empleados[i],empleados[j]]=[empleados[j],empleados[i]];renderOrdenConfig()}))}
+async function guardarOrdenConfig(){try{const r=await fetch(`${API_BASE_URL}/horarios/orden`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sector:sectorActual,orden:empleados})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.mensaje||'No se pudo guardar el orden');renderTabla();mensajeConfig('horariosOrdenMensaje','Orden guardado.')}catch(e){mensajeConfig('horariosOrdenMensaje',e.message,'error')}}
+function renderConfiguracionHorarios(){if(!puedeVerConfiguracion())return cambiarVista('equipo');renderListaTurnosConfig();renderOrdenConfig()}
+
 function configurarEventos() {
   crearPanelEdicion();
   crearSelectorSector();
@@ -813,6 +831,12 @@ function configurarEventos() {
   $("btnCancelarHorario")?.addEventListener("click", cerrarEditor);
   $("btnGuardarHorario")?.addEventListener("click", guardarEdicion);
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.horariosVista)));
+  $("btnHorariosNuevoTurno")?.addEventListener("click",()=>abrirTurnoConfig());
+  $("btnHorariosGuardarTurno")?.addEventListener("click",guardarTurnoConfig);
+  $("btnHorariosEliminarTurno")?.addEventListener("click",eliminarTurnoConfig);
+  $("btnHorariosCancelarTurno")?.addEventListener("click",cerrarTurnoConfig);
+  $("btnHorariosGuardarOrden")?.addEventListener("click",guardarOrdenConfig);
+  $("horariosTurnoModal")?.addEventListener("click",e=>{if(e.target.id==="horariosTurnoModal")cerrarTurnoConfig()});
   document.addEventListener("keydown", e => { if (e.key === "Escape") { if (edicionActual) cerrarEditor(); else if (modoEdicion) salirModoEdicion(); } });
   window.addEventListener("autoservicio:sesion", () => { actualizarPermisos(); renderMiHorario(); });
 }

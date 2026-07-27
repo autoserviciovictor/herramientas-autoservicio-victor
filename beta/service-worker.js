@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v861-beta-editor-turnos';
+const CACHE_VERSION = 'autoservicio-v870-config-calendario';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

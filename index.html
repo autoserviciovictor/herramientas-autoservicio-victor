@@ -459,6 +459,20 @@
                     </section>
                     <section id="miHorarioLista" class="mi-horario-list"></section>
                 </div>
+
+                <div id="horariosConfigView" class="horarios-config-view oculto">
+                    <section class="settings-card horarios-config-card">
+                        <div class="admin-section-head"><div><strong>Horarios</strong><span>Agregá, editá, eliminá y elegí el color de los turnos de tu sector</span></div><button id="btnHorariosNuevoTurno" type="button">+ Nuevo horario</button></div>
+                        <div id="horariosConfigMensaje" class="admin-message"></div>
+                        <div id="horariosConfigLista" class="admin-shifts-list"></div>
+                        <p class="admin-shifts-note">Franco, vacaciones, licencia y ausencia son estados especiales.</p>
+                    </section>
+                    <section class="settings-card horarios-config-card">
+                        <div class="admin-section-head"><div><strong>Orden del personal</strong><span>Definí cómo aparecen las filas en el calendario</span></div><button id="btnHorariosGuardarOrden" type="button">Guardar orden</button></div>
+                        <div id="horariosOrdenMensaje" class="admin-message"></div>
+                        <div id="horariosOrdenLista" class="horarios-order-list"></div>
+                    </section>
+                </div>
             </section>
 
             <aside id="horariosEditor" class="horarios-editor oculto" aria-hidden="true">
@@ -479,6 +493,7 @@
         <nav class="app-bottom-nav horarios-bottom-nav" aria-label="Navegación de horarios">
             <button type="button" class="activo" data-horarios-vista="equipo"><span class="horarios-nav-icon">▦</span><span>Calendario</span></button>
             <button type="button" data-horarios-vista="mio"><span class="horarios-nav-icon">◷</span><span>Mi horario</span></button>
+            <button id="btnHorariosConfigNav" type="button" class="oculto" data-horarios-vista="config"><span class="horarios-nav-icon">⚙</span><span>Configuración</span></button>
         </nav>
     </main>
 
@@ -636,7 +651,6 @@
             <button type="button" class="admin-tab activo" data-admin-tab="usuarios">👤 Usuarios</button>
             <button type="button" class="admin-tab" data-admin-tab="sectores">🏬 Sectores</button>
             <button type="button" class="admin-tab" data-admin-tab="historial">📋 Historial</button>
-            <button type="button" class="admin-tab" data-admin-tab="horarios">🕒 Horarios</button>
             <button type="button" class="admin-tab" data-admin-tab="sistema">⚙️ Sistema</button>
         </nav>
 
@@ -685,15 +699,6 @@
             <div id="adminHistorialResumen" class="admin-history-summary" aria-live="polite"></div>
             <div id="adminHistorialLista" class="admin-history-list"></div>
             <button id="btnAdminHistorialMas" type="button" class="setting-btn admin-history-more oculto">Cargar movimientos anteriores</button>
-        </section>
-
-
-        <section id="adminTab-horarios" class="admin-tab-panel settings-card oculto">
-            <div class="admin-section-head"><div><strong>Horarios</strong><span>Creá, editá y asigná un color a cada turno</span></div><button id="btnAdminNuevoHorario" type="button">+ Nuevo horario</button></div>
-            <label class="admin-shift-sector">Sector<select id="adminHorarioSector"></select></label>
-            <div id="adminHorariosMensaje" class="admin-message"></div>
-            <div id="adminHorariosLista" class="admin-shifts-list"></div>
-            <p class="admin-shifts-note">Franco y Vacaciones son estados especiales y no se modifican desde esta lista.</p>
         </section>
 
         <section id="adminTab-sistema" class="admin-tab-panel settings-card oculto">
@@ -853,25 +858,24 @@
 
 </div>
 
-    <div id="adminHorarioModal" class="modal-overlay oculto" aria-hidden="true">
-      <div class="modal-card admin-shift-modal" role="dialog" aria-modal="true" aria-labelledby="adminHorarioModalTitulo">
+    <div id="horariosTurnoModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card admin-shift-modal" role="dialog" aria-modal="true" aria-labelledby="horariosTurnoModalTitulo">
         <div class="modal-kicker">Configuración de horarios</div>
-        <h2 id="adminHorarioModalTitulo">Nuevo horario</h2>
-        <input id="adminHorarioOriginal" type="hidden">
+        <h2 id="horariosTurnoModalTitulo">Nuevo horario</h2>
+        <input id="horariosTurnoOriginal" type="hidden">
         <div class="admin-shift-form">
-          <label>Hora de inicio<input id="adminHorarioInicio" type="time" required></label>
-          <label>Hora de finalización<input id="adminHorarioFin" type="time" required></label>
-          
-<div class="admin-color-picker admin-shift-color-picker" data-color-picker="horario" aria-label="Elegir color del horario">
-  <input id="adminHorarioColor" type="hidden" value="#f59e0b">
-  <div class="admin-color-picker-head"><span>Color del turno</span><strong id="adminHorarioColorNombre">Naranja</strong></div>
-  <div id="adminHorarioColorPalette" class="admin-color-palette" role="radiogroup" aria-label="Colores disponibles"></div>
-</div>
+          <label>Hora de inicio<input id="horariosTurnoInicio" type="time" required></label>
+          <label>Hora de finalización<input id="horariosTurnoFin" type="time" required></label>
+          <div class="admin-color-picker admin-shift-color-picker" aria-label="Elegir color del horario">
+            <input id="horariosTurnoColor" type="hidden" value="#f59e0b">
+            <div class="admin-color-picker-head"><span>Color del turno</span><strong id="horariosTurnoColorNombre">Naranja</strong></div>
+            <div id="horariosTurnoColorPalette" class="admin-color-palette" role="radiogroup" aria-label="Colores disponibles"></div>
+          </div>
         </div>
         <div class="modal-actions">
-          <button id="btnAdminGuardarHorario" class="save-btn" type="button">Guardar horario</button>
-          <button id="btnAdminEliminarHorario" class="danger-btn-soft oculto" type="button">Eliminar</button>
-          <button id="btnAdminCancelarHorario" class="secondary-btn" type="button">Cancelar</button>
+          <button id="btnHorariosGuardarTurno" class="save-btn" type="button">Guardar horario</button>
+          <button id="btnHorariosEliminarTurno" class="danger-btn-soft oculto" type="button">Eliminar</button>
+          <button id="btnHorariosCancelarTurno" class="secondary-btn" type="button">Cancelar</button>
         </div>
       </div>
     </div>
@@ -881,12 +885,12 @@
 <script src="./pwa.js?v=84-entrega8" defer></script>
 <script type="module" src="./auth.js?v=84-entrega8"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=84-entrega8"></script>
+<script src="./horarios-config.js?v=870-config-sector"></script>
 <script type="module" src="./admin.js?v=84-entrega8"></script>
 <script type="module" src="./notifications.js?v=84-entrega8"></script>
 <script type="module" src="./prices.js?v=84-entrega8"></script>
 <script type="module" src="./app.js?v=84-entrega8"></script>
-<script type="module" src="./horarios.js?v=861-supervisor-en-sector"></script>
+<script type="module" src="./horarios.js?v=870-config-sector"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

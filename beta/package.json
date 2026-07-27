@@ -1,6 +1,6 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "8.6.0",
+  "version": "8.7.0",
   "description": "Autoservicio 8.6",
   "main": "server.js",
   "scripts": {
