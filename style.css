@@ -4407,3 +4407,392 @@ body.horarios-modo-edicion .horario-cell{pointer-events:none}
 .pantalla,.settings-card,.module-card,.product-card,.venc-list-card,.admin-user-card,.admin-sector-card{min-width:0;}
 .pantalla strong,.pantalla span,.pantalla p,.pantalla small{overflow-wrap:anywhere;}
 img,video,canvas{max-width:100%;}
+
+/* =========================================================
+   V8.11.6 · ENTREGA 5.2.2 — Pulido del editor de usuarios
+   ========================================================= */
+/* Un solo panel continuo: cabecera y acciones fijas, sin marcos superpuestos. */
+#adminUsuarioModal .admin-user-modal-v2{
+  position:relative!important;
+  padding:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  background:#fff!important;
+  border:1px solid #e5ddd7!important;
+  border-radius:24px!important;
+  box-shadow:0 26px 80px rgba(31,24,20,.24)!important;
+  scrollbar-gutter:stable;
+}
+#adminUsuarioModal .admin-user-modal-v2>.admin-user-modal-head{
+  position:sticky!important;
+  inset-block-start:0!important;
+  z-index:10!important;
+  width:100%!important;
+  margin:0!important;
+  padding:20px 22px 17px!important;
+  border:0!important;
+  border-radius:23px 23px 0 0!important;
+  background:#fff!important;
+  box-shadow:0 1px 0 #eee8e3,0 9px 18px rgba(255,255,255,.96)!important;
+}
+#adminUsuarioModal .admin-user-modal-v2>.admin-user-modal-head::after{
+  content:none!important;
+}
+#adminUsuarioModal .admin-user-modal-v2>.admin-form-section,
+#adminUsuarioModal .admin-user-modal-v2>.admin-active-row,
+#adminUsuarioModal .admin-user-modal-v2>.danger-btn-soft{
+  position:relative;
+  z-index:1;
+}
+#adminUsuarioModal .admin-user-modal-v2>.admin-form-section{
+  margin-inline:22px!important;
+}
+#adminUsuarioModal .admin-user-modal-v2>.admin-modal-actions-sticky{
+  position:sticky!important;
+  inset-block-end:0!important;
+  z-index:10!important;
+  width:100%!important;
+  margin:18px 0 0!important;
+  padding:14px 22px max(14px,env(safe-area-inset-bottom))!important;
+  border:0!important;
+  border-radius:0 0 23px 23px!important;
+  background:#fff!important;
+  box-shadow:0 -1px 0 #eee8e3,0 -10px 18px rgba(255,255,255,.96)!important;
+  overflow:hidden!important;
+}
+#adminUsuarioModal .admin-user-modal-v2>.admin-modal-actions-sticky::before,
+#adminUsuarioModal .admin-user-modal-v2>.admin-modal-actions-sticky::after{
+  content:none!important;
+}
+#adminUsuarioModal .admin-modal-actions-sticky .cancel-btn,
+#adminUsuarioModal .admin-modal-actions-sticky .save-btn{
+  width:100%!important;
+  margin:0!important;
+  border-radius:13px!important;
+  overflow:hidden!important;
+}
+
+/* Módulos visibles: grilla centrada y tarjetas de igual tamaño. */
+#adminUsuarioModal .admin-permissions-fieldset{
+  width:100%!important;
+  margin:0!important;
+  padding:15px!important;
+  border:1px solid #e5ddd7!important;
+  border-radius:17px!important;
+  background:#faf9f7!important;
+  text-align:center!important;
+}
+#adminUsuarioModal .admin-permissions-fieldset legend{
+  margin:0 auto!important;
+  padding:0 9px!important;
+  color:#2d2825!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  text-align:center!important;
+}
+#adminUsuarioModal .admin-permissions-fieldset>p{
+  max-width:430px;
+  margin:1px auto 14px!important;
+  color:#817973!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+  text-align:center!important;
+}
+#adminUsuarioModal .admin-permissions-grid{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  justify-content:center!important;
+  align-items:stretch!important;
+  gap:10px!important;
+  width:100%!important;
+  margin:0 auto!important;
+}
+#adminUsuarioModal .admin-permissions-grid label{
+  position:relative!important;
+  flex:0 1 calc(33.333% - 7px)!important;
+  min-width:128px!important;
+  min-height:104px!important;
+  margin:0!important;
+  padding:16px 12px 13px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid #e4ddd7!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  text-align:center!important;
+  cursor:pointer!important;
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease,transform .12s ease!important;
+}
+#adminUsuarioModal .admin-permissions-grid label:hover{
+  border-color:#d2c5c0!important;
+  box-shadow:0 5px 14px rgba(43,34,29,.07)!important;
+}
+#adminUsuarioModal .admin-permissions-grid label:active{transform:scale(.985)}
+#adminUsuarioModal .admin-permissions-grid label:has(input:checked){
+  border-color:rgba(183,46,53,.5)!important;
+  background:#fff8f8!important;
+  box-shadow:0 0 0 2px rgba(183,46,53,.07)!important;
+}
+#adminUsuarioModal .admin-permissions-grid input[type="checkbox"]{
+  position:absolute!important;
+  inset-block-start:10px!important;
+  inset-inline-end:10px!important;
+  width:19px!important;
+  height:19px!important;
+  margin:0!important;
+  accent-color:#b72e35!important;
+}
+#adminUsuarioModal .admin-permissions-grid label>span{
+  width:100%!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  color:#39322e!important;
+  font-size:14px!important;
+  line-height:1.15!important;
+  font-weight:850!important;
+  text-align:center!important;
+}
+#adminUsuarioModal .admin-permissions-grid label>span .app-icon{
+  width:25px!important;
+  height:25px!important;
+  color:#b72e35!important;
+}
+#adminUsuarioModal .admin-permissions-note{
+  margin:12px auto 0!important;
+  text-align:center!important;
+}
+
+/* El modal de sector comparte la misma terminación inferior limpia. */
+#adminSectorModal .admin-user-modal{
+  overflow-x:hidden!important;
+  border:1px solid #e5ddd7!important;
+  border-radius:24px!important;
+  background:#fff!important;
+}
+#adminSectorModal .admin-modal-actions{
+  margin-inline:-22px!important;
+  margin-bottom:-22px!important;
+  padding:14px 22px max(14px,env(safe-area-inset-bottom))!important;
+  border:0!important;
+  border-radius:0 0 23px 23px!important;
+  background:#fff!important;
+  box-shadow:0 -1px 0 #eee8e3,0 -10px 18px rgba(255,255,255,.96)!important;
+  overflow:hidden!important;
+}
+
+@media(max-width:700px){
+  #adminUsuarioModal .admin-user-modal-v2>.admin-user-modal-head{
+    padding:17px 17px 14px!important;
+  }
+  #adminUsuarioModal .admin-user-modal-v2>.admin-form-section,
+  #adminUsuarioModal .admin-user-modal-v2>.admin-active-row,
+  #adminUsuarioModal .admin-user-modal-v2>.danger-btn-soft{
+    margin-inline:17px!important;
+  }
+  #adminUsuarioModal .admin-user-modal-v2>.admin-modal-actions-sticky{
+    padding-inline:17px!important;
+  }
+  #adminUsuarioModal .admin-permissions-fieldset{padding:13px 11px!important}
+  #adminUsuarioModal .admin-permissions-grid{gap:9px!important}
+  #adminUsuarioModal .admin-permissions-grid label{
+    flex-basis:calc(50% - 5px)!important;
+    min-width:0!important;
+    min-height:96px!important;
+    padding:15px 8px 11px!important;
+  }
+  #adminUsuarioModal .admin-permissions-grid label>span{font-size:13px!important}
+  #adminSectorModal .admin-modal-actions{
+    margin-inline:-18px!important;
+    margin-bottom:-18px!important;
+    padding-inline:18px!important;
+  }
+}
+
+@media(max-width:380px){
+  #adminUsuarioModal .admin-permissions-grid label{
+    min-height:91px!important;
+    padding-inline:5px!important;
+  }
+  #adminUsuarioModal .admin-permissions-grid label>span{font-size:12px!important}
+}
+
+/* =========================================================
+   V8.11.7 · ENTREGA 5.2.3 · REVISIÓN GENERAL FINAL
+   Ajustes transversales de consistencia, accesibilidad y responsive.
+   ========================================================= */
+
+/* Evita desbordes en textos largos y mantiene cajas predecibles. */
+#app *,
+.modal-overlay *,
+.app-dialog-overlay *{
+  box-sizing:border-box;
+}
+.card,
+.module-card,
+.modal-card,
+.admin-user-modal,
+.admin-user-modal-v2,
+.admin-form-section,
+.admin-permissions-fieldset{
+  min-width:0;
+}
+.card p,
+.card strong,
+.module-card p,
+.module-card strong,
+.admin-user-modal p,
+.admin-user-modal strong,
+.admin-user-modal-v2 p,
+.admin-user-modal-v2 strong{
+  overflow-wrap:anywhere;
+}
+
+/* Foco visible uniforme para teclado, sin alterar la experiencia táctil. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible{
+  outline:3px solid rgba(183,46,53,.26)!important;
+  outline-offset:2px!important;
+}
+
+/* Áreas táctiles mínimas y alineación estable. */
+button,
+[role="button"],
+.bottom-nav button,
+.admin-bottom-nav button{
+  touch-action:manipulation;
+}
+button:not(.icon-btn):not(.app-dialog-close):not(.modal-close){
+  min-height:42px;
+}
+.icon-btn,
+.app-dialog-close,
+.modal-close{
+  min-width:40px;
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Los overlays ocupan el viewport real y respetan áreas seguras. */
+.modal-overlay,
+.app-dialog-overlay{
+  width:100%;
+  min-height:100dvh;
+  padding-top:max(14px,env(safe-area-inset-top));
+  padding-right:max(14px,env(safe-area-inset-right));
+  padding-bottom:max(14px,env(safe-area-inset-bottom));
+  padding-left:max(14px,env(safe-area-inset-left));
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.modal-card,
+.app-dialog-card{
+  max-width:min(94vw,680px);
+  max-height:calc(100dvh - max(28px,env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+}
+
+/* Controles y textos secundarios con alineación coherente. */
+input,
+select,
+textarea{
+  max-width:100%;
+}
+label,
+.form-label,
+.modal-kicker{
+  line-height:1.3;
+}
+.badge,
+.chip,
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1.15;
+}
+
+/* Navegaciones inferiores: sin recortes y con área segura. */
+.bottom-nav,
+.admin-bottom-nav,
+.horarios-bottom-nav{
+  padding-bottom:max(8px,env(safe-area-inset-bottom));
+}
+.bottom-nav button,
+.admin-bottom-nav button,
+.horarios-bottom-nav button{
+  min-width:0;
+}
+.bottom-nav button span,
+.admin-bottom-nav button span,
+.horarios-bottom-nav button span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Tablas y calendarios se desplazan dentro de su módulo, no toda la página. */
+.table-wrap,
+.calendar-wrap,
+.horarios-table-wrap,
+.admin-table-wrap{
+  max-width:100%;
+  overflow:auto;
+  overscroll-behavior-inline:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* Escritorio: mejor aprovechamiento sin estirar formularios innecesariamente. */
+@media(min-width:1024px){
+  .modal-card.admin-user-modal-v2{
+    width:min(920px,calc(100vw - 64px));
+  }
+  #adminUsuarioModal .admin-user-modal-v2>.admin-form-section{
+    max-width:none;
+  }
+  #adminUsuarioModal .admin-permissions-grid label{
+    flex-basis:calc(20% - 8px)!important;
+    min-width:130px!important;
+  }
+}
+
+/* Celulares angostos: evitar recortes de acciones y textos. */
+@media(max-width:480px){
+  .modal-overlay,
+  .app-dialog-overlay{
+    padding-left:max(8px,env(safe-area-inset-left));
+    padding-right:max(8px,env(safe-area-inset-right));
+  }
+  .modal-actions,
+  .app-dialog-actions,
+  .admin-modal-actions,
+  .admin-modal-actions-sticky{
+    gap:9px!important;
+  }
+  .modal-actions>button,
+  .app-dialog-actions>button,
+  .admin-modal-actions>button,
+  .admin-modal-actions-sticky>button{
+    min-width:0;
+    white-space:normal;
+    line-height:1.15;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    transition-duration:.01ms!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+  }
+}

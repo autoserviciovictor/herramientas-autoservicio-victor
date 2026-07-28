@@ -124,10 +124,10 @@ function cargarTurnosConfigurados() {
     clase: 'turno-configurable',
     estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`
   })).concat([
-    { id: 'franco', label: 'Franco', clase: 'turno-franco', estilo: '' },
-    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-verde', estilo: '' },
-    { id: 'ausente', label: 'Ausente', clase: 'turno-ausente', estilo: '' },
-    { id: 'licencia', label: 'Licencia', clase: 'turno-licencia', estilo: '' }
+    { id: 'franco', label: 'Franco', clase: 'turno-franco', color: '#64748b', badge: 'F', estilo: '--turno-color:#64748b;--turno-fondo:#e2e8f0;--turno-borde:#94a3b8' },
+    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-verde', color: '#16a34a', badge: 'V', estilo: '--turno-color:#16a34a;--turno-fondo:#dcfce7;--turno-borde:#86efac' },
+    { id: 'ausente', label: 'Ausencia', clase: 'turno-ausente', color: '#dc2626', badge: 'A', estilo: '--turno-color:#dc2626;--turno-fondo:#fee2e2;--turno-borde:#fca5a5' },
+    { id: 'licencia', label: 'Licencia', clase: 'turno-licencia', color: '#2563eb', badge: 'L', estilo: '--turno-color:#2563eb;--turno-fondo:#dbeafe;--turno-borde:#93c5fd' }
   ]);
   if (!TURNOS.some(t => t.id === turnoPincel)) turnoPincel = TURNOS.find(t => !['franco','vacaciones'].includes(t.id))?.id || 'franco';
 }
@@ -430,7 +430,7 @@ function actualizarSelectorTurnos() {
   turnoPincel=opcion.id;
   const label=$("horariosPaintLabel"), swatch=$("horariosPaintSwatch");
   if(label) label.textContent=opcion.label;
-  if(swatch){swatch.style.background=opcion.color||"#fff";swatch.textContent=opcion.id==="franco"?"F":(opcion.tipo==="cortado"?"C":"");swatch.style.color=contrasteTurno(opcion.color||"#fff");}
+  if(swatch){swatch.style.background=opcion.color||"#fff";swatch.textContent=opcion.badge||(opcion.tipo==="cortado"?"C":"");swatch.style.color=contrasteTurno(opcion.color||"#fff");}
 }
 
 function crearPanelEdicion() {
@@ -466,8 +466,8 @@ function crearPanelEdicion() {
   $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
   $("horariosPaintTurnoButton").onclick = async () => {
-    const opciones = TURNOS.filter(t=>t.id!=="personalizado").map(t=>({value:t.id,label:t.label,color:t.color||"#ffffff",badge:t.id==="franco"?"F":(t.tipo==="cortado"?"C":""),description:t.id==="franco"?"Día libre":(t.tipo==="cortado"?"Horario cortado":"Horario continuo")}));
-    const elegido = await window.AppChoicePicker.open({title:"Seleccionar horario",kicker:"Pintar con",options:opciones,value:turnoPincel});
+    const opciones = TURNOS.filter(t=>t.id!=="personalizado").map(t=>({value:t.id,label:t.label,color:t.color||"#ffffff",badge:t.badge||(t.tipo==="cortado"?"C":""),description:t.id==="franco"?"Día libre":(["vacaciones","ausente","licencia"].includes(t.id)?"Estado especial":(t.tipo==="cortado"?"Horario cortado":"Horario continuo"))}));
+    const elegido = await window.AppChoicePicker.open({title:"Seleccionar horario",kicker:"Pintar con",options,value:turnoPincel});
     if (elegido) { turnoPincel=elegido; actualizarSelectorTurnos(); }
   };
   $("horariosClearSelection").onclick = () => {

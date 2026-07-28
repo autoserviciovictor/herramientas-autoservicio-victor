@@ -328,7 +328,7 @@ async function asegurarHojaUsuarios() {
         requestBody: { requests: [{ addSheet: { properties: { title: USUARIOS_SHEET_NAME } } }] }
       });
     }
-    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector", "Sectores a cargo"];
+    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector", "Sectores del supervisor"];
     const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:I2` });
     const filas = respuesta.data.values || [];
     if (!filas[0] || encabezados.some((titulo, i) => filas[0][i] !== titulo)) {
@@ -915,27 +915,21 @@ async function actualizarFilaSector(sector, cambios = {}) {
   });
 }
 
-async function quitarSupervisionDeUsuario(usuarioClave, exceptoSectorId = "") {
-  const clave = normalizarUsuario(usuarioClave);
-  if (!clave) return;
-  const sectores = await obtenerSectores();
-  for (const sector of sectores.filter(s => s.supervisor === clave && s.id !== exceptoSectorId)) {
-    await actualizarFilaSector(sector, { supervisor: "" });
-  }
-}
-
 async function reconciliarSupervisorAnterior(usuarioClave, sectorPreferido = "") {
   const clave = normalizarUsuario(usuarioClave);
   if (!clave) return;
-  invalidarCache("usuarios");
+  invalidarCache("usuarios", "sectores");
   const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), obtenerSectores()]);
   const usuario = usuarios.find(u => u.usuario === clave);
   if (!usuario || usuario.rol === "administrador") return;
-  const sigueSupervisando = sectores.some(s => s.supervisor === clave && s.activo);
-  if (!sigueSupervisando && usuario.rol === "supervisor") {
-    await actualizarFilaUsuario(usuario, { rol: "personal", sector: sectorPreferido || usuario.sector || "" });
-    invalidarCache("usuarios");
+  const asignados = sectores.filter(s => s.supervisor === clave && s.activo).map(s => s.id).slice(0, 2);
+  if (!asignados.length && usuario.rol === "supervisor") {
+    await actualizarFilaUsuario(usuario, { rol: "personal", sectores: [], sector: sectorPreferido || usuario.sector || "" });
+  } else if (usuario.rol === "supervisor") {
+    const principal = asignados.includes(usuario.sector) ? usuario.sector : asignados[0];
+    await actualizarFilaUsuario(usuario, { sector: principal, sectores: asignados });
   }
+  invalidarCache("usuarios", "sectores");
 }
 
 async function asignarSupervisorASector(usuarioClave, sectorId) {
@@ -947,38 +941,32 @@ async function asignarSupervisorASector(usuarioClave, sectorId) {
   if (!usuario) throw new Error("El supervisor seleccionado no existe");
   if (!usuario.activo) throw new Error("El supervisor seleccionado está inactivo");
   if (!sector || !sector.activo) throw new Error("El sector seleccionado no existe o está inactivo");
-
-  // Un supervisor solo puede administrar un sector. Si estaba en otro, se libera.
-  await quitarSupervisionDeUsuario(clave, sectorId);
-
+  const actuales = sectores.filter(s => s.supervisor === clave && s.activo).map(s => s.id);
+  if (!actuales.includes(sectorId) && actuales.length >= 2) throw new Error("Un supervisor puede estar a cargo de hasta dos sectores");
+  const asignados = [...new Set([...actuales, sectorId])].slice(0, 2);
   const rol = usuario.rol === "administrador" ? "administrador" : "supervisor";
-  await actualizarFilaUsuario(usuario, { rol, sector: sectorId });
+  await actualizarFilaUsuario(usuario, { rol, sector: usuario.sector || asignados[0], sectores: asignados });
   invalidarCache("usuarios");
 }
 
-async function sincronizarUsuarioSupervisor(usuarioClave, rol, sectorId, activo = true) {
+async function sincronizarUsuarioSupervisor(usuarioClave, rol, sectoresIds, activo = true) {
   const clave = normalizarUsuario(usuarioClave);
   const sectores = await obtenerSectores();
-  const supervisadosAntes = sectores.filter(s => s.supervisor === clave);
-
+  const actuales = sectores.filter(s => s.supervisor === clave);
+  const deseados = rol === "supervisor" ? [...new Set((Array.isArray(sectoresIds) ? sectoresIds : [sectoresIds]).map(normalizarTexto).filter(Boolean))].slice(0, 2) : [];
   if (rol === "supervisor") {
     if (!activo) throw new Error("Un usuario inactivo no puede ser supervisor");
-    if (!sectorId) throw new Error("Asigná un sector al supervisor");
-    const destino = sectores.find(s => s.id === sectorId && s.activo);
-    if (!destino) throw new Error("El sector seleccionado no existe o está inactivo");
-    for (const sector of supervisadosAntes.filter(s => s.id !== sectorId)) {
-      await actualizarFilaSector(sector, { supervisor: "" });
-    }
-    const supervisorAnteriorDestino = normalizarUsuario(destino.supervisor);
-    await actualizarFilaSector(destino, { supervisor: clave });
-    if (supervisorAnteriorDestino && supervisorAnteriorDestino !== clave) {
-      await reconciliarSupervisorAnterior(supervisorAnteriorDestino, destino.id);
-    }
-  } else {
-    for (const sector of supervisadosAntes) {
-      await actualizarFilaSector(sector, { supervisor: "" });
+    if (!deseados.length) throw new Error("Asigná un sector personal al supervisor");
+    for (const id of deseados) {
+      const destino = sectores.find(s => s.id === id && s.activo);
+      if (!destino) throw new Error("Uno de los sectores seleccionados no existe o está inactivo");
+      const anterior = normalizarUsuario(destino.supervisor);
+      await actualizarFilaSector(destino, { supervisor: clave });
+      if (anterior && anterior !== clave) await reconciliarSupervisorAnterior(anterior, destino.id);
     }
   }
+  for (const sector of actuales.filter(s => !deseados.includes(s.id))) await actualizarFilaSector(sector, { supervisor: "" });
+  invalidarCache("sectores", "usuarios");
 }
 
 async function sincronizarSectorSupervisor(sector, nuevoSupervisor) {
@@ -987,7 +975,7 @@ async function sincronizarSectorSupervisor(sector, nuevoSupervisor) {
   if (nuevo) await asignarSupervisorASector(nuevo, sector.id);
   await actualizarFilaSector(sector, { supervisor: nuevo });
   if (anterior && anterior !== nuevo) await reconciliarSupervisorAnterior(anterior, sector.id);
-  invalidarCache("usuarios");
+  invalidarCache("usuarios", "sectores");
 }
 
 app.get("/admin/sectores", requerirAdministrador, async (req,res) => {
@@ -1043,14 +1031,16 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
     const rolEntrada = normalizarTexto(req.body?.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
     const sector = normalizarTexto(req.body?.sector);
-    const sectoresCargo = [...new Set((Array.isArray(req.body?.sectores)?req.body.sectores:[]).map(normalizarTexto).filter(Boolean))];
+    const sectorSecundario = normalizarTexto(req.body?.sectorSecundario);
+    const sectoresCargo = [...new Set([sector, sectorSecundario, ...(Array.isArray(req.body?.sectores)?req.body.sectores:[])].map(normalizarTexto).filter(Boolean))].slice(0, 2);
     const permisos = normalizarPermisos(req.body?.permisos, rol);
     if (sector) {
       const sectores = await obtenerSectores();
       if (!sectores.some(s => s.id === sector && s.activo)) return res.status(400).json({ ok:false, mensaje:"El sector seleccionado no existe o está inactivo" });
     }
-    if (rol === "supervisor" && !sectoresCargo.length) return res.status(400).json({ ok:false, mensaje:"Asigná al menos un sector a cargo del supervisor" });
-    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores a cargo no existe o está inactivo"}); }
+    if (rol === "supervisor" && !sector) return res.status(400).json({ ok:false, mensaje:"Asigná un sector personal al supervisor" });
+    if (sectorSecundario && sectorSecundario === sector) return res.status(400).json({ ok:false, mensaje:"El segundo sector debe ser distinto del principal" });
+    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores seleccionados no existe o está inactivo"}); }
     if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return res.status(400).json({ ok:false, mensaje:"El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo" });
     if (password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
     const usuarios = await obtenerUsuarios();
@@ -1063,7 +1053,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
       requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
     });
     invalidarCache("usuarios");
-    await sincronizarUsuarioSupervisor(usuario, rol, sector, true);
+    await sincronizarUsuarioSupervisor(usuario, rol, sectoresCargo, true);
     res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true, permisos, sector, sectores:sectoresCargo } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo crear el usuario" });
@@ -1080,7 +1070,10 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     const rolEntrada = req.body?.rol === undefined ? actual.rol : normalizarTexto(req.body.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
     const sector = req.body?.sector === undefined ? (actual.sector || "") : normalizarTexto(req.body.sector);
-    const sectoresCargo = req.body?.sectores === undefined ? (actual.sectores || []) : [...new Set((Array.isArray(req.body.sectores)?req.body.sectores:[]).map(normalizarTexto).filter(Boolean))];
+    const sectorSecundario = req.body?.sectorSecundario === undefined ? ((actual.sectores || []).find(id => id && id !== sector) || "") : normalizarTexto(req.body.sectorSecundario);
+    const sectoresCargo = req.body?.sectores === undefined
+      ? (rol === "supervisor" ? [...new Set([sector, sectorSecundario].filter(Boolean))].slice(0,2) : [])
+      : [...new Set([sector, sectorSecundario, ...(Array.isArray(req.body.sectores)?req.body.sectores:[])].map(normalizarTexto).filter(Boolean))].slice(0,2);
     const activo = req.body?.activo === undefined ? actual.activo : Boolean(req.body.activo);
     const permisos = req.body?.permisos === undefined ? normalizarPermisos(actual.permisos, rol) : normalizarPermisos(req.body.permisos, rol);
     const password = String(req.body?.password || "");
@@ -1088,8 +1081,9 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       const sectores = await obtenerSectores();
       if (!sectores.some(s => s.id === sector && s.activo)) return res.status(400).json({ ok:false, mensaje:"El sector seleccionado no existe o está inactivo" });
     }
-    if (rol === "supervisor" && !sectoresCargo.length) return res.status(400).json({ ok:false, mensaje:"Asigná al menos un sector a cargo del supervisor" });
-    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores a cargo no existe o está inactivo"}); }
+    if (rol === "supervisor" && !sector) return res.status(400).json({ ok:false, mensaje:"Asigná un sector personal al supervisor" });
+    if (sectorSecundario && sectorSecundario === sector) return res.status(400).json({ ok:false, mensaje:"El segundo sector debe ser distinto del principal" });
+    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores seleccionados no existe o está inactivo"}); }
     if (clave === req.usuario.usuario && (!activo || rol !== "administrador")) {
       return res.status(400).json({ ok:false, mensaje:"No podés desactivar tu propia cuenta ni quitarte el rol de administrador" });
     }
@@ -1102,7 +1096,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
     });
     invalidarCache("usuarios");
-    await sincronizarUsuarioSupervisor(clave, rol, sector, activo);
+    await sincronizarUsuarioSupervisor(clave, rol, sectoresCargo, activo);
     res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo, permisos, sector, sectores:sectoresCargo } });
   } catch (error) {
     res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });

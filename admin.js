@@ -19,7 +19,9 @@ function aplicarPermisosModal(permisos, rol="personal") {
 function actualizarEstadoPermisosPorRol() {
   const rolActual = $("adminUsuarioRol")?.value || "personal";
   const esAdmin = rolActual === "administrador";
-  $("adminUsuarioSectoresCargo")?.classList.toggle("oculto", rolActual !== "supervisor");
+  $("adminUsuarioSectorSecundarioFila")?.classList.toggle("oculto", rolActual !== "supervisor");
+  if (rolActual !== "supervisor" && $("adminUsuarioSectorSecundario")) $("adminUsuarioSectorSecundario").value = "";
+  actualizarSelectoresUsuario();
   document.querySelectorAll("[data-permiso-modulo]").forEach(input => { input.disabled = esAdmin; if (esAdmin) input.checked = true; });
   $("adminPermisosAdminAviso")?.classList.toggle("oculto", !esAdmin);
   $("adminUsuarioPermisos")?.classList.toggle("es-admin", esAdmin);
@@ -96,12 +98,21 @@ async function cargarSectores() {
 function sectorPorId(id){ return sectores.find(s => s.id === id); }
 function etiquetaRol(valor){return ({personal:"Personal",supervisor:"Supervisor",administracion:"Administración",administrador:"Administrador"})[valor]||"Personal";}
 function actualizarSelectoresUsuario(){
- const rol=$("adminUsuarioRol"), rb=$("adminUsuarioRolButton"), sec=$("adminUsuarioSector"), sb=$("adminUsuarioSectorButton");
+ const rol=$("adminUsuarioRol"), rb=$("adminUsuarioRolButton"), sec=$("adminUsuarioSector"), sb=$("adminUsuarioSectorButton"), sec2=$("adminUsuarioSectorSecundario"), sb2=$("adminUsuarioSectorSecundarioButton");
  if(rb&&rol) rb.querySelector("span").textContent=etiquetaRol(rol.value);
  if(sb&&sec) sb.querySelector("span").textContent=sec.options[sec.selectedIndex]?.textContent||"Sin sector";
+ if(sb2&&sec2) sb2.querySelector("span").textContent=sec2.options[sec2.selectedIndex]?.textContent||"Sin segundo sector";
 }
 async function abrirSelectorRolUsuario(){const sel=$("adminUsuarioRol");const v=await window.AppChoicePicker.open({title:"Seleccionar rol",kicker:"Permisos",value:sel.value,options:[{value:"personal",label:"Personal",description:"Acceso según módulos asignados"},{value:"supervisor",label:"Supervisor",description:"Administra horarios de sus sectores"},{value:"administracion",label:"Administración",description:"Acceso administrativo limitado"},{value:"administrador",label:"Administrador",description:"Acceso completo al sistema"}]});if(v){sel.value=v;sel.dispatchEvent(new Event("change",{bubbles:true}));actualizarSelectoresUsuario();}}
 async function abrirSelectorSectorUsuario(){const sel=$("adminUsuarioSector");const options=[...sel.options].map(o=>({value:o.value,label:o.textContent,color:sectorPorId(o.value)?.color||null,description:o.value?"Asignar como sector principal":"Sin sector asignado"}));const v=await window.AppChoicePicker.open({title:"Seleccionar sector",kicker:"Usuario",value:sel.value,options});if(v!==null){sel.value=v;sel.dispatchEvent(new Event("change",{bubbles:true}));actualizarSelectoresUsuario();}}
+async function abrirSelectorSectorSecundarioUsuario(){
+ const sel=$("adminUsuarioSectorSecundario");
+ const principal=$("adminUsuarioSector")?.value||"";
+ const options=[...sel.options].filter(o=>!o.value||o.value!==principal).map(o=>({value:o.value,label:o.textContent,color:sectorPorId(o.value)?.color||null,description:o.value?"Asignar como segundo sector":"Sin segundo sector"}));
+ const v=await window.AppChoicePicker.open({title:"Seleccionar segundo sector",kicker:"Supervisor",value:sel.value,options});
+ if(v!==null){sel.value=v;sel.dispatchEvent(new Event("change",{bubbles:true}));actualizarSelectoresUsuario();}
+}
+
 
 const COLORES_ADMIN = [
   {valor:'#b72e35',nombre:'Rojo'}, {valor:'#ef4444',nombre:'Rojo claro'},
@@ -138,18 +149,18 @@ function renderPaletaColor(tipo, valor){
   }));
 }
 
-function poblarSectoresUsuario(valorPreferido = null, sectoresCargoPreferidos = null){
-  const sel=$("adminUsuarioSector"); if(!sel)return;
+function poblarSectoresUsuario(valorPreferido = null, segundoPreferido = null){
+  const sel=$("adminUsuarioSector"), sel2=$("adminUsuarioSectorSecundario"); if(!sel)return;
   const actual = valorPreferido === null ? sel.value : String(valorPreferido || "");
-  const opciones = sectores.filter(s => s.activo || s.id === actual);
+  const segundoActual = segundoPreferido === null ? (sel2?.value||"") : String(segundoPreferido || "");
+  const opciones = sectores.filter(s => s.activo || s.id === actual || s.id === segundoActual);
   sel.innerHTML=`<option value="">Sin sector</option>`+opciones.map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}${s.activo ? "" : " (inactivo)"}</option>`).join("");
   sel.value = opciones.some(s => s.id === actual) ? actual : "";
-  actualizarSelectoresUsuario();
-  const grid=$("adminUsuarioSectoresGrid");
-  if(grid){
-    const actuales = new Set(Array.isArray(sectoresCargoPreferidos) ? sectoresCargoPreferidos : [...grid.querySelectorAll('input:checked')].map(i=>i.value));
-    grid.innerHTML=sectores.filter(s=>s.activo||actuales.has(s.id)).map(s=>`<label><input type="checkbox" value="${s.id}" ${actuales.has(s.id)?'checked':''}><span>${escaparHtml(s.nombre)}${s.activo?'':' (inactivo)'}</span></label>`).join('');
+  if(sel2){
+    sel2.innerHTML=`<option value="">Sin segundo sector</option>`+opciones.map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}${s.activo ? "" : " (inactivo)"}</option>`).join("");
+    sel2.value = opciones.some(s => s.id === segundoActual && s.id !== sel.value) ? segundoActual : "";
   }
+  actualizarSelectoresUsuario();
 }
 function renderSectores(){
   const cont=$("adminSectoresLista"); if(!cont)return;
@@ -252,7 +263,7 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioPassword").placeholder = "Dejar vacío para no cambiar";
   const rol = ["administrador","administracion","supervisor","personal"].includes(String(u.rol||"").toLowerCase()) ? String(u.rol).toLowerCase() : "personal";
   $("adminUsuarioRol").value = rol;
-  poblarSectoresUsuario(u.sector || "", u.sectores || []);
+  poblarSectoresUsuario(u.sector || "", (u.sectores || []).find(id => id && id !== u.sector) || "");
   aplicarPermisosModal(u.permisos, rol);
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
@@ -262,7 +273,7 @@ function abrirEditarUsuario(clave) {
   usuarioModalInicial = estadoUsuarioModal();
 }
 
-function estadoUsuarioModal(){return JSON.stringify({nombre:$("adminUsuarioNombre")?.value||"",usuario:$("adminUsuarioUsuario")?.value||"",rol:$("adminUsuarioRol")?.value||"",sector:$("adminUsuarioSector")?.value||"",sectores:[...document.querySelectorAll("#adminUsuarioSectoresGrid input:checked")].map(i=>i.value),activo:Boolean($("adminUsuarioActivo")?.checked),permisos:leerPermisosModal(),password:$("adminUsuarioPassword")?.value||""});}
+function estadoUsuarioModal(){return JSON.stringify({nombre:$("adminUsuarioNombre")?.value||"",usuario:$("adminUsuarioUsuario")?.value||"",rol:$("adminUsuarioRol")?.value||"",sector:$("adminUsuarioSector")?.value||"",sectorSecundario:$("adminUsuarioSectorSecundario")?.value||"",activo:Boolean($("adminUsuarioActivo")?.checked),permisos:leerPermisosModal(),password:$("adminUsuarioPassword")?.value||""});}
 function cerrarUsuarioModalDirecto() { $("adminUsuarioModal")?.classList.add("oculto"); document.body.classList.remove("modal-abierto"); usuarioModalInicial=""; }
 async function cerrarUsuarioModal() {
   if(!$("adminUsuarioModal") || $("adminUsuarioModal").classList.contains("oculto")) return;
@@ -282,7 +293,8 @@ async function guardarUsuario() {
     rol: $("adminUsuarioRol").value,
     permisos: leerPermisosModal(),
     sector: $("adminUsuarioSector")?.value || "",
-    sectores: [...document.querySelectorAll("#adminUsuarioSectoresGrid input:checked")].map(i=>i.value),
+    sectorSecundario: $("adminUsuarioRol").value === "supervisor" ? ($("adminUsuarioSectorSecundario")?.value || "") : "",
+    sectores: $("adminUsuarioRol").value === "supervisor" ? [$("adminUsuarioSector")?.value || "", $("adminUsuarioSectorSecundario")?.value || ""].filter(Boolean) : [],
     activo: $("adminUsuarioActivo").checked
   };
   const btn = $("btnAdminGuardarUsuario"); btn.disabled = true;
@@ -768,4 +780,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.getElementById("adminUsuarioRolButton")?.addEventListener("click",abrirSelectorRolUsuario);
 document.getElementById("adminUsuarioSectorButton")?.addEventListener("click",abrirSelectorSectorUsuario);
+document.getElementById("adminUsuarioSectorSecundarioButton")?.addEventListener("click",abrirSelectorSectorSecundarioUsuario);
+document.getElementById("adminUsuarioSector")?.addEventListener("change",()=>{const s2=$("adminUsuarioSectorSecundario");if(s2&&s2.value===$("adminUsuarioSector").value)s2.value="";actualizarSelectoresUsuario();});
 document.getElementById("adminUsuarioNombre")?.addEventListener("input",e=>{const av=$("adminUsuarioAvatarModal");if(av)av.textContent=(e.target.value.trim()||"U").slice(0,1).toUpperCase();});
+
