@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v8110-entrega4-pulido';
+const CACHE_VERSION = 'autoservicio-v8113-entrega53-responsive';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=8110-entrega4',
+  './style.css?v=8111-entrega51',
   './app.js?v=8110-entrega4',
   './config.js?v=84-entrega8',
   './excel.js?v=84-entrega8',
@@ -16,11 +16,11 @@ const APP_SHELL = [
   './pwa.js?v=84-entrega8',
   './search.js?v=84-entrega8',
   './horarios-config.js?v=871-ajustes-calendario',
-  './admin.js?v=8100-entrega3',
+  './admin.js?v=8111-entrega51',
   './auth.js?v=880-entrega1',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=8100-entrega3',
+  './horarios.js?v=8111-entrega51',
   './api-cache.js?v=84-entrega8',
   './manifest.webmanifest',
   './version.json',

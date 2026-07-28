@@ -250,7 +250,7 @@ function formatoCelda(id) {
   if (id === "licencia") return "L";
   if (esTurnoCortado(id)) return "C";
   const horas = horasDeTurno(id);
-  return horas ? `<span>${horas.inicio}</span><span>${horas.fin}</span>` : "—";
+  return horas ? `<span>${String(horas.inicio).slice(0,2)}</span><span>${String(horas.fin).slice(0,2)}</span>` : "—";
 }
 function formatoHorario24(id) {
   if (!id) return "Sin asignar";
@@ -606,7 +606,8 @@ function renderTabla() {
 document.addEventListener("pointermove", ev => {
   if (!punteroSeleccion || ev.pointerId !== punteroSeleccion.id || !modoEdicion) return;
   const distancia = Math.hypot(ev.clientX - punteroSeleccion.x, ev.clientY - punteroSeleccion.y);
-  if (distancia < 6) return;
+  const umbral = punteroSeleccion.tipo === "touch" ? 18 : 6;
+  if (distancia < umbral) return;
   punteroSeleccion.movio = true;
   if (punteroSeleccion.tipo === "touch") return;
   arrastrando = true;
@@ -729,19 +730,34 @@ function renderMiHorario() {
   const saludo = document.querySelector(".mi-horario-saludo");
   if (saludo) saludo.textContent = `Hola, ${usuario?.nombre || usuario?.usuario || "Usuario"}`;
 
+  const hoy = new Date();
+  const fechaHoyTexto = hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+
   if (!e) {
     lista.innerHTML = '<div class="mi-horario-vacio"><strong>Sin horarios asignados</strong><span>Tu usuario no tiene turnos cargados en este sector.</span></div>';
-    $("miHorarioProximo").textContent = "Sin turnos próximos";
-    $("miHorarioProximoFecha").textContent = "—";
+    $("miHorarioProximo").textContent = "Sin asignar";
+    $("miHorarioProximoFecha").textContent = fechaHoyTexto;
     return;
   }
 
-  const inicio = esMesActual() ? new Date().getDate() : 1;
-  const dias = Array.from({ length: Math.min(10, diasDelMes() - inicio + 1) }, (_, i) => inicio + i);
-  lista.innerHTML = dias.map(d => { const id = obtenerTurno(e, d), tr = obtenerDefinicion(id), f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d); return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${d} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ''}">${formatoHorario24(id)}</span></article>`; }).join("");
-  const proximo = encontrarProximoTurno(e);
-  $("miHorarioProximo").textContent = proximo ? formatoHorario24(proximo.id) : "Sin turnos próximos";
-  $("miHorarioProximoFecha").textContent = proximo ? proximo.fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) : "—";
+  const mesHoy = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const turnoHoy = resumenHoyDatos.get(claveResumenHoy(e)) || obtenerTurnoEn(mesHoy, e, hoy.getDate()) || "";
+  $("miHorarioProximo").textContent = turnoHoy ? formatoHorario24(turnoHoy) : "Sin asignar";
+  $("miHorarioProximoFecha").textContent = fechaHoyTexto;
+
+  const fechas = [];
+  for (let offset = 1; offset <= 14 && fechas.length < 10; offset++) {
+    const f = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + offset);
+    // Los datos disponibles en pantalla corresponden al mes actualmente cargado.
+    if (f.getFullYear() !== fechaVista.getFullYear() || f.getMonth() !== fechaVista.getMonth()) continue;
+    fechas.push(f);
+  }
+
+  lista.innerHTML = fechas.length ? fechas.map(f => {
+    const id = obtenerTurnoEn(new Date(f.getFullYear(), f.getMonth(), 1), e, f.getDate());
+    const tr = obtenerDefinicion(id);
+    return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${f.getDate()} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ''}">${id ? formatoHorario24(id) : "Sin asignar"}</span></article>`;
+  }).join("") : '<div class="mi-horario-vacio"><strong>Sin próximos horarios</strong><span>No hay más días disponibles en el mes cargado.</span></div>';
 }
 
 
