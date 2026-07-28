@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v921-editor-usuarios';
+const CACHE_VERSION = 'autoservicio-v93-modulo-tareas';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
