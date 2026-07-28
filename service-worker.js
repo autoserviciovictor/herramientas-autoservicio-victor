@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v900-final';
+const CACHE_VERSION = 'autoservicio-v901-hotfix-calendario';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=900-final',
+  './style.css?v=901-hotfix-calendario',
   './app.js?v=8110-entrega4',
   './config.js?v=84-entrega8',
   './excel.js?v=84-entrega8',
@@ -20,7 +20,7 @@ const APP_SHELL = [
   './auth.js?v=880-entrega1',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=900-final',
+  './horarios.js?v=901-hotfix-calendario',
   './api-cache.js?v=84-entrega8',
   './manifest.webmanifest',
   './version.json',

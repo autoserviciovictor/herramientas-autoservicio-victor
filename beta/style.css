@@ -4455,3 +4455,72 @@ img,video,canvas{max-width:100%;}
   }
   #adminSectorModal .admin-modal-actions{padding-left:17px!important;padding-right:17px!important}
 }
+
+
+/* =========================================================
+   V9.0.1 · Hotfix Calendario
+   ========================================================= */
+/* Encabezado y selector mensual centrados como un único bloque visual. */
+.horarios-toolbar{
+  width:min(100%,760px)!important;
+  margin:0 auto 14px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:12px!important;
+  text-align:center!important;
+}
+.horarios-toolbar>div:first-child{width:100%;text-align:center!important}
+.horarios-toolbar h2,.horarios-toolbar p{margin-inline:auto!important;text-align:center!important}
+.horarios-month-nav{
+  width:min(100%,480px)!important;
+  margin-inline:auto!important;
+  justify-content:center!important;
+}
+.horarios-month-nav strong{flex:1 1 auto!important;text-align:center!important}
+
+/* Celdas y pastillas de turnos centradas, incluida la primera columna de días. */
+.horarios-table th:not(.empleado-col),
+.horarios-table td:not(.empleado-col){
+  text-align:center!important;
+  padding-inline:4px!important;
+}
+.horarios-table td[data-empleado]{vertical-align:middle!important}
+.horario-cell{
+  width:42px!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0 auto!important;
+  box-sizing:border-box!important;
+  align-self:center!important;
+}
+.horario-cell>span{text-align:center!important;margin-inline:auto!important}
+
+/* Desplazamiento horizontal más estable y suave, sin saltos visuales. */
+.horarios-table-wrap{
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-inline:contain!important;
+  scroll-behavior:auto!important;
+  touch-action:pan-x pan-y!important;
+  isolation:isolate;
+}
+.horarios-table{
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+.horarios-table .empleado-col{
+  backface-visibility:hidden;
+  transform:translateZ(0);
+}
+@media (hover:none),(pointer:coarse){
+  .horario-cell{transition:none!important}
+  .horario-cell:hover{transform:none!important;filter:none!important}
+}
+@media(max-width:760px){
+  .horarios-toolbar{width:min(100%,560px)!important;padding-inline:0!important}
+  .horarios-month-nav{width:min(100%,480px)!important}
+}
+@media(max-width:420px){
+  .horario-cell{width:40px!important}
+}

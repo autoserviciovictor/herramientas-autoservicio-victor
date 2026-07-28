@@ -483,7 +483,7 @@ function crearPanelEdicion() {
       badge:iniciales[t.id]||(t.tipo==="cortado"?"C":""),
       description:descripciones[t.id]||(t.tipo==="cortado"?"Horario cortado":"Horario continuo")
     }));
-    const elegido = await picker.open({title:"Seleccionar horario",kicker:"Pintar con",options,value:turnoPincel});
+    const elegido = await picker.open({title:"Seleccionar horario",kicker:"Pintar con",options:opciones,value:turnoPincel});
     if (elegido !== null && elegido !== undefined && elegido !== "") {
       turnoPincel=elegido;
       actualizarSelectorTurnos();
