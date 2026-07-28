@@ -50,7 +50,7 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=71-entrega4-rendimiento-sync";
+} from "./ui.js?v=8100-entrega3";
 
 import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=71-entrega4-rendimiento-sync";
 import { coincideBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
@@ -1271,7 +1271,7 @@ function renderListadoVencimientos() {
                     <div class="venc-reciente-info">
                         <strong>${articulo}</strong>
                         <div class="venc-reciente-meta">
-                            <span>📅 ${fecha}</span>
+                            <span><svg class="app-icon inline-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>${fecha}</span>
                             <em class="venc-reciente-dias ${clase}">${estado}</em>
                         </div>
                     </div>
@@ -1299,7 +1299,7 @@ function renderListadoVencimientos() {
         return `
             <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""}" data-id="${item.id}" tabindex="0">
                 <div class="venc-card-topline">
-                    <span class="venc-offer-tag ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "🏷️ Oferta activa" : "Sin oferta"}</span>
+                    <span class="venc-offer-tag ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "Oferta activa" : "Sin oferta"}</span>
                 </div>
                 <div class="venc-card-heading">
                     <strong>${articulo}</strong>

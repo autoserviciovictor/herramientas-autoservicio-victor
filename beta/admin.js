@@ -94,6 +94,15 @@ async function cargarSectores() {
   poblarSectoresUsuario();
 }
 function sectorPorId(id){ return sectores.find(s => s.id === id); }
+function etiquetaRol(valor){return ({personal:"Personal",supervisor:"Supervisor",administracion:"Administración",administrador:"Administrador"})[valor]||"Personal";}
+function actualizarSelectoresUsuario(){
+ const rol=$("adminUsuarioRol"), rb=$("adminUsuarioRolButton"), sec=$("adminUsuarioSector"), sb=$("adminUsuarioSectorButton");
+ if(rb&&rol) rb.querySelector("span").textContent=etiquetaRol(rol.value);
+ if(sb&&sec) sb.querySelector("span").textContent=sec.options[sec.selectedIndex]?.textContent||"Sin sector";
+}
+async function abrirSelectorRolUsuario(){const sel=$("adminUsuarioRol");const v=await window.AppChoicePicker.open({title:"Seleccionar rol",kicker:"Permisos",value:sel.value,options:[{value:"personal",label:"Personal",description:"Acceso según módulos asignados"},{value:"supervisor",label:"Supervisor",description:"Administra horarios de sus sectores"},{value:"administracion",label:"Administración",description:"Acceso administrativo limitado"},{value:"administrador",label:"Administrador",description:"Acceso completo al sistema"}]});if(v){sel.value=v;sel.dispatchEvent(new Event("change",{bubbles:true}));actualizarSelectoresUsuario();}}
+async function abrirSelectorSectorUsuario(){const sel=$("adminUsuarioSector");const options=[...sel.options].map(o=>({value:o.value,label:o.textContent,color:sectorPorId(o.value)?.color||null,description:o.value?"Asignar como sector principal":"Sin sector asignado"}));const v=await window.AppChoicePicker.open({title:"Seleccionar sector",kicker:"Usuario",value:sel.value,options});if(v!==null){sel.value=v;sel.dispatchEvent(new Event("change",{bubbles:true}));actualizarSelectoresUsuario();}}
+
 const COLORES_ADMIN = [
   {valor:'#b72e35',nombre:'Rojo'}, {valor:'#ef4444',nombre:'Rojo claro'},
   {valor:'#f97316',nombre:'Naranja'}, {valor:'#f59e0b',nombre:'Ámbar'},
@@ -135,6 +144,7 @@ function poblarSectoresUsuario(valorPreferido = null, sectoresCargoPreferidos = 
   const opciones = sectores.filter(s => s.activo || s.id === actual);
   sel.innerHTML=`<option value="">Sin sector</option>`+opciones.map(s=>`<option value="${s.id}">${escaparHtml(s.nombre)}${s.activo ? "" : " (inactivo)"}</option>`).join("");
   sel.value = opciones.some(s => s.id === actual) ? actual : "";
+  actualizarSelectoresUsuario();
   const grid=$("adminUsuarioSectoresGrid");
   if(grid){
     const actuales = new Set(Array.isArray(sectoresCargoPreferidos) ? sectoresCargoPreferidos : [...grid.querySelectorAll('input:checked')].map(i=>i.value));
@@ -213,7 +223,7 @@ async function eliminarUsuario(clave) {
 
 async function abrirNuevoUsuario() {
   if (!sectores.length) await cargarSectores().catch(()=>{});
-  $("adminUsuarioModalTitulo").textContent = "Crear usuario";
+  $("adminUsuarioModalTitulo").textContent = "Crear usuario"; $("adminUsuarioModalKicker").textContent="Nuevo acceso"; $("adminUsuarioModalResumen").textContent="Completá los datos y permisos"; $("adminUsuarioAvatarModal").textContent="U";
   $("adminUsuarioOriginal").value = "";
   $("adminUsuarioNombre").value = "";
   $("adminUsuarioUsuario").value = "";
@@ -233,7 +243,7 @@ async function abrirNuevoUsuario() {
 
 function abrirEditarUsuario(clave) {
   const u = usuarios.find(x => x.usuario === clave); if (!u) return;
-  $("adminUsuarioModalTitulo").textContent = "Editar usuario";
+  $("adminUsuarioModalTitulo").textContent = "Editar usuario"; $("adminUsuarioModalKicker").textContent="Gestión de usuarios"; $("adminUsuarioModalResumen").textContent=`${u.nombre} · ${etiquetaRol(u.rol)}`; $("adminUsuarioAvatarModal").textContent=(u.nombre||u.usuario||"U").slice(0,1).toUpperCase();
   $("adminUsuarioOriginal").value = u.usuario;
   $("adminUsuarioNombre").value = u.nombre;
   $("adminUsuarioUsuario").value = u.usuario;
@@ -754,3 +764,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.detail?.rol !== "administrador") ocultarPanelAdmin();
   });
 });
+
+
+document.getElementById("adminUsuarioRolButton")?.addEventListener("click",abrirSelectorRolUsuario);
+document.getElementById("adminUsuarioSectorButton")?.addEventListener("click",abrirSelectorSectorUsuario);
+document.getElementById("adminUsuarioNombre")?.addEventListener("input",e=>{const av=$("adminUsuarioAvatarModal");if(av)av.textContent=(e.target.value.trim()||"U").slice(0,1).toUpperCase();});

@@ -68,14 +68,26 @@ function crearSelectorSector() {
   bar.className = "horarios-sector-bar";
   bar.innerHTML = `
     <div class="horarios-sector-identidad"><i id="horariosSectorColor"></i><div><span>Sector</span><strong id="horariosSectorNombre">—</strong></div></div>
-    <label id="horariosSectorSelectorWrap" class="horarios-sector-selector oculto"><span>Cambiar sector</span><select id="horariosSectorSelector"></select></label>`;
+    <div id="horariosSectorSelectorWrap" class="horarios-sector-selector oculto"><span>Cambiar sector</span><button id="horariosSectorSelectorButton" type="button" class="visual-select-button"><span>Seleccionar sector</span><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></button></div>`;
   document.querySelector(".horarios-toolbar")?.after(bar);
-  $("horariosSectorSelector").addEventListener("change", async e => {
+  $("horariosSectorSelectorButton").onclick = async () => {
+    const elegido = await window.AppChoicePicker.open({
+      title: "Seleccionar sector",
+      kicker: "Calendario",
+      value: sectorActual,
+      options: sectoresHorarios.map(sec => ({
+        value: sec.id,
+        label: sec.nombre,
+        color: sec.color,
+        description: sec.id === sectorActual ? "Sector actual" : "Cambiar a este sector"
+      }))
+    });
+    if (!elegido || elegido === sectorActual) return;
     if (modoEdicion) {
       const salio = await salirModoEdicion();
-      if (!salio) { e.target.value = sectorActual; return; }
+      if (!salio) return;
     }
-    sectorActual = e.target.value;
+    sectorActual = elegido;
     empleados = empleadosDelSector();
     seleccion.clear();
     diaSeleccionado = Math.min(diaSeleccionado, diasDelMes());
@@ -86,7 +98,7 @@ function crearSelectorSector() {
     renderSelectorSector();
     renderTodo();
     desplazarAlDia(esMesActual() ? new Date().getDate() : 1, "auto");
-  });
+  };
 }
 function renderSelectorSector() {
   crearSelectorSector();
@@ -94,12 +106,9 @@ function renderSelectorSector() {
   if ($("horariosSectorNombre")) $("horariosSectorNombre").textContent = sector?.nombre || "Sin sector";
   if ($("horariosSectorColor")) $("horariosSectorColor").style.background = sector?.color || "#b72e35";
   const wrap = $("horariosSectorSelectorWrap");
-  const select = $("horariosSectorSelector");
+  const selectButton = $("horariosSectorSelectorButton");
   if (wrap) wrap.classList.toggle("oculto", vistaActual !== "equipo" || !["administrador","supervisor"].includes(rolHorarios()) || sectoresHorarios.length < 2);
-  if (select) {
-    select.innerHTML = sectoresHorarios.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("");
-    select.value = sectorActual;
-  }
+  if (selectButton) selectButton.querySelector("span").textContent = sector?.nombre || "Seleccionar sector";
   const subtitulo = $("horariosSubtituloVista");
   if (subtitulo) subtitulo.textContent = vistaActual === "equipo"
     ? `Calendario mensual de ${sector?.nombre || "este sector"}`
@@ -416,14 +425,12 @@ function dialogoHorarios({ titulo, mensaje, confirmar = "Confirmar", peligro = f
   });
 }
 function actualizarSelectorTurnos() {
-  const select = $("horariosPaintTurno");
-  if (!select) return;
-  const opciones = TURNOS.filter(t => t.id !== "personalizado");
-  const valorAnterior = turnoPincel;
-  select.innerHTML = opciones.map(t => `<option value="${t.id}">${t.label}</option>`).join("");
-  if (opciones.some(t => t.id === valorAnterior)) turnoPincel = valorAnterior;
-  else turnoPincel = opciones[0]?.id || "franco";
-  select.value = turnoPincel;
+  const opcion = TURNOS.find(t=>t.id===turnoPincel) || TURNOS.filter(t=>t.id!=="personalizado")[0];
+  if (!opcion) return;
+  turnoPincel=opcion.id;
+  const label=$("horariosPaintLabel"), swatch=$("horariosPaintSwatch");
+  if(label) label.textContent=opcion.label;
+  if(swatch){swatch.style.background=opcion.color||"#fff";swatch.textContent=opcion.id==="franco"?"F":(opcion.tipo==="cortado"?"C":"");swatch.style.color=contrasteTurno(opcion.color||"#fff");}
 }
 
 function crearPanelEdicion() {
@@ -441,7 +448,7 @@ function crearPanelEdicion() {
         <button id="btnHorariosCerrarEdicion" type="button" aria-label="Cerrar edición">✕</button>
       </div>
       <div class="horarios-pintar-control">
-        <label><span>Pintar con</span><select id="horariosPaintTurno">${TURNOS.filter(t => t.id !== "personalizado").map(t => `<option value="${t.id}">${t.label}</option>`).join("")}</select></label>
+        <div class="horarios-paint-picker"><span>Pintar con</span><button id="horariosPaintTurnoButton" type="button" class="visual-select-button"><i id="horariosPaintSwatch"></i><span id="horariosPaintLabel">Seleccionar horario</span><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></button></div>
         <button id="horariosPaint" type="button" disabled>Aplicar</button>
       </div>
       <div class="horarios-seleccion-info">
@@ -458,7 +465,11 @@ function crearPanelEdicion() {
   $("btnHorariosEditar").onclick = entrarModoEdicion;
   $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
-  $("horariosPaintTurno").onchange = e => turnoPincel = e.target.value;
+  $("horariosPaintTurnoButton").onclick = async () => {
+    const opciones = TURNOS.filter(t=>t.id!=="personalizado").map(t=>({value:t.id,label:t.label,color:t.color||"#ffffff",badge:t.id==="franco"?"F":(t.tipo==="cortado"?"C":""),description:t.id==="franco"?"Día libre":(t.tipo==="cortado"?"Horario cortado":"Horario continuo")}));
+    const elegido = await window.AppChoicePicker.open({title:"Seleccionar horario",kicker:"Pintar con",options,value:turnoPincel});
+    if (elegido) { turnoPincel=elegido; actualizarSelectorTurnos(); }
+  };
   $("horariosClearSelection").onclick = () => {
     seleccion.clear();
     renderTabla();
@@ -630,14 +641,6 @@ function renderResumen() {
     return `<div class="horarios-resumen-persona"><span><i class="${x.clase}" style="${x.estilo || ''}"></i><strong>${e}</strong></span><b>${formatoHorario24(id)}</b></div>`;
   });
   c.innerHTML = filas.length ? filas.join("") : '<div class="horarios-resumen-vacio">No hay personal asignado a este sector.</div>';
-  let manana = 0, tarde = 0;
-  empleados.forEach(e => {
-    const segmentos = segmentosDeTurno(resumenHoyDatos.get(claveResumenHoy(e)) || "");
-    if (segmentos.some(x=>Number(x.inicio.slice(0,2)) < 14 && Number(x.fin.slice(0,2)) >= 8)) manana++;
-    if (segmentos.some(x=>Number(x.inicio.slice(0,2)) < 22 && Number(x.fin.slice(0,2)) > 14)) tarde++;
-  });
-  const b = $("horariosCoberturaEstado");
-  if (b) { b.textContent = `Mañana ${manana} · Tarde ${tarde}`; b.classList.toggle("alerta", manana < 2 || tarde < 2); }
   renderEstadisticasSector();
 }
 function renderEstadisticasSector(){
