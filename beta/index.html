@@ -43,7 +43,6 @@
   <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
   <symbol id="icon-building" viewBox="0 0 24 24"><path d="M4 21V5h10v16M14 9h6v12M8 9h2M8 13h2M8 17h2M17 13h1M17 17h1M2 21h20"/></symbol>
   <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/></symbol>
-  <symbol id="icon-tasks" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3V2h6v1M9 9l1.5 1.5L14 7M9 15l1.5 1.5L14 13M15 9h1M15 15h1"/></symbol>
 </svg>
 
 
@@ -130,12 +129,6 @@
                 <small>Turnos del equipo</small>
             </button>
 
-            <button type="button" class="module-card module-tareas" data-modulo="tareas">
-                <span class="module-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-tasks"></use></svg></span>
-                <strong>Tareas</strong>
-                <small>Organización semanal</small>
-            </button>
-
             <button id="btnAbrirAdminHome" type="button" class="module-card module-administrador admin-module-card oculto">
                 <span class="module-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-shield"></use></svg></span>
                 <strong>Administrador</strong>
@@ -151,7 +144,7 @@
             <button type="button" id="btnInstalarApp" class="setting-btn">Instalar aplicación</button>
         </section>
 
-        <section class="home-status"><strong>9.2</strong></section>
+        <section class="home-status"><strong>9.2.1</strong></section>
     </main>
 
     <main id="pantallaInventario" class="pantalla">
@@ -300,7 +293,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">9.2</strong>
+            <strong id="settingsAppVersion">9.2.1</strong>
         </section>
     </main>
 
@@ -441,7 +434,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span><svg class="app-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>9.2</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
+                <div class="horarios-sidebar-note"><strong>9.2.1</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -674,39 +667,6 @@
     </div>
 
 
-
-    <main id="pantallaTareas" class="pantalla tareas-screen">
-      <section class="tareas-shell">
-        <div class="tareas-toolbar">
-          <button id="btnTareasSemanaAnterior" type="button" aria-label="Semana anterior">‹</button>
-          <button id="btnTareasSemanaActual" class="tareas-week-label" type="button"></button>
-          <button id="btnTareasSemanaSiguiente" type="button" aria-label="Semana siguiente">›</button>
-        </div>
-        <div id="tareasDias" class="tareas-days" aria-label="Días de la semana"></div>
-        <div id="tareasResumen" class="tareas-summary"></div>
-        <div class="tareas-section-head"><h2 id="tareasFechaTitulo"></h2><button id="btnNuevaTarea" class="tareas-add-btn" type="button">+ Nueva tarea</button></div>
-        <div id="tareasLista" class="tareas-list"></div>
-      </section>
-      <nav class="app-bottom-nav tareas-bottom-nav" aria-label="Navegación de tareas">
-        <button type="button" class="activo"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3V2h6v1M9 9l1.5 1.5L14 7M9 15l1.5 1.5L14 13"/></svg><span>Tareas</span></button>
-        <button id="btnTareasHoy" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg><span>Hoy</span></button>
-      </nav>
-    </main>
-
-    <div id="tareaModal" class="modal-overlay oculto" aria-hidden="true">
-      <div class="modal-card tarea-modal-card" role="dialog" aria-modal="true">
-        <button id="btnCerrarTareaModal" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
-        <div class="modal-kicker">GESTIÓN DE TAREAS</div><h3 id="tareaModalTitulo">Nueva tarea</h3>
-        <label>Nombre<input id="tareaNombre" type="text" placeholder="Ej.: Limpieza panera"></label>
-        <div class="tarea-form-grid"><label>Fecha<input id="tareaFecha" type="date"></label><label>Duración<input id="tareaDuracion" type="text" placeholder="10 min"></label></div>
-        <label>Sector<input id="tareaSector" type="text" placeholder="Ej.: Panadería"></label>
-        <label>Responsables<input id="tareaResponsables" type="text" placeholder="Camila, Cynthia"></label>
-        <label>Turno<select id="tareaTurno"><option value="7:00 - 14:00">7:00 - 14:00</option><option value="8:00 - 15:00">8:00 - 15:00</option><option value="15:00 - 22:00">15:00 - 22:00</option></select></label>
-        <label>Descripción<textarea id="tareaDescripcion" rows="3" placeholder="Indicaciones opcionales"></textarea></label>
-        <div class="modal-actions"><button id="btnCancelarTarea" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarTarea" class="save-btn" type="button">Guardar tarea</button></div>
-      </div>
-    </div>
-
     <main id="pantallaAdmin" class="pantalla admin-screen" aria-hidden="true">
 
         <div id="adminMensaje" class="admin-message"></div>
@@ -764,7 +724,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">9.2</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">9.2.1</strong></div>
             </div>
             <div id="adminReleaseChannelCard" class="admin-import-card oculto">
                 <div class="admin-import-head"><div><strong>Versión beta activa</strong><span>Este dispositivo está usando la versión de prueba. Podés volver a la versión estable cuando quieras.</span></div></div>
@@ -795,6 +755,7 @@
           <div><span id="adminUsuarioModalKicker">Gestión de usuarios</span><h2 id="adminUsuarioModalTitulo">Crear usuario</h2><small id="adminUsuarioModalResumen">Completá los datos y permisos</small></div>
           <button id="btnAdminCerrarUsuario" class="modal-close admin-user-close" type="button" aria-label="Cerrar"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
         </header>
+        <div class="admin-user-modal-body">
         <input id="adminUsuarioOriginal" type="hidden">
         <section class="admin-form-section"><div class="admin-form-section-title"><strong>Información personal</strong><span>Datos para identificar e ingresar al sistema</span></div>
           <div class="admin-form-grid"><label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label><label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label></div>
@@ -811,10 +772,10 @@
           <label><input type="checkbox" data-permiso-modulo="anotar" checked><span><svg class="app-icon" aria-hidden="true"><use href="#icon-list"></use></svg> Lista</span></label>
           <label><input type="checkbox" data-permiso-modulo="precios" checked><span><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg> Precios</span></label>
           <label><input type="checkbox" data-permiso-modulo="horarios" checked><span><svg class="app-icon" aria-hidden="true"><use href="#icon-clock"></use></svg> Horarios</span></label>
-          <label><input type="checkbox" data-permiso-modulo="tareas" checked><span><svg class="app-icon" aria-hidden="true"><use href="#icon-tasks"></use></svg> Tareas</span></label>
         </div><small id="adminPermisosAdminAviso" class="admin-permissions-note oculto">Los administradores tienen acceso completo a todos los módulos.</small></fieldset></section>
         <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked><span><strong>Usuario activo</strong><small>Puede iniciar sesión y usar sus módulos asignados.</small></span></label>
         <button id="btnAdminEliminarUsuario" type="button" class="danger-btn-soft oculto">Eliminar usuario</button>
+        </div>
         <div class="admin-modal-actions admin-modal-actions-sticky"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar cambios</button></div>
       </div>
     </div>
@@ -961,7 +922,6 @@
 <script type="module" src="./prices.js?v=84-entrega8"></script>
 <script type="module" src="./app.js?v=8110-entrega4"></script>
 <script type="module" src="./horarios.js?v=901-hotfix-calendario"></script>
-<script type="module" src="./tareas.js?v=930-tareas"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

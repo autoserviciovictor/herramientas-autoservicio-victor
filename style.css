@@ -4607,7 +4607,90 @@ body.en-admin #pantallaAdmin{
 #adminUsuarioModal .admin-modal-actions-sticky .save-btn{margin:0!important}
 #adminUsuarioModal .admin-form-section:first-of-type{padding-top:12px!important}
 #adminUsuarioModal .admin-user-modal-v2>*{max-width:100%}
-/* === V9.3 Módulo Tareas === */
-.module-tareas .module-icon{background:#fff0f0;color:#c5232c}.tareas-screen{padding-bottom:92px}.tareas-shell{width:min(980px,calc(100% - 28px));margin:0 auto 36px}.tareas-toolbar{display:grid;grid-template-columns:48px 1fr 48px;gap:10px;margin-bottom:14px}.tareas-toolbar button{min-height:48px;border:1px solid #e5e3df;background:#fff;border-radius:14px;font-size:26px}.tareas-toolbar .tareas-week-label{font-size:15px;font-weight:800}.tareas-days{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:14px}.tareas-days button{background:#fff;border:1px solid #e9e7e3;border-radius:12px;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.tareas-days button strong{font-size:11px}.tareas-days button span{font-weight:800}.tareas-days button.activo{border:2px solid #ef393f;color:#c5232c;background:#fff8f8}.tareas-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:22px}.tareas-summary>div{background:#fff;border:1px solid #ece9e5;border-radius:14px;text-align:center;padding:12px 4px;box-shadow:0 5px 16px rgba(30,25,20,.04)}.tareas-summary small{display:block;color:#666}.tareas-summary strong{font-size:24px}.tareas-summary .pend strong{color:#ed9a00}.tareas-summary .proc strong{color:#185ed8}.tareas-summary .comp strong{color:#188c4b}.tareas-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 12px}.tareas-section-head h2{font-size:16px;color:#b51e27}.tareas-add-btn{border:0;border-radius:12px;background:#c3242d;color:#fff;font-weight:800;padding:11px 14px}.tareas-list{display:grid;gap:10px}.tarea-card{display:grid;grid-template-columns:54px minmax(0,1fr) 150px;gap:14px;align-items:center;background:#fff;border:1px solid #e9e6e1;border-radius:17px;padding:14px;box-shadow:0 6px 20px rgba(25,20,15,.05)}.tarea-card-icon{width:48px;height:48px;border-radius:14px;background:#fff0f0;color:#b8242c;display:grid;place-items:center}.tarea-card-icon .app-icon{width:25px;height:25px}.tarea-card h3{font-size:15px;margin:0 0 4px;text-transform:uppercase}.tarea-sector{font-size:12px;color:#686868}.tarea-meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:9px;font-size:12px}.turno-chip{border-radius:7px;padding:4px 8px;font-weight:800}.turno-manana{background:#ffe6ad;color:#a65d00}.turno-tarde{background:#d7efc3;color:#286d27}.turno-noche{background:#cfe1ff;color:#174aa2}.tarea-card-state{border-left:1px solid #ece9e5;padding-left:14px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:9px}.tarea-card-state strong{font-size:12px}.estado-pendiente strong{color:#e49300}.estado-proceso strong{color:#1760d6}.estado-completada strong{color:#138847}.tarea-card-state button{background:#fff;border:1px solid #d9d7d4;border-radius:10px;padding:9px 14px;font-weight:800}.estado-proceso button{border-color:#b7cdf8;color:#185ed8}.tarea-card-state small{font-size:11px}.tareas-empty{background:#fff;border:1px dashed #d9d5cf;border-radius:17px;padding:35px;text-align:center;display:flex;flex-direction:column;gap:7px;color:#777}.tareas-bottom-nav{z-index:35}.tarea-modal-card{width:min(600px,calc(100% - 28px));max-height:90dvh;overflow:auto}.tarea-modal-card>label,.tarea-form-grid label{display:grid;gap:7px;font-weight:800;margin-top:14px}.tarea-modal-card input,.tarea-modal-card select,.tarea-modal-card textarea{width:100%;border:1px solid #ddd9d3;border-radius:13px;padding:14px;font:inherit;background:#fff}.tarea-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:640px){.tareas-shell{width:calc(100% - 20px)}.tareas-days{gap:4px}.tareas-days button{min-height:54px;border-radius:10px}.tareas-summary{gap:5px}.tareas-summary>div{padding:10px 2px}.tareas-summary strong{font-size:20px}.tarea-card{grid-template-columns:42px minmax(0,1fr) 92px;gap:9px;padding:12px}.tarea-card-icon{width:40px;height:40px}.tarea-card h3{font-size:12px}.tarea-meta{font-size:11px;gap:6px}.tarea-card-state{padding-left:8px}.tarea-card-state strong{font-size:10px}.tarea-card-state button{padding:8px 9px;font-size:11px}.tareas-add-btn{font-size:12px}.tarea-form-grid{grid-template-columns:1fr}}
-.tarea-persona::before{content:"";display:inline-block;width:13px;height:13px;margin-right:5px;vertical-align:-2px;border:1.8px solid currentColor;border-radius:50%;box-shadow:0 6px 0 -3px currentColor}
+
+/* V9.2.1 · Hotfix editor de usuarios: cabecera, contenido y acciones independientes */
+#adminUsuarioModal .admin-user-modal-v2{
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+  max-height:calc(100dvh - 36px)!important;
+  overflow:hidden!important;
+  padding:0!important;
+  background:#fff!important;
+}
+#adminUsuarioModal .admin-user-modal-head{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  z-index:3!important;
+  border-radius:24px 24px 0 0!important;
+  background:#fff!important;
+  padding:22px!important;
+}
+#adminUsuarioModal .admin-user-modal-body{
+  min-height:0!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  background:#fff!important;
+  padding:0 22px 22px!important;
+  scrollbar-gutter:stable;
+}
+#adminUsuarioModal .admin-user-modal-body>.admin-form-section,
+#adminUsuarioModal .admin-user-modal-body>fieldset,
+#adminUsuarioModal .admin-user-modal-body>.admin-active-row,
+#adminUsuarioModal .admin-user-modal-body>.danger-btn-soft{
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+#adminUsuarioModal .admin-user-modal-body>.admin-form-section{
+  padding-left:0!important;
+  padding-right:0!important;
+}
+#adminUsuarioModal .admin-permissions-fieldset{
+  float:none!important;
+  display:block!important;
+  margin-inline:auto!important;
+}
+#adminUsuarioModal .admin-permissions-grid{
+  width:100%!important;
+  margin-inline:auto!important;
+  justify-content:center!important;
+}
+#adminUsuarioModal #btnAdminEliminarUsuario{
+  display:block;
+  width:100%!important;
+  margin:22px auto 0!important;
+  align-self:center!important;
+}
+#adminUsuarioModal #btnAdminEliminarUsuario.oculto{display:none!important}
+#adminUsuarioModal .admin-modal-actions-sticky{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  z-index:4!important;
+  margin:0!important;
+  padding:14px 22px max(14px,env(safe-area-inset-bottom))!important;
+  border:0!important;
+  border-radius:0 0 24px 24px!important;
+  background:#fff!important;
+  box-shadow:0 -10px 24px rgba(32,24,20,.08)!important;
+  box-sizing:border-box!important;
+}
+@media(max-width:560px){
+  #adminUsuarioModal .admin-user-modal-v2{
+    max-height:calc(100dvh - max(20px,env(safe-area-inset-top)) - max(20px,env(safe-area-inset-bottom)))!important;
+  }
+  #adminUsuarioModal .admin-user-modal-head{
+    padding:18px 17px 16px!important;
+  }
+  #adminUsuarioModal .admin-user-modal-body{
+    padding:0 17px 20px!important;
+  }
+  #adminUsuarioModal .admin-modal-actions-sticky{
+    padding:12px 17px max(12px,env(safe-area-inset-bottom))!important;
+  }
+}

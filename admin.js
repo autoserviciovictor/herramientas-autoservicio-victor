@@ -2,7 +2,7 @@ import { API_BASE_URL } from "./config.js?v=92-supervisores";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
-const NOMBRES_MODULO = { inventario:"Inventario", vencimientos:"Vencimientos", anotar:"Lista", precios:"Precios", horarios:"Horarios", tareas:"Tareas" };
+const NOMBRES_MODULO = { inventario:"Inventario", vencimientos:"Vencimientos", anotar:"Lista", precios:"Precios", horarios:"Horarios" };
 function permisosCompatibles(permisos, rol="personal") {
   if (rol === "administrador") return Object.fromEntries(MODULOS_PERMISO.map(m => [m,true]));
   const valor = permisos && typeof permisos === "object" ? permisos : {};
