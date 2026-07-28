@@ -4145,3 +4145,265 @@ label>span,label>strong{line-height:1.3}
   .modal-actions,.admin-modal-actions{display:grid!important;grid-template-columns:1fr;gap:8px!important}
   .empty,.venc-list-empty{min-height:96px!important;padding:18px 14px!important}
 }
+
+
+/* =========================================================
+   V8.11.1 · ENTREGA 5.1 — Correcciones funcionales
+   ========================================================= */
+/* Calendario: horas compactas y legibles (08 arriba / 16 abajo). */
+.horario-cell{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:1px!important;
+  min-width:34px;
+  font-size:13px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+}
+.horario-cell>span{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+  line-height:1!important;
+  text-align:center!important;
+}
+.horario-cell.turno-franco,
+.horario-cell.turno-verde,
+.horario-cell.turno-ausente,
+.horario-cell.turno-licencia,
+.horario-cell.turno-configurable{
+  font-size:14px!important;
+}
+.horario-cell .horario-nota-dot{position:absolute}
+body.horarios-modo-edicion .horarios-table td[data-empleado]{cursor:pointer;touch-action:pan-x pan-y}
+body.horarios-modo-edicion .horarios-table td.celda-seleccionada{box-shadow:inset 0 0 0 3px #111!important}
+body.horarios-modo-edicion .horario-cell{pointer-events:none}
+
+/* Modales de Administración: scroll real y cuatro esquinas redondeadas. */
+#adminUsuarioModal,#adminSectorModal{
+  overflow:hidden!important;
+  padding:18px!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+#adminUsuarioModal .admin-user-modal,
+#adminSectorModal .admin-user-modal{
+  display:flex!important;
+  flex-direction:column!important;
+  width:min(620px,100%)!important;
+  max-height:calc(100dvh - 36px)!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  border-radius:24px!important;
+  padding-bottom:max(16px,env(safe-area-inset-bottom))!important;
+}
+#adminUsuarioModal .admin-user-modal-head{
+  position:sticky!important;
+  top:0!important;
+  z-index:5!important;
+}
+#adminUsuarioModal .admin-modal-actions,
+#adminSectorModal .admin-modal-actions{
+  flex:0 0 auto;
+  border-radius:0 0 20px 20px!important;
+}
+@media(max-width:560px){
+  #adminUsuarioModal,#adminSectorModal{
+    padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))!important;
+    align-items:center!important;
+  }
+  #adminUsuarioModal .admin-user-modal,
+  #adminSectorModal .admin-user-modal{
+    width:100%!important;
+    max-height:calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom)))!important;
+    border-radius:24px!important;
+    margin:0!important;
+  }
+  #adminUsuarioModal .admin-modal-actions-sticky{
+    position:sticky!important;
+    bottom:0!important;
+    border-radius:0 0 20px 20px!important;
+  }
+  #adminSectorModal .admin-modal-actions{
+    position:sticky!important;
+    bottom:0!important;
+    border-radius:0 0 20px 20px!important;
+    padding-bottom:max(12px,env(safe-area-inset-bottom))!important;
+  }
+  .horario-cell{font-size:13px!important;min-height:42px!important}
+}
+
+
+/* V8.11.2 · Entrega 5.2 — interfaz y experiencia de usuario */
+.module-precios .module-icon{color:var(--brand,#b72e35)!important}
+
+/* Resumen del día: filas respiradas y alineación exacta */
+.horarios-summary-list{row-gap:6px!important}
+.horarios-summary-list .horarios-resumen-persona{
+  min-height:58px!important;
+  padding:12px 8px!important;
+  border:1px solid #eceef2!important;
+  border-radius:12px!important;
+  margin:0!important;
+  background:#fff;
+}
+.horarios-summary-list .horarios-resumen-persona:last-child{border-bottom:1px solid #eceef2!important}
+.horarios-summary-list .horarios-resumen-persona>span{display:flex!important;align-items:center!important;gap:10px!important;min-width:0}
+.horarios-summary-list .horarios-resumen-persona i{align-self:center!important;margin:0!important;flex:0 0 14px}
+.horarios-summary-list .horarios-resumen-persona strong{font-size:13px!important;line-height:1.25;white-space:normal}
+.horarios-summary-list .horarios-resumen-persona>b{font-size:12px!important;line-height:1.25;text-align:right;white-space:normal;max-width:48%}
+
+/* Mi horario: el bloque principal representa hoy; la lista empieza mañana */
+.mi-horario-hero>div:first-child>span:not(.mi-horario-saludo){font-weight:800;letter-spacing:.02em;opacity:.92}
+.mi-horario-hero strong{line-height:1.08;overflow-wrap:anywhere}
+.mi-horario-list{margin-top:16px!important;gap:10px!important}
+.mi-horario-list article{min-height:66px!important;padding:14px 16px!important;align-items:center!important}
+.mi-horario-list .mi-turno-pill{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:7px 10px;border-radius:10px;line-height:1.2;white-space:normal;text-align:center}
+
+/* Precios: el estado sin precio siempre queda contenido y centrado */
+.precio-ultimo-precio{width:100%;min-width:0;justify-content:center;text-align:center}
+.precio-ultimo-precio.sin-precio b{display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-height:42px;padding:7px 12px;border:1px solid #ead7d8;border-radius:11px;background:#faf7f7;line-height:1.2;overflow-wrap:anywhere;text-align:center}
+.precio-product-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(112px,auto)!important;align-items:center!important}
+.precio-product-row>b{justify-self:end;max-width:150px;line-height:1.2;text-align:center!important}
+.precio-product-row b.sin-precio{display:flex;align-items:center;justify-content:center;min-height:42px;width:100%;max-width:150px!important;padding:6px 9px;border:1px solid #ead7d8;border-radius:10px;background:#faf7f7;white-space:normal!important;overflow-wrap:anywhere;text-align:center!important}
+
+@media(max-width:560px){
+  .horarios-summary-list{gap:8px!important}
+  .horarios-summary-list .horarios-resumen-persona{min-height:62px!important;padding:13px 10px!important}
+  .horarios-summary-list .horarios-resumen-persona>b{max-width:52%;font-size:11px!important}
+  .mi-horario-hero{padding:20px!important}
+  .mi-horario-hero strong{font-size:27px!important}
+  .precio-product-row{grid-template-columns:minmax(0,1fr) 118px!important;gap:10px!important;padding:14px!important}
+  .precio-product-row>b,.precio-product-row b.sin-precio{max-width:118px!important}
+}
+@media(max-width:370px){
+  .precio-product-row{grid-template-columns:minmax(0,1fr) 104px!important}
+  .precio-product-row>b,.precio-product-row b.sin-precio{max-width:104px!important;font-size:12px!important}
+}
+
+/* =========================================================
+   V8.11.3 · ENTREGA 5.3 — Responsive de escritorio y cierre
+   ========================================================= */
+
+/* La aplicación deja de estar limitada a una columna móvil en pantallas grandes. */
+@media (min-width: 900px) {
+  html,body{min-width:0!important;width:100%;}
+  body{background:#eef1f4!important;}
+  .app{
+    width:100%!important;
+    max-width:none!important;
+    min-height:100dvh;
+    margin:0!important;
+    padding-bottom:96px;
+    background:var(--bg);
+  }
+  .brand-header{position:relative;z-index:60;}
+  .pantalla:not(.horarios-screen){
+    width:min(100%,1440px);
+    margin-inline:auto!important;
+    padding-left:clamp(28px,4vw,64px)!important;
+    padding-right:clamp(28px,4vw,64px)!important;
+  }
+  .pantalla-inicio{width:min(100%,1280px)!important;}
+  .module-grid{
+    width:100%;
+    grid-template-columns:repeat(3,minmax(220px,1fr))!important;
+    gap:18px!important;
+  }
+  .module-card{min-height:150px;}
+
+  /* Pantallas de trabajo: más ancho útil sin estirar formularios simples. */
+  .precios-screen,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaInventario{
+    max-width:1180px!important;
+  }
+  #pantallaAjustes{max-width:920px!important;}
+  .admin-screen{max-width:1180px!important;}
+  .admin-tab-panel{padding:22px!important;}
+  .admin-users-list,.admin-sectors-list,.admin-history-list{gap:12px;}
+  .admin-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+
+  /* Precios aprovecha el ancho, manteniendo lectura cómoda. */
+  .precios-vista{width:100%;}
+  .precio-product-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .precio-product-row{margin:0!important;min-height:82px;}
+  .precio-ultimo-producto{min-height:240px;}
+
+  /* Vencimientos y listas: tarjetas en una zona central amplia. */
+  #pantallaVencimientos .venc-summary-card,
+  #pantallaVencimientos .venc-list-card,
+  .repo-product-card,.repo-form-card,.repo-registro-card{
+    width:100%!important;
+    max-width:none!important;
+  }
+
+  /* Navegaciones inferiores centradas y proporcionadas en escritorio. */
+  .app-bottom-nav:not(.horarios-bottom-nav),.venc-bottom-nav:not(.horarios-bottom-nav){
+    left:50%!important;
+    right:auto!important;
+    transform:translateX(-50%);
+    width:min(620px,calc(100vw - 48px))!important;
+    bottom:14px!important;
+    border:1px solid var(--ui-border)!important;
+    border-radius:18px!important;
+    padding:7px!important;
+    box-shadow:0 12px 34px rgba(43,34,29,.13)!important;
+  }
+
+  /* Modales: proporción de escritorio y acciones sin cortes. */
+  .modal-overlay,.app-choice-overlay,.app-dialog-overlay{padding:28px!important;align-items:center!important;}
+  .modal-card,.app-choice-sheet,.app-dialog-card,.filter-sheet{
+    border-radius:24px!important;
+  }
+  .filter-sheet{width:min(560px,100%)!important;padding:22px!important;}
+}
+
+/* Calendario: ocupa el ancho y la altura realmente disponibles en PC. */
+@media (min-width: 901px) {
+  .horarios-screen{width:100%!important;max-width:none!important;margin:0!important;}
+  .horarios-shell{width:100%;min-height:calc(100dvh - 62px);}
+  .horarios-content{padding:clamp(18px,2vw,30px)!important;min-width:0;}
+  .horarios-toolbar{margin-bottom:16px;}
+  .horarios-board-card{min-width:0;}
+  .horarios-table-wrap{
+    width:100%;
+    max-height:clamp(480px,calc(100dvh - 365px),720px)!important;
+  }
+  .horarios-table{min-width:1500px;}
+  .horarios-bottom-grid{grid-template-columns:minmax(0,1fr)!important;}
+  .horarios-summary-list{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));}
+  .horarios-config-view{max-width:1100px;margin-inline:auto;}
+  .mi-horario-hero,.mi-horario-list{max-width:920px;margin-inline:auto;}
+}
+
+/* Pantallas muy anchas: balance entre densidad y legibilidad. */
+@media (min-width: 1280px) {
+  .module-grid{grid-template-columns:repeat(3,minmax(260px,1fr))!important;}
+  .horarios-shell{grid-template-columns:190px minmax(0,1fr)!important;}
+  body.horarios-modo-edicion .horarios-shell{grid-template-columns:190px minmax(0,1fr) 360px!important;}
+  .horarios-table th,.horarios-table td{height:62px!important;}
+  .horario-cell{min-height:44px!important;}
+  .admin-user-card,.admin-sector-card{padding:15px!important;}
+}
+
+/* Tablet: evita una columna demasiado angosta sin comportarse como escritorio completo. */
+@media (min-width: 700px) and (max-width: 899px) {
+  .app{max-width:none!important;width:100%!important;}
+  .pantalla:not(.horarios-screen){width:min(100%,900px);margin-inline:auto!important;padding-inline:24px!important;}
+  .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;}
+  .admin-screen{max-width:860px!important;}
+  .precio-product-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+}
+
+/* Contención general ante textos o datos largos. */
+.pantalla,.settings-card,.module-card,.product-card,.venc-list-card,.admin-user-card,.admin-sector-card{min-width:0;}
+.pantalla strong,.pantalla span,.pantalla p,.pantalla small{overflow-wrap:anywhere;}
+img,video,canvas{max-width:100%;}
