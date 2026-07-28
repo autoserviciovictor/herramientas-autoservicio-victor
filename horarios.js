@@ -467,7 +467,7 @@ function crearPanelEdicion() {
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
   $("horariosPaintTurnoButton").onclick = async () => {
     const opciones = TURNOS.filter(t=>t.id!=="personalizado").map(t=>({value:t.id,label:t.label,color:t.color||"#ffffff",badge:t.id==="franco"?"F":(t.tipo==="cortado"?"C":""),description:t.id==="franco"?"Día libre":(t.tipo==="cortado"?"Horario cortado":"Horario continuo")}));
-    const elegido = await window.AppChoicePicker.open({title:"Seleccionar horario",kicker:"Pintar con",options,value:turnoPincel});
+    const elegido = await window.AppChoicePicker.open({title:"Seleccionar horario",kicker:"Pintar con",options:opciones,value:turnoPincel});
     if (elegido) { turnoPincel=elegido; actualizarSelectorTurnos(); }
   };
   $("horariosClearSelection").onclick = () => {

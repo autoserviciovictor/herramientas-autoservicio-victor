@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v8113-entrega53-responsive';
+const CACHE_VERSION = 'autoservicio-v8114-hotfix-selector-turnos';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
@@ -20,7 +20,7 @@ const APP_SHELL = [
   './auth.js?v=880-entrega1',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=8111-entrega51',
+  './horarios.js?v=8114-hotfix-selector-turnos',
   './api-cache.js?v=84-entrega8',
   './manifest.webmanifest',
   './version.json',
