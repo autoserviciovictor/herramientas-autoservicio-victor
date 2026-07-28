@@ -79,7 +79,7 @@ function renderUltimo(producto) {
   if (!producto || (!producto.codigo && !producto.articulo)) {
     box.className = 'precio-ultimo-vacio';
     box.innerHTML = `
-      <span class="precio-empty-icon" aria-hidden="true">🏷️</span>
+      <span class="precio-empty-icon" aria-hidden="true"><svg class="app-icon"><use href="#icon-tag"></use></svg></span>
       <strong>Todavía no consultaste productos</strong>
       <small>Escaneá o buscá un producto para comenzar.</small>`;
     return;

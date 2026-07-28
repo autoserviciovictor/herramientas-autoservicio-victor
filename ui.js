@@ -139,7 +139,7 @@ export function actualizarEstadoExcel(cantidad) {
     elementos.estadoExcelTexto.textContent = cantidad ? "Google Sheets" : "Sin conexión";
     elementos.estadoConteoTexto.textContent = cantidad ? `${cantidad} productos` : "0 productos";
     if (elementos.estadoExcelAjustes) {
-        elementos.estadoExcelAjustes.textContent = cantidad ? `✅ Google Sheets conectado: ${cantidad} productos` : "Sin conexión con Google Sheets";
+        elementos.estadoExcelAjustes.textContent = cantidad ? `Google Sheets conectado: ${cantidad} productos` : "Sin conexión con Google Sheets";
         elementos.estadoExcelAjustes.classList.toggle("cargado", Boolean(cantidad));
     }
 }
@@ -254,7 +254,7 @@ export function renderResultadosBusqueda(lista, onSeleccionar, opciones = {}) {
         if (tab === "cargados") {
             elementos.resultadoBusqueda.innerHTML = `
                 <div class="result-empty result-empty-large">
-                    <span class="empty-state-icon" aria-hidden="true">📦</span>
+                    <span class="empty-state-icon" aria-hidden="true"><svg class="app-icon"><use href="#icon-box"></use></svg></span>
                     <strong>Todavía no hay productos con stock cargado</strong>
                     <small>Los productos que cargues aparecerán acá.</small>
                 </div>`;
@@ -323,3 +323,59 @@ export function desactivarModoCantidad() {
     elementos.pantallaInventario.classList.remove("modo-cantidad");
     elementos.quantityCard.classList.add("oculto");
 }
+
+
+// Selector visual unificado para opciones de la aplicación.
+(function crearSelectorVisualGlobal(){
+    if (window.AppChoicePicker) return;
+    let overlay = null;
+    let resolver = null;
+    function asegurar(){
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.id = 'appChoicePicker';
+        overlay.className = 'app-choice-overlay oculto';
+        overlay.setAttribute('aria-hidden','true');
+        overlay.innerHTML = `
+          <section class="app-choice-sheet" role="dialog" aria-modal="true" aria-labelledby="appChoiceTitle">
+            <header class="app-choice-head">
+              <div><span class="app-choice-kicker">Seleccionar</span><h2 id="appChoiceTitle">Elegir opción</h2></div>
+              <button type="button" class="app-choice-close" aria-label="Cerrar"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+            </header>
+            <div id="appChoiceList" class="app-choice-list"></div>
+            <button type="button" class="app-choice-cancel">Cancelar</button>
+          </section>`;
+        document.body.appendChild(overlay);
+        const cerrar = (valor=null) => {
+            overlay.classList.add('oculto');
+            overlay.setAttribute('aria-hidden','true');
+            document.body.classList.remove('modal-abierto');
+            const r = resolver; resolver = null; if (r) r(valor);
+        };
+        overlay.querySelector('.app-choice-close').onclick=()=>cerrar();
+        overlay.querySelector('.app-choice-cancel').onclick=()=>cerrar();
+        overlay.addEventListener('click',e=>{if(e.target===overlay) cerrar();});
+        overlay._cerrar=cerrar;
+        return overlay;
+    }
+    window.AppChoicePicker={
+        open({title='Elegir opción', kicker='Seleccionar', options=[], value=''}){
+            const root=asegurar();
+            if(resolver) root._cerrar();
+            root.querySelector('#appChoiceTitle').textContent=title;
+            root.querySelector('.app-choice-kicker').textContent=kicker;
+            const list=root.querySelector('#appChoiceList');
+            list.innerHTML=options.map(o=>`<button type="button" class="app-choice-option ${String(o.value)===String(value)?'seleccionada':''}" data-value="${String(o.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">
+              ${o.color?`<i class="app-choice-swatch" style="background:${o.color}">${o.badge||''}</i>`:(o.icon?`<span class="app-choice-icon">${o.icon}</span>`:'')}
+              <span class="app-choice-copy"><strong>${o.label}</strong>${o.description?`<small>${o.description}</small>`:''}</span>
+              <span class="app-choice-check"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg></span>
+            </button>`).join('');
+            return new Promise(resolve=>{
+                resolver=resolve;
+                list.querySelectorAll('.app-choice-option').forEach(btn=>btn.onclick=()=>root._cerrar(btn.dataset.value));
+                root.classList.remove('oculto'); root.setAttribute('aria-hidden','false'); document.body.classList.add('modal-abierto');
+                setTimeout(()=>list.querySelector('.seleccionada')?.scrollIntoView({block:'nearest'}),30);
+            });
+        }
+    };
+})();

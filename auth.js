@@ -242,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     input.type = mostrar ? "text" : "password";
     boton.setAttribute("aria-pressed", String(mostrar));
     boton.setAttribute("aria-label", mostrar ? "Ocultar contraseña" : "Mostrar contraseña");
-    boton.textContent = mostrar ? "🙈" : "👁";
+    boton.innerHTML = mostrar ? `<svg class="app-icon" aria-hidden="true"><use href="#icon-eye-off"></use></svg>` : `<svg class="app-icon" aria-hidden="true"><use href="#icon-eye"></use></svg>`;
     input.focus();
   });
 

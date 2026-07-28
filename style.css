@@ -522,7 +522,7 @@ body { background: var(--bg); }
     color: var(--text);
 }
 .manual-link-btn::before {
-    content: "⌨️ ";
+    content: "";
 }
 
 .camera-card { height: 210px; }
@@ -556,7 +556,7 @@ body { background: var(--bg); }
 .tabs-card { padding: 6px; }
 .tab-btn.activo { background: var(--brand); }
 .search-card { display: flex; align-items: center; gap: 8px; }
-.search-card::before { content: "🔎"; opacity: .6; }
+.search-card::before { content: ""; display:none; }
 .result-list { gap: 12px; }
 .result-item {
     display: grid;
@@ -3928,3 +3928,220 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .horarios-cortado-check input{width:20px;height:20px;accent-color:#b72e35}
 .horarios-segundo-tramo{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}
 @media(max-width:560px){.horarios-segundo-tramo{grid-template-columns:1fr}}
+
+
+/* Entrega 1: iconografía profesional e identidad visual */
+.svg-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.app-icon{width:1em;height:1em;display:inline-block;vertical-align:-.14em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.inline-icon{margin-right:.38em}
+.login-input-icon .app-icon,.login-password-toggle .app-icon{width:21px;height:21px}
+.module-icon{display:grid;place-items:center;color:var(--brand);background:transparent!important;border-radius:0!important;box-shadow:none!important}
+.module-icon .app-icon{width:42px;height:42px;stroke-width:1.7}
+.module-card,.module-vencimientos,.module-anotar,.module-administrador,.module-card.module-horarios{background:#fff!important;border-color:rgba(183,46,53,.20)!important}
+.module-administrador .module-icon,.module-card.module-horarios .module-icon{background:transparent!important}
+.location-btn,.scan-open-btn,.admin-tab{display:flex;align-items:center;justify-content:center;gap:8px}
+.location-btn .app-icon,.scan-open-btn .app-icon,.admin-tab .app-icon{width:19px;height:19px}
+.user-dropdown-action>span{display:grid;place-items:center}.user-dropdown-action .app-icon{width:20px;height:20px}
+.user-dropdown-avatar{display:grid;place-items:center}.user-dropdown-avatar .app-icon{width:22px;height:22px}
+.empty-icon .app-icon,.empty-state-icon .app-icon{width:38px;height:38px}
+.mi-horario-avatar .app-icon{width:32px;height:32px}
+.repo-confirm-icon .app-icon{width:30px;height:30px}
+.repo-search-row::before{content:''!important;width:18px;height:18px;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E");font-size:0!important}
+.product-card.error .product-status::before{content:''!important}
+
+
+/* Entrega 2: selectores y diálogos unificados */
+.native-select-hidden{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;padding:0!important;border:0!important}
+.visual-select-button{width:100%;min-height:48px;border:1px solid #dcd5cf;border-radius:13px;background:#fff;padding:0 13px;display:flex;align-items:center;gap:10px;font:inherit;font-weight:750;color:#292522;text-align:left;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.02);transition:border-color .18s,box-shadow .18s,transform .12s}
+.visual-select-button:hover{border-color:#bbb1aa}.visual-select-button:focus-visible{outline:3px solid rgba(183,46,53,.13);border-color:#b72e35}.visual-select-button:active{transform:scale(.995)}
+.visual-select-button>span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.visual-select-button>.app-icon{width:19px;height:19px;color:#766f69;flex:0 0 auto}
+.app-choice-overlay{position:fixed;inset:0;z-index:12000;background:rgba(24,20,18,.48);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(3px);animation:choiceFade .18s ease}
+.app-choice-sheet{width:min(480px,100%);max-height:min(720px,calc(100dvh - 36px));background:#fff;border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.22);display:flex;flex-direction:column;gap:14px;animation:choiceUp .22s cubic-bezier(.2,.8,.2,1)}
+.app-choice-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.app-choice-head h2{margin:2px 0 0;font-size:23px;line-height:1.15}.app-choice-kicker{font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:#b72e35}.app-choice-close{width:40px;height:40px;border:0;border-radius:12px;background:#f3f0ed;display:grid;place-items:center;cursor:pointer}.app-choice-close .app-icon{width:20px;height:20px}
+.app-choice-list{display:flex;flex-direction:column;gap:8px;overflow:auto;padding:2px;overscroll-behavior:contain}.app-choice-option{width:100%;min-height:64px;border:1px solid #e5dfda;border-radius:16px;background:#fff;padding:10px 12px;display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;transition:.16s}.app-choice-option:hover{border-color:#ccbfc0;background:#fcf9f9}.app-choice-option.seleccionada{border-color:#b72e35;background:#fff7f7;box-shadow:0 0 0 2px rgba(183,46,53,.08)}
+.app-choice-swatch{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(0,0,0,.12);font-style:normal;font-weight:900}.app-choice-icon{width:40px;height:40px;border-radius:12px;background:#f3f0ed;display:grid;place-items:center}.app-choice-copy{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}.app-choice-copy strong{font-size:15px;color:#231f1d}.app-choice-copy small{font-size:12px;color:#7a736d}.app-choice-check{width:26px;height:26px;border:2px solid #d5cfca;border-radius:50%;display:grid;place-items:center;color:transparent;flex:0 0 auto}.app-choice-option.seleccionada .app-choice-check{background:#b72e35;border-color:#b72e35;color:#fff}.app-choice-check .app-icon{width:15px;height:15px;stroke-width:3}
+.app-choice-cancel{min-height:46px;border:0;border-radius:13px;background:#f1eeeb;color:#433d39;font-weight:850;cursor:pointer}
+@keyframes choiceFade{from{opacity:0}to{opacity:1}}@keyframes choiceUp{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.horarios-paint-picker{display:grid;gap:4px;min-width:240px}.horarios-paint-picker>span{font-size:11px;color:#777;font-weight:800;text-transform:uppercase}.horarios-paint-picker .visual-select-button i{width:28px;height:28px;border-radius:8px;border:1px solid rgba(0,0,0,.12);display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:900;flex:0 0 auto}
+.horarios-sector-selector .visual-select-button{min-height:42px;border-radius:12px}
+.admin-user-modal-v2{padding:0!important;overflow:hidden!important;width:min(620px,100%)!important}.admin-user-modal-v2>.admin-user-modal-head{padding:22px 22px 18px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;border-bottom:1px solid #eee8e3;background:linear-gradient(180deg,#fff,#fdfbf9)}.admin-user-modal-avatar{width:52px;height:52px;border-radius:17px;background:#f5e6e7;color:#b72e35;display:grid;place-items:center;font-size:22px;font-weight:950}.admin-user-modal-head h2{margin:2px 0 1px!important;font-size:23px}.admin-user-modal-head>div:nth-child(2){min-width:0}.admin-user-modal-head span{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:#b72e35}.admin-user-modal-head small{display:block;color:#817973;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-user-close{position:static!important;align-self:start}
+.admin-user-modal-v2>.admin-form-section,.admin-user-modal-v2>fieldset,.admin-user-modal-v2>.admin-active-row,.admin-user-modal-v2>.danger-btn-soft{margin-left:22px!important;margin-right:22px!important}.admin-form-section{padding:17px 0;border-bottom:1px solid #eee8e3}.admin-form-section-title{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}.admin-form-section-title strong{font-size:15px}.admin-form-section-title span{font-size:12px;color:#817973}.admin-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.admin-user-modal-v2 label small{font-weight:500;color:#8a817b}.admin-active-row{border:1px solid #e4ddd7;border-radius:14px;padding:12px 13px!important;gap:10px}.admin-active-row span{display:flex;flex-direction:column}.admin-active-row small{font-weight:500;color:#827b75}.admin-modal-actions-sticky{position:sticky;bottom:0;background:#fff;border-top:1px solid #e9e2dc;padding:14px 22px max(14px,env(safe-area-inset-bottom));margin-top:18px!important;box-shadow:0 -8px 20px rgba(255,255,255,.92)}
+@media(max-width:560px){.app-choice-overlay{align-items:flex-end;padding:0}.app-choice-sheet{width:100%;max-height:88dvh;border-radius:24px 24px 0 0;padding:18px 16px max(16px,env(safe-area-inset-bottom))}.admin-user-modal-v2>.admin-user-modal-head{padding:18px 17px 15px}.admin-user-modal-v2>.admin-form-section,.admin-user-modal-v2>fieldset,.admin-user-modal-v2>.admin-active-row,.admin-user-modal-v2>.danger-btn-soft{margin-left:17px!important;margin-right:17px!important}.admin-form-grid{grid-template-columns:1fr}.admin-modal-actions-sticky{padding-left:17px;padding-right:17px}.admin-user-modal-avatar{width:46px;height:46px;border-radius:15px}.admin-user-modal-head h2{font-size:21px}}
+
+
+/* =========================================================
+   V8.10.0 · ENTREGA 3 — Pulido de Calendario y Horarios
+   ========================================================= */
+.horarios-content{padding:20px clamp(14px,2vw,24px) 24px}
+.horarios-toolbar{margin-bottom:12px;align-items:flex-start}
+.horarios-toolbar h2{font-size:clamp(21px,2vw,25px);line-height:1.15}
+.horarios-toolbar p{margin-top:3px;line-height:1.35}
+.horarios-month-nav{gap:6px;padding:5px;border-radius:13px}
+.horarios-month-nav strong{min-width:138px;font-size:14px}
+.horarios-month-nav button{display:grid;place-items:center;width:36px;height:36px;line-height:1;border-radius:10px}
+.horarios-month-nav .horarios-hoy-btn{width:auto;min-width:52px;padding-inline:11px;font-size:12px;font-weight:850}
+.horarios-status-row{margin-bottom:10px;min-height:26px}
+.horarios-status-row>div:first-child{flex-wrap:wrap;row-gap:2px}
+
+.horarios-board-card{overflow:hidden;border-radius:16px}
+.horarios-table-wrap{max-height:min(56vh,560px);border-radius:16px;scrollbar-gutter:stable}
+.horarios-table th,.horarios-table td{height:58px;padding:5px;vertical-align:middle}
+.horarios-table thead th{height:48px;padding-block:7px}
+.horarios-table thead th span{line-height:1.1;letter-spacing:.02em}
+.horarios-table thead th strong{margin-top:3px;line-height:1}
+.horarios-table .empleado-col{width:148px;min-width:148px;padding:8px 12px}
+.horarios-table tbody .empleado-col{min-height:58px;align-items:center}
+.empleado-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:9px}
+.horario-cell{min-height:42px;padding:5px 3px;border-radius:8px;line-height:1.12;font-size:10.5px;overflow:hidden}
+.horario-cell>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.horario-nota-dot{right:4px;top:4px}
+
+.horarios-estadisticas{margin-top:12px;gap:10px}
+.horarios-estadisticas article{min-height:72px;padding:13px 10px;border-radius:13px}
+.horarios-estadisticas article strong{line-height:1}
+.horarios-bottom-grid{margin-top:12px;grid-template-columns:1fr}
+.horarios-summary-card{padding:18px;border-radius:16px}
+.horarios-card-heading{margin-bottom:14px;align-items:flex-start}
+.horarios-card-heading>div{gap:4px}
+.horarios-card-heading>div>span{font-size:11px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:#8a8e97}
+.horarios-card-heading strong{font-size:16px;line-height:1.25;color:#24262d}
+.horarios-summary-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 18px}
+.horarios-summary-list .horarios-resumen-persona{min-height:48px;padding:10px 2px;align-items:center!important}
+.horarios-resumen-persona>span{display:flex;align-items:center!important;gap:10px;min-height:24px}
+.horarios-summary-list .horarios-resumen-persona i{display:block;align-self:center;width:14px;height:14px;min-width:14px;min-height:14px;margin:0;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(15,23,42,.10)}
+.horarios-resumen-persona>span strong{font-size:12.5px;line-height:1.25;color:#3f4652}
+.horarios-resumen-persona>b{font-size:13px;line-height:1.25;font-weight:800;color:#334155}
+.horarios-resumen-vacio{min-height:74px;display:grid;place-items:center;padding:16px;color:#64748b;text-align:center}
+
+@media(max-width:760px){
+  .horarios-content{padding:14px 10px 20px}
+  .horarios-toolbar{display:grid;gap:10px}
+  .horarios-month-nav{width:100%;justify-content:space-between}
+  .horarios-month-nav strong{min-width:0;flex:1}
+  .horarios-status-row{padding-inline:2px}
+  .horarios-table-wrap{max-height:58vh}
+  .horarios-summary-card{padding:15px}
+  .horarios-summary-list{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .horarios-summary-list .horarios-resumen-persona{flex-direction:row!important;align-items:center!important;gap:10px}
+  .horarios-resumen-persona>b{padding-left:0!important;margin-left:auto;text-align:right}
+  .horarios-table .empleado-col{width:128px;min-width:128px;padding:7px 9px}
+  .horarios-table th,.horarios-table td{height:54px;padding:4px}
+  .horario-cell{min-height:39px;font-size:10px}
+}
+
+/* =========================================================
+   V8.11.0 · ENTREGA 4 — Pulido visual integral
+   Sistema visual compartido para toda la beta
+   ========================================================= */
+:root{
+  --ui-red:#b72e35;
+  --ui-red-dark:#97252b;
+  --ui-bg:#f6f4f2;
+  --ui-surface:#ffffff;
+  --ui-text:#25211f;
+  --ui-muted:#746d67;
+  --ui-border:#e5dfda;
+  --ui-soft:#f3f0ed;
+  --ui-radius-sm:10px;
+  --ui-radius-md:14px;
+  --ui-radius-lg:18px;
+  --ui-shadow:0 8px 24px rgba(43,34,29,.07);
+  --ui-shadow-hover:0 12px 30px rgba(43,34,29,.11);
+  --ui-focus:0 0 0 3px rgba(183,46,53,.14);
+  --ui-page-x:clamp(14px,2.5vw,28px);
+}
+html{scroll-behavior:smooth}
+body{background:var(--ui-bg);color:var(--ui-text);text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit}
+button,.module-card,.settings-card,.product-card,.admin-tab,.nav-btn,.setting-btn{transition:transform .15s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease,opacity .18s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:none;box-shadow:var(--ui-focus)!important}
+button:active:not(:disabled),.module-card:active{transform:scale(.985)}
+button:disabled{cursor:not-allowed;opacity:.52}
+
+/* Encabezados y estructura */
+.app-header,.screen-header,.scanner-topbar,.admin-header,.horarios-header{min-height:64px;padding:10px var(--ui-page-x)!important}
+.app-header h1,.screen-header h1,.admin-header h1,.scanner-topbar h1{font-size:clamp(20px,2.5vw,26px)!important;line-height:1.15;margin:0}
+.app-header p,.screen-header p,.admin-header p{margin-top:3px;color:var(--ui-muted);line-height:1.35}
+.pantalla>.content,.pantalla>.screen-content,.main-content,.admin-content{padding-left:var(--ui-page-x);padding-right:var(--ui-page-x)}
+
+/* Tarjetas compartidas */
+.module-card,.settings-card,.product-card,.search-card,.manual-panel,.venc-list-card,.venc-actions-card,.venc-summary-card,.admin-import-card,.admin-section,.horarios-config-card,.list-summary,.repo-confirm-card,.camera-card{
+  background:var(--ui-surface)!important;
+  border:1px solid var(--ui-border)!important;
+  border-radius:var(--ui-radius-lg)!important;
+  box-shadow:var(--ui-shadow)!important;
+}
+.module-card:hover,.settings-card:hover,.product-card:hover{box-shadow:var(--ui-shadow-hover)!important;border-color:#d8cec8!important;transform:translateY(-1px)}
+.module-card,.settings-card{padding:18px!important}
+.module-icon,.empty-icon,.repo-confirm-icon{display:grid!important;place-items:center!important}
+.module-icon .app-icon,.empty-icon .app-icon{width:26px;height:26px}
+
+/* Botones */
+.save-btn,.cancel-btn,.secondary-btn,.danger-btn,.danger-btn-soft,.setting-btn,.scan-open-btn,.manual-link-btn,.location-btn{
+  min-height:44px;border-radius:var(--ui-radius-md)!important;padding:10px 16px!important;font-weight:800;line-height:1.1;display:inline-flex;align-items:center;justify-content:center;gap:8px
+}
+.save-btn{background:var(--ui-red)!important;border-color:var(--ui-red)!important;color:#fff!important}
+.save-btn:hover:not(:disabled){background:var(--ui-red-dark)!important;border-color:var(--ui-red-dark)!important}
+.cancel-btn,.secondary-btn,.setting-btn,.manual-link-btn{background:var(--ui-soft)!important;border:1px solid var(--ui-border)!important;color:#3d3733!important}
+.cancel-btn:hover,.secondary-btn:hover,.setting-btn:hover{background:#ebe6e2!important}
+.danger-btn,.danger-btn-soft{border:1px solid #e8bfc2!important}
+.modal-actions,.admin-modal-actions,.repo-confirm-actions{gap:10px!important}
+
+/* Formularios */
+input:not([type="checkbox"]):not([type="radio"]),select,textarea,.visual-select-button{
+  min-height:46px;border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-md)!important;background:#fff;color:var(--ui-text);padding:10px 13px
+}
+textarea{min-height:96px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#a19892}
+label{color:#4b443f}
+label>span,label>strong{line-height:1.3}
+.form-group,.field-group{gap:6px}
+
+/* Modales y paneles */
+.modal-overlay{background:rgba(28,23,20,.48)!important;backdrop-filter:blur(4px)}
+.modal-card,.admin-user-modal,.venc-modal-card{border:1px solid rgba(255,255,255,.7);border-radius:22px!important;box-shadow:0 26px 80px rgba(31,24,20,.24)!important}
+.modal-card{padding:22px!important}
+.modal-card h2,.admin-user-modal h2{letter-spacing:-.02em;line-height:1.2}
+.modal-close,.app-choice-close{display:grid!important;place-items:center!important;border-radius:12px!important}
+
+/* Navegación inferior */
+.app-bottom-nav,.venc-bottom-nav{border-top:1px solid var(--ui-border)!important;background:rgba(255,255,255,.94)!important;backdrop-filter:blur(14px);box-shadow:0 -8px 24px rgba(43,34,29,.06)}
+.nav-btn{min-height:56px;border-radius:12px!important}
+.nav-btn .nav-icon,.nav-btn .app-icon{display:grid;place-items:center}
+
+/* Listas, estados y contadores */
+.empty,.venc-list-empty,.horarios-resumen-vacio{min-height:118px!important;padding:22px 16px!important;border-radius:var(--ui-radius-lg);color:var(--ui-muted);text-align:center}
+.empty h3,.venc-list-empty h3{margin:8px 0 4px;font-size:16px;color:var(--ui-text)}
+.empty p,.venc-list-empty p{margin:0;line-height:1.45}
+.product-card,.venc-list-card{padding:14px 16px!important}
+.product-card+ .product-card,.venc-list-card+ .venc-list-card{margin-top:10px}
+.list-summary,.venc-resumen{padding:14px 16px!important}
+.list-summary strong,.venc-total strong,.venc-summary-card strong{font-size:clamp(22px,3vw,30px);line-height:1}
+
+/* Tabs y chips */
+.admin-tabs{gap:6px;padding:5px;background:var(--ui-soft);border-radius:15px}
+.admin-tab,.admin-period-btn{min-height:40px;border-radius:11px!important;font-weight:800}
+.admin-tab.activo,.admin-period-btn.activo{box-shadow:0 2px 8px rgba(43,34,29,.10)}
+
+/* Ajustes de densidad y alineación */
+.settings-card,.admin-section-head,.venc-list-head{align-items:center}
+.app-icon{flex:0 0 auto}
+.badge,.product-status,.venc-modal-status{display:inline-flex;align-items:center;justify-content:center;min-height:24px;line-height:1;padding:5px 9px;border-radius:999px}
+
+/* Movimiento accesible y fluido */
+.pantalla:not(.oculto){animation:uiScreenIn .2s ease-out}
+@keyframes uiScreenIn{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+@media(max-width:600px){
+  :root{--ui-page-x:12px}
+  .app-header,.screen-header,.scanner-topbar,.admin-header,.horarios-header{min-height:58px;padding-block:8px!important}
+  .module-card,.settings-card{padding:15px!important}
+  .modal-card{padding:18px 16px!important;border-radius:20px 20px 0 0!important}
+  .modal-overlay{align-items:flex-end!important;padding:0!important}
+  .save-btn,.cancel-btn,.secondary-btn,.danger-btn,.setting-btn{min-height:46px}
+  .modal-actions,.admin-modal-actions{display:grid!important;grid-template-columns:1fr;gap:8px!important}
+  .empty,.venc-list-empty{min-height:96px!important;padding:18px 14px!important}
+}
