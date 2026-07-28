@@ -4524,3 +4524,86 @@ img,video,canvas{max-width:100%;}
 @media(max-width:420px){
   .horario-cell{width:40px!important}
 }
+
+
+/* V9.1 · Administración: navegación inferior y editor continuo */
+body.en-admin #pantallaAdmin{
+  padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
+}
+.admin-bottom-nav{
+  position:fixed!important;
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  z-index:80!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin:0!important;
+  padding:7px max(8px,env(safe-area-inset-right)) max(7px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))!important;
+  border-radius:0!important;
+  border-top:1px solid var(--ui-border,#e6e8ed)!important;
+  background:rgba(255,255,255,.96)!important;
+  box-shadow:0 -8px 24px rgba(43,34,29,.08)!important;
+  backdrop-filter:blur(14px);
+}
+.admin-bottom-nav .admin-tab{
+  min-width:0!important;
+  min-height:56px!important;
+  padding:6px 2px!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:transparent!important;
+  display:grid!important;
+  place-items:center!important;
+  align-content:center!important;
+  gap:3px!important;
+  color:#747780!important;
+  font-size:11px!important;
+  font-weight:800!important;
+}
+.admin-bottom-nav .admin-tab .app-icon{width:23px!important;height:23px!important}
+.admin-bottom-nav .admin-tab.activo{background:#ffe9ea!important;color:#d12d35!important}
+@media(min-width:760px){
+  .admin-bottom-nav{
+    left:50%!important;right:auto!important;bottom:12px!important;
+    width:min(620px,calc(100vw - 40px))!important;
+    transform:translateX(-50%)!important;
+    border:1px solid var(--ui-border,#e6e8ed)!important;
+    border-radius:18px!important;
+    padding:7px!important;
+  }
+  body.en-admin #pantallaAdmin{padding-bottom:110px!important}
+}
+
+/* El modal es una sola superficie: sin cajas blancas internas ni separadores salidos. */
+#adminUsuarioModal .admin-user-modal-v2{
+  background:#fff!important;
+  border:0!important;
+  box-shadow:0 22px 55px rgba(20,20,25,.24)!important;
+  overflow-y:auto!important;
+  scrollbar-gutter:stable;
+}
+#adminUsuarioModal .admin-user-modal-head{
+  background:#fff!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  margin:0!important;
+}
+#adminUsuarioModal .admin-user-modal-head::before,
+#adminUsuarioModal .admin-user-modal-head::after,
+#adminUsuarioModal .admin-modal-actions-sticky::before,
+#adminUsuarioModal .admin-modal-actions-sticky::after{content:none!important;display:none!important}
+#adminUsuarioModal .admin-modal-actions-sticky{
+  background:#fff!important;
+  border:0!important;
+  box-shadow:0 -12px 24px rgba(255,255,255,.98)!important;
+  margin:0!important;
+  padding-top:12px!important;
+  z-index:6!important;
+}
+#adminUsuarioModal .admin-modal-actions-sticky .cancel-btn,
+#adminUsuarioModal .admin-modal-actions-sticky .save-btn{margin:0!important}
+#adminUsuarioModal .admin-form-section:first-of-type{padding-top:12px!important}
+#adminUsuarioModal .admin-user-modal-v2>*{max-width:100%}

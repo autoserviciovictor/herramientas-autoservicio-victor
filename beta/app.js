@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { APP_VERSION } from "./config.js?v=92-supervisores";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -22,12 +22,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=71-entrega4-rendimiento-sync";
+} from "./excel.js?v=92-supervisores";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=71-entrega4-rendimiento-sync";
+} from "./scanner.js?v=92-supervisores";
 
 import {
     ocultarSplash,
@@ -52,8 +52,8 @@ import {
     actualizarConteosUbicacion
 } from "./ui.js?v=8100-entrega3";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=71-entrega4-rendimiento-sync";
-import { coincideBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=92-supervisores";
+import { coincideBusqueda } from "./search.js?v=92-supervisores";
 
 let ubicacionActual = "salon";
 let productoActual = null;

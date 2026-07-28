@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v901-hotfix-calendario';
+const CACHE_VERSION = 'autoservicio-v92-supervisores-sectores';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
