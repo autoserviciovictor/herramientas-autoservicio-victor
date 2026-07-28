@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "9.3",
-  "label": "9.3",
-  "build": 90300,
-  "name": "Versión 9.3 - Módulo Tareas (base 9.2.1 preservada)"
+  "version": "9.3.1",
+  "label": "9.3.1",
+  "build": 90301,
+  "name": "Versión 9.3.1 - Tareas por sector, Baño y Configuración"
 }

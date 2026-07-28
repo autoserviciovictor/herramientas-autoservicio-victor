@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v93-tareas-rebuild';
+const CACHE_VERSION = 'autoservicio-v931-tareas-navegacion';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

@@ -151,7 +151,7 @@
             <button type="button" id="btnInstalarApp" class="setting-btn">Instalar aplicación</button>
         </section>
 
-        <section class="home-status"><strong>9.3</strong></section>
+        <section class="home-status"><strong>9.3.1</strong></section>
     </main>
 
     <main id="pantallaInventario" class="pantalla">
@@ -300,7 +300,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">9.3</strong>
+            <strong id="settingsAppVersion">9.3.1</strong>
         </section>
     </main>
 
@@ -441,7 +441,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span><svg class="app-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>9.3</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
+                <div class="horarios-sidebar-note"><strong>9.3.1</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -675,20 +675,59 @@
 
 
     <main id="pantallaTareas" class="pantalla tareas-screen">
-      <section class="tareas-shell">
-        <div class="tareas-toolbar">
-          <button id="btnTareasSemanaAnterior" type="button" aria-label="Semana anterior">‹</button>
-          <button id="btnTareasSemanaActual" class="tareas-week-label" type="button"></button>
-          <button id="btnTareasSemanaSiguiente" type="button" aria-label="Semana siguiente">›</button>
+      <section id="tareasVistaTareas" class="tareas-view activa" data-tareas-view="tareas">
+        <div class="tareas-shell">
+          <div class="tareas-sector-bar">
+            <div><small>Sector</small><strong id="tareasSectorNombre">Mi sector</strong></div>
+            <button id="btnTareasCambiarSector" type="button" class="oculto">Cambiar</button>
+          </div>
+          <div class="tareas-toolbar">
+            <button id="btnTareasSemanaAnterior" type="button" aria-label="Semana anterior">‹</button>
+            <button id="btnTareasSemanaActual" class="tareas-week-label" type="button"></button>
+            <button id="btnTareasSemanaSiguiente" type="button" aria-label="Semana siguiente">›</button>
+          </div>
+          <div id="tareasDias" class="tareas-days" aria-label="Días de la semana"></div>
+          <div id="tareasResumen" class="tareas-summary"></div>
+          <div class="tareas-section-head"><h2 id="tareasFechaTitulo"></h2><button id="btnNuevaTarea" class="tareas-add-btn" type="button">+ Nueva tarea</button></div>
+          <div id="tareasLista" class="tareas-list"></div>
         </div>
-        <div id="tareasDias" class="tareas-days" aria-label="Días de la semana"></div>
-        <div id="tareasResumen" class="tareas-summary"></div>
-        <div class="tareas-section-head"><h2 id="tareasFechaTitulo"></h2><button id="btnNuevaTarea" class="tareas-add-btn" type="button">+ Nueva tarea</button></div>
-        <div id="tareasLista" class="tareas-list"></div>
       </section>
+
+      <section id="tareasVistaBano" class="tareas-view oculto" data-tareas-view="bano">
+        <div class="tareas-shell bano-shell">
+          <div class="tareas-page-heading"><div class="tareas-page-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M16 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M5 9h6v5H9v7H6v-7H5V9M13 9h6v5h-1v7h-3v-7h-2V9"/></svg></div><div><h2>Limpieza del baño</h2><p>Rotación comunitaria cada dos días</p></div></div>
+          <article id="banoTurnoActual" class="bano-current-card"></article>
+          <div class="tareas-section-head"><h2>Próximos turnos</h2></div>
+          <div id="banoProximos" class="bano-next-list"></div>
+          <div class="tareas-section-head"><h2>Últimas confirmaciones</h2></div>
+          <div id="banoHistorial" class="bano-history-list"></div>
+        </div>
+      </section>
+
+      <section id="tareasVistaConfig" class="tareas-view oculto" data-tareas-view="config">
+        <div class="tareas-shell tareas-config-shell">
+          <div class="tareas-page-heading"><div class="tareas-page-icon"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-3v-.08A1.7 1.7 0 0 0 10.68 18.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7.02 15a1.7 1.7 0 0 0-1.56-1.03H5v-3h.46A1.7 1.7 0 0 0 7.02 9.94a1.7 1.7 0 0 0-.34-1.88L6.62 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.71 4.7V4h3v.7a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.96 11H21v3h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg></div><div><h2>Configuración</h2><p>Administrá tareas y la rotación del baño</p></div></div>
+          <div id="tareasConfigSinPermiso" class="tareas-empty oculto"><strong>Sin acceso a configuración</strong><span>Esta pantalla está disponible para administradores y supervisores.</span></div>
+          <div id="tareasConfigContenido">
+            <article class="tareas-config-card">
+              <div class="tareas-config-head"><div><h3>Tareas por sector</h3><p>Creá, editá o desactivá tareas.</p></div><button id="btnConfigNuevaTarea" type="button">+ Agregar</button></div>
+              <label class="tareas-config-filter">Sector<select id="configSectorFiltro"></select></label>
+              <div id="configTareasLista" class="config-task-list"></div>
+            </article>
+            <article class="tareas-config-card">
+              <div class="tareas-config-head"><div><h3>Rotación del baño</h3><p>Definí participantes, frecuencia y comienzo.</p></div></div>
+              <label>Participantes<textarea id="banoParticipantes" rows="5" placeholder="Un nombre por línea"></textarea></label>
+              <div class="tarea-form-grid"><label>Cada cuántos días<input id="banoIntervalo" type="number" min="1" value="2"></label><label>Fecha de inicio<input id="banoFechaInicio" type="date"></label></div>
+              <button id="btnGuardarConfigBano" class="save-btn" type="button">Guardar configuración</button>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <nav class="app-bottom-nav tareas-bottom-nav" aria-label="Navegación de tareas">
-        <button type="button" class="activo"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3V2h6v1M9 9l1.5 1.5L14 7M9 15l1.5 1.5L14 13"/></svg><span>Tareas</span></button>
-        <button id="btnTareasHoy" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg><span>Hoy</span></button>
+        <button type="button" class="activo" data-tareas-tab="tareas"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3V2h6v1M9 9l1.5 1.5L14 7M9 15l1.5 1.5L14 13"/></svg><span>Tareas</span></button>
+        <button type="button" data-tareas-tab="bano"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M8 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M16 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M5 9h6v5H9v7H6v-7H5V9M13 9h6v5h-1v7h-3v-7h-2V9"/></svg><span>Baño</span></button>
+        <button type="button" data-tareas-tab="config"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-3v-.08A1.7 1.7 0 0 0 10.68 18.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7.02 15a1.7 1.7 0 0 0-1.56-1.03H5v-3h.46A1.7 1.7 0 0 0 7.02 9.94a1.7 1.7 0 0 0-.34-1.88L6.62 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.71 4.7V4h3v.7a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.96 11H21v3h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>Configuración</span></button>
       </nav>
     </main>
 
@@ -763,7 +802,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">9.3</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">9.3.1</strong></div>
             </div>
             <div id="adminReleaseChannelCard" class="admin-import-card oculto">
                 <div class="admin-import-head"><div><strong>Versión beta activa</strong><span>Este dispositivo está usando la versión de prueba. Podés volver a la versión estable cuando quieras.</span></div></div>
@@ -961,7 +1000,7 @@
 <script type="module" src="./notifications.js?v=84-entrega8"></script>
 <script type="module" src="./prices.js?v=84-entrega8"></script>
 <script type="module" src="./app.js?v=8110-entrega4"></script>
-<script type="module" src="./tareas.js?v=930-tareas-rebuild"></script>
+<script type="module" src="./tareas.js?v=931-tareas-nav"></script>
 <script type="module" src="./horarios.js?v=901-hotfix-calendario"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
