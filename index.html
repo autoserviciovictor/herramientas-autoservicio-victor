@@ -144,7 +144,7 @@
             <button type="button" id="btnInstalarApp" class="setting-btn">Instalar aplicación</button>
         </section>
 
-        <section class="home-status"><strong>9.2</strong></section>
+        <section class="home-status"><strong>9.2.1</strong></section>
     </main>
 
     <main id="pantallaInventario" class="pantalla">
@@ -293,7 +293,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">9.2</strong>
+            <strong id="settingsAppVersion">9.2.1</strong>
         </section>
     </main>
 
@@ -434,7 +434,7 @@
         <section class="horarios-shell">
             <aside class="horarios-sidebar" aria-label="Navegación de horarios">
                 <div class="horarios-sidebar-brand"><span><svg class="app-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>9.2</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
+                <div class="horarios-sidebar-note"><strong>9.2.1</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
             </aside>
 
             <section class="horarios-content">
@@ -724,7 +724,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">9.2</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">9.2.1</strong></div>
             </div>
             <div id="adminReleaseChannelCard" class="admin-import-card oculto">
                 <div class="admin-import-head"><div><strong>Versión beta activa</strong><span>Este dispositivo está usando la versión de prueba. Podés volver a la versión estable cuando quieras.</span></div></div>
@@ -755,6 +755,7 @@
           <div><span id="adminUsuarioModalKicker">Gestión de usuarios</span><h2 id="adminUsuarioModalTitulo">Crear usuario</h2><small id="adminUsuarioModalResumen">Completá los datos y permisos</small></div>
           <button id="btnAdminCerrarUsuario" class="modal-close admin-user-close" type="button" aria-label="Cerrar"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
         </header>
+        <div class="admin-user-modal-body">
         <input id="adminUsuarioOriginal" type="hidden">
         <section class="admin-form-section"><div class="admin-form-section-title"><strong>Información personal</strong><span>Datos para identificar e ingresar al sistema</span></div>
           <div class="admin-form-grid"><label>Nombre<input id="adminUsuarioNombre" type="text" maxlength="50" autocomplete="off"></label><label>Usuario<input id="adminUsuarioUsuario" type="text" maxlength="30" autocomplete="off"></label></div>
@@ -774,6 +775,7 @@
         </div><small id="adminPermisosAdminAviso" class="admin-permissions-note oculto">Los administradores tienen acceso completo a todos los módulos.</small></fieldset></section>
         <label id="adminUsuarioActivoFila" class="admin-active-row oculto"><input id="adminUsuarioActivo" type="checkbox" checked><span><strong>Usuario activo</strong><small>Puede iniciar sesión y usar sus módulos asignados.</small></span></label>
         <button id="btnAdminEliminarUsuario" type="button" class="danger-btn-soft oculto">Eliminar usuario</button>
+        </div>
         <div class="admin-modal-actions admin-modal-actions-sticky"><button id="btnAdminCancelarUsuario" type="button" class="cancel-btn">Cancelar</button><button id="btnAdminGuardarUsuario" type="button" class="save-btn">Guardar cambios</button></div>
       </div>
     </div>

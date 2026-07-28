@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "9.2.0",
-  "label": "9.2",
-  "build": 90100,
-  "name": "Versión 9.2 - Supervisores y sectores"
+  "version": "9.2.1",
+  "label": "9.2.1",
+  "build": 90201,
+  "name": "Versión 9.2.1 - Correcciones del editor de usuarios"
 }
