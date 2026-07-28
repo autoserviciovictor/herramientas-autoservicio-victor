@@ -4407,3 +4407,51 @@ body.horarios-modo-edicion .horario-cell{pointer-events:none}
 .pantalla,.settings-card,.module-card,.product-card,.venc-list-card,.admin-user-card,.admin-sector-card{min-width:0;}
 .pantalla strong,.pantalla span,.pantalla p,.pantalla small{overflow-wrap:anywhere;}
 img,video,canvas{max-width:100%;}
+
+
+/* =========================================================
+   V9.0 · Ajustes finales de sector, supervisor y horarios
+   ========================================================= */
+/* El botón Eliminar sector no debe quedar debajo ni difuminado por la barra de acciones. */
+#adminSectorModal #btnAdminEliminarSector{
+  position:relative!important;
+  z-index:1!important;
+  flex:0 0 auto!important;
+  width:calc(100% - 44px)!important;
+  margin:12px 22px 18px!important;
+  opacity:1!important;
+  filter:none!important;
+}
+#adminSectorModal .admin-modal-actions{
+  position:sticky!important;
+  bottom:0!important;
+  z-index:4!important;
+  margin-top:0!important;
+  padding:14px 22px max(16px,env(safe-area-inset-bottom))!important;
+  background:#fff!important;
+  border-top:1px solid #eee8e3!important;
+  box-shadow:none!important;
+}
+/* El selector de horario debe quedar siempre por encima y aceptar interacción táctil. */
+#horariosPaintTurnoButton{
+  position:relative!important;
+  z-index:12!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+.horarios-paint-picker{position:relative;z-index:12}
+/* Centrado real del marco de navegación mensual. */
+.horarios-month-nav{margin-inline:auto!important}
+@media(max-width:850px){
+  .horarios-toolbar{align-items:stretch!important}
+  .horarios-month-nav{width:min(100%,480px)!important;justify-content:space-between!important}
+}
+@media(max-width:560px){
+  #adminSectorModal #btnAdminEliminarSector{
+    width:calc(100% - 34px)!important;
+    margin-left:17px!important;
+    margin-right:17px!important;
+    margin-bottom:18px!important;
+  }
+  #adminSectorModal .admin-modal-actions{padding-left:17px!important;padding-right:17px!important}
+}

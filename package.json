@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "8.11.5",
-  "description": "Autoservicio 8.6",
+  "version": "9.0.0",
+  "description": "Autoservicio 9.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

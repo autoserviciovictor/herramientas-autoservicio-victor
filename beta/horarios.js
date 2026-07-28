@@ -1,3 +1,4 @@
+import "./ui.js?v=8100-entrega3";
 import { API_BASE_URL } from "./config.js?v=82-entrega6";
 
 let empleados = [];
@@ -465,11 +466,32 @@ function crearPanelEdicion() {
   $("btnHorariosEditar").onclick = entrarModoEdicion;
   $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
-  $("horariosPaintTurnoButton").onclick = async () => {
-    const opciones = TURNOS.filter(t=>t.id!=="personalizado").map(t=>({value:t.id,label:t.label,color:t.color||"#ffffff",badge:t.id==="franco"?"F":(t.tipo==="cortado"?"C":""),description:t.id==="franco"?"Día libre":(t.tipo==="cortado"?"Horario cortado":"Horario continuo")}));
-    const elegido = await window.AppChoicePicker.open({title:"Seleccionar horario",kicker:"Pintar con",options,value:turnoPincel});
-    if (elegido) { turnoPincel=elegido; actualizarSelectorTurnos(); }
+  const abrirSelectorTurnos = async (evento) => {
+    evento?.preventDefault?.();
+    evento?.stopPropagation?.();
+    const picker = window.AppChoicePicker;
+    if (!picker?.open) {
+      avisoHorarios("No se pudo abrir el selector de horarios. Recargá la aplicación e intentá nuevamente.", "error");
+      return;
+    }
+    const iniciales = { franco:"F", vacaciones:"V", ausente:"A", licencia:"L" };
+    const descripciones = { franco:"Día libre", vacaciones:"Vacaciones", ausente:"Ausencia", licencia:"Licencia" };
+    const opciones = TURNOS.filter(t=>t.id!=="personalizado").map(t=>({
+      value:t.id,
+      label:t.label,
+      color:t.color||({franco:"#e5e7eb",vacaciones:"#22c55e",ausente:"#ef4444",licencia:"#3b82f6"}[t.id]||"#ffffff"),
+      badge:iniciales[t.id]||(t.tipo==="cortado"?"C":""),
+      description:descripciones[t.id]||(t.tipo==="cortado"?"Horario cortado":"Horario continuo")
+    }));
+    const elegido = await picker.open({title:"Seleccionar horario",kicker:"Pintar con",options,value:turnoPincel});
+    if (elegido !== null && elegido !== undefined && elegido !== "") {
+      turnoPincel=elegido;
+      actualizarSelectorTurnos();
+    }
   };
+  const botonSelectorTurnos = $("horariosPaintTurnoButton");
+  botonSelectorTurnos.addEventListener("click", abrirSelectorTurnos);
+  botonSelectorTurnos.addEventListener("pointerdown", evento => evento.stopPropagation());
   $("horariosClearSelection").onclick = () => {
     seleccion.clear();
     renderTabla();

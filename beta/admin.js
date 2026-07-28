@@ -163,7 +163,7 @@ function renderSectores(){
 }
 function poblarSupervisoresSector(actual=''){
  const sel=$("adminSectorSupervisor"); if(!sel)return;
- const candidatos=usuarios.filter(u=>u.activo);
+ const candidatos=usuarios.filter(u=>u.activo && String(u.rol || "").trim().toLowerCase() === "supervisor");
  sel.innerHTML='<option value="">Sin supervisor</option>'+candidatos.map(u=>`<option value="${u.usuario}">${escaparHtml(u.nombre)} (@${u.usuario})</option>`).join(''); sel.value=actual||'';
 }
 async function abrirSectorModal(sec=null){
