@@ -7,6 +7,7 @@ const elementos = {
         anotar: document.getElementById("pantallaAnotar"),
         precios: document.getElementById("pantallaPrecios"),
         horarios: document.getElementById("pantallaHorarios"),
+        tareas: document.getElementById("pantallaTareas"),
         productos: document.getElementById("pantallaProductos"),
         editarProducto: document.getElementById("pantallaEditarProducto"),
         ajustes: document.getElementById("pantallaAjustes"),
@@ -69,6 +70,7 @@ function actualizarEncabezadoModulo(nombre) {
         anotar: "Lista",
         precios: "Precios",
         horarios: "Horarios",
+        tareas: "Tareas",
         admin: "Administrador"
     };
     if (tituloMarca) tituloMarca.textContent = modulos[nombre] || "Autoservicio";
@@ -84,6 +86,7 @@ function actualizarEncabezadoModulo(nombre) {
         anotar: ["Lista", "Agregar productos"],
         precios: ["Precios", "Consultar precio"],
         horarios: ["Horarios", "Turnos del equipo"],
+        tareas: ["Tareas", "Organización semanal"],
         admin: ["Administrador", "Usuarios e historial"]
     };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
@@ -119,6 +122,7 @@ export function cambiarPantalla(nombre) {
     document.body.classList.toggle("en-anotar", nombre === "anotar");
     document.body.classList.toggle("en-precios", nombre === "precios");
     document.body.classList.toggle("en-horarios", nombre === "horarios");
+    document.body.classList.toggle("en-tareas", nombre === "tareas");
     document.body.classList.toggle("en-ajustes", nombre === "ajustes");
     document.body.classList.toggle("en-admin", nombre === "admin");
     document.body.classList.toggle("en-modulo-inventario", ["inventario", "productos", "cargados", "editarProducto"].includes(nombre));

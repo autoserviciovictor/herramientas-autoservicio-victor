@@ -9,7 +9,7 @@ let usuarioActual = null;
 try { usuarioActual = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch {}
 
 const $ = id => document.getElementById(id);
-const MODULOS_DISPONIBLES = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
+const MODULOS_DISPONIBLES = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
 
 function permisosUsuario(usuario = usuarioActual) {
   if (usuario?.rol === "administrador") return Object.fromEntries(MODULOS_DISPONIBLES.map(m => [m, true]));
