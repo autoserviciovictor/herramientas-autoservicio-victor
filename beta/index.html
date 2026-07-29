@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=936-logica-tareas">
+    <link rel="stylesheet" href="style.css?v=96-pulido-visual">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -688,14 +688,14 @@
           </div>
           <div id="tareasDias" class="tareas-days" aria-label="Días de la semana"></div>
           <div id="tareasResumen" class="tareas-summary"></div>
-          <div class="tareas-section-head"><h2 id="tareasFechaTitulo"></h2><button id="btnNuevaTarea" class="tareas-add-btn" type="button">+ Nueva tarea</button></div>
+          <div class="tareas-section-head"><h2 id="tareasFechaTitulo"></h2><button id="btnNuevaTarea" class="tareas-add-btn" type="button">+ Asignar tarea</button></div>
           <div id="tareasLista" class="tareas-list"></div>
         </div>
       </section>
 
       <section id="tareasVistaBano" class="tareas-view oculto" data-tareas-view="bano">
         <div class="tareas-shell bano-shell">
-          <div class="tareas-page-heading"><div class="tareas-page-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M16 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M5 9h6v5H9v7H6v-7H5V9M13 9h6v5h-1v7h-3v-7h-2V9"/></svg></div><div><h2>Limpieza del baño</h2><p>Rotación comunitaria cada dos días</p></div></div>
+          <div class="tareas-page-heading"><div class="tareas-page-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M16 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M5 9h6v5H9v7H6v-7H5V9M13 9h6v5h-1v7h-3v-7h-2V9"/></svg></div><div><h2>Limpieza del baño</h2><p>Rotación automática: un día sí y otro no</p></div></div>
           <article id="banoTurnoActual" class="bano-current-card"></article>
           <div class="tareas-section-head"><h2>Próximos turnos</h2></div>
           <div id="banoProximos" class="bano-next-list"></div>
@@ -727,16 +727,11 @@
                 <div class="tareas-config-title"><span class="config-card-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M16 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M5 9h6v5H9v7H6v-7H5V9M13 9h6v5h-1v7h-3v-7h-2V9"/></svg></span><div><h3>Rotación del baño</h3><p>Elegí los participantes y configurá el cambio de responsable.</p></div></div>
               </div>
               <section class="config-section-block">
-                <div class="config-section-label"><div><strong>Participantes</strong><span>Todos forman parte de la lista comunitaria.</span></div><span id="banoParticipantesCantidad" class="config-count-pill">0</span></div>
-                <div id="banoParticipantesChips" class="config-participant-chips"></div>
-                <div class="config-add-person"><input id="banoParticipanteNuevo" type="text" placeholder="Nombre del participante" autocomplete="off"><button id="btnAgregarParticipanteBano" type="button"><svg class="app-icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar</button></div>
-                <textarea id="banoParticipantes" class="oculto" aria-hidden="true" tabindex="-1"></textarea>
+                <div class="config-section-label"><div><strong>Participantes</strong><span>Seleccioná usuarios registrados para formar la rotación.</span></div><span id="banoParticipantesCantidad" class="config-count-pill">0</span></div>
+                <div id="banoUsuariosDisponibles" class="config-user-list"></div>
               </section>
-              <section class="config-section-block config-rotation-grid">
-                <label class="config-field-card"><span>Cambio de responsable</span><div class="config-number-field"><input id="banoIntervalo" type="number" min="1" value="2"><small>días</small></div></label>
-                <label class="config-field-card"><span>Comienza el</span><input id="banoFechaInicio" type="date"></label>
-              </section>
-              <div class="config-save-bar"><div><strong>Rotación comunitaria</strong><span>Los cambios se aplicarán desde la fecha indicada.</span></div><button id="btnGuardarConfigBano" class="save-btn" type="button"><svg class="app-icon" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4M8 17h8"/></svg>Guardar</button></div>
+              <div class="config-fixed-rule"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M4 9h16M5 5h14v16H5z"/><path d="m8 15 2 2 5-5"/></svg><div><strong>Limpieza día por medio</strong><span>La aplicación alterna automáticamente: un día se limpia y al siguiente no.</span></div></div>
+              <div class="config-save-bar"><div><strong>Rotación comunitaria</strong><span>Los responsables avanzan automáticamente en cada día de limpieza.</span></div><button id="btnGuardarConfigBano" class="save-btn" type="button"><svg class="app-icon" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4M8 17h8"/></svg>Guardar</button></div>
             </article>
           </div>
         </div>
@@ -752,21 +747,26 @@
     <div id="tareaModal" class="modal-overlay oculto" aria-hidden="true">
       <div class="modal-card tarea-modal-card" role="dialog" aria-modal="true" aria-labelledby="tareaModalTitulo">
         <button id="btnCerrarTareaModal" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
-        <div class="modal-kicker">GESTIÓN DE TAREAS</div><h3 id="tareaModalTitulo">Nueva tarea</h3>
-        <label>Nombre<input id="tareaNombre" type="text" placeholder="Ej.: Limpieza panera"></label>
-        <div class="tarea-form-grid"><label>Comienza el<input id="tareaFecha" type="date"></label><label>Duración<input id="tareaDuracion" type="text" placeholder="10 min"></label></div>
-        <label>Sector<input id="tareaSector" type="text" placeholder="Ej.: Panadería"></label>
-        <label>Responsables<input id="tareaResponsables" type="text" placeholder="Camila, Cynthia"></label>
-        <label>Turno<select id="tareaTurno"><option value="7:00 - 14:00">7:00 - 14:00</option><option value="8:00 - 15:00">8:00 - 15:00</option><option value="15:00 - 22:00">15:00 - 22:00</option></select></label>
-        <section class="tarea-repeat-card">
-          <label class="tarea-repeat-toggle"><input id="tareaRepetir" type="checkbox"><span><strong>Repetir semanalmente</strong><small>La tarea aparecerá automáticamente los días elegidos.</small></span></label>
-          <div id="tareaDiasRepeticion" class="tarea-repeat-days" aria-label="Días de repetición">
-            <label><input type="checkbox" value="1"><span>Lun</span></label><label><input type="checkbox" value="2"><span>Mar</span></label><label><input type="checkbox" value="3"><span>Mié</span></label><label><input type="checkbox" value="4"><span>Jue</span></label><label><input type="checkbox" value="5"><span>Vie</span></label><label><input type="checkbox" value="6"><span>Sáb</span></label><label><input type="checkbox" value="0"><span>Dom</span></label>
-          </div>
-        </section>
+        <div class="modal-kicker">CONFIGURACIÓN DE TAREAS</div><h3 id="tareaModalTitulo">Nueva tarea</h3>
+        <label>Nombre<input id="tareaNombre" type="text" placeholder="Ej.: Limpieza de cajas"></label>
         <label>Descripción<textarea id="tareaDescripcion" rows="3" placeholder="Indicaciones opcionales"></textarea></label>
-        <button id="btnEliminarTarea" class="tarea-delete-btn oculto" type="button"><svg class="app-icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>Eliminar tarea</button>
+        <label>Duración<select id="tareaDuracion"><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="15">15 minutos</option><option value="20">20 minutos</option><option value="30">30 minutos</option><option value="45">45 minutos</option><option value="60">1 hora</option><option value="90">1 hora 30 minutos</option><option value="120">2 horas</option></select></label>
+        <label>Turno permitido<select id="tareaTurno"><option value="manana">Solo mañana</option><option value="tarde">Solo tarde</option><option value="ambos">Mañana y tarde</option></select></label>
+        <section class="tarea-repeat-card"><strong>Días de realización</strong><div id="tareaDiasRepeticion" class="tarea-repeat-days" aria-label="Días de realización"><label><input type="checkbox" value="1"><span>Lun</span></label><label><input type="checkbox" value="2"><span>Mar</span></label><label><input type="checkbox" value="3"><span>Mié</span></label><label><input type="checkbox" value="4"><span>Jue</span></label><label><input type="checkbox" value="5"><span>Vie</span></label><label><input type="checkbox" value="6"><span>Sáb</span></label><label><input type="checkbox" value="0"><span>Dom</span></label></div></section>
+        <button id="btnEliminarTarea" class="tarea-delete-btn oculto" type="button">Eliminar tarea</button>
         <div class="modal-actions"><button id="btnCancelarTarea" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarTarea" class="save-btn" type="button">Guardar tarea</button></div>
+      </div>
+    </div>
+
+    <div id="asignarModal" class="modal-overlay oculto" aria-hidden="true">
+      <div class="modal-card tarea-modal-card" role="dialog" aria-modal="true" aria-labelledby="asignarModalTitulo">
+        <button id="btnCerrarAsignarModal" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
+        <div class="modal-kicker">ASIGNACIÓN DIARIA</div><h3 id="asignarModalTitulo">Asignar tarea</h3>
+        <p id="asignarFechaTexto" class="asignar-fecha"></p>
+        <label>Tarea disponible<select id="asignarTareaSelect"></select></label>
+        <label>Turno<select id="asignarTurno"></select></label>
+        <div><strong>Responsables</strong><div id="asignarUsuarios" class="asignar-usuarios"></div></div>
+        <div class="modal-actions"><button id="btnCancelarAsignar" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarAsignar" class="save-btn" type="button">Asignar</button></div>
       </div>
     </div>
 
@@ -1025,7 +1025,7 @@
 <script type="module" src="./notifications.js?v=84-entrega8"></script>
 <script type="module" src="./prices.js?v=84-entrega8"></script>
 <script type="module" src="./app.js?v=8110-entrega4"></script>
-<script type="module" src="./tareas.js?v=936-logica-tareas"></script>
+<script type="module" src="./tareas.js?v=96-pulido-visual"></script>
 <script type="module" src="./horarios.js?v=901-hotfix-calendario"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 

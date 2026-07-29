@@ -1006,6 +1006,17 @@ app.put("/admin/sectores/:id", requerirAdministrador, async (req,res) => {
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo actualizar el sector"}); }
 });
 
+app.get("/tareas/usuarios", requerirSesion, async (req, res) => {
+  try {
+    const usuarios = (await obtenerUsuarios()).filter(u => u.activo);
+    const visibles = req.usuario.rol === "administrador" ? usuarios : usuarios.filter(u => {
+      const sectoresPermitidos = [...new Set([req.usuario.sector, ...(req.usuario.sectores || [])].filter(Boolean))];
+      return sectoresPermitidos.includes(u.sector) || (u.sectores || []).some(s => sectoresPermitidos.includes(s));
+    });
+    res.json({ok:true, usuarios:visibles.map(u=>({usuario:u.usuario,nombre:u.nombre,sector:u.sector,sectores:u.sectores||[]}))});
+  } catch(error) { res.status(500).json({ok:false,mensaje:error.message || "No se pudieron cargar los usuarios"}); }
+});
+
 app.get("/admin/usuarios", requerirAdministrador, async (req, res) => {
   try {
     const usuarios = await obtenerUsuarios();

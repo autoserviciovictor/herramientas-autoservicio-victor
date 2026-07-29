@@ -5078,3 +5078,130 @@ body.en-tareas #pantallaTareas .tarea-modal-card::-webkit-scrollbar-thumb{backgr
   body.en-tareas #pantallaTareas [data-tareas-view]{animation:none}
   body.en-tareas #pantallaTareas *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
+
+/* v9.4 - flujo de plantillas y asignaciones */
+body.en-tareas #pantallaTareas .tareas-days{grid-template-columns:repeat(7,minmax(0,1fr));overflow:visible!important;gap:4px!important}
+body.en-tareas #pantallaTareas .tareas-days button{min-width:0!important;padding-inline:1px}
+.tareas-summary{grid-template-columns:repeat(3,1fr)}
+.asignar-fecha{text-transform:capitalize;color:#6d6560;font-weight:800;margin:4px 0 14px}.asignar-usuarios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}.asignar-usuarios label{margin:0!important}.asignar-usuarios input{position:absolute;opacity:0}.asignar-usuarios span{display:flex;align-items:center;min-height:44px;padding:10px 12px;border:1px solid #ddd7d1;border-radius:12px;background:#fff;font-weight:800}.asignar-usuarios input:checked+span{border-color:#c5232c;background:#fff1f2;color:#a51d25}.tarea-repeat-card>strong{font-size:14px}@media(max-width:480px){.asignar-usuarios{grid-template-columns:1fr}.tareas-days button strong{font-size:9px!important}.tareas-days button span{font-size:17px!important}}
+
+/* === V9.5 — Rotación automática del baño === */
+.config-user-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.config-user-option{position:relative;display:flex!important;align-items:center;gap:10px;margin:0!important;padding:11px;border:1px solid #e5e1dc;border-radius:14px;background:#fff;cursor:pointer}
+.config-user-option input{position:absolute;opacity:0;pointer-events:none}
+.config-user-check{width:28px;height:28px;flex:0 0 28px;border:1px solid #d9d3cd;border-radius:9px;display:grid;place-items:center;color:transparent;background:#faf9f7}
+.config-user-check .app-icon{width:17px;height:17px}
+.config-user-option input:checked+.config-user-check{background:#c3242d;border-color:#c3242d;color:#fff}
+.config-user-option:has(input:checked){border-color:#e4aeb2;background:#fff8f8}
+.config-user-copy{min-width:0;display:flex;flex-direction:column;gap:2px}
+.config-user-copy strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.config-user-copy small{font-size:11px;color:#7b756f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.config-fixed-rule{margin-top:14px;padding:13px;border:1px solid #ead9bd;background:#fffaf0;border-radius:14px;display:flex;align-items:center;gap:11px}
+.config-fixed-rule>.app-icon{width:24px;height:24px;color:#a66a00;flex:none}
+.config-fixed-rule>div{display:flex;flex-direction:column;gap:3px}
+.config-fixed-rule strong{font-size:14px}.config-fixed-rule span{font-size:12px;color:#736b60}
+.bano-status-pill.is-rest{background:#eef1f5;color:#5c6673}
+.bano-hero-person.is-rest-day{opacity:.82}
+.bano-rest-note{padding:13px;border-radius:14px;background:#f4f6f8;border:1px solid #e2e7ec;display:flex;flex-direction:column;gap:3px;text-align:center}
+.bano-rest-note strong{font-size:13px}.bano-rest-note span{font-size:12px;color:#69727d}
+@media(max-width:520px){.config-user-list{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   V9.6 — PULIDO VISUAL Y RESPONSIVE DEL MÓDULO TAREAS
+   ========================================================= */
+.module-card.module-tareas .module-icon{
+  background:transparent!important;
+  color:var(--brand,#b72e35)!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+
+body.en-tareas #pantallaTareas .tareas-shell{max-width:980px}
+body.en-tareas #pantallaTareas .tareas-sector-bar,
+body.en-tareas #pantallaTareas .config-sector-picker{
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+body.en-tareas #pantallaTareas .tareas-sector-bar:not(:disabled):hover,
+body.en-tareas #pantallaTareas .config-sector-picker:hover{
+  border-color:#d9b9bb;box-shadow:0 8px 22px rgba(54,38,31,.08);transform:translateY(-1px)
+}
+
+body.en-tareas #pantallaTareas .tareas-days{
+  width:100%;grid-template-columns:repeat(7,minmax(0,1fr))!important;
+  gap:5px!important;overflow:visible!important;
+}
+body.en-tareas #pantallaTareas .tareas-days button{
+  width:100%;min-width:0!important;min-height:62px;padding:5px 1px!important;
+}
+body.en-tareas #pantallaTareas .tareas-days button strong{
+  max-width:100%;font-size:10px!important;letter-spacing:-.1px;overflow:hidden;text-overflow:clip
+}
+body.en-tareas #pantallaTareas .tareas-days button span{font-size:19px!important}
+
+body.en-tareas #pantallaTareas .tareas-summary{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px}
+body.en-tareas #pantallaTareas .tareas-summary>div{padding:14px 6px}
+body.en-tareas #pantallaTareas .tareas-summary strong{font-size:25px!important}
+
+body.en-tareas #pantallaTareas .tareas-list,
+body.en-tareas #pantallaTareas .config-task-list,
+body.en-tareas #pantallaTareas .bano-turn-list{gap:14px!important}
+
+body.en-tareas #pantallaTareas .tarea-card{
+  border-radius:19px;box-shadow:0 8px 24px rgba(39,29,23,.055)
+}
+body.en-tareas #pantallaTareas .tarea-card-state strong{
+  border-radius:999px;padding:6px 9px;background:#fff8e8;font-size:10.5px!important
+}
+body.en-tareas #pantallaTareas .tarea-card-state.estado-completada strong{background:#eaf8ef}
+body.en-tareas #pantallaTareas .tarea-card-state button,
+body.en-tareas #pantallaTareas .tareas-add-btn,
+body.en-tareas #pantallaTareas .config-task-actions button{
+  min-height:42px!important;padding:9px 14px!important
+}
+body.en-tareas #pantallaTareas .tareas-add-btn{font-size:13px!important;white-space:nowrap}
+
+body.en-tareas #pantallaTareas .config-task-row{padding:14px!important;gap:13px!important}
+body.en-tareas #pantallaTareas .config-task-summary strong{font-size:22px}
+body.en-tareas #pantallaTareas .config-task-actions{gap:8px!important}
+body.en-tareas #pantallaTareas .config-status-pill{
+  display:inline-flex;align-items:center;min-height:24px;padding:4px 8px;border-radius:999px;
+  background:#eaf8ef;color:#167743;font-size:10px;font-weight:900
+}
+body.en-tareas #pantallaTareas .config-task-row.is-disabled .config-status-pill{background:#efeeec;color:#69645f!important}
+
+body.en-tareas #pantallaTareas .bano-hero-name,
+body.en-tareas #pantallaTareas .bano-hero-person strong{font-size:clamp(25px,6vw,34px)!important;line-height:1.08}
+body.en-tareas #pantallaTareas .bano-turn-copy strong{font-size:16px!important}
+
+@media(max-width:640px){
+  body.en-tareas #pantallaTareas .tareas-shell{width:calc(100% - 18px)!important}
+  body.en-tareas #pantallaTareas .tareas-days{gap:3px!important}
+  body.en-tareas #pantallaTareas .tareas-days button{min-height:58px;border-radius:10px!important}
+  body.en-tareas #pantallaTareas .tareas-days button strong{font-size:8.5px!important}
+  body.en-tareas #pantallaTareas .tareas-days button span{font-size:17px!important}
+  body.en-tareas #pantallaTareas .tareas-section-head{align-items:center!important;gap:8px}
+  body.en-tareas #pantallaTareas .tareas-section-head h2{max-width:58%;font-size:14px!important}
+  body.en-tareas #pantallaTareas .tareas-add-btn{padding:9px 11px!important;font-size:11.5px!important}
+  body.en-tareas #pantallaTareas .tarea-card{
+    grid-template-columns:42px minmax(0,1fr)!important;gap:10px!important;padding:13px!important
+  }
+  body.en-tareas #pantallaTareas .tarea-card-icon{width:40px!important;height:40px!important;border-radius:12px!important}
+  body.en-tareas #pantallaTareas .tarea-card-state{
+    grid-column:1/-1;min-height:0!important;border-left:0!important;border-top:1px solid #eee9e5;
+    padding:11px 0 0!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;text-align:left!important
+  }
+  body.en-tareas #pantallaTareas .tarea-card-state button{min-width:112px}
+  body.en-tareas #pantallaTareas .config-task-actions{justify-content:stretch!important}
+  body.en-tareas #pantallaTareas .config-task-actions button{min-width:0;flex:1;padding-inline:7px!important;font-size:11px}
+}
+
+@media(max-width:370px){
+  body.en-tareas #pantallaTareas .tareas-shell{width:calc(100% - 12px)!important}
+  body.en-tareas #pantallaTareas .tareas-days{gap:2px!important}
+  body.en-tareas #pantallaTareas .tareas-days button{min-height:55px;padding-inline:0!important}
+  body.en-tareas #pantallaTareas .tareas-days button strong{font-size:7.5px!important}
+  body.en-tareas #pantallaTareas .tareas-days button span{font-size:16px!important}
+  body.en-tareas #pantallaTareas .tareas-summary small{font-size:9px!important}
+  body.en-tareas #pantallaTareas .tareas-summary strong{font-size:20px!important}
+}
