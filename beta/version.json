@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "9.9.3",
-  "label": "9.9.3",
-  "build": 90903,
-  "name": "Versión 9.9.3 - Pulido visual y estabilización"
+  "version": "10.2",
+  "label": "10.2",
+  "build": 100200,
+  "name": "Versión 10.2 - Roles y permisos"
 }

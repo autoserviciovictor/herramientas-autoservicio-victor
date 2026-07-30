@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=993-pulido-final";
+import { API_BASE_URL } from "./config.js?v=102-roles-permisos";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -17,6 +17,9 @@ let usuariosTareas = [];
 let configSubvista = "tareas";
 let asignarDisponibles = [];
 let solicitudResponsables = 0;
+let tareasMemoria = [];
+let contextoTareas = { sectores:[], puedeAsignar:false, puedeConfigurar:false };
+let guardadoRemotoEnCurso = Promise.resolve();
 
 function inicioDia(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function inicioSemana(d){ const x=inicioDia(d), day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return x; }
@@ -26,15 +29,39 @@ function fmt(d,opt={}){ return new Intl.DateTimeFormat("es-AR",opt).format(d); }
 function esc(v){const d=document.createElement("div");d.textContent=v??"";return d.innerHTML;}
 function leerJSON(key, fallback){ try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback));}catch{return fallback;} }
 function guardarJSON(key,v){ localStorage.setItem(key,JSON.stringify(v)); }
-function leer(){ return leerJSON(KEY,[]); }
-function guardar(v){ guardarJSON(KEY,v); }
+function leer(){ return tareasMemoria.length || localStorage.getItem(KEY) ? tareasMemoria : leerJSON(KEY,[]); }
+function guardarLocal(v){ tareasMemoria=Array.isArray(v)?v:[]; guardarJSON(KEY,tareasMemoria); }
+async function sincronizarTareas(v){
+  if(!["administrador","supervisor"].includes(usuario()?.rol)) return;
+  guardadoRemotoEnCurso=guardadoRemotoEnCurso.then(async()=>{
+    const r=await fetch(`${API_BASE_URL}/tareas`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({tareas:v})});
+    const data=await r.json(); if(!r.ok||!data.ok) throw new Error(data.mensaje||"No se pudieron sincronizar las tareas");
+  }).catch(error=>window.AutoservicioDialog?.alert?.({title:"No se pudo sincronizar",message:error.message||"Revisá la conexión e intentá nuevamente."}));
+  return guardadoRemotoEnCurso;
+}
+function guardar(v){ guardarLocal(v); void sincronizarTareas(v); }
+async function cargarContextoTareas(){
+  try{const r=await fetch(`${API_BASE_URL}/tareas/contexto`),data=await r.json();if(r.ok&&data.ok)contextoTareas=data;}catch{}
+}
+async function cargarTareasRemotas(){
+  const locales=leerJSON(KEY,[]);
+  try{
+    const r=await fetch(`${API_BASE_URL}/tareas`),data=await r.json();
+    if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudieron cargar las tareas");
+    tareasMemoria=Array.isArray(data.tareas)?data.tareas:[];
+    // Primera migración: si el administrador todavía no tiene tareas en servidor, publica su base local.
+    if(usuario()?.rol==="administrador"&&!tareasMemoria.length&&locales.length){guardarLocal(locales);await sincronizarTareas(locales);tareasMemoria=locales;}
+    else guardarLocal(tareasMemoria);
+  }catch{tareasMemoria=locales;}
+}
 function usuario(){ return window.AutoservicioAuth?.getUsuario?.() || {}; }
-function puedeGestionar(){ return ["administrador","supervisor"].includes(usuario()?.rol); }
+function puedeAsignar(){ return contextoTareas.puedeAsignar || ["administrador","supervisor"].includes(usuario()?.rol); }
+function puedeConfigurar(){ return contextoTareas.puedeConfigurar || usuario()?.rol==="administrador"; }
 function claveSector(v){ return String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es"); }
 function sectoresUnicos(valores){ const mapa=new Map(); for(const valor of valores){ const limpio=String(valor||"").trim(); if(!limpio)continue; const clave=claveSector(limpio); if(!mapa.has(clave))mapa.set(clave,limpio); } return [...mapa.values()]; }
-function sectoresUsuario(){ const u=usuario(); return sectoresUnicos([u.sector,...(Array.isArray(u.sectores)?u.sectores:[])]); }
-function todosLosSectores(){ const deTareas=leer().map(t=>t.sector).filter(Boolean); const propios=sectoresUsuario(); const base=["Caja","Depósito","Fiambrería","Carnicería","Administración","Verdulería","Panadería","Limpieza"]; return sectoresUnicos([...propios,...deTareas,...base]).sort((a,b)=>a.localeCompare(b,"es",{sensitivity:"base"})); }
-function sectoresPermitidos(){ const u=usuario(); return u.rol==="administrador"?todosLosSectores():(sectoresUsuario().length?sectoresUsuario():todosLosSectores().slice(0,1)); }
+function sectoresUsuario(){ return sectoresUnicos((contextoTareas.sectores||[]).map(s=>s.nombre||s.id)); }
+function todosLosSectores(){ const delContexto=sectoresUsuario(); const deTareas=leer().map(t=>t.sector).filter(Boolean); return sectoresUnicos([...delContexto,...deTareas]).sort((a,b)=>a.localeCompare(b,"es",{sensitivity:"base"})); }
+function sectoresPermitidos(){ return sectoresUsuario().length?sectoresUsuario():todosLosSectores(); }
 function normalizarSector(){ const permitidos=sectoresPermitidos(); if(!sectorSeleccionado || !permitidos.includes(sectorSeleccionado)) sectorSeleccionado=permitidos[0]||"General"; }
 function normalizarTurnoPermitido(v){ const x=String(v||"").toLowerCase(); if(x==="manana"||x==="tarde"||x==="ambos")return x; if(x.includes("15:00")||x.includes("tarde"))return "tarde"; return "manana"; }
 function duracionTexto(v){ const n=Number(v); if(!Number.isFinite(n)||n<=0)return "Sin duración"; const h=Math.floor(n/60),m=n%60; return h&&m?`${h} h ${m} min`:h?`${h} h`:`${m} min`; }
@@ -97,19 +124,55 @@ function responsablesHTML(valor){ const nombres=Array.isArray(valor)?valor:Strin
 
 function renderDias(){ const box=$("tareasDias"); if(!box)return; box.innerHTML=""; for(let i=0;i<7;i++){const d=new Date(semanaBase);d.setDate(d.getDate()+i);const b=document.createElement("button");b.type="button";b.className=[iso(d)===iso(fechaSeleccionada)?"activo":"",iso(d)===iso(new Date())?"hoy":""].filter(Boolean).join(" ");b.innerHTML=`<strong>${DIAS[d.getDay()]}</strong><span>${d.getDate()}</span>`;b.onclick=()=>{fechaSeleccionada=d;renderTareas();};box.appendChild(b);} }
 function renderResumen(items){ const n=s=>items.filter(t=>t.estado===s).length; $("tareasResumen").innerHTML=`<div><small>Total</small><strong>${items.length}</strong></div><div class="pend"><small>Pend.</small><strong>${n("pendiente")}</strong></div><div class="comp"><small>Comp.</small><strong>${n("completada")}</strong></div>`; }
-function renderLista(items){ const box=$("tareasLista"); if(!items.length){box.innerHTML='<div class="tareas-empty tareas-empty-day"><span class="tareas-empty-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><strong>Sin tareas asignadas</strong><span>Usá “Asignar tarea” para organizar este día.</span></div>';return;} box.innerHTML=items.map(t=>`<article class="tarea-card" data-id="${t.id}" data-turno="${t._turno}"><div class="tarea-card-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></div><div class="tarea-card-main"><div class="tarea-card-title"><h3>${esc(t.nombre)}</h3><span class="tarea-sector">${esc(t.sector||"General")}</span></div><div class="tarea-assignment"><span class="turno-chip ${colorTurno(t._turno)}">${TURNOS[t._turno]}</span>${responsablesHTML(t._asignacion.responsables)}</div><div class="tarea-duration"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${duracionTexto(t.duracionMin)}</div></div><div class="tarea-card-state estado-${t.estado}"><strong><span class="estado-dot"></span>${t.estado==="completada"?"COMPLETADA":"PENDIENTE"}</strong>${t.estado==="completada"?`<small>por ${esc(t._asignacion.completadaPor||"Usuario")}${t._asignacion.completadaHora?` · ${esc(t._asignacion.completadaHora)}`:""}</small>`:`<button type="button" data-accion="completar">Completar</button>`}</div></article>`).join(""); }
-function renderTareas(){ normalizarSector(); const items=asignacionesDelDia(); $("tareasSectorNombre").textContent=sectorSeleccionado; const puedeCambiarSector=sectoresPermitidos().length>1; $("btnTareasCambiarSector").disabled=!puedeCambiarSector; $("btnTareasCambiarSector").classList.toggle("sector-unico",!puedeCambiarSector); $("btnTareasSemanaActual").textContent=`${fmt(semanaBase,{day:"2-digit",month:"short"})} - ${fmt(new Date(semanaBase.getFullYear(),semanaBase.getMonth(),semanaBase.getDate()+6),{day:"2-digit",month:"short"})}`; $("tareasFechaTitulo").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}).toUpperCase(); $("btnNuevaTarea").textContent="+ Asignar tarea"; $("btnNuevaTarea").classList.toggle("oculto",!puedeGestionar()); renderDias();renderResumen(items);renderLista(items); }
+function tareaCardHTML(t){
+  const completada=t.estado==="completada";
+  return `<article class="tarea-card tarea-card-v10" data-id="${t.id}" data-turno="${t._turno}">
+    <div class="tarea-card-main">
+      <div class="tarea-card-title">
+        <h3>${esc(t.nombre)}</h3>
+        <span class="tarea-duration-pill" aria-label="Duración: ${esc(duracionTexto(t.duracionMin))}">
+          <svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          ${duracionTexto(t.duracionMin)}
+        </span>
+      </div>
+      <div class="tarea-info-grid">
+        <div class="tarea-info-row tarea-info-sector"><span class="tarea-info-label">Sector</span><strong>${esc(t.sector||"General")}</strong></div>
+        <div class="tarea-info-row tarea-info-responsables"><span class="tarea-info-label">Responsables</span><div class="tarea-assignment">${responsablesHTML(t._asignacion.responsables)}</div></div>
+      </div>
+    </div>
+    <div class="tarea-card-state estado-${t.estado}">
+      <strong><span class="estado-dot"></span>${completada?"COMPLETADA":"PENDIENTE"}</strong>
+      ${completada?`<small>por ${esc(t._asignacion.completadaPor||"Usuario")}${t._asignacion.completadaHora?` · ${esc(t._asignacion.completadaHora)}`:""}</small>`:`<button type="button" data-accion="completar">Completar</button>`}
+    </div>
+  </article>`;
+}
+function renderGrupoTurno(turno,items){
+  const esManana=turno==="manana",titulo=esManana?"Mañana":"Tarde";
+  const icono=esManana
+    ? '<svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    : '<svg class="app-icon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 118.5 4 7 7 0 0020 15.5z"/></svg>';
+  return `<section class="tareas-turno-group tareas-turno-${turno}">
+    <header class="tareas-turno-head"><span class="tareas-turno-icon">${icono}</span><div><h3>${titulo}</h3><small>${items.length} ${items.length===1?"tarea":"tareas"}</small></div></header>
+    <div class="tareas-turno-list">${items.length?items.map(tareaCardHTML).join(""):`<div class="tareas-turno-empty">Sin tareas para este turno</div>`}</div>
+  </section>`;
+}
+function renderLista(items){
+  const box=$("tareasLista");
+  if(!items.length){box.innerHTML='<div class="tareas-empty tareas-empty-day"><span class="tareas-empty-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><strong>Sin tareas asignadas</strong><span>Usá “Asignar tarea” para organizar este día.</span></div>';return;}
+  const manana=items.filter(t=>t._turno==="manana"),tarde=items.filter(t=>t._turno==="tarde");
+  box.innerHTML=renderGrupoTurno("manana",manana)+renderGrupoTurno("tarde",tarde);
+}
+function renderTareas(){ normalizarSector(); const items=asignacionesDelDia(); $("tareasSectorNombre").textContent=sectorSeleccionado; const puedeCambiarSector=sectoresPermitidos().length>1; $("btnTareasCambiarSector").disabled=!puedeCambiarSector; $("btnTareasCambiarSector").classList.toggle("sector-unico",!puedeCambiarSector); $("btnTareasSemanaActual").textContent=`${fmt(semanaBase,{day:"2-digit",month:"short"})} - ${fmt(new Date(semanaBase.getFullYear(),semanaBase.getMonth(),semanaBase.getDate()+6),{day:"2-digit",month:"short"})}`; $("tareasFechaTitulo").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}).toUpperCase(); $("btnNuevaTarea").textContent="+ Asignar tarea"; $("btnNuevaTarea").classList.toggle("oculto",!puedeAsignar()); renderDias();renderResumen(items);renderLista(items); }
 async function cambiarEstado(id,turno){
   const all=leer(),t=all.find(x=>x.id===id),fecha=iso(fechaSeleccionada),a=t?.asignaciones?.[fecha]?.[turno];
   if(!a||a.estado==="completada")return;
   const ok=await window.AutoservicioDialog?.confirm?.({title:"Completar tarea",message:`¿Marcar “${t.nombre}” como completada?`,confirmText:"Completar"});
   if(ok===false)return;
-  // Volver a leer evita sobrescribir cambios realizados mientras se confirmó.
-  const actuales=leer(),actual=actuales.find(x=>x.id===id),asig=actual?.asignaciones?.[fecha]?.[turno];
-  if(!asig||asig.estado==="completada")return;
-  asig.estado="completada";
-  const u=usuario();asig.completadaPor=u.nombre||u.usuario||"Usuario";asig.completadaHora=new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
-  guardar(actuales);renderTareas();
+  try{
+    const r=await fetch(`${API_BASE_URL}/tareas/completar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,fecha,turno})});
+    const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo completar la tarea");
+    Object.assign(a,data.asignacion||{});guardarLocal(all);renderTareas();
+  }catch(error){window.AutoservicioDialog?.alert?.({title:"No se pudo completar",message:error.message||"Intentá nuevamente."});}
 }
 
 function abrir(t=null){
@@ -325,7 +388,7 @@ async function cambiarSectorConfig(){
   if(elegido&&sectores.includes(elegido)){ $("configSectorFiltro").value=elegido; sectorSeleccionado=elegido; renderConfig(); }
 }
 function renderConfig(){
-  const permiso=puedeGestionar(); $("tareasConfigSinPermiso").classList.toggle("oculto",permiso); $("tareasConfigContenido").classList.toggle("oculto",!permiso); if(!permiso)return;
+  const permiso=puedeConfigurar(); $("tareasConfigSinPermiso").classList.toggle("oculto",permiso); $("tareasConfigContenido").classList.toggle("oculto",!permiso); if(!permiso)return;
   const sectores=sectoresPermitidos(),sel=$("configSectorFiltro"),actual=sel.value||sectorSeleccionado||sectores[0]||"General"; sel.innerHTML=sectores.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");sel.value=sectores.includes(actual)?actual:(sectores[0]||"");sectorSeleccionado=sel.value||sectorSeleccionado;$("configSectorNombre").textContent=sel.value||"General";
   const todas=leer().filter(t=>(t.sector||"General")===sel.value), q=normalClave($("configBuscarTarea")?.value||""), lista=todas.filter(t=>!q||normalClave(t.nombre).includes(q)),activas=todas.filter(t=>t.activo!==false).length;
   $("btnLimpiarBusquedaTarea").classList.toggle("oculto",!q);
@@ -341,7 +404,7 @@ function actualizarConfigSubvista(){
 }
 
 async function cambiarSector(){ const opts=sectoresPermitidos().map(s=>({value:s,label:s})); if(window.AppChoicePicker?.open){const v=await window.AppChoicePicker.open({title:"Seleccionar sector",kicker:"Tareas",value:sectorSeleccionado,options:opts});if(v){sectorSeleccionado=v;renderTareas();}} else { const v=prompt("Sector",sectorSeleccionado); if(v){sectorSeleccionado=v;renderTareas();} } }
-function cambiarVista(v){ vistaActual=v; document.querySelectorAll("[data-tareas-view]").forEach(x=>{const visible=x.dataset.tareasView===v;x.classList.toggle("oculto",!visible);x.setAttribute("aria-hidden",visible?"false":"true");}); document.querySelectorAll("[data-tareas-tab]").forEach(x=>{const activo=x.dataset.tareasTab===v;x.classList.toggle("activo",activo);x.setAttribute("aria-current",activo?"page":"false");}); if(v==="tareas")renderTareas(); if(v==="bano")renderBano(); if(v==="config")renderConfig(); requestAnimationFrame(()=>window.scrollTo({top:0,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})); }
+function cambiarVista(v){ vistaActual=v; document.body.dataset.tareasVista=v; document.querySelectorAll("[data-tareas-view]").forEach(x=>{const visible=x.dataset.tareasView===v;x.classList.toggle("oculto",!visible);x.setAttribute("aria-hidden",visible?"false":"true");}); document.querySelectorAll("[data-tareas-tab]").forEach(x=>{const activo=x.dataset.tareasTab===v;x.classList.toggle("activo",activo);x.setAttribute("aria-current",activo?"page":"false");}); if(v==="tareas")renderTareas(); if(v==="bano")renderBano(); if(v==="config")renderConfig(); requestAnimationFrame(()=>window.scrollTo({top:0,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})); }
 
 function bind(){
   prepararSelectorDuracion();
@@ -357,6 +420,15 @@ function bind(){
   $("banoUsuariosDisponibles").onchange=()=>renderParticipantesConfig(participantesConfigActuales());
   $("configTareasLista").onclick=e=>{const row=e.target.closest("[data-id]");if(!row)return;const t=leer().find(x=>x.id===row.dataset.id);if(t)abrir(t);};$("configTareasLista").onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&e.target.closest("[data-id]")){e.preventDefault();e.target.closest("[data-id]").click();}};
 }
-async function activar(){activo=true;seed();await cargarUsuariosTareas();normalizarSector();cambiarVista(vistaActual);}
+async function activar(){
+  activo=true;seed();
+  await Promise.all([cargarContextoTareas(),cargarUsuariosTareas()]);
+  await cargarTareasRemotas();
+  normalizarSector();
+  const esAdmin=puedeConfigurar();
+  document.querySelector('[data-tareas-tab="config"]')?.classList.toggle("oculto",!esAdmin);
+  if(!esAdmin&&vistaActual==="config")vistaActual="tareas";
+  cambiarVista(vistaActual);
+}
 function desactivar(){activo=false;cerrar();}
 bind();window.TareasModule={activar,desactivar};

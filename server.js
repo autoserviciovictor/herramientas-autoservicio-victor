@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "9.2.1";
+const APP_VERSION = "10.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -30,6 +30,7 @@ const REEMPLAZOS_HORARIOS_SHEET_NAME = "Reemplazos Horarios";
 const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
 const PUSH_SUBSCRIPTIONS_SHEET_NAME = "Notificaciones Suscripciones";
 const NOTIFICATION_LOG_SHEET_NAME = "Notificaciones Vencimientos";
+const TAREAS_SHEET_NAME = "Tareas";
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
 const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
 const VAPID_SUBJECT = normalizarTexto(process.env.VAPID_SUBJECT || "mailto:administracion@autoserviciovictor.com");
@@ -1006,13 +1007,132 @@ app.put("/admin/sectores/:id", requerirAdministrador, async (req,res) => {
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo actualizar el sector"}); }
 });
 
+
+
+let hojaTareasAsegurada = false;
+async function asegurarHojaTareas() {
+  if (hojaTareasAsegurada) return;
+  validarConfiguracion();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  if (!(meta.data.sheets || []).some(h => h.properties?.title === TAREAS_SHEET_NAME)) {
+    await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody:{ requests:[{ addSheet:{ properties:{ title:TAREAS_SHEET_NAME } } }] } });
+  }
+  await sheets.spreadsheets.values.update({
+    spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A1:H1`, valueInputOption:"USER_ENTERED",
+    requestBody:{ values:[["ID","Sector","Nombre","Duración","Activo","Asignaciones","Actualizado","Actualizado por"]] }
+  });
+  hojaTareasAsegurada = true;
+}
+function normalizarTareaServidor(t) {
+  const asignaciones = t?.asignaciones && typeof t.asignaciones === "object" ? t.asignaciones : {};
+  return {
+    id: normalizarTexto(t?.id) || crypto.randomUUID(),
+    sector: normalizarTexto(t?.sector) || "General",
+    nombre: normalizarTexto(t?.nombre) || "Tarea",
+    duracionMin: Math.max(1, Math.min(480, Number(t?.duracionMin || t?.duracion || 10))),
+    activo: t?.activo !== false,
+    asignaciones
+  };
+}
+async function obtenerTareasServidor() {
+  await asegurarHojaTareas();
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A:H` });
+  return (r.data.values || []).slice(1).filter(f=>f[0]).map(f=>{
+    let asignaciones={}; try{asignaciones=JSON.parse(f[5]||"{}");}catch{}
+    return normalizarTareaServidor({id:f[0],sector:f[1],nombre:f[2],duracionMin:Number(f[3]),activo:!["no","false","0","inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),asignaciones});
+  });
+}
+async function guardarTareasServidor(tareas, usuario) {
+  return ejecutarEnCola("tareas", async()=>{
+    await asegurarHojaTareas();
+    const prev = await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A:H`});
+    const filas=(tareas||[]).map(normalizarTareaServidor).map(t=>[t.id,t.sector,t.nombre,t.duracionMin,t.activo?"Sí":"No",JSON.stringify(t.asignaciones||{}),fechaHoraArgentinaIso(),usuario?.usuario||""]);
+    if(filas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A2:H${filas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:filas}});
+    const prevCount=Math.max(0,(prev.data.values||[]).length-1);
+    if(prevCount>filas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A${filas.length+2}:H${prevCount+1}`});
+  });
+}
+async function sectoresTareasPermitidos(usuario) {
+  const sectores=(await obtenerSectores()).filter(s=>s.activo);
+  if(usuario.rol==="administrador") return sectores;
+  if(usuario.rol==="supervisor") {
+    const ids=new Set([usuario.sector,...(usuario.sectores||[])].filter(Boolean));
+    sectores.filter(s=>normalizarUsuario(s.supervisor)===normalizarUsuario(usuario.usuario)).forEach(s=>ids.add(s.id));
+    return sectores.filter(s=>ids.has(s.id));
+  }
+  return sectores.filter(s=>s.id===usuario.sector);
+}
+function coincideResponsable(a, usuario) {
+  const claves=new Set([usuario.usuario,usuario.nombre].map(normalizarUsuario).filter(Boolean));
+  return Object.values(a||{}).some(turnos=>Object.values(turnos||{}).some(asig=>(asig?.responsables||[]).some(r=>claves.has(normalizarUsuario(r)))));
+}
+
+app.get("/tareas/contexto", requerirSesion, async (req,res)=>{
+  try {
+    const sectores=await sectoresTareasPermitidos(req.usuario);
+    res.json({ok:true,rol:req.usuario.rol,sectores:sectores.map(s=>({id:s.id,nombre:s.nombre,color:s.color})),puedeAsignar:["administrador","supervisor"].includes(req.usuario.rol),puedeConfigurar:req.usuario.rol==="administrador"});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar el contexto de tareas"});}
+});
+
+app.get("/tareas", requerirSesion, async (req,res)=>{
+  try {
+    const [tareas,sectores]=await Promise.all([obtenerTareasServidor(),sectoresTareasPermitidos(req.usuario)]);
+    const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+    let visibles=tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
+    if(req.usuario.rol==="personal") visibles=visibles.filter(t=>coincideResponsable(t.asignaciones,req.usuario));
+    res.json({ok:true,tareas:visibles});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron cargar las tareas"});}
+});
+
+app.put("/tareas", requerirSesion, async (req,res)=>{
+  try {
+    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar tareas"});
+    const entrantes=Array.isArray(req.body?.tareas)?req.body.tareas.map(normalizarTareaServidor):[];
+    const actuales=await obtenerTareasServidor();
+    if(req.usuario.rol==="administrador") {
+      await guardarTareasServidor(entrantes,req.usuario);
+      return res.json({ok:true,tareas:entrantes});
+    }
+    const sectores=await sectoresTareasPermitidos(req.usuario);
+    const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+    const mapaEntrantes=new Map(entrantes.filter(t=>permitidos.has(normalizarTexto(t.sector))).map(t=>[t.id,t]));
+    const fusion=actuales.map(actual=>{
+      if(!permitidos.has(normalizarTexto(actual.sector))) return actual;
+      const nuevo=mapaEntrantes.get(actual.id);
+      if(!nuevo) return actual;
+      // El supervisor solo puede cambiar asignaciones, no la plantilla.
+      return {...actual,asignaciones:nuevo.asignaciones||{}};
+    });
+    await guardarTareasServidor(fusion,req.usuario);
+    res.json({ok:true,tareas:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)))});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron guardar las tareas"});}
+});
+
+app.post("/tareas/completar", requerirSesion, async (req,res)=>{
+  try {
+    const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
+    const tareas=await obtenerTareasServidor(),t=tareas.find(x=>x.id===id);
+    if(!t||!t.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
+    const asig=t.asignaciones[fecha][turno];
+    if(req.usuario.rol==="personal") {
+      const claves=new Set([req.usuario.usuario,req.usuario.nombre].map(normalizarUsuario).filter(Boolean));
+      if(!(asig.responsables||[]).some(r=>claves.has(normalizarUsuario(r)))) return res.status(403).json({ok:false,mensaje:"Esta tarea no está asignada a tu usuario"});
+    } else if(req.usuario.rol==="supervisor") {
+      const sectores=await sectoresTareasPermitidos(req.usuario);
+      const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+      if(!permitidos.has(normalizarTexto(t.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para completar tareas de este sector"});
+    }
+    asig.estado="completada"; asig.completadaPor=req.usuario.nombre||req.usuario.usuario; asig.completadaHora=new Date().toLocaleTimeString("es-AR",{timeZone:TIME_ZONE,hour:"2-digit",minute:"2-digit"});
+    await guardarTareasServidor(tareas,req.usuario);
+    res.json({ok:true,asignacion:asig});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo completar la tarea"});}
+});
+
 app.get("/tareas/usuarios", requerirSesion, async (req, res) => {
   try {
-    const usuarios = (await obtenerUsuarios()).filter(u => u.activo);
-    const visibles = req.usuario.rol === "administrador" ? usuarios : usuarios.filter(u => {
-      const sectoresPermitidos = [...new Set([req.usuario.sector, ...(req.usuario.sectores || [])].filter(Boolean))];
-      return sectoresPermitidos.includes(u.sector) || (u.sectores || []).some(s => sectoresPermitidos.includes(s));
-    });
+    const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), sectoresTareasPermitidos(req.usuario)]);
+    const permitidos = new Set(sectores.map(s=>s.id));
+    const visibles = req.usuario.rol === "administrador" ? usuarios.filter(u=>u.activo) : usuarios.filter(u => u.activo && (permitidos.has(u.sector) || (u.sectores || []).some(s => permitidos.has(s))));
     res.json({ok:true, usuarios:visibles.map(u=>({usuario:u.usuario,nombre:u.nombre,sector:u.sector,sectores:u.sectores||[]}))});
   } catch(error) { res.status(500).json({ok:false,mensaje:error.message || "No se pudieron cargar los usuarios"}); }
 });

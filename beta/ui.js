@@ -58,6 +58,7 @@ function actualizarEncabezadoModulo(nombre) {
     const tituloPagina = document.getElementById("modulePageTitle");
     const subtituloPagina = document.getElementById("modulePageSubtitle");
     const volver = document.getElementById("brandBackBtn");
+    const iconoPagina = document.getElementById("modulePageIconUse");
 
     const modulos = {
         inicio: "Autoservicio",
@@ -89,7 +90,22 @@ function actualizarEncabezadoModulo(nombre) {
         tareas: ["Tareas", "Organización semanal"],
         admin: ["Administrador", "Usuarios e historial"]
     };
+    const iconos = {
+        inicio: "#icon-box",
+        inventario: "#icon-box",
+        productos: "#icon-box",
+        cargados: "#icon-box",
+        editarProducto: "#icon-edit",
+        ajustes: "#icon-settings",
+        vencimientos: "#icon-calendar",
+        anotar: "#icon-list",
+        precios: "#icon-tag",
+        horarios: "#icon-clock",
+        tareas: "#icon-tasks",
+        admin: "#icon-shield"
+    };
     const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
+    if (iconoPagina) iconoPagina.setAttribute("href", iconos[nombre] || iconos.inicio);
     if (tituloPagina) tituloPagina.textContent = textoTitulo;
     if (subtituloPagina) {
         subtituloPagina.textContent = textoSubtitulo;
