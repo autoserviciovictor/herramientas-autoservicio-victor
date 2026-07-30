@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "10.2",
+  "version": "10.3",
   "label": "10.2",
   "build": 100200,
-  "name": "Versión 10.2 - Roles y permisos"
+  "name": "v10.3 - Sectores, persistencia y configuración de supervisor"
 }

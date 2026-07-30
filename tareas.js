@@ -1,10 +1,11 @@
-import { API_BASE_URL } from "./config.js?v=102-roles-permisos";
+import { API_BASE_URL } from "./config.js?v=103-estabilizacion-tareas";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
 const OLD_KEYS = ["autoservicio_tareas_v2","autoservicio_tareas_v1"];
 const BANO_KEY = "autoservicio_bano_config_v1";
 const BANO_HISTORY_KEY = "autoservicio_bano_historial_v1";
+const PENDING_KEY = "autoservicio_tareas_pendientes_v1";
 const DIAS = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
 const TURNOS = {manana:"Mañana",tarde:"Tarde"};
 let fechaSeleccionada = inicioDia(new Date());
@@ -31,38 +32,55 @@ function leerJSON(key, fallback){ try{return JSON.parse(localStorage.getItem(key
 function guardarJSON(key,v){ localStorage.setItem(key,JSON.stringify(v)); }
 function leer(){ return tareasMemoria.length || localStorage.getItem(KEY) ? tareasMemoria : leerJSON(KEY,[]); }
 function guardarLocal(v){ tareasMemoria=Array.isArray(v)?v:[]; guardarJSON(KEY,tareasMemoria); }
-async function sincronizarTareas(v){
-  if(!["administrador","supervisor"].includes(usuario()?.rol)) return;
+async function sincronizarTareas(v, deletedIds=[]){
+  if(!["administrador","supervisor"].includes(usuario()?.rol)) return false;
+  const anterior=leerJSON(PENDING_KEY,{tareas:[],deletedIds:[]});
+  const pendientes={tareas:Array.isArray(v)?v:[],deletedIds:[...new Set([...(anterior?.deletedIds||[]),...deletedIds].filter(Boolean))]};
+  guardarJSON(PENDING_KEY,pendientes);
+  let exito=false;
   guardadoRemotoEnCurso=guardadoRemotoEnCurso.then(async()=>{
-    const r=await fetch(`${API_BASE_URL}/tareas`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({tareas:v})});
+    const r=await fetch(`${API_BASE_URL}/tareas`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(pendientes)});
     const data=await r.json(); if(!r.ok||!data.ok) throw new Error(data.mensaje||"No se pudieron sincronizar las tareas");
-  }).catch(error=>window.AutoservicioDialog?.alert?.({title:"No se pudo sincronizar",message:error.message||"Revisá la conexión e intentá nuevamente."}));
-  return guardadoRemotoEnCurso;
+    if(Array.isArray(data.tareas)) guardarLocal(data.tareas);
+    localStorage.removeItem(PENDING_KEY); exito=true;
+  }).catch(error=>window.AutoservicioDialog?.alert?.({title:"Cambios guardados en el dispositivo",message:`${error.message||"No se pudo conectar con el servidor"}. Se volverán a enviar automáticamente al ingresar nuevamente.`}));
+  await guardadoRemotoEnCurso;
+  return exito;
 }
-function guardar(v){ guardarLocal(v); void sincronizarTareas(v); }
+function guardar(v,opciones={}){ guardarLocal(v); void sincronizarTareas(v,opciones.deletedIds||[]); }
 async function cargarContextoTareas(){
-  try{const r=await fetch(`${API_BASE_URL}/tareas/contexto`),data=await r.json();if(r.ok&&data.ok)contextoTareas=data;}catch{}
+  const intentos=[`${API_BASE_URL}/tareas/contexto`,`${API_BASE_URL}/horarios/contexto`];
+  for(const url of intentos){
+    try{
+      const r=await fetch(url),data=await r.json();
+      if(r.ok&&data.ok&&Array.isArray(data.sectores)&&data.sectores.length){
+        contextoTareas={...contextoTareas,...data,puedeAsignar:data.puedeAsignar??["administrador","supervisor"].includes(usuario()?.rol),puedeConfigurar:data.puedeConfigurar??["administrador","supervisor"].includes(usuario()?.rol)};
+        return;
+      }
+    }catch{}
+  }
+  contextoTareas={sectores:[],puedeAsignar:false,puedeConfigurar:["administrador","supervisor"].includes(usuario()?.rol),errorSectores:true};
 }
 async function cargarTareasRemotas(){
-  const locales=leerJSON(KEY,[]);
+  const locales=leerJSON(KEY,[]),pendientes=leerJSON(PENDING_KEY,null);
   try{
+    if(pendientes?.tareas&&["administrador","supervisor"].includes(usuario()?.rol)) await sincronizarTareas(pendientes.tareas,pendientes.deletedIds||[]);
     const r=await fetch(`${API_BASE_URL}/tareas`),data=await r.json();
     if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudieron cargar las tareas");
     tareasMemoria=Array.isArray(data.tareas)?data.tareas:[];
-    // Primera migración: si el administrador todavía no tiene tareas en servidor, publica su base local.
     if(usuario()?.rol==="administrador"&&!tareasMemoria.length&&locales.length){guardarLocal(locales);await sincronizarTareas(locales);tareasMemoria=locales;}
     else guardarLocal(tareasMemoria);
   }catch{tareasMemoria=locales;}
 }
 function usuario(){ return window.AutoservicioAuth?.getUsuario?.() || {}; }
 function puedeAsignar(){ return contextoTareas.puedeAsignar || ["administrador","supervisor"].includes(usuario()?.rol); }
-function puedeConfigurar(){ return contextoTareas.puedeConfigurar || usuario()?.rol==="administrador"; }
+function puedeConfigurar(){ return contextoTareas.puedeConfigurar || ["administrador","supervisor"].includes(usuario()?.rol); }
 function claveSector(v){ return String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es"); }
 function sectoresUnicos(valores){ const mapa=new Map(); for(const valor of valores){ const limpio=String(valor||"").trim(); if(!limpio)continue; const clave=claveSector(limpio); if(!mapa.has(clave))mapa.set(clave,limpio); } return [...mapa.values()]; }
 function sectoresUsuario(){ return sectoresUnicos((contextoTareas.sectores||[]).map(s=>s.nombre||s.id)); }
 function todosLosSectores(){ const delContexto=sectoresUsuario(); const deTareas=leer().map(t=>t.sector).filter(Boolean); return sectoresUnicos([...delContexto,...deTareas]).sort((a,b)=>a.localeCompare(b,"es",{sensitivity:"base"})); }
 function sectoresPermitidos(){ return sectoresUsuario().length?sectoresUsuario():todosLosSectores(); }
-function normalizarSector(){ const permitidos=sectoresPermitidos(); if(!sectorSeleccionado || !permitidos.includes(sectorSeleccionado)) sectorSeleccionado=permitidos[0]||"General"; }
+function normalizarSector(){ const permitidos=sectoresPermitidos(); if(!sectorSeleccionado || !permitidos.includes(sectorSeleccionado)) sectorSeleccionado=permitidos[0]||""; }
 function normalizarTurnoPermitido(v){ const x=String(v||"").toLowerCase(); if(x==="manana"||x==="tarde"||x==="ambos")return x; if(x.includes("15:00")||x.includes("tarde"))return "tarde"; return "manana"; }
 function duracionTexto(v){ const n=Number(v); if(!Number.isFinite(n)||n<=0)return "Sin duración"; const h=Math.floor(n/60),m=n%60; return h&&m?`${h} h ${m} min`:h?`${h} h`:`${m} min`; }
 function duracionAInput(v){ const n=Math.max(1,Number(v)||10),h=Math.floor(n/60),m=n%60; return `${String(Math.min(h,8)).padStart(2,"0")}:${String(m).padStart(2,"0")}`; }
@@ -193,8 +211,8 @@ function guardarForm(){
   else all.push({id:crypto.randomUUID?.()||String(Date.now()),nombre,descripcion:"",sector:sectorSeleccionado,duracionMin,diasSemana:[],turnoPermitido:"ambos",activo:true,asignaciones:{}});
   guardar(all); cerrar(); renderTareas(); renderConfig();
 }
-async function eliminarTareaActual(){ if(!tareaEditando)return; const ok=await window.AutoservicioDialog?.confirm?.({title:"Eliminar tarea",message:`¿Eliminar “${tareaEditando.nombre}”?`,confirmText:"Eliminar",danger:true});if(ok===false)return;guardar(leer().filter(x=>x.id!==tareaEditando.id));cerrar();renderTareas();renderConfig(); }
-async function confirmarEliminar(t){ const ok=await window.AutoservicioDialog?.confirm?.({title:"Eliminar tarea",message:`¿Eliminar “${t.nombre}”?`,confirmText:"Eliminar",danger:true});if(ok===false)return;guardar(leer().filter(x=>x.id!==t.id));renderConfig();renderTareas(); }
+async function eliminarTareaActual(){ if(!tareaEditando)return; const id=tareaEditando.id; const ok=await window.AutoservicioDialog?.confirm?.({title:"Eliminar tarea",message:`¿Eliminar “${tareaEditando.nombre}”?`,confirmText:"Eliminar",danger:true});if(ok===false)return;guardar(leer().filter(x=>x.id!==id),{deletedIds:[id]});cerrar();renderTareas();renderConfig(); }
+async function confirmarEliminar(t){ const ok=await window.AutoservicioDialog?.confirm?.({title:"Eliminar tarea",message:`¿Eliminar “${t.nombre}”?`,confirmText:"Eliminar",danger:true});if(ok===false)return;guardar(leer().filter(x=>x.id!==t.id),{deletedIds:[t.id]});renderConfig();renderTareas(); }
 
 async function cargarUsuariosTareas(){ try{const r=await fetch(`${API_BASE_URL}/tareas/usuarios`),data=await r.json();if(r.ok&&data.ok)usuariosTareas=data.usuarios||[];}catch{} if(!usuariosTareas.length){const u=usuario();usuariosTareas=u.nombre?[{usuario:u.usuario||u.nombre,nombre:u.nombre,sector:u.sector||""}]:[];} }
 function normalClave(v){return String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();}
@@ -425,9 +443,9 @@ async function activar(){
   await Promise.all([cargarContextoTareas(),cargarUsuariosTareas()]);
   await cargarTareasRemotas();
   normalizarSector();
-  const esAdmin=puedeConfigurar();
-  document.querySelector('[data-tareas-tab="config"]')?.classList.toggle("oculto",!esAdmin);
-  if(!esAdmin&&vistaActual==="config")vistaActual="tareas";
+  const tieneConfig=puedeConfigurar();
+  document.querySelector('[data-tareas-tab="config"]')?.classList.toggle("oculto",!tieneConfig);
+  if(!tieneConfig&&vistaActual==="config")vistaActual="tareas";
   cambiarVista(vistaActual);
 }
 function desactivar(){activo=false;cerrar();}

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v102-roles-permisos';
+const CACHE_VERSION = 'autoservicio-v103-estabilizacion-tareas';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

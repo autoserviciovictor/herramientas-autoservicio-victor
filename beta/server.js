@@ -1070,7 +1070,7 @@ function coincideResponsable(a, usuario) {
 app.get("/tareas/contexto", requerirSesion, async (req,res)=>{
   try {
     const sectores=await sectoresTareasPermitidos(req.usuario);
-    res.json({ok:true,rol:req.usuario.rol,sectores:sectores.map(s=>({id:s.id,nombre:s.nombre,color:s.color})),puedeAsignar:["administrador","supervisor"].includes(req.usuario.rol),puedeConfigurar:req.usuario.rol==="administrador"});
+    res.json({ok:true,rol:req.usuario.rol,sectores:sectores.map(s=>({id:s.id,nombre:s.nombre,color:s.color})),puedeAsignar:["administrador","supervisor"].includes(req.usuario.rol),puedeConfigurar:["administrador","supervisor"].includes(req.usuario.rol)});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar el contexto de tareas"});}
 });
 
@@ -1088,23 +1088,20 @@ app.put("/tareas", requerirSesion, async (req,res)=>{
   try {
     if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar tareas"});
     const entrantes=Array.isArray(req.body?.tareas)?req.body.tareas.map(normalizarTareaServidor):[];
+    const eliminadas=new Set((Array.isArray(req.body?.deletedIds)?req.body.deletedIds:[]).map(normalizarTexto).filter(Boolean));
     const actuales=await obtenerTareasServidor();
-    if(req.usuario.rol==="administrador") {
-      await guardarTareasServidor(entrantes,req.usuario);
-      return res.json({ok:true,tareas:entrantes});
-    }
     const sectores=await sectoresTareasPermitidos(req.usuario);
     const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    const mapaEntrantes=new Map(entrantes.filter(t=>permitidos.has(normalizarTexto(t.sector))).map(t=>[t.id,t]));
-    const fusion=actuales.map(actual=>{
-      if(!permitidos.has(normalizarTexto(actual.sector))) return actual;
-      const nuevo=mapaEntrantes.get(actual.id);
-      if(!nuevo) return actual;
-      // El supervisor solo puede cambiar asignaciones, no la plantilla.
-      return {...actual,asignaciones:nuevo.asignaciones||{}};
-    });
+    const puedeSector=t=>req.usuario.rol==="administrador"||permitidos.has(normalizarTexto(t.sector));
+    const mapa=new Map(actuales.filter(t=>!(eliminadas.has(t.id)&&puedeSector(t))).map(t=>[t.id,t]));
+    for(const tarea of entrantes){
+      if(!puedeSector(tarea)) continue;
+      mapa.set(tarea.id,tarea);
+    }
+    const fusion=[...mapa.values()];
     await guardarTareasServidor(fusion,req.usuario);
-    res.json({ok:true,tareas:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)))});
+    const visibles=req.usuario.rol==="administrador"?fusion:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)));
+    res.json({ok:true,tareas:visibles});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron guardar las tareas"});}
 });
 
