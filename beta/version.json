@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "9.6",
-  "label": "9.6",
-  "build": 90600,
-  "name": "Versión 9.6 - Pulido visual del módulo Tareas"
+  "version": "9.8",
+  "label": "9.8",
+  "build": 90800,
+  "name": "Versión 9.8 - Organización y experiencia de uso"
 }
