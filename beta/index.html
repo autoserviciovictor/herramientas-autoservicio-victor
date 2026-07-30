@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=98-experiencia">
+    <link rel="stylesheet" href="style.css?v=993-pulido-final">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -723,7 +723,7 @@
                 <span class="config-sector-action">Cambiar<svg class="app-icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
               </button>
               <select id="configSectorFiltro" class="oculto" aria-hidden="true" tabindex="-1"></select>
-              <div class="config-search-wrap"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="configBuscarTarea" type="search" placeholder="Buscar tarea" autocomplete="off"><button id="btnLimpiarBusquedaTarea" class="oculto" type="button" aria-label="Limpiar búsqueda">×</button></div>
+              <div class="config-search-wrap"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="configBuscarTarea" type="search" aria-label="Buscar tarea configurada" placeholder="Buscar tarea" autocomplete="off"><button id="btnLimpiarBusquedaTarea" class="oculto" type="button" aria-label="Limpiar búsqueda">×</button></div>
               <div id="configTareasResumen" class="config-task-summary"></div>
               <div id="configTareasLista" class="config-task-list"></div>
             </article>
@@ -734,7 +734,7 @@
               <section class="config-section-block">
                 <div class="config-section-label"><div><strong>Participantes</strong><span>Seleccioná usuarios registrados para formar la rotación.</span></div><span id="banoParticipantesCantidad" class="config-count-pill">0</span></div>
                 <div class="config-participant-toolbar"><div id="banoParticipantesSeleccionados" class="config-selected-users"></div><button id="btnElegirParticipantesBano" class="config-secondary-btn" type="button">Elegir participantes</button></div>
-                <div id="banoSelectorParticipantes" class="config-participant-picker oculto"><div class="config-search-wrap"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="banoBuscarUsuario" type="search" placeholder="Buscar usuario" autocomplete="off"></div><div id="banoUsuariosDisponibles" class="config-user-list"></div></div>
+                <div id="banoSelectorParticipantes" class="config-participant-picker oculto"><div class="config-search-wrap"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="banoBuscarUsuario" type="search" aria-label="Buscar participante" placeholder="Buscar usuario" autocomplete="off"></div><div id="banoUsuariosDisponibles" class="config-user-list"></div></div>
               </section>
               <div class="config-fixed-rule"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M4 9h16M5 5h14v16H5z"/><path d="m8 15 2 2 5-5"/></svg><div><strong>Limpieza día por medio</strong><span>La aplicación alterna automáticamente: un día se limpia y al siguiente no.</span></div></div>
               <div class="config-save-bar"><div><strong>Rotación comunitaria</strong><span>Los responsables avanzan automáticamente en cada día de limpieza.</span></div><button id="btnGuardarConfigBano" class="save-btn" type="button"><svg class="app-icon" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4M8 17h8"/></svg>Guardar</button></div>
@@ -755,21 +755,33 @@
         <button id="btnCerrarTareaModal" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
         <div class="modal-kicker">CONFIGURACIÓN DE TAREAS</div><h3 id="tareaModalTitulo">Nueva tarea</h3>
         <label>Nombre<input id="tareaNombre" type="text" placeholder="Ej.: Limpieza de cajas"></label>
-        <label>Duración<input id="tareaDuracion" type="time" step="60" value="00:10" aria-label="Duración en horas y minutos"><small class="field-help">Seleccioná las horas y los minutos que demora la tarea.</small></label>
+        <label>Duración
+          <div class="duration-picker" role="group" aria-label="Duración de la tarea">
+            <label class="duration-column"><span>Horas</span><select id="tareaDuracionHoras" aria-label="Horas de duración"></select></label>
+            <span class="duration-separator">:</span>
+            <label class="duration-column"><span>Minutos</span><select id="tareaDuracionMinutos" aria-label="Minutos de duración"></select></label>
+          </div>
+          <input id="tareaDuracion" type="hidden" value="00:10">
+          <small class="field-help">Seleccioná las horas y los minutos que demora la tarea.</small>
+        </label>
         <div id="tareaModalAdminActions" class="tarea-modal-admin-actions oculto"><button id="btnAlternarTarea" class="config-toggle-btn" type="button">Desactivar tarea</button><button id="btnEliminarTarea" class="tarea-delete-btn" type="button">Eliminar tarea</button></div>
         <div class="modal-actions"><button id="btnCancelarTarea" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarTarea" class="save-btn" type="button">Guardar tarea</button></div>
       </div>
     </div>
 
     <div id="asignarModal" class="modal-overlay oculto" aria-hidden="true">
-      <div class="modal-card tarea-modal-card" role="dialog" aria-modal="true" aria-labelledby="asignarModalTitulo">
-        <button id="btnCerrarAsignarModal" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
-        <div class="modal-kicker">ASIGNACIÓN DIARIA</div><h3 id="asignarModalTitulo">Asignar tarea</h3>
-        <p id="asignarFechaTexto" class="asignar-fecha"></p>
-        <div class="assign-field"><div class="assign-label-row"><strong>Tarea disponible</strong><span id="asignarTareasCantidad"></span></div><div class="assign-search"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="asignarBuscarTarea" type="search" placeholder="Buscar tarea" autocomplete="off"></div><div id="asignarTareasLista" class="assign-task-list" role="radiogroup"></div><select id="asignarTareaSelect" class="oculto" aria-hidden="true" tabindex="-1"></select></div>
-        <label>Turno<select id="asignarTurno"></select></label>
-        <div class="assign-field"><div class="assign-label-row"><strong>Responsables</strong><span id="asignarResponsablesCantidad">0 seleccionados</span></div><div id="asignarUsuarios" class="asignar-usuarios"></div></div>
-        <div class="modal-actions"><button id="btnCancelarAsignar" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarAsignar" class="save-btn" type="button">Asignar</button></div>
+      <div class="modal-card tarea-modal-card assign-modal-card" role="dialog" aria-modal="true" aria-labelledby="asignarModalTitulo">
+        <header class="assign-modal-header">
+          <button id="btnCerrarAsignarModal" class="app-dialog-close" type="button" aria-label="Cerrar">×</button>
+          <div class="modal-kicker">ASIGNACIÓN DIARIA</div><h3 id="asignarModalTitulo">Asignar tarea</h3>
+          <p id="asignarFechaTexto" class="asignar-fecha"></p>
+        </header>
+        <div class="assign-modal-body">
+          <div class="assign-field"><div class="assign-label-row"><strong>Tarea disponible</strong><span id="asignarTareasCantidad"></span></div><div class="assign-search"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="asignarBuscarTarea" type="search" aria-label="Buscar tarea disponible" placeholder="Buscar tarea" autocomplete="off"></div><div id="asignarTareasLista" class="assign-task-list" role="radiogroup"></div><select id="asignarTareaSelect" class="oculto" aria-hidden="true" tabindex="-1"></select></div>
+          <div class="assign-field"><div class="assign-label-row"><strong>Turno</strong></div><div id="asignarTurnoOpciones" class="shift-segmented" role="radiogroup" aria-label="Turno"><button type="button" data-turno="manana">Mañana</button><button type="button" data-turno="tarde">Tarde</button></div><input id="asignarTurno" type="hidden"></div>
+          <div class="assign-field"><div class="assign-label-row"><strong>Responsables</strong><span id="asignarResponsablesCantidad" aria-live="polite">0 seleccionados</span></div><div id="asignarUsuarios" class="asignar-usuarios"></div></div>
+        </div>
+        <footer class="modal-actions assign-modal-footer"><button id="btnCancelarAsignar" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarAsignar" class="save-btn" type="button">Asignar</button></footer>
       </div>
     </div>
 
@@ -1028,7 +1040,7 @@
 <script type="module" src="./notifications.js?v=84-entrega8"></script>
 <script type="module" src="./prices.js?v=84-entrega8"></script>
 <script type="module" src="./app.js?v=8110-entrega4"></script>
-<script type="module" src="./tareas.js?v=98-experiencia"></script>
+<script type="module" src="./tareas.js?v=993-pulido-final"></script>
 <script type="module" src="./horarios.js?v=901-hotfix-calendario"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 

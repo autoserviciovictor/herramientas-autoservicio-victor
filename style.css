@@ -5237,3 +5237,134 @@ body.en-tareas #pantallaTareas .config-task-copy{min-width:0}.config-task-copy>s
 .asignar-usuarios{grid-template-columns:1fr!important;max-height:225px;overflow:auto}.assign-user-card{position:relative;display:grid!important;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:10px;margin:0!important;padding:9px 10px;border:1px solid #e2ddd8;border-radius:13px;background:#fff}.assign-user-card input{position:absolute;opacity:0}.assign-user-check{width:28px;height:28px;border:1px solid #d7d1cb;border-radius:9px;display:grid!important;place-items:center!important;padding:0!important;min-height:0!important;color:transparent}.assign-user-check .app-icon{width:17px;height:17px}.assign-user-copy{display:flex!important;min-height:0!important;padding:0!important;border:0!important;background:transparent!important;flex-direction:column;gap:2px}.assign-user-card:has(input:checked){border-color:#c5232c;background:#fff7f7}.assign-user-card input:checked~.assign-user-check{background:#c5232c;border-color:#c5232c;color:#fff}.assign-user-card input:checked~.assign-user-copy{color:#a51d25!important}
 .config-participant-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.config-selected-users{display:flex;flex-wrap:wrap;gap:6px;min-width:0}.config-selected-user{display:inline-flex;padding:6px 9px;border-radius:999px;background:#f7e8e9;color:#9f252d;font-size:12px;font-weight:850}.config-selected-empty{font-size:12px;color:#77706b;padding-top:7px}.config-secondary-btn{flex:none;min-height:40px;padding:0 12px;border:1px solid #d8d1cb;border-radius:12px;background:#fff;font-weight:850;color:#5f5853}.config-participant-picker{margin-top:12px;padding-top:2px}.config-participant-picker .config-search-wrap{margin-top:0}.config-user-list{max-height:330px;overflow:auto;padding-right:2px}
 @media(max-width:520px){.config-inner-tabs{position:sticky;top:8px;z-index:4}.tarea-modal-admin-actions{grid-template-columns:1fr}.config-participant-toolbar{flex-direction:column}.config-secondary-btn{width:100%}.assign-task-list{max-height:210px}}
+
+/* v9.9.2 — modal móvil y selectores propios */
+.duration-picker{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:end;gap:8px;margin-top:2px}
+.duration-column{display:grid!important;gap:6px!important;margin:0!important;font-weight:800}
+.duration-column>span{font-size:12px;color:#6f6862;text-transform:uppercase;letter-spacing:.04em}
+.tarea-modal-card .duration-column select{min-height:58px;padding:12px 42px 12px 14px;font-size:20px;font-weight:900;text-align:center;background:#fff}
+.duration-separator{font-size:28px;font-weight:900;text-align:center;padding-bottom:13px;color:#6c655f}
+.assign-modal-card{display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden!important;padding:0!important;max-height:min(92dvh,820px);overscroll-behavior:contain}
+.assign-modal-header{position:relative;padding:24px 24px 12px;background:#fff;border-bottom:1px solid #eee9e4;z-index:2}
+.assign-modal-header .app-dialog-close{top:16px;right:18px}
+.assign-modal-header h3{margin-bottom:4px}
+.assign-modal-body{min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 24px 18px;scrollbar-width:none;overscroll-behavior:contain}
+.assign-modal-body::-webkit-scrollbar,.assign-task-list::-webkit-scrollbar,.asignar-usuarios::-webkit-scrollbar{display:none}
+.assign-modal-footer{margin:0!important;padding:14px 24px calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #eee9e4;box-shadow:0 -8px 20px rgba(35,25,20,.06);z-index:2}
+.shift-segmented{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;border:1px solid #ded8d2;border-radius:15px;background:#f3f0ed}
+.shift-segmented button{min-height:48px;border:0;border-radius:11px;background:transparent;color:#5c5550;font:inherit;font-weight:900}
+.shift-segmented button.is-active{background:#fff;color:#b8212a;box-shadow:0 3px 12px rgba(40,30,20,.10)}
+.shift-segmented button:disabled{opacity:.38}
+.assign-task-list{max-height:220px;overflow-y:auto;overflow-x:hidden;padding:0}
+.assign-task-option{min-height:62px;padding:8px 10px}
+.assign-task-copy strong{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2}
+.asignar-usuarios{max-height:250px;overflow-y:auto;overflow-x:hidden;padding:0}
+.assign-modal-card *{box-sizing:border-box;max-width:100%}
+@media(max-width:520px){
+  .assign-modal-card{width:calc(100% - 20px);max-height:94dvh;border-radius:24px}
+  .assign-modal-header{padding:20px 18px 10px}
+  .assign-modal-body{padding:2px 18px 14px}
+  .assign-modal-footer{padding-left:18px;padding-right:18px}
+  .assign-task-list{max-height:195px}
+  .asignar-usuarios{max-height:230px}
+}
+
+
+/* =========================================================
+   V9.9.3 — PULIDO VISUAL Y ESTABILIZACIÓN FINAL
+   ========================================================= */
+body.en-tareas,body.en-tareas #pantallaTareas{overflow-x:hidden}
+body.en-tareas #pantallaTareas *,
+#tareaModal *,#asignarModal *{box-sizing:border-box}
+
+/* Buscadores: un solo icono, texto legible y sin adornos nativos duplicados */
+.config-search-wrap,.assign-search{overflow:hidden}
+.config-search-wrap>.app-icon,.assign-search>.app-icon{z-index:2;flex:none}
+.config-search-wrap input,.assign-search input{
+  appearance:none;-webkit-appearance:none;
+  padding-left:46px!important;padding-right:44px!important;
+  line-height:1.2;color:#2f2b28;
+}
+.config-search-wrap input::-webkit-search-decoration,
+.config-search-wrap input::-webkit-search-cancel-button,
+.config-search-wrap input::-webkit-search-results-button,
+.config-search-wrap input::-webkit-search-results-decoration,
+.assign-search input::-webkit-search-decoration,
+.assign-search input::-webkit-search-cancel-button,
+.assign-search input::-webkit-search-results-button,
+.assign-search input::-webkit-search-results-decoration{display:none;-webkit-appearance:none}
+.config-search-wrap input::placeholder,.assign-search input::placeholder{color:#918983;opacity:1}
+
+/* Responsables: elimina el icono CSS antiguo que se superponía al SVG */
+.tarea-persona::before{content:none!important;display:none!important}
+body.en-tareas #tareasVistaTareas .tarea-assignment{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-width:0}
+body.en-tareas #tareasVistaTareas .tarea-persona{
+  display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;
+  padding:4px 7px;border-radius:999px;background:#f4f1ee;color:#4f4945!important;
+  line-height:1.15;white-space:normal;overflow-wrap:anywhere;
+}
+body.en-tareas #tareasVistaTareas .tarea-persona .app-icon{flex:0 0 14px}
+
+/* Tarjetas y tipografía consistentes */
+body.en-tareas #tareasVistaTareas .tarea-card h3{text-transform:none!important;line-height:1.25}
+body.en-tareas #tareasVistaTareas .tarea-card-main{min-width:0}
+body.en-tareas #tareasVistaTareas .tarea-card-state small{line-height:1.35;color:#6f6862}
+body.en-tareas #tareasVistaTareas .tarea-card-state button:focus-visible,
+body.en-tareas button:focus-visible,#tareaModal button:focus-visible,#asignarModal button:focus-visible,
+body.en-tareas input:focus-visible,body.en-tareas select:focus-visible{
+  outline:3px solid rgba(197,35,44,.22);outline-offset:2px
+}
+
+/* Acción principal: estado deshabilitado inequívoco */
+#btnGuardarAsignar:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.35);box-shadow:none}
+#btnGuardarAsignar:not(:disabled){cursor:pointer}
+
+/* Listas sin barras invasivas y sin desborde horizontal */
+.assign-task-list,.asignar-usuarios,.config-user-list,.assign-modal-body{
+  overflow-x:hidden!important;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain
+}
+.assign-task-list::-webkit-scrollbar,.asignar-usuarios::-webkit-scrollbar,
+.config-user-list::-webkit-scrollbar,.assign-modal-body::-webkit-scrollbar{width:0;height:0;display:none}
+.assign-task-option,.assign-user-card,.config-task-row{width:100%;min-width:0}
+.assign-user-copy strong,.assign-user-copy small{overflow-wrap:anywhere}
+
+/* Configuración más compacta sin perder información */
+body.en-tareas #tareasVistaConfig .tareas-config-stats{gap:7px!important}
+body.en-tareas #tareasVistaConfig .config-stat{padding:10px 7px!important;min-height:66px!important}
+body.en-tareas #tareasVistaConfig .config-stat strong{font-size:20px!important}
+body.en-tareas #tareasVistaConfig .config-task-copy>strong{text-transform:none;line-height:1.25}
+
+/* Modal de tarea y selector de duración */
+.duration-picker select{font-variant-numeric:tabular-nums}
+.duration-column select:focus{border-color:#c5232c;box-shadow:0 0 0 3px rgba(197,35,44,.10)}
+.tarea-modal-admin-actions .tarea-delete-btn{color:#b3212a;border-color:#e5b7ba;background:#fff8f8}
+
+@media(max-width:640px){
+  body.en-tareas #tareasVistaTareas .tarea-card{
+    grid-template-columns:40px minmax(0,1fr)!important;
+    align-items:start!important;
+  }
+  body.en-tareas #tareasVistaTareas .tarea-card-state{
+    grid-column:1/-1;display:flex!important;flex-direction:row!important;
+    align-items:center!important;justify-content:space-between!important;
+    text-align:left!important;border-left:0!important;border-top:1px solid #ece9e5!important;
+    padding:10px 0 0!important;margin-top:2px!important;gap:10px!important
+  }
+  body.en-tareas #tareasVistaTareas .tarea-card-state button{min-width:108px}
+  body.en-tareas #tareasVistaTareas .tarea-assignment{margin-top:8px}
+  body.en-tareas #tareasVistaTareas .tarea-persona{font-size:11px!important}
+  .assign-modal-footer .cancel-btn,.assign-modal-footer .save-btn{min-height:48px}
+}
+@media(max-width:390px){
+  .assign-modal-card{width:calc(100% - 12px)!important;border-radius:20px!important}
+  .assign-modal-header{padding-left:14px!important;padding-right:14px!important}
+  .assign-modal-body{padding-left:14px!important;padding-right:14px!important}
+  .assign-modal-footer{padding-left:14px!important;padding-right:14px!important;gap:8px!important}
+  .assign-task-option{grid-template-columns:34px minmax(0,1fr) 25px!important;gap:8px!important}
+  .assign-task-icon{width:33px!important;height:33px!important}
+  .duration-picker{grid-template-columns:minmax(0,1fr) 14px minmax(0,1fr);gap:5px}
+  .duration-separator{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  #pantallaTareas *,#tareaModal *,#asignarModal *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}

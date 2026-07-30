@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v98-experiencia-tareas';
+const CACHE_VERSION = 'autoservicio-v993-pulido-final';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=98-experiencia',
+  './style.css?v=993-pulido-final',
   './app.js?v=8110-entrega4',
   './config.js?v=84-entrega8',
   './excel.js?v=84-entrega8',
@@ -22,7 +22,7 @@ const APP_SHELL = [
   './prices.js?v=84-entrega8',
   './horarios.js?v=901-hotfix-calendario',
   './api-cache.js?v=84-entrega8',
-  './tareas.js?v=98-experiencia',
+  './tareas.js?v=993-pulido-final',
   './manifest.webmanifest',
   './version.json',
   './icons/icon-96.png',
