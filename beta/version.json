@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "10.3.1",
-  "label": "10.3.1",
-  "build": 100301,
-  "name": "v10.3.1 - Correcciones de tareas y horarios"
+  "version": "10.3.3",
+  "label": "10.3.3",
+  "build": 100303,
+  "name": "v10.3.3 - Limpieza responsive y preparación para v11"
 }

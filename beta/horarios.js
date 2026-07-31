@@ -1,5 +1,5 @@
-import "./ui.js?v=8100-entrega3";
-import { API_BASE_URL } from "./config.js?v=82-entrega6";
+import "./ui.js?v=10302";
+import { API_BASE_URL } from "./config.js?v=10302";
 
 let empleados = [];
 let empleadosInfo = new Map();
@@ -11,6 +11,22 @@ const detalles = new Map();
 let metadatosModificados = false;
 let resumenHoyDatos = new Map();
 let resumenHoyClave = "";
+const HORARIOS_CACHE_TTL = 30000;
+const horariosPeticiones = new Map();
+function cacheHorariosKey(tipo, extra="") { return `autoservicio_horarios_cache_v1033:${tipo}:${extra}`; }
+function leerCacheHorarios(tipo, extra="") {
+  try { const x=JSON.parse(localStorage.getItem(cacheHorariosKey(tipo,extra))||"null"); return x&&x.data ? x : null; } catch { return null; }
+}
+function guardarCacheHorarios(tipo, extra, data) {
+  try { localStorage.setItem(cacheHorariosKey(tipo,extra), JSON.stringify({ts:Date.now(),data})); } catch {}
+}
+async function fetchHorariosUnico(url, key, {forzar=false}={}) {
+  const cache=leerCacheHorarios("api",key);
+  if(!forzar && cache && Date.now()-cache.ts < HORARIOS_CACHE_TTL) return cache.data;
+  if(horariosPeticiones.has(key)) return horariosPeticiones.get(key);
+  const prom=(async()=>{ const r=await fetch(url,{cache:"default"}); const data=await r.json(); if(!r.ok||!data.ok) throw new Error(data.mensaje||"No se pudieron cargar los horarios"); guardarCacheHorarios("api",key,data); return data; })().finally(()=>horariosPeticiones.delete(key));
+  horariosPeticiones.set(key,prom); return prom;
+}
 
 function usuarioHorarios() { return window.AutoservicioAuth?.getUsuario?.() || {}; }
 function rolHorarios() { return String(usuarioHorarios().rol || "").trim().toLowerCase(); }
@@ -32,9 +48,7 @@ function puedeEditarEmpleado(nombre){
 }
 async function cargarContextoHorarios() {
   try {
-    const r = await fetch(`${API_BASE_URL}/horarios/contexto?ts=${Date.now()}`, { cache: "no-store" });
-    const data = await r.json();
-    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudieron cargar los sectores");
+    const data = await fetchHorariosUnico(`${API_BASE_URL}/horarios/contexto`, "contexto");
     sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
     permisoEdicionServidor = data.puedeEditar === true;
     const usuario = usuarioHorarios();
@@ -52,14 +66,18 @@ async function cargarContextoHorarios() {
     renderSelectorSector();
     renderTodo();
   } catch (error) {
-    sectoresHorarios = [];
-    permisoEdicionServidor = false;
-    sectorActual = "";
-    empleados = [];
+    const respaldo=leerCacheHorarios("api","contexto")?.data;
+    if(respaldo?.sectores?.length){
+      sectoresHorarios=(respaldo.sectores||[]).filter(s=>s.activo!==false);
+      permisoEdicionServidor=respaldo.puedeEditar===true;
+      const usuario=usuarioHorarios();
+      sectorActual=(sectorActual&&sectoresHorarios.some(s=>s.id===sectorActual)?sectorActual:(usuario.sector||sectoresHorarios[0]?.id||""));
+      empleados=empleadosDelSector();
+    }
     contextoHorariosCargado = true;
     renderSelectorSector();
     renderTodo();
-    avisoHorarios(error.message || "No se pudo acceder a Horarios.", "error");
+    avisoHorarios("No se pudo actualizar. Se muestran los últimos datos guardados.", "error");
   }
 }
 function crearSelectorSector() {
@@ -125,10 +143,10 @@ function cargarTurnosConfigurados() {
     clase: 'turno-configurable',
     estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`
   })).concat([
-    { id: 'franco', label: 'Franco', clase: 'turno-franco', estilo: '' },
-    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-verde', estilo: '' },
-    { id: 'ausente', label: 'Ausente', clase: 'turno-ausente', estilo: '' },
-    { id: 'licencia', label: 'Licencia', clase: 'turno-licencia', estilo: '' }
+    { id: 'franco', label: 'Franco', clase: 'turno-franco', estilo: 'background:#e5e7eb;color:#374151;border-color:#cbd5e1' },
+    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-vacaciones', estilo: 'background:#dcfce7;color:#15803d;border-color:#86efac' },
+    { id: 'ausente', label: 'Ausente', clase: 'turno-ausente', estilo: 'background:#fee2e2;color:#dc2626;border-color:#fca5a5' },
+    { id: 'licencia', label: 'Licencia', clase: 'turno-licencia', estilo: 'background:#dbeafe;color:#1d4ed8;border-color:#93c5fd' }
   ]);
   if (!TURNOS.some(t => t.id === turnoPincel)) turnoPincel = TURNOS.find(t => !['franco','vacaciones'].includes(t.id))?.id || 'franco';
 }
@@ -171,9 +189,7 @@ async function cargarResumenHoy(forzar = false) {
     if (mesClave() === mesHoy) {
       resumenHoyDatos = new Map(empleados.map(e => [claveResumenHoy(e), obtenerTurno(e, hoy.getDate())]));
     } else {
-      const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesHoy}&ts=${Date.now()}`, { cache: "no-store" });
-      const data = await r.json();
-      if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cargar el resumen de hoy");
+      const data = await fetchHorariosUnico(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesHoy}`, `cal:${sectorActual}:${mesHoy}`);
       const mapa = new Map();
       (data.celdas || []).filter(c => Number(c.dia) === hoy.getDate()).forEach(c => mapa.set(claveResumenHoy(c.empleado), String(c.turno || "")));
       resumenHoyDatos = mapa;
@@ -189,13 +205,12 @@ function limpiarMesDatos(sector = sectorActual, fecha = fechaVista) {
   const prefijo = `${sector || "general"}|${fecha.getFullYear()}-${fecha.getMonth()}-`;
   for (const k of [...datos.keys()]) if (k.startsWith(prefijo)) datos.delete(k);
 }
-async function cargarCalendarioActual() {
+async function cargarCalendarioActual(forzar=false) {
   if (!sectorActual) return;
-  limpiarMesDatos();
+  const cacheKey=`cal:${sectorActual}:${mesClave()}`;
   try {
-    const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesClave()}&ts=${Date.now()}`, { cache: "no-store" });
-    const data = await r.json();
-    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cargar el calendario");
+    const data = await fetchHorariosUnico(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesClave()}`, cacheKey, {forzar});
+    limpiarMesDatos();
     (data.celdas || []).forEach(c => datos.set(clave(String(c.empleado), Number(c.dia)), String(c.turno)));
     detalles.clear();
     (data.detalles || []).forEach(x => detalles.set(keyCelda(String(x.empleado), Number(x.dia)), { tipo:x.tipo || "", motivo:x.motivo || "", observacion:x.observacion || "" }));
@@ -205,7 +220,14 @@ async function cargarCalendarioActual() {
       cargarTurnosConfigurados();
     }
   } catch (error) {
-    avisoHorarios(error.message || "No se pudo cargar el calendario", "error");
+    const respaldo=leerCacheHorarios("api",cacheKey)?.data;
+    if(respaldo){
+      limpiarMesDatos();
+      (respaldo.celdas||[]).forEach(c=>datos.set(clave(String(c.empleado),Number(c.dia)),String(c.turno)));
+      detalles.clear();
+      (respaldo.detalles||[]).forEach(x=>detalles.set(keyCelda(String(x.empleado),Number(x.dia)),{tipo:x.tipo||"",motivo:x.motivo||"",observacion:x.observacion||""}));
+    }
+    avisoHorarios("No se pudo actualizar el calendario. Se muestran los últimos datos guardados.", "error");
   }
 }
 function obtenerTurnoEn(fecha, e, d) { return datos.get(claveMes(fecha, e, d)) || ""; }
@@ -336,6 +358,7 @@ async function confirmarGuardado() {
     });
     const data = await respuesta.json().catch(() => ({}));
     if (!respuesta.ok || !data.ok) throw new Error(data.mensaje || "No se pudo validar el guardado");
+    guardarCacheHorarios("api",`cal:${sectorActual}:${mesClave()}`,{ok:true,sector:sectorActual,mes:mesClave(),celdas:serializarCeldasDesdeMapa(datos),detalles:[...detalles].map(([k,v])=>{const [empleado,dia]=k.split("::");return {empleado,dia:Number(dia),...v}}),turnos:window.AutoservicioHorariosConfig?.cargar?.(sectorActual)||[]});
     estadoInicialEdicion = clonarDatos();
     metadatosModificados = false;
     historial = [];

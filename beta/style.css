@@ -5566,3 +5566,202 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
   .horarios-table-wrap{overflow-x:auto!important;overflow-y:visible!important;max-height:none!important;height:auto!important;overscroll-behavior-y:auto!important}
   .horarios-table{min-width:1380px!important}
 }
+
+
+/* =========================================================
+   V10.3.2 — Estabilidad de horarios y tareas
+   ========================================================= */
+.horario-cell.turno-franco,.horarios-turno-option.turno-franco{background:#e5e7eb!important;color:#374151!important;border-color:#cbd5e1!important}
+.horario-cell.turno-vacaciones,.horarios-turno-option.turno-vacaciones{background:#dcfce7!important;color:#15803d!important;border-color:#86efac!important}
+.horario-cell.turno-ausente,.horarios-turno-option.turno-ausente{background:#fee2e2!important;color:#dc2626!important;border-color:#fca5a5!important}
+.horario-cell.turno-licencia,.horarios-turno-option.turno-licencia{background:#dbeafe!important;color:#1d4ed8!important;border-color:#93c5fd!important}
+/* El modo edición no modifica el ancho útil del calendario en escritorio. */
+@media(min-width:1101px){
+  body.horarios-modo-edicion .horarios-shell,body:not(.horarios-modo-edicion) .horarios-shell{grid-template-columns:180px minmax(0,1fr)!important}
+  body.horarios-modo-edicion .horarios-editor{position:fixed!important;right:22px!important;top:145px!important;width:350px!important;max-height:calc(100vh - 175px)!important;z-index:80!important;box-shadow:0 18px 50px rgba(20,25,40,.2)!important}
+  .horarios-editor.oculto{display:none!important;opacity:1!important}
+  .horarios-editor.oculto:after{content:none!important}
+}
+/* Nunca mostrar instrucciones de doble clic: la edición se inicia con el botón Editar. */
+.horarios-editor.oculto:after{content:none!important;display:none!important}
+
+/* =========================================================
+   V10.3.3 — Limpieza responsive y navegación de escritorio
+   ========================================================= */
+
+/* Escritorio: todas las navegaciones internas pasan a una barra lateral
+   compacta y ordenada. En móvil se conserva la navegación inferior. */
+@media (min-width: 901px) {
+  body:not(.en-inicio) .app-bottom-nav,
+  body:not(.en-inicio) .venc-bottom-nav,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav,
+  body.en-admin #pantallaAdmin .admin-bottom-nav {
+    position: fixed !important;
+    left: 18px !important;
+    right: auto !important;
+    top: 112px !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 164px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 7px !important;
+    padding: 8px !important;
+    margin: 0 !important;
+    border: 1px solid #e6e2de !important;
+    border-radius: 18px !important;
+    background: rgba(255,255,255,.97) !important;
+    box-shadow: 0 12px 34px rgba(43,34,29,.12) !important;
+    z-index: 85 !important;
+  }
+
+  body:not(.en-inicio) .app-bottom-nav button,
+  body:not(.en-inicio) .app-bottom-nav .nav-btn,
+  body:not(.en-inicio) .venc-bottom-nav button,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav button,
+  body.en-admin #pantallaAdmin .admin-bottom-nav .admin-tab {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    text-align: left !important;
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+  }
+
+  body:not(.en-inicio) .app-bottom-nav button::before,
+  body:not(.en-inicio) .app-bottom-nav .nav-btn::before,
+  body:not(.en-inicio) .venc-bottom-nav button::before,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav button::before,
+  body.en-admin #pantallaAdmin .admin-bottom-nav .admin-tab::before {
+    top: 10px !important;
+    bottom: 10px !important;
+    left: -8px !important;
+    right: auto !important;
+    width: 4px !important;
+    height: auto !important;
+    border-radius: 0 5px 5px 0 !important;
+  }
+
+  body:not(.en-inicio) .app-bottom-nav button > span:last-child,
+  body:not(.en-inicio) .venc-bottom-nav button > span:last-child,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav button > span:last-child,
+  body.en-admin #pantallaAdmin .admin-bottom-nav .admin-tab > span:last-child {
+    white-space: normal !important;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Reserva espacio real para la barra lateral y evita solapamientos. */
+  body:not(.en-inicio) .pantalla:not(.horarios-screen) {
+    padding-left: 205px !important;
+  }
+  body.en-tareas #pantallaTareas,
+  body.en-admin #pantallaAdmin {
+    padding-bottom: 36px !important;
+  }
+  .horarios-screen .horarios-content {
+    padding-left: 205px !important;
+  }
+
+  /* Calendario: el mes completo entra en el ancho disponible sin barra inferior. */
+  .horarios-board-card,
+  .horarios-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+  .horarios-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .horarios-table .empleado-col {
+    width: 136px !important;
+    min-width: 136px !important;
+    max-width: 136px !important;
+  }
+  .horarios-table th:not(.empleado-col),
+  .horarios-table td:not(.empleado-col) {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 2px 1px !important;
+    overflow: hidden !important;
+  }
+  .horarios-table th:not(.empleado-col) {
+    font-size: 10px !important;
+    letter-spacing: -.2px !important;
+  }
+  .horario-cell {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding-inline: 0 !important;
+    font-size: 10px !important;
+    overflow: hidden !important;
+  }
+
+  /* Entrar en edición no altera el ancho, alto ni columnas del calendario. */
+  body.horarios-modo-edicion .horarios-shell,
+  body:not(.horarios-modo-edicion) .horarios-shell {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  body.horarios-modo-edicion .horarios-content,
+  body:not(.horarios-modo-edicion) .horarios-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+  body.horarios-modo-edicion .horarios-editor {
+    position: fixed !important;
+    right: 22px !important;
+    top: 126px !important;
+    width: min(360px,calc(100vw - 230px)) !important;
+    max-height: calc(100vh - 150px) !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Móvil: conservar el calendario validado por el usuario: desplazamiento
+   horizontal, sin scroll vertical interno y con todas las filas visibles. */
+@media (max-width: 900px) {
+  .horarios-table-wrap {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .horarios-editor,
+  .tarea-modal-card,
+  .modal-card {
+    max-width: calc(100vw - 24px) !important;
+  }
+  .pantalla {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Estados especiales: respaldo visual final en cualquier vista o modo. */
+.horario-cell.turno-franco,
+.horarios-turno-option.turno-franco { background:#e5e7eb!important; color:#374151!important; border-color:#cbd5e1!important; }
+.horario-cell.turno-vacaciones,
+.horarios-turno-option.turno-vacaciones { background:#dcfce7!important; color:#15803d!important; border-color:#86efac!important; }
+.horario-cell.turno-ausente,
+.horarios-turno-option.turno-ausente { background:#fee2e2!important; color:#dc2626!important; border-color:#fca5a5!important; }
+.horario-cell.turno-licencia,
+.horarios-turno-option.turno-licencia { background:#dbeafe!important; color:#1d4ed8!important; border-color:#93c5fd!important; }

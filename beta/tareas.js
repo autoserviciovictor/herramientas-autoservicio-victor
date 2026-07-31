@@ -177,7 +177,8 @@ function renderGrupoTurno(turno,items){
 function renderLista(items){
   const box=$("tareasLista");
   if(!items.length){box.innerHTML='<div class="tareas-empty tareas-empty-day"><span class="tareas-empty-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><strong>Sin tareas asignadas</strong><span>Usá “Asignar tarea” para organizar este día.</span></div>';return;}
-  const manana=items.filter(t=>t._turno==="manana"),tarde=items.filter(t=>t._turno==="tarde");
+  const unicas=[...new Map(items.map(t=>[`${t.id}::${t._turno}`,t])).values()];
+  const manana=unicas.filter(t=>t._turno==="manana"),tarde=unicas.filter(t=>t._turno==="tarde");
   box.innerHTML=renderGrupoTurno("manana",manana)+renderGrupoTurno("tarde",tarde);
 }
 function renderTareas(){ normalizarSector(); const items=asignacionesDelDia(); $("tareasSectorNombre").textContent=sectorSeleccionado; const puedeCambiarSector=sectoresPermitidos().length>1; $("btnTareasCambiarSector").disabled=!puedeCambiarSector; $("btnTareasCambiarSector").classList.toggle("sector-unico",!puedeCambiarSector); $("btnTareasSemanaActual").textContent=`${fmt(semanaBase,{day:"2-digit",month:"short"})} - ${fmt(new Date(semanaBase.getFullYear(),semanaBase.getMonth(),semanaBase.getDate()+6),{day:"2-digit",month:"short"})}`; $("tareasFechaTitulo").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}).toUpperCase(); $("btnNuevaTarea").textContent="+ Asignar tarea"; $("btnNuevaTarea").classList.toggle("oculto",!puedeAsignar()); renderDias();renderResumen(items);renderLista(items); }
