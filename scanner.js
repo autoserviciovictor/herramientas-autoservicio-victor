@@ -77,19 +77,32 @@ async function pedirPermisoTemporalCamara() {
     await esperar(120);
 }
 
-function puntuarCamara(device, index, total) {
+function puntuarCamara(device, index, total, priorizarEnfoqueCercano = false) {
     const label = normalizarTexto(device.label);
     let puntos = 0;
     if (label.includes("back") || label.includes("rear") || label.includes("environment") || label.includes("trasera") || label.includes("posterior")) puntos += 100;
     if (label.includes("front") || label.includes("user") || label.includes("frontal") || label.includes("delantera")) puntos -= 200;
-    if (label.includes("ultra") || label.includes("wide angle") || label.includes("ultrawide") || label.includes("ultra-wide") || label.includes("gran angular")) puntos -= 35;
-    if (label.includes("macro") || label.includes("tele") || label.includes("depth") || label.includes("profundidad")) puntos -= 30;
+    const esUltraAngular = label.includes("ultra") || label.includes("wide angle") || label.includes("ultrawide") || label.includes("ultra-wide") || label.includes("gran angular");
+    const esMacro = label.includes("macro");
+    const esTeleOProfundidad = label.includes("tele") || label.includes("depth") || label.includes("profundidad");
+
+    // En iPhone, la cámara ultra gran angular es la que normalmente permite enfocar
+    // códigos a menor distancia (modo macro). En el resto de los equipos se conserva
+    // la preferencia histórica por la cámara trasera principal.
+    if (priorizarEnfoqueCercano) {
+        if (esMacro) puntos += 180;
+        if (esUltraAngular) puntos += 140;
+        if (esTeleOProfundidad) puntos -= 80;
+    } else {
+        if (esUltraAngular) puntos -= 35;
+        if (esMacro || esTeleOProfundidad) puntos -= 30;
+    }
     puntos += index * 3;
     if (index === total - 1) puntos += 8;
     return puntos;
 }
 
-async function elegirCamaraTraseraPrincipal() {
+async function elegirCamaraTraseraPrincipal({ priorizarEnfoqueCercano = false } = {}) {
     if (!navigator.mediaDevices?.enumerateDevices) return null;
     let dispositivos = await navigator.mediaDevices.enumerateDevices();
     let camaras = dispositivos.filter(d => d.kind === "videoinput");
@@ -103,13 +116,19 @@ async function elegirCamaraTraseraPrincipal() {
         }
     }
     if (!camaras.length) return null;
-    const guardada = localStorage.getItem("inventarioVictorCameraId");
+    const claveCamara = priorizarEnfoqueCercano
+        ? "inventarioVictorCameraIdIOSCercana"
+        : "inventarioVictorCameraId";
+    const guardada = localStorage.getItem(claveCamara);
     if (guardada && camaras.some(c => c.deviceId === guardada)) return guardada;
     const elegida = camaras
-        .map((camara, index) => ({ camara, puntos: puntuarCamara(camara, index, camaras.length) }))
+        .map((camara, index) => ({
+            camara,
+            puntos: puntuarCamara(camara, index, camaras.length, priorizarEnfoqueCercano)
+        }))
         .sort((a, b) => b.puntos - a.puntos)[0]?.camara;
     if (elegida?.deviceId) {
-        localStorage.setItem("inventarioVictorCameraId", elegida.deviceId);
+        localStorage.setItem(claveCamara, elegida.deviceId);
         return elegida.deviceId;
     }
     return null;
@@ -133,7 +152,16 @@ async function mejorarEnfoque(videoId, sesion) {
         if (capabilities.zoom) {
             const min = Number(capabilities.zoom.min ?? 1);
             const max = Number(capabilities.zoom.max ?? min);
-            if (max > min) advanced.push({ zoom: Math.min(max, Math.max(min, 1.45)) });
+            if (max > min) {
+                // No forzar zoom en iPhone: acercar digitalmente no reduce la distancia
+                // mínima de enfoque y puede empeorar la lectura de códigos cercanos.
+                // En Android y otros equipos se conserva la configuración anterior.
+                advanced.push({
+                    zoom: esDispositivoIOS()
+                        ? min
+                        : Math.min(max, Math.max(min, 1.45))
+                });
+            }
         }
         if (advanced.length) await track.applyConstraints({ advanced });
     } catch (_) {
@@ -174,13 +202,17 @@ export async function iniciarScanner(videoId, callbackCodigo) {
     detenerStreamsVideo();
 
     try {
-        const deviceId = await elegirCamaraTraseraPrincipal();
+        const ios = esDispositivoIOS();
+        const deviceId = await elegirCamaraTraseraPrincipal({ priorizarEnfoqueCercano: ios });
         if (sesion !== sesionScanner) return;
         dispositivoActualId = deviceId || "";
         const principal = {
             video: {
                 ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } }),
-                width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 }
+                width: { ideal: ios ? 1920 : 1280 },
+                height: { ideal: ios ? 1080 : 720 },
+                frameRate: { ideal: 30, max: 30 },
+                ...(ios ? { resizeMode: { ideal: "crop-and-scale" } } : {})
             }, audio: false
         };
         const fallback = {

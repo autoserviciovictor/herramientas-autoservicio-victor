@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v1035-iphone-safe-area';
+const CACHE_VERSION = 'autoservicio-v1036-iphone-close-focus';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
