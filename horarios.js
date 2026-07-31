@@ -32,7 +32,7 @@ function puedeEditarEmpleado(nombre){
 }
 async function cargarContextoHorarios() {
   try {
-    const r = await fetch(`${API_BASE_URL}/horarios/contexto`);
+    const r = await fetch(`${API_BASE_URL}/horarios/contexto?ts=${Date.now()}`, { cache: "no-store" });
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudieron cargar los sectores");
     sectoresHorarios = (data.sectores || []).filter(s => s.activo !== false);
@@ -171,7 +171,7 @@ async function cargarResumenHoy(forzar = false) {
     if (mesClave() === mesHoy) {
       resumenHoyDatos = new Map(empleados.map(e => [claveResumenHoy(e), obtenerTurno(e, hoy.getDate())]));
     } else {
-      const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesHoy}`);
+      const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesHoy}&ts=${Date.now()}`, { cache: "no-store" });
       const data = await r.json();
       if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cargar el resumen de hoy");
       const mapa = new Map();
@@ -193,7 +193,7 @@ async function cargarCalendarioActual() {
   if (!sectorActual) return;
   limpiarMesDatos();
   try {
-    const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesClave()}`);
+    const r = await fetch(`${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sectorActual)}&mes=${mesClave()}&ts=${Date.now()}`, { cache: "no-store" });
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cargar el calendario");
     (data.celdas || []).forEach(c => datos.set(clave(String(c.empleado), Number(c.dia)), String(c.turno)));

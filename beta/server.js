@@ -692,7 +692,10 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
     if(!puedeAccederSectorHorarios(req.usuario,sector)) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
     if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
     await asegurarHojasHorarios();
-    const contenido = await leerConCache(`calendarioHorarios:${sector}:${mes}`, CACHE_TTL.calendarioHorarios, async () => {
+    // El calendario debe leerse siempre desde Sheets. Un calendario cacheado puede
+    // entregar una base vieja a otra computadora y provocar un conflicto falso.
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    const contenido = await (async () => {
       const [r, dr] = await Promise.all([
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
@@ -712,7 +715,7 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
         .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31)
         .forEach(x=>detallesMapa.set(`${x.empleado}::${x.dia}`,x));
       return {celdas:[...celdasMapa.values()],detalles:[...detallesMapa.values()],reemplazos:[]};
-    });
+    })();
     const turnos=await obtenerTurnosSector(sector);
     res.json({ok:true,sector,mes,...contenido,turnos});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo cargar el calendario"}); }
@@ -803,6 +806,7 @@ async function asegurarHojaAuditoriaHorarios() {
 }
 app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
     const activos = sectores.filter(s => s.activo);
     if (!["administrador","supervisor"].includes(req.usuario.rol) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });

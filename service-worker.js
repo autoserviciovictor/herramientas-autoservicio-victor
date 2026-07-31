@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v103-estabilizacion-tareas';
+const CACHE_VERSION = 'autoservicio-v1031-correcciones-tareas-horarios';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=101-identidad-visual',
+  './style.css?v=1031-correcciones',
   './app.js?v=8110-entrega4',
   './config.js?v=84-entrega8',
   './excel.js?v=84-entrega8',
@@ -20,9 +20,9 @@ const APP_SHELL = [
   './auth.js?v=880-entrega1',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=901-hotfix-calendario',
+  './horarios.js?v=1031-correcciones',
   './api-cache.js?v=84-entrega8',
-  './tareas.js?v=101-identidad-visual',
+  './tareas.js?v=1031-correcciones',
   './manifest.webmanifest',
   './version.json',
   './icons/icon-96.png',
