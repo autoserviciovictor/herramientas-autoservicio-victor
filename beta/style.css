@@ -5886,3 +5886,54 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
   }
   body.horarios-modo-edicion .horarios-consulta-acciones { display:none !important; }
 }
+
+
+/* =========================================================
+   V10.3.5 — Safe Area iPhone / iOS
+   Mantiene los controles del encabezado fuera del notch y
+   de Dynamic Island, con una superficie táctil segura.
+   ========================================================= */
+@media (max-width: 768px) {
+  .brand-header {
+    box-sizing: border-box !important;
+    min-height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    padding-right: calc(66px + env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: 8px !important;
+    padding-left: calc(66px + env(safe-area-inset-left, 0px)) !important;
+  }
+
+  .brand-back-btn,
+  .brand-menu-btn {
+    top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    transform: none !important;
+    width: 50px !important;
+    height: 50px !important;
+    min-width: 50px !important;
+    min-height: 50px !important;
+    display: grid !important;
+    place-items: center !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 1002 !important;
+  }
+
+  .brand-back-btn {
+    left: calc(10px + env(safe-area-inset-left, 0px)) !important;
+  }
+
+  .brand-menu-btn {
+    right: calc(10px + env(safe-area-inset-right, 0px)) !important;
+    left: auto !important;
+  }
+
+  .brand-header-text {
+    min-height: 50px !important;
+  }
+
+  .user-dropdown {
+    top: calc(100% + 8px) !important;
+    right: calc(9px + env(safe-area-inset-right, 0px)) !important;
+    max-width: calc(100vw - 18px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+  }
+}

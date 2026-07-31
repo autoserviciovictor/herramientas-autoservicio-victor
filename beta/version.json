@@ -1,7 +1,7 @@
 {
   "channel": "beta",
-  "version": "10.3.4",
-  "label": "10.3.4",
-  "build": 100304,
-  "name": "v10.3.4 - Ajuste visual de escritorio"
+  "version": "10.3.5",
+  "label": "10.3.5",
+  "build": 100305,
+  "name": "v10.3.5 - Compatibilidad iPhone Safe Area"
 }
