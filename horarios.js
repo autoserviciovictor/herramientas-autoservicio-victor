@@ -1,5 +1,5 @@
-import "./ui.js?v=10302";
-import { API_BASE_URL } from "./config.js?v=10302";
+import "./ui.js?v=10304";
+import { API_BASE_URL } from "./config.js?v=10304";
 
 let empleados = [];
 let empleadosInfo = new Map();
@@ -143,10 +143,10 @@ function cargarTurnosConfigurados() {
     clase: 'turno-configurable',
     estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`
   })).concat([
-    { id: 'franco', label: 'Franco', clase: 'turno-franco', estilo: 'background:#e5e7eb;color:#374151;border-color:#cbd5e1' },
-    { id: 'vacaciones', label: 'Vacaciones', clase: 'turno-vacaciones', estilo: 'background:#dcfce7;color:#15803d;border-color:#86efac' },
-    { id: 'ausente', label: 'Ausente', clase: 'turno-ausente', estilo: 'background:#fee2e2;color:#dc2626;border-color:#fca5a5' },
-    { id: 'licencia', label: 'Licencia', clase: 'turno-licencia', estilo: 'background:#dbeafe;color:#1d4ed8;border-color:#93c5fd' }
+    { id: 'franco', label: 'Franco', color:'#9ca3af', clase: 'turno-franco', estilo: 'background:#e5e7eb;color:#374151;border-color:#cbd5e1' },
+    { id: 'vacaciones', label: 'Vacaciones', color:'#22c55e', clase: 'turno-vacaciones', estilo: 'background:#dcfce7;color:#15803d;border-color:#86efac' },
+    { id: 'ausente', label: 'Ausente', color:'#ef4444', clase: 'turno-ausente', estilo: 'background:#fee2e2;color:#dc2626;border-color:#fca5a5' },
+    { id: 'licencia', label: 'Licencia', color:'#3b82f6', clase: 'turno-licencia', estilo: 'background:#dbeafe;color:#1d4ed8;border-color:#93c5fd' }
   ]);
   if (!TURNOS.some(t => t.id === turnoPincel)) turnoPincel = TURNOS.find(t => !['franco','vacaciones'].includes(t.id))?.id || 'franco';
 }
@@ -454,7 +454,15 @@ function actualizarSelectorTurnos() {
   turnoPincel=opcion.id;
   const label=$("horariosPaintLabel"), swatch=$("horariosPaintSwatch");
   if(label) label.textContent=opcion.label;
-  if(swatch){swatch.style.background=opcion.color||"#fff";swatch.textContent=opcion.id==="franco"?"F":(opcion.tipo==="cortado"?"C":"");swatch.style.color=contrasteTurno(opcion.color||"#fff");}
+  if(swatch){
+    const coloresEspeciales={franco:"#9ca3af",vacaciones:"#22c55e",ausente:"#ef4444",licencia:"#3b82f6"};
+    const color=opcion.color||coloresEspeciales[opcion.id]||"#ffffff";
+    const iniciales={franco:"F",vacaciones:"V",ausente:"A",licencia:"L"};
+    swatch.style.background=color;
+    swatch.textContent=iniciales[opcion.id]||(opcion.tipo==="cortado"?"C":"");
+    swatch.style.color=contrasteTurno(color);
+    swatch.className=`turno-${opcion.id}`;
+  }
 }
 
 function crearPanelEdicion() {

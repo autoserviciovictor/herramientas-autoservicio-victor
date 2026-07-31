@@ -5765,3 +5765,124 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
 .horarios-turno-option.turno-ausente { background:#fee2e2!important; color:#dc2626!important; border-color:#fca5a5!important; }
 .horario-cell.turno-licencia,
 .horarios-turno-option.turno-licencia { background:#dbeafe!important; color:#1d4ed8!important; border-color:#93c5fd!important; }
+
+/* =========================================================
+   V10.3.4 — Ajuste visual de escritorio
+   ========================================================= */
+
+/* La versión queda disponible internamente, pero no se muestra en la interfaz. */
+.home-status,
+.horarios-sidebar-note,
+.settings-version-card,
+.admin-version { display:none !important; }
+
+/* Muestra de color del selector "Pintar con", incluso para estados especiales. */
+#horariosPaintSwatch.turno-franco { background:#9ca3af !important; color:#fff !important; border-color:#6b7280 !important; }
+#horariosPaintSwatch.turno-vacaciones { background:#22c55e !important; color:#fff !important; border-color:#16a34a !important; }
+#horariosPaintSwatch.turno-ausente { background:#ef4444 !important; color:#fff !important; border-color:#dc2626 !important; }
+#horariosPaintSwatch.turno-licencia { background:#3b82f6 !important; color:#fff !important; border-color:#2563eb !important; }
+
+@media (min-width: 901px) {
+  /* Navegación lateral real: fija, amplia, sin apariencia de tarjeta flotante. */
+  body:not(.en-inicio) .app-bottom-nav,
+  body:not(.en-inicio) .venc-bottom-nav,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav,
+  body.en-admin #pantallaAdmin .admin-bottom-nav {
+    position:fixed !important;
+    left:0 !important;
+    top:70px !important;
+    bottom:0 !important;
+    right:auto !important;
+    width:190px !important;
+    height:auto !important;
+    min-height:0 !important;
+    padding:24px 14px !important;
+    margin:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:flex-start !important;
+    gap:10px !important;
+    border:0 !important;
+    border-right:1px solid #e6e2de !important;
+    border-radius:0 !important;
+    background:#fff !important;
+    box-shadow:none !important;
+    transform:none !important;
+    z-index:90 !important;
+  }
+
+  body:not(.en-inicio) .app-bottom-nav button,
+  body:not(.en-inicio) .app-bottom-nav .nav-btn,
+  body:not(.en-inicio) .venc-bottom-nav button,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav button,
+  body.en-admin #pantallaAdmin .admin-bottom-nav .admin-tab {
+    width:100% !important;
+    min-height:62px !important;
+    padding:13px 14px !important;
+    gap:12px !important;
+    justify-content:flex-start !important;
+    border-radius:14px !important;
+    font-size:14px !important;
+    font-weight:800 !important;
+  }
+  body:not(.en-inicio) .app-bottom-nav .nav-icon,
+  body:not(.en-inicio) .app-bottom-nav svg,
+  body:not(.en-inicio) .horarios-nav-icon,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav svg {
+    width:25px !important;
+    height:25px !important;
+    flex:0 0 25px !important;
+  }
+  body:not(.en-inicio) .app-bottom-nav button > span:last-child,
+  body:not(.en-inicio) .venc-bottom-nav button > span:last-child,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav button > span:last-child,
+  body.en-admin #pantallaAdmin .admin-bottom-nav .admin-tab > span:last-child {
+    font-size:14px !important;
+    line-height:1.2 !important;
+  }
+
+  /* Reserva uniforme para la barra fija en todos los módulos. */
+  body:not(.en-inicio) .pantalla,
+  body:not(.en-inicio) .horarios-screen .horarios-content {
+    padding-left:214px !important;
+  }
+
+  /* Horarios más compacto: menos aire y el calendario como foco principal. */
+  .horarios-shell { display:block !important; grid-template-columns:none !important; }
+  .horarios-sidebar { display:none !important; }
+  .horarios-content {
+    padding-top:12px !important;
+    padding-right:24px !important;
+    padding-bottom:28px !important;
+  }
+  .horarios-toolbar {
+    margin:0 0 8px !important;
+    padding:0 !important;
+    min-height:58px !important;
+    align-items:center !important;
+  }
+  .horarios-toolbar h2 { margin:0 !important; font-size:24px !important; }
+  .horarios-toolbar p { margin:2px 0 0 !important; }
+  .horarios-sector-card { margin:0 0 8px !important; }
+  .horarios-status-row { margin:0 0 8px !important; min-height:22px !important; }
+  .horarios-edicion-marco { margin:0 0 8px !important; }
+  .horarios-consulta-acciones { min-height:56px !important; padding:8px 10px !important; }
+  .horarios-panel-edicion { padding:12px !important; }
+  .horarios-board-card { margin-top:8px !important; }
+
+  /* El panel de edición flota sobre el contenido sin estrechar ni desplazar la tabla. */
+  body.horarios-modo-edicion .horarios-panel-edicion {
+    position:fixed !important;
+    top:96px !important;
+    right:24px !important;
+    width:min(520px,calc(100vw - 250px)) !important;
+    max-height:calc(100vh - 120px) !important;
+    overflow:auto !important;
+    z-index:95 !important;
+    background:#fff !important;
+    border:1px solid #e4e0dc !important;
+    border-radius:16px !important;
+    box-shadow:0 18px 50px rgba(30,25,22,.18) !important;
+  }
+  body.horarios-modo-edicion .horarios-consulta-acciones { display:none !important; }
+}
