@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
-import { ordenarPorBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
-import { obtenerJsonCacheado } from "./api-cache.js?v=71-entrega4-rendimiento-sync";
+import { API_BASE_URL } from "./config.js?v=1110";
+import { ordenarPorBusqueda } from "./search.js?v=1110";
+import { obtenerJsonCacheado } from "./api-cache.js?v=1110";
 
 let datos = [];
 let catalogoMaestro = [];

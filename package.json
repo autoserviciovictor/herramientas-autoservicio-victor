@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "10.6.0",
-  "description": "Autoservicio 10.6 - refactorización modular",
+  "version": "11.1.0",
+  "description": "Autoservicio 11.1 - validación y limpieza final",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

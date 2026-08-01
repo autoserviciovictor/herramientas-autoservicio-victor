@@ -1,35 +1,34 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v1060-module-refactor';
+const CACHE_VERSION = 'autoservicio-v1110-stable';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './design-tokens.css?v=1060',
-  './style.css?v=1060',
-  './design-components.css?v=1060',
-  './app-shell.css?v=1060',
-  './app.js?v=1060',
-  './config.js?v=1060',
-  './excel.js?v=84-entrega8',
-  './scanner.js?v=84-entrega8',
-  './reposicion.js?v=880-entrega1',
-  './ui.js?v=1060',
-  './module-registry.js?v=1060',
-  './shared/dom-utils.js?v=1060',
-  './modules/tareas/task-view.js?v=1060',
-  './modules/horarios/schedule-format.js?v=1060',
-  './release-channel.js?v=82-canal-beta-1',
-  './pwa.js?v=84-entrega8',
-  './search.js?v=84-entrega8',
-  './horarios-config.js?v=871-ajustes-calendario',
-  './admin.js?v=900-final',
-  './auth.js?v=880-entrega1',
-  './notifications.js?v=84-entrega8',
-  './prices.js?v=84-entrega8',
-  './horarios.js?v=1060',
-  './api-cache.js?v=84-entrega8',
-  './tareas.js?v=1060',
+  './design-tokens.css?v=1110',
+  './style.css?v=1110',
+  './design-components.css?v=1110',
+  './app-shell.css?v=1110',
+  './app.js?v=1110',
+  './config.js?v=1110',
+  './excel.js?v=1110',
+  './scanner.js?v=1110',
+  './reposicion.js?v=1110',
+  './ui.js?v=1110',
+  './module-registry.js?v=1110',
+  './shared/dom-utils.js?v=1110',
+  './modules/tareas/task-view.js?v=1110',
+  './modules/horarios/schedule-format.js?v=1110',
+  './pwa.js?v=1110',
+  './search.js?v=1110',
+  './horarios-config.js?v=1110',
+  './admin.js?v=1110',
+  './auth.js?v=1110',
+  './notifications.js?v=1110',
+  './prices.js?v=1110',
+  './horarios.js?v=1110',
+  './api-cache.js?v=1110',
+  './tareas.js?v=1110',
   './manifest.webmanifest',
   './version.json',
   './icons/icon-96.png',
@@ -96,14 +95,6 @@ async function navegacionSegura(request) {
   }
 }
 
-async function cachePrimero(request) {
-  const cache = await caches.open(CACHE_VERSION);
-  const guardado = await cache.match(request);
-  if (guardado) return guardado;
-  const respuesta = await fetch(request);
-  if (respuesta?.ok) await cache.put(request, respuesta.clone());
-  return respuesta;
-}
 
 async function actualizarEnSegundoPlano(request, event) {
   const cache = await caches.open(CACHE_VERSION);
@@ -130,13 +121,7 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.origin === self.location.origin) {
-    const esArchivoVersionado = url.searchParams.has('v');
-    const esImagen = request.destination === 'image';
-    if (esArchivoVersionado || esImagen) {
-      event.respondWith(actualizarEnSegundoPlano(request, event));
-    } else {
-      event.respondWith(actualizarEnSegundoPlano(request, event));
-    }
+    event.respondWith(actualizarEnSegundoPlano(request, event));
     return;
   }
 

@@ -1,6 +1,6 @@
 {
-  "version": "10.6",
-  "label": "10.6",
-  "build": 100600,
-  "name": "v10.6 - Refactorización modular"
+  "version": "11.1",
+  "label": "11.1",
+  "build": 110100,
+  "name": "v11.1 - Validación y limpieza final"
 }

@@ -4033,7 +4033,7 @@ button:disabled{cursor:not-allowed;opacity:.55}
 
 /* =========================================================
    V8.11.0 · ENTREGA 4 — Pulido visual integral
-   Sistema visual compartido para toda la beta
+   Sistema visual compartido de la aplicación estable
    ========================================================= */
 :root{
   --ui-red:#b72e35;

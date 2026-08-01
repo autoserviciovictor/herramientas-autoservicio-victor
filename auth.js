@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { API_BASE_URL } from "./config.js?v=1110";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
@@ -126,7 +126,6 @@ function ocultarLogin() {
 }
 
 function actualizarInterfazUsuario() {
-  if (usuarioActual?.rol && window.AutoservicioReleaseChannel?.syncForRole?.(usuarioActual.rol)) return;
   const nombre = usuarioActual?.nombre || usuarioActual?.usuario || "";
   if ($("sesionNombre")) $("sesionNombre").textContent = nombre;
   const textoRol = usuarioActual?.rol === "administrador" ? "Administrador" : (usuarioActual?.rol === "supervisor" ? "Supervisor" : "Personal");

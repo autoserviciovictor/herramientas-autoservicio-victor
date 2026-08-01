@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Autoservicio – Herramientas",
   "short_name": "Autoservicio",
-  "description": "Inventario, vencimientos, precios y listas de reposición.",
+  "description": "Herramientas del Autoservicio Victor: inventario, vencimientos, precios, horarios, tareas y administración.",
   "lang": "es-AR",
   "dir": "ltr",
   "start_url": "./?source=pwa",

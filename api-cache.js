@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
+import { API_BASE_URL } from "./config.js?v=1110";
 
 const MEMORIA = new Map();
 const EN_CURSO = new Map();
