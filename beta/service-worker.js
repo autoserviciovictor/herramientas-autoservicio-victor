@@ -1,17 +1,17 @@
 const CACHE_PREFIX = 'autoservicio-';
-const CACHE_VERSION = 'autoservicio-v1036-iphone-close-focus';
+const CACHE_VERSION = 'autoservicio-v1037-structural-cleanup';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',
   './index.html',
   './xlsx.full.min.js',
-  './style.css?v=10302',
+  './style.css?v=10307',
   './app.js?v=8110-entrega4',
   './config.js?v=84-entrega8',
   './excel.js?v=84-entrega8',
   './scanner.js?v=84-entrega8',
   './reposicion.js?v=880-entrega1',
-  './ui.js?v=8100-entrega3',
+  './ui.js?v=10307',
   './release-channel.js?v=82-canal-beta-1',
   './pwa.js?v=84-entrega8',
   './search.js?v=84-entrega8',
@@ -20,9 +20,9 @@ const APP_SHELL = [
   './auth.js?v=880-entrega1',
   './notifications.js?v=84-entrega8',
   './prices.js?v=84-entrega8',
-  './horarios.js?v=10302',
+  './horarios.js?v=10307',
   './api-cache.js?v=84-entrega8',
-  './tareas.js?v=10302',
+  './tareas.js?v=10307',
   './manifest.webmanifest',
   './version.json',
   './icons/icon-96.png',

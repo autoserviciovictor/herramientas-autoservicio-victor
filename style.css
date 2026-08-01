@@ -5937,3 +5937,185 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
     max-width: calc(100vw - 18px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
   }
 }
+
+/* =========================================================
+   V10.3.7 — Limpieza estructural de escritorio
+   Header fijo, navegación específica por módulo y Horarios.
+   ========================================================= */
+
+@media (min-width: 901px) {
+  :root { --desktop-header-h: 78px; --desktop-sidebar-w: 220px; }
+
+  .brand-header {
+    position: fixed !important;
+    inset: 0 0 auto 0 !important;
+    height: var(--desktop-header-h) !important;
+    min-height: var(--desktop-header-h) !important;
+    z-index: 300 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .app { padding-top: var(--desktop-header-h) !important; }
+
+  .desktop-module-sidebar {
+    position: fixed;
+    left: 0;
+    top: var(--desktop-header-h);
+    bottom: 0;
+    width: var(--desktop-sidebar-w);
+    display: none;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px 16px;
+    background: #fff;
+    border-right: 1px solid #e8e2dd;
+    z-index: 220;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .desktop-module-sidebar.visible { display: flex; }
+  .desktop-module-sidebar-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 6px 14px;
+    border-bottom: 1px solid #eee8e3;
+  }
+  .desktop-sidebar-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: #fff0f1;
+    color: #c82b34;
+  }
+  .desktop-sidebar-icon .app-icon { width: 24px; height: 24px; }
+  .desktop-module-sidebar-head strong { font-size: 17px; color: #282321; }
+  .desktop-sidebar-nav { display: grid; gap: 9px; }
+  .desktop-sidebar-button {
+    position: relative;
+    width: 100%;
+    min-height: 62px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: #716b67;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 13px;
+    padding: 12px 14px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 850;
+    text-align: left;
+    cursor: pointer;
+  }
+  .desktop-sidebar-button svg,
+  .desktop-sidebar-button .nav-icon,
+  .desktop-sidebar-button .app-icon,
+  .desktop-sidebar-button .horarios-nav-icon {
+    width: 26px !important;
+    height: 26px !important;
+    flex: 0 0 26px !important;
+  }
+  .desktop-sidebar-button.activo {
+    background: #ffe9eb !important;
+    color: #c82831 !important;
+  }
+  .desktop-sidebar-button.activo::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 4px;
+    border-radius: 0 5px 5px 0;
+    background: #c82831;
+  }
+
+  /* En escritorio se ocultan las barras originales: el sidebar las replica. */
+  body:not(.en-inicio) .app-bottom-nav,
+  body:not(.en-inicio) .venc-bottom-nav,
+  body.en-tareas #pantallaTareas .tareas-bottom-nav,
+  body.en-admin #pantallaAdmin .admin-bottom-nav {
+    display: none !important;
+  }
+
+  body:not(.en-inicio) .module-page-header,
+  body:not(.en-inicio) .pantalla {
+    margin-left: var(--desktop-sidebar-w) !important;
+    width: calc(100% - var(--desktop-sidebar-w)) !important;
+    box-sizing: border-box !important;
+  }
+  body:not(.en-inicio) .pantalla,
+  body:not(.en-inicio) .horarios-screen .horarios-content {
+    padding-left: 0 !important;
+  }
+
+  /* Horarios: composición compacta y editor integrado, sin tapar la tabla. */
+  .horarios-content { padding: 10px 22px 34px !important; }
+  .horarios-toolbar { margin-bottom: 6px !important; min-height: 52px !important; }
+  .horarios-status-row { margin: 6px 0 8px !important; }
+  .horarios-edicion-marco { margin: 0 0 10px !important; }
+  .horarios-consulta-acciones {
+    min-height: 58px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 8px 12px !important;
+  }
+  .horarios-consulta-acciones::before {
+    content: "Modo lectura · Consultá el calendario del mes";
+    color: #6e6864;
+    font-size: 13px;
+    font-weight: 750;
+  }
+  .horarios-panel-edicion {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  body.horarios-modo-edicion .horarios-editor { position: static !important; width: 100% !important; }
+
+  /* Selección limpia y coherente con la app. */
+  body.horarios-modo-edicion .horarios-table td.celda-seleccionada {
+    position: relative;
+    box-shadow: inset 0 0 0 2px #d92c33 !important;
+    background: #fff1f2 !important;
+  }
+  body.horarios-modo-edicion .horarios-table td.celda-seleccionada::after {
+    content: "✓" !important;
+    position: absolute !important;
+    right: 3px !important;
+    top: 3px !important;
+    width: 14px !important;
+    height: 14px !important;
+    border-radius: 50% !important;
+    display: grid !important;
+    place-items: center !important;
+    background: #d92c33 !important;
+    color: #fff !important;
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  body.horarios-modo-edicion .horarios-table td.celda-seleccionada .horario-cell {
+    transform: none !important;
+    filter: none !important;
+    outline: 0 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .desktop-module-sidebar { display: none !important; }
+}

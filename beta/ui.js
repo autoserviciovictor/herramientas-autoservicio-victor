@@ -44,6 +44,66 @@ const elementos = {
     editarTotal: document.getElementById("editarTotal")
 };
 
+const desktopSidebar = {
+    root: document.getElementById("desktopModuleSidebar"),
+    nav: document.getElementById("desktopSidebarNav"),
+    title: document.getElementById("desktopSidebarTitle"),
+    iconUse: document.querySelector("#desktopSidebarIcon use")
+};
+
+const desktopSidebarSources = {
+    inventario: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
+    productos: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
+    cargados: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
+    editarProducto: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
+    vencimientos: { title: "Vencimientos", icon: "#icon-calendar", selector: "#pantallaVencimientos .venc-bottom-nav" },
+    anotar: { title: "Lista", icon: "#icon-list", selector: "#pantallaAnotar .repo-bottom-nav" },
+    precios: { title: "Precios", icon: "#icon-tag", selector: "#pantallaPrecios .precios-bottom-nav" },
+    horarios: { title: "Horarios", icon: "#icon-clock", selector: "#pantallaHorarios .horarios-bottom-nav" },
+    tareas: { title: "Tareas", icon: "#icon-tasks", selector: "#pantallaTareas .tareas-bottom-nav" },
+    admin: { title: "Administrador", icon: "#icon-shield", selector: "#pantallaAdmin .admin-bottom-nav" }
+};
+
+let desktopSidebarScreen = "inicio";
+
+function renderDesktopSidebar(nombre = desktopSidebarScreen) {
+    desktopSidebarScreen = nombre;
+    const cfg = desktopSidebarSources[nombre];
+    if (!desktopSidebar.root || !desktopSidebar.nav || !cfg) {
+        desktopSidebar.root?.classList.remove("visible");
+        desktopSidebar.root?.setAttribute("aria-hidden", "true");
+        return;
+    }
+    const source = document.querySelector(cfg.selector);
+    if (!source) {
+        desktopSidebar.root.classList.remove("visible");
+        desktopSidebar.root.setAttribute("aria-hidden", "true");
+        return;
+    }
+    desktopSidebar.title.textContent = cfg.title;
+    desktopSidebar.iconUse?.setAttribute("href", cfg.icon);
+    desktopSidebar.nav.innerHTML = "";
+    [...source.querySelectorAll(":scope > button")].filter(btn => !btn.classList.contains("oculto")).forEach((original, index) => {
+        const clone = original.cloneNode(true);
+        clone.removeAttribute("id");
+        clone.classList.add("desktop-sidebar-button");
+        clone.dataset.sidebarIndex = String(index);
+        clone.onclick = () => {
+            original.click();
+            setTimeout(() => renderDesktopSidebar(nombre), 0);
+        };
+        desktopSidebar.nav.appendChild(clone);
+    });
+    desktopSidebar.root.classList.add("visible");
+    desktopSidebar.root.setAttribute("aria-hidden", "false");
+}
+
+const sidebarObserver = new MutationObserver(() => {
+    if (window.matchMedia("(min-width: 901px)").matches) renderDesktopSidebar();
+});
+[...document.querySelectorAll(".app-bottom-nav,.admin-bottom-nav")].forEach(nav => sidebarObserver.observe(nav, { subtree: true, attributes: true, attributeFilter: ["class"] }));
+window.addEventListener("resize", () => renderDesktopSidebar());
+
 let temporizadorToast = null;
 let sonidoHabilitado = true;
 let vibracionHabilitada = true;
@@ -143,6 +203,7 @@ export function cambiarPantalla(nombre) {
     document.body.classList.toggle("en-admin", nombre === "admin");
     document.body.classList.toggle("en-modulo-inventario", ["inventario", "productos", "cargados", "editarProducto"].includes(nombre));
     document.body.classList.toggle("en-editor-producto", nombre === "editarProducto");
+    renderDesktopSidebar(nombre);
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {
