@@ -17,24 +17,27 @@ export function taskCardTemplate(task) {
   const completed = task.estado === 'completada';
   const assignment = task._asignacion || {};
   const duration = formatDuration(task.duracionMin);
-  return `<article class="tarea-card tarea-card-v10" data-id="${escapeHTML(task.id)}" data-turno="${escapeHTML(task._turno)}">
+  const completion = completed
+    ? `<small class="tarea-completion-copy">por ${escapeHTML(assignment.completadaPor || 'Usuario')}${assignment.completadaHora ? ` · ${escapeHTML(assignment.completadaHora)}` : ''}</small>`
+    : '';
+  return `<article class="tarea-card tarea-card-v11" data-id="${escapeHTML(task.id)}" data-turno="${escapeHTML(task._turno)}">
     <div class="tarea-card-main">
       <div class="tarea-card-title">
         <h3>${escapeHTML(task.nombre)}</h3>
         <span class="tarea-duration-pill" aria-label="Duración: ${escapeHTML(duration)}">${CLOCK_ICON}${escapeHTML(duration)}</span>
       </div>
       <div class="tarea-info-grid">
-        <div class="tarea-info-row tarea-info-sector"><span class="tarea-info-label">Sector</span><strong>${escapeHTML(task.sector || 'General')}</strong></div>
-        <div class="tarea-info-row tarea-info-responsables"><span class="tarea-info-label">Responsables</span><div class="tarea-assignment">${responsibleBadges(assignment.responsables)}</div></div>
+        <div class="tarea-info-row"><span class="tarea-info-label">Sector</span><strong>${escapeHTML(task.sector || 'General')}</strong></div>
+        <div class="tarea-info-row"><span class="tarea-info-label">Responsables</span><div class="tarea-assignment">${responsibleBadges(assignment.responsables)}</div></div>
       </div>
     </div>
-    <div class="tarea-card-state estado-${escapeHTML(task.estado)}">
-      <strong><span class="estado-dot"></span>${completed ? 'COMPLETADA' : 'PENDIENTE'}</strong>
-      ${completed
-        ? `<small>por ${escapeHTML(assignment.completadaPor || 'Usuario')}${assignment.completadaHora ? ` · ${escapeHTML(assignment.completadaHora)}` : ''}</small>`
-        : '<button type="button" data-accion="completar">Completar</button>'}
-      ${task._canManage ? `<div class="tarea-manage-actions"><button type="button" data-accion="editar">Editar</button><button type="button" data-accion="eliminar" class="danger">Eliminar</button></div>` : ''}
-    </div>
+    <footer class="tarea-card-footer estado-${escapeHTML(task.estado)}">
+      <div class="tarea-state-copy"><strong><span class="estado-dot"></span>${completed ? 'COMPLETADA' : 'PENDIENTE'}</strong>${completion}</div>
+      <div class="tarea-card-actions">
+        ${completed ? '' : '<button type="button" data-accion="completar" class="tarea-action-complete">Completar</button>'}
+        ${task._canManage ? '<button type="button" data-accion="editar">Editar</button><button type="button" data-accion="eliminar" class="danger">Eliminar</button>' : ''}
+      </div>
+    </footer>
   </article>`;
 }
 
