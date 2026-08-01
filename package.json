@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.2.0",
-  "description": "Autoservicio 11.2 - persistencia y funcionamiento",
+  "version": "11.2.1",
+  "description": "Autoservicio 11.2.1 - correcciones de interfaz y edición",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

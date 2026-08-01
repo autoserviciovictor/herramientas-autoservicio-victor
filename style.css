@@ -6136,3 +6136,157 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
   }
   body.horarios-modo-edicion .horarios-content{min-width:0!important}
 }
+
+
+/* v11.2.1 — cierre del selector de baño, tarjetas compactas y editor integrado */
+body.en-tareas #tareasConfigContenido .config-selected-users{display:none!important}
+body.en-tareas #tareasConfigContenido .config-participant-toolbar{justify-content:flex-end!important}
+
+/* El editor reemplaza a la tarjeta de modo lectura en el mismo lugar. */
+body.en-horarios .horarios-edicion-marco,
+body.horarios-modo-edicion .horarios-edicion-marco{
+  position:static!important;
+  inset:auto!important;
+  float:none!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 10px!important;
+  box-sizing:border-box!important;
+  z-index:auto!important;
+}
+body.en-horarios .horarios-panel-edicion,
+body.horarios-modo-edicion .horarios-panel-edicion{
+  position:static!important;
+  inset:auto!important;
+  width:100%!important;
+  max-width:none!important;
+  transform:none!important;
+  margin:0!important;
+  box-shadow:none!important;
+}
+body.en-horarios .horarios-consulta-acciones,
+body.en-horarios .horarios-panel-edicion{min-height:58px}
+
+/* Tarjeta de tarea 11.2.1: información compacta y acciones estables. */
+body.en-tareas #tareasVistaTareas .tarea-card.tarea-card-v11{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  min-height:0!important;
+  border-radius:16px!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-main{
+  display:grid!important;
+  gap:12px!important;
+  padding:14px 16px 12px!important;
+  min-width:0!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-title{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 h3{
+  margin:0!important;
+  font-size:15px!important;
+  line-height:1.28!important;
+  text-transform:none!important;
+  overflow-wrap:anywhere!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-duration-pill{
+  flex:none!important;
+  white-space:nowrap!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-info-grid{
+  display:grid!important;
+  gap:7px!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-info-row{
+  display:grid!important;
+  grid-template-columns:92px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:10px!important;
+  min-height:22px!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-info-label{
+  color:#77706b!important;
+  font-size:12px!important;
+  font-weight:750!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-assignment{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:5px!important;
+  min-width:0!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-footer{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:10px 12px!important;
+  border-top:1px solid #eee9e5!important;
+  background:#fff!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-state-copy{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:7px!important;
+  min-width:0!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-state-copy>strong{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  border-radius:999px!important;
+  padding:6px 9px!important;
+  font-size:11px!important;
+  white-space:nowrap!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .estado-pendiente .tarea-state-copy>strong{background:#fff5d9!important;color:#d88b00!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .estado-completada .tarea-state-copy>strong{background:#eaf8ef!important;color:#15864a!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-completion-copy{font-size:11px!important;color:#716a65!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:7px!important;
+  flex:none!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions button{
+  min-width:82px!important;
+  min-height:36px!important;
+  padding:7px 12px!important;
+  border:1px solid #dcd7d2!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#191715!important;
+  font-size:11px!important;
+  font-weight:850!important;
+  white-space:nowrap!important;
+  word-break:keep-all!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
+  color:#b4232d!important;
+  border-color:#efb7bb!important;
+  background:#fff7f7!important;
+}
+
+@media(max-width:640px){
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-main{padding:13px 14px 11px!important;gap:11px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 h3{font-size:14px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-info-row{grid-template-columns:88px minmax(0,1fr)!important;gap:8px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-footer{display:grid!important;grid-template-columns:1fr!important;gap:9px!important;padding:10px 12px 12px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-state-copy{justify-content:flex-start!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important;gap:7px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions button{min-width:0!important;width:100%!important;padding:8px 5px!important;font-size:11px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions button:only-child{grid-column:1/-1!important}
+}
+@media(max-width:390px){
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions{gap:5px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions button{font-size:10px!important;padding-inline:3px!important}
+}

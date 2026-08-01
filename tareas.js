@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1120";
-import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1120";
-import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1120";
+import { API_BASE_URL } from "./config.js?v=1121";
+import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1121";
+import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1121";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -377,8 +377,9 @@ function participantesConfigActuales(){
 function renderParticipantesConfig(seleccionados){
   const marcados=new Set((seleccionados||[]).map(claveParticipante));
   $("banoParticipantesCantidad").textContent=String(marcados.size);
-  const elegidos=usuariosTareas.filter(u=>marcados.has(claveParticipante(u)));
-  $("banoParticipantesSeleccionados").innerHTML=elegidos.length?elegidos.map(u=>`<span class="config-selected-user">${esc(u.nombre||u.usuario)}</span>`).join(""):'<span class="config-selected-empty">Todavía no seleccionaste participantes.</span>';
+  // La configuración resumida muestra únicamente la cantidad. Los nombres
+  // permanecen disponibles dentro del selector, evitando una cabecera saturada.
+  $("banoParticipantesSeleccionados").innerHTML="";
   const q=normalClave($("banoBuscarUsuario")?.value||"");
   const lista=usuariosTareas.filter(u=>!q||normalClave(`${u.nombre||""} ${u.usuario||""} ${u.sector||""}`).includes(q));
   $("banoUsuariosDisponibles").innerHTML=lista.length?lista.map(u=>{
@@ -389,7 +390,7 @@ function renderParticipantesConfig(seleccionados){
 async function guardarConfigBano(){
   const anterior=configBano(),participantes=participantesConfigActuales(),boton=$("btnGuardarConfigBano");
   if(boton){boton.disabled=true;boton.dataset.textoOriginal=boton.textContent;boton.textContent="Guardando...";}
-  try{const r=await fetch(`${API_BASE_URL}/tareas/bano`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({participantes,fechaAncla:anterior.fechaAncla||iso(new Date())})}),data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo guardar");banoMemoria=data.config;guardarJSON(BANO_KEY,banoMemoria);guardarJSON(BANO_HISTORY_KEY,banoMemoria.historial||[]);renderParticipantesConfig(banoMemoria.participantes);renderBano();window.AutoservicioDialog?.alert?.({title:"Configuración guardada",message:"La rotación quedó disponible para todos los usuarios y dispositivos."});}
+  try{const r=await fetch(`${API_BASE_URL}/tareas/bano`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({participantes,fechaAncla:anterior.fechaAncla||iso(new Date())})}),data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo guardar");banoMemoria=data.config;guardarJSON(BANO_KEY,banoMemoria);guardarJSON(BANO_HISTORY_KEY,banoMemoria.historial||[]);renderParticipantesConfig(banoMemoria.participantes);$("banoSelectorParticipantes")?.classList.add("oculto");renderBano();window.AutoservicioDialog?.alert?.({title:"Configuración guardada",message:"La rotación quedó disponible para todos los usuarios y dispositivos."});}
   catch(error){window.AutoservicioDialog?.alert?.({title:"No se pudo guardar",message:error.message||"Intentá nuevamente."});}
   finally{if(boton){boton.disabled=false;boton.textContent=boton.dataset.textoOriginal||"Guardar configuración";}}
 }
