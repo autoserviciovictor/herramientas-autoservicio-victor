@@ -33,6 +33,7 @@ export function taskCardTemplate(task) {
       ${completed
         ? `<small>por ${escapeHTML(assignment.completadaPor || 'Usuario')}${assignment.completadaHora ? ` · ${escapeHTML(assignment.completadaHora)}` : ''}</small>`
         : '<button type="button" data-accion="completar">Completar</button>'}
+      ${task._canManage ? `<div class="tarea-manage-actions"><button type="button" data-accion="editar">Editar</button><button type="button" data-accion="eliminar" class="danger">Eliminar</button></div>` : ''}
     </div>
   </article>`;
 }

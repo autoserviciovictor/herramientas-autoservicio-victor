@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1110";
-import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1110";
-import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1110";
+import { API_BASE_URL } from "./config.js?v=1120";
+import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1120";
+import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1120";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -23,6 +23,8 @@ let solicitudResponsables = 0;
 let tareasMemoria = [];
 let contextoTareas = { sectores:[], puedeAsignar:false, puedeConfigurar:false };
 let guardadoRemotoEnCurso = Promise.resolve();
+let banoMemoria = null;
+let asignacionEditando = null;
 
 function inicioDia(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function inicioSemana(d){ const x=inicioDia(d), day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return x; }
@@ -132,7 +134,7 @@ function asignacionesDelDia(){
  const fecha=iso(fechaSeleccionada), out=[];
  leer().filter(t=>(t.sector||"General")===sectorSeleccionado).forEach(t=>{
    for(const turno of turnosPermitidos(t)){
-     const a=asignacion(t,fecha,turno); if(a) out.push({...t,_turno:turno,_asignacion:a,estado:a.estado||"pendiente"});
+     const a=asignacion(t,fecha,turno); if(a) out.push({...t,_turno:turno,_asignacion:a,estado:a.estado||"pendiente",_canManage:puedeAsignar()});
    }
  }); return out;
 }
@@ -263,34 +265,59 @@ function elegirTurnoAsignacion(turno){
 function actualizarTurnosAsignacion(){
   const id=$("asignarTareaSelect").value,t=leer().find(x=>x.id===id),fecha=iso(fechaSeleccionada),anterior=$("asignarTurno").value;
   if(!t){renderTurnosAsignacion([]);$("asignarUsuarios").innerHTML="";return;}
-  const disponibles=["manana","tarde"].filter(turno=>!asignacion(t,fecha,turno));
+  const disponibles=["manana","tarde"].filter(turno=>!asignacion(t,fecha,turno)||(asignacionEditando&&asignacionEditando.id===id&&asignacionEditando.fecha===fecha&&asignacionEditando.turno===turno));
   renderTurnosAsignacion(disponibles,anterior);
   renderResponsablesAsignacion();
 }
 async function abrirAsignar(){
-  await cargarUsuariosTareas(); asignarDisponibles=tareasDisponibles(); if(!asignarDisponibles.length){window.AutoservicioDialog?.alert?.({title:"Sin tareas disponibles",message:"Todas las tareas activas de este sector ya fueron asignadas en ambos turnos para este día."});return;} $("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}); $("asignarBuscarTarea").value=""; $("asignarTareaSelect").innerHTML=asignarDisponibles.map(t=>`<option value="${t.id}">${esc(t.nombre)}</option>`).join(""); $("asignarTareaSelect").value=asignarDisponibles[0].id; renderTareasAsignables();
+  asignacionEditando=null; await cargarUsuariosTareas(); asignarDisponibles=tareasDisponibles(); if(!asignarDisponibles.length){window.AutoservicioDialog?.alert?.({title:"Sin tareas disponibles",message:"Todas las tareas activas de este sector ya fueron asignadas en ambos turnos para este día."});return;} $("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}); $("asignarBuscarTarea").value=""; $("asignarTareaSelect").innerHTML=asignarDisponibles.map(t=>`<option value="${t.id}">${esc(t.nombre)}</option>`).join(""); $("asignarTareaSelect").value=asignarDisponibles[0].id; renderTareasAsignables();
   $("asignarModal").classList.remove("oculto");$("asignarModal").setAttribute("aria-hidden","false");
   const card=$("asignarModal").querySelector(".tarea-modal-card"); if(card)card.scrollTop=0;
   $("asignarTareasLista").scrollTop=0; $("asignarUsuarios").scrollTop=0;
   actualizarTurnosAsignacion();
 }
-function cerrarAsignar(){ solicitudResponsables++; $("asignarModal").classList.add("oculto");$("asignarModal").setAttribute("aria-hidden","true"); $("btnGuardarAsignar").disabled=true; }
-function guardarAsignacion(){
+function cerrarAsignar(){ asignacionEditando=null; solicitudResponsables++; $("asignarModal").classList.add("oculto");$("asignarModal").setAttribute("aria-hidden","true"); $("btnGuardarAsignar").disabled=true; }
+async function guardarAsignacion(){
   const id=$("asignarTareaSelect").value,turno=$("asignarTurno").value;
   const responsables=[...new Set([...document.querySelectorAll("#asignarUsuarios input:checked")].map(x=>x.value.trim()).filter(Boolean))];
-  if(!id){window.AutoservicioDialog?.alert?.({title:"Elegí una tarea",message:"Seleccioná la tarea que querés asignar."});return;}
-  if(!turno){window.AutoservicioDialog?.alert?.({title:"Elegí un turno",message:"Seleccioná mañana o tarde para esta asignación."});return;}
-  if(!responsables.length){window.AutoservicioDialog?.alert?.({title:"Elegí responsables",message:"Seleccioná uno o varios usuarios disponibles."});return;}
+  if(!id||!turno||!responsables.length){window.AutoservicioDialog?.alert?.({title:"Faltan datos",message:"Seleccioná tarea, turno y al menos un responsable."});return;}
   const all=leer(),t=all.find(x=>x.id===id),fecha=iso(fechaSeleccionada);
-  if(!t||t.activo===false||(t.sector||"General")!==sectorSeleccionado){window.AutoservicioDialog?.alert?.({title:"Tarea no disponible",message:"La tarea ya no está disponible para este sector."});return;}
-  if(asignacion(t,fecha,turno)){window.AutoservicioDialog?.alert?.({title:"Tarea ya asignada",message:`“${t.nombre}” ya tiene una asignación para ${TURNOS[turno].toLowerCase()} en este día.`});actualizarTurnosAsignacion();return;}
-  t.asignaciones=t.asignaciones||{};t.asignaciones[fecha]=t.asignaciones[fecha]||{};t.asignaciones[fecha][turno]={responsables,estado:"pendiente",completadaPor:"",completadaHora:""};
-  guardar(all);cerrarAsignar();renderTareas();
+  if(!t||t.activo===false){window.AutoservicioDialog?.alert?.({title:"Tarea no disponible",message:"La tarea ya no está disponible."});return;}
+  if(asignacion(t,fecha,turno)&&!(asignacionEditando&&asignacionEditando.id===id&&asignacionEditando.fecha===fecha&&asignacionEditando.turno===turno)){window.AutoservicioDialog?.alert?.({title:"Tarea ya asignada",message:`“${t.nombre}” ya tiene una asignación para este turno.`});return;}
+  const boton=$("btnGuardarAsignar");if(boton){boton.disabled=true;boton.textContent="Guardando...";}
+  try{
+    const r=await fetch(`${API_BASE_URL}/tareas/asignacion`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,fecha,turno,responsables,estado:asignacionEditando?.estado||"pendiente"})}),data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo guardar la asignación");
+    if(asignacionEditando&&asignacionEditando.turno!==turno){
+      const borrar=await fetch(`${API_BASE_URL}/tareas/asignacion`,{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,fecha,turno:asignacionEditando.turno})});
+      const borrarData=await borrar.json();if(!borrar.ok||!borrarData.ok)throw new Error(borrarData.mensaje||"No se pudo mover la asignación");
+      delete t.asignaciones?.[fecha]?.[asignacionEditando.turno];
+    }
+    t.asignaciones=t.asignaciones||{};t.asignaciones[fecha]=t.asignaciones[fecha]||{};t.asignaciones[fecha][turno]=data.asignacion;guardarLocal(all);cerrarAsignar();renderTareas();
+  }catch(error){window.AutoservicioDialog?.alert?.({title:"No se pudo guardar",message:error.message||"Intentá nuevamente."});}
+  finally{if(boton){boton.disabled=false;boton.textContent="Asignar";actualizarEstadoGuardarAsignacion();}}
+}
+async function abrirEditarAsignacion(id,turno){
+  const fecha=iso(fechaSeleccionada),t=leer().find(x=>x.id===id),a=t?.asignaciones?.[fecha]?.[turno];if(!t||!a)return;
+  asignacionEditando={id,fecha,turno,estado:a.estado||"pendiente"};await cargarUsuariosTareas();asignarDisponibles=[t];$("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"});$("asignarBuscarTarea").value="";$("asignarTareaSelect").innerHTML=`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`;$("asignarTareaSelect").value=t.id;renderTareasAsignables();$("asignarModal").classList.remove("oculto");$("asignarModal").setAttribute("aria-hidden","false");const turnos=["manana","tarde"].filter(x=>x===turno||!asignacion(t,fecha,x));renderTurnosAsignacion(turnos,turno);await renderResponsablesAsignacion();
+  const claves=new Set((a.responsables||[]).map(normalClave));document.querySelectorAll("#asignarUsuarios input").forEach(x=>x.checked=claves.has(normalClave(x.value)));actualizarCantidadResponsables();$("btnGuardarAsignar").textContent="Guardar cambios";
+}
+async function eliminarAsignacion(id,turno){
+  const t=leer().find(x=>x.id===id),fecha=iso(fechaSeleccionada);if(!t?.asignaciones?.[fecha]?.[turno])return;
+  const ok=await window.AutoservicioDialog?.confirm?.({title:"Eliminar asignación",message:`¿Eliminar la asignación de “${t.nombre}” para ${TURNOS[turno].toLowerCase()}?`,confirmText:"Eliminar",danger:true});if(ok===false)return;
+  try{const r=await fetch(`${API_BASE_URL}/tareas/asignacion`,{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,fecha,turno})}),data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo eliminar");delete t.asignaciones[fecha][turno];if(!Object.keys(t.asignaciones[fecha]).length)delete t.asignaciones[fecha];guardarLocal(leer());renderTareas();}
+  catch(error){window.AutoservicioDialog?.alert?.({title:"No se pudo eliminar",message:error.message||"Intentá nuevamente."});}
 }
 
 function configBano(){
-  const cfg=leerJSON(BANO_KEY,{participantes:[],fechaAncla:iso(new Date())});
-  return {participantes:Array.isArray(cfg.participantes)?cfg.participantes:[],fechaAncla:cfg.fechaAncla||cfg.fechaInicio||iso(new Date())};
+  const cfg=banoMemoria||leerJSON(BANO_KEY,{participantes:[],fechaAncla:iso(new Date()),historial:[]});
+  return {participantes:Array.isArray(cfg.participantes)?cfg.participantes:[],fechaAncla:cfg.fechaAncla||cfg.fechaInicio||iso(new Date()),historial:Array.isArray(cfg.historial)?cfg.historial:[]};
+}
+async function cargarBanoRemoto(){
+  try{
+    const r=await fetch(`${API_BASE_URL}/tareas/bano`),data=await r.json();
+    if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo cargar la rotación");
+    banoMemoria=data.config||{}; guardarJSON(BANO_KEY,banoMemoria); guardarJSON(BANO_HISTORY_KEY,banoMemoria.historial||[]);
+  }catch{banoMemoria=leerJSON(BANO_KEY,{participantes:[],fechaAncla:iso(new Date()),historial:leerJSON(BANO_HISTORY_KEY,[])});}
 }
 function claveParticipante(valor){
   if(valor&&typeof valor==="object") return String(valor.usuario||valor.nombre||"");
@@ -312,7 +339,7 @@ function indiceBano(fecha,cfg){
 }
 function responsableBano(fecha,cfg){ const i=indiceBano(fecha,cfg); return i<0?"":nombreParticipante(claveParticipante(cfg.participantes[i])); }
 function renderBano(){
-  const cfg=configBano(), hoy=inicioDia(new Date()), corresponde=esDiaLimpieza(hoy,cfg), responsable=responsableBano(hoy,cfg), hist=leerJSON(BANO_HISTORY_KEY,[]);
+  const cfg=configBano(), hoy=inicioDia(new Date()), corresponde=esDiaLimpieza(hoy,cfg), responsable=responsableBano(hoy,cfg), hist=cfg.historial||[];
   const confirmado=corresponde?hist.find(h=>h.fecha===iso(hoy)):null;
   const sinParticipantes=!cfg.participantes.length;
   const inicial=responsable?responsable.charAt(0).toUpperCase():"—";
@@ -337,11 +364,12 @@ function renderBano(){
   $("banoHistorial").innerHTML=hist.length?hist.slice().reverse().slice(0,5).map(h=>`<article class="bano-history-card"><span class="bano-history-check"><svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span><div><strong>${esc(h.usuario)}</strong><span>${fmt(parseFecha(h.fecha),{weekday:"long",day:"numeric",month:"long"})}</span></div><time>${esc(h.hora)}</time></article>`).join(""):'<div class="tareas-empty bano-empty-history"><span class="tareas-empty-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span><strong>Sin confirmaciones</strong><span>Las limpiezas confirmadas aparecerán acá.</span></div>';
   $("btnConfirmarBano")?.addEventListener("click",confirmarBano);
 }
-function confirmarBano(){
-  const hist=leerJSON(BANO_HISTORY_KEY,[]), hoyFecha=new Date(), hoy=iso(hoyFecha), cfg=configBano();
-  if(!esDiaLimpieza(hoyFecha,cfg)||hist.some(h=>h.fecha===hoy))return;
-  const u=usuario(); hist.push({fecha:hoy,hora:new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}),usuario:u.nombre||u.usuario||responsableBano(hoyFecha,cfg)});
-  guardarJSON(BANO_HISTORY_KEY,hist); renderBano();
+async function confirmarBano(){
+  const hoyFecha=new Date(),hoy=iso(hoyFecha),cfg=configBano();
+  if(!esDiaLimpieza(hoyFecha,cfg)||(cfg.historial||[]).some(h=>h.fecha===hoy))return;
+  const boton=$("btnConfirmarBano"); if(boton){boton.disabled=true;boton.textContent="Confirmando...";}
+  try{const r=await fetch(`${API_BASE_URL}/tareas/bano/confirmar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fecha:hoy})}),data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo confirmar");banoMemoria=data.config;guardarJSON(BANO_KEY,banoMemoria);guardarJSON(BANO_HISTORY_KEY,banoMemoria.historial||[]);renderBano();}
+  catch(error){window.AutoservicioDialog?.alert?.({title:"No se pudo confirmar",message:error.message||"Intentá nuevamente."});if(boton)boton.disabled=false;}
 }
 function participantesConfigActuales(){
   return [...document.querySelectorAll("#banoUsuariosDisponibles input:checked")].map(x=>x.value).filter(Boolean);
@@ -358,11 +386,12 @@ function renderParticipantesConfig(seleccionados){
     return `<label class="config-user-option"><input type="checkbox" value="${esc(clave)}" ${marcado?"checked":""}><span class="config-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="config-user-copy"><strong>${esc(u.nombre||u.usuario)}</strong><small>${esc(u.sector||"Sin sector")}</small></span></label>`;
   }).join(""):'<div class="config-participants-empty"><strong>Sin coincidencias</strong><span>Probá con otra búsqueda.</span></div>';
 }
-function guardarConfigBano(){
-  const anterior=configBano(), participantes=participantesConfigActuales();
-  guardarJSON(BANO_KEY,{participantes,fechaAncla:anterior.fechaAncla||iso(new Date())});
-  window.AutoservicioDialog?.alert?.({title:"Configuración guardada",message:"La rotación quedó configurada para realizarse un día sí y otro no."});
-  renderParticipantesConfig(participantes); renderBano();
+async function guardarConfigBano(){
+  const anterior=configBano(),participantes=participantesConfigActuales(),boton=$("btnGuardarConfigBano");
+  if(boton){boton.disabled=true;boton.dataset.textoOriginal=boton.textContent;boton.textContent="Guardando...";}
+  try{const r=await fetch(`${API_BASE_URL}/tareas/bano`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({participantes,fechaAncla:anterior.fechaAncla||iso(new Date())})}),data=await r.json();if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudo guardar");banoMemoria=data.config;guardarJSON(BANO_KEY,banoMemoria);guardarJSON(BANO_HISTORY_KEY,banoMemoria.historial||[]);renderParticipantesConfig(banoMemoria.participantes);renderBano();window.AutoservicioDialog?.alert?.({title:"Configuración guardada",message:"La rotación quedó disponible para todos los usuarios y dispositivos."});}
+  catch(error){window.AutoservicioDialog?.alert?.({title:"No se pudo guardar",message:error.message||"Intentá nuevamente."});}
+  finally{if(boton){boton.disabled=false;boton.textContent=boton.dataset.textoOriginal||"Guardar configuración";}}
 }
 
 async function cambiarSectorConfig(){
@@ -399,7 +428,7 @@ function bind(){
   $("btnTareasCambiarSector").onclick=cambiarSector;$("btnNuevaTarea").onclick=abrirAsignar;$("btnConfigNuevaTarea").onclick=()=>{sectorSeleccionado=$("configSectorFiltro").value||sectorSeleccionado;abrir();};
   $("btnCerrarTareaModal").onclick=$("btnCancelarTarea").onclick=cerrar;$("btnGuardarTarea").onclick=guardarForm;$("btnEliminarTarea").onclick=eliminarTareaActual;$("btnAlternarTarea").onclick=async()=>{if(!tareaEditando)return;const all=leer(),t=all.find(x=>x.id===tareaEditando.id);if(!t)return;const vaAActivar=t.activo===false;if(!vaAActivar){const ok=await window.AutoservicioDialog?.confirm?.({title:"Desactivar tarea",message:`¿Desactivar “${t.nombre}”? Ya no aparecerá entre las tareas disponibles para asignar.`,confirmText:"Desactivar",danger:true});if(ok===false)return;}t.activo=vaAActivar;guardar(all);cerrar();renderConfig();renderTareas();};$("tareaModal").onclick=e=>{if(e.target.id==="tareaModal")cerrar();};
   $("btnCerrarAsignarModal").onclick=$("btnCancelarAsignar").onclick=cerrarAsignar;$("btnGuardarAsignar").onclick=guardarAsignacion;document.querySelectorAll("#asignarTurnoOpciones [data-turno]").forEach(btn=>btn.onclick=()=>elegirTurnoAsignacion(btn.dataset.turno));$("asignarBuscarTarea").oninput=renderTareasAsignables;$("asignarTareasLista").onchange=e=>{if(e.target.name==="asignarTareaRadio")seleccionarTareaAsignable(e.target.value);};$("asignarUsuarios").onchange=actualizarCantidadResponsables;$("asignarModal").onclick=e=>{if(e.target.id==="asignarModal")cerrarAsignar();};
-  $("tareasLista").onclick=e=>{const card=e.target.closest(".tarea-card"),btn=e.target.closest("button[data-accion]");if(card&&btn)cambiarEstado(card.dataset.id,card.dataset.turno);};
+  $("tareasLista").onclick=e=>{const card=e.target.closest(".tarea-card"),btn=e.target.closest("button[data-accion]");if(!card||!btn)return;const accion=btn.dataset.accion;if(accion==="completar")cambiarEstado(card.dataset.id,card.dataset.turno);if(accion==="editar")abrirEditarAsignacion(card.dataset.id,card.dataset.turno);if(accion==="eliminar")eliminarAsignacion(card.dataset.id,card.dataset.turno);};
   document.querySelectorAll("[data-tareas-tab]").forEach(b=>b.onclick=()=>cambiarVista(b.dataset.tareasTab));
   $("configSectorFiltro").onchange=renderConfig;$("btnConfigCambiarSector").onclick=cambiarSectorConfig;$("btnGuardarConfigBano").onclick=guardarConfigBano;$("configBuscarTarea").oninput=renderConfig;$("btnLimpiarBusquedaTarea").onclick=()=>{$("configBuscarTarea").value="";renderConfig();};$("btnConfigTabTareas").onclick=()=>{configSubvista="tareas";actualizarConfigSubvista();};$("btnConfigTabBano").onclick=()=>{configSubvista="bano";actualizarConfigSubvista();};$("btnElegirParticipantesBano").onclick=()=>{$("banoSelectorParticipantes").classList.toggle("oculto");};$("banoBuscarUsuario").oninput=()=>renderParticipantesConfig(participantesConfigActuales());
   $("banoUsuariosDisponibles").onchange=()=>renderParticipantesConfig(participantesConfigActuales());
@@ -407,7 +436,7 @@ function bind(){
 }
 async function activar(){
   activo=true;seed();
-  await Promise.all([cargarContextoTareas(),cargarUsuariosTareas()]);
+  await Promise.all([cargarContextoTareas(),cargarUsuariosTareas(),cargarBanoRemoto()]);
   await cargarTareasRemotas();
   normalizarSector();
   const tieneConfig=puedeConfigurar();

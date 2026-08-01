@@ -1,6 +1,6 @@
 {
-  "version": "11.1",
-  "label": "11.1",
-  "build": 110100,
-  "name": "v11.1 - Validación y limpieza final"
+  "version": "11.2",
+  "label": "11.2",
+  "build": 110200,
+  "name": "v11.2 - Persistencia y funcionamiento"
 }

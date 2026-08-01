@@ -31,6 +31,7 @@ const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
 const PUSH_SUBSCRIPTIONS_SHEET_NAME = "Notificaciones Suscripciones";
 const NOTIFICATION_LOG_SHEET_NAME = "Notificaciones Vencimientos";
 const TAREAS_SHEET_NAME = "Tareas";
+const TAREAS_BANO_SHEET_NAME = "Tareas_Bano";
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
 const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
 const VAPID_SUBJECT = normalizarTexto(process.env.VAPID_SUBJECT || "mailto:administracion@autoserviciovictor.com");
@@ -1038,6 +1039,54 @@ function normalizarTareaServidor(t) {
     asignaciones
   };
 }
+function fusionarAsignacionesServidor(base = {}, entrada = {}) {
+  const salida = JSON.parse(JSON.stringify(base || {}));
+  for (const [fecha, turnos] of Object.entries(entrada || {})) {
+    salida[fecha] = salida[fecha] || {};
+    for (const [turno, asignacion] of Object.entries(turnos || {})) {
+      if (asignacion == null) delete salida[fecha][turno];
+      else salida[fecha][turno] = { ...(salida[fecha][turno] || {}), ...asignacion };
+    }
+    if (!Object.keys(salida[fecha]).length) delete salida[fecha];
+  }
+  return salida;
+}
+function fusionarTareaServidor(actual, entrante) {
+  const a = normalizarTareaServidor(actual || {}), e = normalizarTareaServidor(entrante || {});
+  return { ...a, ...e, asignaciones: fusionarAsignacionesServidor(a.asignaciones, e.asignaciones) };
+}
+async function asegurarHojaBano() {
+  validarConfiguracion();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  if (!(meta.data.sheets || []).some(h => h.properties?.title === TAREAS_BANO_SHEET_NAME)) {
+    await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody:{ requests:[{ addSheet:{ properties:{ title:TAREAS_BANO_SHEET_NAME } } }] } });
+  }
+  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_BANO_SHEET_NAME}!A1:D1`, valueInputOption:"USER_ENTERED", requestBody:{values:[["Clave","Datos","Actualizado","Actualizado por"]]} });
+}
+async function leerBanoServidor() {
+  await asegurarHojaBano();
+  const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_BANO_SHEET_NAME}!A:D`});
+  const filas=(r.data.values||[]).slice(1);
+  const mapa=new Map(filas.map(f=>[f[0],f]));
+  let config={participantes:[],fechaAncla:new Date().toISOString().slice(0,10),historial:[]};
+  try{ if(mapa.get("config")?.[1]) config={...config,...JSON.parse(mapa.get("config")[1])}; }catch{}
+  try{ if(mapa.get("historial")?.[1]) config.historial=JSON.parse(mapa.get("historial")[1])||[]; }catch{}
+  config.participantes=Array.isArray(config.participantes)?config.participantes:[];
+  config.historial=Array.isArray(config.historial)?config.historial:[];
+  return config;
+}
+async function guardarBanoServidor(config, usuario) {
+  return ejecutarEnCola("tareas-bano",async()=>{
+    await asegurarHojaBano();
+    const limpio={participantes:[...new Set((config.participantes||[]).map(normalizarTexto).filter(Boolean))],fechaAncla:normalizarTexto(config.fechaAncla)||new Date().toISOString().slice(0,10)};
+    const historial=Array.isArray(config.historial)?config.historial:[];
+    await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_BANO_SHEET_NAME}!A2:D3`,valueInputOption:"USER_ENTERED",requestBody:{values:[
+      ["config",JSON.stringify(limpio),fechaHoraArgentinaIso(),usuario?.usuario||""],
+      ["historial",JSON.stringify(historial),fechaHoraArgentinaIso(),usuario?.usuario||""]
+    ]}});
+    return {...limpio,historial};
+  });
+}
 async function obtenerTareasServidor() {
   await asegurarHojaTareas();
   const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A:H` });
@@ -1100,13 +1149,56 @@ app.put("/tareas", requerirSesion, async (req,res)=>{
     const mapa=new Map(actuales.filter(t=>!(eliminadas.has(t.id)&&puedeSector(t))).map(t=>[t.id,t]));
     for(const tarea of entrantes){
       if(!puedeSector(tarea)) continue;
-      mapa.set(tarea.id,tarea);
+      mapa.set(tarea.id, mapa.has(tarea.id) ? fusionarTareaServidor(mapa.get(tarea.id), tarea) : tarea);
     }
     const fusion=[...mapa.values()];
     await guardarTareasServidor(fusion,req.usuario);
     const visibles=req.usuario.rol==="administrador"?fusion:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)));
     res.json({ok:true,tareas:visibles});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron guardar las tareas"});}
+});
+
+app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
+  try {
+    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
+    const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
+    const tareas=await obtenerTareasServidor(), tarea=tareas.find(t=>t.id===id);
+    if(!tarea||!fecha||!["manana","tarde"].includes(turno)) return res.status(400).json({ok:false,mensaje:"Asignación inválida"});
+    const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+    if(req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
+    tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
+    tarea.asignaciones[fecha][turno]={...(tarea.asignaciones[fecha][turno]||{}),responsables:[...new Set((req.body?.responsables||[]).map(normalizarTexto).filter(Boolean))],estado:normalizarTexto(req.body?.estado)||"pendiente",completadaPor:"",completadaHora:""};
+    await guardarTareasServidor(tareas,req.usuario);
+    res.json({ok:true,asignacion:tarea.asignaciones[fecha][turno]});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar la asignación"});}
+});
+app.delete("/tareas/asignacion", requerirSesion, async (req,res)=>{
+  try {
+    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para eliminar asignaciones"});
+    const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
+    const tareas=await obtenerTareasServidor(),tarea=tareas.find(t=>t.id===id);
+    if(!tarea?.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
+    const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+    if(req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
+    delete tarea.asignaciones[fecha][turno]; if(!Object.keys(tarea.asignaciones[fecha]).length) delete tarea.asignaciones[fecha];
+    await guardarTareasServidor(tareas,req.usuario); res.json({ok:true});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo eliminar la asignación"});}
+});
+app.get("/tareas/bano", requerirSesion, async(req,res)=>{try{res.json({ok:true,config:await leerBanoServidor()});}catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar la rotación"});}});
+app.put("/tareas/bano", requerirSesion, async(req,res)=>{
+  try{
+    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar la rotación"});
+    const actual=await leerBanoServidor();
+    const config=await guardarBanoServidor({...actual,participantes:req.body?.participantes||[],fechaAncla:req.body?.fechaAncla||actual.fechaAncla},req.usuario);
+    res.json({ok:true,config});
+  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar la rotación"});}
+});
+app.post("/tareas/bano/confirmar", requerirSesion, async(req,res)=>{
+  try{
+    const fecha=normalizarTexto(req.body?.fecha)||new Date().toISOString().slice(0,10),actual=await leerBanoServidor();
+    if(!actual.historial.some(x=>x.fecha===fecha)) actual.historial.unshift({fecha,usuario:req.usuario.nombre||req.usuario.usuario,hora:new Date().toLocaleTimeString("es-AR",{timeZone:TIME_ZONE,hour:"2-digit",minute:"2-digit"})});
+    const config=await guardarBanoServidor(actual,req.usuario);res.json({ok:true,config});
+  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo confirmar la limpieza"});}
 });
 
 app.post("/tareas/completar", requerirSesion, async (req,res)=>{

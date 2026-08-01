@@ -1,4 +1,4 @@
-import { resolveModule, getDesktopNavigationSource } from "./module-registry.js?v=1110";
+import { resolveModule, getDesktopNavigationSource } from "./module-registry.js?v=1120";
 
 const elementos = {
     splash: document.getElementById("splash"),

@@ -6119,3 +6119,20 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
 @media (max-width: 900px) {
   .desktop-module-sidebar { display: none !important; }
 }
+
+/* v11.2 — persistencia compartida y correcciones funcionales */
+.tarea-manage-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.tarea-manage-actions button{min-width:0!important;padding:7px 10px!important;font-size:11px!important}
+.tarea-manage-actions .danger{border-color:#efb7bb!important;color:#b4232d!important;background:#fff7f7!important}
+@media(max-width:640px){.tarea-manage-actions{width:100%;justify-content:stretch}.tarea-manage-actions button{flex:1}}
+
+@media(min-width:1101px){
+  body.horarios-modo-edicion .horarios-shell,
+  body:not(.horarios-modo-edicion) .horarios-shell{grid-template-columns:180px minmax(0,1fr)!important}
+  body.horarios-modo-edicion .horarios-editor{
+    position:static!important;inset:auto!important;width:100%!important;max-height:none!important;
+    margin:10px 0 12px!important;box-shadow:0 6px 18px rgba(20,25,40,.07)!important;
+    grid-column:auto!important;z-index:auto!important
+  }
+  body.horarios-modo-edicion .horarios-content{min-width:0!important}
+}
