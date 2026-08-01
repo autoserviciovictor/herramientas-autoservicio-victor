@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1121";
+import { API_BASE_URL } from "./config.js?v=1130";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
@@ -198,6 +198,7 @@ async function guardarSector(){
 async function cargarUsuarios() {
   const data = await api("/admin/usuarios");
   usuarios = data.usuarios || [];
+  if ($("adminUsuariosSistema")) $("adminUsuariosSistema").textContent = usuarios.length;
   renderUsuarios();
 }
 

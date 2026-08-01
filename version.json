@@ -1,6 +1,6 @@
 {
-  "version": "11.2.1",
-  "label": "11.2.1",
-  "build": 110201,
-  "name": "v11.2.1 - Correcciones de interfaz"
+  "version": "11.3",
+  "label": "11.3",
+  "build": 110300,
+  "name": "v11.3 - Consistencia estructural"
 }

@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.2.1",
-  "description": "Autoservicio 11.2.1 - correcciones de interfaz y edición",
+  "version": "11.3.0",
+  "description": "Autoservicio 11.3 - consistencia estructural y componentes uniformes",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

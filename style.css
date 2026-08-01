@@ -6138,7 +6138,7 @@ body.en-tareas .tarea-persona{max-width:100%;white-space:normal!important}
 }
 
 
-/* v11.2.1 — cierre del selector de baño, tarjetas compactas y editor integrado */
+/* v11.3 — cierre del selector de baño, tarjetas compactas y editor integrado */
 body.en-tareas #tareasConfigContenido .config-selected-users{display:none!important}
 body.en-tareas #tareasConfigContenido .config-participant-toolbar{justify-content:flex-end!important}
 
@@ -6167,7 +6167,7 @@ body.horarios-modo-edicion .horarios-panel-edicion{
 body.en-horarios .horarios-consulta-acciones,
 body.en-horarios .horarios-panel-edicion{min-height:58px}
 
-/* Tarjeta de tarea 11.2.1: información compacta y acciones estables. */
+/* Tarjeta de tarea 11.3: información compacta y acciones estables. */
 body.en-tareas #tareasVistaTareas .tarea-card.tarea-card-v11{
   display:grid!important;
   grid-template-columns:minmax(0,1fr)!important;
@@ -6289,4 +6289,127 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
 @media(max-width:390px){
   body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions{gap:5px!important}
   body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions button{font-size:10px!important;padding-inline:3px!important}
+}
+
+/* =========================================================
+   V11.3 — Consistencia estructural y componentes uniformes
+   ========================================================= */
+
+:root{
+  --desktop-sidebar-w:232px;
+  --app-shell-sidebar-width:232px;
+}
+
+@media (min-width:901px){
+  .desktop-module-sidebar{
+    width:var(--desktop-sidebar-w)!important;
+    padding:20px 16px!important;
+    gap:16px!important;
+  }
+  .desktop-sidebar-nav{gap:8px!important}
+  .desktop-sidebar-button{
+    min-height:58px!important;
+    border-radius:15px!important;
+    padding:11px 14px!important;
+    gap:12px!important;
+    font-size:14px!important;
+  }
+  .desktop-sidebar-button.activo::before{top:10px!important;bottom:10px!important;width:4px!important}
+  body:not(.en-inicio) .module-page-header,
+  body:not(.en-inicio) .pantalla{
+    margin-left:var(--desktop-sidebar-w)!important;
+    width:calc(100% - var(--desktop-sidebar-w))!important;
+  }
+}
+
+/* Usuarios: grilla uniforme y jerarquía estable. */
+@media (min-width:760px){
+  #adminUsuariosLista.admin-users-list{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:12px!important;
+  }
+  #adminUsuariosLista .admin-user-card{height:100%;min-height:128px}
+}
+.admin-user-card{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:stretch!important;
+  gap:14px!important;
+  padding:15px!important;
+  border-radius:18px!important;
+}
+.admin-user-main{align-items:flex-start!important;min-width:0!important}
+.admin-user-main>div:last-child{gap:4px!important;min-width:0!important}
+.admin-user-main strong{font-size:15px!important;line-height:1.25!important}
+.admin-user-main span{line-height:1.35!important;overflow-wrap:anywhere!important}
+.admin-user-permission-chips{margin-top:8px!important;gap:6px!important;align-content:flex-start!important}
+.admin-user-permission-chips em{padding:5px 8px!important;white-space:nowrap!important}
+.admin-user-actions{
+  min-width:84px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:space-between!important;
+  align-items:stretch!important;
+  gap:10px!important;
+}
+.user-status{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:76px!important;
+  min-height:28px!important;
+  padding:5px 10px!important;
+  white-space:nowrap!important;
+  writing-mode:horizontal-tb!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  line-height:1!important;
+}
+.btn-editar-usuario{min-height:38px!important;white-space:nowrap!important}
+
+/* Modal de usuario: secciones respiradas, divisores claros y footer estable. */
+#adminUsuarioModal .admin-user-modal-v2{width:min(640px,100%)!important}
+#adminUsuarioModal .admin-user-modal-body{padding:0 22px 18px!important;scrollbar-width:auto!important}
+#adminUsuarioModal .admin-user-modal-body>.admin-form-section,
+#adminUsuarioModal .admin-user-modal-body>fieldset{
+  margin:0!important;
+  padding:20px 0!important;
+  border-bottom:1px solid #ece6e1!important;
+}
+#adminUsuarioModal .admin-form-section-title{margin-bottom:14px!important;gap:4px!important}
+#adminUsuarioModal .admin-form-grid{gap:14px!important}
+#adminUsuarioModal .admin-user-modal label{margin:0!important;gap:7px!important}
+#adminUsuarioModal .admin-active-row{margin:18px 0 0!important}
+#adminUsuarioModal .admin-modal-actions-sticky{margin:0!important}
+
+/* Tarjetas y listas de baño más compactas y homogéneas. */
+.bano-next-list,.bano-history-list{gap:9px!important}
+.bano-turn-card{min-height:66px!important;padding:8px 14px 8px 9px!important;border-radius:17px!important}
+.bano-turn-date{width:50px!important;height:50px!important;border-radius:14px!important}
+.bano-turn-copy{gap:1px!important}
+
+/* Sistema: aprovecha el ancho y mantiene métricas iguales. */
+#adminTab-sistema .admin-summary-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+#adminTab-sistema .admin-summary-grid>div{
+  min-height:86px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border-radius:16px!important;
+}
+#adminTab-sistema .setting-btn{min-height:48px!important}
+#adminTab-sistema .admin-import-card{margin-top:14px!important}
+
+@media (max-width:759px){
+  .admin-user-card{grid-template-columns:minmax(0,1fr)!important}
+  .admin-user-actions{min-width:0!important;display:grid!important;grid-template-columns:auto 1fr!important;align-items:center!important}
+  .user-status{justify-self:start!important}
+  #adminUsuarioModal .admin-user-modal-body{padding-left:17px!important;padding-right:17px!important}
+  #adminTab-sistema .admin-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
