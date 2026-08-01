@@ -1,6 +1,6 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.3.0",
+  "version": "11.3.1",
   "description": "Autoservicio 11.3 - consistencia estructural y componentes uniformes",
   "main": "server.js",
   "scripts": {

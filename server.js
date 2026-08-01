@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "10.2";
+const APP_VERSION = "11.3.1";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -2331,7 +2331,7 @@ async function migrarEstructuraHorariosV812() {
   await asegurarHojaSectores();
   await asegurarHojasHorarios();
   await asegurarHojaAuditoriaHorarios();
-  limpiarCache("usuarios");
+  invalidarCache("usuarios");
   return {
     hojas: [
       USUARIOS_SHEET_NAME,
