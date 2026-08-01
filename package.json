@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.3.1",
-  "description": "Autoservicio 11.3 - consistencia estructural y componentes uniformes",
+  "version": "11.3.2",
+  "description": "Autoservicio 11.3.2 - ajustes de navegación y editor de usuarios",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -6413,3 +6413,192 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
   #adminUsuarioModal .admin-user-modal-body{padding-left:17px!important;padding-right:17px!important}
   #adminTab-sistema .admin-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+/* =========================================================
+   V11.3.2 — Ajustes de navegación y editor de usuarios
+   ========================================================= */
+
+/* El menú de Inventario usa exactamente la misma escala tipográfica del shell. */
+@media (min-width:901px){
+  body.en-modulo-inventario .desktop-sidebar-button,
+  body.en-modulo-inventario .desktop-sidebar-button > span:last-child,
+  body.en-modulo-inventario .desktop-sidebar-button strong{
+    font-size:14px!important;
+    font-weight:800!important;
+    line-height:1.2!important;
+    letter-spacing:0!important;
+  }
+  body.en-modulo-inventario .desktop-sidebar-button .app-icon,
+  body.en-modulo-inventario .desktop-sidebar-button svg,
+  body.en-modulo-inventario .desktop-sidebar-button .nav-icon{
+    width:23px!important;
+    height:23px!important;
+    flex:0 0 23px!important;
+  }
+  body.en-modulo-inventario .desktop-module-sidebar-head strong{
+    font-size:17px!important;
+    font-weight:850!important;
+  }
+}
+
+/* Editor de usuarios: una sola superficie limpia, sin cajas anidadas. */
+#adminUsuarioModal .admin-user-modal-v2{
+  border:0!important;
+  background:#fff!important;
+}
+#adminUsuarioModal .admin-user-modal-head{
+  border:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
+#adminUsuarioModal .admin-user-modal-body{
+  background:#fff!important;
+}
+#adminUsuarioModal .admin-user-modal-body>.admin-form-section,
+#adminUsuarioModal .admin-user-modal-body>fieldset{
+  border:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  border-radius:0!important;
+  padding:18px 0 8px!important;
+}
+#adminUsuarioModal .admin-user-modal-body>.admin-form-section + .admin-form-section,
+#adminUsuarioModal .admin-user-modal-body>.admin-form-section + fieldset,
+#adminUsuarioModal .admin-user-modal-body>fieldset + .admin-active-row{
+  margin-top:14px!important;
+}
+#adminUsuarioModal .admin-form-section-title{
+  margin-bottom:13px!important;
+}
+#adminUsuarioModal .admin-form-section-title strong,
+#adminUsuarioModal .admin-permissions-fieldset legend{
+  font-size:16px!important;
+  line-height:1.2!important;
+  color:#211d1b!important;
+}
+#adminUsuarioModal .admin-form-section-title span,
+#adminUsuarioModal .admin-permissions-fieldset>p{
+  color:#77706b!important;
+  line-height:1.4!important;
+}
+
+/* Solo los controles editables conservan borde. */
+#adminUsuarioModal input:not([type="checkbox"]):not([type="hidden"]),
+#adminUsuarioModal select,
+#adminUsuarioModal .visual-select-button{
+  border:1px solid #ddd6d1!important;
+  box-shadow:none!important;
+}
+
+/* Módulos visibles centrados, uniformes y sin marcos dobles. */
+#adminUsuarioModal .admin-permissions-fieldset{
+  width:100%!important;
+  margin:0!important;
+  padding:18px 0 4px!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#adminUsuarioModal .admin-permissions-fieldset legend{
+  padding:0!important;
+  margin:0 0 6px!important;
+}
+#adminUsuarioModal .admin-permissions-fieldset>p{
+  margin:0 0 14px!important;
+}
+#adminUsuarioModal .admin-permissions-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  gap:10px!important;
+  width:100%!important;
+}
+#adminUsuarioModal .admin-permissions-grid label{
+  position:relative!important;
+  min-height:68px!important;
+  margin:0!important;
+  padding:12px 14px!important;
+  display:grid!important;
+  grid-template-columns:22px minmax(0,1fr)!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:#f7f5f3!important;
+  box-shadow:none!important;
+  text-align:center!important;
+}
+#adminUsuarioModal .admin-permissions-grid label:hover{
+  background:#f1eeeb!important;
+}
+#adminUsuarioModal .admin-permissions-grid input{
+  width:19px!important;
+  height:19px!important;
+  margin:0!important;
+  justify-self:center!important;
+  align-self:center!important;
+  accent-color:#b72e35!important;
+}
+#adminUsuarioModal .admin-permissions-grid label>span{
+  min-width:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  margin:0!important;
+  font-size:14px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+#adminUsuarioModal .admin-permissions-grid label>span .app-icon{
+  width:21px!important;
+  height:21px!important;
+  flex:0 0 21px!important;
+}
+
+/* Estado y acción de borrado más livianos. */
+#adminUsuarioModal .admin-active-row{
+  border:0!important;
+  background:#f7f5f3!important;
+  box-shadow:none!important;
+  border-radius:14px!important;
+  padding:13px 14px!important;
+}
+#adminUsuarioModal #btnAdminEliminarUsuario{
+  box-shadow:none!important;
+}
+#adminUsuarioModal .admin-modal-actions-sticky{
+  border:0!important;
+  box-shadow:0 -8px 20px rgba(255,255,255,.96)!important;
+}
+
+@media(max-width:560px){
+  #adminUsuarioModal .admin-user-modal-body>.admin-form-section,
+  #adminUsuarioModal .admin-user-modal-body>fieldset{
+    padding-top:15px!important;
+  }
+  #adminUsuarioModal .admin-permissions-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  #adminUsuarioModal .admin-permissions-grid label{
+    min-height:72px!important;
+    padding:10px 8px!important;
+    grid-template-columns:20px minmax(0,1fr)!important;
+    gap:6px!important;
+  }
+  #adminUsuarioModal .admin-permissions-grid label>span{
+    font-size:13px!important;
+    gap:6px!important;
+  }
+  #adminUsuarioModal .admin-permissions-grid label>span .app-icon{
+    width:19px!important;
+    height:19px!important;
+    flex-basis:19px!important;
+  }
+}
