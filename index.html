@@ -15,7 +15,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="style.css?v=10302">
+    <link rel="stylesheet" href="design-tokens.css?v=1060">
+    <link rel="stylesheet" href="style.css?v=1060">
+    <link rel="stylesheet" href="design-components.css?v=1060">
+    <link rel="stylesheet" href="app-shell.css?v=1060">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -159,7 +162,7 @@
             <button type="button" id="btnInstalarApp" class="setting-btn">Instalar aplicación</button>
         </section>
 
-        <section class="home-status"><strong>9.3.7</strong></section>
+
     </main>
 
     <main id="pantallaInventario" class="pantalla">
@@ -308,7 +311,7 @@
 
         <section class="settings-card settings-version-card">
             <span>Versión instalada</span>
-            <strong id="settingsAppVersion">9.3.7</strong>
+            <strong id="settingsAppVersion">10.6</strong>
         </section>
     </main>
 
@@ -447,11 +450,6 @@
 
     <main id="pantallaHorarios" class="pantalla horarios-screen">
         <section class="horarios-shell">
-            <aside class="horarios-sidebar" aria-label="Navegación de horarios">
-                <div class="horarios-sidebar-brand"><span><svg class="app-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></span><strong>Horarios</strong></div>
-                <div class="horarios-sidebar-note"><strong>9.3.7</strong><span>Calendario mensual, resumen de hoy y horario personal.</span></div>
-            </aside>
-
             <section class="horarios-content">
                 <header class="horarios-toolbar">
                     <div>
@@ -850,7 +848,7 @@
             <div class="admin-summary-grid admin-summary-grid-clean">
                 <div><span>Productos</span><strong id="adminProductos">—</strong></div>
                 <div><span>Vencimientos</span><strong id="adminVencimientos">—</strong></div>
-                <div><span>Versión</span><strong id="adminVersionSistema">9.3.7</strong></div>
+                <div><span>Versión</span><strong id="adminVersionSistema">10.6</strong></div>
             </div>
             <div id="adminReleaseChannelCard" class="admin-import-card oculto">
                 <div class="admin-import-head"><div><strong>Versión beta activa</strong><span>Este dispositivo está usando la versión de prueba. Podés volver a la versión estable cuando quieras.</span></div></div>
@@ -1047,9 +1045,9 @@
 <script type="module" src="./admin.js?v=900-final"></script>
 <script type="module" src="./notifications.js?v=84-entrega8"></script>
 <script type="module" src="./prices.js?v=84-entrega8"></script>
-<script type="module" src="./app.js?v=8110-entrega4"></script>
-<script type="module" src="./tareas.js?v=10302"></script>
-<script type="module" src="./horarios.js?v=10302"></script>
+<script type="module" src="./app.js?v=1060"></script>
+<script type="module" src="./tareas.js?v=1060"></script>
+<script type="module" src="./horarios.js?v=1060"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

@@ -1,4 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=103-estabilizacion-tareas";
+import { API_BASE_URL } from "./config.js?v=1060";
+import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1060";
+import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1060";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -27,7 +29,6 @@ function inicioSemana(d){ const x=inicioDia(d), day=x.getDay(); x.setDate(x.getD
 function iso(d){ const x=inicioDia(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; }
 function parseFecha(v){ const [y,m,d]=String(v||"").split("-").map(Number); return y?new Date(y,m-1,d):inicioDia(new Date()); }
 function fmt(d,opt={}){ return new Intl.DateTimeFormat("es-AR",opt).format(d); }
-function esc(v){const d=document.createElement("div");d.textContent=v??"";return d.innerHTML;}
 function leerJSON(key, fallback){ try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback));}catch{return fallback;} }
 function guardarJSON(key,v){ localStorage.setItem(key,JSON.stringify(v)); }
 function leer(){ return tareasMemoria.length || localStorage.getItem(KEY) ? tareasMemoria : leerJSON(KEY,[]); }
@@ -82,7 +83,6 @@ function todosLosSectores(){ const delContexto=sectoresUsuario(); const deTareas
 function sectoresPermitidos(){ return sectoresUsuario().length?sectoresUsuario():todosLosSectores(); }
 function normalizarSector(){ const permitidos=sectoresPermitidos(); if(!sectorSeleccionado || !permitidos.includes(sectorSeleccionado)) sectorSeleccionado=permitidos[0]||""; }
 function normalizarTurnoPermitido(v){ const x=String(v||"").toLowerCase(); if(x==="manana"||x==="tarde"||x==="ambos")return x; if(x.includes("15:00")||x.includes("tarde"))return "tarde"; return "manana"; }
-function duracionTexto(v){ const n=Number(v); if(!Number.isFinite(n)||n<=0)return "Sin duración"; const h=Math.floor(n/60),m=n%60; return h&&m?`${h} h ${m} min`:h?`${h} h`:`${m} min`; }
 function duracionAInput(v){ const n=Math.max(1,Number(v)||10),h=Math.floor(n/60),m=n%60; return `${String(Math.min(h,8)).padStart(2,"0")}:${String(m).padStart(2,"0")}`; }
 function duracionDesdeInput(v){ const [h,m]=String(v||"").split(":").map(Number); return Number.isFinite(h)&&Number.isFinite(m)?h*60+m:0; }
 function prepararSelectorDuracion(){
@@ -138,48 +138,14 @@ function asignacionesDelDia(){
 }
 function tareasDisponibles(){ const fecha=iso(fechaSeleccionada); return leer().filter(t=>(t.sector||"General")===sectorSeleccionado && t.activo!==false && ["manana","tarde"].some(turno=>!asignacion(t,fecha,turno))); }
 function colorTurno(t){ return t==="manana"?"turno-manana":"turno-tarde"; }
-function responsablesHTML(valor){ const nombres=Array.isArray(valor)?valor:String(valor||"").split(",").map(x=>x.trim()).filter(Boolean); if(!nombres.length)return '<span class="tarea-persona sin-responsable">Sin responsable</span>'; return nombres.map(nombre=>`<span class="tarea-persona"><svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20c.4-4 2.4-6 6-6s5.6 2 6 6"/></svg>${esc(nombre)}</span>`).join(""); }
-
 function renderDias(){ const box=$("tareasDias"); if(!box)return; box.innerHTML=""; for(let i=0;i<7;i++){const d=new Date(semanaBase);d.setDate(d.getDate()+i);const b=document.createElement("button");b.type="button";b.className=[iso(d)===iso(fechaSeleccionada)?"activo":"",iso(d)===iso(new Date())?"hoy":""].filter(Boolean).join(" ");b.innerHTML=`<strong>${DIAS[d.getDay()]}</strong><span>${d.getDate()}</span>`;b.onclick=()=>{fechaSeleccionada=d;renderTareas();};box.appendChild(b);} }
 function renderResumen(items){ const n=s=>items.filter(t=>t.estado===s).length; $("tareasResumen").innerHTML=`<div><small>Total</small><strong>${items.length}</strong></div><div class="pend"><small>Pend.</small><strong>${n("pendiente")}</strong></div><div class="comp"><small>Comp.</small><strong>${n("completada")}</strong></div>`; }
-function tareaCardHTML(t){
-  const completada=t.estado==="completada";
-  return `<article class="tarea-card tarea-card-v10" data-id="${t.id}" data-turno="${t._turno}">
-    <div class="tarea-card-main">
-      <div class="tarea-card-title">
-        <h3>${esc(t.nombre)}</h3>
-        <span class="tarea-duration-pill" aria-label="Duración: ${esc(duracionTexto(t.duracionMin))}">
-          <svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          ${duracionTexto(t.duracionMin)}
-        </span>
-      </div>
-      <div class="tarea-info-grid">
-        <div class="tarea-info-row tarea-info-sector"><span class="tarea-info-label">Sector</span><strong>${esc(t.sector||"General")}</strong></div>
-        <div class="tarea-info-row tarea-info-responsables"><span class="tarea-info-label">Responsables</span><div class="tarea-assignment">${responsablesHTML(t._asignacion.responsables)}</div></div>
-      </div>
-    </div>
-    <div class="tarea-card-state estado-${t.estado}">
-      <strong><span class="estado-dot"></span>${completada?"COMPLETADA":"PENDIENTE"}</strong>
-      ${completada?`<small>por ${esc(t._asignacion.completadaPor||"Usuario")}${t._asignacion.completadaHora?` · ${esc(t._asignacion.completadaHora)}`:""}</small>`:`<button type="button" data-accion="completar">Completar</button>`}
-    </div>
-  </article>`;
-}
-function renderGrupoTurno(turno,items){
-  const esManana=turno==="manana",titulo=esManana?"Mañana":"Tarde";
-  const icono=esManana
-    ? '<svg class="app-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
-    : '<svg class="app-icon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 118.5 4 7 7 0 0020 15.5z"/></svg>';
-  return `<section class="tareas-turno-group tareas-turno-${turno}">
-    <header class="tareas-turno-head"><span class="tareas-turno-icon">${icono}</span><div><h3>${titulo}</h3><small>${items.length} ${items.length===1?"tarea":"tareas"}</small></div></header>
-    <div class="tareas-turno-list">${items.length?items.map(tareaCardHTML).join(""):`<div class="tareas-turno-empty">Sin tareas para este turno</div>`}</div>
-  </section>`;
-}
 function renderLista(items){
   const box=$("tareasLista");
-  if(!items.length){box.innerHTML='<div class="tareas-empty tareas-empty-day"><span class="tareas-empty-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><strong>Sin tareas asignadas</strong><span>Usá “Asignar tarea” para organizar este día.</span></div>';return;}
+  if(!items.length){box.innerHTML=emptyTaskListTemplate();return;}
   const unicas=[...new Map(items.map(t=>[`${t.id}::${t._turno}`,t])).values()];
   const manana=unicas.filter(t=>t._turno==="manana"),tarde=unicas.filter(t=>t._turno==="tarde");
-  box.innerHTML=renderGrupoTurno("manana",manana)+renderGrupoTurno("tarde",tarde);
+  box.innerHTML=shiftSectionTemplate("manana",manana)+shiftSectionTemplate("tarde",tarde);
 }
 function renderTareas(){ normalizarSector(); const items=asignacionesDelDia(); $("tareasSectorNombre").textContent=sectorSeleccionado; const puedeCambiarSector=sectoresPermitidos().length>1; $("btnTareasCambiarSector").disabled=!puedeCambiarSector; $("btnTareasCambiarSector").classList.toggle("sector-unico",!puedeCambiarSector); $("btnTareasSemanaActual").textContent=`${fmt(semanaBase,{day:"2-digit",month:"short"})} - ${fmt(new Date(semanaBase.getFullYear(),semanaBase.getMonth(),semanaBase.getDate()+6),{day:"2-digit",month:"short"})}`; $("tareasFechaTitulo").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}).toUpperCase(); $("btnNuevaTarea").textContent="+ Asignar tarea"; $("btnNuevaTarea").classList.toggle("oculto",!puedeAsignar()); renderDias();renderResumen(items);renderLista(items); }
 async function cambiarEstado(id,turno){

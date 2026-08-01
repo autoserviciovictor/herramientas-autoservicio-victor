@@ -2,6 +2,7 @@ import { API_BASE_URL } from "./config.js?v=71-entrega4-rendimiento-sync";
 import { iniciarScanner, detenerScanner } from "./scanner.js?v=71-entrega4-rendimiento-sync";
 import { ordenarPorBusqueda } from "./search.js?v=71-entrega4-rendimiento-sync";
 import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=71-entrega4-rendimiento-sync";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1060";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -93,7 +94,6 @@ function toast(texto, tipo="ok"){
 }
 function unidades(n){ const v=numero(n); return `${v} ${v===1?"unidad":"unidades"}`; }
 function numero(v){ const n=Number(v); return Number.isInteger(n)&&n>=0?n:0; }
-function escapar(s){ return String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
 function fechaCorta(valor){
   const d=new Date(valor); if(Number.isNaN(d.getTime())) return "";
   return d.toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});

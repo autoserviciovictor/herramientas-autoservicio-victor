@@ -2,6 +2,7 @@ import { API_BASE_URL } from './config.js?v=71-entrega4-rendimiento-sync';
 import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=71-entrega4-rendimiento-sync';
 import { ordenarPorBusqueda } from './search.js?v=71-entrega4-rendimiento-sync';
 import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=71-entrega4-rendimiento-sync';
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1060";
 
 const $ = id => document.getElementById(id);
 const LAST_KEY = 'autoservicio-precios-ultimo-v2';
@@ -34,12 +35,6 @@ function normalizarProducto(p) {
     articulo: String(p?.articulo || 'Producto').trim(),
     precio: precioNumero(p?.precio)
   };
-}
-
-function esc(v) {
-  return String(v ?? '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
 }
 
 async function cargarProductos({ forzar = false } = {}) {

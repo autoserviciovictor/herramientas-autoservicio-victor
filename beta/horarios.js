@@ -1,5 +1,6 @@
 import "./ui.js?v=10304";
-import { API_BASE_URL } from "./config.js?v=10304";
+import { API_BASE_URL } from "./config.js?v=1060";
+import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1060";
 
 let empleados = [];
 let empleadosInfo = new Map();
@@ -246,44 +247,14 @@ function puedeEditar() {
   return sector?.puedeEditar === true;
 }
 
-function parsearTurno(id) {
-  const m = String(id || "").match(/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?$/);
-  if (!m) return null;
-  return { inicioH: Number(m[1]), inicioM: Number(m[2] || 0), finH: Number(m[3]), finM: Number(m[4] || 0) };
-}
-function hora24(h, m = 0) { return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; }
+function parsearTurno(id) { return parseSimpleShift(id); }
+function hora24(h, m = 0) { return time24(h, m); }
 function definicionTurno(id){ return TURNOS.find(t => t.id === id) || null; }
-function segmentosDeTurno(id) {
-  const definicion = definicionTurno(id);
-  if (definicion?.inicio && definicion?.fin) {
-    const segmentos=[{inicio:definicion.inicio,fin:definicion.fin}];
-    if(definicion.tipo==='cortado'&&definicion.inicio2&&definicion.fin2) segmentos.push({inicio:definicion.inicio2,fin:definicion.fin2});
-    return segmentos;
-  }
-  const p = parsearTurno(id);
-  return p ? [{ inicio: hora24(p.inicioH, p.inicioM), fin: hora24(p.finH, p.finM) }] : [];
-}
+function segmentosDeTurno(id) { return shiftSegments(id, TURNOS); }
 function horasDeTurno(id) { return segmentosDeTurno(id)[0] || null; }
-function esTurnoCortado(id){ return segmentosDeTurno(id).length > 1; }
-function formatoCelda(id) {
-  if (!id) return "—";
-  if (id === "franco") return "F";
-  if (id === "vacaciones") return "V";
-  if (id === "ausente") return "A";
-  if (id === "licencia") return "L";
-  if (esTurnoCortado(id)) return "C";
-  const horas = horasDeTurno(id);
-  return horas ? `<span>${String(horas.inicio).slice(0,2)}</span><span>${String(horas.fin).slice(0,2)}</span>` : "—";
-}
-function formatoHorario24(id) {
-  if (!id) return "Sin asignar";
-  if (id === "franco") return "Franco";
-  if (id === "vacaciones") return "Vacaciones";
-  if (id === "ausente") return "Ausente";
-  if (id === "licencia") return "Licencia";
-  const segmentos = segmentosDeTurno(id);
-  return segmentos.length ? segmentos.map(x=>`${x.inicio} - ${x.fin}`).join(" / ") : "Sin asignar";
-}
+function esTurnoCortado(id){ return isSplitShift(id, TURNOS); }
+function formatoCelda(id) { return cellLabel(id, TURNOS); }
+function formatoHorario24(id) { return fullScheduleLabel(id, TURNOS); }
 function coberturaDia(d) {
   let manana = 0, tarde = 0;
   empleados.forEach(e => {

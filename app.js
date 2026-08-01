@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=92-supervisores";
+import { APP_VERSION } from "./config.js?v=1050";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -50,7 +50,7 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=8100-entrega3";
+} from "./ui.js?v=1050";
 
 import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=92-supervisores";
 import { coincideBusqueda } from "./search.js?v=92-supervisores";

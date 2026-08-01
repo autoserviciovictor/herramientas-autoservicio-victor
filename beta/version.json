@@ -1,7 +1,6 @@
 {
-  "channel": "beta",
-  "version": "10.3.7",
-  "label": "10.3.7",
-  "build": 100307,
-  "name": "v10.3.7 - Limpieza estructural"
+  "version": "10.6",
+  "label": "10.6",
+  "build": 100600,
+  "name": "v10.6 - Refactorización modular"
 }

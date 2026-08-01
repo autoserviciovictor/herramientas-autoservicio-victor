@@ -1,3 +1,5 @@
+import { resolveModule, getDesktopNavigationSource } from "./module-registry.js?v=1050";
+
 const elementos = {
     splash: document.getElementById("splash"),
     pantallas: {
@@ -51,24 +53,11 @@ const desktopSidebar = {
     iconUse: document.querySelector("#desktopSidebarIcon use")
 };
 
-const desktopSidebarSources = {
-    inventario: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
-    productos: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
-    cargados: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
-    editarProducto: { title: "Inventario", icon: "#icon-box", selector: ".bottom-nav.app-bottom-nav" },
-    vencimientos: { title: "Vencimientos", icon: "#icon-calendar", selector: "#pantallaVencimientos .venc-bottom-nav" },
-    anotar: { title: "Lista", icon: "#icon-list", selector: "#pantallaAnotar .repo-bottom-nav" },
-    precios: { title: "Precios", icon: "#icon-tag", selector: "#pantallaPrecios .precios-bottom-nav" },
-    horarios: { title: "Horarios", icon: "#icon-clock", selector: "#pantallaHorarios .horarios-bottom-nav" },
-    tareas: { title: "Tareas", icon: "#icon-tasks", selector: "#pantallaTareas .tareas-bottom-nav" },
-    admin: { title: "Administrador", icon: "#icon-shield", selector: "#pantallaAdmin .admin-bottom-nav" }
-};
-
 let desktopSidebarScreen = "inicio";
 
 function renderDesktopSidebar(nombre = desktopSidebarScreen) {
     desktopSidebarScreen = nombre;
-    const cfg = desktopSidebarSources[nombre];
+    const cfg = getDesktopNavigationSource(nombre);
     if (!desktopSidebar.root || !desktopSidebar.nav || !cfg) {
         desktopSidebar.root?.classList.remove("visible");
         desktopSidebar.root?.setAttribute("aria-hidden", "true");
@@ -88,6 +77,8 @@ function renderDesktopSidebar(nombre = desktopSidebarScreen) {
         clone.removeAttribute("id");
         clone.classList.add("desktop-sidebar-button");
         clone.dataset.sidebarIndex = String(index);
+        clone.dataset.moduleNavProxy = cfg.moduleId;
+        clone.setAttribute("aria-current", original.classList.contains("activo") ? "page" : "false");
         clone.onclick = () => {
             original.click();
             setTimeout(() => renderDesktopSidebar(nombre), 0);
@@ -119,58 +110,18 @@ function actualizarEncabezadoModulo(nombre) {
     const subtituloPagina = document.getElementById("modulePageSubtitle");
     const volver = document.getElementById("brandBackBtn");
     const iconoPagina = document.getElementById("modulePageIconUse");
+    const module = resolveModule(nombre);
 
-    const modulos = {
-        inicio: "Autoservicio",
-        inventario: "Inventario",
-        productos: "Inventario",
-        cargados: "Inventario",
-        editarProducto: "Inventario",
-        ajustes: "Configuración",
-        vencimientos: "Vencimientos",
-        anotar: "Lista",
-        precios: "Precios",
-        horarios: "Horarios",
-        tareas: "Tareas",
-        admin: "Administrador"
-    };
-    if (tituloMarca) tituloMarca.textContent = modulos[nombre] || "Autoservicio";
-
-    const encabezados = {
-        inicio: ["Herramientas", "Elegí el módulo que querés usar"],
-        inventario: ["Inventario", "Control de stock"],
-        productos: ["Productos", "Lista completa"],
-        cargados: ["Cargados", "Productos con stock"],
-        editarProducto: ["Editar producto", "Inventario"],
-        ajustes: ["Configuración", ""],
-        vencimientos: ["Vencimientos", "Control de fechas"],
-        anotar: ["Lista", "Agregar productos"],
-        precios: ["Precios", "Consultar precio"],
-        horarios: ["Horarios", "Turnos del equipo"],
-        tareas: ["Tareas", "Organización semanal"],
-        admin: ["Administrador", "Usuarios e historial"]
-    };
-    const iconos = {
-        inicio: "#icon-box",
-        inventario: "#icon-box",
-        productos: "#icon-box",
-        cargados: "#icon-box",
-        editarProducto: "#icon-edit",
-        ajustes: "#icon-settings",
-        vencimientos: "#icon-calendar",
-        anotar: "#icon-list",
-        precios: "#icon-tag",
-        horarios: "#icon-clock",
-        tareas: "#icon-tasks",
-        admin: "#icon-shield"
-    };
-    const [textoTitulo, textoSubtitulo] = encabezados[nombre] || encabezados.inicio;
-    if (iconoPagina) iconoPagina.setAttribute("href", iconos[nombre] || iconos.inicio);
-    if (tituloPagina) tituloPagina.textContent = textoTitulo;
+    if (tituloMarca) tituloMarca.textContent = module.title;
+    if (iconoPagina) iconoPagina.setAttribute("href", module.icon);
+    if (tituloPagina) tituloPagina.textContent = module.pageTitle;
     if (subtituloPagina) {
-        subtituloPagina.textContent = textoSubtitulo;
-        subtituloPagina.hidden = !textoSubtitulo;
+        subtituloPagina.textContent = module.subtitle;
+        subtituloPagina.hidden = !module.subtitle;
     }
+
+    document.body.dataset.module = module.moduleId;
+    document.body.dataset.screen = nombre;
 
     if (volver) {
         const destinos = { editarProducto: "productos" };

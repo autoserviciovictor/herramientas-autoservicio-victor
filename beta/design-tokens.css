@@ -1,0 +1,83 @@
+/* =========================================================
+   v10.5 — Sistema de diseño compartido
+   Variables globales para color, tipografía, espaciado y elevación.
+   ========================================================= */
+:root {
+  /* Marca */
+  --ds-brand-50: #fff4f4;
+  --ds-brand-100: #ffe4e5;
+  --ds-brand-500: #df4a4f;
+  --ds-brand-600: #cf3f44;
+  --ds-brand-700: #b93237;
+
+  /* Neutros */
+  --ds-bg: #f7f5ef;
+  --ds-surface: #ffffff;
+  --ds-surface-muted: #fbfaf7;
+  --ds-text: #262b27;
+  --ds-text-muted: #737970;
+  --ds-border: #ebe6dc;
+  --ds-border-strong: #dcd5ca;
+
+  /* Estados */
+  --ds-success: #3f8758;
+  --ds-success-soft: #eef8f0;
+  --ds-warning: #d98b22;
+  --ds-warning-soft: #fff6e7;
+  --ds-danger: #d94141;
+  --ds-danger-soft: #fff3f3;
+  --ds-info: #2f73cf;
+  --ds-info-soft: #eaf3ff;
+
+  /* Escala espacial */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-space-10: 40px;
+
+  /* Radios */
+  --ds-radius-sm: 10px;
+  --ds-radius-md: 14px;
+  --ds-radius-lg: 20px;
+  --ds-radius-xl: 24px;
+  --ds-radius-pill: 999px;
+
+  /* Sombras */
+  --ds-shadow-sm: 0 2px 8px rgba(34, 39, 35, .06);
+  --ds-shadow-md: 0 10px 24px rgba(34, 39, 35, .08);
+  --ds-shadow-lg: 0 18px 45px rgba(34, 39, 35, .13);
+
+  /* Tipografía */
+  --ds-font-family: Arial, Helvetica, sans-serif;
+  --ds-text-xs: 12px;
+  --ds-text-sm: 14px;
+  --ds-text-md: 16px;
+  --ds-text-lg: 18px;
+  --ds-text-xl: 22px;
+  --ds-text-2xl: 30px;
+
+  /* Controles */
+  --ds-control-height: 48px;
+  --ds-control-height-lg: 54px;
+  --ds-focus-ring: 0 0 0 3px rgba(223, 74, 79, .20);
+
+  /* Compatibilidad con variables históricas */
+  --bg: var(--ds-bg);
+  --card: var(--ds-surface);
+  --text: var(--ds-text);
+  --muted: var(--ds-text-muted);
+  --brand: var(--ds-brand-500);
+  --brand-dark: var(--ds-brand-700);
+  --brand-soft: var(--ds-brand-50);
+  --primary: var(--ds-success);
+  --primary-soft: var(--ds-success-soft);
+  --danger: var(--ds-danger);
+  --danger-soft: var(--ds-danger-soft);
+  --border: var(--ds-border);
+  --shadow: var(--ds-shadow-md);
+  --radius: var(--ds-radius-lg);
+}
