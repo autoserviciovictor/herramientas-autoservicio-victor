@@ -1284,35 +1284,57 @@ function renderListadoVencimientos() {
 
         if (vencTabActual === "vencidos") {
             return `
-                <article class="venc-item venc-item-vencido-registro venc-vencido" data-id="${item.id}" tabindex="0">
-                    <div class="venc-card-heading">
-                        <strong>${articulo}</strong>
-                        <span class="venc-code">Código: ${codigo}</span>
+                <article class="venc-item venc-item-vencido-registro venc-vencido expiry-card expiry-card--expired" data-id="${item.id}" tabindex="0">
+                    <div class="expiry-card__status-row">
+                        <span class="expiry-card__status expiry-card__status--expired">Vencido</span>
+                        <span class="expiry-card__hint">Tocá para editar</span>
                     </div>
-                    <div class="venc-days-hero venc-vencido-hero">${estado}</div>
-                    <div class="venc-card-summary">
-                        <span class="venc-card-date">Fecha: ${fecha}</span>
-                        <span class="venc-card-qty"><strong>${cantidad}</strong><small>${cantidad === 1 ? "unidad" : "unidades"}</small></span>
+                    <div class="expiry-card__identity">
+                        <strong>${articulo}</strong>
+                        <span>Código ${codigo}</span>
+                    </div>
+                    <div class="expiry-card__deadline expiry-card__deadline--expired">${estado}</div>
+                    <div class="expiry-card__facts">
+                        <div class="expiry-card__fact">
+                            <small>Fecha de vencimiento</small>
+                            <b>${fecha}</b>
+                        </div>
+                        <div class="expiry-card__fact expiry-card__fact--qty">
+                            <small>Cantidad</small>
+                            <b>${cantidad} <em>${cantidad === 1 ? "unidad" : "unidades"}</em></b>
+                        </div>
                     </div>
                 </article>
             `;
         }
 
         return `
-            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""}" data-id="${item.id}" tabindex="0">
-                <div class="venc-card-topline">
-                    <span class="venc-offer-tag ${ofertaActiva ? "activa" : "pendiente"}">${ofertaActiva ? "Oferta activa" : "Sin oferta"}</span>
+            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""} expiry-card expiry-card--upcoming ${ofertaActiva ? "expiry-card--offer" : "expiry-card--no-offer"}" data-id="${item.id}" tabindex="0">
+                <div class="expiry-card__status-row">
+                    <span class="expiry-card__status ${clase}">${estado}</span>
+                    <span class="expiry-card__offer ${ofertaActiva ? "is-active" : "is-inactive"}">
+                        <span class="expiry-card__offer-dot" aria-hidden="true"></span>
+                        ${ofertaActiva ? "Oferta activa" : "Sin oferta"}
+                    </span>
                 </div>
-                <div class="venc-card-heading">
+                <div class="expiry-card__identity">
                     <strong>${articulo}</strong>
-                    <span class="venc-code">Código: ${codigo}</span>
+                    <span>Código ${codigo}</span>
                 </div>
-                <div class="venc-days-hero ${clase}">${estado}</div>
-                <div class="venc-card-summary">
-                    <span class="venc-card-date">Fecha: ${fecha}</span>
-                    <span class="venc-card-qty"><strong>${cantidad}</strong><small>${cantidad === 1 ? "unidad" : "unidades"}</small></span>
+                <div class="expiry-card__facts">
+                    <div class="expiry-card__fact">
+                        <small>Fecha de vencimiento</small>
+                        <b>${fecha}</b>
+                    </div>
+                    <div class="expiry-card__fact expiry-card__fact--qty">
+                        <small>Cantidad</small>
+                        <b>${cantidad} <em>${cantidad === 1 ? "unidad" : "unidades"}</em></b>
+                    </div>
                 </div>
-                <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Marcar oferta"}</button>
+                <div class="expiry-card__footer">
+                    <span>${ofertaActiva ? "Producto marcado para oferta" : "Todavía no tiene oferta"}</span>
+                    <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Activar oferta"}</button>
+                </div>
             </article>
         `;
     }).join("");

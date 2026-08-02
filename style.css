@@ -6602,3 +6602,220 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
     flex-basis:19px!important;
   }
 }
+
+/* === V11.4 · Rediseño de tarjetas de vencimientos === */
+#pantallaVencimientos .venc-list-proximos,
+#pantallaVencimientos .venc-list-vencidos{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:14px!important;
+  align-items:stretch!important;
+}
+#pantallaVencimientos .expiry-card{
+  position:relative;
+  display:flex!important;
+  flex-direction:column!important;
+  min-width:0;
+  min-height:294px!important;
+  height:100%!important;
+  margin:0!important;
+  padding:16px!important;
+  gap:14px!important;
+  border:1px solid #e7dfda!important;
+  border-radius:20px!important;
+  background:#fff!important;
+  box-shadow:0 8px 24px rgba(56,37,30,.07)!important;
+  overflow:hidden;
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease!important;
+}
+#pantallaVencimientos .expiry-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 13px 30px rgba(56,37,30,.11)!important;
+}
+#pantallaVencimientos .expiry-card:focus-visible{
+  outline:3px solid rgba(214,48,57,.22)!important;
+  outline-offset:2px;
+}
+#pantallaVencimientos .expiry-card::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:5px;
+  border-radius:20px 0 0 20px;
+  background:#d7dadd;
+}
+#pantallaVencimientos .expiry-card.venc-7::before{background:#ef7c26}
+#pantallaVencimientos .expiry-card.venc-15::before{background:#e5b226}
+#pantallaVencimientos .expiry-card.venc-30::before{background:#4d7edb}
+#pantallaVencimientos .expiry-card--expired::before{background:#c52d35}
+#pantallaVencimientos .expiry-card--offer{
+  border-color:#b8dfc8!important;
+  box-shadow:0 8px 24px rgba(32,129,73,.09)!important;
+}
+.expiry-card__status-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:28px;
+}
+.expiry-card__status,
+.expiry-card__offer{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+  white-space:nowrap;
+}
+.expiry-card__status.venc-7{background:#fff0e4;color:#b94b08}
+.expiry-card__status.venc-15{background:#fff6d9;color:#946b00}
+.expiry-card__status.venc-30{background:#eaf1ff;color:#275cac}
+.expiry-card__status--expired{background:#fde5e6;color:#af2028}
+.expiry-card__offer{gap:6px;border:1px solid transparent}
+.expiry-card__offer.is-active{background:#e3f7ea;color:#11743a;border-color:#bce7cb}
+.expiry-card__offer.is-inactive{background:#f2f3f4;color:#676d72;border-color:#e2e4e6}
+.expiry-card__offer-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.expiry-card__hint{font-size:10px;font-weight:750;color:#9a8e89;white-space:nowrap}
+.expiry-card__identity{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-height:64px;
+}
+.expiry-card__identity strong{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  color:#1d2023;
+  font-size:17px!important;
+  line-height:1.24!important;
+  font-weight:900!important;
+}
+.expiry-card__identity span{
+  color:#85898d;
+  font-size:11px;
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.expiry-card__deadline{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:#fde5e6;
+  color:#af2028;
+  text-align:center;
+  font-size:19px;
+  line-height:1.12;
+  font-weight:950;
+}
+.expiry-card__facts{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(105px,.72fr);
+  gap:10px;
+}
+.expiry-card__fact{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  min-height:62px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:#f7f6f5;
+}
+.expiry-card__fact small{
+  margin-bottom:5px;
+  color:#85807c;
+  font-size:10px;
+  font-weight:750;
+}
+.expiry-card__fact b{
+  color:#24272a;
+  font-size:15px;
+  line-height:1.1;
+  font-weight:900;
+}
+.expiry-card__fact--qty{
+  align-items:flex-end;
+  background:#fff;
+  border:1px solid #e9e0dc;
+}
+.expiry-card__fact--qty b{font-size:24px}
+.expiry-card__fact--qty em{font-size:9px;font-style:normal;color:#71767a;text-transform:uppercase;letter-spacing:.03em}
+.expiry-card__footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:auto;
+  padding-top:12px;
+  border-top:1px solid #eee8e4;
+}
+.expiry-card__footer>span{
+  min-width:0;
+  color:#7c7f82;
+  font-size:10px;
+  font-weight:700;
+  line-height:1.25;
+}
+#pantallaVencimientos .expiry-card .venc-card-action.offer{
+  flex:0 0 auto;
+  min-height:38px!important;
+  width:auto!important;
+  margin:0!important;
+  padding:8px 12px!important;
+  border:1px solid #d7d9db!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#3f4448!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  white-space:nowrap;
+}
+#pantallaVencimientos .expiry-card .venc-card-action.offer.active{
+  border-color:#a8dbba!important;
+  background:#e4f7eb!important;
+  color:#116d37!important;
+}
+#pantallaVencimientos .expiry-card--expired{
+  min-height:240px!important;
+  border-color:#efcecf!important;
+  background:linear-gradient(180deg,#fff 0%,#fffafa 100%)!important;
+}
+#pantallaVencimientos .expiry-card--expired .expiry-card__identity{min-height:64px}
+#pantallaVencimientos .expiry-card--expired .expiry-card__facts{margin-top:auto}
+
+@media(max-width:1050px){
+  #pantallaVencimientos .venc-list-proximos,
+  #pantallaVencimientos .venc-list-vencidos{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:700px){
+  #pantallaVencimientos .venc-list-proximos,
+  #pantallaVencimientos .venc-list-vencidos{grid-template-columns:1fr!important;gap:12px!important}
+  #pantallaVencimientos .expiry-card{min-height:0!important;padding:15px!important;gap:12px!important;border-radius:18px!important}
+  #pantallaVencimientos .expiry-card--expired{min-height:0!important}
+  .expiry-card__identity{min-height:0}
+  .expiry-card__identity strong{font-size:17px!important}
+  .expiry-card__facts{grid-template-columns:1fr 116px}
+  .expiry-card__footer{align-items:stretch}
+  .expiry-card__footer>span{display:flex;align-items:center}
+}
+@media(max-width:380px){
+  .expiry-card__status-row{align-items:flex-start;flex-wrap:wrap}
+  .expiry-card__facts{grid-template-columns:1fr 104px}
+  .expiry-card__fact{padding:9px 10px}
+  .expiry-card__footer{flex-direction:column}
+  #pantallaVencimientos .expiry-card .venc-card-action.offer{width:100%!important}
+}
