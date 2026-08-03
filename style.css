@@ -7086,3 +7086,21 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
   #pantallaVencimientos .venc-range-group__header h3{font-size:14px}
   #pantallaVencimientos .venc-range-group__grid{grid-template-columns:1fr;gap:12px;width:100%}
 }
+
+/* ===== v11.8 · consistencia global, cargar y recientes locales ===== */
+.inventory-recent-card{background:#fff;border:1px solid var(--border,#e6e0dc);border-radius:22px;padding:18px;margin:18px auto 0;box-shadow:0 8px 24px rgba(32,25,20,.06)}
+.inventory-recent-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.inventory-recent-head h2{margin:0;font-size:1.18rem}.inventory-recent-head p{margin:2px 0 0;color:#777;font-size:.82rem}.inventory-recent-head>span{min-width:34px;height:34px;border-radius:12px;background:#fdebed;color:#bd2732;display:grid;place-items:center;font-weight:800}
+.inventory-recent-list{display:grid;gap:9px}.inventory-recent-item{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:11px 12px;border-radius:15px;background:#faf9f7}.inventory-recent-icon{width:42px;height:42px;border-radius:13px;background:#fdebed;color:#c62935;display:grid;place-items:center}.inventory-recent-item>div{min-width:0}.inventory-recent-item strong,.inventory-recent-item small{display:block}.inventory-recent-item>div:nth-child(2) strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.inventory-recent-item small{color:#777;font-size:.75rem;margin-top:3px}.inventory-recent-meta{text-align:right}.inventory-recent-meta strong{font-size:1.05rem}.inventory-recent-empty{padding:22px;text-align:center;color:#777;border:1px dashed #d8d2ce;border-radius:15px}
+/* Un solo encabezado visible en Horarios; la barra interna conserva únicamente la navegación mensual. */
+#pantallaHorarios .horarios-toolbar>div:first-child{display:none!important}
+#pantallaHorarios .horarios-toolbar{justify-content:center;margin-top:0!important}
+/* Ritmo compartido entre encabezado y primer bloque */
+.module-page-header+main.pantalla.activa{padding-top:14px!important}
+.pantalla.activa>section:first-child,.pantalla.activa>.horarios-shell{margin-top:0!important}
+@media(max-width:720px){
+  #pantallaInventario,#pantallaProductos,#pantallaCargados,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin{--mobile-page-gap:14px}
+  .module-page-header{margin-bottom:14px!important}
+  .inventory-location-card,.scan-panel,.bottom-info,.inventory-recent-card,.search-card,.venc-list-card,.repo-list-selector,.repo-actions-card{width:calc(100% - 28px)!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important}
+  .inventory-recent-card{padding:15px;margin-bottom:110px}
+}

@@ -15,10 +15,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="design-tokens.css?v=11700">
-    <link rel="stylesheet" href="style.css?v=11700">
-    <link rel="stylesheet" href="design-components.css?v=11700">
-    <link rel="stylesheet" href="app-shell.css?v=11700">
+    <link rel="stylesheet" href="design-tokens.css?v=1180">
+    <link rel="stylesheet" href="style.css?v=1180">
+    <link rel="stylesheet" href="design-components.css?v=1180">
+    <link rel="stylesheet" href="app-shell.css?v=1180">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -166,11 +166,6 @@
     </main>
 
     <main id="pantallaInventario" class="pantalla">
-        <section class="inventory-status-strip">
-            <span id="estadoExcelTexto">Conectando...</span>
-            <span id="estadoConteoTexto">0 productos</span>
-        </section>
-
         <section class="inventory-location-card" aria-label="Ubicación de conteo">
             <span>¿Dónde estás contando?</span>
             <div class="location-grid">
@@ -232,6 +227,13 @@
         <section class="bottom-info">
             <div><span>Salón contado</span><strong id="contadorSalonTexto">0</strong></div>
             <div><span>Depósito contado</span><strong id="contadorDepositoTexto">0</strong></div>
+        </section>
+
+        <section class="inventory-recent-card">
+            <div class="inventory-recent-head"><div><h2>Últimos escaneados</h2><p>Este dispositivo</p></div><span>3</span></div>
+            <div id="inventarioRecientes" class="inventory-recent-list">
+                <div class="inventory-recent-empty">Todavía no escaneaste productos en este dispositivo.</div>
+            </div>
         </section>
     </main>
 
@@ -601,7 +603,7 @@
     </main>
 
     <nav class="bottom-nav app-bottom-nav" aria-label="Navegación de inventario">
-        <button type="button" class="nav-btn" data-pantalla="inventario"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8"/></svg><span>Inventario</span></button>
+        <button type="button" class="nav-btn" data-pantalla="inventario"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8"/></svg><span>Cargar</span></button>
         <button type="button" class="nav-btn" data-pantalla="productos"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg><span>Productos</span></button>
         <button type="button" class="nav-btn" data-pantalla="cargados"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m8 12 2.5 2.5L16 9"/></svg><span>Cargados</span></button>
     </nav>
@@ -1033,17 +1035,17 @@
       </div>
     </div>
 
-<script src="./dialog.js?v=11700"></script>
-<script src="./pwa.js?v=11700" defer></script>
-<script type="module" src="./auth.js?v=11700"></script>
+<script src="./dialog.js?v=1180"></script>
+<script src="./pwa.js?v=1180" defer></script>
+<script type="module" src="./auth.js?v=1180"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=11700"></script>
-<script type="module" src="./admin.js?v=11700"></script>
-<script type="module" src="./notifications.js?v=11700"></script>
-<script type="module" src="./prices.js?v=11700"></script>
-<script type="module" src="./app.js?v=11700"></script>
-<script type="module" src="./tareas.js?v=11700"></script>
-<script type="module" src="./horarios.js?v=11700"></script>
+<script src="./horarios-config.js?v=1180"></script>
+<script type="module" src="./admin.js?v=1180"></script>
+<script type="module" src="./notifications.js?v=1180"></script>
+<script type="module" src="./prices.js?v=1180"></script>
+<script type="module" src="./app.js?v=1180"></script>
+<script type="module" src="./tareas.js?v=1180"></script>
+<script type="module" src="./horarios.js?v=1180"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">

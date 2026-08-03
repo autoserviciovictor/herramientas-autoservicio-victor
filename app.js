@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=1130";
+import { APP_VERSION } from "./config.js?v=1180";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -22,12 +22,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=1130";
+} from "./excel.js?v=1180";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=1130";
+} from "./scanner.js?v=1180";
 
 import {
     ocultarSplash,
@@ -50,10 +50,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=1130";
+} from "./ui.js?v=1180";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=1130";
-import { coincideBusqueda } from "./search.js?v=1130";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=1180";
+import { coincideBusqueda } from "./search.js?v=1180";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -73,6 +73,7 @@ let busquedaVencimientos = "";
 let vencimientoSeleccionado = null;
 let vencTabActual = "cargar";
 const INTERVALO_SINCRONIZACION = 7000;
+const INVENTARIO_RECIENTES_KEY = "autoservicio_inventario_recientes_v118";
 let pantallaActualApp = "inicio";
 let snapshotProductoEditando = null;
 let snapshotVencimientoEditando = null;
@@ -82,6 +83,7 @@ const $ = (id) => document.getElementById(id);
 
 const elementos = {
     btnActualizarProductos: $("btnActualizarProductos"),
+    inventarioRecientes: $("inventarioRecientes"),
     btnAbrirScanner: $("btnAbrirScanner"),
     btnCerrarScanner: $("btnCerrarScanner"),
     btnCodigoManualToggle: $("btnCodigoManualToggle"),
@@ -372,7 +374,7 @@ function configurarEventos() {
 
 function cambiarTabVencimientos(tab) {
     vencTabActual = tab || "cargar";
-    const titulos = { cargar: ["Vencimientos", "Control de fechas"], proximos: ["Próximos a vencer", "Control de fechas"], vencidos: ["Productos vencidos", "Vencidos"] };
+    const titulos = { cargar: ["Vencimientos", "Registrar vencimiento"], proximos: ["Próximos", "Próximos vencimientos"], vencidos: ["Vencidos", "Productos vencidos"] };
     const actual = titulos[vencTabActual] || titulos.cargar;
     if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
     if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
@@ -673,6 +675,40 @@ async function manejarCodigoEscaneado(codigo) {
     reproducirConfirmacion("ok");
 }
 
+
+function cargarRecientesInventario() {
+    try { return JSON.parse(localStorage.getItem(INVENTARIO_RECIENTES_KEY) || "[]").slice(0, 3); }
+    catch { return []; }
+}
+
+function renderRecientesInventario() {
+    const contenedor = elementos.inventarioRecientes;
+    if (!contenedor) return;
+    const recientes = cargarRecientesInventario();
+    if (!recientes.length) {
+        contenedor.innerHTML = '<div class="inventory-recent-empty">Todavía no escaneaste productos en este dispositivo.</div>';
+        return;
+    }
+    contenedor.innerHTML = recientes.map(item => `
+        <article class="inventory-recent-item">
+            <span class="inventory-recent-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg></span>
+            <div><strong>${String(item.nombre || "Producto")}</strong><small>${String(item.codigo || "-")} · ${item.ubicacion === "deposito" ? "Depósito" : "Salón"}</small></div>
+            <div class="inventory-recent-meta"><strong>+${Number(item.cantidad || 0)}</strong><small>${String(item.hora || "")}</small></div>
+        </article>`).join("");
+}
+
+function registrarRecienteInventario(producto, cantidad, ubicacion) {
+    const actuales = cargarRecientesInventario();
+    actuales.unshift({
+        nombre: producto?.articulo || producto?.nombre || "Producto",
+        codigo: producto?.codigo || "-",
+        cantidad, ubicacion,
+        hora: new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+    });
+    localStorage.setItem(INVENTARIO_RECIENTES_KEY, JSON.stringify(actuales.slice(0, 3)));
+    renderRecientesInventario();
+}
+
 async function guardarCantidadActual() {
     try {
         if (guardando) return;
@@ -698,6 +734,7 @@ async function guardarCantidadActual() {
         const resultado = await guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
 
         actualizarContador(resultado.contador);
+        registrarRecienteInventario(productoActual, cantidad, ubicacionActual);
         actualizarConteosUbicacion(obtenerConteosUbicacion());
         refrescarProductos();
         sincronizarEnSegundoPlano();
@@ -727,6 +764,8 @@ function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {
     input.value = nuevo;
     if (callback) callback();
 }
+
+renderRecientesInventario();
 
 function cambiarTabProductos(tab) {
     tabProductosActual = tab === "cargados" ? "cargados" : "productos";

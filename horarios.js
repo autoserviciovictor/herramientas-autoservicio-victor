@@ -1,6 +1,6 @@
-import "./ui.js?v=1130";
-import { API_BASE_URL } from "./config.js?v=1130";
-import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1130";
+import "./ui.js?v=1180";
+import { API_BASE_URL } from "./config.js?v=1180";
+import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1180";
 
 let empleados = [];
 let empleadosInfo = new Map();
@@ -793,8 +793,11 @@ function cambiarVista(v) {
   $("horariosEquipoView")?.classList.toggle("oculto", !eq);
   $("horariosMioView")?.classList.toggle("oculto", !mio);
   $("horariosConfigView")?.classList.toggle("oculto", !cfg);
-  $("horariosTituloVista").textContent = eq ? "Calendario" : (mio ? "Mi horario" : "Configuración");
-  $("horariosSubtituloVista").textContent = cfg ? `Horarios y orden del personal de ${sectorSeleccionado()?.nombre || "tu sector"}` : $("horariosSubtituloVista").textContent;
+  const titulosVista = eq ? ["Calendario", "Turnos del equipo"] : (mio ? ["Mi horario", "Horario personal"] : ["Configuración", "Administrar horarios"]);
+  if ($("modulePageTitle")) $("modulePageTitle").textContent = titulosVista[0];
+  if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = titulosVista[1];
+  if ($("horariosTituloVista")) $("horariosTituloVista").textContent = titulosVista[0];
+  if ($("horariosSubtituloVista")) $("horariosSubtituloVista").textContent = titulosVista[1];
   $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion());
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.classList.toggle("activo", b.dataset.horariosVista === v));
   renderSelectorSector();

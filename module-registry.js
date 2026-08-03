@@ -17,9 +17,9 @@ export const MODULE_REGISTRY = Object.freeze({
   },
   inventario: {
     id: "inventario",
-    title: "Inventario",
-    pageTitle: "Inventario",
-    subtitle: "Control de stock",
+    title: "Cargar",
+    pageTitle: "Cargar",
+    subtitle: "Registrar productos",
     icon: "#icon-box",
     sidebarTitle: "Inventario",
     navSelector: ".bottom-nav.app-bottom-nav"
@@ -96,9 +96,9 @@ const SCREEN_ALIASES = Object.freeze({
 });
 
 const PAGE_OVERRIDES = Object.freeze({
-  productos: { pageTitle: "Productos", subtitle: "Lista completa", icon: "#icon-box" },
-  cargados: { pageTitle: "Cargados", subtitle: "Productos con stock", icon: "#icon-box" },
-  editarProducto: { pageTitle: "Editar producto", subtitle: "Inventario", icon: "#icon-edit" }
+  productos: { pageTitle: "Productos", subtitle: "Consultar productos", icon: "#icon-box" },
+  cargados: { pageTitle: "Cargados", subtitle: "Conteos realizados", icon: "#icon-box" },
+  editarProducto: { pageTitle: "Editar producto", subtitle: "Modificar producto", icon: "#icon-edit" }
 });
 
 export function resolveModule(screenName = "inicio") {

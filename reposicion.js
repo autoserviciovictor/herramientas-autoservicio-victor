@@ -1,8 +1,8 @@
-import { API_BASE_URL } from "./config.js?v=1130";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1130";
-import { ordenarPorBusqueda } from "./search.js?v=1130";
-import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1130";
-import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1130";
+import { API_BASE_URL } from "./config.js?v=1180";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1180";
+import { ordenarPorBusqueda } from "./search.js?v=1180";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1180";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1180";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -301,8 +301,8 @@ function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoC
 function actualizarEncabezadoRepo(esCarga){
   const titulo=$("modulePageTitle");
   const subtitulo=$("modulePageSubtitle");
-  if(titulo) titulo.textContent=esCarga?"Lista":"Mi lista";
-  if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Productos anotados";
+  if(titulo) titulo.textContent=esCarga?"Agregar":"Mi lista";
+  if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Lista de productos";
 }
 function cambiarTab(nueva){
   if(modoEdicion && nueva!=="registro"){ solicitarSalidaEdicion(() => cambiarTab(nueva)); return; }
