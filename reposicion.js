@@ -1,13 +1,14 @@
-import { API_BASE_URL } from "./config.js?v=1182";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1182";
-import { ordenarPorBusqueda } from "./search.js?v=1182";
-import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1182";
-import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1182";
+import { API_BASE_URL } from "./config.js?v=1190";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1190";
+import { ordenarPorBusqueda } from "./search.js?v=1190";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1190";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1190";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
 let registros = [];
 let tab = "cargar";
+let productosDetectados = [];
 let iniciado = false;
 let operacionEnCurso = false;
 let temporizadorToast = null;
@@ -120,6 +121,12 @@ export function inicializarReposicion(){
   $("btnRepoGuardar")?.addEventListener("click",guardar);
   $("btnRepoCancelar")?.addEventListener("click",limpiar);
   $("btnRepoVerRegistro")?.addEventListener("click",()=>cambiarTab("registro"));
+  $("btnRepoGuardarBorrador")?.addEventListener("click",guardarBorradorListaEscrita);
+  $("btnRepoBorrarTexto")?.addEventListener("click",borrarListaEscrita);
+  $("btnRepoProcesarTexto")?.addEventListener("click",procesarListaEscrita);
+  $("btnRepoAgregarDetectados")?.addEventListener("click",agregarProductosDetectados);
+  $("repoRevisionLista")?.addEventListener("input",actualizarProductoDetectado);
+  $("repoRevisionLista")?.addEventListener("click",eliminarProductoDetectado);
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.addEventListener("click",()=>cambiarTab(b.dataset.repoTab)));
   document.querySelectorAll("[data-repo-lista]").forEach(b=>b.addEventListener("click",()=>seleccionarLista(b.dataset.repoLista)));
   $("repoBuscador")?.addEventListener("input",render);
@@ -144,6 +151,7 @@ export function inicializarReposicion(){
   document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizarReposicionAlVolver(); });
   precargarCatalogo();
   sincronizarSelectorListas();
+  cargarBorradorListaEscrita();
 }
 
 export function prepararReposicion(){
@@ -298,24 +306,97 @@ async function guardar(){
   finally { operacionEnCurso=false; const boton=$("btnRepoGuardar"); if(boton){ boton.disabled=false; boton.textContent="Guardar"; } }
 }
 function limpiar(){ productoActual=null; if($("repoCodigoManualInput")) $("repoCodigoManualInput").value=""; limpiarSugerenciasRepo(); $("repoManualPanel")?.classList.add("oculto"); if($("btnRepoManualToggle")) $("btnRepoManualToggle").textContent="Ingresar producto manual"; $("repoProductoCard")?.classList.add("oculto"); $("repoFormCard")?.classList.add("oculto"); cerrarScanner(); $("repoActionsCard")?.classList.remove("oculto"); }
-function actualizarEncabezadoRepo(esCarga){
+function actualizarEncabezadoRepo(vista){
   const titulo=$("modulePageTitle");
   const subtitulo=$("modulePageSubtitle");
-  if(titulo) titulo.textContent=esCarga?"Agregar":"Mi lista";
-  if(subtitulo) subtitulo.textContent=esCarga?"Agregar productos":"Lista de productos";
+  const datos={cargar:["Agregar","Agregar productos"],escrita:["Lista escrita","Escribir productos"],registro:["Mi lista","Lista de productos"]};
+  const [t,st]=datos[vista]||datos.cargar;
+  if(titulo) titulo.textContent=t;
+  if(subtitulo) subtitulo.textContent=st;
 }
 function cambiarTab(nueva){
   if(modoEdicion && nueva!=="registro"){ solicitarSalidaEdicion(() => cambiarTab(nueva)); return; }
   if(nueva!=="registro") salirModoEdicionSilencioso();
-  tab=nueva==="registro"?"registro":"cargar";
-  const esCarga=tab==="cargar";
-  $("repoCargaVista")?.classList.toggle("oculto",!esCarga);
-  $("repoRegistroVista")?.classList.toggle("oculto",esCarga);
-  actualizarEncabezadoRepo(esCarga);
+  tab=["cargar","escrita","registro"].includes(nueva)?nueva:"cargar";
+  $("repoCargaVista")?.classList.toggle("oculto",tab!=="cargar");
+  $("repoEscritaVista")?.classList.toggle("oculto",tab!=="escrita");
+  $("repoRegistroVista")?.classList.toggle("oculto",tab!=="registro");
+  actualizarEncabezadoRepo(tab);
   sincronizarSelectorListas();
   document.querySelectorAll("[data-repo-tab]").forEach(b=>b.classList.toggle("activo",b.dataset.repoTab===tab));
   if($("repoBuscador")) $("repoBuscador").value="";
-  if(!esCarga){ refrescarReposicion(); render(); } else { refrescarReposicion(); }
+  if(tab==="escrita") cargarBorradorListaEscrita();
+  refrescarReposicion();
+  if(tab==="registro") render();
+}
+
+function claveBorradorListaEscrita(){return `autoservicio_repo_borrador_${usuarioCacheRepo()}_lista_${listaActual}`;}
+function cargarBorradorListaEscrita(){
+  const campo=$("repoTextoLista"); if(!campo)return;
+  try{campo.value=localStorage.getItem(claveBorradorListaEscrita())||"";}catch{}
+  actualizarEstadoBorrador();
+}
+function actualizarEstadoBorrador(texto="Borrador local"){const e=$("repoBorradorEstado");if(e)e.textContent=texto;}
+function guardarBorradorListaEscrita(){
+  try{localStorage.setItem(claveBorradorListaEscrita(),$("repoTextoLista")?.value||"");actualizarEstadoBorrador("Borrador guardado");toast("Borrador guardado");}catch{toast("No se pudo guardar el borrador","error");}
+}
+function borrarListaEscrita(){
+  if(!confirm("¿Borrar la lista escrita?"))return;
+  const c=$("repoTextoLista");if(c)c.value="";productosDetectados=[];renderRevisionLista();
+  try{localStorage.removeItem(claveBorradorListaEscrita());}catch{} actualizarEstadoBorrador();
+}
+function separarPresentacion(texto){
+  const patrones=[/\b(\d+(?:[.,]\d+)?\s*(?:kg|g|mg|l|ml|cc))\b/i,/\b(\d+\s*(?:litros?|kilos?|gramos?))\b/i,/\b(paquete|sachet|botella|lata|caja|bolsa)\b/i];
+  for(const patron of patrones){const m=texto.match(patron);if(m)return {presentacion:m[1].replace(/\s+/g," ").trim(),nombre:texto.replace(m[0]," ").replace(/\s+/g," ").trim()};}
+  return {presentacion:"",nombre:texto.trim()};
+}
+function parsearLineaLista(linea,indice){
+  let texto=String(linea||"").trim(); if(!texto)return null;
+  const m=texto.match(/^(\d+)\s*[xX]?\s+(.+)$/); const cantidad=m?Math.max(1,Number(m[1])):1; texto=m?m[2]:texto;
+  texto=texto.replace(/^(?:unidades?|paquetes?|botellas?|latas?|cajas?|bolsas?)\s+de\s+/i,"");
+  const sep=separarPresentacion(texto);
+  const termino=sep.nombre.replace(/\bde\b$/i,"").trim();
+  const q=normalizarBusquedaLista(termino);
+  const coincidencias=productosMaestroCache.filter(p=>normalizarBusquedaLista(p.articulo).includes(q)||q.split(/\s+/).every(w=>normalizarBusquedaLista(p.articulo).includes(w))).slice(0,6);
+  const exacta=coincidencias[0];
+  return {id:`manual-${Date.now()}-${indice}`,cantidad,nombre:termino,presentacion:sep.presentacion,codigo:exacta?.codigo||"",articulo:exacta?.articulo||termino,coincidencias,pendiente:!exacta,lineaOriginal:linea};
+}
+async function procesarListaEscrita(){
+  const texto=$("repoTextoLista")?.value||""; const lineas=texto.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!lineas.length)return toast("Escribí al menos un producto","error");
+  await cargarProductosMaestroRepo();
+  productosDetectados=lineas.map(parsearLineaLista).filter(Boolean);
+  renderRevisionLista(); guardarBorradorListaEscrita();
+  $("repoRevisionCard")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function renderRevisionLista(){
+  const card=$("repoRevisionCard"),lista=$("repoRevisionLista"),cantidad=$("repoRevisionCantidad"); if(!card||!lista)return;
+  card.classList.toggle("oculto",!productosDetectados.length); if(cantidad)cantidad.textContent=String(productosDetectados.length);
+  lista.innerHTML=productosDetectados.map((p,i)=>`<article class="repo-review-item ${p.pendiente?'pendiente':''}" data-detectado-id="${escapar(p.id)}"><div class="repo-review-top"><strong>Línea ${i+1}</strong><button type="button" data-eliminar-detectado="${escapar(p.id)}" aria-label="Quitar">✕</button></div><label>Cantidad<input type="number" min="1" value="${p.cantidad}" data-detectado-campo="cantidad"></label><label>Producto<input type="text" value="${escapar(p.articulo)}" data-detectado-campo="articulo"></label><label>Presentación<input type="text" value="${escapar(p.presentacion)}" placeholder="Ej. 2 L" data-detectado-campo="presentacion"></label><label>Producto del catálogo<select data-detectado-campo="catalogo"><option value="">${p.pendiente?'Seleccionar producto':'Usar texto escrito'}</option>${p.coincidencias.map(c=>`<option value="${escapar(c.codigo)}" ${c.codigo===p.codigo?'selected':''}>${escapar(c.articulo)}</option>`).join('')}</select></label>${p.pendiente?'<small class="repo-review-warning">Revisá esta línea antes de agregarla.</small>':''}</article>`).join('');
+}
+function actualizarProductoDetectado(e){
+  const campo=e.target.dataset.detectadoCampo;if(!campo)return;const art=e.target.closest('[data-detectado-id]');const p=productosDetectados.find(x=>x.id===art?.dataset.detectadoId);if(!p)return;
+  if(campo==='cantidad')p.cantidad=Math.max(1,Number(e.target.value)||1);
+  else if(campo==='catalogo'){const c=productosMaestroCache.find(x=>String(x.codigo)===String(e.target.value));if(c){p.codigo=c.codigo;p.articulo=c.articulo;p.pendiente=false;}else{p.codigo='';p.pendiente=!p.articulo.trim();}}
+  else {p[campo]=e.target.value;p.pendiente=!p.articulo.trim();}
+  art.classList.toggle('pendiente',p.pendiente);
+}
+function eliminarProductoDetectado(e){const id=e.target.closest('[data-eliminar-detectado]')?.dataset.eliminarDetectado;if(!id)return;productosDetectados=productosDetectados.filter(x=>x.id!==id);renderRevisionLista();}
+async function agregarProductosDetectados(){
+  if(!productosDetectados.length)return;
+  if(productosDetectados.some(p=>!p.articulo.trim()))return toast("Revisá las líneas pendientes","error");
+  const boton=$("btnRepoAgregarDetectados");if(boton){boton.disabled=true;boton.textContent="Agregando...";}
+  let agregados=0;
+  try{
+    for(const p of productosDetectados){
+      let codigo=p.codigo; let articulo=[p.articulo,p.presentacion].filter(Boolean).join(" ").trim();
+      if(!codigo){const q=normalizarBusquedaLista(p.articulo);const encontrado=productosMaestroCache.find(x=>normalizarBusquedaLista(x.articulo)===q);codigo=encontrado?.codigo||`MANUAL-${Date.now()}-${agregados}`;articulo=encontrado?.articulo||articulo;}
+      const data=await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo,articulo,cantidad:Math.max(1,Number(p.cantidad)||1),lista:listaActual})});
+      if(data.registro){const i=registros.findIndex(r=>String(r.codigo)===String(data.registro.codigo));if(i>=0)registros[i]=data.registro;else registros.push(data.registro);} agregados++;
+    }
+    guardarCacheRepo(listaActual);productosDetectados=[];renderRevisionLista();const c=$("repoTextoLista");if(c)c.value="";try{localStorage.removeItem(claveBorradorListaEscrita());}catch{}toast(`${agregados} producto${agregados===1?'':'s'} agregado${agregados===1?'':'s'}`);cambiarTab("registro");
+  }catch(err){toast(err.message,"error");}
+  finally{if(boton){boton.disabled=false;boton.textContent="Agregar a Mi lista";}}
 }
 
 function htmlCargando(texto="Cargando..."){ return `<span class="app-spinner" aria-hidden="true"></span><strong>${escapar(texto)}</strong>`; }

@@ -7106,7 +7106,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
 }
 
 /* =========================================================
-   v11.8.2 — normalización visual completa
+   v11.9.0 — normalización visual completa
    ========================================================= */
 :root{
   --mobile-page-inline:16px;
@@ -7240,3 +7240,24 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
     border-radius:var(--mobile-card-radius)!important;
   }
 }
+
+
+/* v11.9 - Lista escrita a mano */
+body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(3,1fr)!important}
+.repo-written-card,.repo-review-card{width:min(100% - 28px,1180px);margin-inline:auto}
+.repo-written-textarea{width:100%;min-height:220px;resize:vertical;border:1px solid #dec9cb;border-radius:14px;padding:14px;font:inherit;line-height:1.5;background:#fff;box-sizing:border-box}
+.repo-written-textarea:focus{outline:3px solid rgba(183,46,53,.13);border-color:#b72e35}
+.repo-written-actions{display:grid;grid-template-columns:1fr 1fr 1.35fr;gap:10px;margin-top:12px}
+.repo-written-actions button,.repo-add-detected{min-height:46px}
+.repo-draft-state,.repo-review-count{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;border-radius:999px;background:#f7eeee;color:#8e2b31;font-size:12px;font-weight:800}
+.repo-review-list{display:grid;gap:12px;margin:14px 0}
+.repo-review-item{display:grid;grid-template-columns:120px minmax(180px,1fr) minmax(130px,.7fr) minmax(220px,1.1fr);gap:10px;padding:13px;border-radius:14px;background:#faf8f8;border:1px solid transparent}
+.repo-review-item.pendiente{background:#fff8e8;border-color:#efd38a}
+.repo-review-top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+.repo-review-top button{border:0;background:#fff0f0;color:#b3261e;border-radius:9px;width:32px;height:32px;font-weight:900}
+.repo-review-item label{display:grid;gap:5px;font-size:12px;font-weight:800;color:#555}
+.repo-review-item input,.repo-review-item select{width:100%;min-height:42px;border:1px solid #ddd;border-radius:10px;padding:8px 10px;background:#fff;box-sizing:border-box}
+.repo-review-warning{grid-column:1/-1;color:#8a5a00;font-weight:700}
+.repo-add-detected{width:100%}
+@media(max-width:760px){.repo-written-actions{grid-template-columns:1fr 1fr}.repo-written-actions .save-btn{grid-column:1/-1}.repo-review-item{grid-template-columns:90px 1fr}.repo-review-item label:nth-of-type(2),.repo-review-item label:nth-of-type(4){grid-column:1/-1}}
+@media(max-width:430px){.repo-written-card,.repo-review-card{width:calc(100% - 28px)!important}.repo-review-item{grid-template-columns:1fr}.repo-review-item label{grid-column:1!important}.repo-written-textarea{min-height:190px}}

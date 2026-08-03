@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1182";
+import { API_BASE_URL } from "./config.js?v=1190";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

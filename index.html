@@ -15,10 +15,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="design-tokens.css?v=1182">
-    <link rel="stylesheet" href="style.css?v=1182">
-    <link rel="stylesheet" href="design-components.css?v=1182">
-    <link rel="stylesheet" href="app-shell.css?v=1182">
+    <link rel="stylesheet" href="design-tokens.css?v=1190">
+    <link rel="stylesheet" href="style.css?v=1190">
+    <link rel="stylesheet" href="design-components.css?v=1190">
+    <link rel="stylesheet" href="app-shell.css?v=1190">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -596,8 +596,34 @@
             </section>
         </section>
 
+
+        <section id="repoEscritaVista" class="oculto">
+            <div class="repo-list-selector" role="group" aria-label="Lista de destino para la lista escrita">
+                <button type="button" class="activo" data-repo-lista="1" data-repo-lista-contexto="escrita">Lista 1</button>
+                <button type="button" data-repo-lista="2" data-repo-lista-contexto="escrita">Lista 2</button>
+            </div>
+            <section class="venc-list-card repo-written-card">
+                <div class="venc-list-head"><div><h2>Lista escrita</h2><small>Escribí un producto por línea.</small></div><span id="repoBorradorEstado" class="repo-draft-state">Borrador local</span></div>
+                <textarea id="repoTextoLista" class="repo-written-textarea" rows="9" placeholder="2 coca de 2 litros
+3 paquetes de azúcar
+1 leche descremada
+4 fideos tirabuzón"></textarea>
+                <div class="repo-written-actions">
+                    <button id="btnRepoGuardarBorrador" type="button" class="secondary-btn">Guardar borrador</button>
+                    <button id="btnRepoBorrarTexto" type="button" class="cancel-btn">Borrar</button>
+                    <button id="btnRepoProcesarTexto" type="button" class="save-btn">Procesar lista</button>
+                </div>
+            </section>
+            <section id="repoRevisionCard" class="venc-list-card repo-review-card oculto">
+                <div class="venc-list-head"><div><h2>Revisar productos</h2><small>Corregí los datos antes de agregarlos.</small></div><span id="repoRevisionCantidad" class="repo-review-count">0</span></div>
+                <div id="repoRevisionLista" class="repo-review-list"></div>
+                <button id="btnRepoAgregarDetectados" type="button" class="save-btn repo-add-detected">Agregar a Mi lista</button>
+            </section>
+        </section>
+
         <nav class="venc-bottom-nav repo-bottom-nav app-bottom-nav" aria-label="Navegación de lista">
             <button type="button" class="activo" data-repo-tab="cargar"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Agregar</span></button>
+            <button type="button" data-repo-tab="escrita"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 15l9-9 3 3-9 9-4 1z"/></svg><span>Escribir</span></button>
             <button type="button" data-repo-tab="registro"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="m3 6 1 1 2-2M3 12h3M3 18h3"/></svg><span>Mi lista</span></button>
         </nav>
     </main>
@@ -1035,17 +1061,17 @@
       </div>
     </div>
 
-<script src="./dialog.js?v=1182"></script>
-<script src="./pwa.js?v=1182" defer></script>
-<script type="module" src="./auth.js?v=1182"></script>
+<script src="./dialog.js?v=1190"></script>
+<script src="./pwa.js?v=1190" defer></script>
+<script type="module" src="./auth.js?v=1190"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=1182"></script>
-<script type="module" src="./admin.js?v=1182"></script>
-<script type="module" src="./notifications.js?v=1182"></script>
-<script type="module" src="./prices.js?v=1182"></script>
-<script type="module" src="./app.js?v=1182"></script>
-<script type="module" src="./tareas.js?v=1182"></script>
-<script type="module" src="./horarios.js?v=1182"></script>
+<script src="./horarios-config.js?v=1190"></script>
+<script type="module" src="./admin.js?v=1190"></script>
+<script type="module" src="./notifications.js?v=1190"></script>
+<script type="module" src="./prices.js?v=1190"></script>
+<script type="module" src="./app.js?v=1190"></script>
+<script type="module" src="./tareas.js?v=1190"></script>
+<script type="module" src="./horarios.js?v=1190"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
