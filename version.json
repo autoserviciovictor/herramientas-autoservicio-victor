@@ -1,6 +1,6 @@
 {
-  "version": "12.0.0",
-  "label": "12.0",
-  "build": 120000,
-  "name": "v12.0 - Administración y tarjetas de usuarios"
+  "version": "12.0.1",
+  "label": "12.0.1",
+  "build": 120001,
+  "name": "v12.0.1 - Tarjetas compactas de usuarios y tareas"
 }

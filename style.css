@@ -7253,7 +7253,7 @@ body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(3,1fr)!important}
 @media(max-width:430px){.repo-written-card{width:calc(100% - 28px)!important}.repo-written-textarea{min-height:240px}.repo-written-actions-simple{grid-template-columns:1fr}.repo-written-actions-simple .save-btn{order:-1}}
 
 
-/* v12.0 — Tarjetas de usuarios simplificadas y acciones directas */
+/* v12.0.1 — Tarjetas compactas de usuarios y tareas */
 #adminUsuariosLista.admin-users-list{
   display:grid!important;
   grid-template-columns:repeat(auto-fit,minmax(310px,1fr))!important;
@@ -7295,4 +7295,84 @@ body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(3,1fr)!important}
   #adminUsuariosLista .admin-user-actions{grid-template-columns:1fr!important;align-items:stretch!important}
   #adminUsuariosLista .user-status{justify-self:start!important}
   #adminUsuariosLista .admin-user-card-buttons{max-width:none!important}
+}
+
+
+/* v12.0.1 — Tarjetas compactas de usuarios y tareas */
+#adminUsuariosLista.admin-users-list{
+  gap:10px!important;
+}
+#adminUsuariosLista .admin-user-card{
+  min-height:0!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:12px!important;
+  padding:13px 14px!important;
+  border-radius:16px!important;
+}
+#adminUsuariosLista .admin-user-main{gap:10px!important;align-items:center!important}
+#adminUsuariosLista .admin-avatar{width:40px!important;height:40px!important;border-radius:13px!important;font-size:14px!important}
+#adminUsuariosLista .admin-user-copy{gap:1px!important}
+#adminUsuariosLista .admin-user-copy strong{font-size:15px!important;line-height:1.18!important}
+#adminUsuariosLista .admin-user-copy>span{font-size:11px!important;line-height:1.28!important}
+#adminUsuariosLista .admin-user-module-count{
+  margin-top:6px!important;padding:5px 8px!important;font-size:10.5px!important;gap:5px!important
+}
+#adminUsuariosLista .admin-user-module-count .app-icon{width:13px!important;height:13px!important}
+#adminUsuariosLista .admin-user-actions{
+  min-width:188px!important;display:grid!important;grid-template-columns:auto 1fr!important;
+  align-items:center!important;gap:8px!important
+}
+#adminUsuariosLista .user-status{padding:5px 8px!important;font-size:10px!important;min-width:56px!important}
+#adminUsuariosLista .admin-user-card-buttons{display:grid!important;grid-template-columns:1fr auto!important;gap:6px!important;width:auto!important}
+#adminUsuariosLista .btn-editar-usuario,#adminUsuariosLista .btn-eliminar-usuario{
+  min-height:34px!important;padding:6px 9px!important;font-size:11px!important;border-radius:10px!important
+}
+#adminUsuariosLista .btn-eliminar-usuario{min-width:34px!important}
+#adminUsuariosLista .btn-editar-usuario .app-icon,#adminUsuariosLista .btn-eliminar-usuario .app-icon{width:14px!important;height:14px!important}
+
+body.en-tareas #tareasVistaTareas .tarea-card.tarea-card-v1201{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:9px!important;
+  padding:12px 13px!important;border-radius:16px!important;box-shadow:0 5px 16px rgba(39,29,23,.045)!important
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-main{display:grid!important;gap:7px!important;min-width:0!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-title{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 h3{margin:1px 0 0!important;font-size:14px!important;line-height:1.22!important;text-transform:none!important;overflow-wrap:anywhere!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-duration-pill{padding:4px 7px!important;font-size:10.5px!important}
+body.en-tareas #tareasVistaTareas .tarea-compact-meta{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:4px 7px!important;min-width:0!important;color:#5d5651!important;font-size:11px!important}
+body.en-tareas #tareasVistaTareas .tarea-compact-meta>strong{font-size:11px!important;color:#4b4541!important}
+body.en-tareas #tareasVistaTareas .tarea-meta-separator{color:#aaa19b!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-assignment{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:4px!important;margin:0!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-persona{padding:2px 6px!important;background:#f4f1ee!important;font-size:10.5px!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-persona .app-icon{width:12px!important;height:12px!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-footer{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;
+  border-top:1px solid #eee9e5!important;padding:9px 0 0!important;margin:0!important;min-height:0!important
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-state-copy{min-width:0!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-state-copy strong{font-size:10.5px!important;white-space:nowrap!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-state-copy small{font-size:9.5px!important;line-height:1.25!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:6px!important;flex-wrap:nowrap!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-actions button{min-width:0!important;min-height:34px!important;padding:6px 10px!important;font-size:10.5px!important;border-radius:10px!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-action-delete{width:36px!important;padding:6px!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-delete-short{display:none!important}
+
+@media(max-width:640px){
+  #adminUsuariosLista .admin-user-card{grid-template-columns:1fr!important;padding:12px!important;gap:9px!important}
+  #adminUsuariosLista .admin-user-actions{min-width:0!important;width:100%!important;grid-template-columns:auto 1fr!important;gap:8px!important}
+  #adminUsuariosLista .admin-user-card-buttons{justify-self:end!important}
+  #adminUsuariosLista .btn-editar-usuario,#adminUsuariosLista .btn-eliminar-usuario{min-height:36px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card.tarea-card-v1201{padding:11px 12px!important;gap:8px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-footer{gap:7px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-actions{gap:5px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-actions button{padding:6px 9px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-action-delete{width:35px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-delete-text{display:none!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-delete-short{display:inline!important;font-size:19px!important;line-height:1!important}
+}
+@media(max-width:390px){
+  #adminUsuariosLista .admin-user-actions{grid-template-columns:1fr!important}
+  #adminUsuariosLista .user-status{justify-self:start!important}
+  #adminUsuariosLista .admin-user-card-buttons{justify-self:stretch!important;grid-template-columns:1fr auto!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-footer{align-items:flex-start!important;flex-direction:column!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1201 .tarea-card-actions{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr auto!important}
 }
