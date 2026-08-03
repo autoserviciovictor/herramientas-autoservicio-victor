@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "11.9.1";
+const APP_VERSION = "11.9.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -2476,6 +2476,55 @@ app.get("/reposicion", async (req, res) => {
     const registros = (await obtenerListaReposicionPersistente(req.usuario.usuario, numeroLista)).map(r => limpiarRegistroReposicion(r, numeroLista));
     res.json({ ok:true, total:registros.length, lista:numeroLista, usuario:req.usuario, registros });
   } catch(error) { console.error("Error en GET /reposicion:", error); res.status(500).json({ok:false,mensaje:error.message||"Error al obtener reposición"}); }
+});
+
+app.post("/reposicion/lote", async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.usuario.usuario);
+    const numeroLista = normalizarNumeroLista(req.body.lista);
+    const entradas = Array.isArray(req.body.items) ? req.body.items : [];
+    const items = entradas.map((item, indice) => ({
+      codigo: normalizarCodigo(item?.codigo || `ESCRITO-${Date.now()}-${indice + 1}`),
+      articulo: normalizarTexto(item?.articulo),
+      cantidad: enteroPositivo(item?.cantidad)
+    })).filter(item => item.codigo && item.articulo && item.cantidad !== null);
+    if (!items.length) return res.status(400).json({ok:false,mensaje:"Escribí al menos un producto válido"});
+
+    const resultados = await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async () => {
+      const todos = await leerTodasLasListas();
+      const ahora = fechaHoraArgentinaIso();
+      let orden = Math.max(0, ...todos.filter(x => x.usuario === usuario && x.lista === numeroLista).map(x => Number(x.orden) || 0));
+      const guardados = [];
+      for (const item of items) {
+        let r = todos.find(x => x.usuario === usuario && x.lista === numeroLista && x.codigo === item.codigo);
+        if (r) {
+          r.cantidad += item.cantidad;
+          r.estado = "pendiente";
+          r.actualizado = ahora;
+          // En listas escritas se conserva el texto más reciente exactamente como fue ingresado.
+          r.articulo = item.articulo;
+        } else {
+          orden += 1;
+          r = {id:crearIdReposicion(),usuario,lista:numeroLista,codigo:item.codigo,articulo:item.articulo,cantidad:item.cantidad,estado:"pendiente",orden,actualizado:ahora};
+          todos.push(r);
+        }
+        guardados.push(r);
+      }
+      await escribirTodasLasListas(todos);
+      return guardados;
+    });
+
+    res.json({
+      ok:true,
+      lista:numeroLista,
+      total:resultados.length,
+      mensaje:`${resultados.length} producto${resultados.length === 1 ? "" : "s"} agregado${resultados.length === 1 ? "" : "s"}`,
+      registros:resultados.map(r => limpiarRegistroReposicion(r, numeroLista))
+    });
+  } catch(error) {
+    console.error("Error en POST /reposicion/lote:", error);
+    res.status(500).json({ok:false,mensaje:error.message||"No se pudo guardar la lista escrita"});
+  }
 });
 
 app.post("/reposicion", async (req, res) => {

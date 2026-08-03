@@ -350,22 +350,30 @@ async function agregarListaEscritaDirecta(){
   if(!items.length) return toast("Escribí al menos un producto","error");
   const boton=$("btnRepoAgregarTexto");
   if(boton){boton.disabled=true;boton.textContent="Agregando...";}
-  let agregados=0;
   try{
-    for(const item of items){
-      const data=await pedir("/reposicion",{method:"POST",body:JSON.stringify({codigo:item.codigo,articulo:item.articulo,cantidad:item.cantidad,lista:listaActual})});
-      if(data.registro){
-        const i=registros.findIndex(r=>String(r.codigo)===String(data.registro.codigo));
-        if(i>=0) registros[i]=data.registro; else registros.push(data.registro);
-      }
-      agregados++;
+    const data=await pedir("/reposicion/lote",{
+      method:"POST",
+      body:JSON.stringify({
+        lista:listaActual,
+        items:items.map(item=>({codigo:item.codigo,articulo:item.articulo,cantidad:item.cantidad}))
+      })
+    });
+    const recibidos=Array.isArray(data.registros)?data.registros:[];
+    for(const recibido of recibidos){
+      const normalizado={...recibido,lista:String(recibido.lista||listaActual)==="2"?"2":"1",orden:ordenRegistro(recibido,registros.length)};
+      const i=registros.findIndex(r=>String(r.id)===String(normalizado.id)||String(r.codigo)===String(normalizado.codigo));
+      if(i>=0) registros[i]=normalizado; else registros.push(normalizado);
     }
+    registros=normalizarOrdenRegistros(registros).sort(compararOrden);
     guardarCacheRepo(listaActual);
     if(campo) campo.value="";
-    toast(`${agregados} producto${agregados===1?"":"s"} agregado${agregados===1?"":"s"}`);
+    toast(`${recibidos.length||items.length} producto${(recibidos.length||items.length)===1?"":"s"} agregado${(recibidos.length||items.length)===1?"":"s"}`);
     cambiarTab("registro");
-  }catch(error){toast(error.message||"No se pudo agregar la lista","error");}
-  finally{if(boton){boton.disabled=false;boton.textContent="Agregar a Mi lista";}}
+  }catch(error){
+    toast(error.message||"No se pudo agregar la lista","error");
+  }finally{
+    if(boton){boton.disabled=false;boton.textContent="Agregar a Mi lista";}
+  }
 }
 
 function htmlCargando(texto="Cargando..."){ return `<span class="app-spinner" aria-hidden="true"></span><strong>${escapar(texto)}</strong>`; }

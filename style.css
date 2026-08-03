@@ -7242,7 +7242,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
 }
 
 
-/* v11.9.1 - Lista escrita simple */
+/* v11.9.2 - Lista escrita simple */
 body.en-anotar .repo-bottom-nav{grid-template-columns:repeat(3,1fr)!important}
 .repo-written-card{width:min(100% - 28px,1180px);margin-inline:auto}
 .repo-written-textarea{width:100%;min-height:260px;resize:vertical;border:1px solid #dec9cb;border-radius:14px;padding:14px;font:inherit;line-height:1.5;background:#fff;box-sizing:border-box}
