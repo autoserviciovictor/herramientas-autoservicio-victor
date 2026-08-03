@@ -1,6 +1,6 @@
 {
-  "version": "11.8.1",
-  "label": "11.8.1",
-  "build": 110800,
-  "name": "v11.8.1 - Corrección de acceso a módulos"
+  "version": "11.8.2",
+  "label": "11.8.2",
+  "build": 110802,
+  "name": "v11.8.2 - Normalización visual completa"
 }

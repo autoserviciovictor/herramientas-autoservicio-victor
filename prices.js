@@ -1,8 +1,8 @@
-import { API_BASE_URL } from './config.js?v=1181';
-import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=1181';
-import { ordenarPorBusqueda } from './search.js?v=1181';
-import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=1181';
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1181";
+import { API_BASE_URL } from './config.js?v=1182';
+import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=1182';
+import { ordenarPorBusqueda } from './search.js?v=1182';
+import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=1182';
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1182";
 
 const $ = id => document.getElementById(id);
 const LAST_KEY = 'autoservicio-precios-ultimo-v2';
@@ -201,8 +201,19 @@ function detenerScanner() {
   $('preciosActionsCard')?.classList.remove('oculto');
 }
 
+function actualizarEncabezadoPrecios(tab) {
+  const esProductos = tab === 'productos';
+  const titulo = document.getElementById('modulePageTitle');
+  const subtitulo = document.getElementById('modulePageSubtitle');
+  const icono = document.getElementById('modulePageIconUse');
+  if (titulo) titulo.textContent = esProductos ? 'Productos' : 'Consultar';
+  if (subtitulo) subtitulo.textContent = esProductos ? 'Lista de precios' : 'Consultar precio';
+  if (icono) icono.setAttribute('href', esProductos ? '#icon-list' : '#icon-tag');
+}
+
 function cambiarTab(tab) {
   tabActual = tab;
+  actualizarEncabezadoPrecios(tab);
   if (tab === 'productos') cantidadVisible = 100;
   $('preciosConsultarVista')?.classList.toggle('oculto', tab !== 'consultar');
   $('preciosProductosVista')?.classList.toggle('oculto', tab !== 'productos');

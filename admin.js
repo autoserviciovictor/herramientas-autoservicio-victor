@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1181";
+import { API_BASE_URL } from "./config.js?v=1182";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
@@ -464,6 +464,19 @@ async function cargarTodo() {
 function cambiarTab(tab) {
   document.querySelectorAll(".admin-tab").forEach(b => b.classList.toggle("activo", b.dataset.adminTab === tab));
   document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.toggle("oculto", p.id !== `adminTab-${tab}`));
+  const encabezados = {
+    usuarios: ["Usuarios", "Gestión de usuarios", "#icon-user"],
+    sectores: ["Sectores", "Gestión de sectores", "#icon-building"],
+    historial: ["Historial", "Actividad del sistema", "#icon-clipboard"],
+    sistema: ["Sistema", "Configuración general", "#icon-settings"]
+  };
+  const actual = encabezados[tab] || encabezados.usuarios;
+  const titulo = document.getElementById("modulePageTitle");
+  const subtitulo = document.getElementById("modulePageSubtitle");
+  const icono = document.getElementById("modulePageIconUse");
+  if (titulo) titulo.textContent = actual[0];
+  if (subtitulo) subtitulo.textContent = actual[1];
+  if (icono) icono.setAttribute("href", actual[2]);
 }
 
 

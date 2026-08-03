@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.8.1",
-  "description": "Autoservicio 11.8.1 - corrección de acceso a módulos",
+  "version": "11.8.2",
+  "description": "Autoservicio 11.8.2 - normalización visual completa",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

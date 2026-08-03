@@ -7104,3 +7104,139 @@ body.en-tareas #tareasVistaTareas .tarea-card-v11 .tarea-card-actions .danger{
   .inventory-location-card,.scan-panel,.bottom-info,.inventory-recent-card,.search-card,.venc-list-card,.repo-list-selector,.repo-actions-card{width:calc(100% - 28px)!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important}
   .inventory-recent-card{padding:15px;margin-bottom:110px}
 }
+
+/* =========================================================
+   v11.8.2 — normalización visual completa
+   ========================================================= */
+:root{
+  --mobile-page-inline:16px;
+  --mobile-block-gap:12px;
+  --mobile-card-radius:22px;
+}
+
+@media(max-width:720px){
+  /* Un único eje y ancho útil para todos los módulos. */
+  .module-page-header{
+    width:calc(100% - (var(--mobile-page-inline) * 2))!important;
+    max-width:none!important;
+    margin:14px var(--mobile-page-inline) 10px!important;
+    box-sizing:border-box!important;
+  }
+  .pantalla.activa{
+    width:100%!important;
+    max-width:none!important;
+    padding-left:var(--mobile-page-inline)!important;
+    padding-right:var(--mobile-page-inline)!important;
+    padding-top:var(--mobile-block-gap)!important;
+    box-sizing:border-box!important;
+  }
+  .pantalla.activa > :not(.app-bottom-nav):not(.venc-bottom-nav):not(.repo-bottom-nav):not(.precios-bottom-nav):not(.horarios-bottom-nav):not(.tareas-bottom-nav):not(.admin-bottom-nav){
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Vistas internas: su contenido usa el mismo ancho del encabezado. */
+  #pantallaPrecios .precios-vista,
+  #pantallaAnotar #repoCargaVista,
+  #pantallaAnotar #repoRegistroVista,
+  #pantallaHorarios .horarios-shell,
+  #pantallaHorarios .horarios-content,
+  #pantallaAdmin .admin-tab-panel,
+  #pantallaVencimientos > section{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Ritmo vertical común entre tarjetas principales. */
+  .pantalla.activa .inventory-location-card,
+  .pantalla.activa .scan-panel,
+  .pantalla.activa .bottom-info,
+  .pantalla.activa .inventory-recent-card,
+  .pantalla.activa .search-card,
+  .pantalla.activa .venc-actions-card,
+  .pantalla.activa .venc-summary-card,
+  .pantalla.activa .venc-list-card,
+  .pantalla.activa .repo-list-selector,
+  .pantalla.activa .repo-actions-card,
+  .pantalla.activa .repo-recent-card,
+  .pantalla.activa .repo-registro-card,
+  .pantalla.activa .settings-card,
+  .pantalla.activa .horarios-sector-bar,
+  .pantalla.activa .horarios-edicion-marco,
+  .pantalla.activa .list-summary{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+  .pantalla.activa .inventory-location-card,
+  .pantalla.activa .scan-panel,
+  .pantalla.activa .bottom-info,
+  .pantalla.activa .inventory-recent-card,
+  .pantalla.activa .search-card,
+  .pantalla.activa .venc-actions-card,
+  .pantalla.activa .venc-summary-card,
+  .pantalla.activa .venc-list-card,
+  .pantalla.activa .repo-list-selector,
+  .pantalla.activa .repo-actions-card,
+  .pantalla.activa .repo-recent-card,
+  .pantalla.activa .repo-registro-card,
+  .pantalla.activa .settings-card,
+  .pantalla.activa .horarios-sector-bar,
+  .pantalla.activa .horarios-edicion-marco,
+  .pantalla.activa .list-summary{
+    margin-top:0!important;
+    margin-bottom:var(--mobile-block-gap)!important;
+  }
+
+  /* Elimina separaciones heredadas grandes en pantallas señaladas. */
+  #pantallaAdmin{gap:0!important;}
+  #pantallaAdmin .admin-message:empty{display:none!important;}
+  #pantallaAdmin .admin-tab-panel{margin-top:0!important;}
+  #pantallaAdmin .settings-card{padding:16px!important;}
+
+  #pantallaHorarios .horarios-toolbar{margin:0 0 var(--mobile-block-gap)!important;}
+  #pantallaHorarios .horarios-status-row{margin:0 0 8px!important;}
+  #pantallaHorarios .horarios-sector-bar{margin-bottom:var(--mobile-block-gap)!important;}
+  #pantallaHorarios .horarios-edicion-marco{margin-bottom:var(--mobile-block-gap)!important;}
+  #pantallaHorarios .horarios-board-card{margin-top:0!important;}
+
+  #pantallaAnotar .repo-list-selector{margin-bottom:var(--mobile-block-gap)!important;}
+  #pantallaAnotar .repo-actions-card,
+  #pantallaAnotar .repo-recent-card,
+  #pantallaAnotar .repo-registro-card{margin-bottom:var(--mobile-block-gap)!important;}
+
+  #pantallaInventario .inventory-location-card,
+  #pantallaInventario .scan-panel,
+  #pantallaInventario .bottom-info{margin-bottom:var(--mobile-block-gap)!important;}
+  #pantallaInventario .inventory-recent-card{margin-top:0!important;}
+
+  #pantallaProductos .search-card,
+  #pantallaCargados .search-card,
+  #pantallaPrecios .search-card{margin-bottom:var(--mobile-block-gap)!important;}
+
+  /* Radios coherentes para los marcos principales. */
+  .pantalla.activa .inventory-location-card,
+  .pantalla.activa .scan-panel,
+  .pantalla.activa .bottom-info,
+  .pantalla.activa .inventory-recent-card,
+  .pantalla.activa .search-card,
+  .pantalla.activa .venc-actions-card,
+  .pantalla.activa .venc-summary-card,
+  .pantalla.activa .venc-list-card,
+  .pantalla.activa .repo-actions-card,
+  .pantalla.activa .repo-recent-card,
+  .pantalla.activa .repo-registro-card,
+  .pantalla.activa .settings-card,
+  .pantalla.activa .horarios-sector-bar,
+  .pantalla.activa .horarios-edicion-marco{
+    border-radius:var(--mobile-card-radius)!important;
+  }
+}
