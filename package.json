@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.8.0",
-  "description": "Autoservicio 11.8 - cargar, subtítulos y consistencia global",
+  "version": "11.8.1",
+  "description": "Autoservicio 11.8.1 - corrección de acceso a módulos",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

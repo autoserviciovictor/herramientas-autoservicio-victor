@@ -1,4 +1,4 @@
-import { resolveModule, getDesktopNavigationSource } from "./module-registry.js?v=1180";
+import { resolveModule, getDesktopNavigationSource } from "./module-registry.js?v=1181";
 
 const elementos = {
     splash: document.getElementById("splash"),
@@ -168,8 +168,8 @@ export function mostrarMensaje(texto, tipo = "ok") {
 
 export function actualizarEstadoExcel(cantidad) {
     totalProductos = cantidad;
-    elementos.estadoExcelTexto.textContent = cantidad ? "Google Sheets" : "Sin conexión";
-    elementos.estadoConteoTexto.textContent = cantidad ? `${cantidad} productos` : "0 productos";
+    if (elementos.estadoExcelTexto) elementos.estadoExcelTexto.textContent = cantidad ? "Google Sheets" : "Sin conexión";
+    if (elementos.estadoConteoTexto) elementos.estadoConteoTexto.textContent = cantidad ? `${cantidad} productos` : "0 productos";
     if (elementos.estadoExcelAjustes) {
         elementos.estadoExcelAjustes.textContent = cantidad ? `Google Sheets conectado: ${cantidad} productos` : "Sin conexión con Google Sheets";
         elementos.estadoExcelAjustes.classList.toggle("cargado", Boolean(cantidad));
@@ -228,7 +228,7 @@ export function limpiarProducto(texto = "Esperando escaneo...") {
 export function actualizarContador(numero) {
     // Se mantiene para compatibilidad con la lógica principal.
     // La cabecera muestra solo la cantidad total de productos del Excel.
-    elementos.estadoConteoTexto.textContent = totalProductos ? `${totalProductos} productos` : "0 productos";
+    if (elementos.estadoConteoTexto) elementos.estadoConteoTexto.textContent = totalProductos ? `${totalProductos} productos` : "0 productos";
 }
 
 export function actualizarConteosUbicacion(conteos = { salon: 0, deposito: 0 }) {

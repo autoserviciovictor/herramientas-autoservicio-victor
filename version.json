@@ -1,6 +1,6 @@
 {
-  "version": "11.8",
-  "label": "11.8",
+  "version": "11.8.1",
+  "label": "11.8.1",
   "build": 110800,
-  "name": "v11.8 - Cargar, subtítulos y consistencia global"
+  "name": "v11.8.1 - Corrección de acceso a módulos"
 }
