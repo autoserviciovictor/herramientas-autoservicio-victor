@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.4.0",
-  "description": "Autoservicio 11.4.0 - ajustes de navegación y editor de usuarios",
+  "version": "11.4.2",
+  "description": "Autoservicio 11.4.2 - agrupación por rangos de vencimiento",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

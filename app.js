@@ -1136,8 +1136,8 @@ function bucketVencimiento(item) {
     if (dias < 0) return "vencidos";
     if (dias <= 7) return "7";
     if (dias <= 15) return "15";
-    // El contador azul agrupa todos los vigentes con 16 días o más.
-    return "30";
+    if (dias <= 30) return "30";
+    return "fuera";
 }
 
 function fechaHoyArgentina() {
@@ -1224,6 +1224,76 @@ function renderResumenVencimientos() {
     ].join("");
 }
 
+function crearTarjetaVencimiento(item) {
+    const clase = claseEstadoVencimiento(item);
+    const cantidad = Number(item.total) || ((Number(item.salon) || 0) + (Number(item.deposito) || 0));
+    const articulo = item.articulo || "Sin descripción";
+    const codigo = item.codigo || "-";
+    const fecha = formatearFecha(item.vencimiento);
+    const estado = textoEstadoVencimiento(item);
+    const ofertaActiva = tieneOferta(item);
+
+    if (vencTabActual === "cargar") {
+        return `
+            <article class="venc-item venc-item-reciente ${clase}" data-id="${item.id}">
+                <div class="venc-reciente-info">
+                    <strong>${articulo}</strong>
+                    <div class="venc-reciente-meta">
+                        <span><svg class="app-icon inline-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>${fecha}</span>
+                        <em class="venc-reciente-dias ${clase}">${estado}</em>
+                    </div>
+                </div>
+                <b>${cantidad}</b>
+            </article>
+        `;
+    }
+
+    if (vencTabActual === "vencidos") {
+        return `
+            <article class="venc-item venc-item-vencido-registro venc-vencido expiry-compact expiry-compact--expired" data-id="${item.id}" tabindex="0">
+                <header class="expiry-compact__header">
+                    <div class="expiry-compact__identity">
+                        <strong>${articulo}</strong>
+                        <span>Código: ${codigo}</span>
+                    </div>
+                    <span class="expiry-compact__badge expiry-compact__badge--expired">${estado}</span>
+                </header>
+                <div class="expiry-compact__meta">
+                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${fecha}</b></span>
+                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><b>${cantidad} un.</b></span>
+                </div>
+                <button type="button" class="expiry-compact__action expiry-compact__action--danger" data-venc-accion="editar">
+                    <svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>Dar de baja
+                </button>
+            </article>
+        `;
+    }
+
+    return `
+        <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""} expiry-compact expiry-compact--upcoming" data-id="${item.id}" tabindex="0">
+            <header class="expiry-compact__header">
+                <div class="expiry-compact__identity">
+                    <strong>${articulo}</strong>
+                    <span>Código: ${codigo}</span>
+                </div>
+                <span class="expiry-compact__badge ${clase}">${estado}</span>
+            </header>
+            <div class="expiry-compact__meta">
+                <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${fecha}</b></span>
+                <i aria-hidden="true">•</i>
+                <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><b>${cantidad} un.</b></span>
+                <i aria-hidden="true">•</i>
+                <span><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg><em class="expiry-compact__offer ${ofertaActiva ? "is-active" : "is-inactive"}">${ofertaActiva ? "Activa" : "Sin oferta"}</em></span>
+            </div>
+            <div class="expiry-compact__bottom">
+                <button type="button" class="expiry-compact__action ${ofertaActiva ? "is-active" : ""}" data-venc-accion="oferta">
+                    <svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg>${ofertaActiva ? "Quitar oferta" : "Activar oferta"}
+                </button>
+            </div>
+        </article>
+    `;
+}
+
 function renderListadoVencimientos() {
     if (!elementos.vencListado) return;
     renderResumenVencimientos();
@@ -1255,89 +1325,37 @@ function renderListadoVencimientos() {
         return;
     }
 
-    elementos.vencListado.className = `venc-list venc-list-${vencTabActual}`;
-    elementos.vencListado.innerHTML = lista.map(item => {
-        const clase = claseEstadoVencimiento(item);
-        const cantidad = Number(item.total) || ((Number(item.salon) || 0) + (Number(item.deposito) || 0));
-        const articulo = item.articulo || "Sin descripción";
-        const codigo = item.codigo || "-";
-        const fecha = formatearFecha(item.vencimiento);
-        const salon = Number(item.salon) || 0;
-        const deposito = Number(item.deposito) || 0;
-        const estado = textoEstadoVencimiento(item);
-        const ofertaActiva = tieneOferta(item);
-
-        if (vencTabActual === "cargar") {
+    const agruparTodos = vencTabActual === "proximos" && filtroVencimientos === "todos";
+    if (agruparTodos) {
+        const grupos = [
+            { bucket: "7", titulo: "Vencen dentro de 7 días", detalle: "0 a 7 días" },
+            { bucket: "15", titulo: "Vencen entre 8 y 15 días", detalle: "8 a 15 días" },
+            { bucket: "30", titulo: "Vencen entre 16 y 30 días", detalle: "16 a 30 días" },
+        ];
+        elementos.vencListado.className = "venc-list venc-list-proximos venc-list-grouped";
+        elementos.vencListado.innerHTML = grupos.map(grupo => {
+            const items = lista.filter(item => bucketVencimiento(item) === grupo.bucket);
+            if (!items.length) return "";
             return `
-                <article class="venc-item venc-item-reciente ${clase}" data-id="${item.id}">
-                    <div class="venc-reciente-info">
-                        <strong>${articulo}</strong>
-                        <div class="venc-reciente-meta">
-                            <span><svg class="app-icon inline-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>${fecha}</span>
-                            <em class="venc-reciente-dias ${clase}">${estado}</em>
+                <section class="venc-range-group venc-range-group--${grupo.bucket}" aria-labelledby="vencGrupo${grupo.bucket}">
+                    <header class="venc-range-group__header">
+                        <div>
+                            <h3 id="vencGrupo${grupo.bucket}">${grupo.titulo}</h3>
+                            <span>${grupo.detalle}</span>
                         </div>
-                    </div>
-                    <b>${cantidad}</b>
-                </article>
-            `;
-        }
-
-        if (vencTabActual === "vencidos") {
-            return `
-                <article class="venc-item venc-item-vencido-registro venc-vencido expiry-compact expiry-compact--expired" data-id="${item.id}" tabindex="0">
-                    <header class="expiry-compact__header">
-                        <div class="expiry-compact__identity">
-                            <strong>${articulo}</strong>
-                            <span>Código: ${codigo}</span>
-                        </div>
-                        <span class="expiry-compact__badge expiry-compact__badge--expired">${estado}</span>
+                        <strong>${items.length} ${items.length === 1 ? "producto" : "productos"}</strong>
                     </header>
-                    <div class="expiry-compact__meta">
-                        <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${fecha}</b></span>
-                        <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><b>${cantidad} ${cantidad === 1 ? "un." : "un."}</b></span>
+                    <div class="venc-range-group__grid">
+                        ${items.map(crearTarjetaVencimiento).join("")}
                     </div>
-                    <div class="expiry-compact__alert expiry-compact__alert--expired">
-                        <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
-                        <span>Producto vencido. No apto para la venta.</span>
-                    </div>
-                    <button type="button" class="expiry-compact__action expiry-compact__action--danger" data-venc-accion="editar">
-                        <svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>Dar de baja
-                    </button>
-                </article>
+                </section>
             `;
-        }
+        }).join("");
+        return;
+    }
 
-        const mensajeEstado = clase === "venc-7"
-            ? (diasHastaVencimiento(item.vencimiento) <= 0 ? "Vence hoy. Revisá su estado." : `${estado}.`)
-            : clase === "venc-15" ? `${estado}.` : "Stock dentro del rango recomendado.";
-        return `
-            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""} expiry-compact expiry-compact--upcoming" data-id="${item.id}" tabindex="0">
-                <header class="expiry-compact__header">
-                    <div class="expiry-compact__identity">
-                        <strong>${articulo}</strong>
-                        <span>Código: ${codigo}</span>
-                    </div>
-                    <span class="expiry-compact__badge ${clase}">${estado}</span>
-                </header>
-                <div class="expiry-compact__meta">
-                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${fecha}</b></span>
-                    <i aria-hidden="true">•</i>
-                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><b>${cantidad} un.</b></span>
-                    <i aria-hidden="true">•</i>
-                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg><em class="expiry-compact__offer ${ofertaActiva ? "is-active" : "is-inactive"}">${ofertaActiva ? "Activa" : "Sin oferta"}</em></span>
-                </div>
-                <div class="expiry-compact__bottom">
-                    <div class="expiry-compact__alert ${clase}">
-                        <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
-                        <span>${mensajeEstado}</span>
-                    </div>
-                    <button type="button" class="expiry-compact__action ${ofertaActiva ? "is-active" : ""}" data-venc-accion="oferta">
-                        <svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg>${ofertaActiva ? "Quitar oferta" : "Activar oferta"}
-                    </button>
-                </div>
-            </article>
-        `;
-    }).join("");
+    elementos.vencListado.className = `venc-list venc-list-${vencTabActual}`;
+    elementos.vencListado.innerHTML = lista.map(crearTarjetaVencimiento).join("");
 }
 
 function manejarClickListadoVencimientos(event) {
