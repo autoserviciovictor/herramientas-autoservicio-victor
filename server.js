@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.0.3";
+const APP_VERSION = "12.1.0";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -30,6 +30,7 @@ const REEMPLAZOS_HORARIOS_SHEET_NAME = "Reemplazos Horarios";
 const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
 const PUSH_SUBSCRIPTIONS_SHEET_NAME = "Notificaciones Suscripciones";
 const NOTIFICATION_LOG_SHEET_NAME = "Notificaciones Vencimientos";
+const NOTIFICATION_CENTER_SHEET_NAME = "Centro Notificaciones";
 const TAREAS_SHEET_NAME = "Tareas";
 const TAREAS_BANO_SHEET_NAME = "Tareas_Bano";
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
@@ -1766,6 +1767,7 @@ async function asegurarHojasNotificaciones() {
   const requests = [];
   if (!titulos.has(PUSH_SUBSCRIPTIONS_SHEET_NAME)) requests.push({ addSheet: { properties: { title: PUSH_SUBSCRIPTIONS_SHEET_NAME } } });
   if (!titulos.has(NOTIFICATION_LOG_SHEET_NAME)) requests.push({ addSheet: { properties: { title: NOTIFICATION_LOG_SHEET_NAME } } });
+  if (!titulos.has(NOTIFICATION_CENTER_SHEET_NAME)) requests.push({ addSheet: { properties: { title: NOTIFICATION_CENTER_SHEET_NAME } } });
   if (requests.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { requests } });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
@@ -1776,6 +1778,11 @@ async function asegurarHojasNotificaciones() {
     spreadsheetId: SPREADSHEET_ID,
     range: `${NOTIFICATION_LOG_SHEET_NAME}!A1:G1`, valueInputOption: "RAW",
     requestBody: { values: [["Clave", "Fecha envío", "Tipo", "ID", "Código", "Vencimiento", "Detalle"]] }
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${NOTIFICATION_CENTER_SHEET_NAME}!A1:I1`, valueInputOption: "RAW",
+    requestBody: { values: [["ID", "Usuario", "Tipo", "Título", "Mensaje", "URL", "Fecha", "Leída", "Clave"]] }
   });
   hojasNotificacionesAseguradas = true;
 }
@@ -1824,6 +1831,49 @@ async function clavesNotificacionesEnviadas() {
 async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
   await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
     requestBody: { values: [[clave, fechaHoraArgentinaIso(), tipo, registro.id, registro.codigo, registro.vencimiento, detalle]] } });
+}
+
+
+async function registrarCentroNotificacion({ usuario, tipo, titulo, mensaje, url = "./", clave = "" }) {
+  await asegurarHojasNotificaciones();
+  const usuarioNorm = normalizarUsuario(usuario);
+  if (!usuarioNorm) return;
+  const claveNorm = normalizarTexto(clave || `${tipo}|${titulo}|${mensaje}`);
+  const id = crypto.createHash("sha1").update(`${usuarioNorm}|${claveNorm}`).digest("hex").slice(0, 20);
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
+  const filas = r.data.values || [];
+  if (filas.slice(1).some(f => normalizarTexto(f[0]) === id)) return;
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[id, usuarioNorm, normalizarTexto(tipo), normalizarTexto(titulo), normalizarTexto(mensaje), normalizarTexto(url || "./"), fechaHoraArgentinaIso(), "No", claveNorm]] }
+  });
+}
+
+async function obtenerCentroNotificaciones(usuario) {
+  await asegurarHojasNotificaciones();
+  const clave = normalizarUsuario(usuario);
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
+  return (r.data.values || []).slice(1).map((f, i) => ({
+    filaGoogle: i + 2, id: normalizarTexto(f[0]), usuario: normalizarUsuario(f[1]), tipo: normalizarTexto(f[2]),
+    titulo: normalizarTexto(f[3]), mensaje: normalizarTexto(f[4]), url: normalizarTexto(f[5]) || "./", fecha: normalizarTexto(f[6]),
+    leida: normalizarTexto(f[7]).toLowerCase() === "sí" || normalizarTexto(f[7]).toLowerCase() === "si"
+  })).filter(n => n.usuario === clave).sort((a,b) => String(b.fecha).localeCompare(String(a.fecha))).slice(0,10);
+}
+
+async function marcarCentroNotificacion(usuario, id = "", todas = false) {
+  await asegurarHojasNotificaciones();
+  const clave = normalizarUsuario(usuario);
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
+  const filas = r.data.values || [];
+  const updates = [];
+  filas.slice(1).forEach((f, i) => {
+    if (normalizarUsuario(f[1]) !== clave) return;
+    if (!todas && normalizarTexto(f[0]) !== normalizarTexto(id)) return;
+    if ((normalizarTexto(f[7]).toLowerCase() === "sí" || normalizarTexto(f[7]).toLowerCase() === "si")) return;
+    updates.push({ range: `${NOTIFICATION_CENTER_SHEET_NAME}!H${i+2}`, values: [["Sí"]] });
+  });
+  if (updates.length) await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: "RAW", data: updates } });
+  return updates.length;
 }
 
 async function desactivarSuscripcionPush(filaGoogle) {
@@ -1890,13 +1940,11 @@ async function vaciarColaNotificacionesTareas() {
   temporizadorNotificacionesTareas = null;
   const grupos = [...colaNotificacionesTareas.values()];
   colaNotificacionesTareas.clear();
-  if (!grupos.length || !PUSH_CONFIGURED) return;
+  if (!grupos.length) return;
   const clavesEnviadas = await clavesNotificacionesEnviadas();
   for (const grupo of grupos) {
     const pendientes = grupo.items.filter(item => !clavesEnviadas.has(item.clave));
     if (!pendientes.length) continue;
-    const suscripciones = await obtenerSuscripcionesUsuarioModulo(grupo.usuario, "tareas");
-    if (!suscripciones.length) continue;
     const cantidad = pendientes.length;
     const sector = grupo.sectorNombre || grupo.sector || "tu sector";
     const fechaTexto = fechaTareaLegible(grupo.fecha);
@@ -1909,7 +1957,9 @@ async function vaciarColaNotificacionesTareas() {
       tag: `tareas-${grupo.usuario}-${grupo.fecha}-${grupo.turno}-${normalizarTexto(grupo.sector)}`,
       data: { url: `./?modulo=tareas&fecha=${encodeURIComponent(grupo.fecha)}&sector=${encodeURIComponent(grupo.sector || "")}` }
     };
-    const resultado = await enviarPushASuscripciones(suscripciones, payload);
+    await registrarCentroNotificacion({ usuario: grupo.usuario, tipo: "tarea", titulo: payload.title, mensaje: payload.body, url: payload.data.url, clave: payload.tag });
+    const suscripciones = await obtenerSuscripcionesUsuarioModulo(grupo.usuario, "tareas");
+    const resultado = suscripciones.length ? await enviarPushASuscripciones(suscripciones, payload) : { enviados: 0 };
     if (resultado.enviados > 0) {
       for (const item of pendientes) {
         await registrarNotificacionEnviada(item.clave, "tarea-asignada", {
@@ -1997,9 +2047,6 @@ async function procesarNotificacionBano(tipo) {
   const enviadas = await clavesNotificacionesEnviadas();
   if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
 
-  const suscripciones = await obtenerSuscripcionesUsuarioModulo(usuario.usuario, "tareas");
-  if (!suscripciones.length) return { enviados: 0, sinSuscripciones: true };
-
   const payload = tipo === "08"
     ? {
         title: "Hoy te corresponde limpiar el baño",
@@ -2014,7 +2061,9 @@ async function procesarNotificacionBano(tipo) {
         data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` }
       };
 
-  const resultado = await enviarPushASuscripciones(suscripciones, payload);
+  await registrarCentroNotificacion({ usuario: usuario.usuario, tipo: "bano", titulo: payload.title, mensaje: payload.body, url: payload.data.url, clave: payload.tag });
+  const suscripciones = await obtenerSuscripcionesUsuarioModulo(usuario.usuario, "tareas");
+  const resultado = suscripciones.length ? await enviarPushASuscripciones(suscripciones, payload) : { enviados: 0, sinSuscripciones: true };
   if (resultado.enviados > 0) {
     await registrarNotificacionEnviada(clave, `bano-${tipo}`, {
       id: `bano-${fecha}`,
@@ -2070,6 +2119,8 @@ async function enviarAlertaRegistro(registro, dias, tipo, clave = claveUnicaAler
     const enviadas = clavesConocidas || await clavesNotificacionesEnviadas();
     if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
     const payload = payloadAlertaVencimiento(registro, dias, tipo);
+    const usuarios = (await obtenerUsuarios()).filter(u => u.activo && u.permisos?.vencimientos === true);
+    await Promise.all(usuarios.map(u => registrarCentroNotificacion({ usuario: u.usuario, tipo: "vencimientos", titulo: payload.title, mensaje: payload.body, url: "./?modulo=vencimientos", clave: `${clave}|${u.usuario}` })));
     const resultado = await enviarPushVencimientos(payload);
     if (resultado.enviados > 0) {
       await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
@@ -2165,6 +2216,23 @@ async function procesarAlertasVencimientos() {
     console.error("Error procesando alertas de vencimientos:", error);
   } finally { procesandoNotificaciones = false; }
 }
+
+app.get("/notificaciones/centro", requerirSesion, async (req, res) => {
+  try {
+    const notificaciones = await obtenerCentroNotificaciones(req.usuario.usuario);
+    res.json({ ok: true, notificaciones, noLeidas: notificaciones.filter(n => !n.leida).length });
+  } catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron cargar las notificaciones" }); }
+});
+
+app.patch("/notificaciones/centro/:id/leida", requerirSesion, async (req, res) => {
+  try { await marcarCentroNotificacion(req.usuario.usuario, req.params.id, false); res.json({ ok:true }); }
+  catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar la notificación" }); }
+});
+
+app.patch("/notificaciones/centro-leidas", requerirSesion, async (req, res) => {
+  try { const actualizadas = await marcarCentroNotificacion(req.usuario.usuario, "", true); res.json({ ok:true, actualizadas }); }
+  catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron actualizar las notificaciones" }); }
+});
 
 app.get("/notificaciones/public-key", (req, res) => {
   res.json({ ok: true, configurado: PUSH_CONFIGURED, publicKey: VAPID_PUBLIC_KEY || "" });

@@ -15,10 +15,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="design-tokens.css?v=1203">
-    <link rel="stylesheet" href="style.css?v=1203">
-    <link rel="stylesheet" href="design-components.css?v=1203">
-    <link rel="stylesheet" href="app-shell.css?v=1203">
+    <link rel="stylesheet" href="design-tokens.css?v=1210">
+    <link rel="stylesheet" href="style.css?v=1210">
+    <link rel="stylesheet" href="design-components.css?v=1210">
+    <link rel="stylesheet" href="app-shell.css?v=1210">
 
     <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
 </head>
@@ -91,6 +91,7 @@
                 <span class="user-dropdown-avatar"><svg class="app-icon" aria-hidden="true"><use href="#icon-user"></use></svg></span>
                 <div><strong id="menuSesionNombre">Usuario</strong><small id="menuSesionRol">Personal</small></div>
             </div>
+            <button id="btnMenuNotificaciones" type="button" class="user-dropdown-action"><span class="notification-menu-icon">🔔</span><strong>Notificaciones</strong><b id="menuNotificacionesBadge" class="notification-menu-badge oculto">0</b></button>
             <button id="btnMenuAjustes" type="button" class="user-dropdown-action"><span><svg class="app-icon" aria-hidden="true"><use href="#icon-settings"></use></svg></span><strong>Configuración</strong></button>
             <button id="btnMenuCerrarSesion" type="button" class="user-dropdown-action user-dropdown-logout"><span><svg class="app-icon" aria-hidden="true"><use href="#icon-logout"></use></svg></span><strong>Cerrar sesión</strong></button>
         </div>
@@ -1055,17 +1056,18 @@
       </div>
     </div>
 
-<script src="./dialog.js?v=1203"></script>
-<script src="./pwa.js?v=1203" defer></script>
-<script type="module" src="./auth.js?v=1203"></script>
+<script src="./dialog.js?v=1210"></script>
+<script src="./pwa.js?v=1210" defer></script>
+<script type="module" src="./auth.js?v=1210"></script>
 <script src="./xlsx.full.min.js"></script>
-<script src="./horarios-config.js?v=1203"></script>
-<script type="module" src="./admin.js?v=1203"></script>
-<script type="module" src="./notifications.js?v=1203"></script>
-<script type="module" src="./prices.js?v=1203"></script>
-<script type="module" src="./app.js?v=1203"></script>
-<script type="module" src="./tareas.js?v=1203"></script>
-<script type="module" src="./horarios.js?v=1203"></script>
+<script src="./horarios-config.js?v=1210"></script>
+<script type="module" src="./admin.js?v=1210"></script>
+<script type="module" src="./notifications.js?v=1210"></script>
+<script type="module" src="./notification-center.js?v=1210"></script>
+<script type="module" src="./prices.js?v=1210"></script>
+<script type="module" src="./app.js?v=1210"></script>
+<script type="module" src="./tareas.js?v=1210"></script>
+<script type="module" src="./horarios.js?v=1210"></script>
 <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div id="iosInstallModal" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
@@ -1083,6 +1085,18 @@
           <button type="button" id="btnCerrarIosInstall" class="save-btn">Entendido</button>
         </div>
       </div>
+    </div>
+
+
+    <div id="notificationCenterOverlay" class="notification-center-overlay oculto" aria-hidden="true">
+      <section class="notification-center-panel" role="dialog" aria-modal="true" aria-labelledby="notificationCenterTitle">
+        <header class="notification-center-header">
+          <div><span>AVISOS</span><h2 id="notificationCenterTitle">Notificaciones</h2></div>
+          <button id="btnCerrarNotificationCenter" type="button" aria-label="Cerrar">×</button>
+        </header>
+        <div class="notification-center-toolbar"><span id="notificationCenterCount">Últimas 10</span><button id="btnMarcarTodasLeidas" type="button">Marcar todas como leídas</button></div>
+        <div id="notificationCenterList" class="notification-center-list"></div>
+      </section>
     </div>
 
     <div id="appDialogOverlay" class="app-dialog-overlay oculto" aria-hidden="true">

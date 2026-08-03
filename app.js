@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=1202";
+import { APP_VERSION } from "./config.js?v=1210";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -22,12 +22,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=1202";
+} from "./excel.js?v=1210";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=1202";
+} from "./scanner.js?v=1210";
 
 import {
     ocultarSplash,
@@ -50,10 +50,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=1202";
+} from "./ui.js?v=1210";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=1202";
-import { coincideBusqueda } from "./search.js?v=1202";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=1210";
+import { coincideBusqueda } from "./search.js?v=1210";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -256,11 +256,16 @@ window.AutoservicioNavigate = entrarPantalla;
 
 async function abrirDestinoNotificacion() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("modulo") !== "tareas") return;
-    await entrarPantalla("tareas");
-    const fecha = params.get("fecha");
-    if (fecha) window.TareasModule?.seleccionarFecha?.(fecha);
-    if (params.get("vista") === "bano") window.TareasModule?.mostrarBano?.();
+    const modulo = params.get("modulo");
+    if (modulo === "tareas") {
+        await entrarPantalla("tareas");
+        const fecha = params.get("fecha");
+        if (fecha) window.TareasModule?.seleccionarFecha?.(fecha);
+        if (params.get("vista") === "bano") window.TareasModule?.mostrarBano?.();
+    } else if (modulo === "vencimientos") {
+        await entrarPantalla("vencimientos");
+        cambiarTabVencimientos("proximos");
+    } else return;
     window.history.replaceState({}, document.title, window.location.pathname);
 }
 
