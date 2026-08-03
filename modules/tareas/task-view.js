@@ -20,7 +20,7 @@ export function taskCardTemplate(task) {
   const completion = completed
     ? `<small class="tarea-completion-copy">por ${escapeHTML(assignment.completadaPor || 'Usuario')}${assignment.completadaHora ? ` · ${escapeHTML(assignment.completadaHora)}` : ''}</small>`
     : '';
-  return `<article class="tarea-card tarea-card-v1201" data-id="${escapeHTML(task.id)}" data-turno="${escapeHTML(task._turno)}">
+  return `<article class="tarea-card tarea-card-v1202" data-id="${escapeHTML(task.id)}" data-turno="${escapeHTML(task._turno)}">
     <div class="tarea-card-main">
       <div class="tarea-card-title">
         <h3>${escapeHTML(task.nombre)}</h3>
@@ -36,7 +36,7 @@ export function taskCardTemplate(task) {
       <div class="tarea-state-copy"><strong><span class="estado-dot"></span>${completed ? 'COMPLETADA' : 'PENDIENTE'}</strong>${completion}</div>
       <div class="tarea-card-actions">
         ${completed ? '' : '<button type="button" data-accion="completar" class="tarea-action-complete">Completar</button>'}
-        ${task._canManage ? '<button type="button" data-accion="editar">Editar</button><button type="button" data-accion="eliminar" class="danger tarea-action-delete" aria-label="Eliminar tarea"><span class="tarea-delete-text">Eliminar</span><span class="tarea-delete-short">×</span></button>' : ''}
+        ${task._canManage ? '<button type="button" data-accion="editar">Editar</button><button type="button" data-accion="eliminar" class="danger tarea-action-delete" aria-label="Eliminar tarea"><span class="tarea-delete-text">Eliminar</span></button>' : ''}
       </div>
     </footer>
   </article>`;

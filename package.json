@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.0.1",
-  "description": "Autoservicio 12.0.1 - tarjetas compactas de usuarios y tareas",
+  "version": "12.0.2",
+  "description": "Autoservicio 12.0.2 - corrección de tarjetas de usuarios y tareas",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
