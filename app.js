@@ -1284,56 +1284,56 @@ function renderListadoVencimientos() {
 
         if (vencTabActual === "vencidos") {
             return `
-                <article class="venc-item venc-item-vencido-registro venc-vencido expiry-card expiry-card--expired" data-id="${item.id}" tabindex="0">
-                    <div class="expiry-card__status-row">
-                        <span class="expiry-card__status expiry-card__status--expired">Vencido</span>
-                        <span class="expiry-card__hint">Tocá para editar</span>
-                    </div>
-                    <div class="expiry-card__identity">
-                        <strong>${articulo}</strong>
-                        <span>Código ${codigo}</span>
-                    </div>
-                    <div class="expiry-card__deadline expiry-card__deadline--expired">${estado}</div>
-                    <div class="expiry-card__facts">
-                        <div class="expiry-card__fact">
-                            <small>Fecha de vencimiento</small>
-                            <b>${fecha}</b>
+                <article class="venc-item venc-item-vencido-registro venc-vencido expiry-compact expiry-compact--expired" data-id="${item.id}" tabindex="0">
+                    <header class="expiry-compact__header">
+                        <div class="expiry-compact__identity">
+                            <strong>${articulo}</strong>
+                            <span>Código: ${codigo}</span>
                         </div>
-                        <div class="expiry-card__fact expiry-card__fact--qty">
-                            <small>Cantidad</small>
-                            <b>${cantidad} <em>${cantidad === 1 ? "unidad" : "unidades"}</em></b>
-                        </div>
+                        <span class="expiry-compact__badge expiry-compact__badge--expired">${estado}</span>
+                    </header>
+                    <div class="expiry-compact__meta">
+                        <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${fecha}</b></span>
+                        <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><b>${cantidad} ${cantidad === 1 ? "un." : "un."}</b></span>
                     </div>
+                    <div class="expiry-compact__alert expiry-compact__alert--expired">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                        <span>Producto vencido. No apto para la venta.</span>
+                    </div>
+                    <button type="button" class="expiry-compact__action expiry-compact__action--danger" data-venc-accion="editar">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>Dar de baja
+                    </button>
                 </article>
             `;
         }
 
+        const mensajeEstado = clase === "venc-7"
+            ? (diasHastaVencimiento(item.vencimiento) <= 0 ? "Vence hoy. Revisá su estado." : `${estado}.`)
+            : clase === "venc-15" ? `${estado}.` : "Stock dentro del rango recomendado.";
         return `
-            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""} expiry-card expiry-card--upcoming ${ofertaActiva ? "expiry-card--offer" : "expiry-card--no-offer"}" data-id="${item.id}" tabindex="0">
-                <div class="expiry-card__status-row">
-                    <span class="expiry-card__status ${clase}">${estado}</span>
-                    <span class="expiry-card__offer ${ofertaActiva ? "is-active" : "is-inactive"}">
-                        <span class="expiry-card__offer-dot" aria-hidden="true"></span>
-                        ${ofertaActiva ? "Oferta activa" : "Sin oferta"}
-                    </span>
-                </div>
-                <div class="expiry-card__identity">
-                    <strong>${articulo}</strong>
-                    <span>Código ${codigo}</span>
-                </div>
-                <div class="expiry-card__facts">
-                    <div class="expiry-card__fact">
-                        <small>Fecha de vencimiento</small>
-                        <b>${fecha}</b>
+            <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""} expiry-compact expiry-compact--upcoming" data-id="${item.id}" tabindex="0">
+                <header class="expiry-compact__header">
+                    <div class="expiry-compact__identity">
+                        <strong>${articulo}</strong>
+                        <span>Código: ${codigo}</span>
                     </div>
-                    <div class="expiry-card__fact expiry-card__fact--qty">
-                        <small>Cantidad</small>
-                        <b>${cantidad} <em>${cantidad === 1 ? "unidad" : "unidades"}</em></b>
-                    </div>
+                    <span class="expiry-compact__badge ${clase}">${estado}</span>
+                </header>
+                <div class="expiry-compact__meta">
+                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${fecha}</b></span>
+                    <i aria-hidden="true">•</i>
+                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><b>${cantidad} un.</b></span>
+                    <i aria-hidden="true">•</i>
+                    <span><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg><em class="expiry-compact__offer ${ofertaActiva ? "is-active" : "is-inactive"}">${ofertaActiva ? "Activa" : "Sin oferta"}</em></span>
                 </div>
-                <div class="expiry-card__footer">
-                    <span>${ofertaActiva ? "Producto marcado para oferta" : "Todavía no tiene oferta"}</span>
-                    <button type="button" class="venc-card-action offer ${ofertaActiva ? "active" : ""}" data-venc-accion="oferta">${ofertaActiva ? "Quitar oferta" : "Activar oferta"}</button>
+                <div class="expiry-compact__bottom">
+                    <div class="expiry-compact__alert ${clase}">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                        <span>${mensajeEstado}</span>
+                    </div>
+                    <button type="button" class="expiry-compact__action ${ofertaActiva ? "is-active" : ""}" data-venc-accion="oferta">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg>${ofertaActiva ? "Quitar oferta" : "Activar oferta"}
+                    </button>
                 </div>
             </article>
         `;
