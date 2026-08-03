@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.9.0",
-  "description": "Autoservicio 11.9.0 - normalización visual completa",
+  "version": "11.9.1",
+  "description": "Autoservicio 11.9.1 - lista escrita simple",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
