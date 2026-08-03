@@ -252,6 +252,17 @@ async function entrarPantalla(nombre, opciones = {}) {
 
 window.AutoservicioNavigate = entrarPantalla;
 
+async function abrirDestinoNotificacion() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("modulo") !== "tareas") return;
+    await entrarPantalla("tareas");
+    const fecha = params.get("fecha");
+    if (fecha) window.TareasModule?.seleccionarFecha?.(fecha);
+    if (params.get("vista") === "bano") window.TareasModule?.mostrarBano?.();
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+
 function actualizarVersionConfiguracion() {
     const version = document.getElementById("settingsAppVersion");
     if (version) version.textContent = APP_VERSION;
@@ -1571,3 +1582,5 @@ window.addEventListener("beforeunload", (event) => {
 document.addEventListener("visibilitychange", () => {
     if (!document.hidden) sincronizarEnSegundoPlano();
 });
+
+window.addEventListener("autoservicio:sesion", () => abrirDestinoNotificacion().catch(() => {}));

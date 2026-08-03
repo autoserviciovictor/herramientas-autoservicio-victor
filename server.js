@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "11.5";
+const APP_VERSION = "11.7";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -305,7 +305,7 @@ function verificarPassword(password, guardado) {
 
 let hojaUsuariosAsegurada = false;
 let promesaHojaUsuarios = null;
-const MODULOS_PERMITIDOS = ["inventario", "vencimientos", "anotar", "precios", "horarios"];
+const MODULOS_PERMITIDOS = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
 function normalizarRol(valor) { const rol = normalizarTexto(valor).toLowerCase(); return rol === "repositor" ? "personal" : (["administrador","administracion","supervisor","personal"].includes(rol) ? rol : "personal"); }
 function permisosPorDefecto() { return Object.fromEntries(MODULOS_PERMITIDOS.map(m => [m, true])); }
 function normalizarPermisos(valor, rol = "personal") {
@@ -1167,8 +1167,21 @@ app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
     const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
     if(req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
     tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
-    tarea.asignaciones[fecha][turno]={...(tarea.asignaciones[fecha][turno]||{}),responsables:[...new Set((req.body?.responsables||[]).map(normalizarTexto).filter(Boolean))],estado:normalizarTexto(req.body?.estado)||"pendiente",completadaPor:"",completadaHora:""};
+    const asignacionAnterior=tarea.asignaciones[fecha][turno]||{};
+    const responsablesAnteriores=new Set((asignacionAnterior.responsables||[]).map(normalizarUsuario).filter(Boolean));
+    const responsables=[...new Set((req.body?.responsables||[]).map(normalizarTexto).filter(Boolean))];
+    tarea.asignaciones[fecha][turno]={...asignacionAnterior,responsables,estado:normalizarTexto(req.body?.estado)||"pendiente",completadaPor:"",completadaHora:""};
     await guardarTareasServidor(tareas,req.usuario);
+    const usuarios=await obtenerUsuarios();
+    const usuarioPorClave=new Map(usuarios.map(u=>[normalizarUsuario(u.usuario),u]));
+    usuarios.forEach(u=>{ if(u.nombre) usuarioPorClave.set(normalizarUsuario(u.nombre),u); });
+    const responsablesNuevos=responsables
+      .map(r=>usuarioPorClave.get(normalizarUsuario(r)))
+      .filter(Boolean)
+      .filter(u=>!responsablesAnteriores.has(normalizarUsuario(u.usuario)))
+      .map(u=>u.usuario);
+    const sectorInfo=(await obtenerSectores()).find(s=>[s.id,s.nombre].includes(tarea.sector));
+    if(responsablesNuevos.length) encolarNotificacionesTareas({tarea,fecha,turno,responsables:responsablesNuevos,sectorNombre:sectorInfo?.nombre||tarea.sector});
     res.json({ok:true,asignacion:tarea.asignaciones[fecha][turno]});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar la asignación"});}
 });
@@ -1827,6 +1840,191 @@ async function obtenerSuscripcionesVencimientosPermitidas() {
   });
 }
 
+async function obtenerSuscripcionesUsuarioModulo(usuarioClave, modulo) {
+  const clave = normalizarUsuario(usuarioClave);
+  if (!clave) return [];
+  const [suscripciones, usuarios] = await Promise.all([obtenerSuscripcionesPush(), obtenerUsuarios()]);
+  const usuario = usuarios.find(u => u.usuario === clave);
+  if (!usuario || !usuario.activo || usuario.permisos?.[modulo] !== true) return [];
+  return suscripciones.filter(s => normalizarUsuario(s.usuario) === clave && s.activo);
+}
+
+async function enviarPushASuscripciones(suscripciones, payload) {
+  if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false, destinatarios: 0 };
+  let enviados = 0;
+  await Promise.all((suscripciones || []).map(async s => {
+    try {
+      await webpush.sendNotification(
+        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        JSON.stringify(payload),
+        { TTL: 86400 }
+      );
+      enviados += 1;
+    } catch (error) {
+      if ([404, 410].includes(error?.statusCode)) await desactivarSuscripcionPush(s.filaGoogle);
+      else console.error("Error enviando notificación push:", error?.statusCode || error?.message || error);
+    }
+  }));
+  return { enviados, configurado: true, destinatarios: (suscripciones || []).length };
+}
+
+const colaNotificacionesTareas = new Map();
+let temporizadorNotificacionesTareas = null;
+
+function claveNotificacionTarea(tarea, fecha, turno, usuario) {
+  return ["tarea", normalizarTexto(tarea.id), normalizarTexto(fecha), normalizarTexto(turno), normalizarUsuario(usuario)].join("|");
+}
+
+function nombreTurnoTarea(turno) {
+  return turno === "manana" ? "mañana" : "tarde";
+}
+
+function fechaTareaLegible(fecha) {
+  const hoy = fechaArgentina();
+  if (fecha === hoy) return "hoy";
+  const [y,m,d] = normalizarTexto(fecha).split("-");
+  return y && m && d ? `${d}/${m}/${y}` : fecha;
+}
+
+async function vaciarColaNotificacionesTareas() {
+  temporizadorNotificacionesTareas = null;
+  const grupos = [...colaNotificacionesTareas.values()];
+  colaNotificacionesTareas.clear();
+  if (!grupos.length || !PUSH_CONFIGURED) return;
+  const clavesEnviadas = await clavesNotificacionesEnviadas();
+  for (const grupo of grupos) {
+    const pendientes = grupo.items.filter(item => !clavesEnviadas.has(item.clave));
+    if (!pendientes.length) continue;
+    const suscripciones = await obtenerSuscripcionesUsuarioModulo(grupo.usuario, "tareas");
+    if (!suscripciones.length) continue;
+    const cantidad = pendientes.length;
+    const sector = grupo.sectorNombre || grupo.sector || "tu sector";
+    const fechaTexto = fechaTareaLegible(grupo.fecha);
+    const turnoTexto = nombreTurnoTarea(grupo.turno);
+    const payload = {
+      title: cantidad === 1 ? "Nueva tarea asignada" : `${cantidad} tareas nuevas`,
+      body: cantidad === 1
+        ? `${pendientes[0].nombre} · ${sector} · ${fechaTexto} por la ${turnoTexto}`
+        : `Tenés ${cantidad} tareas nuevas en ${sector} para ${fechaTexto} por la ${turnoTexto}`,
+      tag: `tareas-${grupo.usuario}-${grupo.fecha}-${grupo.turno}-${normalizarTexto(grupo.sector)}`,
+      data: { url: `./?modulo=tareas&fecha=${encodeURIComponent(grupo.fecha)}&sector=${encodeURIComponent(grupo.sector || "")}` }
+    };
+    const resultado = await enviarPushASuscripciones(suscripciones, payload);
+    if (resultado.enviados > 0) {
+      for (const item of pendientes) {
+        await registrarNotificacionEnviada(item.clave, "tarea-asignada", {
+          id: item.id,
+          codigo: grupo.usuario,
+          vencimiento: grupo.fecha
+        }, payload.body);
+        clavesEnviadas.add(item.clave);
+      }
+    }
+  }
+}
+
+function encolarNotificacionesTareas({ tarea, fecha, turno, responsables, sectorNombre }) {
+  for (const responsable of responsables || []) {
+    const usuario = normalizarUsuario(responsable);
+    if (!usuario) continue;
+    const claveGrupo = [usuario, fecha, turno, normalizarTexto(tarea.sector)].join("|");
+    const grupo = colaNotificacionesTareas.get(claveGrupo) || {
+      usuario, fecha, turno, sector: tarea.sector, sectorNombre, items: []
+    };
+    const clave = claveNotificacionTarea(tarea, fecha, turno, usuario);
+    if (!grupo.items.some(item => item.clave === clave)) grupo.items.push({ clave, id: tarea.id, nombre: tarea.nombre });
+    colaNotificacionesTareas.set(claveGrupo, grupo);
+  }
+  clearTimeout(temporizadorNotificacionesTareas);
+  temporizadorNotificacionesTareas = setTimeout(() => {
+    vaciarColaNotificacionesTareas().catch(error => console.error("Error enviando notificaciones de tareas:", error));
+  }, 1800);
+}
+
+
+function diasEntreFechasIso(fechaA, fechaB) {
+  const parsear = valor => {
+    const m = normalizarTexto(valor).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : NaN;
+  };
+  const a = parsear(fechaA), b = parsear(fechaB);
+  return Number.isFinite(a) && Number.isFinite(b) ? Math.floor((b - a) / 86400000) : null;
+}
+
+function responsableBanoParaFecha(config, fechaIso) {
+  const participantes = Array.isArray(config?.participantes)
+    ? config.participantes.map(normalizarTexto).filter(Boolean)
+    : [];
+  const fechaAncla = normalizarTexto(config?.fechaAncla);
+  if (!participantes.length || !fechaAncla) return "";
+  const dias = diasEntreFechasIso(fechaAncla, fechaIso);
+  if (dias === null || ((dias % 2) + 2) % 2 !== 0) return "";
+  const turno = Math.floor(dias / 2);
+  const indice = ((turno % participantes.length) + participantes.length) % participantes.length;
+  return participantes[indice] || "";
+}
+
+async function resolverUsuarioResponsableBano(valor) {
+  const clave = normalizarUsuario(valor);
+  if (!clave) return null;
+  const usuarios = await obtenerUsuarios();
+  return usuarios.find(u => u.usuario === clave)
+    || usuarios.find(u => normalizarUsuario(u.nombre) === clave)
+    || null;
+}
+
+function limpiezaBanoConfirmada(config, fechaIso) {
+  return (Array.isArray(config?.historial) ? config.historial : [])
+    .some(item => normalizarTexto(item?.fecha) === fechaIso);
+}
+
+function claveNotificacionBano(fechaIso, tipo, usuario) {
+  return ["bano", fechaIso, tipo, normalizarUsuario(usuario)].join("|");
+}
+
+async function procesarNotificacionBano(tipo) {
+  if (!PUSH_CONFIGURED || !["08", "16"].includes(tipo)) return { enviados: 0 };
+  const fecha = fechaArgentina();
+  const config = await leerBanoServidor();
+  const participante = responsableBanoParaFecha(config, fecha);
+  if (!participante) return { enviados: 0, descanso: true };
+  if (tipo === "16" && limpiezaBanoConfirmada(config, fecha)) return { enviados: 0, confirmada: true };
+
+  const usuario = await resolverUsuarioResponsableBano(participante);
+  if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true) return { enviados: 0, sinDestinatario: true };
+
+  const clave = claveNotificacionBano(fecha, tipo, usuario.usuario);
+  const enviadas = await clavesNotificacionesEnviadas();
+  if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
+
+  const suscripciones = await obtenerSuscripcionesUsuarioModulo(usuario.usuario, "tareas");
+  if (!suscripciones.length) return { enviados: 0, sinSuscripciones: true };
+
+  const payload = tipo === "08"
+    ? {
+        title: "Hoy te corresponde limpiar el baño",
+        body: "Tu turno es hoy. Confirmá la limpieza cuando termines.",
+        tag: `bano-${fecha}-08-${usuario.usuario}`,
+        data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` }
+      }
+    : {
+        title: "Limpieza del baño pendiente",
+        body: "Todavía no registraste la limpieza de hoy.",
+        tag: `bano-${fecha}-16-${usuario.usuario}`,
+        data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` }
+      };
+
+  const resultado = await enviarPushASuscripciones(suscripciones, payload);
+  if (resultado.enviados > 0) {
+    await registrarNotificacionEnviada(clave, `bano-${tipo}`, {
+      id: `bano-${fecha}`,
+      codigo: usuario.usuario,
+      vencimiento: fecha
+    }, payload.body);
+  }
+  return resultado;
+}
+
 async function enviarPushVencimientos(payload) {
   if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false, destinatarios: 0 };
   const suscripciones = await obtenerSuscripcionesVencimientosPermitidas();
@@ -2342,7 +2540,7 @@ app.delete("/reposicion", async(req,res)=>{
 });
 
 
-let ultimaEjecucionDiariaNotificaciones = "";
+const ejecucionesDiariasNotificaciones = new Set();
 function horaMinutoArgentina(fecha = new Date()) {
   const partes = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(fecha);
   const valor = tipo => Number(partes.find(parte => parte.type === tipo)?.value || 0);
@@ -2351,11 +2549,27 @@ function horaMinutoArgentina(fecha = new Date()) {
 async function ejecutarNotificacionesDiariasSiCorresponde() {
   const hoy = fechaArgentina();
   const { hora } = horaMinutoArgentina();
-  if (hora !== 8 || ultimaEjecucionDiariaNotificaciones === hoy) return;
-  ultimaEjecucionDiariaNotificaciones = hoy;
-  await procesarAlertasVencimientos();
+  const ejecutarUnaVez = async (clave, tarea) => {
+    const id = `${hoy}|${clave}`;
+    if (ejecucionesDiariasNotificaciones.has(id)) return;
+    ejecucionesDiariasNotificaciones.add(id);
+    try { await tarea(); }
+    catch (error) { ejecucionesDiariasNotificaciones.delete(id); throw error; }
+  };
+
+  if (hora === 8) {
+    await ejecutarUnaVez("vencimientos-08", procesarAlertasVencimientos);
+    await ejecutarUnaVez("bano-08", () => procesarNotificacionBano("08"));
+  }
+  if (hora === 16) {
+    await ejecutarUnaVez("bano-16", () => procesarNotificacionBano("16"));
+  }
+
+  for (const clave of [...ejecucionesDiariasNotificaciones]) {
+    if (!clave.startsWith(`${hoy}|`)) ejecucionesDiariasNotificaciones.delete(clave);
+  }
 }
-// Revisión frecuente, pero los avisos diarios solo se procesan a las 08:00 de Argentina.
+// Revisión frecuente; los avisos se envían a las 08:00 y 16:00 de Argentina.
 setInterval(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error en horario diario de notificaciones:", error)), 60 * 1000);
 setTimeout(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error inicializando horario diario de notificaciones:", error)), 5000);
 

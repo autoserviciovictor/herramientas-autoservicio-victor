@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.5",
-  "description": "Autoservicio 11.5 - agrupación por rangos de vencimiento",
+  "version": "11.7",
+  "description": "Autoservicio 11.7 - notificaciones de limpieza del baño",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

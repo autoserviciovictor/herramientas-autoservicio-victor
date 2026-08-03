@@ -446,4 +446,4 @@ async function activar(){
   cambiarVista(vistaActual);
 }
 function desactivar(){activo=false;cerrar();}
-bind();window.TareasModule={activar,desactivar};
+bind();window.TareasModule={activar,desactivar,mostrarBano:()=>cambiarVista("bano")};

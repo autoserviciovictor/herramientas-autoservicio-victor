@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=11500";
+import { API_BASE_URL } from "./config.js?v=11700";
 
 const $ = id => document.getElementById(id);
 const ESTADO_KEY = "autoservicio_notificaciones_preferencia_v1";
