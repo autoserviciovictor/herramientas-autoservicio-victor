@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "11.4.2";
+const APP_VERSION = "11.5";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1744,6 +1744,7 @@ async function obtenerVencimientos() {
 
 let hojasNotificacionesAseguradas = false;
 let procesandoNotificaciones = false;
+const clavesNotificacionEnProceso = new Set();
 
 async function asegurarHojasNotificaciones() {
   if (hojasNotificacionesAseguradas) return;
@@ -1793,8 +1794,18 @@ async function guardarSuscripcionPush(req) {
 
 async function clavesNotificacionesEnviadas() {
   await asegurarHojasNotificaciones();
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:A` });
-  return new Set((r.data.values || []).slice(1).map(f => normalizarTexto(f[0])).filter(Boolean));
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G` });
+  const claves = new Set();
+  for (const fila of (r.data.values || []).slice(1)) {
+    const guardada = normalizarTexto(fila[0]);
+    if (guardada) claves.add(guardada);
+    const fechaEnvio = normalizarTexto(fila[1]).slice(0, 10);
+    const tipo = normalizarTexto(fila[2]);
+    const codigo = normalizarCodigo(fila[4]);
+    const vencimiento = normalizarTexto(fila[5]);
+    if (codigo && vencimiento && tipo && fechaEnvio) claves.add([codigo, vencimiento, tipo, fechaEnvio].join("|"));
+  }
+  return claves;
 }
 
 async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
@@ -1807,9 +1818,18 @@ async function desactivarSuscripcionPush(filaGoogle) {
   await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!F${filaGoogle}:F${filaGoogle}`, valueInputOption: "RAW", requestBody: { values: [["No"]] } }).catch(() => {});
 }
 
-async function enviarPushATodos(payload) {
-  if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false };
-  const suscripciones = await obtenerSuscripcionesPush();
+async function obtenerSuscripcionesVencimientosPermitidas() {
+  const [suscripciones, usuarios] = await Promise.all([obtenerSuscripcionesPush(), obtenerUsuarios()]);
+  const porUsuario = new Map(usuarios.map(u => [u.usuario, u]));
+  return suscripciones.filter(s => {
+    const usuario = porUsuario.get(normalizarUsuario(s.usuario));
+    return Boolean(usuario && usuario.activo && usuario.permisos?.vencimientos === true);
+  });
+}
+
+async function enviarPushVencimientos(payload) {
+  if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false, destinatarios: 0 };
+  const suscripciones = await obtenerSuscripcionesVencimientosPermitidas();
   let enviados = 0;
   await Promise.all(suscripciones.map(async s => {
     try {
@@ -1820,7 +1840,11 @@ async function enviarPushATodos(payload) {
       else console.error("Error enviando notificación push:", error?.statusCode || error?.message || error);
     }
   }));
-  return { enviados, configurado: true };
+  return { enviados, configurado: true, destinatarios: suscripciones.length };
+}
+
+function claveUnicaAlertaVencimiento(registro, tipo) {
+  return [normalizarCodigo(registro.codigo), normalizarTexto(registro.vencimiento), normalizarTexto(tipo), fechaIsoHoy()].join("|");
 }
 
 function payloadAlertaVencimiento(registro, dias, tipo) {
@@ -1841,11 +1865,22 @@ function payloadAlertaVencimiento(registro, dias, tipo) {
   return { title: textoDias, body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
 }
 
-async function enviarAlertaRegistro(registro, dias, tipo, clave) {
-  const payload = payloadAlertaVencimiento(registro, dias, tipo);
-  const resultado = await enviarPushATodos(payload);
-  if (resultado.enviados > 0) await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
-  return resultado;
+async function enviarAlertaRegistro(registro, dias, tipo, clave = claveUnicaAlertaVencimiento(registro, tipo), clavesConocidas = null) {
+  if (clavesNotificacionEnProceso.has(clave)) return { enviados: 0, duplicada: true };
+  clavesNotificacionEnProceso.add(clave);
+  try {
+    const enviadas = clavesConocidas || await clavesNotificacionesEnviadas();
+    if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
+    const payload = payloadAlertaVencimiento(registro, dias, tipo);
+    const resultado = await enviarPushVencimientos(payload);
+    if (resultado.enviados > 0) {
+      await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
+      enviadas.add(clave);
+    }
+    return resultado;
+  } finally {
+    clavesNotificacionEnProceso.delete(clave);
+  }
 }
 
 let limpiezaVencimientosEnCurso = false;
@@ -1923,10 +1958,9 @@ async function procesarAlertasVencimientos() {
       else if (dias < 0) tipos.push("vencido");
       if (dias === 3 && normalizarOfertaVencimiento(registro.oferta) === "Sí") tipos.push("oferta-3");
       for (const tipo of tipos) {
-        const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
+        const clave = claveUnicaAlertaVencimiento(registro, tipo);
         if (enviadas.has(clave)) continue;
-        await enviarAlertaRegistro(registro, dias, tipo, clave);
-        enviadas.add(clave);
+        await enviarAlertaRegistro(registro, dias, tipo, clave, enviadas);
       }
     }
   } catch (error) {
@@ -1938,7 +1972,7 @@ app.get("/notificaciones/public-key", (req, res) => {
   res.json({ ok: true, configurado: PUSH_CONFIGURED, publicKey: VAPID_PUBLIC_KEY || "" });
 });
 
-app.post("/notificaciones/suscribir", async (req, res) => {
+app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
   try {
     if (!PUSH_CONFIGURED) return res.status(503).json({ ok: false, mensaje: "Las notificaciones todavía no están configuradas en Render" });
     await guardarSuscripcionPush(req);
@@ -1946,7 +1980,7 @@ app.post("/notificaciones/suscribir", async (req, res) => {
   } catch (error) { res.status(400).json({ ok: false, mensaje: error.message || "No se pudo guardar la suscripción" }); }
 });
 
-app.post("/notificaciones/procesar", async (req, res) => {
+app.post("/notificaciones/procesar", requerirSesion, async (req, res) => {
   await procesarAlertasVencimientos();
   res.json({ ok: true });
 });
@@ -2013,7 +2047,7 @@ app.post("/vencimientos", async (req, res) => {
     const diasRestantes = diasDesdeHoyArgentina(registro.vencimiento);
     if (PUSH_CONFIGURED) {
       const tipo = "nuevo";
-      const clave = `${registro.id}|${registro.vencimiento}|${tipo}`;
+      const clave = claveUnicaAlertaVencimiento(registro, tipo);
       setImmediate(async () => {
         try {
           const enviadas = await clavesNotificacionesEnviadas();
