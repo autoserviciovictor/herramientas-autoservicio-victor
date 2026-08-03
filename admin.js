@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1202";
+import { API_BASE_URL } from "./config.js?v=1203";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
@@ -213,7 +213,8 @@ function renderUsuarios() {
     const textoModulos = `${cantidadModulos} ${cantidadModulos === 1 ? "módulo disponible" : "módulos disponibles"}`;
     const rol = u.rol === "administrador" ? "Administrador" : (u.rol === "administracion" ? "Administración" : (u.rol === "supervisor" ? "Supervisor" : "Personal"));
     return `
-    <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
+    <article class="admin-user-card admin-user-card-v1203 ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
+      <span class="user-status admin-user-status-corner ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span>
       <div class="admin-user-main">
         <div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div>
         <div class="admin-user-copy">
@@ -223,12 +224,9 @@ function renderUsuarios() {
           <div class="admin-user-module-count"><svg class="app-icon" aria-hidden="true"><use href="#icon-tasks"></use></svg><span>${textoModulos}</span></div>
         </div>
       </div>
-      <div class="admin-user-actions">
-        <span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span>
-        <div class="admin-user-card-buttons">
-          <button type="button" class="btn-editar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button>
-          <button type="button" class="btn-eliminar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg><span>Eliminar</span></button>
-        </div>
+      <div class="admin-user-card-buttons">
+        <button type="button" class="btn-editar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button>
+        <button type="button" class="btn-eliminar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg><span>Eliminar</span></button>
       </div>
     </article>`;
   }).join("");

@@ -7480,3 +7480,84 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1202 .tarea-card-actions .danger{
   body.en-tareas #tareasVistaTareas .tarea-card-v1202 .tarea-card-actions{gap:5px!important}
   body.en-tareas #tareasVistaTareas .tarea-card-v1202 .tarea-card-actions button{font-size:10.5px!important;padding-inline:3px!important}
 }
+
+/* =========================================================
+   V12.0.3 — Tarjetas de usuarios y tareas compactas
+   ========================================================= */
+.admin-user-card.admin-user-card-v1203{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:10px!important;
+  padding:13px 14px 12px!important;
+  min-height:0!important;
+  align-items:start!important;
+}
+.admin-user-card-v1203 .admin-user-main{padding-right:76px;align-items:center;gap:10px}
+.admin-user-card-v1203 .admin-avatar{width:44px;height:44px;border-radius:13px}
+.admin-user-card-v1203 .admin-user-copy{gap:1px!important}
+.admin-user-card-v1203 .admin-user-copy>strong{font-size:15px;line-height:1.15}
+.admin-user-card-v1203 .admin-user-copy>span{font-size:11px;line-height:1.25}
+.admin-user-card-v1203 .admin-user-module-count{margin-top:5px!important;padding:4px 7px!important;font-size:10px!important;width:max-content;max-width:100%}
+.admin-user-card-v1203 .admin-user-status-corner{
+  position:absolute;top:12px;right:12px;z-index:1;
+  padding:5px 9px;font-size:10px;line-height:1
+}
+.admin-user-card-v1203 .admin-user-card-buttons{
+  display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important;width:100%;margin:0!important
+}
+.admin-user-card-v1203 .admin-user-card-buttons button{min-height:36px!important;padding:7px 10px!important;font-size:11px!important;border-radius:10px!important}
+@media(max-width:560px){
+  .admin-user-card.admin-user-card-v1203{padding:12px!important;gap:9px!important}
+  .admin-user-card-v1203 .admin-user-main{padding-right:72px}
+  .admin-user-card-v1203 .admin-user-status-corner{top:11px;right:11px}
+}
+
+body.en-tareas #tareasVistaTareas .tarea-card.tarea-card-v1203{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:10px!important;
+  padding:13px 14px!important;
+  border-radius:16px!important;
+  min-height:0!important;
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-head{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203 h3{
+  margin:1px 0 0!important;font-size:14px!important;line-height:1.25!important;text-transform:none!important
+}
+body.en-tareas #tareasVistaTareas .tarea-status-corner{
+  display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:145px;text-align:right
+}
+body.en-tareas #tareasVistaTareas .tarea-status-corner strong{
+  display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;
+  font-size:10px;line-height:1;font-weight:900;white-space:nowrap;background:#fff4d8;color:#bd7800
+}
+body.en-tareas #tareasVistaTareas .tarea-status-corner.estado-completada strong{background:#e6f7ec;color:#168042}
+body.en-tareas #tareasVistaTareas .tarea-completion-copy{font-size:9px;color:#777;line-height:1.2}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203 .tarea-assignment{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203 .tarea-persona{font-size:10.5px!important;padding:3px 7px!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203 .tarea-duration-pill{padding:5px 8px;font-size:10.5px;flex:none}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:7px;padding-top:9px;border-top:1px solid #eee9e5
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions button{
+  min-height:35px!important;padding:7px 12px!important;border-radius:10px!important;font-size:11px!important;font-weight:850!important
+}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions.is-employee .tarea-action-complete{min-width:112px}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions.is-manager button{min-width:84px}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-delete{background:#fff5f5!important;color:#b51f28!important;border-color:#efc9cc!important}
+body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-complete{background:#fff!important}
+@media(max-width:520px){
+  body.en-tareas #tareasVistaTareas .tarea-card.tarea-card-v1203{padding:12px!important;gap:9px!important}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1203-head{gap:7px}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1203 h3{font-size:13px!important}
+  body.en-tareas #tareasVistaTareas .tarea-status-corner strong{font-size:9.5px;padding:5px 7px}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1203-meta{align-items:flex-start}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions.is-manager{display:grid;grid-template-columns:1fr 1fr 1fr}
+  body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions.is-manager button{min-width:0;width:100%;padding:7px 5px!important}
+}

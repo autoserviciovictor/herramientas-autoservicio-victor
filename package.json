@@ -1,6 +1,6 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.0.2",
+  "version": "12.0.3",
   "description": "Autoservicio 12.0.2 - corrección de tarjetas de usuarios y tareas",
   "main": "server.js",
   "scripts": {
