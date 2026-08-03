@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "11.9.2",
-  "description": "Autoservicio 11.9.2 - corrección lista escrita",
+  "version": "12.0.0",
+  "description": "Autoservicio 12.0 - tarjetas y editor de usuarios",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

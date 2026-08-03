@@ -1,6 +1,6 @@
 {
-  "version": "11.9.2",
-  "label": "11.9.2",
-  "build": 110902,
-  "name": "v11.9.2 - Corrección lista escrita"
+  "version": "12.0.0",
+  "label": "12.0",
+  "build": 120000,
+  "name": "v12.0 - Administración y tarjetas de usuarios"
 }

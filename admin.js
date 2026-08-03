@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1190";
+import { API_BASE_URL } from "./config.js?v=1200";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
@@ -206,12 +206,34 @@ function renderUsuarios() {
   const cont = $("adminUsuariosLista");
   if (!cont) return;
   if (!usuarios.length) { cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>'; return; }
-  cont.innerHTML = usuarios.map(u => `
+  cont.innerHTML = usuarios.map(u => {
+    const cantidadModulos = u.rol === "administrador"
+      ? MODULOS_PERMISO.length
+      : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).length;
+    const textoModulos = `${cantidadModulos} ${cantidadModulos === 1 ? "módulo disponible" : "módulos disponibles"}`;
+    const rol = u.rol === "administrador" ? "Administrador" : (u.rol === "administracion" ? "Administración" : (u.rol === "supervisor" ? "Supervisor" : "Personal"));
+    return `
     <article class="admin-user-card ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <div class="admin-user-main"><div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div><div><strong>${u.nombre}</strong><span>@${u.usuario} · ${u.rol === "administrador" ? "Administrador" : (u.rol === "administracion" ? "Administración" : (u.rol === "supervisor" ? "Supervisor" : "Personal"))} · ${sectorPorId(u.sector)?.nombre || "Sin sector"}</span><div class="admin-user-permission-chips">${(u.rol === "administrador" ? ["Acceso completo"] : MODULOS_PERMISO.filter(m => permisosCompatibles(u.permisos)[m]).map(m => NOMBRES_MODULO[m])).map(x => `<em>${x}</em>`).join("") || "<em>Sin módulos</em>"}</div></div></div>
-      <div class="admin-user-actions"><span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-usuario">Editar</button></div>
-    </article>`).join("");
+      <div class="admin-user-main">
+        <div class="admin-avatar">${(u.nombre || u.usuario).slice(0,1).toUpperCase()}</div>
+        <div class="admin-user-copy">
+          <strong>${escaparHtml(u.nombre || u.usuario)}</strong>
+          <span>@${escaparHtml(u.usuario)} · ${rol}</span>
+          <span>${escaparHtml(sectorPorId(u.sector)?.nombre || "Sin sector")}</span>
+          <div class="admin-user-module-count"><svg class="app-icon" aria-hidden="true"><use href="#icon-tasks"></use></svg><span>${textoModulos}</span></div>
+        </div>
+      </div>
+      <div class="admin-user-actions">
+        <span class="user-status ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span>
+        <div class="admin-user-card-buttons">
+          <button type="button" class="btn-editar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button>
+          <button type="button" class="btn-eliminar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg><span>Eliminar</span></button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
   cont.querySelectorAll(".btn-editar-usuario").forEach(btn => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+  cont.querySelectorAll(".btn-eliminar-usuario").forEach(btn => btn.addEventListener("click", () => eliminarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
 }
 
 async function eliminarUsuario(clave) {
@@ -236,7 +258,6 @@ async function abrirNuevoUsuario() {
   aplicarPermisosModal(null, "personal");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
-  $("btnAdminEliminarUsuario")?.classList.add("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
   usuarioModalInicial = estadoUsuarioModal();
@@ -257,7 +278,6 @@ function abrirEditarUsuario(clave) {
   aplicarPermisosModal(u.permisos, rol);
   $("adminUsuarioActivo").checked = u.activo;
   $("adminUsuarioActivoFila").classList.remove("oculto");
-  $("btnAdminEliminarUsuario")?.classList.remove("oculto");
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
   usuarioModalInicial = estadoUsuarioModal();
