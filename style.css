@@ -7575,7 +7575,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .assign-task-option input[type=checkbox]{position:absolute;opacity:0}
 @media(max-width:600px){.tareas-user-group{padding:10px;border-radius:15px}.tareas-user-avatar{width:34px;height:34px}.tareas-user-group-head h3{font-size:14px}}
 
-/* v12.2.2 — selección múltiple y lista completa de usuarios */
+/* v12.2.3 — selección múltiple y lista completa de usuarios */
 .asignar-usuarios{
   max-height:none!important;
   overflow:visible!important;
@@ -7588,7 +7588,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .assign-task-option:has(input:checked){border-color:#c5232c!important;background:#fff7f7!important}
 .assign-task-option input:checked~.assign-task-mark{background:#c5232c!important;border-color:#c5232c!important;color:#fff!important}
 
-/* v12.2.2 — tareas agrupadas por usuario */
+/* v12.2.3 — tareas agrupadas por usuario */
 body.en-tareas #tareasResumen{display:none!important}
 body.en-tareas .tareas-user-list{display:grid;gap:12px}
 body.en-tareas .tarea-user-card{background:#fff;border:1px solid #e7e2dc;border-radius:18px;box-shadow:0 7px 22px rgba(42,32,24,.055);overflow:hidden}
@@ -7627,4 +7627,31 @@ body.en-tareas .tarea-row-actions.is-employee .task-action-complete{min-width:11
  body.en-tareas .tarea-row-actions.is-employee{justify-content:flex-end}
  body.en-tareas .task-action{width:100%;min-width:0;padding:7px 5px;font-size:10.5px}
  body.en-tareas .tarea-row-actions.is-employee .task-action-complete{width:auto;min-width:118px;padding-inline:14px}
+}
+
+/* v12.2.3 — tareas por usuario: checks, edición única y modal inmediato */
+body.en-tareas #tareasVistaTareas .tarea-user-card{overflow:hidden}
+body.en-tareas #tareasVistaTareas .tarea-user-items{display:grid}
+body.en-tareas #tareasVistaTareas .tarea-check-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid #eee9e4;cursor:pointer;background:#fff}
+body.en-tareas #tareasVistaTareas .tarea-check-row:last-child{border-bottom:0}
+body.en-tareas #tareasVistaTareas .tarea-complete-check{position:absolute;opacity:0;pointer-events:none}
+body.en-tareas #tareasVistaTareas .tarea-check-visual{width:28px;height:28px;border:2px solid #d8d1cb;border-radius:9px;display:grid;place-items:center;color:transparent;background:#fff;transition:.18s ease;flex:none}
+body.en-tareas #tareasVistaTareas .tarea-check-visual .app-icon{width:17px;height:17px;stroke-width:2.4}
+body.en-tareas #tareasVistaTareas .tarea-complete-check:checked+.tarea-check-visual{background:#1d8f50;border-color:#1d8f50;color:#fff}
+body.en-tareas #tareasVistaTareas .tarea-check-row:not(.is-completed):hover .tarea-check-visual{border-color:#c92b35}
+body.en-tareas #tareasVistaTareas .tarea-check-row.is-completed{background:#fbfdfb;cursor:default}
+body.en-tareas #tareasVistaTareas .tarea-check-row.is-completed .tarea-item-copy strong{text-decoration:line-through;color:#6d766f}
+body.en-tareas #tareasVistaTareas .tarea-check-row .tarea-item-copy{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+body.en-tareas #tareasVistaTareas .tarea-check-row .tarea-item-copy strong{font-size:14px;line-height:1.3;color:#26211e;min-width:0}
+body.en-tareas #tareasVistaTareas .tarea-check-row .tarea-duration-pill{flex:none;margin:0}
+body.en-tareas #tareasVistaTareas .tarea-user-footer{padding:11px 15px 13px;border-top:1px solid #eee9e4;background:#fff;display:flex;justify-content:flex-end}
+body.en-tareas #tareasVistaTareas .tarea-user-edit{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 18px;border:1px solid #ded7d1;border-radius:12px;background:#fff;color:#2c2724;font-weight:900;font-size:13px;box-shadow:none}
+body.en-tareas #tareasVistaTareas .tarea-user-edit .app-icon{width:17px;height:17px}
+body.en-tareas #tareasVistaTareas .tarea-user-edit:hover{background:#faf7f5;border-color:#c92b35;color:#b7222c}
+@media(max-width:700px){
+ body.en-tareas #tareasVistaTareas .tarea-check-row{padding:12px 13px;gap:10px}
+ body.en-tareas #tareasVistaTareas .tarea-check-row .tarea-item-copy{align-items:flex-start}
+ body.en-tareas #tareasVistaTareas .tarea-check-row .tarea-item-copy strong{font-size:13.5px}
+ body.en-tareas #tareasVistaTareas .tarea-user-footer{padding:10px 13px 12px}
+ body.en-tareas #tareasVistaTareas .tarea-user-edit{width:100%}
 }

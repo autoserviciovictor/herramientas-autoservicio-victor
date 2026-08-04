@@ -1204,12 +1204,21 @@ app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
 app.post("/tareas/asignaciones-lote", requerirSesion, async (req,res)=>{
   try {
     if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
-    const ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(normalizarTexto).filter(Boolean))],fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno),responsable=normalizarTexto(req.body?.responsable);
-    if(!ids.length||!fecha||!["manana","tarde"].includes(turno)||!responsable) return res.status(400).json({ok:false,mensaje:"Asignación incompleta"});
+    const ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(normalizarTexto).filter(Boolean))],fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno),responsable=normalizarTexto(req.body?.responsable),reemplazar=Boolean(req.body?.reemplazar);
+    if((!ids.length&&!reemplazar)||!fecha||!["manana","tarde"].includes(turno)||!responsable) return res.status(400).json({ok:false,mensaje:"Asignación incompleta"});
     const tareas=await obtenerTareasServidor(), sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
     const seleccionadas=tareas.filter(t=>ids.includes(t.id));
     if(seleccionadas.length!==ids.length) return res.status(404).json({ok:false,mensaje:"Una o más tareas no existen"});
     if(seleccionadas.some(t=>req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(t.sector)))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para una de las tareas"});
+    if(reemplazar){
+      for(const tarea of tareas){
+        const asig=tarea.asignaciones?.[fecha]?.[turno];
+        if(!asig) continue;
+        const restantes=(asig.responsables||[]).map(normalizarTexto).filter(r=>r&&normalizarUsuario(r)!==normalizarUsuario(responsable));
+        if(restantes.length) asig.responsables=[...new Set(restantes)];
+        else { delete tarea.asignaciones[fecha][turno]; if(!Object.keys(tarea.asignaciones[fecha]).length) delete tarea.asignaciones[fecha]; }
+      }
+    }
     for(const tarea of seleccionadas){
       tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
       const anterior=tarea.asignaciones[fecha][turno]||{};

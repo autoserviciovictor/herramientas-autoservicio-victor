@@ -22,28 +22,24 @@ export function responsibleBadges(value) {
 function taskRowTemplate(task) {
   const completed = task.estado === 'completada';
   const duration = formatDuration(task.duracionMin);
-  const actions = task._canManage
-    ? `${completed ? '' : `<button type="button" data-accion="editar" class="task-action task-action-edit">${EDIT_ICON}<span>Editar</span></button><button type="button" data-accion="eliminar" class="task-action task-action-delete">${DELETE_ICON}<span>Eliminar</span></button><button type="button" data-accion="completar" class="task-action task-action-complete">${CHECK_ICON}<span>Completar</span></button>`}`
-    : `${completed ? '' : `<button type="button" data-accion="completar" class="task-action task-action-complete">${CHECK_ICON}<span>Completar</span></button>`}`;
-  return `<div class="tarea-item-row ${completed ? 'is-completed' : ''}" data-id="${escapeHTML(task.id)}" data-turno="${escapeHTML(task._turno)}">
-    <div class="tarea-item-copy">
-      <strong>${escapeHTML(task.nombre)}</strong>
-      <span class="tarea-duration-pill">${CLOCK_ICON}${escapeHTML(duration)}</span>
-    </div>
-    <span class="tarea-row-status estado-${escapeHTML(task.estado)}">${completed ? 'Completada' : 'Pendiente'}</span>
-    ${actions ? `<div class="tarea-row-actions ${task._canManage ? 'is-manager' : 'is-employee'}">${actions}</div>` : ''}
-  </div>`;
+  return `<label class="tarea-item-row tarea-check-row ${completed ? 'is-completed' : ''}" data-id="${escapeHTML(task.id)}" data-turno="${escapeHTML(task._turno)}">
+    <input class="tarea-complete-check" type="checkbox" ${completed ? 'checked disabled' : ''} aria-label="Marcar ${escapeHTML(task.nombre)} como completada">
+    <span class="tarea-check-visual">${CHECK_ICON}</span>
+    <span class="tarea-item-copy"><strong>${escapeHTML(task.nombre)}</strong><span class="tarea-duration-pill">${CLOCK_ICON}${escapeHTML(duration)}</span></span>
+  </label>`;
 }
 
 function userCardTemplate(name, items, shift) {
   const completed = items.filter(item => item.estado === 'completada').length;
   const allDone = completed === items.length && items.length > 0;
-  return `<article class="tarea-user-card ${allDone ? 'is-complete' : ''}">
+  const canManage = items.some(item => item._canManage);
+  return `<article class="tarea-user-card ${allDone ? 'is-complete' : ''}" data-responsable="${escapeHTML(name)}" data-turno="${escapeHTML(shift)}">
     <header class="tarea-user-head">
       <div class="tarea-user-identity"><span class="tarea-user-avatar">${PERSON_ICON}</span><div><h4>${escapeHTML(name)}</h4><small>${shift === 'manana' ? 'Mañana' : 'Tarde'} · ${completed} de ${items.length} completadas</small></div></div>
       <span class="tarea-user-progress ${allDone ? 'is-complete' : ''}">${allDone ? 'Completado' : `${items.length} ${items.length === 1 ? 'tarea' : 'tareas'}`}</span>
     </header>
     <div class="tarea-user-items">${items.map(taskRowTemplate).join('')}</div>
+    ${canManage ? `<footer class="tarea-user-footer"><button type="button" class="tarea-user-edit" data-accion="editar-usuario">${EDIT_ICON}<span>Editar tareas</span></button></footer>` : ''}
   </article>`;
 }
 
