@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1230";
+import { API_BASE_URL } from "./config.js?v=12301";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];

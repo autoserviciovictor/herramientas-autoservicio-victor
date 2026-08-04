@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1224";
-import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1224";
-import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1224";
+import { API_BASE_URL } from "./config.js?v=12301";
+import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=12301";
+import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=12301";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";

@@ -7656,6 +7656,6 @@ body.en-tareas #tareasVistaTareas .tarea-user-edit:hover{background:#faf7f5;bord
  body.en-tareas #tareasVistaTareas .tarea-user-edit{width:100%}
 }
 
-/* v12.3.0 — confirmación fiable del check de tareas */
+/* v12.3.0.1 — confirmación fiable del check de tareas */
 body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving{pointer-events:none;opacity:.7}
 body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving .tarea-check-visual{border-color:#c92b35;background:#fff7f7}

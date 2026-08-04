@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.3.0";
+const APP_VERSION = "12.3.0.1";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1141,11 +1141,6 @@ async function sectoresTareasPermitidos(usuario) {
   }
   return sectores.filter(s=>s.id===usuario.sector);
 }
-function coincideResponsable(a, usuario) {
-  const claves=new Set([usuario.usuario,usuario.nombre].map(normalizarUsuario).filter(Boolean));
-  return Object.values(a||{}).some(turnos=>Object.values(turnos||{}).some(asig=>(asig?.responsables||[]).some(r=>claves.has(normalizarUsuario(r)))));
-}
-
 app.get("/tareas/contexto", requerirSesion, async (req,res)=>{
   try {
     const sectores=await sectoresTareasPermitidos(req.usuario);
@@ -1157,8 +1152,10 @@ app.get("/tareas", requerirSesion, async (req,res)=>{
   try {
     const [tareas,sectores]=await Promise.all([obtenerTareasServidor(),sectoresTareasPermitidos(req.usuario)]);
     const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    let visibles=tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
-    if(req.usuario.rol==="personal") visibles=visibles.filter(t=>coincideResponsable(t.asignaciones,req.usuario));
+    // Las tareas pertenecen al sector: todo usuario activo del sector puede verlas,
+    // aunque la asignación indique otro responsable. Los permisos de edición se
+    // siguen resolviendo por rol en /tareas/contexto y en los endpoints de escritura.
+    const visibles=tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
     res.json({ok:true,tareas:visibles});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron cargar las tareas"});}
 });
@@ -1265,10 +1262,7 @@ app.post("/tareas/completar", requerirSesion, async (req,res)=>{
     const tareas=await obtenerTareasServidor(),t=tareas.find(x=>x.id===id);
     if(!t||!t.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
     const asig=t.asignaciones[fecha][turno];
-    if(req.usuario.rol==="personal") {
-      const claves=new Set([req.usuario.usuario,req.usuario.nombre].map(normalizarUsuario).filter(Boolean));
-      if(!(asig.responsables||[]).some(r=>claves.has(normalizarUsuario(r)))) return res.status(403).json({ok:false,mensaje:"Esta tarea no está asignada a tu usuario"});
-    } else if(req.usuario.rol==="supervisor") {
+    if(req.usuario.rol!=="administrador") {
       const sectores=await sectoresTareasPermitidos(req.usuario);
       const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
       if(!permitidos.has(normalizarTexto(t.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para completar tareas de este sector"});
