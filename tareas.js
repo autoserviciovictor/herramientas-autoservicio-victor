@@ -486,8 +486,7 @@ async function activar(){
   if(activo)renderTareas();
   await tareasRemotas;
   const tieneConfig=puedeConfigurar();
-  document.querySelector('[data-tareas-tab="config"]')?.classList.toggle("oculto",!tieneConfig);
-  if(!tieneConfig&&vistaActual==="config")vistaActual="tareas";
+  document.querySelector('[data-tareas-tab="config"]')?.classList.remove("oculto");
   cambiarVista(vistaActual);
   })().finally(()=>{activacionTareasEnCurso=null;});
   return activacionTareasEnCurso;

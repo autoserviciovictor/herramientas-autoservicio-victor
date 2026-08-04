@@ -809,7 +809,6 @@ function renderMiHorario() {
 
 function puedeVerConfiguracion(){ return ["administrador","supervisor"].includes(rolHorarios()) && sectorSeleccionado()?.puedeEditar===true; }
 function cambiarVista(v) {
-  if(v==="config" && !puedeVerConfiguracion()) v="equipo";
   vistaActual = v;
   const eq = v === "equipo", mio=v === "mio", cfg=v === "config";
   document.body.classList.toggle("horarios-vista-calendario", eq);
@@ -823,7 +822,6 @@ function cambiarVista(v) {
   if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = titulosVista[1];
   if ($("horariosTituloVista")) $("horariosTituloVista").textContent = titulosVista[0];
   if ($("horariosSubtituloVista")) $("horariosSubtituloVista").textContent = titulosVista[1];
-  $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion());
   document.querySelectorAll("[data-horarios-vista]").forEach(b => b.classList.toggle("activo", b.dataset.horariosVista === v));
   renderSelectorSector();
   $("horariosEdicionMarco")?.classList.toggle("oculto", !eq || !puedeEditar());
@@ -834,7 +832,7 @@ function cambiarVista(v) {
 }
 async function cambiarMes(n) { fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1); diaSeleccionado = esMesActual() ? new Date().getDate() : 1; seleccion.clear(); await cargarCalendarioActual(); await cargarResumenHoy(); renderTodo(); }
 async function irAHoy() { const h = new Date(); fechaVista = new Date(h.getFullYear(), h.getMonth(), 1); diaSeleccionado = h.getDate(); cambiarVista("equipo"); await cargarCalendarioActual(); await cargarResumenHoy(true); renderTodo(); desplazarAlDia(diaSeleccionado); }
-function renderTodo() { $("btnHorariosConfigNav")?.classList.toggle("oculto", !puedeVerConfiguracion()); if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); }
+function renderTodo() { if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes(); renderSelectorSector(); actualizarPanelMes(); actualizarSelectorTurnos(); renderTabla(); renderResumen(); renderMiHorario(); actualizarPermisos(); actualizarAcciones(); }
 
 const COLORES_TURNOS=[['#dc2626','Rojo'],['#f97316','Naranja'],['#f59e0b','Ámbar'],['#eab308','Amarillo'],['#65a30d','Lima'],['#16a34a','Verde'],['#0f766e','Verde azulado'],['#0891b2','Cian'],['#2563eb','Azul'],['#4f46e5','Índigo'],['#7c3aed','Violeta'],['#c026d3','Magenta']];
 const MAPA_COLORES_ANTERIORES={
@@ -864,7 +862,23 @@ function actualizarBotonGuardarOrden(){const b=$("btnHorariosGuardarOrden");if(b
 function prepararOrdenConfig(){if(ordenSectorInicial!==sectorActual){ordenSectorInicial=sectorActual;ordenPersonalInicial=[...empleados]}actualizarBotonGuardarOrden()}
 function renderOrdenConfig(){const cont=$("horariosOrdenLista");if(!cont)return;prepararOrdenConfig();cont.innerHTML=empleados.map((e,i)=>`<article class="horarios-order-item" data-empleado="${e.replace(/"/g,'&quot;')}"><span class="horarios-order-index">${i+1}</span><div class="horarios-order-info"><strong>${e}</strong><span>${empleadosInfo.get(e)?.rol==='supervisor'?'Supervisor':'Empleado'}</span></div><div class="horarios-order-actions"><button type="button" data-dir="-1" ${i===0?'disabled':''} aria-label="Subir">↑</button><button type="button" data-dir="1" ${i===empleados.length-1?'disabled':''} aria-label="Bajar">↓</button></div></article>`).join('');cont.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>{const card=b.closest('[data-empleado]'),i=empleados.indexOf(card.dataset.empleado),j=i+Number(b.dataset.dir);if(i<0||j<0||j>=empleados.length)return;[empleados[i],empleados[j]]=[empleados[j],empleados[i]];renderOrdenConfig();actualizarBotonGuardarOrden()}));actualizarBotonGuardarOrden()}
 async function guardarOrdenConfig(){if(!ordenPersonalModificado())return;const boton=$("btnHorariosGuardarOrden");if(boton)boton.disabled=true;try{const r=await fetch(`${API_BASE_URL}/horarios/orden`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sector:sectorActual,orden:empleados})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.mensaje||'No se pudo guardar el orden');ordenPersonalInicial=[...empleados];ordenSectorInicial=sectorActual;renderTabla();actualizarBotonGuardarOrden();mensajeConfig('horariosOrdenMensaje','Orden guardado correctamente.')}catch(e){actualizarBotonGuardarOrden();mensajeConfig('horariosOrdenMensaje',e.message,'error')}}
-function renderConfiguracionHorarios(){if(!puedeVerConfiguracion())return cambiarVista('equipo');renderListaTurnosConfig();renderOrdenConfig()}
+function renderConfiguracionHorarios(){
+  const vista=$("horariosConfigView");
+  if(!vista)return;
+  let bloqueo=$("horariosConfigSinPermiso");
+  if(!bloqueo){
+    bloqueo=document.createElement("div");
+    bloqueo.id="horariosConfigSinPermiso";
+    bloqueo.className="tareas-empty horarios-config-sin-permiso";
+    bloqueo.innerHTML='<strong>Sin acceso a configuración</strong><span>Esta pantalla está disponible únicamente para supervisores y administradores.</span>';
+    vista.prepend(bloqueo);
+  }
+  const permitido=puedeVerConfiguracion();
+  bloqueo.classList.toggle("oculto",permitido);
+  vista.querySelectorAll(":scope > .settings-card").forEach(card=>card.classList.toggle("oculto",!permitido));
+  if(!permitido)return;
+  renderListaTurnosConfig();renderOrdenConfig();
+}
 
 function configurarEventos() {
   crearPanelEdicion();
