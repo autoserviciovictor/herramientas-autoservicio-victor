@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.1.3";
+const APP_VERSION = "12.2.0";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1177,6 +1177,26 @@ app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
     await guardarTareasServidor(tareas,req.usuario);
     res.json({ok:true,asignacion:tarea.asignaciones[fecha][turno]});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar la asignación"});}
+});
+
+app.post("/tareas/asignaciones-lote", requerirSesion, async (req,res)=>{
+  try {
+    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
+    const ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(normalizarTexto).filter(Boolean))],fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno),responsable=normalizarTexto(req.body?.responsable);
+    if(!ids.length||!fecha||!["manana","tarde"].includes(turno)||!responsable) return res.status(400).json({ok:false,mensaje:"Asignación incompleta"});
+    const tareas=await obtenerTareasServidor(), sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+    const seleccionadas=tareas.filter(t=>ids.includes(t.id));
+    if(seleccionadas.length!==ids.length) return res.status(404).json({ok:false,mensaje:"Una o más tareas no existen"});
+    if(seleccionadas.some(t=>req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(t.sector)))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para una de las tareas"});
+    for(const tarea of seleccionadas){
+      tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
+      const anterior=tarea.asignaciones[fecha][turno]||{};
+      const responsables=[...new Set([...(anterior.responsables||[]).map(normalizarTexto).filter(Boolean),responsable])];
+      tarea.asignaciones[fecha][turno]={...anterior,responsables,estado:anterior.estado||"pendiente",completadaPor:anterior.completadaPor||"",completadaHora:anterior.completadaHora||""};
+    }
+    await guardarTareasServidor(tareas,req.usuario);
+    res.json({ok:true,asignadas:seleccionadas.length,responsable});
+  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron asignar las tareas"});}
 });
 app.delete("/tareas/asignacion", requerirSesion, async (req,res)=>{
   try {
