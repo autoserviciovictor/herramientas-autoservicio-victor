@@ -451,15 +451,23 @@ function bind(){
   $("btnCerrarAsignarModal").onclick=$("btnCancelarAsignar").onclick=cerrarAsignar;$("btnGuardarAsignar").onclick=guardarAsignacion;document.querySelectorAll("#asignarTurnoOpciones [data-turno]").forEach(btn=>btn.onclick=()=>elegirTurnoAsignacion(btn.dataset.turno));$("asignarBuscarTarea").oninput=renderTareasAsignables;
   $("asignarTareasLista").onchange=e=>{const input=e.target.closest('input[type="checkbox"]');if(input){input.checked?asignarTareasSeleccionadas.add(input.value):asignarTareasSeleccionadas.delete(input.value);}actualizarEstadoGuardarAsignacion();};
   $("asignarUsuarios").onchange=e=>{const input=e.target.closest('input[type="radio"]');if(input)asignarUsuarioSeleccionado=input.value||"";sincronizarEstadoSeleccionAsignacion();actualizarCantidadResponsables();};$("asignarModal").onclick=e=>{if(e.target.id==="asignarModal")cerrarAsignar();};
-  $("tareasLista").onclick=e=>{const edit=e.target.closest('button[data-accion="editar-usuario"]');if(edit){const card=edit.closest(".tarea-user-card");if(card)abrirEditarUsuario(card.dataset.responsable,card.dataset.turno);return;}};
-  $("tareasLista").onchange=async e=>{
-    const check=e.target.closest(".tarea-complete-check");
+  $("tareasLista").onclick=async e=>{
+    const edit=e.target.closest('button[data-accion="editar-usuario"]');
+    if(edit){const card=edit.closest(".tarea-user-card");if(card)abrirEditarUsuario(card.dataset.responsable,card.dataset.turno);return;}
+    const row=e.target.closest(".tarea-check-row");
+    if(!row||row.classList.contains("is-completed")||row.classList.contains("is-saving"))return;
+    e.preventDefault();
+    const check=row.querySelector(".tarea-complete-check");
     if(!check||check.disabled)return;
-    const row=check.closest(".tarea-item-row");if(!row)return;
     check.checked=false;
     check.disabled=true;
+    row.classList.add("is-saving");
     const completada=await cambiarEstado(row.dataset.id,row.dataset.turno);
-    if(!completada&&document.body.contains(check))check.disabled=false;
+    if(!completada&&document.body.contains(check)){
+      check.checked=false;
+      check.disabled=false;
+      row.classList.remove("is-saving");
+    }
   };
   document.querySelectorAll("[data-tareas-tab]").forEach(b=>b.onclick=()=>cambiarVista(b.dataset.tareasTab));
   $("configSectorFiltro").onchange=renderConfig;$("btnConfigCambiarSector").onclick=cambiarSectorConfig;$("btnGuardarConfigBano").onclick=guardarConfigBano;$("configBuscarTarea").oninput=renderConfig;$("btnLimpiarBusquedaTarea").onclick=()=>{$("configBuscarTarea").value="";renderConfig();};$("btnConfigTabTareas").onclick=()=>{configSubvista="tareas";actualizarConfigSubvista();};$("btnConfigTabBano").onclick=()=>{configSubvista="bano";actualizarConfigSubvista();};$("btnElegirParticipantesBano").onclick=()=>{$("banoSelectorParticipantes").classList.toggle("oculto");};$("banoBuscarUsuario").oninput=()=>renderParticipantesConfig(participantesConfigActuales());

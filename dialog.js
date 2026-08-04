@@ -33,11 +33,26 @@
     return new Promise(resolve => { resolutor = resolve; });
   }
 
-  window.AppDialog = {
-    confirm(opciones = {}) { return abrir({ ...opciones, modo: 'confirm' }); },
-    alert(opciones = {}) { return abrir({ ...opciones, modo: 'alert', cancelarTexto: '' }); },
-    prompt(opciones = {}) { return abrir({ ...opciones, modo: 'prompt' }); }
+  function normalizarOpciones(opciones = {}) {
+    return {
+      titulo: opciones.titulo ?? opciones.title ?? 'Confirmar',
+      mensaje: opciones.mensaje ?? opciones.message ?? '',
+      confirmarTexto: opciones.confirmarTexto ?? opciones.confirmText ?? 'Aceptar',
+      cancelarTexto: opciones.cancelarTexto ?? opciones.cancelText ?? 'Cancelar',
+      peligro: opciones.peligro ?? opciones.danger ?? false,
+      valor: opciones.valor ?? opciones.value ?? ''
+    };
+  }
+
+  const dialogoPublico = {
+    confirm(opciones = {}) { return abrir({ ...normalizarOpciones(opciones), modo: 'confirm' }); },
+    alert(opciones = {}) { return abrir({ ...normalizarOpciones(opciones), modo: 'alert', cancelarTexto: '' }); },
+    prompt(opciones = {}) { return abrir({ ...normalizarOpciones(opciones), modo: 'prompt' }); }
   };
+
+  // Nombre actual y alias histórico utilizado por módulos existentes.
+  window.AppDialog = dialogoPublico;
+  window.AutoservicioDialog = dialogoPublico;
 
   window.addEventListener('DOMContentLoaded', () => {
     $('appDialogConfirmar')?.addEventListener('click', () => {

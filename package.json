@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.2.4",
-  "description": "Autoservicio 12.2.4 - confirmación y eliminación de asignaciones vacías",
+  "version": "12.2.4.1",
+  "description": "Autoservicio 12.2.4.1 - hotfix de confirmación de tareas",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

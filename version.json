@@ -1,6 +1,6 @@
 {
-  "version": "12.2.4",
-  "label": "12.2.4",
-  "build": 122400,
-  "name": "v12.2.4 - Confirmación y tarjetas vacías"
+  "version": "12.2.4.1",
+  "label": "12.2.4.1",
+  "build": 122401,
+  "name": "v12.2.4.1 - Hotfix de confirmación de tareas"
 }
