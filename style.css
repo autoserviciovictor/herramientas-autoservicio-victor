@@ -7574,3 +7574,16 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .tareas-user-list{display:grid;gap:9px}
 .assign-task-option input[type=checkbox]{position:absolute;opacity:0}
 @media(max-width:600px){.tareas-user-group{padding:10px;border-radius:15px}.tareas-user-avatar{width:34px;height:34px}.tareas-user-group-head h3{font-size:14px}}
+
+/* v12.2.1 — selección múltiple y lista completa de usuarios */
+.asignar-usuarios{
+  max-height:none!important;
+  overflow:visible!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch;
+}
+@media (min-width:760px){.asignar-usuarios{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media (min-width:1180px){.asignar-usuarios{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+.assign-user-card,.assign-task-option{cursor:pointer;user-select:none}
+.assign-task-option:has(input:checked){border-color:#c5232c!important;background:#fff7f7!important}
+.assign-task-option input:checked~.assign-task-mark{background:#c5232c!important;border-color:#c5232c!important;color:#fff!important}

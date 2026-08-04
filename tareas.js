@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1211";
-import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1211";
-import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1211";
+import { API_BASE_URL } from "./config.js?v=1221";
+import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1221";
+import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1221";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -25,6 +25,9 @@ let contextoTareas = { sectores:[], puedeAsignar:false, puedeConfigurar:false };
 let guardadoRemotoEnCurso = Promise.resolve();
 let banoMemoria = null;
 let asignacionEditando = null;
+let asignarUsuarioSeleccionado = "";
+let asignarTareasSeleccionadas = new Set();
+let activacionTareasEnCurso = null;
 
 function inicioDia(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function inicioSemana(d){ const x=inicioDia(d), day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return x; }
@@ -83,7 +86,19 @@ function sectoresUnicos(valores){ const mapa=new Map(); for(const valor of valor
 function sectoresUsuario(){ return sectoresUnicos((contextoTareas.sectores||[]).map(s=>s.nombre||s.id)); }
 function todosLosSectores(){ const delContexto=sectoresUsuario(); const deTareas=leer().map(t=>t.sector).filter(Boolean); return sectoresUnicos([...delContexto,...deTareas]).sort((a,b)=>a.localeCompare(b,"es",{sensitivity:"base"})); }
 function sectoresPermitidos(){ return sectoresUsuario().length?sectoresUsuario():todosLosSectores(); }
-function normalizarSector(){ const permitidos=sectoresPermitidos(); if(!sectorSeleccionado || !permitidos.includes(sectorSeleccionado)) sectorSeleccionado=permitidos[0]||""; }
+function sectorInicialUsuario(){
+  const u=usuario()||{};
+  return String(u.sector||u.sectorPersonal||u.sector_principal||u.sectorPrincipal||"").trim();
+}
+function normalizarSector(){
+  const permitidos=sectoresPermitidos();
+  const preferido=sectorInicialUsuario();
+  if(!sectorSeleccionado){
+    sectorSeleccionado=(preferido&&permitidos.includes(preferido)?preferido:permitidos[0])||preferido||"";
+    return;
+  }
+  if(permitidos.length&&!permitidos.includes(sectorSeleccionado)) sectorSeleccionado=(preferido&&permitidos.includes(preferido)?preferido:permitidos[0])||"";
+}
 function normalizarTurnoPermitido(v){ const x=String(v||"").toLowerCase(); if(x==="manana"||x==="tarde"||x==="ambos")return x; if(x.includes("15:00")||x.includes("tarde"))return "tarde"; return "manana"; }
 function duracionAInput(v){ const n=Math.max(1,Number(v)||10),h=Math.floor(n/60),m=n%60; return `${String(Math.min(h,8)).padStart(2,"0")}:${String(m).padStart(2,"0")}`; }
 function duracionDesdeInput(v){ const [h,m]=String(v||"").split(":").map(Number); return Number.isFinite(h)&&Number.isFinite(m)?h*60+m:0; }
@@ -212,17 +227,18 @@ async function usuariosDisponiblesCalendario(turno){
     });
   }catch{return[];}
 }
+function sincronizarEstadoSeleccionAsignacion(){
+  document.querySelectorAll('#asignarUsuarios input').forEach(input=>{input.checked=normalClave(input.value)===normalClave(asignarUsuarioSeleccionado);});
+  document.querySelectorAll('#asignarTareasLista input').forEach(input=>{input.checked=asignarTareasSeleccionadas.has(input.value);});
+}
 function actualizarEstadoGuardarAsignacion(){
   const boton=$("btnGuardarAsignar");
   if(!boton)return;
-  const usuarioElegido=document.querySelector('#asignarUsuarios input:checked');
-  const tareasElegidas=document.querySelectorAll('#asignarTareasLista input:checked');
-  const valido=Boolean(usuarioElegido && tareasElegidas.length && $("asignarTurno")?.value);
+  const valido=Boolean(asignarUsuarioSeleccionado && asignarTareasSeleccionadas.size && $("asignarTurno")?.value);
   boton.disabled=!valido; boton.setAttribute("aria-disabled",String(!valido));
 }
 function actualizarCantidadResponsables(){
-  const n=document.querySelectorAll('#asignarUsuarios input:checked').length;
-  $("asignarResponsablesCantidad").textContent=n?"1 seleccionado":"0 seleccionados";
+  $("asignarResponsablesCantidad").textContent=asignarUsuarioSeleccionado?"1 seleccionado":"0 seleccionados";
   actualizarEstadoGuardarAsignacion();
 }
 async function renderResponsablesAsignacion(){
@@ -232,14 +248,14 @@ async function renderResponsablesAsignacion(){
   let lista=await usuariosDisponiblesCalendario(turno); if(pedido!==solicitudResponsables)return;
   const unicos=new Map(); for(const item of lista){const clave=normalClave(item.usuario||item.nombre);if(clave&&!unicos.has(clave))unicos.set(clave,item);} lista=[...unicos.values()];
   if(!lista.length) box.innerHTML='<div class="tareas-empty assign-empty"><strong>Sin usuarios disponibles</strong><span>No hay personas de este sector trabajando en este día y turno.</span></div>';
-  else box.innerHTML=lista.map(u=>`<label class="assign-user-card"><input type="radio" name="asignarUsuarioRadio" value="${esc(u.nombre)}"><span class="assign-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="assign-user-copy"><strong>${esc(u.nombre)}</strong><small>${esc(u.horario)}</small></span></label>`).join("");
-  actualizarCantidadResponsables();
+  else box.innerHTML=lista.map(u=>`<label class="assign-user-card"><input type="radio" name="asignarUsuarioRadio" value="${esc(u.nombre)}" ${normalClave(u.nombre)===normalClave(asignarUsuarioSeleccionado)?"checked":""}><span class="assign-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="assign-user-copy"><strong>${esc(u.nombre)}</strong><small>${esc(u.horario)}</small></span></label>`).join("");
+  sincronizarEstadoSeleccionAsignacion(); actualizarCantidadResponsables();
 }
 function renderTareasAsignables(){
   const q=normalClave($("asignarBuscarTarea").value), lista=asignarDisponibles.filter(t=>!q||normalClave(t.nombre).includes(q));
   $("asignarTareasCantidad").textContent=`${lista.length} disponible${lista.length===1?"":"s"}`;
-  $("asignarTareasLista").innerHTML=lista.length?lista.map(t=>`<label class="assign-task-option"><input type="checkbox" value="${t.id}"><span class="assign-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span class="assign-task-copy"><strong>${esc(t.nombre)}</strong><small>${duracionTexto(t.duracionMin)}</small></span><span class="assign-task-mark"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`).join(""):'<div class="tareas-empty assign-empty"><strong>Sin coincidencias</strong><span>Probá con otro nombre.</span></div>';
-  actualizarEstadoGuardarAsignacion();
+  $("asignarTareasLista").innerHTML=lista.length?lista.map(t=>`<label class="assign-task-option"><input type="checkbox" value="${t.id}" ${asignarTareasSeleccionadas.has(t.id)?"checked":""}><span class="assign-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span class="assign-task-copy"><strong>${esc(t.nombre)}</strong><small>${duracionTexto(t.duracionMin)}</small></span><span class="assign-task-mark"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`).join(""):'<div class="tareas-empty assign-empty"><strong>Sin coincidencias</strong><span>Probá con otro nombre.</span></div>';
+  sincronizarEstadoSeleccionAsignacion(); actualizarEstadoGuardarAsignacion();
 }
 function renderTurnosAsignacion(disponibles=["manana","tarde"],preferido=""){
   const input=$("asignarTurno"),botones=[...document.querySelectorAll("#asignarTurnoOpciones [data-turno]")],elegido=disponibles.includes(preferido)?preferido:(disponibles[0]||"");
@@ -250,15 +266,15 @@ function elegirTurnoAsignacion(turno){
   $("asignarTurno").value=turno; document.querySelectorAll("#asignarTurnoOpciones [data-turno]").forEach(x=>{x.classList.toggle("is-active",x.dataset.turno===turno);x.setAttribute("aria-checked",String(x.dataset.turno===turno));}); renderResponsablesAsignacion();
 }
 async function abrirAsignar(){
-  asignacionEditando=null; await cargarUsuariosTareas(); asignarDisponibles=leer().filter(t=>(t.sector||"General")===sectorSeleccionado&&t.activo!==false);
+  asignacionEditando=null; asignarUsuarioSeleccionado=""; asignarTareasSeleccionadas.clear(); await cargarUsuariosTareas(); asignarDisponibles=leer().filter(t=>(t.sector||"General")===sectorSeleccionado&&t.activo!==false);
   if(!asignarDisponibles.length){window.AutoservicioDialog?.alert?.({title:"Sin tareas disponibles",message:"No hay tareas activas configuradas para este sector."});return;}
   $("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}); $("asignarBuscarTarea").value=""; renderTareasAsignables(); renderTurnosAsignacion(["manana","tarde"],"manana"); await renderResponsablesAsignacion();
   $("asignarModalTitulo").textContent="Asignar tareas por usuario"; $("btnGuardarAsignar").textContent="Asignar tareas";
   $("asignarModal").classList.remove("oculto");$("asignarModal").setAttribute("aria-hidden","false");
 }
-function cerrarAsignar(){ asignacionEditando=null; solicitudResponsables++; $("asignarModal").classList.add("oculto");$("asignarModal").setAttribute("aria-hidden","true"); $("btnGuardarAsignar").disabled=true; }
+function cerrarAsignar(){ asignacionEditando=null; asignarUsuarioSeleccionado=""; asignarTareasSeleccionadas.clear(); solicitudResponsables++; $("asignarModal").classList.add("oculto");$("asignarModal").setAttribute("aria-hidden","true"); $("btnGuardarAsignar").disabled=true; }
 async function guardarAsignacion(){
-  const turno=$("asignarTurno").value, responsable=document.querySelector('#asignarUsuarios input:checked')?.value?.trim(), ids=[...document.querySelectorAll('#asignarTareasLista input:checked')].map(x=>x.value), fecha=iso(fechaSeleccionada);
+  const turno=$("asignarTurno").value, responsable=asignarUsuarioSeleccionado.trim(), ids=[...asignarTareasSeleccionadas], fecha=iso(fechaSeleccionada);
   if(!turno||!responsable||!ids.length){window.AutoservicioDialog?.alert?.({title:"Faltan datos",message:"Seleccioná un usuario, el turno y al menos una tarea."});return;}
   const boton=$("btnGuardarAsignar"); boton.disabled=true; boton.textContent="Guardando…";
   try{
@@ -269,7 +285,7 @@ async function guardarAsignacion(){
 async function abrirEditarAsignacion(id,turno){
   const fecha=iso(fechaSeleccionada),t=leer().find(x=>x.id===id),a=t?.asignaciones?.[fecha]?.[turno];if(!t||!a)return;
   asignacionEditando={id,fecha,turno,estado:a.estado||"pendiente"};await cargarUsuariosTareas();asignarDisponibles=[t];$("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"});$("asignarBuscarTarea").value="";$("asignarTareaSelect").innerHTML=`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`;$("asignarTareaSelect").value=t.id;renderTareasAsignables();$("asignarModal").classList.remove("oculto");$("asignarModal").setAttribute("aria-hidden","false");const turnos=["manana","tarde"].filter(x=>x===turno||!asignacion(t,fecha,x));renderTurnosAsignacion(turnos,turno);await renderResponsablesAsignacion();
-  const claves=new Set((a.responsables||[]).map(normalClave));document.querySelectorAll("#asignarUsuarios input").forEach(x=>x.checked=claves.has(normalClave(x.value)));actualizarCantidadResponsables();$("btnGuardarAsignar").textContent="Guardar cambios";
+  const responsables=(a.responsables||[]); asignarUsuarioSeleccionado=responsables[0]||""; asignarTareasSeleccionadas=new Set([t.id]); sincronizarEstadoSeleccionAsignacion(); actualizarCantidadResponsables();$("btnGuardarAsignar").textContent="Guardar cambios";
 }
 async function eliminarAsignacion(id,turno){
   const t=leer().find(x=>x.id===id),fecha=iso(fechaSeleccionada);if(!t?.asignaciones?.[fecha]?.[turno])return;
@@ -398,7 +414,9 @@ function bind(){
   $("btnTareasSemanaActual").onclick=()=>{fechaSeleccionada=inicioDia(new Date());semanaBase=inicioSemana(fechaSeleccionada);renderTareas();};
   $("btnTareasCambiarSector").onclick=cambiarSector;$("btnNuevaTarea").onclick=abrirAsignar;$("btnConfigNuevaTarea").onclick=()=>{sectorSeleccionado=$("configSectorFiltro").value||sectorSeleccionado;abrir();};
   $("btnCerrarTareaModal").onclick=$("btnCancelarTarea").onclick=cerrar;$("btnGuardarTarea").onclick=guardarForm;$("btnEliminarTarea").onclick=eliminarTareaActual;$("btnAlternarTarea").onclick=async()=>{if(!tareaEditando)return;const all=leer(),t=all.find(x=>x.id===tareaEditando.id);if(!t)return;const vaAActivar=t.activo===false;if(!vaAActivar){const ok=await window.AutoservicioDialog?.confirm?.({title:"Desactivar tarea",message:`¿Desactivar “${t.nombre}”? Ya no aparecerá entre las tareas disponibles para asignar.`,confirmText:"Desactivar",danger:true});if(ok===false)return;}t.activo=vaAActivar;guardar(all);cerrar();renderConfig();renderTareas();};$("tareaModal").onclick=e=>{if(e.target.id==="tareaModal")cerrar();};
-  $("btnCerrarAsignarModal").onclick=$("btnCancelarAsignar").onclick=cerrarAsignar;$("btnGuardarAsignar").onclick=guardarAsignacion;document.querySelectorAll("#asignarTurnoOpciones [data-turno]").forEach(btn=>btn.onclick=()=>elegirTurnoAsignacion(btn.dataset.turno));$("asignarBuscarTarea").oninput=renderTareasAsignables;$("asignarTareasLista").onchange=actualizarEstadoGuardarAsignacion;$("asignarUsuarios").onchange=actualizarCantidadResponsables;$("asignarModal").onclick=e=>{if(e.target.id==="asignarModal")cerrarAsignar();};
+  $("btnCerrarAsignarModal").onclick=$("btnCancelarAsignar").onclick=cerrarAsignar;$("btnGuardarAsignar").onclick=guardarAsignacion;document.querySelectorAll("#asignarTurnoOpciones [data-turno]").forEach(btn=>btn.onclick=()=>elegirTurnoAsignacion(btn.dataset.turno));$("asignarBuscarTarea").oninput=renderTareasAsignables;
+  $("asignarTareasLista").onchange=e=>{const input=e.target.closest('input[type="checkbox"]');if(input){input.checked?asignarTareasSeleccionadas.add(input.value):asignarTareasSeleccionadas.delete(input.value);}actualizarEstadoGuardarAsignacion();};
+  $("asignarUsuarios").onchange=e=>{const input=e.target.closest('input[type="radio"]');if(input)asignarUsuarioSeleccionado=input.value||"";sincronizarEstadoSeleccionAsignacion();actualizarCantidadResponsables();};$("asignarModal").onclick=e=>{if(e.target.id==="asignarModal")cerrarAsignar();};
   $("tareasLista").onclick=e=>{const card=e.target.closest(".tarea-card"),btn=e.target.closest("button[data-accion]");if(!card||!btn)return;const accion=btn.dataset.accion;if(accion==="completar")cambiarEstado(card.dataset.id,card.dataset.turno);if(accion==="editar")abrirEditarAsignacion(card.dataset.id,card.dataset.turno);if(accion==="eliminar")eliminarAsignacion(card.dataset.id,card.dataset.turno);};
   document.querySelectorAll("[data-tareas-tab]").forEach(b=>b.onclick=()=>cambiarVista(b.dataset.tareasTab));
   $("configSectorFiltro").onchange=renderConfig;$("btnConfigCambiarSector").onclick=cambiarSectorConfig;$("btnGuardarConfigBano").onclick=guardarConfigBano;$("configBuscarTarea").oninput=renderConfig;$("btnLimpiarBusquedaTarea").onclick=()=>{$("configBuscarTarea").value="";renderConfig();};$("btnConfigTabTareas").onclick=()=>{configSubvista="tareas";actualizarConfigSubvista();};$("btnConfigTabBano").onclick=()=>{configSubvista="bano";actualizarConfigSubvista();};$("btnElegirParticipantesBano").onclick=()=>{$("banoSelectorParticipantes").classList.toggle("oculto");};$("banoBuscarUsuario").oninput=()=>renderParticipantesConfig(participantesConfigActuales());
@@ -406,14 +424,22 @@ function bind(){
   $("configTareasLista").onclick=e=>{const row=e.target.closest("[data-id]");if(!row)return;const t=leer().find(x=>x.id===row.dataset.id);if(t)abrir(t);};$("configTareasLista").onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&e.target.closest("[data-id]")){e.preventDefault();e.target.closest("[data-id]").click();}};
 }
 async function activar(){
+  if(activacionTareasEnCurso)return activacionTareasEnCurso;
+  activacionTareasEnCurso=(async()=>{
   activo=true;seed();
+  sectorSeleccionado=sectorSeleccionado||sectorInicialUsuario();
+  renderTareas();
+  const tareasRemotas=cargarTareasRemotas().then(()=>{if(activo){normalizarSector();renderTareas();}});
   await Promise.all([cargarContextoTareas(),cargarUsuariosTareas(),cargarBanoRemoto()]);
-  await cargarTareasRemotas();
   normalizarSector();
+  if(activo)renderTareas();
+  await tareasRemotas;
   const tieneConfig=puedeConfigurar();
   document.querySelector('[data-tareas-tab="config"]')?.classList.toggle("oculto",!tieneConfig);
   if(!tieneConfig&&vistaActual==="config")vistaActual="tareas";
   cambiarVista(vistaActual);
+  })().finally(()=>{activacionTareasEnCurso=null;});
+  return activacionTareasEnCurso;
 }
 function desactivar(){activo=false;cerrar();}
 bind();window.TareasModule={activar,desactivar,mostrarBano:()=>cambiarVista("bano")};
