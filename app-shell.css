@@ -135,3 +135,107 @@
     box-sizing: border-box !important;
   }
 }
+
+/* =========================================================
+   v12.3.1.3 — Alineación completa del contenido
+   El encabezado y todos los bloques de cada vista comparten
+   el mismo eje central. Calendario móvil recupera ancho útil.
+   ========================================================= */
+
+@media (min-width: 901px) {
+  /* Centrar el contenido real, no solamente el encabezado. */
+  #pantallaInventario > section,
+  #pantallaProductos > section,
+  #pantallaEditarProducto > section,
+  #pantallaAjustes > section,
+  #pantallaVencimientos > section,
+  #pantallaPrecios > .precios-vista,
+  #pantallaAnotar > section,
+  #pantallaTareas > .tareas-view,
+  #pantallaAdmin > .admin-tab-panel {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Las vistas internas también deben centrar sus tarjetas. */
+  #pantallaPrecios .precios-vista > section,
+  #pantallaAnotar #repoCargaVista > section,
+  #pantallaAnotar #repoRegistroVista > section,
+  #pantallaAnotar #repoEscritaVista > section,
+  #pantallaTareas .tareas-shell,
+  #pantallaAdmin .admin-tab-panel {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Ancho compartido para las pantallas estándar. */
+  body:not(.en-horarios) .pantalla.activa > :not(nav):not(.modal-overlay),
+  body.en-horarios:not(.horarios-vista-calendario) .horarios-content > :not(.horarios-control-deck) {
+    box-sizing: border-box !important;
+  }
+
+  /* Administrador ocupa el área útil y centra cada panel. */
+  #pantallaAdmin.admin-screen {
+    max-width: none !important;
+  }
+  #pantallaAdmin > .admin-tab-panel {
+    width: min(920px, calc(100% - 40px)) !important;
+    max-width: 920px !important;
+  }
+
+  /* Inventario y módulos operativos: mismo centro que el título. */
+  #pantallaInventario,
+  #pantallaProductos,
+  #pantallaEditarProducto,
+  #pantallaAjustes,
+  #pantallaVencimientos,
+  #pantallaPrecios,
+  #pantallaAnotar,
+  #pantallaTareas {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Calendario móvil: eliminar el límite heredado de escritorio. */
+  body.en-horarios.horarios-vista-calendario #pantallaHorarios,
+  body.en-horarios.horarios-vista-calendario .horarios-shell,
+  body.en-horarios.horarios-vista-calendario .horarios-content,
+  body.en-horarios.horarios-vista-calendario #horariosEquipoView {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  body.en-horarios.horarios-vista-calendario .horarios-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Encabezado y controles usan el mismo margen que las tarjetas móviles. */
+  body.en-horarios.horarios-vista-calendario .module-page-header,
+  body.en-horarios.horarios-vista-calendario #horariosControlDeck {
+    width: calc(100% - 20px) !important;
+    max-width: none !important;
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+  }
+
+  body.en-horarios.horarios-vista-calendario .horarios-board-card,
+  body.en-horarios.horarios-vista-calendario .horarios-estadisticas,
+  body.en-horarios.horarios-vista-calendario .horarios-bottom-grid {
+    width: calc(100% - 20px) !important;
+    max-width: none !important;
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  body.en-horarios.horarios-vista-calendario .horarios-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
