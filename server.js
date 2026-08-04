@@ -1094,19 +1094,41 @@ async function guardarBanoServidor(config, usuario) {
 async function obtenerTareasServidor() {
   await asegurarHojaTareas();
   const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A:H` });
-  return (r.data.values || []).slice(1).filter(f=>f[0]).map(f=>{
+  const filasTareas=(r.data.values || []).slice(1).filter(f=>f[0]);
+  cantidadFilasTareasConocida=filasTareas.length;
+  return filasTareas.map(f=>{
     let asignaciones={}; try{asignaciones=JSON.parse(f[5]||"{}");}catch{}
     return normalizarTareaServidor({id:f[0],sector:f[1],nombre:f[2],duracionMin:Number(f[3]),activo:!["no","false","0","inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),asignaciones});
   });
 }
+let cantidadFilasTareasConocida = null;
+function esErrorCuotaGoogle(error) {
+  const status=Number(error?.response?.status||error?.code||error?.status||0);
+  const reason=error?.response?.data?.error?.errors?.[0]?.reason||"";
+  return status===429 || reason==="rateLimitExceeded" || reason==="userRateLimitExceeded";
+}
+async function ejecutarGoogleConReintento(operacion, intentos=4) {
+  let ultimoError;
+  for(let intento=0;intento<intentos;intento++){
+    try{return await operacion();}
+    catch(error){
+      ultimoError=error;
+      if(!esErrorCuotaGoogle(error)||intento===intentos-1)throw error;
+      const espera=700*Math.pow(2,intento)+Math.floor(Math.random()*250);
+      await new Promise(resolve=>setTimeout(resolve,espera));
+    }
+  }
+  throw ultimoError;
+}
 async function guardarTareasServidor(tareas, usuario) {
   return ejecutarEnCola("tareas", async()=>{
     await asegurarHojaTareas();
-    const prev = await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A:H`});
     const filas=(tareas||[]).map(normalizarTareaServidor).map(t=>[t.id,t.sector,t.nombre,t.duracionMin,t.activo?"Sí":"No",JSON.stringify(t.asignaciones||{}),fechaHoraArgentinaIso(),usuario?.usuario||""]);
-    if(filas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A2:H${filas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:filas}});
-    const prevCount=Math.max(0,(prev.data.values||[]).length-1);
-    if(prevCount>filas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A${filas.length+2}:H${prevCount+1}`});
+    const prevCount=Number.isInteger(cantidadFilasTareasConocida)?cantidadFilasTareasConocida:filas.length;
+    if(filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A2:H${filas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:filas}}));
+    if(prevCount>filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A${filas.length+2}:H${prevCount+1}`}));
+    cantidadFilasTareasConocida=filas.length;
+    invalidarCache("tareas");
   });
 }
 async function sectoresTareasPermitidos(usuario) {

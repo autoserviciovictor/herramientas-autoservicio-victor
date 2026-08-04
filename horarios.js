@@ -1,6 +1,6 @@
-import "./ui.js?v=1221";
-import { API_BASE_URL } from "./config.js?v=1221";
-import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1221";
+import "./ui.js?v=1222";
+import { API_BASE_URL } from "./config.js?v=1222";
+import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1222";
 
 let empleados = [];
 let empleadosInfo = new Map();

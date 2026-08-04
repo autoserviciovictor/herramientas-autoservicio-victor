@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1221";
-import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1221";
-import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1221";
+import { API_BASE_URL } from "./config.js?v=1222";
+import { escapeHTML as esc, formatDuration as duracionTexto } from "./shared/dom-utils.js?v=1222";
+import { shiftSectionTemplate, emptyTaskListTemplate } from "./modules/tareas/task-view.js?v=1222";
 
 const $ = id => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -156,7 +156,7 @@ function asignacionesDelDia(){
 function tareasDisponibles(){ const fecha=iso(fechaSeleccionada); return leer().filter(t=>(t.sector||"General")===sectorSeleccionado && t.activo!==false && ["manana","tarde"].some(turno=>!asignacion(t,fecha,turno))); }
 function colorTurno(t){ return t==="manana"?"turno-manana":"turno-tarde"; }
 function renderDias(){ const box=$("tareasDias"); if(!box)return; box.innerHTML=""; for(let i=0;i<7;i++){const d=new Date(semanaBase);d.setDate(d.getDate()+i);const b=document.createElement("button");b.type="button";b.className=[iso(d)===iso(fechaSeleccionada)?"activo":"",iso(d)===iso(new Date())?"hoy":""].filter(Boolean).join(" ");b.innerHTML=`<strong>${DIAS[d.getDay()]}</strong><span>${d.getDate()}</span>`;b.onclick=()=>{fechaSeleccionada=d;renderTareas();};box.appendChild(b);} }
-function renderResumen(items){ const n=s=>items.filter(t=>t.estado===s).length; $("tareasResumen").innerHTML=`<div><small>Total</small><strong>${items.length}</strong></div><div class="pend"><small>Pend.</small><strong>${n("pendiente")}</strong></div><div class="comp"><small>Comp.</small><strong>${n("completada")}</strong></div>`; }
+function renderResumen(){ const box=$("tareasResumen"); if(box){box.innerHTML="";box.classList.add("oculto");} }
 function renderLista(items){
   const box=$("tareasLista");
   if(!items.length){box.innerHTML=emptyTaskListTemplate();return;}
@@ -417,7 +417,7 @@ function bind(){
   $("btnCerrarAsignarModal").onclick=$("btnCancelarAsignar").onclick=cerrarAsignar;$("btnGuardarAsignar").onclick=guardarAsignacion;document.querySelectorAll("#asignarTurnoOpciones [data-turno]").forEach(btn=>btn.onclick=()=>elegirTurnoAsignacion(btn.dataset.turno));$("asignarBuscarTarea").oninput=renderTareasAsignables;
   $("asignarTareasLista").onchange=e=>{const input=e.target.closest('input[type="checkbox"]');if(input){input.checked?asignarTareasSeleccionadas.add(input.value):asignarTareasSeleccionadas.delete(input.value);}actualizarEstadoGuardarAsignacion();};
   $("asignarUsuarios").onchange=e=>{const input=e.target.closest('input[type="radio"]');if(input)asignarUsuarioSeleccionado=input.value||"";sincronizarEstadoSeleccionAsignacion();actualizarCantidadResponsables();};$("asignarModal").onclick=e=>{if(e.target.id==="asignarModal")cerrarAsignar();};
-  $("tareasLista").onclick=e=>{const card=e.target.closest(".tarea-card"),btn=e.target.closest("button[data-accion]");if(!card||!btn)return;const accion=btn.dataset.accion;if(accion==="completar")cambiarEstado(card.dataset.id,card.dataset.turno);if(accion==="editar")abrirEditarAsignacion(card.dataset.id,card.dataset.turno);if(accion==="eliminar")eliminarAsignacion(card.dataset.id,card.dataset.turno);};
+  $("tareasLista").onclick=e=>{const row=e.target.closest(".tarea-item-row"),btn=e.target.closest("button[data-accion]");if(!row||!btn)return;const accion=btn.dataset.accion;if(accion==="completar")cambiarEstado(row.dataset.id,row.dataset.turno);if(accion==="editar")abrirEditarAsignacion(row.dataset.id,row.dataset.turno);if(accion==="eliminar")eliminarAsignacion(row.dataset.id,row.dataset.turno);};
   document.querySelectorAll("[data-tareas-tab]").forEach(b=>b.onclick=()=>cambiarVista(b.dataset.tareasTab));
   $("configSectorFiltro").onchange=renderConfig;$("btnConfigCambiarSector").onclick=cambiarSectorConfig;$("btnGuardarConfigBano").onclick=guardarConfigBano;$("configBuscarTarea").oninput=renderConfig;$("btnLimpiarBusquedaTarea").onclick=()=>{$("configBuscarTarea").value="";renderConfig();};$("btnConfigTabTareas").onclick=()=>{configSubvista="tareas";actualizarConfigSubvista();};$("btnConfigTabBano").onclick=()=>{configSubvista="bano";actualizarConfigSubvista();};$("btnElegirParticipantesBano").onclick=()=>{$("banoSelectorParticipantes").classList.toggle("oculto");};$("banoBuscarUsuario").oninput=()=>renderParticipantesConfig(participantesConfigActuales());
   $("banoUsuariosDisponibles").onchange=()=>renderParticipantesConfig(participantesConfigActuales());

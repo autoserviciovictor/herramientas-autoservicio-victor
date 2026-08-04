@@ -7575,7 +7575,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .assign-task-option input[type=checkbox]{position:absolute;opacity:0}
 @media(max-width:600px){.tareas-user-group{padding:10px;border-radius:15px}.tareas-user-avatar{width:34px;height:34px}.tareas-user-group-head h3{font-size:14px}}
 
-/* v12.2.1 — selección múltiple y lista completa de usuarios */
+/* v12.2.2 — selección múltiple y lista completa de usuarios */
 .asignar-usuarios{
   max-height:none!important;
   overflow:visible!important;
@@ -7587,3 +7587,44 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .assign-user-card,.assign-task-option{cursor:pointer;user-select:none}
 .assign-task-option:has(input:checked){border-color:#c5232c!important;background:#fff7f7!important}
 .assign-task-option input:checked~.assign-task-mark{background:#c5232c!important;border-color:#c5232c!important;color:#fff!important}
+
+/* v12.2.2 — tareas agrupadas por usuario */
+body.en-tareas #tareasResumen{display:none!important}
+body.en-tareas .tareas-user-list{display:grid;gap:12px}
+body.en-tareas .tarea-user-card{background:#fff;border:1px solid #e7e2dc;border-radius:18px;box-shadow:0 7px 22px rgba(42,32,24,.055);overflow:hidden}
+body.en-tareas .tarea-user-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #eee9e4;background:#fff}
+body.en-tareas .tarea-user-identity{display:flex;align-items:center;gap:10px;min-width:0}
+body.en-tareas .tarea-user-avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#fdebed;color:#bd2730;flex:none}
+body.en-tareas .tarea-user-avatar .app-icon{width:21px;height:21px}
+body.en-tareas .tarea-user-head h4{margin:0;font-size:15px;line-height:1.2;color:#25211f}
+body.en-tareas .tarea-user-head small{display:block;margin-top:3px;color:#77706b;font-size:11px;font-weight:700}
+body.en-tareas .tarea-user-progress{flex:none;padding:5px 9px;border-radius:999px;background:#f3f0ed;color:#665f5a;font-size:10.5px;font-weight:900}
+body.en-tareas .tarea-user-progress.is-complete{background:#e4f7eb;color:#137b43}
+body.en-tareas .tarea-user-items{display:grid}
+body.en-tareas .tarea-item-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:12px 14px;border-bottom:1px solid #f0ece8}
+body.en-tareas .tarea-item-row:last-child{border-bottom:0}
+body.en-tareas .tarea-item-row.is-completed{background:#fbfdfb}
+body.en-tareas .tarea-item-copy{display:flex;align-items:center;gap:9px;min-width:0}
+body.en-tareas .tarea-item-copy>strong{min-width:0;font-size:13.5px;line-height:1.25;color:#262220}
+body.en-tareas .tarea-duration-pill{display:inline-flex;align-items:center;gap:4px;flex:none;padding:4px 7px;border-radius:999px;background:#f4f1ee;color:#625c58;font-size:10px;font-weight:900}
+body.en-tareas .tarea-duration-pill .app-icon{width:13px;height:13px}
+body.en-tareas .tarea-row-status{justify-self:end;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.02em}
+body.en-tareas .tarea-row-status.estado-pendiente{background:#fff4d7;color:#d88a00}
+body.en-tareas .tarea-row-status.estado-completada{background:#e5f7eb;color:#148047}
+body.en-tareas .tarea-row-actions{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;gap:7px;padding-top:2px}
+body.en-tareas .task-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 12px;border-radius:11px;border:1px solid #ddd7d1;background:#fff;color:#3d3834;font-size:11px;font-weight:900;box-shadow:none}
+body.en-tareas .task-action .app-icon{width:15px;height:15px}
+body.en-tareas .task-action-edit{background:#fff;border-color:#dcd6d0}
+body.en-tareas .task-action-delete{background:#fff7f7;border-color:#efc7ca;color:#b7212a}
+body.en-tareas .task-action-complete{background:#c5232c;border-color:#c5232c;color:#fff;box-shadow:0 6px 14px rgba(197,35,44,.18)}
+body.en-tareas .tarea-row-actions.is-employee .task-action-complete{min-width:116px}
+@media(max-width:640px){
+ body.en-tareas .tarea-user-head{padding:12px}
+ body.en-tareas .tarea-item-row{grid-template-columns:minmax(0,1fr) auto;padding:11px 12px;gap:8px}
+ body.en-tareas .tarea-item-copy{align-items:flex-start;flex-direction:column;gap:6px}
+ body.en-tareas .tarea-item-copy>strong{font-size:13px}
+ body.en-tareas .tarea-row-actions.is-manager{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+ body.en-tareas .tarea-row-actions.is-employee{justify-content:flex-end}
+ body.en-tareas .task-action{width:100%;min-width:0;padding:7px 5px;font-size:10.5px}
+ body.en-tareas .tarea-row-actions.is-employee .task-action-complete{width:auto;min-width:118px;padding-inline:14px}
+}

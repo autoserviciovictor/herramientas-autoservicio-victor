@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1221";
+import { API_BASE_URL } from "./config.js?v=1222";
 
 const $ = id => document.getElementById(id);
 const CACHE_KEY = "autoservicio_centro_notificaciones_v1220";

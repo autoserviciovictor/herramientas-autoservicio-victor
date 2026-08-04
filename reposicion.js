@@ -1,8 +1,8 @@
-import { API_BASE_URL } from "./config.js?v=1221";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1221";
-import { ordenarPorBusqueda } from "./search.js?v=1221";
-import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1221";
-import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1221";
+import { API_BASE_URL } from "./config.js?v=1222";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1222";
+import { ordenarPorBusqueda } from "./search.js?v=1222";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1222";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1222";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
