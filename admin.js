@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1222";
+import { API_BASE_URL } from "./config.js?v=1230";
 
 const $ = id => document.getElementById(id);
 const MODULOS_PERMISO = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
@@ -805,3 +805,14 @@ document.getElementById("adminUsuarioSectorButton")?.addEventListener("click",()
 document.getElementById("adminUsuarioSectorSecundarioButton")?.addEventListener("click",()=>abrirSelectorSectorUsuario(true));
 document.getElementById("adminSectorSupervisorButton")?.addEventListener("click",abrirSelectorSupervisorSector);
 document.getElementById("adminUsuarioNombre")?.addEventListener("input",e=>{const av=$("adminUsuarioAvatarModal");if(av)av.textContent=(e.target.value.trim()||"U").slice(0,1).toUpperCase();});
+
+
+window.AdminModule = {
+  reiniciar(){
+    cambiarTab("usuarios");
+    const buscar=document.getElementById("adminHistorialBuscar"); if(buscar) buscar.value="";
+    const usuario=document.getElementById("adminHistorialUsuario"); if(usuario) usuario.value="";
+    const accion=document.getElementById("adminHistorialAccion"); if(accion) accion.value="";
+    window.scrollTo({top:0,behavior:"auto"});
+  }
+};

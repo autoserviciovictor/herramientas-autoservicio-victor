@@ -1,4 +1,4 @@
-import { APP_VERSION } from "./config.js?v=1222";
+import { APP_VERSION } from "./config.js?v=1230";
 import {
     cargarProductosDesdeServidor,
     sincronizarProductosDesdeServidor,
@@ -22,12 +22,12 @@ import {
     actualizarVencimiento,
     eliminarVencimiento,
     actualizarOfertaVencimiento
-} from "./excel.js?v=1222";
+} from "./excel.js?v=1230";
 
 import {
     iniciarScanner,
     detenerScanner
-} from "./scanner.js?v=1222";
+} from "./scanner.js?v=1230";
 
 import {
     ocultarSplash,
@@ -50,10 +50,10 @@ import {
     activarModoCantidad,
     desactivarModoCantidad,
     actualizarConteosUbicacion
-} from "./ui.js?v=1222";
+} from "./ui.js?v=1230";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion } from "./reposicion.js?v=1222";
-import { coincideBusqueda } from "./search.js?v=1222";
+import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion, reiniciarReposicion } from "./reposicion.js?v=1230";
+import { coincideBusqueda } from "./search.js?v=1230";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -165,6 +165,56 @@ const elementos = {
 
 inicializar();
 
+let navegacionInternaActiva = false;
+
+function moduloDePantalla(nombre = pantallaActualApp) {
+    if (["inventario","productos","cargados","editarProducto"].includes(nombre)) return "inventario";
+    return nombre;
+}
+
+function reiniciarEstadoModulo(modulo) {
+    if (!modulo || modulo === "inicio") return;
+    if (modulo === "inventario") {
+        cerrarScanner(true);
+        productoEditando = null;
+        snapshotProductoEditando = null;
+        tabProductosActual = "productos";
+        if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+        if (elementos.codigoManualInput) elementos.codigoManualInput.value = "";
+        limpiarProducto();
+        desactivarModoCantidad();
+    }
+    if (modulo === "vencimientos") {
+        cerrarScannerVencimientos(false);
+        if (elementos.vencBuscador) elementos.vencBuscador.value = "";
+        if (elementos.vencCodigoManualInput) elementos.vencCodigoManualInput.value = "";
+        busquedaVencimientos = "";
+        filtroVencimientos = "todos";
+        filtroOfertaVencimientos = "todos";
+        cambiarTabVencimientos("cargar");
+    }
+    if (modulo === "anotar") reiniciarReposicion?.();
+    if (modulo === "precios") window.PreciosModule?.reiniciar?.();
+    if (modulo === "horarios") window.HorariosModule?.reiniciar?.();
+    if (modulo === "tareas") window.TareasModule?.reiniciar?.();
+    if (modulo === "admin") window.AdminModule?.reiniciar?.();
+    window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function intentarBloquearOrientacion() {
+    try {
+        if (screen.orientation?.lock && (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone)) {
+            screen.orientation.lock("portrait").catch(() => {});
+        }
+    } catch (_) {}
+}
+
+function registrarEstadoNavegacion(nombre, reemplazar = false) {
+    const state = { autoservicio: true, pantalla: nombre, modulo: moduloDePantalla(nombre) };
+    const fn = reemplazar ? "replaceState" : "pushState";
+    history[fn](state, "", location.pathname + location.search);
+}
+
 function fechaHoyLocalIso() {
     try {
         const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
@@ -185,6 +235,8 @@ async function inicializar() {
     ocultarSplash();
     cambiarPantalla("inicio");
     pantallaActualApp = "inicio";
+    registrarEstadoNavegacion("inicio", true);
+    intentarBloquearOrientacion();
     actualizarUbicacion(ubicacionActual);
     actualizarEstadoExcel(0);
     actualizarContador(0);
@@ -204,9 +256,13 @@ async function inicializar() {
 }
 
 async function entrarPantalla(nombre, opciones = {}) {
+    const pantallaAnterior = pantallaActualApp;
+    const moduloAnterior = moduloDePantalla(pantallaAnterior);
+    let moduloNuevo = moduloDePantalla(nombre);
     if (!window.AutoservicioAuth?.puedeVerModulo?.(nombre)) {
         window.AutoservicioDialog?.alert?.({ title: "Sin permiso", message: "Este módulo no está habilitado para tu usuario." });
         nombre = "inicio";
+        moduloNuevo = "inicio";
     }
     if (!opciones.forzar) {
         if (pantallaActualApp === "anotar" && nombre !== "anotar") {
@@ -222,6 +278,8 @@ async function entrarPantalla(nombre, opciones = {}) {
             return;
         }
     }
+    if (moduloAnterior !== moduloNuevo && moduloAnterior !== "inicio") reiniciarEstadoModulo(moduloAnterior);
+
     if (nombre !== "inventario") cerrarScanner(true);
     if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
     if (nombre !== "precios") window.PreciosModule?.desactivar?.();
@@ -238,6 +296,7 @@ async function entrarPantalla(nombre, opciones = {}) {
 
     cambiarPantalla(nombre);
     pantallaActualApp = nombre;
+    if (!opciones.desdeHistorial && pantallaAnterior !== nombre) registrarEstadoNavegacion(nombre);
 
     if (nombre === "productos" || nombre === "cargados") mostrarCargandoEn($("resultadoBusqueda"), "Cargando productos...");
     if (["inventario", "productos", "cargados", "ajustes"].includes(nombre)) {
@@ -275,13 +334,30 @@ function actualizarVersionConfiguracion() {
     if (version) version.textContent = APP_VERSION;
 }
 
+window.addEventListener("popstate", event => {
+    if (navegacionInternaActiva) return;
+    navegacionInternaActiva = true;
+    const destino = event.state?.pantalla || "inicio";
+    entrarPantalla(destino, { forzar: true, desdeHistorial: true })
+        .finally(() => { navegacionInternaActiva = false; });
+});
+window.addEventListener("orientationchange", intentarBloquearOrientacion);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) intentarBloquearOrientacion(); });
+
 function configurarEventos() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => entrarPantalla(btn.dataset.pantalla));
     });
 
     document.querySelectorAll("[data-modulo]").forEach(btn => {
-        btn.addEventListener("click", () => entrarPantalla(btn.dataset.modulo));
+        btn.addEventListener("click", () => {
+            const destino = btn.dataset.modulo;
+            if (btn.id === "brandBackBtn" && destino === "inicio" && pantallaActualApp !== "inicio") {
+                history.back();
+                return;
+            }
+            entrarPantalla(destino);
+        });
     });
 
     elementos.btnActualizarProductos?.addEventListener("click", cargarProductos);

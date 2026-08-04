@@ -1,8 +1,8 @@
-import { API_BASE_URL } from './config.js?v=1222';
-import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=1222';
-import { ordenarPorBusqueda } from './search.js?v=1222';
-import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=1222';
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1222";
+import { API_BASE_URL } from './config.js?v=1230';
+import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=1230';
+import { ordenarPorBusqueda } from './search.js?v=1230';
+import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=1230';
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1230";
 
 const $ = id => document.getElementById(id);
 const LAST_KEY = 'autoservicio-precios-ultimo-v2';
@@ -276,9 +276,19 @@ async function activar() {
   }
 }
 
-function desactivar() {
+function reiniciarModuloPrecios() {
   detenerScanner();
   cerrarManual();
+  tabActual = 'consultar';
+  cantidadVisible = 100;
+  const buscador = $('precioBuscadorProductos'); if (buscador) buscador.value = '';
+  const manual = $('precioManualInput'); if (manual) manual.value = '';
+  cambiarTab('consultar');
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function desactivar() {
+  reiniciarModuloPrecios();
 }
 
 function init() {
@@ -320,4 +330,4 @@ function init() {
 }
 
 init();
-window.PreciosModule = { activar, desactivar };
+window.PreciosModule = { activar, desactivar, reiniciar: reiniciarModuloPrecios };

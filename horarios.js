@@ -1,6 +1,6 @@
-import "./ui.js?v=1222";
-import { API_BASE_URL } from "./config.js?v=1222";
-import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1222";
+import "./ui.js?v=1230";
+import { API_BASE_URL } from "./config.js?v=1230";
+import { parseSimpleShift, time24, shiftSegments, isSplitShift, cellLabel, fullScheduleLabel } from "./modules/horarios/schedule-format.js?v=1230";
 
 let empleados = [];
 let empleadosInfo = new Map();
@@ -866,11 +866,19 @@ function activar() {
   document.querySelectorAll(".app-bottom-nav:not(.horarios-bottom-nav)").forEach(n => { restaurarBottomNav.push([n, n.style.display]); n.style.display = "none"; });
   renderTodo(); cambiarVista(vistaActual); if (esMesActual()) desplazarAlDia(new Date().getDate(), "auto");
 }
-function desactivar() { if (hayCambiosPendientes()) restaurarDatos(estadoInicialEdicion); salirModoEdicion(true); restaurarBottomNav.forEach(([n, d]) => n.style.display = d); restaurarBottomNav = []; }
+function reiniciarModuloHorarios() {
+  if (hayCambiosPendientes()) restaurarDatos(estadoInicialEdicion);
+  salirModoEdicion(true);
+  vistaActual = "equipo";
+  seleccion.clear();
+  cambiarVista("equipo");
+  window.scrollTo({top:0,behavior:"auto"});
+}
+function desactivar() { reiniciarModuloHorarios(); restaurarBottomNav.forEach(([n, d]) => n.style.display = d); restaurarBottomNav = []; }
 
 configurarEventos();
 cargarContextoHorarios();
-window.HorariosModule = { activar, desactivar };
+window.HorariosModule = { activar, desactivar, reiniciar: reiniciarModuloHorarios };
 
 
 

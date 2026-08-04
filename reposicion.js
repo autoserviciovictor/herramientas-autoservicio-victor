@@ -1,8 +1,8 @@
-import { API_BASE_URL } from "./config.js?v=1222";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1222";
-import { ordenarPorBusqueda } from "./search.js?v=1222";
-import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1222";
-import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1222";
+import { API_BASE_URL } from "./config.js?v=1230";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1230";
+import { ordenarPorBusqueda } from "./search.js?v=1230";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1230";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1230";
 
 const $ = id => document.getElementById(id);
 let productoActual = null;
@@ -449,6 +449,17 @@ function solicitarSalidaEdicion(continuar){
   abrirModalDescartarEdicion();
 }
 export function resolverSalidaReposicion(continuar){ solicitarSalidaEdicion(continuar); }
+export function reiniciarReposicion(){
+  salirModoEdicionSilencioso();
+  tab="cargar";
+  listaActual="1";
+  limpiar();
+  const texto=$("repoTextoLista"); if(texto) texto.value="";
+  const buscador=$("repoBuscador"); if(buscador) buscador.value="";
+  cambiarTab("cargar");
+  window.scrollTo({top:0,behavior:"auto"});
+}
+
 async function guardarEdicionAntesDeSalir(){
   const continuar=accionPendienteTrasEdicion; accionPendienteTrasEdicion=null;
   cerrarModalDescartarEdicion();

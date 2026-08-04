@@ -492,5 +492,14 @@ async function activar(){
   })().finally(()=>{activacionTareasEnCurso=null;});
   return activacionTareasEnCurso;
 }
-function desactivar(){activo=false;cerrar();}
-bind();window.TareasModule={activar,desactivar,mostrarBano:()=>cambiarVista("bano")};
+function reiniciarModuloTareas(){
+  cerrar();
+  cerrarAsignar?.();
+  vistaActual="tareas";
+  configSubvista="tareas";
+  const buscador=$("configBuscarTarea"); if(buscador) buscador.value="";
+  cambiarVista("tareas");
+  window.scrollTo({top:0,behavior:"auto"});
+}
+function desactivar(){activo=false;reiniciarModuloTareas();}
+bind();window.TareasModule={activar,desactivar,reiniciar:reiniciarModuloTareas,mostrarBano:()=>cambiarVista("bano")};
