@@ -7659,3 +7659,197 @@ body.en-tareas #tareasVistaTareas .tarea-user-edit:hover{background:#faf7f5;bord
 /* v12.3.0.1 — confirmación fiable del check de tareas */
 body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving{pointer-events:none;opacity:.7}
 body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving .tarea-check-visual{border-color:#c92b35;background:#fff7f7}
+
+/* =========================================================
+   V12.3.1 — Refinamiento visual general
+   ========================================================= */
+:root{
+  --module-header-width:760px;
+  --module-header-gutter:16px;
+}
+
+/* Encabezados de pantalla centrados y con una única medida. */
+.module-page-header{
+  width:min(var(--module-header-width),calc(100% - 32px))!important;
+  max-width:var(--module-header-width)!important;
+  margin:14px auto 13px!important;
+  padding:14px 18px!important;
+  min-height:92px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:13px!important;
+  text-align:left!important;
+}
+.module-page-icon{flex:0 0 auto!important}
+.module-page-copy{min-width:0!important;text-align:left!important}
+.module-page-header h1{font-size:clamp(1.65rem,4vw,2rem)!important;line-height:1.05!important}
+.module-page-header p{font-size:.94rem!important;line-height:1.25!important}
+
+@media(min-width:901px){
+  body:not(.en-inicio) .module-page-header{
+    width:min(var(--module-header-width),calc(100vw - var(--app-shell-sidebar-width) - 40px))!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    left:calc(var(--app-shell-sidebar-width) / 2)!important;
+  }
+  /* Calendario es la única vista cuyo encabezado usa todo el ancho útil. */
+  body.en-horarios.horarios-vista-calendario .module-page-header{
+    width:calc(100vw - var(--app-shell-sidebar-width) - 32px)!important;
+    max-width:none!important;
+  }
+}
+@media(max-width:900px){
+  .module-page-header{width:min(760px,calc(100% - 28px))!important;min-height:86px!important;padding:13px 15px!important}
+  body.en-horarios.horarios-vista-calendario .module-page-header{width:calc(100% - 18px)!important;max-width:none!important}
+}
+
+/* Tarjetas de usuarios: etiquetas legibles y distribución estable en PC. */
+@media(min-width:901px){
+  #adminUsuariosLista.admin-users-list{
+    grid-template-columns:repeat(2,minmax(360px,1fr))!important;
+    align-items:stretch!important;
+  }
+  #adminUsuariosLista .admin-user-card-v1203{
+    min-width:0!important;
+    min-height:142px!important;
+    padding:16px 17px 14px!important;
+    gap:12px!important;
+  }
+  #adminUsuariosLista .admin-user-main{padding-right:92px!important;min-width:0!important}
+  #adminUsuariosLista .admin-user-copy{display:flex!important;flex-direction:column!important;align-items:flex-start!important;min-width:0!important}
+  #adminUsuariosLista .admin-user-copy>strong{font-size:16px!important;max-width:100%!important}
+  #adminUsuariosLista .admin-user-copy>span{font-size:12px!important;white-space:nowrap!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  #adminUsuariosLista .admin-user-module-count{
+    display:inline-flex!important;align-items:center!important;gap:5px!important;
+    white-space:nowrap!important;max-width:none!important;width:max-content!important;
+    font-size:11px!important;padding:5px 8px!important;
+  }
+  #adminUsuariosLista .admin-user-status-corner{
+    top:16px!important;right:16px!important;white-space:nowrap!important;min-width:58px!important;text-align:center!important;
+  }
+  #adminUsuariosLista .admin-user-card-buttons{margin-top:auto!important;grid-template-columns:1fr 1fr!important}
+}
+
+/* Editor de usuarios limpio, centrado y sin cajas duplicadas. */
+#adminUsuarioModal{padding:18px!important;align-items:center!important;justify-content:center!important}
+#adminUsuarioModal .admin-user-modal-v2{
+  width:min(680px,100%)!important;
+  max-height:calc(100dvh - 36px)!important;
+  padding:0!important;
+  border-radius:26px!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+#adminUsuarioModal .admin-user-modal-head{
+  display:grid!important;
+  grid-template-columns:58px minmax(0,1fr) 44px!important;
+  align-items:center!important;
+  gap:14px!important;
+  padding:20px 22px 17px!important;
+  border-bottom:0!important;
+  text-align:left!important;
+}
+#adminUsuarioModal .admin-user-modal-avatar{width:58px!important;height:58px!important;margin:0!important}
+#adminUsuarioModal .admin-user-modal-heading{min-width:0!important}
+#adminUsuarioModal .admin-user-modal-heading span,
+#adminUsuarioModal .admin-user-modal-heading h2,
+#adminUsuarioModal .admin-user-modal-heading small{display:block!important;text-align:left!important}
+#adminUsuarioModal .admin-user-modal-heading h2{margin:3px 0 2px!important}
+#adminUsuarioModal .admin-user-modal-body{
+  padding:0 22px 18px!important;
+  overflow:auto!important;
+  display:grid!important;
+  gap:20px!important;
+}
+#adminUsuarioModal .admin-form-section{
+  border:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  padding:0!important;
+  margin:0!important;
+}
+#adminUsuarioModal .admin-form-section-title{text-align:center!important;margin-bottom:12px!important}
+#adminUsuarioModal .admin-form-section-title strong,
+#adminUsuarioModal .admin-form-section-title span{display:block!important;text-align:center!important}
+#adminUsuarioModal .admin-form-grid{gap:12px!important}
+#adminUsuarioModal .admin-user-modal-body label{margin:0!important;gap:7px!important}
+#adminUsuarioModal .admin-permissions-fieldset{border:0!important;padding:0!important;margin:0!important;text-align:center!important}
+#adminUsuarioModal .admin-permissions-fieldset legend{width:100%!important;text-align:center!important;padding:0!important}
+#adminUsuarioModal .admin-permissions-fieldset>p{text-align:center!important;margin:5px 0 13px!important}
+#adminUsuarioModal .admin-permissions-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+#adminUsuarioModal .admin-permissions-grid label{
+  min-height:82px!important;padding:12px 9px!important;margin:0!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+  border:0!important;background:#f7f5f2!important;border-radius:16px!important;text-align:center!important;
+}
+#adminUsuarioModal .admin-permissions-grid label span{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;text-align:center!important}
+#adminUsuarioModal .admin-active-row{
+  width:100%!important;justify-content:center!important;padding:13px!important;border:0!important;border-radius:16px!important;background:#f7f5f2!important;
+}
+#adminUsuarioModal .admin-modal-actions-sticky{
+  padding:14px 22px max(14px,env(safe-area-inset-bottom))!important;
+  border-top:1px solid #eee7e2!important;background:#fff!important;
+}
+@media(max-width:620px){
+  #adminUsuarioModal{padding:0!important;align-items:flex-end!important}
+  #adminUsuarioModal .admin-user-modal-v2{width:100%!important;max-height:calc(100dvh - env(safe-area-inset-top))!important;border-radius:26px 26px 0 0!important}
+  #adminUsuarioModal .admin-user-modal-head{grid-template-columns:48px minmax(0,1fr) 42px!important;padding:16px 17px 13px!important;gap:10px!important}
+  #adminUsuarioModal .admin-user-modal-avatar{width:48px!important;height:48px!important}
+  #adminUsuarioModal .admin-user-modal-body{padding:0 17px 16px!important;gap:17px!important}
+  #adminUsuarioModal .admin-form-grid{grid-template-columns:1fr!important}
+  #adminUsuarioModal .admin-permissions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #adminUsuarioModal .admin-modal-actions-sticky{padding-inline:17px!important}
+}
+
+/* Icono de notificaciones igual al lenguaje visual del resto. */
+.notification-menu-icon{
+  width:38px!important;height:38px!important;border-radius:12px!important;
+  display:grid!important;place-items:center!important;
+  background:#f9e6e8!important;color:#bd2631!important;font-size:0!important;
+}
+.notification-menu-icon .app-icon{width:21px!important;height:21px!important;stroke-width:2!important}
+
+/* Calendario: controles compactos y distribuidos. */
+#pantallaHorarios .horarios-control-deck{
+  width:calc(100% - 28px)!important;
+  max-width:none!important;
+  margin:0 auto 12px!important;
+  display:grid!important;
+  grid-template-columns:minmax(260px,440px) minmax(260px,1fr)!important;
+  grid-template-areas:"month edit" "sector edit" "status status"!important;
+  align-items:start!important;
+  gap:10px 14px!important;
+}
+#pantallaHorarios .horarios-control-deck .horarios-toolbar{
+  grid-area:month!important;width:100%!important;margin:0!important;display:block!important;text-align:left!important;
+}
+#pantallaHorarios .horarios-control-deck .horarios-month-nav{
+  width:100%!important;max-width:440px!important;margin:0!important;justify-content:flex-start!important;
+}
+#pantallaHorarios .horarios-control-deck .horarios-month-nav strong{text-align:left!important;padding-left:4px!important}
+#pantallaHorarios .horarios-control-deck .horarios-sector-bar{
+  grid-area:sector!important;width:100%!important;max-width:440px!important;margin:0!important;min-height:0!important;
+}
+#pantallaHorarios .horarios-control-deck .horarios-edicion-marco{
+  grid-area:edit!important;width:min(100%,560px)!important;justify-self:end!important;margin:0!important;min-height:0!important;
+}
+#pantallaHorarios .horarios-control-deck .horarios-consulta-acciones{justify-content:flex-end!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#pantallaHorarios .horarios-control-deck .horarios-editar-btn{min-width:150px!important;min-height:46px!important}
+#pantallaHorarios .horarios-control-deck .horarios-status-row{grid-area:status!important;margin:0!important;padding:0!important;min-height:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#pantallaHorarios .horarios-control-deck .horarios-status-row>div{padding:5px 2px!important}
+#pantallaHorarios .horarios-board-card{margin-top:0!important}
+@media(max-width:760px){
+  #pantallaHorarios .horarios-control-deck{
+    width:calc(100% - 18px)!important;
+    grid-template-columns:1fr auto!important;
+    grid-template-areas:"month edit" "sector sector" "status status"!important;
+    gap:9px!important;
+  }
+  #pantallaHorarios .horarios-control-deck .horarios-month-nav{max-width:none!important}
+  #pantallaHorarios .horarios-control-deck .horarios-month-nav strong{text-align:center!important;padding-left:0!important}
+  #pantallaHorarios .horarios-control-deck .horarios-sector-bar{max-width:none!important}
+  #pantallaHorarios .horarios-control-deck .horarios-edicion-marco{width:auto!important;align-self:start!important}
+  #pantallaHorarios .horarios-control-deck .horarios-editar-btn{min-width:92px!important;padding-inline:14px!important}
+  #pantallaHorarios .horarios-control-deck .horarios-panel-edicion{width:min(94vw,520px)!important}
+}

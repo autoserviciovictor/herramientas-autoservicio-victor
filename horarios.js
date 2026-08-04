@@ -90,6 +90,7 @@ function crearSelectorSector() {
     <div class="horarios-sector-identidad"><i id="horariosSectorColor"></i><div><span>Sector</span><strong id="horariosSectorNombre">—</strong></div></div>
     <div id="horariosSectorSelectorWrap" class="horarios-sector-selector oculto"><span>Cambiar sector</span><button id="horariosSectorSelectorButton" type="button" class="visual-select-button"><span>Seleccionar sector</span><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></button></div>`;
   document.querySelector(".horarios-toolbar")?.after(bar);
+  organizarControlesCalendario();
   $("horariosSectorSelectorButton").onclick = async () => {
     const elegido = await window.AppChoicePicker.open({
       title: "Seleccionar sector",
@@ -436,6 +437,26 @@ function actualizarSelectorTurnos() {
   }
 }
 
+function organizarControlesCalendario() {
+  const content = document.querySelector("#pantallaHorarios .horarios-content");
+  const toolbar = document.querySelector("#pantallaHorarios .horarios-toolbar");
+  const sector = $("horariosSectorBar");
+  const editor = $("horariosEdicionMarco");
+  const status = document.querySelector("#pantallaHorarios .horarios-status-row");
+  if (!content || !toolbar || !sector || !editor) return;
+  let deck = $("horariosControlDeck");
+  if (!deck) {
+    deck = document.createElement("section");
+    deck.id = "horariosControlDeck";
+    deck.className = "horarios-control-deck";
+    content.insertBefore(deck, toolbar);
+  }
+  if (toolbar.parentElement !== deck) deck.appendChild(toolbar);
+  if (sector.parentElement !== deck) deck.appendChild(sector);
+  if (editor.parentElement !== deck) deck.appendChild(editor);
+  if (status && status.parentElement !== deck) deck.appendChild(status);
+}
+
 function crearPanelEdicion() {
   if ($("horariosEdicionMarco")) return;
   const marco = document.createElement("section");
@@ -465,6 +486,7 @@ function crearPanelEdicion() {
       </div>
     </div>`;
   document.querySelector(".horarios-status-row")?.after(marco);
+  organizarControlesCalendario();
   $("btnHorariosEditar").onclick = entrarModoEdicion;
   $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
@@ -790,6 +812,9 @@ function cambiarVista(v) {
   if(v==="config" && !puedeVerConfiguracion()) v="equipo";
   vistaActual = v;
   const eq = v === "equipo", mio=v === "mio", cfg=v === "config";
+  document.body.classList.toggle("horarios-vista-calendario", eq);
+  document.body.classList.toggle("horarios-vista-mio", mio);
+  document.body.classList.toggle("horarios-vista-config", cfg);
   $("horariosEquipoView")?.classList.toggle("oculto", !eq);
   $("horariosMioView")?.classList.toggle("oculto", !mio);
   $("horariosConfigView")?.classList.toggle("oculto", !cfg);
