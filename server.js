@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.2.0";
+const APP_VERSION = "12.2.4";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1226,7 +1226,8 @@ app.post("/tareas/asignaciones-lote", requerirSesion, async (req,res)=>{
       tarea.asignaciones[fecha][turno]={...anterior,responsables,estado:anterior.estado||"pendiente",completadaPor:anterior.completadaPor||"",completadaHora:anterior.completadaHora||""};
     }
     await guardarTareasServidor(tareas,req.usuario);
-    res.json({ok:true,asignadas:seleccionadas.length,responsable});
+    const visibles=req.usuario.rol==="administrador"?tareas:tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
+    res.json({ok:true,asignadas:seleccionadas.length,responsable,tareas:visibles});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron asignar las tareas"});}
 });
 app.delete("/tareas/asignacion", requerirSesion, async (req,res)=>{

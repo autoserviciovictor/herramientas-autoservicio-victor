@@ -7575,7 +7575,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .assign-task-option input[type=checkbox]{position:absolute;opacity:0}
 @media(max-width:600px){.tareas-user-group{padding:10px;border-radius:15px}.tareas-user-avatar{width:34px;height:34px}.tareas-user-group-head h3{font-size:14px}}
 
-/* v12.2.3 — selección múltiple y lista completa de usuarios */
+/* v12.2.4 — selección múltiple y lista completa de usuarios */
 .asignar-usuarios{
   max-height:none!important;
   overflow:visible!important;
@@ -7588,7 +7588,7 @@ body.en-tareas #tareasVistaTareas .tarea-card-v1203-actions .tarea-action-comple
 .assign-task-option:has(input:checked){border-color:#c5232c!important;background:#fff7f7!important}
 .assign-task-option input:checked~.assign-task-mark{background:#c5232c!important;border-color:#c5232c!important;color:#fff!important}
 
-/* v12.2.3 — tareas agrupadas por usuario */
+/* v12.2.4 — tareas agrupadas por usuario */
 body.en-tareas #tareasResumen{display:none!important}
 body.en-tareas .tareas-user-list{display:grid;gap:12px}
 body.en-tareas .tarea-user-card{background:#fff;border:1px solid #e7e2dc;border-radius:18px;box-shadow:0 7px 22px rgba(42,32,24,.055);overflow:hidden}
@@ -7629,7 +7629,7 @@ body.en-tareas .tarea-row-actions.is-employee .task-action-complete{min-width:11
  body.en-tareas .tarea-row-actions.is-employee .task-action-complete{width:auto;min-width:118px;padding-inline:14px}
 }
 
-/* v12.2.3 — tareas por usuario: checks, edición única y modal inmediato */
+/* v12.2.4 — tareas por usuario: checks, edición única y modal inmediato */
 body.en-tareas #tareasVistaTareas .tarea-user-card{overflow:hidden}
 body.en-tareas #tareasVistaTareas .tarea-user-items{display:grid}
 body.en-tareas #tareasVistaTareas .tarea-check-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid #eee9e4;cursor:pointer;background:#fff}

@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.2.3",
-  "description": "Autoservicio 12.2.3 - notificaciones de tareas según horario y aviso al supervisor",
+  "version": "12.2.4",
+  "description": "Autoservicio 12.2.4 - confirmación y eliminación de asignaciones vacías",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
