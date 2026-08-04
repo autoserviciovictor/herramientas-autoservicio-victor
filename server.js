@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.1.1";
+const APP_VERSION = "12.1.2";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -2123,39 +2123,99 @@ async function enviarPushVencimientos(payload) {
 }
 
 function claveUnicaAlertaVencimiento(registro, tipo) {
+  if (tipo === "nuevo") return ["vencimiento-nuevo", normalizarTexto(registro.id)].join("|");
   return [normalizarCodigo(registro.codigo), normalizarTexto(registro.vencimiento), normalizarTexto(tipo), fechaIsoHoy()].join("|");
 }
 
-function payloadAlertaVencimiento(registro, dias, tipo) {
+function payloadNuevoVencimiento(registro) {
   const total = numero(registro.total);
   const unidades = `${total} ${total === 1 ? "unidad" : "unidades"}`;
-  if (tipo === "nuevo") {
-    return {
-      title: "Nuevo vencimiento cargado",
-      body: `${registro.articulo} · ${unidades} · vence ${registro.vencimiento}`,
-      tag: `venc-${registro.id}-nuevo`,
-      data: { url: "./" }
-    };
-  }
-  if (tipo === "vencido") return { title: "Producto vencido", body: `${registro.articulo} · ${total} ${total === 1 ? "unidad vencida" : "unidades vencidas"}`, tag: `venc-${registro.id}-vencido`, data: { url: "./" } };
-  if (tipo === "hoy") return { title: "Vence hoy", body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-hoy`, data: { url: "./" } };
-  if (tipo === "oferta-3") return { title: "Oferta próxima a vencer", body: `${registro.articulo} · ${unidades} · vence en 3 días`, tag: `venc-${registro.id}-oferta-3`, data: { url: "./" } };
-  const textoDias = dias === 1 ? "Vence mañana" : `Vence en ${dias} días`;
-  return { title: textoDias, body: `${registro.articulo} · ${unidades}`, tag: `venc-${registro.id}-${tipo}`, data: { url: "./" } };
+  return {
+    title: "Nuevo vencimiento cargado",
+    body: `${registro.articulo} · ${unidades} · vence ${registro.vencimiento}`,
+    tag: `venc-${registro.id}-nuevo`,
+    data: { url: "./?modulo=vencimientos&vista=proximos" }
+  };
 }
 
 async function enviarAlertaRegistro(registro, dias, tipo, clave = claveUnicaAlertaVencimiento(registro, tipo), clavesConocidas = null) {
+  if (tipo !== "nuevo") return { enviados: 0, omitida: true };
   if (clavesNotificacionEnProceso.has(clave)) return { enviados: 0, duplicada: true };
   clavesNotificacionEnProceso.add(clave);
   try {
     const enviadas = clavesConocidas || await clavesNotificacionesEnviadas();
     if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
-    const payload = payloadAlertaVencimiento(registro, dias, tipo);
+    const payload = payloadNuevoVencimiento(registro);
     const usuarios = (await obtenerUsuarios()).filter(u => u.activo && u.permisos?.vencimientos === true);
-    await Promise.all(usuarios.map(u => registrarCentroNotificacion({ usuario: u.usuario, tipo: "vencimientos", titulo: payload.title, mensaje: payload.body, url: "./?modulo=vencimientos", clave: `${clave}|${u.usuario}` })));
+    await Promise.all(usuarios.map(u => registrarCentroNotificacion({
+      usuario: u.usuario,
+      tipo: "vencimientos",
+      titulo: payload.title,
+      mensaje: payload.body,
+      url: payload.data.url,
+      clave: `${clave}|${u.usuario}`
+    })));
     const resultado = await enviarPushVencimientos(payload);
     if (resultado.enviados > 0) {
       await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
+      enviadas.add(clave);
+    }
+    return resultado;
+  } finally {
+    clavesNotificacionEnProceso.delete(clave);
+  }
+}
+
+function claveResumenVencimientos(fecha, tipo) {
+  return ["resumen-vencimientos", fecha, tipo].join("|");
+}
+
+function payloadResumenVencimientos(tipo, cantidad) {
+  if (tipo === "vencidos") {
+    return {
+      title: "Productos vencidos",
+      body: cantidad === 1 ? "Hay 1 producto vencido." : `Hay ${cantidad} productos vencidos.`,
+      tag: `resumen-vencidos-${fechaIsoHoy()}`,
+      data: { url: "./?modulo=vencimientos&vista=vencidos" }
+    };
+  }
+  const dias = Number(tipo);
+  const titulo = dias === 1 ? "Vencen en 1 día" : `Vencen en ${dias} días`;
+  return {
+    title: titulo,
+    body: cantidad === 1
+      ? `Hay 1 producto que vence en ${dias === 1 ? "1 día" : `${dias} días`}.`
+      : `Hay ${cantidad} productos que vencen en ${dias === 1 ? "1 día" : `${dias} días`}.`,
+    tag: `resumen-vencimientos-${fechaIsoHoy()}-${dias}`,
+    data: { url: `./?modulo=vencimientos&vista=proximos&dias=${dias}` }
+  };
+}
+
+async function enviarResumenVencimientos(tipo, registros, enviadas) {
+  if (!Array.isArray(registros) || !registros.length) return { enviados: 0, vacio: true };
+  const fecha = fechaIsoHoy();
+  const clave = claveResumenVencimientos(fecha, tipo);
+  if (enviadas.has(clave) || clavesNotificacionEnProceso.has(clave)) return { enviados: 0, duplicada: true };
+  clavesNotificacionEnProceso.add(clave);
+  try {
+    const payload = payloadResumenVencimientos(tipo, registros.length);
+    const usuarios = (await obtenerUsuarios()).filter(u => u.activo && u.permisos?.vencimientos === true);
+    await Promise.all(usuarios.map(u => registrarCentroNotificacion({
+      usuario: u.usuario,
+      tipo: "vencimientos",
+      titulo: payload.title,
+      mensaje: payload.body,
+      url: payload.data.url,
+      clave: `${clave}|${u.usuario}`
+    })));
+    const resultado = await enviarPushVencimientos(payload);
+    if (resultado.enviados > 0) {
+      const registroResumen = {
+        id: `resumen-${tipo}-${fecha}`,
+        codigo: tipo,
+        vencimiento: fecha
+      };
+      await registrarNotificacionEnviada(clave, `resumen-${tipo}`, registroResumen, payload.body);
       enviadas.add(clave);
     }
     return resultado;
@@ -2230,22 +2290,20 @@ async function procesarAlertasVencimientos() {
   try {
     await limpiarVencimientosAntiguos();
     const [vencimientos, enviadas] = await Promise.all([obtenerVencimientos(), clavesNotificacionesEnviadas()]);
+    const grupos = { "1": [], "3": [], "7": [], "15": [], vencidos: [] };
+
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
       if (dias === null) continue;
-      const tipos = [];
-      if ([15, 7, 3, 1].includes(dias)) tipos.push(String(dias));
-      else if (dias === 0) tipos.push("hoy");
-      else if (dias < 0) tipos.push("vencido");
-      if (dias === 3 && normalizarOfertaVencimiento(registro.oferta) === "Sí") tipos.push("oferta-3");
-      for (const tipo of tipos) {
-        const clave = claveUnicaAlertaVencimiento(registro, tipo);
-        if (enviadas.has(clave)) continue;
-        await enviarAlertaRegistro(registro, dias, tipo, clave, enviadas);
-      }
+      if ([1, 3, 7, 15].includes(dias)) grupos[String(dias)].push(registro);
+      else if (dias < 0) grupos.vencidos.push(registro);
+    }
+
+    for (const tipo of ["1", "3", "7", "15", "vencidos"]) {
+      await enviarResumenVencimientos(tipo, grupos[tipo], enviadas);
     }
   } catch (error) {
-    console.error("Error procesando alertas de vencimientos:", error);
+    console.error("Error procesando alertas agrupadas de vencimientos:", error);
   } finally { procesandoNotificaciones = false; }
 }
 

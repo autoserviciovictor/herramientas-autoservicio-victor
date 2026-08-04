@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "./config.js?v=1211";
 
 const $ = id => document.getElementById(id);
-const CACHE_KEY = "autoservicio_centro_notificaciones_v1211";
+const CACHE_KEY = "autoservicio_centro_notificaciones_v1212";
 const CACHE_TTL = 30000;
 let notificaciones = [];
 let ultimaCarga = 0;

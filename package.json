@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.1.1",
-  "description": "Autoservicio 12.1.1 - optimización de notificaciones y cuota de Google Sheets",
+  "version": "12.1.2",
+  "description": "Autoservicio 12.1.2 - notificaciones de vencimientos agrupadas",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
