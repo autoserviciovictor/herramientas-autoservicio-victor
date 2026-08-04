@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.3.1.1",
-  "description": "Autoservicio 12.3.1 - refinamiento visual general",
+  "version": "12.3.1.2",
+  "description": "Autoservicio 12.3.1.2 - centrado global y anchos responsive",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
