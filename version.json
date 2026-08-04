@@ -1,6 +1,6 @@
 {
-  "version": "12.1.0",
-  "label": "12.1",
-  "build": 121000,
-  "name": "v12.1 - Centro de notificaciones"
+  "version": "12.1.1",
+  "label": "12.1.1",
+  "build": 121100,
+  "name": "v12.1.1 - Optimización de notificaciones"
 }

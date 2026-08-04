@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.1.0";
+const APP_VERSION = "12.1.1";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -76,7 +76,10 @@ const CACHE_TTL = {
   usuarios: 15000,
   sectores: 20000,
   turnosHorarios: 20000,
-  calendarioHorarios: 15000
+  calendarioHorarios: 15000,
+  suscripcionesPush: 60000,
+  clavesNotificaciones: 60000,
+  centroNotificaciones: 30000
 };
 
 async function leerConCache(clave, ttl, lector) {
@@ -1789,11 +1792,13 @@ async function asegurarHojasNotificaciones() {
 
 async function obtenerSuscripcionesPush() {
   await asegurarHojasNotificaciones();
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G` });
-  return (r.data.values || []).slice(1).map((f, i) => ({
-    filaGoogle: i + 2, endpoint: normalizarTexto(f[0]), p256dh: normalizarTexto(f[1]), auth: normalizarTexto(f[2]),
-    usuario: normalizarTexto(f[3]), nombre: normalizarTexto(f[4]), activo: normalizarTexto(f[5]).toLowerCase() !== "no"
-  })).filter(s => s.endpoint && s.p256dh && s.auth && s.activo);
+  return leerConCache("suscripcionesPush", CACHE_TTL.suscripcionesPush, async () => {
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G` });
+    return (r.data.values || []).slice(1).map((f, i) => ({
+      filaGoogle: i + 2, endpoint: normalizarTexto(f[0]), p256dh: normalizarTexto(f[1]), auth: normalizarTexto(f[2]),
+      usuario: normalizarTexto(f[3]), nombre: normalizarTexto(f[4]), activo: normalizarTexto(f[5]).toLowerCase() !== "no"
+    })).filter(s => s.endpoint && s.p256dh && s.auth && s.activo);
+  });
 }
 
 async function guardarSuscripcionPush(req) {
@@ -1810,29 +1815,47 @@ async function guardarSuscripcionPush(req) {
   } else {
     await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS", requestBody: { values: [fila] } });
   }
+  invalidarCache("suscripcionesPush");
 }
 
 async function clavesNotificacionesEnviadas() {
   await asegurarHojasNotificaciones();
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G` });
-  const claves = new Set();
-  for (const fila of (r.data.values || []).slice(1)) {
-    const guardada = normalizarTexto(fila[0]);
-    if (guardada) claves.add(guardada);
-    const fechaEnvio = normalizarTexto(fila[1]).slice(0, 10);
-    const tipo = normalizarTexto(fila[2]);
-    const codigo = normalizarCodigo(fila[4]);
-    const vencimiento = normalizarTexto(fila[5]);
-    if (codigo && vencimiento && tipo && fechaEnvio) claves.add([codigo, vencimiento, tipo, fechaEnvio].join("|"));
-  }
-  return claves;
+  const claves = await leerConCache("clavesNotificaciones", CACHE_TTL.clavesNotificaciones, async () => {
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G` });
+    const resultado = new Set();
+    for (const fila of (r.data.values || []).slice(1)) {
+      const guardada = normalizarTexto(fila[0]);
+      if (guardada) resultado.add(guardada);
+      const fechaEnvio = normalizarTexto(fila[1]).slice(0, 10);
+      const tipo = normalizarTexto(fila[2]);
+      const codigo = normalizarCodigo(fila[4]);
+      const vencimiento = normalizarTexto(fila[5]);
+      if (codigo && vencimiento && tipo && fechaEnvio) resultado.add([codigo, vencimiento, tipo, fechaEnvio].join("|"));
+    }
+    return resultado;
+  });
+  return new Set(claves);
 }
 
 async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
   await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
     requestBody: { values: [[clave, fechaHoraArgentinaIso(), tipo, registro.id, registro.codigo, registro.vencimiento, detalle]] } });
+  const guardado = cacheLecturas.get("clavesNotificaciones");
+  if (guardado?.valor instanceof Set) {
+    const actualizado = new Set(guardado.valor);
+    actualizado.add(clave);
+    cacheLecturas.set("clavesNotificaciones", { fecha: Date.now(), valor: actualizado });
+  } else invalidarCache("clavesNotificaciones");
 }
 
+
+async function leerFilasCentroNotificaciones() {
+  await asegurarHojasNotificaciones();
+  return leerConCache("centroNotificaciones", CACHE_TTL.centroNotificaciones, async () => {
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
+    return r.data.values || [];
+  });
+}
 
 async function registrarCentroNotificacion({ usuario, tipo, titulo, mensaje, url = "./", clave = "" }) {
   await asegurarHojasNotificaciones();
@@ -1840,20 +1863,22 @@ async function registrarCentroNotificacion({ usuario, tipo, titulo, mensaje, url
   if (!usuarioNorm) return;
   const claveNorm = normalizarTexto(clave || `${tipo}|${titulo}|${mensaje}`);
   const id = crypto.createHash("sha1").update(`${usuarioNorm}|${claveNorm}`).digest("hex").slice(0, 20);
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
-  const filas = r.data.values || [];
+  const filas = await leerFilasCentroNotificaciones();
   if (filas.slice(1).some(f => normalizarTexto(f[0]) === id)) return;
+  const nuevaFila = [id, usuarioNorm, normalizarTexto(tipo), normalizarTexto(titulo), normalizarTexto(mensaje), normalizarTexto(url || "./"), fechaHoraArgentinaIso(), "No", claveNorm];
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [[id, usuarioNorm, normalizarTexto(tipo), normalizarTexto(titulo), normalizarTexto(mensaje), normalizarTexto(url || "./"), fechaHoraArgentinaIso(), "No", claveNorm]] }
+    requestBody: { values: [nuevaFila] }
   });
+  const cache = cacheLecturas.get("centroNotificaciones");
+  if (cache?.valor) cacheLecturas.set("centroNotificaciones", { fecha: Date.now(), valor: [...cache.valor, nuevaFila] });
+  else invalidarCache("centroNotificaciones");
 }
 
 async function obtenerCentroNotificaciones(usuario) {
-  await asegurarHojasNotificaciones();
   const clave = normalizarUsuario(usuario);
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
-  return (r.data.values || []).slice(1).map((f, i) => ({
+  const filas = await leerFilasCentroNotificaciones();
+  return filas.slice(1).map((f, i) => ({
     filaGoogle: i + 2, id: normalizarTexto(f[0]), usuario: normalizarUsuario(f[1]), tipo: normalizarTexto(f[2]),
     titulo: normalizarTexto(f[3]), mensaje: normalizarTexto(f[4]), url: normalizarTexto(f[5]) || "./", fecha: normalizarTexto(f[6]),
     leida: normalizarTexto(f[7]).toLowerCase() === "sí" || normalizarTexto(f[7]).toLowerCase() === "si"
@@ -1861,10 +1886,8 @@ async function obtenerCentroNotificaciones(usuario) {
 }
 
 async function marcarCentroNotificacion(usuario, id = "", todas = false) {
-  await asegurarHojasNotificaciones();
   const clave = normalizarUsuario(usuario);
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
-  const filas = r.data.values || [];
+  const filas = await leerFilasCentroNotificaciones();
   const updates = [];
   filas.slice(1).forEach((f, i) => {
     if (normalizarUsuario(f[1]) !== clave) return;
@@ -1872,13 +1895,22 @@ async function marcarCentroNotificacion(usuario, id = "", todas = false) {
     if ((normalizarTexto(f[7]).toLowerCase() === "sí" || normalizarTexto(f[7]).toLowerCase() === "si")) return;
     updates.push({ range: `${NOTIFICATION_CENTER_SHEET_NAME}!H${i+2}`, values: [["Sí"]] });
   });
-  if (updates.length) await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: "RAW", data: updates } });
+  if (updates.length) {
+    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: "RAW", data: updates } });
+    const actualizado = filas.map(f => [...f]);
+    updates.forEach(u => {
+      const match = /!H(\d+)$/.exec(u.range);
+      if (match) actualizado[Number(match[1]) - 1][7] = "Sí";
+    });
+    cacheLecturas.set("centroNotificaciones", { fecha: Date.now(), valor: actualizado });
+  }
   return updates.length;
 }
 
 async function desactivarSuscripcionPush(filaGoogle) {
   if (!filaGoogle) return;
   await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!F${filaGoogle}:F${filaGoogle}`, valueInputOption: "RAW", requestBody: { values: [["No"]] } }).catch(() => {});
+  invalidarCache("suscripcionesPush");
 }
 
 async function obtenerSuscripcionesVencimientosPermitidas() {
@@ -2220,6 +2252,7 @@ async function procesarAlertasVencimientos() {
 app.get("/notificaciones/centro", requerirSesion, async (req, res) => {
   try {
     const notificaciones = await obtenerCentroNotificaciones(req.usuario.usuario);
+    res.set("Cache-Control", "private, max-age=15, stale-while-revalidate=30");
     res.json({ ok: true, notificaciones, noLeidas: notificaciones.filter(n => !n.leida).length });
   } catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron cargar las notificaciones" }); }
 });

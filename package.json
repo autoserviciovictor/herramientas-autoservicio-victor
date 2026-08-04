@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.1.0",
-  "description": "Autoservicio 12.0.2 - corrección de tarjetas de usuarios y tareas",
+  "version": "12.1.1",
+  "description": "Autoservicio 12.1.1 - optimización de notificaciones y cuota de Google Sheets",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
