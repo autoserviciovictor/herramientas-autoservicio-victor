@@ -111,10 +111,8 @@ window.addEventListener("online", () => sincronizarColaOffline());
 setInterval(() => sincronizarColaOffline(), 15000);
 
 function mostrarLogin(mensaje = "") {
-  const overlay = $("loginOverlay");
-  overlay?.classList.remove("oculto");
-  overlay?.style.removeProperty("pointer-events");
-  overlay?.setAttribute("aria-hidden", "false");
+  $("loginOverlay")?.classList.remove("oculto");
+  $("loginOverlay")?.setAttribute("aria-hidden", "false");
   document.body.classList.add("login-bloqueado");
   const estado = $("loginEstado");
   if (estado) { estado.textContent = mensaje; estado.className = `login-status${mensaje ? " error" : ""}`; }
@@ -122,9 +120,8 @@ function mostrarLogin(mensaje = "") {
 }
 
 function ocultarLogin() {
-  const overlay = $("loginOverlay");
-  overlay?.classList.add("oculto");
-  overlay?.setAttribute("aria-hidden", "true");
+  $("loginOverlay")?.classList.add("oculto");
+  $("loginOverlay")?.setAttribute("aria-hidden", "true");
   document.body.classList.remove("login-bloqueado");
 }
 

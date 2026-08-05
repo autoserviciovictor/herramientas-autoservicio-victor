@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.4.5.1",
-  "description": "Autoservicio 12.4.5.1 - Corrección de interacción del inicio de sesión",
+  "version": "12.4.1",
+  "description": "Autoservicio 12.4.1 - selector de días y filtro diario de tareas",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
