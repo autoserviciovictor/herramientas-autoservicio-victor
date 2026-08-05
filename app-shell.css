@@ -343,3 +343,585 @@
     gap:8px!important;
   }
 }
+
+
+/* =========================================================
+   v12.4.2 — Base del layout de escritorio unificado
+   Baño y Configuración de Tareas son la referencia estructural.
+   Esta capa crea un único shell reutilizable; las adaptaciones
+   específicas por módulo continúan en las entregas siguientes.
+   ========================================================= */
+:root{
+  --desktop-page-shell-width:980px;
+  --desktop-page-shell-gutter:20px;
+  --desktop-page-shell-gap:14px;
+}
+
+@media (min-width:901px){
+  body.desktop-layout-v1245:not(.en-inicio) .module-page-header.desktop-page-shell:not(.desktop-page-shell--wide){
+    width:min(var(--desktop-page-shell-width),calc(100vw - var(--app-shell-sidebar-width) - (var(--desktop-page-shell-gutter) * 2)))!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:calc(var(--app-shell-sidebar-width) + (100vw - var(--app-shell-sidebar-width) - min(var(--desktop-page-shell-width),calc(100vw - var(--app-shell-sidebar-width) - (var(--desktop-page-shell-gutter) * 2)))) / 2)!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245:not(.en-inicio) .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
+    padding-left:var(--desktop-page-shell-gutter)!important;
+    padding-right:var(--desktop-page-shell-gutter)!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245:not(.en-inicio) .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide)
+    > :not(.app-bottom-nav):not(.venc-bottom-nav):not(.admin-bottom-nav):not(.modal-overlay){
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Las vistas internas heredan el ancho del shell, sin crear otro eje. */
+  body.desktop-layout-v1245 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
+    .precios-vista,
+    .repo-view,
+    .admin-tab-panel,
+    .tareas-view,
+    .horarios-config-view,
+    #miHorarioView,
+    #horariosConfigView
+  ){
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* El shell ancho queda reservado al calendario mensual. */
+  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario .module-page-header.desktop-page-shell--wide{
+    width:calc(100vw - var(--app-shell-sidebar-width) - 32px)!important;
+    max-width:none!important;
+    margin-left:calc(var(--app-shell-sidebar-width) + 16px)!important;
+    margin-right:16px!important;
+  }
+  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario .pantalla.activa.desktop-page-shell--wide{
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+}
+
+/* =========================================================
+   v12.4.3 — Inventario, Vencimientos y Precios
+   Aplica el shell de Baño/Configuración a todas sus vistas.
+   Solo escritorio: móvil conserva su layout actual.
+   ========================================================= */
+@media (min-width:901px){
+  /* Un único eje para las tres familias de pantallas. */
+  body.desktop-layout-v1245:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
+    .module-page-header.desktop-page-shell:not(.desktop-page-shell--wide){
+    width:min(var(--desktop-page-shell-width),calc(100vw - var(--app-shell-sidebar-width) - 40px))!important;
+    max-width:var(--desktop-page-shell-width)!important;
+  }
+
+  body.desktop-layout-v1245:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
+    .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
+    width:calc(100vw - var(--app-shell-sidebar-width))!important;
+    max-width:none!important;
+    margin-left:var(--app-shell-sidebar-width)!important;
+    margin-right:0!important;
+    padding:0 var(--desktop-page-shell-gutter) 96px!important;
+  }
+
+  body.desktop-layout-v1245:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
+    .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide)
+    > :not(.app-bottom-nav):not(.venc-bottom-nav):not(.modal-overlay){
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Inventario: Cargar, Productos y Cargados comparten el mismo ancho. */
+  body.desktop-layout-v1245.en-modulo-inventario :is(
+    #pantallaInventario,
+    #pantallaProductos,
+    #pantallaCargados,
+    #pantallaEditarProducto
+  ) > :not(.app-bottom-nav):not(.modal-overlay){
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-modulo-inventario :is(
+    #pantallaInventario,
+    #pantallaProductos,
+    #pantallaCargados
+  ){
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+  }
+  body.desktop-layout-v1245.en-modulo-inventario :is(
+    #pantallaInventario,
+    #pantallaProductos,
+    #pantallaCargados
+  ) > :not(.app-bottom-nav):not(.modal-overlay){
+    flex:0 0 auto!important;
+  }
+  body.desktop-layout-v1245.en-modulo-inventario :is(
+    #pantallaProductos .header-simple,
+    #pantallaCargados .header-simple
+  ){
+    display:none!important;
+  }
+  body.desktop-layout-v1245.en-modulo-inventario :is(
+    #pantallaInventario .inventory-location-card,
+    #pantallaInventario .scan-panel,
+    #pantallaInventario .camera-card,
+    #pantallaInventario .product-card,
+    #pantallaInventario .quantity-card,
+    #pantallaInventario .bottom-info,
+    #pantallaInventario .inventory-recent-card,
+    #pantallaProductos .search-card,
+    #pantallaProductos .list-summary,
+    #pantallaProductos .result-list,
+    #pantallaCargados .search-card,
+    #pantallaCargados .list-summary,
+    #pantallaCargados .result-list
+  ){
+    margin-top:0!important;
+    margin-bottom:0!important;
+  }
+
+  /* Vencimientos: el contenido de Cargar, Próximos y Vencidos usa el mismo shell. */
+  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+  }
+  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos > :not(.venc-bottom-nav):not(.modal-overlay){
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin:0 auto!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos :is(
+    .venc-actions-card,
+    .camera-card,
+    .product-card,
+    .venc-form-card,
+    .venc-summary-card,
+    .venc-list-card
+  ){
+    margin-top:0!important;
+    margin-bottom:0!important;
+  }
+  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos :is(
+    .venc-list-proximos,
+    .venc-list-vencidos,
+    .venc-list-grouped,
+    .venc-range-group,
+    .venc-range-group__grid
+  ){
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Precios: vistas internas sin un segundo ancho ni desplazamiento. */
+  body.desktop-layout-v1245.en-precios #pantallaPrecios{
+    display:block!important;
+  }
+  body.desktop-layout-v1245.en-precios #pantallaPrecios > .precios-vista:not(.oculto){
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin:0 auto!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-precios #pantallaPrecios > .precios-vista.oculto{display:none!important}
+  body.desktop-layout-v1245.en-precios #pantallaPrecios .precios-vista > *{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-precios #pantallaPrecios :is(
+    .venc-actions-card,
+    .camera-card,
+    .venc-list-card,
+    .search-card,
+    .list-summary,
+    .precio-product-list
+  ){
+    margin-top:0!important;
+    margin-bottom:0!important;
+  }
+}
+
+
+/* =========================================================
+   v12.4.5 — Lista y Horarios
+   Aplica el shell estructural de Baño/Configuración de Tareas.
+   Solo escritorio. Calendario conserva el modificador ancho.
+   ========================================================= */
+@media (min-width:901px){
+  /* LISTA: Agregar, Escribir y Mi lista comparten un único eje. */
+  body.desktop-layout-v1245.en-anotar
+    .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
+    width:calc(100vw - var(--app-shell-sidebar-width))!important;
+    max-width:none!important;
+    margin-left:var(--app-shell-sidebar-width)!important;
+    margin-right:0!important;
+    padding:0 var(--desktop-page-shell-gutter) 96px!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-anotar #pantallaAnotar{
+    display:block!important;
+  }
+
+  body.desktop-layout-v1245.en-anotar #pantallaAnotar > :is(
+    #repoCargaVista,
+    #repoRegistroVista,
+    #repoEscritaVista
+  ):not(.oculto){
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin:0 auto!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-anotar #pantallaAnotar > :is(
+    #repoCargaVista,
+    #repoRegistroVista,
+    #repoEscritaVista
+  ).oculto{
+    display:none!important;
+  }
+
+  body.desktop-layout-v1245.en-anotar #pantallaAnotar > :is(
+    #repoCargaVista,
+    #repoRegistroVista,
+    #repoEscritaVista
+  ) > *{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-anotar #pantallaAnotar :is(
+    .repo-list-selector,
+    .venc-actions-card,
+    .camera-card,
+    .repo-product-card,
+    .repo-form-card,
+    .venc-list-card,
+    .repo-registro-card,
+    .repo-written-card
+  ){
+    margin-top:0!important;
+    margin-bottom:0!important;
+  }
+
+  body.desktop-layout-v1245.en-anotar #pantallaAnotar :is(
+    .repo-search-row,
+    .repo-list-toolbar,
+    .repo-written-actions,
+    #repoListado,
+    #repoRecientes
+  ){
+    width:100%!important;
+    max-width:none!important;
+    box-sizing:border-box!important;
+  }
+
+  /* HORARIOS estándar: Mi horario y Configuración usan el shell común. */
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
+    width:calc(100vw - var(--app-shell-sidebar-width))!important;
+    max-width:none!important;
+    margin-left:var(--app-shell-sidebar-width)!important;
+    margin-right:0!important;
+    padding:0 var(--desktop-page-shell-gutter) 96px!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios .horarios-shell,
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios .horarios-content{
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios .horarios-content{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios.horarios-vista-mio
+    #pantallaHorarios #horariosMioView,
+  body.desktop-layout-v1245.en-horarios.horarios-vista-config
+    #pantallaHorarios #horariosConfigView{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios.horarios-vista-mio
+    #pantallaHorarios #horariosMioView.oculto,
+  body.desktop-layout-v1245.en-horarios.horarios-vista-config
+    #pantallaHorarios #horariosConfigView.oculto{
+    display:none!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios :is(
+      #horariosMioView,
+      #horariosConfigView,
+      .horarios-config-view
+    ) > *{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios :is(
+      .mi-horario-hero,
+      .mi-horario-list,
+      .settings-card,
+      .horarios-config-card
+    ){
+    margin-top:0!important;
+    margin-bottom:0!important;
+  }
+
+  /* En vistas internas el toolbar antiguo no crea un segundo encabezado. */
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios .horarios-toolbar,
+  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+    #pantallaHorarios .horarios-status-row{
+    display:none!important;
+  }
+
+  /* CALENDARIO: única excepción de ancho completo. */
+  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario
+    .module-page-header.desktop-page-shell--wide{
+    width:calc(100vw - var(--app-shell-sidebar-width) - 32px)!important;
+    max-width:none!important;
+    margin-left:calc(var(--app-shell-sidebar-width) + 16px)!important;
+    margin-right:16px!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario
+    #pantallaHorarios.desktop-page-shell--wide{
+    width:calc(100vw - var(--app-shell-sidebar-width))!important;
+    max-width:none!important;
+    margin-left:var(--app-shell-sidebar-width)!important;
+    margin-right:0!important;
+    padding-left:16px!important;
+    padding-right:16px!important;
+    box-sizing:border-box!important;
+  }
+
+  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario
+    #pantallaHorarios :is(.horarios-shell,.horarios-content,#horariosEquipoView){
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+}
+
+/* =========================================================
+   v12.4.5 — Administrador, Herramientas y pulido final
+   Completa la adopción del shell de Baño/Configuración.
+   Solo escritorio. Calendario continúa como única excepción ancha.
+   ========================================================= */
+@media (min-width:901px){
+  /* INICIO / HERRAMIENTAS: encabezado, grilla e instalación en un eje único. */
+  body.desktop-layout-v1245.en-inicio #pantallaInicio{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:22px var(--desktop-page-shell-gutter) 96px!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-inicio #pantallaInicio > :is(.module-grid,.pwa-install-card){
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-inicio #pantallaInicio .module-grid{
+    align-items:stretch!important;
+    gap:var(--desktop-page-shell-gap)!important;
+  }
+  body.desktop-layout-v1245.en-inicio #pantallaInicio .module-card{
+    min-width:0!important;
+    height:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  /* ADMINISTRADOR: cada pestaña usa el mismo shell que el encabezado. */
+  body.desktop-layout-v1245.en-admin #pantallaAdmin.admin-screen{
+    display:block!important;
+    width:calc(100vw - var(--app-shell-sidebar-width))!important;
+    max-width:none!important;
+    margin-left:var(--app-shell-sidebar-width)!important;
+    margin-right:0!important;
+    padding:0 var(--desktop-page-shell-gutter) 96px!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-admin #pantallaAdmin > :is(
+    #adminMensaje,
+    .admin-tab-panel
+  ){
+    width:min(var(--desktop-page-shell-width),100%)!important;
+    max-width:var(--desktop-page-shell-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-admin #pantallaAdmin > .admin-tab-panel{
+    padding:22px!important;
+    margin-top:0!important;
+  }
+  body.desktop-layout-v1245.en-admin #pantallaAdmin > .admin-tab-panel.oculto{
+    display:none!important;
+  }
+  body.desktop-layout-v1245.en-admin #pantallaAdmin .admin-section-head,
+  body.desktop-layout-v1245.en-admin #pantallaAdmin :is(
+    .admin-users-list,
+    .admin-sectors-list,
+    .admin-history-filters,
+    .admin-history-summary,
+    .admin-history-list,
+    .admin-server-status,
+    .admin-summary-grid,
+    .admin-import-card,
+    .admin-history-more
+  ){
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+  body.desktop-layout-v1245.en-admin #pantallaAdmin :is(
+    .admin-users-list,
+    .admin-sectors-list,
+    .admin-history-list
+  ){
+    gap:var(--desktop-page-shell-gap)!important;
+  }
+
+  /* Tarjetas de usuario: contenido estable, estado libre de superposiciones. */
+  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-card-v1203{
+    position:relative!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-status-corner{
+    top:14px!important;
+    right:14px!important;
+    max-width:86px!important;
+    white-space:nowrap!important;
+    z-index:2!important;
+  }
+  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-main{
+    min-width:0!important;
+    padding-right:92px!important;
+  }
+  body.desktop-layout-v1245.en-admin #adminUsuariosLista :is(
+    .admin-user-copy,
+    .admin-user-copy > strong,
+    .admin-user-copy > span
+  ){
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-module-count{
+    display:inline-flex!important;
+    align-items:center!important;
+    width:max-content!important;
+    max-width:100%!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  /* Estados vacíos y mensajes: ocupan el mismo eje de su pantalla. */
+  body.desktop-layout-v1245 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
+    .empty-state,
+    .tareas-empty,
+    .venc-empty-state,
+    .repo-empty,
+    .admin-message,
+    .admin-import-status
+  ){
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Formularios y paneles estándar no generan un tercer eje interno. */
+  body.desktop-layout-v1245 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
+    .settings-card,
+    .search-card,
+    .camera-card,
+    .venc-actions-card,
+    .venc-list-card,
+    .repo-product-card,
+    .repo-form-card,
+    .repo-written-card
+  ){
+    box-sizing:border-box!important;
+  }
+
+  /* Navegaciones inferiores se conservan fuera del ancho limitado. */
+  body.desktop-layout-v1245 #pantallaAdmin > .admin-bottom-nav,
+  body.desktop-layout-v1245 .pantalla.activa > :is(.app-bottom-nav,.venc-bottom-nav){
+    width:auto!important;
+    max-width:none!important;
+  }
+}
