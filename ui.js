@@ -95,23 +95,6 @@ const sidebarObserver = new MutationObserver(() => {
 [...document.querySelectorAll(".app-bottom-nav,.admin-bottom-nav")].forEach(nav => sidebarObserver.observe(nav, { subtree: true, attributes: true, attributeFilter: ["class"] }));
 window.addEventListener("resize", () => renderDesktopSidebar());
 
-
-function actualizarShellEscritorio() {
-    const header = document.getElementById("modulePageHeader");
-    const pantallas = Object.values(elementos.pantallas).filter(Boolean);
-    document.body.classList.add("desktop-layout-v1243");
-    header?.classList.add("desktop-page-shell");
-    pantallas.forEach(pantalla => {
-        pantalla.classList.toggle("desktop-page-shell", pantalla.classList.contains("activa"));
-    });
-    const calendarioAncho = document.body.classList.contains("en-horarios") && document.body.classList.contains("horarios-vista-calendario");
-    header?.classList.toggle("desktop-page-shell--wide", calendarioAncho);
-    pantallas.forEach(pantalla => pantalla.classList.toggle("desktop-page-shell--wide", calendarioAncho && pantalla.id === "pantallaHorarios"));
-}
-
-const shellClassObserver = new MutationObserver(actualizarShellEscritorio);
-shellClassObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-
 let temporizadorToast = null;
 let sonidoHabilitado = true;
 let vibracionHabilitada = true;
@@ -172,7 +155,6 @@ export function cambiarPantalla(nombre) {
     document.body.classList.toggle("en-modulo-inventario", ["inventario", "productos", "cargados", "editarProducto"].includes(nombre));
     document.body.classList.toggle("en-editor-producto", nombre === "editarProducto");
     renderDesktopSidebar(nombre);
-    actualizarShellEscritorio();
 }
 
 export function mostrarMensaje(texto, tipo = "ok") {
