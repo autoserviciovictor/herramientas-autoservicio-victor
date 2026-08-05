@@ -239,3 +239,188 @@
     max-width: 100% !important;
   }
 }
+
+/* =========================================================
+   v12.3.1.4 — Layout de escritorio unificado
+   Todos los módulos estándar comparten ancho y eje central.
+   Calendario conserva el ancho completo.
+   ========================================================= */
+:root {
+  --app-standard-content-width: 920px;
+}
+
+@media (min-width: 901px) {
+  /* Encabezado y contenido estándar usan exactamente la misma caja. */
+  body:not(.en-inicio):not(.horarios-vista-calendario) .module-page-header {
+    width: min(var(--app-standard-content-width), calc(100vw - var(--app-shell-sidebar-width) - 48px)) !important;
+    max-width: var(--app-standard-content-width) !important;
+    margin-left: calc(
+      var(--app-shell-sidebar-width) +
+      (100vw - var(--app-shell-sidebar-width) - min(var(--app-standard-content-width), calc(100vw - var(--app-shell-sidebar-width) - 48px))) / 2
+    ) !important;
+    margin-right: 0 !important;
+    left: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Las pantallas siguen ocupando el área útil; sus bloques se centran dentro. */
+  body:not(.en-inicio) .pantalla.activa {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Una única medida para todos los bloques superiores de los módulos estándar. */
+  body:not(.en-inicio):not(.horarios-vista-calendario) .pantalla.activa >
+    :not(.app-bottom-nav):not(.venc-bottom-nav):not(.repo-bottom-nav):not(.horarios-bottom-nav):not(.modal-overlay) {
+    width: min(var(--app-standard-content-width), 100%) !important;
+    max-width: var(--app-standard-content-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Contenedores internos que antes conservaban anchos o márgenes propios. */
+  #pantallaInventario > section,
+  #pantallaProductos > section,
+  #pantallaEditarProducto > section,
+  #pantallaAjustes > section,
+  #pantallaVencimientos > section,
+  #pantallaPrecios > .precios-vista,
+  #pantallaAnotar > section,
+  #pantallaTareas > .tareas-view,
+  #pantallaAdmin > .admin-tab-panel,
+  body.en-horarios:not(.horarios-vista-calendario) .horarios-content > * {
+    width: min(var(--app-standard-content-width), 100%) !important;
+    max-width: var(--app-standard-content-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Las tarjetas principales no pueden quedar desplazadas dentro de su vista. */
+  #pantallaInventario section > .card,
+  #pantallaVencimientos section > .card,
+  #pantallaPrecios .precios-vista > section,
+  #pantallaAnotar .repo-view > section,
+  #pantallaTareas .tareas-shell,
+  #pantallaAdmin .admin-tab-panel > section,
+  body.en-horarios:not(.horarios-vista-calendario) .horarios-content > section {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Calendario: única pantalla de ancho completo. */
+  body.en-horarios.horarios-vista-calendario .module-page-header {
+    width: calc(100vw - var(--app-shell-sidebar-width) - 32px) !important;
+    max-width: none !important;
+    margin-left: calc(var(--app-shell-sidebar-width) + 16px) !important;
+    margin-right: 16px !important;
+    left: auto !important;
+  }
+  body.en-horarios.horarios-vista-calendario #pantallaHorarios {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-content,
+  body.en-horarios.horarios-vista-calendario #horariosEquipoView,
+  body.en-horarios.horarios-vista-calendario .horarios-board-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Usuarios: información ordenada, sin superposición de etiquetas. */
+  #adminUsuariosLista.admin-users-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+  #adminUsuariosLista .admin-user-card-v1203 {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    align-content: start !important;
+    min-width: 0 !important;
+    min-height: 154px !important;
+    padding: 16px !important;
+    gap: 12px !important;
+    overflow: hidden !important;
+  }
+  #adminUsuariosLista .admin-user-main {
+    display: grid !important;
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 12px !important;
+    min-width: 0 !important;
+    padding: 0 82px 0 0 !important;
+  }
+  #adminUsuariosLista .admin-avatar {
+    width: 46px !important;
+    height: 46px !important;
+    margin-top: 2px !important;
+  }
+  #adminUsuariosLista .admin-user-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  #adminUsuariosLista .admin-user-copy > strong,
+  #adminUsuariosLista .admin-user-copy > span {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    word-break: normal !important;
+  }
+  #adminUsuariosLista .admin-user-copy > strong {
+    font-size: 15px !important;
+    line-height: 1.25 !important;
+    padding-right: 0 !important;
+  }
+  #adminUsuariosLista .admin-user-copy > span {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+  #adminUsuariosLista .admin-user-module-count {
+    position: static !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 6px 0 0 !important;
+    padding: 5px 8px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 10px !important;
+  }
+  #adminUsuariosLista .admin-user-status-corner {
+    position: absolute !important;
+    top: 14px !important;
+    right: 14px !important;
+    z-index: 2 !important;
+    min-width: 58px !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+  #adminUsuariosLista .admin-user-card-buttons {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    align-self: end !important;
+  }
+  #adminUsuariosLista .admin-user-card-buttons button {
+    width: 100% !important;
+    min-height: 36px !important;
+  }
+}
