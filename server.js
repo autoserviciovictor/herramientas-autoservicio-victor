@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.3.1";
+const APP_VERSION = "12.3.1.5";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1858,6 +1858,44 @@ async function guardarSuscripcionPush(req) {
   invalidarCache("suscripcionesPush");
 }
 
+
+// v12.3.1.5 — Cola global para escrituras de notificaciones en Google Sheets.
+let colaEscriturasNotificaciones = Promise.resolve();
+let ultimaEscrituraNotificaciones = 0;
+const idsCentroNotificacionPendientes = new Set();
+
+function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+function esErrorCuotaSheets(error) {
+  return Number(error?.code || error?.status || error?.response?.status) === 429 ||
+    String(error?.message || '').toLowerCase().includes('quota exceeded') ||
+    String(error?.message || '').toLowerCase().includes('rate limit');
+}
+
+function encolarEscrituraNotificaciones(operacion) {
+  const ejecutar = async () => {
+    const esperaMinima = Math.max(0, 1150 - (Date.now() - ultimaEscrituraNotificaciones));
+    if (esperaMinima) await esperar(esperaMinima);
+    let intento = 0;
+    while (true) {
+      try {
+        const resultado = await operacion();
+        ultimaEscrituraNotificaciones = Date.now();
+        return resultado;
+      } catch (error) {
+        if (!esErrorCuotaSheets(error) || intento >= 5) throw error;
+        const demora = Math.min(30000, 1800 * (2 ** intento)) + Math.floor(Math.random() * 700);
+        intento += 1;
+        console.warn(`Google Sheets 429: reintento ${intento} en ${demora} ms`);
+        await esperar(demora);
+      }
+    }
+  };
+  const promesa = colaEscriturasNotificaciones.then(ejecutar, ejecutar);
+  colaEscriturasNotificaciones = promesa.catch(() => {});
+  return promesa;
+}
+
 async function clavesNotificacionesEnviadas() {
   await asegurarHojasNotificaciones();
   const claves = await leerConCache("clavesNotificaciones", CACHE_TTL.clavesNotificaciones, async () => {
@@ -1878,8 +1916,8 @@ async function clavesNotificacionesEnviadas() {
 }
 
 async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
-  await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [[clave, fechaHoraArgentinaIso(), tipo, registro.id, registro.codigo, registro.vencimiento, detalle]] } });
+  await encolarEscrituraNotificaciones(() => sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[clave, fechaHoraArgentinaIso(), tipo, registro.id, registro.codigo, registro.vencimiento, detalle]] } }));
   const guardado = cacheLecturas.get("clavesNotificaciones");
   if (guardado?.valor instanceof Set) {
     const actualizado = new Set(guardado.valor);
@@ -1904,12 +1942,17 @@ async function registrarCentroNotificacion({ usuario, tipo, titulo, mensaje, url
   const claveNorm = normalizarTexto(clave || `${tipo}|${titulo}|${mensaje}`);
   const id = crypto.createHash("sha1").update(`${usuarioNorm}|${claveNorm}`).digest("hex").slice(0, 20);
   const filas = await leerFilasCentroNotificaciones();
-  if (filas.slice(1).some(f => normalizarTexto(f[0]) === id)) return;
+  if (filas.slice(1).some(f => normalizarTexto(f[0]) === id) || idsCentroNotificacionPendientes.has(id)) return;
   const nuevaFila = [id, usuarioNorm, normalizarTexto(tipo), normalizarTexto(titulo), normalizarTexto(mensaje), normalizarTexto(url || "./"), fechaHoraArgentinaIso(), "No", claveNorm];
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [nuevaFila] }
-  });
+  idsCentroNotificacionPendientes.add(id);
+  try {
+    await encolarEscrituraNotificaciones(() => sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [nuevaFila] }
+    }));
+  } finally {
+    idsCentroNotificacionPendientes.delete(id);
+  }
   const cache = cacheLecturas.get("centroNotificaciones");
   if (cache?.valor) cacheLecturas.set("centroNotificaciones", { fecha: Date.now(), valor: [...cache.valor, nuevaFila] });
   else invalidarCache("centroNotificaciones");
