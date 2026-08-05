@@ -99,7 +99,7 @@ window.addEventListener("resize", () => renderDesktopSidebar());
 function actualizarShellEscritorio() {
     const header = document.getElementById("modulePageHeader");
     const pantallas = Object.values(elementos.pantallas).filter(Boolean);
-    document.body.classList.add("desktop-layout-v1245");
+    document.body.classList.add("desktop-layout-v12451");
     header?.classList.add("desktop-page-shell");
     pantallas.forEach(pantalla => {
         pantalla.classList.toggle("desktop-page-shell", pantalla.classList.contains("activa"));

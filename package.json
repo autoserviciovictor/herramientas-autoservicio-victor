@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.4.5",
-  "description": "Autoservicio 12.4.5 - Administrador, Herramientas y pulido final del layout de escritorio",
+  "version": "12.4.5.1",
+  "description": "Autoservicio 12.4.5.1 - Corrección de interacción del inicio de sesión",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

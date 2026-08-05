@@ -358,7 +358,7 @@
 }
 
 @media (min-width:901px){
-  body.desktop-layout-v1245:not(.en-inicio) .module-page-header.desktop-page-shell:not(.desktop-page-shell--wide){
+  body.desktop-layout-v12451:not(.en-inicio) .module-page-header.desktop-page-shell:not(.desktop-page-shell--wide){
     width:min(var(--desktop-page-shell-width),calc(100vw - var(--app-shell-sidebar-width) - (var(--desktop-page-shell-gutter) * 2)))!important;
     max-width:var(--desktop-page-shell-width)!important;
     margin-left:calc(var(--app-shell-sidebar-width) + (100vw - var(--app-shell-sidebar-width) - min(var(--desktop-page-shell-width),calc(100vw - var(--app-shell-sidebar-width) - (var(--desktop-page-shell-gutter) * 2)))) / 2)!important;
@@ -366,13 +366,13 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245:not(.en-inicio) .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
+  body.desktop-layout-v12451:not(.en-inicio) .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
     padding-left:var(--desktop-page-shell-gutter)!important;
     padding-right:var(--desktop-page-shell-gutter)!important;
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245:not(.en-inicio) .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide)
+  body.desktop-layout-v12451:not(.en-inicio) .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide)
     > :not(.app-bottom-nav):not(.venc-bottom-nav):not(.admin-bottom-nav):not(.modal-overlay){
     width:min(var(--desktop-page-shell-width),100%)!important;
     max-width:var(--desktop-page-shell-width)!important;
@@ -382,7 +382,7 @@
   }
 
   /* Las vistas internas heredan el ancho del shell, sin crear otro eje. */
-  body.desktop-layout-v1245 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
+  body.desktop-layout-v12451 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
     .precios-vista,
     .repo-view,
     .admin-tab-panel,
@@ -399,13 +399,13 @@
   }
 
   /* El shell ancho queda reservado al calendario mensual. */
-  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario .module-page-header.desktop-page-shell--wide{
+  body.desktop-layout-v12451.en-horarios.horarios-vista-calendario .module-page-header.desktop-page-shell--wide{
     width:calc(100vw - var(--app-shell-sidebar-width) - 32px)!important;
     max-width:none!important;
     margin-left:calc(var(--app-shell-sidebar-width) + 16px)!important;
     margin-right:16px!important;
   }
-  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario .pantalla.activa.desktop-page-shell--wide{
+  body.desktop-layout-v12451.en-horarios.horarios-vista-calendario .pantalla.activa.desktop-page-shell--wide{
     padding-left:0!important;
     padding-right:0!important;
   }
@@ -418,13 +418,13 @@
    ========================================================= */
 @media (min-width:901px){
   /* Un único eje para las tres familias de pantallas. */
-  body.desktop-layout-v1245:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
+  body.desktop-layout-v12451:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
     .module-page-header.desktop-page-shell:not(.desktop-page-shell--wide){
     width:min(var(--desktop-page-shell-width),calc(100vw - var(--app-shell-sidebar-width) - 40px))!important;
     max-width:var(--desktop-page-shell-width)!important;
   }
 
-  body.desktop-layout-v1245:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
+  body.desktop-layout-v12451:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
     .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
     width:calc(100vw - var(--app-shell-sidebar-width))!important;
     max-width:none!important;
@@ -433,7 +433,7 @@
     padding:0 var(--desktop-page-shell-gutter) 96px!important;
   }
 
-  body.desktop-layout-v1245:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
+  body.desktop-layout-v12451:is(.en-modulo-inventario,.en-vencimientos,.en-precios)
     .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide)
     > :not(.app-bottom-nav):not(.venc-bottom-nav):not(.modal-overlay){
     width:min(var(--desktop-page-shell-width),100%)!important;
@@ -444,7 +444,7 @@
   }
 
   /* Inventario: Cargar, Productos y Cargados comparten el mismo ancho. */
-  body.desktop-layout-v1245.en-modulo-inventario :is(
+  body.desktop-layout-v12451.en-modulo-inventario :is(
     #pantallaInventario,
     #pantallaProductos,
     #pantallaCargados,
@@ -456,7 +456,7 @@
     margin-right:auto!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-modulo-inventario :is(
+  body.desktop-layout-v12451.en-modulo-inventario :is(
     #pantallaInventario,
     #pantallaProductos,
     #pantallaCargados
@@ -466,20 +466,20 @@
     align-items:stretch!important;
     gap:var(--desktop-page-shell-gap)!important;
   }
-  body.desktop-layout-v1245.en-modulo-inventario :is(
+  body.desktop-layout-v12451.en-modulo-inventario :is(
     #pantallaInventario,
     #pantallaProductos,
     #pantallaCargados
   ) > :not(.app-bottom-nav):not(.modal-overlay){
     flex:0 0 auto!important;
   }
-  body.desktop-layout-v1245.en-modulo-inventario :is(
+  body.desktop-layout-v12451.en-modulo-inventario :is(
     #pantallaProductos .header-simple,
     #pantallaCargados .header-simple
   ){
     display:none!important;
   }
-  body.desktop-layout-v1245.en-modulo-inventario :is(
+  body.desktop-layout-v12451.en-modulo-inventario :is(
     #pantallaInventario .inventory-location-card,
     #pantallaInventario .scan-panel,
     #pantallaInventario .camera-card,
@@ -499,19 +499,19 @@
   }
 
   /* Vencimientos: el contenido de Cargar, Próximos y Vencidos usa el mismo shell. */
-  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos{
+  body.desktop-layout-v12451.en-vencimientos #pantallaVencimientos{
     display:flex!important;
     flex-direction:column!important;
     align-items:stretch!important;
     gap:var(--desktop-page-shell-gap)!important;
   }
-  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos > :not(.venc-bottom-nav):not(.modal-overlay){
+  body.desktop-layout-v12451.en-vencimientos #pantallaVencimientos > :not(.venc-bottom-nav):not(.modal-overlay){
     width:min(var(--desktop-page-shell-width),100%)!important;
     max-width:var(--desktop-page-shell-width)!important;
     margin:0 auto!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos :is(
+  body.desktop-layout-v12451.en-vencimientos #pantallaVencimientos :is(
     .venc-actions-card,
     .camera-card,
     .product-card,
@@ -522,7 +522,7 @@
     margin-top:0!important;
     margin-bottom:0!important;
   }
-  body.desktop-layout-v1245.en-vencimientos #pantallaVencimientos :is(
+  body.desktop-layout-v12451.en-vencimientos #pantallaVencimientos :is(
     .venc-list-proximos,
     .venc-list-vencidos,
     .venc-list-grouped,
@@ -537,10 +537,10 @@
   }
 
   /* Precios: vistas internas sin un segundo ancho ni desplazamiento. */
-  body.desktop-layout-v1245.en-precios #pantallaPrecios{
+  body.desktop-layout-v12451.en-precios #pantallaPrecios{
     display:block!important;
   }
-  body.desktop-layout-v1245.en-precios #pantallaPrecios > .precios-vista:not(.oculto){
+  body.desktop-layout-v12451.en-precios #pantallaPrecios > .precios-vista:not(.oculto){
     display:flex!important;
     flex-direction:column!important;
     align-items:stretch!important;
@@ -550,15 +550,15 @@
     margin:0 auto!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-precios #pantallaPrecios > .precios-vista.oculto{display:none!important}
-  body.desktop-layout-v1245.en-precios #pantallaPrecios .precios-vista > *{
+  body.desktop-layout-v12451.en-precios #pantallaPrecios > .precios-vista.oculto{display:none!important}
+  body.desktop-layout-v12451.en-precios #pantallaPrecios .precios-vista > *{
     width:100%!important;
     max-width:none!important;
     margin-left:0!important;
     margin-right:0!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-precios #pantallaPrecios :is(
+  body.desktop-layout-v12451.en-precios #pantallaPrecios :is(
     .venc-actions-card,
     .camera-card,
     .venc-list-card,
@@ -579,7 +579,7 @@
    ========================================================= */
 @media (min-width:901px){
   /* LISTA: Agregar, Escribir y Mi lista comparten un único eje. */
-  body.desktop-layout-v1245.en-anotar
+  body.desktop-layout-v12451.en-anotar
     .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
     width:calc(100vw - var(--app-shell-sidebar-width))!important;
     max-width:none!important;
@@ -589,11 +589,11 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-anotar #pantallaAnotar{
+  body.desktop-layout-v12451.en-anotar #pantallaAnotar{
     display:block!important;
   }
 
-  body.desktop-layout-v1245.en-anotar #pantallaAnotar > :is(
+  body.desktop-layout-v12451.en-anotar #pantallaAnotar > :is(
     #repoCargaVista,
     #repoRegistroVista,
     #repoEscritaVista
@@ -608,7 +608,7 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-anotar #pantallaAnotar > :is(
+  body.desktop-layout-v12451.en-anotar #pantallaAnotar > :is(
     #repoCargaVista,
     #repoRegistroVista,
     #repoEscritaVista
@@ -616,7 +616,7 @@
     display:none!important;
   }
 
-  body.desktop-layout-v1245.en-anotar #pantallaAnotar > :is(
+  body.desktop-layout-v12451.en-anotar #pantallaAnotar > :is(
     #repoCargaVista,
     #repoRegistroVista,
     #repoEscritaVista
@@ -628,7 +628,7 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-anotar #pantallaAnotar :is(
+  body.desktop-layout-v12451.en-anotar #pantallaAnotar :is(
     .repo-list-selector,
     .venc-actions-card,
     .camera-card,
@@ -642,7 +642,7 @@
     margin-bottom:0!important;
   }
 
-  body.desktop-layout-v1245.en-anotar #pantallaAnotar :is(
+  body.desktop-layout-v12451.en-anotar #pantallaAnotar :is(
     .repo-search-row,
     .repo-list-toolbar,
     .repo-written-actions,
@@ -655,7 +655,7 @@
   }
 
   /* HORARIOS estándar: Mi horario y Configuración usan el shell común. */
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide){
     width:calc(100vw - var(--app-shell-sidebar-width))!important;
     max-width:none!important;
@@ -665,9 +665,9 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios .horarios-shell,
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios .horarios-content{
     width:min(var(--desktop-page-shell-width),100%)!important;
     max-width:var(--desktop-page-shell-width)!important;
@@ -678,7 +678,7 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios .horarios-content{
     display:flex!important;
     flex-direction:column!important;
@@ -686,9 +686,9 @@
     gap:var(--desktop-page-shell-gap)!important;
   }
 
-  body.desktop-layout-v1245.en-horarios.horarios-vista-mio
+  body.desktop-layout-v12451.en-horarios.horarios-vista-mio
     #pantallaHorarios #horariosMioView,
-  body.desktop-layout-v1245.en-horarios.horarios-vista-config
+  body.desktop-layout-v12451.en-horarios.horarios-vista-config
     #pantallaHorarios #horariosConfigView{
     display:flex!important;
     flex-direction:column!important;
@@ -700,14 +700,14 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-horarios.horarios-vista-mio
+  body.desktop-layout-v12451.en-horarios.horarios-vista-mio
     #pantallaHorarios #horariosMioView.oculto,
-  body.desktop-layout-v1245.en-horarios.horarios-vista-config
+  body.desktop-layout-v12451.en-horarios.horarios-vista-config
     #pantallaHorarios #horariosConfigView.oculto{
     display:none!important;
   }
 
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios :is(
       #horariosMioView,
       #horariosConfigView,
@@ -720,7 +720,7 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios :is(
       .mi-horario-hero,
       .mi-horario-list,
@@ -732,15 +732,15 @@
   }
 
   /* En vistas internas el toolbar antiguo no crea un segundo encabezado. */
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios .horarios-toolbar,
-  body.desktop-layout-v1245.en-horarios:not(.horarios-vista-calendario)
+  body.desktop-layout-v12451.en-horarios:not(.horarios-vista-calendario)
     #pantallaHorarios .horarios-status-row{
     display:none!important;
   }
 
   /* CALENDARIO: única excepción de ancho completo. */
-  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario
+  body.desktop-layout-v12451.en-horarios.horarios-vista-calendario
     .module-page-header.desktop-page-shell--wide{
     width:calc(100vw - var(--app-shell-sidebar-width) - 32px)!important;
     max-width:none!important;
@@ -748,7 +748,7 @@
     margin-right:16px!important;
   }
 
-  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario
+  body.desktop-layout-v12451.en-horarios.horarios-vista-calendario
     #pantallaHorarios.desktop-page-shell--wide{
     width:calc(100vw - var(--app-shell-sidebar-width))!important;
     max-width:none!important;
@@ -759,7 +759,7 @@
     box-sizing:border-box!important;
   }
 
-  body.desktop-layout-v1245.en-horarios.horarios-vista-calendario
+  body.desktop-layout-v12451.en-horarios.horarios-vista-calendario
     #pantallaHorarios :is(.horarios-shell,.horarios-content,#horariosEquipoView){
     width:100%!important;
     max-width:none!important;
@@ -776,32 +776,32 @@
    ========================================================= */
 @media (min-width:901px){
   /* INICIO / HERRAMIENTAS: encabezado, grilla e instalación en un eje único. */
-  body.desktop-layout-v1245.en-inicio #pantallaInicio{
+  body.desktop-layout-v12451.en-inicio #pantallaInicio{
     width:100%!important;
     max-width:none!important;
     margin:0!important;
     padding:22px var(--desktop-page-shell-gutter) 96px!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-inicio #pantallaInicio > :is(.module-grid,.pwa-install-card){
+  body.desktop-layout-v12451.en-inicio #pantallaInicio > :is(.module-grid,.pwa-install-card){
     width:min(var(--desktop-page-shell-width),100%)!important;
     max-width:var(--desktop-page-shell-width)!important;
     margin-left:auto!important;
     margin-right:auto!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-inicio #pantallaInicio .module-grid{
+  body.desktop-layout-v12451.en-inicio #pantallaInicio .module-grid{
     align-items:stretch!important;
     gap:var(--desktop-page-shell-gap)!important;
   }
-  body.desktop-layout-v1245.en-inicio #pantallaInicio .module-card{
+  body.desktop-layout-v12451.en-inicio #pantallaInicio .module-card{
     min-width:0!important;
     height:100%!important;
     box-sizing:border-box!important;
   }
 
   /* ADMINISTRADOR: cada pestaña usa el mismo shell que el encabezado. */
-  body.desktop-layout-v1245.en-admin #pantallaAdmin.admin-screen{
+  body.desktop-layout-v12451.en-admin #pantallaAdmin.admin-screen{
     display:block!important;
     width:calc(100vw - var(--app-shell-sidebar-width))!important;
     max-width:none!important;
@@ -810,7 +810,7 @@
     padding:0 var(--desktop-page-shell-gutter) 96px!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-admin #pantallaAdmin > :is(
+  body.desktop-layout-v12451.en-admin #pantallaAdmin > :is(
     #adminMensaje,
     .admin-tab-panel
   ){
@@ -820,15 +820,15 @@
     margin-right:auto!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-admin #pantallaAdmin > .admin-tab-panel{
+  body.desktop-layout-v12451.en-admin #pantallaAdmin > .admin-tab-panel{
     padding:22px!important;
     margin-top:0!important;
   }
-  body.desktop-layout-v1245.en-admin #pantallaAdmin > .admin-tab-panel.oculto{
+  body.desktop-layout-v12451.en-admin #pantallaAdmin > .admin-tab-panel.oculto{
     display:none!important;
   }
-  body.desktop-layout-v1245.en-admin #pantallaAdmin .admin-section-head,
-  body.desktop-layout-v1245.en-admin #pantallaAdmin :is(
+  body.desktop-layout-v12451.en-admin #pantallaAdmin .admin-section-head,
+  body.desktop-layout-v12451.en-admin #pantallaAdmin :is(
     .admin-users-list,
     .admin-sectors-list,
     .admin-history-filters,
@@ -845,7 +845,7 @@
     margin-right:0!important;
     box-sizing:border-box!important;
   }
-  body.desktop-layout-v1245.en-admin #pantallaAdmin :is(
+  body.desktop-layout-v12451.en-admin #pantallaAdmin :is(
     .admin-users-list,
     .admin-sectors-list,
     .admin-history-list
@@ -854,23 +854,23 @@
   }
 
   /* Tarjetas de usuario: contenido estable, estado libre de superposiciones. */
-  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-card-v1203{
+  body.desktop-layout-v12451.en-admin #adminUsuariosLista .admin-user-card-v1203{
     position:relative!important;
     min-width:0!important;
     overflow:hidden!important;
   }
-  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-status-corner{
+  body.desktop-layout-v12451.en-admin #adminUsuariosLista .admin-user-status-corner{
     top:14px!important;
     right:14px!important;
     max-width:86px!important;
     white-space:nowrap!important;
     z-index:2!important;
   }
-  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-main{
+  body.desktop-layout-v12451.en-admin #adminUsuariosLista .admin-user-main{
     min-width:0!important;
     padding-right:92px!important;
   }
-  body.desktop-layout-v1245.en-admin #adminUsuariosLista :is(
+  body.desktop-layout-v12451.en-admin #adminUsuariosLista :is(
     .admin-user-copy,
     .admin-user-copy > strong,
     .admin-user-copy > span
@@ -878,7 +878,7 @@
     min-width:0!important;
     max-width:100%!important;
   }
-  body.desktop-layout-v1245.en-admin #adminUsuariosLista .admin-user-module-count{
+  body.desktop-layout-v12451.en-admin #adminUsuariosLista .admin-user-module-count{
     display:inline-flex!important;
     align-items:center!important;
     width:max-content!important;
@@ -889,7 +889,7 @@
   }
 
   /* Estados vacíos y mensajes: ocupan el mismo eje de su pantalla. */
-  body.desktop-layout-v1245 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
+  body.desktop-layout-v12451 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
     .empty-state,
     .tareas-empty,
     .venc-empty-state,
@@ -905,7 +905,7 @@
   }
 
   /* Formularios y paneles estándar no generan un tercer eje interno. */
-  body.desktop-layout-v1245 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
+  body.desktop-layout-v12451 .pantalla.activa.desktop-page-shell:not(.desktop-page-shell--wide) :is(
     .settings-card,
     .search-card,
     .camera-card,
@@ -919,8 +919,8 @@
   }
 
   /* Navegaciones inferiores se conservan fuera del ancho limitado. */
-  body.desktop-layout-v1245 #pantallaAdmin > .admin-bottom-nav,
-  body.desktop-layout-v1245 .pantalla.activa > :is(.app-bottom-nav,.venc-bottom-nav){
+  body.desktop-layout-v12451 #pantallaAdmin > .admin-bottom-nav,
+  body.desktop-layout-v12451 .pantalla.activa > :is(.app-bottom-nav,.venc-bottom-nav){
     width:auto!important;
     max-width:none!important;
   }

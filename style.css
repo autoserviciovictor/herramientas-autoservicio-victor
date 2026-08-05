@@ -8098,3 +8098,39 @@ body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving .tarea-check-visual
   .config-task-meta{gap:5px}
   .config-task-duration,.config-task-days,.config-task-disabled{font-size:11px;padding:4px 8px}
 }
+
+/* =========================================================
+   v12.4.5.1 — Login interactivo sobre el layout de escritorio
+   El login queda completamente aislado del App Shell y de cualquier
+   overlay/panel del módulo que permanezca montado detrás.
+   ========================================================= */
+body.login-bloqueado #loginOverlay{
+  display:flex!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483647!important;
+  pointer-events:auto!important;
+  isolation:isolate;
+}
+body.login-bloqueado #loginOverlay::before,
+body.login-bloqueado #loginOverlay::after{
+  pointer-events:none!important;
+}
+body.login-bloqueado #loginOverlay .login-card,
+body.login-bloqueado #loginOverlay .login-card *{
+  pointer-events:auto!important;
+}
+body.login-bloqueado > :not(#loginOverlay):not(script):not(style):not(svg){
+  pointer-events:none!important;
+}
+body.login-bloqueado :is(
+  .modal-overlay,
+  .notification-center-overlay,
+  .app-dialog-overlay,
+  .app-choice-overlay,
+  .horarios-dialogo-overlay,
+  .repo-save-floating,
+  .offline-status
+):not(#loginOverlay){
+  pointer-events:none!important;
+}

@@ -1,6 +1,6 @@
 {
-  "version": "12.4.5",
-  "label": "12.4.5",
+  "version": "12.4.5.1",
+  "label": "12.4.5.1",
   "date": "2026-08-05",
-  "name": "v12.4.5 - Administrador y pulido final de escritorio"
+  "name": "v12.4.5.1 - Corrección de interacción del inicio de sesión"
 }
