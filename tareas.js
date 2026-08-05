@@ -157,7 +157,10 @@ function textoDiasTarea(t){
   const dias=diasTarea(t);
   if(dias.length===7)return 'Todos los días';
   const nombres=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  return dias.map(d=>nombres[d]).join(', ');
+  return dias.map(d=>nombres[d]).join(' · ');
+}
+function etiquetaDiasTarea(t){
+  return `<span class="config-task-days" title="Días de realización"><svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>${esc(textoDiasTarea(t))}</span>`;
 }
 function turnosPermitidos(t){ return ["manana","tarde"]; }
 function asignacion(t,fecha,turno){ return t.asignaciones?.[fecha]?.[turno]||null; }
@@ -283,8 +286,9 @@ async function renderResponsablesAsignacion(){
 }
 function renderTareasAsignables(){
   const q=normalClave($("asignarBuscarTarea").value), lista=asignarDisponibles.filter(t=>!q||normalClave(t.nombre).includes(q));
-  $("asignarTareasCantidad").textContent=`${lista.length} disponible${lista.length===1?"":"s"}`;
-  $("asignarTareasLista").innerHTML=lista.length?lista.map(t=>`<label class="assign-task-option"><input type="checkbox" value="${t.id}" ${asignarTareasSeleccionadas.has(t.id)?"checked":""}><span class="assign-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span class="assign-task-copy"><strong>${esc(t.nombre)}</strong><small>${duracionTexto(t.duracionMin)}</small></span><span class="assign-task-mark"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`).join(""):'<div class="tareas-empty assign-empty"><strong>Sin coincidencias</strong><span>Probá con otro nombre.</span></div>';
+  const dia=fmt(fechaSeleccionada,{weekday:"long"});
+  $("asignarTareasCantidad").textContent=`${lista.length} para ${dia}`;
+  $("asignarTareasLista").innerHTML=lista.length?lista.map(t=>`<label class="assign-task-option"><input type="checkbox" value="${t.id}" ${asignarTareasSeleccionadas.has(t.id)?"checked":""}><span class="assign-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span class="assign-task-copy"><strong>${esc(t.nombre)}</strong><small>${duracionTexto(t.duracionMin)}</small></span><span class="assign-task-mark"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`).join(""):`<div class="tareas-empty assign-empty"><strong>${q?"Sin coincidencias":"Sin tareas para este día"}</strong><span>${q?"Probá con otro nombre.":`No hay tareas configuradas para ${dia}.`}</span></div>`;
   sincronizarEstadoSeleccionAsignacion(); actualizarEstadoGuardarAsignacion();
 }
 function renderTurnosAsignacion(disponibles=["manana","tarde"],preferido=""){
@@ -297,7 +301,7 @@ function elegirTurnoAsignacion(turno){
 }
 async function abrirAsignar(){
   asignacionEditando=null; asignarUsuarioSeleccionado=""; asignarTareasSeleccionadas.clear();
-  asignarDisponibles=leer().filter(t=>(t.sector||"General")===sectorSeleccionado&&t.activo!==false);
+  asignarDisponibles=leer().filter(t=>(t.sector||"General")===sectorSeleccionado&&correspondeDia(t,iso(fechaSeleccionada)));
   if(!asignarDisponibles.length){window.AutoservicioDialog?.alert?.({title:"Sin tareas disponibles",message:"No hay tareas activas configuradas para este sector."});return;}
   $("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"}); $("asignarBuscarTarea").value="";
   $("asignarModalTitulo").textContent="Asignar tareas por usuario"; $("btnGuardarAsignar").textContent="Asignar tareas";
@@ -328,8 +332,10 @@ async function abrirEditarUsuario(responsable,turno){
   const fecha=iso(fechaSeleccionada);
   asignacionEditando={porUsuario:true,fecha,turno,responsable};
   asignarUsuarioSeleccionado=responsable;
-  asignarDisponibles=leer().filter(t=>(t.sector||"General")===sectorSeleccionado&&t.activo!==false);
-  asignarTareasSeleccionadas=new Set(asignarDisponibles.filter(t=>(asignacion(t,fecha,turno)?.responsables||[]).some(r=>normalClave(r)===normalClave(responsable))).map(t=>t.id));
+  const todasSector=leer().filter(t=>(t.sector||"General")===sectorSeleccionado&&t.activo!==false);
+  const yaAsignadas=todasSector.filter(t=>(asignacion(t,fecha,turno)?.responsables||[]).some(r=>normalClave(r)===normalClave(responsable)));
+  asignarDisponibles=[...new Map([...todasSector.filter(t=>correspondeDia(t,fecha)),...yaAsignadas].map(t=>[t.id,t])).values()];
+  asignarTareasSeleccionadas=new Set(yaAsignadas.map(t=>t.id));
   $("asignarFechaTexto").textContent=fmt(fechaSeleccionada,{weekday:"long",day:"numeric",month:"long"});$("asignarBuscarTarea").value="";
   $("asignarModalTitulo").textContent=`Editar tareas de ${responsable}`;$("btnGuardarAsignar").textContent="Guardar cambios";
   $("asignarModal").classList.remove("oculto");$("asignarModal").setAttribute("aria-hidden","false");
@@ -445,7 +451,7 @@ function renderConfig(){
   const todas=leer().filter(t=>(t.sector||"General")===sel.value), q=normalClave($("configBuscarTarea")?.value||""), lista=todas.filter(t=>!q||normalClave(t.nombre).includes(q)),activas=todas.filter(t=>t.activo!==false).length;
   $("btnLimpiarBusquedaTarea").classList.toggle("oculto",!q);
   $("configTareasResumen").innerHTML=`<div><small>Total</small><strong>${todas.length}</strong></div><div><small>Activas</small><strong>${activas}</strong></div><div><small>Desactivadas</small><strong>${todas.length-activas}</strong></div>`;
-  $("configTareasLista").innerHTML=lista.length?lista.map(t=>`<article class="config-task-row ${t.activo===false?"is-disabled":""}" data-id="${t.id}" tabindex="0"><span class="config-task-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div class="config-task-copy"><strong>${esc(t.nombre)}</strong><p>${duracionTexto(t.duracionMin)} · ${esc(textoDiasTarea(t))}${t.activo===false?' · Desactivada':''}</p></div><button type="button" class="config-task-open" data-config-action="edit" aria-label="Editar ${esc(t.nombre)}"><svg class="app-icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></article>`).join(""):`<div class="tareas-empty config-tasks-empty"><strong>${q?"Sin coincidencias":"Sin tareas configuradas"}</strong><span>${q?"Probá con otro nombre.":`Agregá la primera tarea de ${esc(sel.value||"este sector")}.`}</span></div>`;
+  $("configTareasLista").innerHTML=lista.length?lista.map(t=>`<article class="config-task-row ${t.activo===false?"is-disabled":""}" data-id="${t.id}" tabindex="0"><span class="config-task-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div class="config-task-copy"><strong>${esc(t.nombre)}</strong><div class="config-task-meta"><span class="config-task-duration">${duracionTexto(t.duracionMin)}</span>${etiquetaDiasTarea(t)}${t.activo===false?'<span class="config-task-disabled">Desactivada</span>':''}</div></div><button type="button" class="config-task-open" data-config-action="edit" aria-label="Editar ${esc(t.nombre)}"><svg class="app-icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></article>`).join(""):`<div class="tareas-empty config-tasks-empty"><strong>${q?"Sin coincidencias":"Sin tareas configuradas"}</strong><span>${q?"Probá con otro nombre.":`Agregá la primera tarea de ${esc(sel.value||"este sector")}.`}</span></div>`;
   const cfg=configBano();renderParticipantesConfig(cfg.participantes); actualizarConfigSubvista();
 }
 function actualizarConfigSubvista(){

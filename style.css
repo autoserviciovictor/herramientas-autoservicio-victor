@@ -8007,3 +8007,94 @@ body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving .tarea-check-visual
 
 /* v12.4 — Días de realización por tarea */
 .tarea-dias-fieldset{border:0;margin:18px 0 0;padding:0}.tarea-dias-fieldset legend{font-weight:900;margin-bottom:4px}.tarea-dias-fieldset .field-help{display:block;margin:0 0 10px;color:#6f6964}.tarea-dias-selector{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}.tarea-dias-selector label{margin:0!important;display:block!important;font-weight:800!important}.tarea-dias-selector input{position:absolute;opacity:0;pointer-events:none}.tarea-dias-selector span{min-height:44px;border:1px solid #ddd8d2;border-radius:12px;background:#fff;display:grid;place-items:center;color:#5d5651;cursor:pointer;transition:.18s ease}.tarea-dias-selector input:checked+span{background:#fff0f1;border-color:#c72630;color:#b31f28;box-shadow:inset 0 0 0 1px #c72630}.tarea-dias-selector input:focus-visible+span{outline:3px solid rgba(199,38,48,.18);outline-offset:2px}@media(max-width:560px){.tarea-dias-selector{grid-template-columns:repeat(4,1fr)}}
+
+/* v12.4.1 — selector de días limpio y centrado */
+.tarea-dias-fieldset{
+  border:0!important;
+  margin:20px 0 4px!important;
+  padding:0!important;
+  min-inline-size:0;
+  text-align:center;
+}
+.tarea-dias-fieldset legend{
+  display:block;
+  width:100%;
+  margin:0 0 5px!important;
+  padding:0!important;
+  text-align:center;
+  font-size:17px;
+  font-weight:900;
+  color:#252220;
+}
+.tarea-dias-fieldset>.field-help{
+  display:block;
+  max-width:420px;
+  margin:0 auto 14px!important;
+  text-align:center;
+  color:#716a65;
+  line-height:1.35;
+}
+.tarea-dias-selector{
+  width:min(100%,440px);
+  margin:0 auto!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(58px,1fr))!important;
+  justify-content:center;
+  gap:10px!important;
+}
+.tarea-dias-selector label{
+  position:relative!important;
+  display:block!important;
+  min-width:0;
+  margin:0!important;
+  padding:0!important;
+}
+.tarea-dias-selector label:nth-child(n+5){transform:translateX(50%)}
+.tarea-dias-selector input{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.tarea-dias-selector span{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%;
+  min-height:48px!important;
+  padding:0 8px;
+  border:1px solid #ddd7d1!important;
+  border-radius:14px!important;
+  background:#f8f6f3!important;
+  color:#5d5651!important;
+  font-size:14px;
+  font-weight:900!important;
+  cursor:pointer;
+  user-select:none;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.tarea-dias-selector span:active{transform:scale(.97)}
+.tarea-dias-selector input:checked+span{
+  background:#c5232c!important;
+  color:#fff!important;
+  border-color:#c5232c!important;
+  box-shadow:0 7px 16px rgba(197,35,44,.2)!important;
+}
+.tarea-dias-selector input:focus-visible+span{
+  outline:3px solid rgba(197,35,44,.2)!important;
+  outline-offset:2px;
+}
+.config-task-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px}
+.config-task-duration,.config-task-days,.config-task-disabled{display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:800;line-height:1.1}
+.config-task-duration{background:#f1efec;color:#68615d}
+.config-task-days{background:#fff0f1;color:#b52029;max-width:100%;white-space:normal}
+.config-task-days .app-icon{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8}
+.config-task-disabled{background:#eee;color:#777}
+@media(max-width:560px){
+  .tarea-dias-selector{width:min(100%,360px);grid-template-columns:repeat(4,minmax(54px,1fr))!important;gap:8px!important}
+  .tarea-dias-selector span{min-height:46px!important;font-size:13px}
+  .tarea-dias-selector label:nth-child(n+5){transform:translateX(50%)}
+  .config-task-meta{gap:5px}
+  .config-task-duration,.config-task-days,.config-task-disabled{font-size:11px;padding:4px 8px}
+}
