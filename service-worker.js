@@ -1,5 +1,5 @@
-const CACHE_PREFIX = 'autoservicio-v12315';
-const CACHE_VERSION = 'autoservicio-v12315';
+const CACHE_PREFIX = 'autoservicio-v1240';
+const CACHE_VERSION = 'autoservicio-v1240';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
   './',

@@ -8,7 +8,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.3.1.5";
+const APP_VERSION = "12.4";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -1027,8 +1027,8 @@ async function asegurarHojaTareas() {
     await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody:{ requests:[{ addSheet:{ properties:{ title:TAREAS_SHEET_NAME } } }] } });
   }
   await sheets.spreadsheets.values.update({
-    spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A1:H1`, valueInputOption:"USER_ENTERED",
-    requestBody:{ values:[["ID","Sector","Nombre","Duración","Activo","Asignaciones","Actualizado","Actualizado por"]] }
+    spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A1:I1`, valueInputOption:"USER_ENTERED",
+    requestBody:{ values:[["ID","Sector","Nombre","Duración","Activo","Asignaciones","Actualizado","Actualizado por","Días semana"]] }
   });
   hojaTareasAsegurada = true;
 }
@@ -1039,6 +1039,10 @@ function normalizarTareaServidor(t) {
     sector: normalizarTexto(t?.sector) || "General",
     nombre: normalizarTexto(t?.nombre) || "Tarea",
     duracionMin: Math.max(1, Math.min(480, Number(t?.duracionMin || t?.duracion || 10))),
+    diasSemana: (()=>{
+      const dias=Array.isArray(t?.diasSemana)?t.diasSemana.map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6):[];
+      return dias.length?[...new Set(dias)]:[0,1,2,3,4,5,6];
+    })(),
     activo: t?.activo !== false,
     asignaciones
   };
@@ -1093,12 +1097,13 @@ async function guardarBanoServidor(config, usuario) {
 }
 async function obtenerTareasServidor() {
   await asegurarHojaTareas();
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A:H` });
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A:I` });
   const filasTareas=(r.data.values || []).slice(1).filter(f=>f[0]);
   cantidadFilasTareasConocida=filasTareas.length;
   return filasTareas.map(f=>{
     let asignaciones={}; try{asignaciones=JSON.parse(f[5]||"{}");}catch{}
-    return normalizarTareaServidor({id:f[0],sector:f[1],nombre:f[2],duracionMin:Number(f[3]),activo:!["no","false","0","inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),asignaciones});
+    let diasSemana=[]; try{diasSemana=JSON.parse(f[8]||"[]");}catch{}
+    return normalizarTareaServidor({id:f[0],sector:f[1],nombre:f[2],duracionMin:Number(f[3]),activo:!["no","false","0","inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),asignaciones,diasSemana});
   });
 }
 let cantidadFilasTareasConocida = null;
@@ -1123,10 +1128,10 @@ async function ejecutarGoogleConReintento(operacion, intentos=4) {
 async function guardarTareasServidor(tareas, usuario) {
   return ejecutarEnCola("tareas", async()=>{
     await asegurarHojaTareas();
-    const filas=(tareas||[]).map(normalizarTareaServidor).map(t=>[t.id,t.sector,t.nombre,t.duracionMin,t.activo?"Sí":"No",JSON.stringify(t.asignaciones||{}),fechaHoraArgentinaIso(),usuario?.usuario||""]);
+    const filas=(tareas||[]).map(normalizarTareaServidor).map(t=>[t.id,t.sector,t.nombre,t.duracionMin,t.activo?"Sí":"No",JSON.stringify(t.asignaciones||{}),fechaHoraArgentinaIso(),usuario?.usuario||"",JSON.stringify(t.diasSemana||[0,1,2,3,4,5,6])]);
     const prevCount=Number.isInteger(cantidadFilasTareasConocida)?cantidadFilasTareasConocida:filas.length;
-    if(filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A2:H${filas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:filas}}));
-    if(prevCount>filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A${filas.length+2}:H${prevCount+1}`}));
+    if(filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A2:I${filas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:filas}}));
+    if(prevCount>filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A${filas.length+2}:I${prevCount+1}`}));
     cantidadFilasTareasConocida=filas.length;
     invalidarCache("tareas");
   });

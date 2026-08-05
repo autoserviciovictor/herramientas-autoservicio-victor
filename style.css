@@ -8003,3 +8003,7 @@ body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving .tarea-check-visual
   }
   #pantallaHorarios .horarios-control-deck .horarios-panel-edicion{width:100%!important}
 }
+
+
+/* v12.4 — Días de realización por tarea */
+.tarea-dias-fieldset{border:0;margin:18px 0 0;padding:0}.tarea-dias-fieldset legend{font-weight:900;margin-bottom:4px}.tarea-dias-fieldset .field-help{display:block;margin:0 0 10px;color:#6f6964}.tarea-dias-selector{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}.tarea-dias-selector label{margin:0!important;display:block!important;font-weight:800!important}.tarea-dias-selector input{position:absolute;opacity:0;pointer-events:none}.tarea-dias-selector span{min-height:44px;border:1px solid #ddd8d2;border-radius:12px;background:#fff;display:grid;place-items:center;color:#5d5651;cursor:pointer;transition:.18s ease}.tarea-dias-selector input:checked+span{background:#fff0f1;border-color:#c72630;color:#b31f28;box-shadow:inset 0 0 0 1px #c72630}.tarea-dias-selector input:focus-visible+span{outline:3px solid rgba(199,38,48,.18);outline-offset:2px}@media(max-width:560px){.tarea-dias-selector{grid-template-columns:repeat(4,1fr)}}

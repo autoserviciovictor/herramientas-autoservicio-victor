@@ -795,6 +795,19 @@
           <input id="tareaDuracion" type="hidden" value="00:10">
           <small class="field-help">Seleccioná las horas y los minutos que demora la tarea.</small>
         </label>
+        <fieldset class="tarea-dias-fieldset">
+          <legend>Días de realización</legend>
+          <p class="field-help">Elegí uno o varios días habituales para esta tarea.</p>
+          <div id="tareaDiasSemana" class="tarea-dias-selector" role="group" aria-label="Días de realización">
+            <label><input type="checkbox" value="1"><span>Lun</span></label>
+            <label><input type="checkbox" value="2"><span>Mar</span></label>
+            <label><input type="checkbox" value="3"><span>Mié</span></label>
+            <label><input type="checkbox" value="4"><span>Jue</span></label>
+            <label><input type="checkbox" value="5"><span>Vie</span></label>
+            <label><input type="checkbox" value="6"><span>Sáb</span></label>
+            <label><input type="checkbox" value="0"><span>Dom</span></label>
+          </div>
+        </fieldset>
         <div id="tareaModalAdminActions" class="tarea-modal-admin-actions oculto"><button id="btnAlternarTarea" class="config-toggle-btn" type="button">Desactivar tarea</button><button id="btnEliminarTarea" class="tarea-delete-btn" type="button">Eliminar tarea</button></div>
         <div class="modal-actions"><button id="btnCancelarTarea" class="cancel-btn" type="button">Cancelar</button><button id="btnGuardarTarea" class="save-btn" type="button">Guardar tarea</button></div>
       </div>
