@@ -1,0 +1,68 @@
+/*
+ * Layout de escritorio reutilizable — v12.4.2
+ *
+ * Esta hoja define la infraestructura visual que se aplicará de forma gradual
+ * a las pantallas a partir de v12.4.3. En esta entrega ninguna pantalla
+ * existente recibe estas clases, por lo que no modifica el diseño actual.
+ */
+
+:root {
+  --desktop-page-max-width: 780px;
+  --desktop-page-wide-max-width: none;
+  --desktop-page-inline-gap: 28px;
+  --desktop-page-block-gap: 14px;
+  --desktop-page-section-gap: 14px;
+}
+
+@media (min-width: 901px) {
+  .desktop-page-shell {
+    width: min(var(--desktop-page-max-width), calc(100% - var(--desktop-page-inline-gap)));
+    max-width: var(--desktop-page-max-width);
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--desktop-page-block-gap);
+    min-width: 0;
+  }
+
+  .desktop-page-shell--wide {
+    width: calc(100% - var(--desktop-page-inline-gap));
+    max-width: var(--desktop-page-wide-max-width);
+  }
+
+  .desktop-page-shell__header,
+  .desktop-page-shell__content,
+  .desktop-page-section {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .desktop-page-shell__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--desktop-page-section-gap);
+  }
+
+  .desktop-page-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--desktop-page-section-gap);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .desktop-page-grid {
+    display: grid;
+    gap: var(--desktop-page-section-gap);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .desktop-page-full-width {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
