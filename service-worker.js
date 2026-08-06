@@ -1,4 +1,4 @@
-const CACHE_PREFIX = 'autoservicio-v1243';
+const CACHE_PREFIX = 'autoservicio-v';
 const CACHE_VERSION = 'autoservicio-v1243';
 const OFFLINE_DOCUMENT = './index.html';
 const APP_SHELL = [
@@ -30,6 +30,8 @@ const APP_SHELL = [
   './horarios.js?v=1243',
   './api-cache.js?v=1243',
   './tareas.js?v=1243',
+  './dialog.js?v=1243',
+  './notification-center.js?v=1243',
   './manifest.webmanifest',
   './version.json',
   './icons/icon-96.png',
