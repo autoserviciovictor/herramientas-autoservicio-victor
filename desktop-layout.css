@@ -66,3 +66,45 @@
     box-sizing: border-box;
   }
 }
+
+
+/* v12.4.3 — Primera migración controlada: Inventario > Cargar.
+ * Replica el patrón estable de las pantallas Baño y Configuración de Tareas:
+ * un solo eje central y todos los marcos con el mismo ancho.
+ */
+@media (min-width: 901px) {
+  body[data-screen="inventario"] #modulePageHeader {
+    width: min(var(--desktop-page-max-width), calc(100% - var(--desktop-page-inline-gap))) !important;
+    max-width: var(--desktop-page-max-width) !important;
+    margin-inline: auto !important;
+    left: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="inventario"] #pantallaInventario.inventory-load-shell {
+    width: min(var(--desktop-page-max-width), calc(100% - var(--desktop-page-inline-gap))) !important;
+    max-width: var(--desktop-page-max-width) !important;
+    margin: 0 auto 36px !important;
+    padding: 0 !important;
+    gap: var(--desktop-page-section-gap) !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="inventario"] #pantallaInventario.inventory-load-shell > section {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="inventario"] #pantallaInventario.inventory-load-shell > section:not(.oculto) {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  body[data-screen="inventario"] #pantallaInventario .inventory-recent-card {
+    margin-bottom: 0 !important;
+  }
+}
