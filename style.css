@@ -8098,3 +8098,90 @@ body.en-tareas #tareasVistaTareas .tarea-check-row.is-saving .tarea-check-visual
   .config-task-meta{gap:5px}
   .config-task-duration,.config-task-days,.config-task-disabled{font-size:11px;padding:4px 8px}
 }
+
+/* =========================================================
+   v12.4.2 — Inventario completo con columna visual unificada
+   Solo escritorio. Replica el eje y ancho de Tareas > Configuración
+   sin modificar navegación, lógica ni vista móvil.
+   ========================================================= */
+@media (min-width:901px){
+  body.en-inventario{
+    --inventory-desktop-width:980px;
+  }
+
+  /* Encabezado y contenido del módulo comparten el mismo eje central. */
+  body.en-inventario .module-page-header{
+    width:min(var(--inventory-desktop-width),calc(100% - 40px))!important;
+    max-width:var(--inventory-desktop-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+
+  body.en-inventario #pantallaInventario,
+  body.en-inventario #pantallaProductos,
+  body.en-inventario #pantallaEditarProducto{
+    width:100%!important;
+    max-width:none!important;
+    padding-left:20px!important;
+    padding-right:20px!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Cargar: todos los marcos principales usan exactamente el mismo ancho. */
+  body.en-inventario #pantallaInventario > .inventory-location-card,
+  body.en-inventario #pantallaInventario > .scan-panel,
+  body.en-inventario #pantallaInventario > .camera-card,
+  body.en-inventario #pantallaInventario > .product-card,
+  body.en-inventario #pantallaInventario > .quantity-card,
+  body.en-inventario #pantallaInventario > .bottom-info,
+  body.en-inventario #pantallaInventario > .inventory-recent-card{
+    width:min(var(--inventory-desktop-width),100%)!important;
+    max-width:var(--inventory-desktop-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+
+  body.en-inventario #pantallaInventario > .inventory-location-card,
+  body.en-inventario #pantallaInventario > .scan-panel,
+  body.en-inventario #pantallaInventario > .camera-card,
+  body.en-inventario #pantallaInventario > .product-card,
+  body.en-inventario #pantallaInventario > .quantity-card,
+  body.en-inventario #pantallaInventario > .bottom-info{
+    margin-bottom:14px!important;
+  }
+  body.en-inventario #pantallaInventario > .inventory-recent-card{
+    margin-top:0!important;
+  }
+
+  /* Productos y Cargados comparten pantalla: buscador, resumen y grilla alineados. */
+  body.en-inventario #pantallaProductos > .header-simple{
+    display:none!important;
+  }
+  body.en-inventario #pantallaProductos > .search-card,
+  body.en-inventario #pantallaProductos > .list-summary,
+  body.en-inventario #pantallaProductos > .result-list{
+    width:min(var(--inventory-desktop-width),100%)!important;
+    max-width:var(--inventory-desktop-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+  body.en-inventario #pantallaProductos > .search-card,
+  body.en-inventario #pantallaProductos > .list-summary{
+    margin-bottom:14px!important;
+  }
+
+  /* Editor interno de producto: mismo eje visual del módulo. */
+  body.en-inventario #pantallaEditarProducto > .header-edit,
+  body.en-inventario #pantallaEditarProducto > .edit-card{
+    width:min(var(--inventory-desktop-width),100%)!important;
+    max-width:var(--inventory-desktop-width)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+  body.en-inventario #pantallaEditarProducto > .header-edit{
+    margin-bottom:14px!important;
+  }
+}
