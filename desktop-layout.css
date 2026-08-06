@@ -2,7 +2,7 @@
  * Layout de escritorio reutilizable — v12.4.2
  *
  * Esta hoja define la infraestructura visual que se aplicará de forma gradual
- * a las pantallas a partir de v12.4.3. En esta entrega ninguna pantalla
+ * a las pantallas a partir de v12.4.4. En esta entrega ninguna pantalla
  * existente recibe estas clases, por lo que no modifica el diseño actual.
  */
 
@@ -68,7 +68,7 @@
 }
 
 
-/* v12.4.3 — Primera migración controlada: Inventario > Cargar.
+/* v12.4.4 — Primera migración controlada: Inventario > Cargar.
  * Replica el patrón estable de las pantallas Baño y Configuración de Tareas:
  * un solo eje central y todos los marcos con el mismo ancho.
  */
@@ -105,6 +105,63 @@
   }
 
   body[data-screen="inventario"] #pantallaInventario .inventory-recent-card {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* v12.4.4 — Segunda migración controlada: Inventario > Productos y Cargados.
+ * Ambas vistas comparten #pantallaProductos; el estado activo se determina
+ * mediante body[data-screen="productos"] / body[data-screen="cargados"].
+ */
+@media (min-width: 901px) {
+  body[data-screen="productos"] #modulePageHeader,
+  body[data-screen="cargados"] #modulePageHeader {
+    width: min(var(--desktop-page-max-width), calc(100% - var(--desktop-page-inline-gap))) !important;
+    max-width: var(--desktop-page-max-width) !important;
+    margin-inline: auto !important;
+    left: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="productos"] #pantallaProductos.inventory-products-shell,
+  body[data-screen="cargados"] #pantallaProductos.inventory-products-shell {
+    width: min(var(--desktop-page-max-width), calc(100% - var(--desktop-page-inline-gap))) !important;
+    max-width: var(--desktop-page-max-width) !important;
+    margin: 0 auto 36px !important;
+    padding: 0 !important;
+    gap: var(--desktop-page-section-gap) !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="productos"] #pantallaProductos > .header-simple,
+  body[data-screen="cargados"] #pantallaProductos > .header-simple {
+    display: none !important;
+  }
+
+  body[data-screen="productos"] #pantallaProductos > .search-card,
+  body[data-screen="productos"] #pantallaProductos > .list-summary,
+  body[data-screen="productos"] #pantallaProductos > .result-list,
+  body[data-screen="cargados"] #pantallaProductos > .search-card,
+  body[data-screen="cargados"] #pantallaProductos > .list-summary,
+  body[data-screen="cargados"] #pantallaProductos > .result-list {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="productos"] #pantallaProductos > .search-card,
+  body[data-screen="cargados"] #pantallaProductos > .search-card,
+  body[data-screen="productos"] #pantallaProductos > .list-summary,
+  body[data-screen="cargados"] #pantallaProductos > .list-summary {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  body[data-screen="productos"] #pantallaProductos > .result-list,
+  body[data-screen="cargados"] #pantallaProductos > .result-list {
     margin-bottom: 0 !important;
   }
 }

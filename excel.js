@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1243";
-import { ordenarPorBusqueda } from "./search.js?v=1243";
-import { obtenerJsonCacheado } from "./api-cache.js?v=1243";
+import { API_BASE_URL } from "./config.js?v=12301";
+import { ordenarPorBusqueda } from "./search.js?v=12301";
+import { obtenerJsonCacheado } from "./api-cache.js?v=12301";
 
 let datos = [];
 let catalogoMaestro = [];

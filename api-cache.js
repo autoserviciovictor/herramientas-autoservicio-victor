@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1243";
+import { API_BASE_URL } from "./config.js?v=12301";
 
 const MEMORIA = new Map();
 const EN_CURSO = new Map();

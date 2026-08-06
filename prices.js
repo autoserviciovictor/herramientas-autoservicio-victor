@@ -1,8 +1,8 @@
-import { API_BASE_URL } from './config.js?v=1243';
-import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=1243';
-import { ordenarPorBusqueda } from './search.js?v=1243';
-import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=1243';
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1243";
+import { API_BASE_URL } from './config.js?v=12301';
+import { iniciarScanner as iniciarScannerCompartido, detenerScanner as detenerScannerCompartido } from './scanner.js?v=12301';
+import { ordenarPorBusqueda } from './search.js?v=12301';
+import { obtenerJsonCacheado, precargarCatalogo } from './api-cache.js?v=12301';
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=12301";
 
 const $ = id => document.getElementById(id);
 const LAST_KEY = 'autoservicio-precios-ultimo-v2';

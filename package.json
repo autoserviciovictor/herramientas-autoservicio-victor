@@ -1,7 +1,7 @@
 {
   "name": "herramientas-autoservicio-victor",
-  "version": "12.4.3",
-  "description": "Autoservicio 12.4.3 - migración controlada de Inventario Cargar",
+  "version": "12.4.4",
+  "description": "Autoservicio 12.4.4 - migración controlada de Inventario Cargar",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
