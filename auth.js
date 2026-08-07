@@ -6,15 +6,30 @@ const REMEMBER_USER_KEY = "autoservicio_login_usuario_recordado";
 const originalFetch = window.fetch.bind(window);
 let token = localStorage.getItem(TOKEN_KEY) || "";
 let usuarioActual = null;
-try { usuarioActual = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch {}
+try {
+  usuarioActual = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+} catch {}
 
-const $ = id => document.getElementById(id);
-const MODULOS_DISPONIBLES = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
+const $ = (id) => document.getElementById(id);
+const MODULOS_DISPONIBLES = [
+  "inventario",
+  "vencimientos",
+  "anotar",
+  "precios",
+  "horarios",
+  "tareas",
+];
 
 function permisosUsuario(usuario = usuarioActual) {
-  if (usuario?.rol === "administrador") return Object.fromEntries(MODULOS_DISPONIBLES.map(m => [m, true]));
-  const recibidos = usuario?.permisos && typeof usuario.permisos === "object" ? usuario.permisos : {};
-  return Object.fromEntries(MODULOS_DISPONIBLES.map(m => [m, recibidos[m] !== false]));
+  if (usuario?.rol === "administrador")
+    return Object.fromEntries(MODULOS_DISPONIBLES.map((m) => [m, true]));
+  const recibidos =
+    usuario?.permisos && typeof usuario.permisos === "object"
+      ? usuario.permisos
+      : {};
+  return Object.fromEntries(
+    MODULOS_DISPONIBLES.map((m) => [m, recibidos[m] !== false]),
+  );
 }
 
 function puedeVerModulo(modulo, usuario = usuarioActual) {
@@ -23,10 +38,15 @@ function puedeVerModulo(modulo, usuario = usuarioActual) {
   return permisosUsuario(usuario)[modulo] !== false;
 }
 
-
 function esApi(url) {
-  try { return new URL(typeof url === "string" ? url : url.url, location.href).origin === new URL(API_BASE_URL).origin; }
-  catch { return false; }
+  try {
+    return (
+      new URL(typeof url === "string" ? url : url.url, location.href).origin ===
+      new URL(API_BASE_URL).origin
+    );
+  } catch {
+    return false;
+  }
 }
 
 const OFFLINE_QUEUE_KEY = "autoservicio_offline_queue_v1";
@@ -34,25 +54,53 @@ const OFFLINE_CACHE_PREFIX = "autoservicio_api_cache_v1:";
 let sincronizandoOffline = false;
 
 function leerColaOffline() {
-  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]");
+  } catch {
+    return [];
+  }
 }
 function guardarColaOffline(cola) {
   localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(cola));
-  window.dispatchEvent(new CustomEvent("autoservicio:offline", { detail: { online: navigator.onLine, pendientes: cola.length } }));
+  window.dispatchEvent(
+    new CustomEvent("autoservicio:offline", {
+      detail: { online: navigator.onLine, pendientes: cola.length },
+    }),
+  );
 }
 function rutaApi(input) {
-  try { const u = new URL(typeof input === "string" ? input : input.url, location.href); return u.pathname + u.search; } catch { return ""; }
+  try {
+    const u = new URL(
+      typeof input === "string" ? input : input.url,
+      location.href,
+    );
+    return u.pathname + u.search;
+  } catch {
+    return "";
+  }
 }
 function respuestaJson(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 function esOperacionOfflinePermitida(method, ruta) {
-  if (!["POST","PUT","PATCH","DELETE"].includes(method)) return false;
-  return ruta.startsWith("/guardar") || ruta.startsWith("/corregir") || ruta.startsWith("/vencimientos") || ruta.startsWith("/reposicion");
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return false;
+  return (
+    ruta.startsWith("/guardar") ||
+    ruta.startsWith("/corregir") ||
+    ruta.startsWith("/vencimientos") ||
+    ruta.startsWith("/reposicion")
+  );
 }
 async function serializarBody(input, init) {
   if (typeof init.body === "string") return init.body;
-  if (input instanceof Request) return await input.clone().text().catch(() => "");
+  if (input instanceof Request)
+    return await input
+      .clone()
+      .text()
+      .catch(() => "");
   return "";
 }
 async function sincronizarColaOffline() {
@@ -66,42 +114,92 @@ async function sincronizarColaOffline() {
       const headers = new Headers(op.headers || {});
       headers.set("Authorization", `Bearer ${token}`);
       headers.set("X-Offline-Operation-Id", op.id);
-      const r = await originalFetch(`${API_BASE_URL}${op.ruta}`, { method: op.method, headers, body: op.body || undefined });
+      const r = await originalFetch(`${API_BASE_URL}${op.ruta}`, {
+        method: op.method,
+        headers,
+        body: op.body || undefined,
+      });
       if (!r.ok) {
         if (r.status >= 500) restantes.push(op);
       }
-    } catch { restantes.push(op); }
+    } catch {
+      restantes.push(op);
+    }
   }
   guardarColaOffline(restantes);
   sincronizandoOffline = false;
-  if (!restantes.length) window.dispatchEvent(new CustomEvent("autoservicio:sincronizado"));
+  if (!restantes.length)
+    window.dispatchEvent(new CustomEvent("autoservicio:sincronizado"));
 }
 
 window.fetch = async (input, init = {}) => {
-  const opciones = { ...init, headers: new Headers(init.headers || (input instanceof Request ? input.headers : undefined)) };
-  const method = String(opciones.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+  const opciones = {
+    ...init,
+    headers: new Headers(
+      init.headers || (input instanceof Request ? input.headers : undefined),
+    ),
+  };
+  const method = String(
+    opciones.method || (input instanceof Request ? input.method : "GET"),
+  ).toUpperCase();
   const ruta = rutaApi(input);
-  if (token && esApi(input)) opciones.headers.set("Authorization", `Bearer ${token}`);
+  if (token && esApi(input))
+    opciones.headers.set("Authorization", `Bearer ${token}`);
   try {
     const respuesta = await originalFetch(input, opciones);
-    if (respuesta.status === 401 && token && esApi(input) && !ruta.includes("/auth/login")) cerrarSesion(false);
+    if (
+      respuesta.status === 401 &&
+      token &&
+      esApi(input) &&
+      !ruta.includes("/auth/login")
+    )
+      cerrarSesion(false);
     if (esApi(input) && method === "GET" && respuesta.ok) {
-      respuesta.clone().text().then(text => localStorage.setItem(OFFLINE_CACHE_PREFIX + ruta, text)).catch(() => {});
+      respuesta
+        .clone()
+        .text()
+        .then((text) => localStorage.setItem(OFFLINE_CACHE_PREFIX + ruta, text))
+        .catch(() => {});
     }
     return respuesta;
   } catch (error) {
     if (!esApi(input)) throw error;
     if (method === "GET") {
       const cache = localStorage.getItem(OFFLINE_CACHE_PREFIX + ruta);
-      if (cache) return new Response(cache, { status: 200, headers: { "Content-Type":"application/json", "X-Offline-Cache":"1" } });
+      if (cache)
+        return new Response(cache, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Offline-Cache": "1",
+          },
+        });
       throw error;
     }
     if (esOperacionOfflinePermitida(method, ruta)) {
       const body = await serializarBody(input, opciones);
       const cola = leerColaOffline();
-      cola.push({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, ruta, method, body, headers: { "Content-Type": opciones.headers.get("Content-Type") || "application/json" }, creado: Date.now() });
+      cola.push({
+        id: crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`,
+        ruta,
+        method,
+        body,
+        headers: {
+          "Content-Type":
+            opciones.headers.get("Content-Type") || "application/json",
+        },
+        creado: Date.now(),
+      });
       guardarColaOffline(cola);
-      return respuestaJson({ ok:true, offline:true, pendiente:true, mensaje:"Cambio guardado en el teléfono. Se sincronizará al recuperar Internet." });
+      return respuestaJson({
+        ok: true,
+        offline: true,
+        pendiente: true,
+        mensaje:
+          "Cambio guardado en el teléfono. Se sincronizará al recuperar Internet.",
+      });
     }
     throw error;
   }
@@ -115,7 +213,10 @@ function mostrarLogin(mensaje = "") {
   $("loginOverlay")?.setAttribute("aria-hidden", "false");
   document.body.classList.add("login-bloqueado");
   const estado = $("loginEstado");
-  if (estado) { estado.textContent = mensaje; estado.className = `login-status${mensaje ? " error" : ""}`; }
+  if (estado) {
+    estado.textContent = mensaje;
+    estado.className = `login-status${mensaje ? " error" : ""}`;
+  }
   setTimeout(() => $("loginUsuario")?.focus(), 100);
 }
 
@@ -128,12 +229,20 @@ function ocultarLogin() {
 function actualizarInterfazUsuario() {
   const nombre = usuarioActual?.nombre || usuarioActual?.usuario || "";
   if ($("sesionNombre")) $("sesionNombre").textContent = nombre;
-  const textoRol = usuarioActual?.rol === "administrador" ? "Administrador" : (usuarioActual?.rol === "supervisor" ? "Supervisor" : "Personal");
+  const textoRol =
+    usuarioActual?.rol === "administrador"
+      ? "Administrador"
+      : usuarioActual?.rol === "administracion"
+        ? "Administración"
+        : usuarioActual?.rol === "supervisor"
+          ? "Supervisor"
+          : "Personal";
   if ($("sesionRol")) $("sesionRol").textContent = textoRol;
-  if ($("menuSesionNombre")) $("menuSesionNombre").textContent = nombre || "Usuario";
+  if ($("menuSesionNombre"))
+    $("menuSesionNombre").textContent = nombre || "Usuario";
   if ($("menuSesionRol")) $("menuSesionRol").textContent = textoRol;
   const esAdministrador = usuarioActual?.rol === "administrador";
-  document.querySelectorAll(".module-card[data-modulo]").forEach(card => {
+  document.querySelectorAll(".module-card[data-modulo]").forEach((card) => {
     card.classList.toggle("oculto", !puedeVerModulo(card.dataset.modulo));
   });
   const adminModule = document.querySelector(".admin-module-card");
@@ -147,21 +256,28 @@ function actualizarInterfazUsuario() {
     document.body.classList.remove("en-admin");
     if (estabaActivo) window.AutoservicioNavigate?.("inicio");
   }
-  window.dispatchEvent(new CustomEvent("autoservicio:sesion", { detail: usuarioActual }));
+  window.dispatchEvent(
+    new CustomEvent("autoservicio:sesion", { detail: usuarioActual }),
+  );
 }
 
 function guardarSesion(nuevoToken, usuario) {
-  token = nuevoToken; usuarioActual = usuario;
+  token = nuevoToken;
+  usuarioActual = usuario;
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(usuario));
-  actualizarInterfazUsuario(); ocultarLogin();
+  actualizarInterfazUsuario();
+  ocultarLogin();
 }
 
 function cerrarSesion(mostrar = true) {
-  token = ""; usuarioActual = null;
-  localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY);
+  token = "";
+  usuarioActual = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
   actualizarInterfazUsuario();
-  if (mostrar) mostrarLogin(); else mostrarLogin("La sesión venció. Volvé a ingresar.");
+  if (mostrar) mostrarLogin();
+  else mostrarLogin("La sesión venció. Volvé a ingresar.");
 }
 
 async function iniciarSesion() {
@@ -170,20 +286,42 @@ async function iniciarSesion() {
   const recordar = Boolean($("loginRecordarme")?.checked);
   const boton = $("btnLoginIngresar");
   const estado = $("loginEstado");
-  if (!usuario || !password) { if (estado) estado.textContent = "Ingresá usuario y contraseña"; return; }
-  if (boton) { boton.disabled = true; boton.classList.add("cargando"); }
-  if (estado) { estado.textContent = "Ingresando…"; estado.className = "login-status"; }
+  if (!usuario || !password) {
+    if (estado) estado.textContent = "Ingresá usuario y contraseña";
+    return;
+  }
+  if (boton) {
+    boton.disabled = true;
+    boton.classList.add("cargando");
+  }
+  if (estado) {
+    estado.textContent = "Ingresando…";
+    estado.className = "login-status";
+  }
   try {
-    const r = await originalFetch(`${API_BASE_URL}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ usuario, password }) });
+    const r = await originalFetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, password }),
+    });
     const data = await r.json();
-    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo ingresar");
+    if (!r.ok || !data.ok)
+      throw new Error(data.mensaje || "No se pudo ingresar");
     guardarSesion(data.token, data.usuario);
     if (recordar) localStorage.setItem(REMEMBER_USER_KEY, usuario);
     else localStorage.removeItem(REMEMBER_USER_KEY);
     if ($("loginPassword")) $("loginPassword").value = "";
   } catch (error) {
-    if (estado) { estado.textContent = error.message; estado.className = "login-status error"; }
-  } finally { if (boton) { boton.disabled = false; boton.classList.remove("cargando"); } }
+    if (estado) {
+      estado.textContent = error.message;
+      estado.className = "login-status error";
+    }
+  } finally {
+    if (boton) {
+      boton.disabled = false;
+      boton.classList.remove("cargando");
+    }
+  }
 }
 
 async function validarSesion() {
@@ -195,8 +333,11 @@ async function validarSesion() {
     if (!r.ok || !data.ok) throw new Error();
     usuarioActual = data.usuario;
     localStorage.setItem(USER_KEY, JSON.stringify(usuarioActual));
-    actualizarInterfazUsuario(); ocultarLogin();
-  } catch { cerrarSesion(false); }
+    actualizarInterfazUsuario();
+    ocultarLogin();
+  } catch {
+    cerrarSesion(false);
+  }
 }
 
 function cerrarMenuUsuario() {
@@ -225,13 +366,15 @@ window.AutoservicioAuth = {
   getPermisos: () => permisosUsuario(),
   cerrarSesion,
   sincronizarOffline: sincronizarColaOffline,
-  pendientesOffline: () => leerColaOffline().length
+  pendientesOffline: () => leerColaOffline().length,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   const usuarioRecordado = localStorage.getItem(REMEMBER_USER_KEY) || "";
-  if ($("loginUsuario") && usuarioRecordado) $("loginUsuario").value = usuarioRecordado;
-  if ($("loginRecordarme")) $("loginRecordarme").checked = Boolean(usuarioRecordado);
+  if ($("loginUsuario") && usuarioRecordado)
+    $("loginUsuario").value = usuarioRecordado;
+  if ($("loginRecordarme"))
+    $("loginRecordarme").checked = Boolean(usuarioRecordado);
   $("btnLoginIngresar")?.addEventListener("click", iniciarSesion);
   $("btnTogglePassword")?.addEventListener("click", () => {
     const input = $("loginPassword");
@@ -240,33 +383,65 @@ document.addEventListener("DOMContentLoaded", () => {
     const mostrar = input.type === "password";
     input.type = mostrar ? "text" : "password";
     boton.setAttribute("aria-pressed", String(mostrar));
-    boton.setAttribute("aria-label", mostrar ? "Ocultar contraseña" : "Mostrar contraseña");
-    boton.innerHTML = mostrar ? `<svg class="app-icon" aria-hidden="true"><use href="#icon-eye-off"></use></svg>` : `<svg class="app-icon" aria-hidden="true"><use href="#icon-eye"></use></svg>`;
+    boton.setAttribute(
+      "aria-label",
+      mostrar ? "Ocultar contraseña" : "Mostrar contraseña",
+    );
+    boton.innerHTML = mostrar
+      ? `<svg class="app-icon" aria-hidden="true"><use href="#icon-eye-off"></use></svg>`
+      : `<svg class="app-icon" aria-hidden="true"><use href="#icon-eye"></use></svg>`;
     input.focus();
   });
 
-  $("loginUsuario")?.addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword")?.focus(); });
-  $("loginPassword")?.addEventListener("keydown", e => { if (e.key === "Enter") iniciarSesion(); });
-  $("brandMenuBtn")?.addEventListener("click", event => { event.stopPropagation(); alternarMenuUsuario(); });
-  $("userDropdown")?.addEventListener("click", event => event.stopPropagation());
-  $("btnMenuAjustes")?.addEventListener("click", () => { cerrarMenuUsuario(); window.AutoservicioNavigate?.("ajustes"); });
-  $("btnMenuCerrarSesion")?.addEventListener("click", () => { cerrarMenuUsuario(); cerrarSesion(true); });
+  $("loginUsuario")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("loginPassword")?.focus();
+  });
+  $("loginPassword")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") iniciarSesion();
+  });
+  $("brandMenuBtn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    alternarMenuUsuario();
+  });
+  $("userDropdown")?.addEventListener("click", (event) =>
+    event.stopPropagation(),
+  );
+  $("btnMenuAjustes")?.addEventListener("click", () => {
+    cerrarMenuUsuario();
+    window.AutoservicioNavigate?.("ajustes");
+  });
+  $("btnMenuCerrarSesion")?.addEventListener("click", () => {
+    cerrarMenuUsuario();
+    cerrarSesion(true);
+  });
   document.addEventListener("click", cerrarMenuUsuario);
-  document.addEventListener("keydown", event => { if (event.key === "Escape") cerrarMenuUsuario(); });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") cerrarMenuUsuario();
+  });
   validarSesion();
 });
-
 
 function actualizarEstadoOffline(evento) {
   const el = document.getElementById("offlineStatus");
   if (!el) return;
   const pendientes = evento?.detail?.pendientes ?? leerColaOffline().length;
   const online = evento?.detail?.online ?? navigator.onLine;
-  if (!online) { el.textContent = pendientes ? `Sin Internet · ${pendientes} cambios pendientes` : "Sin conexión"; el.className = "offline-status error"; }
-  else if (pendientes) { el.textContent = `Sincronizando ${pendientes} cambios pendientes…`; el.className = "offline-status"; }
-  else { el.className = "offline-status oculto"; }
+  if (!online) {
+    el.textContent = pendientes
+      ? `Sin Internet · ${pendientes} cambios pendientes`
+      : "Sin conexión";
+    el.className = "offline-status error";
+  } else if (pendientes) {
+    el.textContent = `Sincronizando ${pendientes} cambios pendientes…`;
+    el.className = "offline-status";
+  } else {
+    el.className = "offline-status oculto";
+  }
 }
 window.addEventListener("autoservicio:offline", actualizarEstadoOffline);
 window.addEventListener("offline", () => actualizarEstadoOffline());
 window.addEventListener("online", () => actualizarEstadoOffline());
-document.addEventListener("DOMContentLoaded", () => { actualizarEstadoOffline(); sincronizarColaOffline(); });
+document.addEventListener("DOMContentLoaded", () => {
+  actualizarEstadoOffline();
+  sincronizarColaOffline();
+});

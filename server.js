@@ -578,27 +578,57 @@ function usuarioPuedeVerHorarios(usuario) {
   return usuario?.rol === "administrador" || usuario?.permisos?.horarios !== false;
 }
 function sectoresACargo(usuario){ return Array.isArray(usuario?.sectores) ? usuario.sectores : []; }
-function puedeAccederSectorHorarios(usuario, sectorId) {
-  const sector=normalizarTexto(sectorId);
-  if (["administrador","supervisor"].includes(usuario?.rol)) return true;
-  return Boolean(usuario?.sector) && usuario.sector === sector;
+function rolGestionGlobal(usuario) { return ["administrador","administracion"].includes(usuario?.rol); }
+function rolGestionSector(usuario) { return ["administrador","administracion","supervisor"].includes(usuario?.rol); }
+async function sectoresSupervisorPermitidos(usuario) {
+  const ids = new Set([usuario?.sector, ...sectoresACargo(usuario)].map(normalizarTexto).filter(Boolean));
+  if (usuario?.rol === "supervisor") {
+    const sectores = await obtenerSectores();
+    sectores
+      .filter(s => s.activo && normalizarUsuario(s.supervisor) === normalizarUsuario(usuario?.usuario))
+      .forEach(s => ids.add(s.id));
+  }
+  return ids;
+}
+async function puedeAccederSectorHorarios(usuario, sectorId) {
+  const sector = normalizarTexto(sectorId);
+  if (!sector) return false;
+  if (rolGestionGlobal(usuario)) return true;
+  // El supervisor puede consultar todos los sectores, pero la edición sigue
+  // limitada a los sectores que tiene formalmente a cargo.
+  if (usuario?.rol === "supervisor") return true;
+  // Personal puede consultar su sector y Administración en modo solo lectura.
+  return sector === "administracion" || (Boolean(usuario?.sector) && normalizarTexto(usuario.sector) === sector);
+}
+
+function empleadosHorarioDelSector(sectorId, usuarios, sectores) {
+  const sector = normalizarTexto(sectorId);
+  const sec = sectores.find(s => s.id === sector && s.activo);
+  if (!sec) return [];
+  const lista = usuarios.filter(u => u.activo && (
+    u.sector === sector ||
+    normalizarUsuario(u.usuario) === normalizarUsuario(sec.supervisor) ||
+    (sector === "administracion" && u.rol === "supervisor")
+  ));
+  return lista.filter((u, i, arr) => arr.findIndex(x => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario)) === i);
+}
+
+function sectoresHorarioSupervisor(usuarioSupervisor, sectores) {
+  const ids = new Set(["administracion", normalizarTexto(usuarioSupervisor?.sector)].filter(Boolean));
+  for (const id of Array.isArray(usuarioSupervisor?.sectores) ? usuarioSupervisor.sectores : []) {
+    const normalizado = normalizarTexto(id);
+    if (normalizado) ids.add(normalizado);
+  }
+  sectores
+    .filter(s => s.activo && normalizarUsuario(s.supervisor) === normalizarUsuario(usuarioSupervisor?.usuario))
+    .forEach(s => ids.add(s.id));
+  return [...ids].filter(id => sectores.some(s => s.activo && s.id === id));
 }
 async function puedeModificarSectorHorarios(usuario, sectorId) {
   const sector = normalizarTexto(sectorId);
-  if (usuario?.rol === "administrador") return true;
+  if (rolGestionGlobal(usuario)) return true;
   if (usuario?.rol !== "supervisor") return false;
-
-  const sectoresUsuario = sectoresACargo(usuario).map(normalizarTexto);
-  if (sectoresUsuario.includes(sector) || normalizarTexto(usuario?.sector) === sector) return true;
-
-  // La asignación oficial del supervisor se guarda en la hoja Sectores.
-  // La sesión puede no contener todavía esa asignación, por eso se valida
-  // también contra la configuración actual antes de rechazar el guardado.
-  const sectorConfigurado = (await obtenerSectores()).find(s => s.id === sector && s.activo);
-  return Boolean(
-    sectorConfigurado &&
-    normalizarUsuario(sectorConfigurado.supervisor) === normalizarUsuario(usuario?.usuario)
-  );
+  return (await sectoresSupervisorPermitidos(usuario)).has(sector);
 }
 async function requerirAccesoHorarios(req, res, next) {
   await requerirSesion(req, res, () => {
@@ -665,7 +695,7 @@ async function registrarAuditoriaHorario(usuario, sectorNombre, mes, accion) {
 app.get("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector = normalizarTexto(req.query.sector);
-    if (!puedeAccederSectorHorarios(req.usuario, sector)) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
+    if (!(await puedeAccederSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
     res.json({ok:true, sector, turnos:await obtenerTurnosSector(sector)});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudieron cargar los horarios del sector"}); }
 });
@@ -694,60 +724,111 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
 app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector=normalizarTexto(req.query.sector), mes=normalizarTexto(req.query.mes);
-    if(!puedeAccederSectorHorarios(req.usuario,sector)) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
+    if(!(await puedeAccederSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
     if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
     await asegurarHojasHorarios();
-    // El calendario debe leerse siempre desde Sheets. Un calendario cacheado puede
-    // entregar una base vieja a otra computadora y provocar un conflicto falso.
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    const contenido = await (async () => {
-      const [r, dr] = await Promise.all([
-        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
-        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
-      ]);
-      const filasCalendario=(r.data.values||[]).slice(1);
-      const filasDetalles=(dr.data.values||[]).slice(1);
-      const propias=filasCalendario.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
-      const propiosDetalles=filasDetalles.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
-      const celdasMapa=new Map();
-      propias
-        .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])}))
-        .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno)
-        .forEach(x=>celdasMapa.set(`${x.empleado}::${x.dia}`,x));
-      const detallesMapa=new Map();
-      propiosDetalles
-        .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])}))
-        .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31)
-        .forEach(x=>detallesMapa.set(`${x.empleado}::${x.dia}`,x));
-      return {celdas:[...celdasMapa.values()],detalles:[...detallesMapa.values()],reemplazos:[]};
-    })();
-    const turnos=await obtenerTurnosSector(sector);
-    res.json({ok:true,sector,mes,...contenido,turnos});
+    const [r, dr, usuarios, sectores] = await Promise.all([
+      sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
+      sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`}),
+      obtenerUsuarios(),
+      obtenerSectores()
+    ]);
+    const filasCalendario=(r.data.values||[]).slice(1);
+    const filasDetalles=(dr.data.values||[]).slice(1);
+    const propias=filasCalendario.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
+    const propiosDetalles=filasDetalles.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
+    const celdasMapa=new Map();
+    propias
+      .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])}))
+      .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno)
+      .forEach(x=>celdasMapa.set(`${x.empleado}::${x.dia}`,x));
+    const detallesMapa=new Map();
+    propiosDetalles
+      .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])}))
+      .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31)
+      .forEach(x=>detallesMapa.set(`${x.empleado}::${x.dia}`,x));
+
+    // Compatibilidad con calendarios anteriores: al consultar Administración,
+    // si todavía no existe la copia sincronizada de un supervisor, se completa
+    // visualmente desde su sector propio. Las futuras ediciones quedan guardadas
+    // en ambos sectores por el PUT de calendario.
+    if (sector === "administracion") {
+      const supervisores = usuarios.filter(u=>u.activo && u.rol === "supervisor");
+      for (const supervisor of supervisores) {
+        const nombre = supervisor.nombre || supervisor.usuario;
+        const sectoresFuente = sectoresHorarioSupervisor(supervisor, sectores).filter(id=>id!=="administracion");
+        for (const sectorFuente of sectoresFuente) {
+          filasCalendario
+            .filter(f=>normalizarTexto(f[0])===sectorFuente&&normalizarTexto(f[1])===mes&&normalizarTexto(f[2])===nombre)
+            .forEach(f=>{
+              const dia=Number(f[3]),turno=normalizarTexto(f[4]);
+              const key=`${nombre}::${dia}`;
+              if(!celdasMapa.has(key)&&Number.isInteger(dia)&&dia>=1&&dia<=31&&turno) celdasMapa.set(key,{empleado:nombre,dia,turno});
+            });
+          filasDetalles
+            .filter(f=>normalizarTexto(f[0])===sectorFuente&&normalizarTexto(f[1])===mes&&normalizarTexto(f[2])===nombre)
+            .forEach(f=>{
+              const dia=Number(f[3]),key=`${nombre}::${dia}`;
+              if(!detallesMapa.has(key)&&dia>=1&&dia<=31) detallesMapa.set(key,{empleado:nombre,dia,tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])});
+            });
+        }
+      }
+    }
+
+    let turnos=await obtenerTurnosSector(sector);
+    if (sector === "administracion") {
+      const supervisores = usuarios.filter(u=>u.activo && u.rol === "supervisor");
+      const sectoresTurnos = new Set(supervisores.flatMap(u=>sectoresHorarioSupervisor(u, sectores)).filter(id=>id!=="administracion"));
+      for (const id of sectoresTurnos) {
+        const extra = await obtenerTurnosSector(id);
+        const ids = new Set(turnos.map(t=>t.id));
+        for (const turno of extra) if (!ids.has(turno.id)) { turnos.push(turno); ids.add(turno.id); }
+      }
+    }
+    res.json({ok:true,sector,mes,celdas:[...celdasMapa.values()],detalles:[...detallesMapa.values()],reemplazos:[],turnos});
   } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo cargar el calendario"}); }
 });
 app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector=normalizarTexto(req.body?.sector), mes=normalizarTexto(req.body?.mes);
-    if(!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"Solo el administrador o el supervisor asignado pueden modificar este calendario"});
+    if(!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar este calendario"});
     if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
-    const sectores=await obtenerSectores(); const sec=sectores.find(s=>s.id===sector&&s.activo);
+    const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
+    const sec=sectores.find(s=>s.id===sector&&s.activo);
     if(!sec) return res.status(404).json({ok:false,mensaje:"Sector inexistente o inactivo"});
-    const usuarios=await obtenerUsuarios();
-    const empleadosBase=usuarios.filter(u=>u.activo&&(u.sector===sector||normalizarUsuario(u.usuario)===normalizarUsuario(sec.supervisor)));
+
+    const empleadosBase=empleadosHorarioDelSector(sector, usuarios, sectores);
     const empleadosPermitidos=new Set(empleadosBase.map(u=>u.nombre||u.usuario));
-    let celdas=(Array.isArray(req.body?.celdas)?req.body.celdas:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
-    let baseCeldas=(Array.isArray(req.body?.baseCeldas)?req.body.baseCeldas:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)})).filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
+    const supervisorPorNombre=new Map(
+      usuarios.filter(u=>u.activo&&u.rol==="supervisor").map(u=>[u.nombre||u.usuario,u])
+    );
+
+    let celdas=(Array.isArray(req.body?.celdas)?req.body.celdas:[])
+      .map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)}))
+      .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
+    let baseCeldas=(Array.isArray(req.body?.baseCeldas)?req.body.baseCeldas:[])
+      .map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)}))
+      .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
     const clienteConBase=Array.isArray(req.body?.baseCeldas);
-    let detalles=(Array.isArray(req.body?.detalles)?req.body.detalles:[]).map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),tipo:normalizarTexto(x.tipo).slice(0,30),motivo:normalizarTexto(x.motivo).slice(0,80),observacion:normalizarTexto(x.observacion).slice(0,300)})).filter(x=>x.empleado&&x.dia>=1&&x.dia<=31&&(x.tipo||x.motivo||x.observacion));
-    if(celdas.some(x=>!empleadosPermitidos.has(x.empleado)) || detalles.some(x=>!empleadosPermitidos.has(x.empleado))) return res.status(400).json({ok:false,mensaje:"El calendario contiene empleados que no pertenecen al sector"});
+    let detalles=(Array.isArray(req.body?.detalles)?req.body.detalles:[])
+      .map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),tipo:normalizarTexto(x.tipo).slice(0,30),motivo:normalizarTexto(x.motivo).slice(0,80),observacion:normalizarTexto(x.observacion).slice(0,300)}))
+      .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31&&(x.tipo||x.motivo||x.observacion));
+
+    if(celdas.some(x=>!empleadosPermitidos.has(x.empleado)) || detalles.some(x=>!empleadosPermitidos.has(x.empleado))) {
+      return res.status(400).json({ok:false,mensaje:"El calendario contiene empleados que no pertenecen al sector"});
+    }
     if(celdas.some(x=>!turnoHorarioValido(x.turno))) return res.status(400).json({ok:false,mensaje:"El calendario contiene un turno inválido"});
+
     await asegurarHojasHorarios();
     await ejecutarEnCola("calendario-horarios", async()=>{
       const [r,dr]=await Promise.all([
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
         sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
       ]);
-      const filasAnteriores=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
+      const todasCalendarioPrevias=(r.data.values||[]).slice(1);
+      const todosDetallesPrevios=(dr.data.values||[]).slice(1);
+      const filasAnteriores=todasCalendarioPrevias.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
       const anterior=new Map(filasAnteriores.map(f=>[`${normalizarTexto(f[2])}::${Number(f[3])}`,normalizarTexto(f[4])]));
       const enviado=new Map(celdas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
       const base=new Map(baseCeldas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
@@ -755,6 +836,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
       const clavesModificadas=clienteConBase
         ? [...new Set([...base.keys(),...enviado.keys()])].filter(k=>(base.get(k)||"")!==(enviado.get(k)||""))
         : [...enviado.keys()];
+
       if(clienteConBase) {
         const conflictos=clavesModificadas.filter(k=>{
           const valorServidor=anterior.get(k)||"", valorBase=base.get(k)||"", valorCliente=enviado.get(k)||"";
@@ -765,34 +847,83 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
           error.statusCode=409; throw error;
         }
       }
+
       for(const k of clavesModificadas) {
         const valor=enviado.get(k)||"";
         if(valor) nuevoCompleto.set(k,valor); else nuevoCompleto.delete(k);
       }
-      const celdasFusionadas=[...nuevoCompleto.entries()].map(([k,turno])=>{const pos=k.lastIndexOf("::");return {empleado:k.slice(0,pos),dia:Number(k.slice(pos+2)),turno};});
-      const otras=(r.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
-      const otrasDetalles=(dr.data.values||[]).slice(1).filter(f=>!(normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes));
+
       const ahora=fechaHoraArgentinaIso();
-      const nuevas=celdasFusionadas.map(x=>[sector,mes,x.empleado,x.dia,x.turno,ahora,req.usuario.usuario,req.usuario.nombre]);
-      const nuevasDetalles=detalles.map(x=>[sector,mes,x.empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
-      const todas=[...otras,...nuevas], todosDetalles=[...otrasDetalles,...nuevasDetalles];
+      const mapaFilas=new Map();
+      for(const f of todasCalendarioPrevias) {
+        const secId=normalizarTexto(f[0]), mesId=normalizarTexto(f[1]), emp=normalizarTexto(f[2]), dia=Number(f[3]);
+        if(secId&&mesId&&emp&&Number.isInteger(dia)) mapaFilas.set(`${secId}||${mesId}||${emp}||${dia}`,f);
+      }
+      // Reemplaza el sector/mes editado por la versión fusionada.
+      for(const key of [...mapaFilas.keys()]) if(key.startsWith(`${sector}||${mes}||`)) mapaFilas.delete(key);
+      for(const [k,turno] of nuevoCompleto.entries()) {
+        const pos=k.lastIndexOf("::"), empleado=k.slice(0,pos),dia=Number(k.slice(pos+2));
+        mapaFilas.set(`${sector}||${mes}||${empleado}||${dia}`,[sector,mes,empleado,dia,turno,ahora,req.usuario.usuario,req.usuario.nombre]);
+      }
+
+      // Un supervisor tiene un único horario funcional. Todo cambio sobre su fila
+      // se replica en Administración y en sus sectores propios, sin requerir una
+      // segunda petición desde el navegador.
+      for(const k of clavesModificadas) {
+        const pos=k.lastIndexOf("::"), empleado=k.slice(0,pos), dia=Number(k.slice(pos+2));
+        const supervisor=supervisorPorNombre.get(empleado);
+        if(!supervisor) continue;
+        const valor=nuevoCompleto.get(k)||"";
+        for(const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+          const claveDestino=`${destino}||${mes}||${empleado}||${dia}`;
+          if(valor) mapaFilas.set(claveDestino,[destino,mes,empleado,dia,valor,ahora,req.usuario.usuario,req.usuario.nombre]);
+          else mapaFilas.delete(claveDestino);
+        }
+      }
+
+      const mapaDetalles=new Map();
+      for(const f of todosDetallesPrevios) {
+        const secId=normalizarTexto(f[0]), mesId=normalizarTexto(f[1]), emp=normalizarTexto(f[2]), dia=Number(f[3]);
+        if(secId&&mesId&&emp&&Number.isInteger(dia)) mapaDetalles.set(`${secId}||${mesId}||${emp}||${dia}`,f);
+      }
+      for(const key of [...mapaDetalles.keys()]) if(key.startsWith(`${sector}||${mes}||`)) mapaDetalles.delete(key);
+      for(const x of detalles) mapaDetalles.set(`${sector}||${mes}||${x.empleado}||${x.dia}`,[sector,mes,x.empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
+
+      // Para supervisores sincroniza también licencias/motivos/observaciones.
+      const supervisoresEnSector=empleadosBase.filter(u=>u.rol==="supervisor");
+      for(const supervisor of supervisoresEnSector) {
+        const empleado=supervisor.nombre||supervisor.usuario;
+        const detalleEmpleado=detalles.filter(x=>x.empleado===empleado);
+        for(const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+          for(const key of [...mapaDetalles.keys()]) {
+            if(key.startsWith(`${destino}||${mes}||${empleado}||`)) mapaDetalles.delete(key);
+          }
+          for(const x of detalleEmpleado) mapaDetalles.set(`${destino}||${mes}||${empleado}||${x.dia}`,[destino,mes,empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
+        }
+      }
+
+      const todas=[...mapaFilas.values()];
+      const todosDetalles=[...mapaDetalles.values()];
       const filasCalendarioPrevias=Math.max(0,(r.data.values||[]).length-1), filasDetallesPrevias=Math.max(0,(dr.data.values||[]).length-1);
       if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
       if(todosDetalles.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I${todosDetalles.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todosDetalles}});
       if(filasCalendarioPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A${todas.length+2}:H${filasCalendarioPrevias+1}`});
       if(filasDetallesPrevias>todosDetalles.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A${todosDetalles.length+2}:I${filasDetallesPrevias+1}`});
-      const nuevoMapa=nuevoCompleto;
-      const claves=new Set([...anterior.keys(),...nuevoMapa.keys()]);
-      const cambios=[...claves].filter(k=>(anterior.get(k)||"")!==(nuevoMapa.get(k)||""));
+
+      const claves=new Set([...anterior.keys(),...nuevoCompleto.keys()]);
+      const cambios=[...claves].filter(k=>(anterior.get(k)||"")!==(nuevoCompleto.get(k)||""));
       if(cambios.length){
         await asegurarHojaAuditoriaHorarios();
-        const filas=cambios.map(k=>{const [empleado,dia]=k.split("::");return [ahora,req.usuario.usuario,req.usuario.nombre,req.usuario.rol,sec.nombre,mes,`Cambió ${empleado} día ${dia}: ${anterior.get(k)||"Sin asignar"} → ${nuevoMapa.get(k)||"Sin asignar"}`]});
+        const filas=cambios.map(k=>{
+          const [empleado,dia]=k.split("::");
+          return [ahora,req.usuario.usuario,req.usuario.nombre,req.usuario.rol,sec.nombre,mes,`Cambió ${empleado} día ${dia}: ${anterior.get(k)||"Sin asignar"} → ${nuevoCompleto.get(k)||"Sin asignar"}`];
+        });
         await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:filas}});
       }
     });
+
     await registrarAuditoriaHorario(req.usuario,sec.nombre,mes,"Guardó calendario del sector");
     invalidarCache(`calendarioHorarios:${sector}:${mes}`);
-
     res.json({ok:true,guardadas:celdas.length});
   } catch(e) { res.status(e.statusCode || 500).json({ok:false,mensaje:e.message || "No se pudo guardar el calendario"}); }
 });
@@ -814,38 +945,50 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
     const activos = sectores.filter(s => s.activo);
-    if (!["administrador","supervisor"].includes(req.usuario.rol) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
-    const sectoresSupervisor = new Set(sectoresACargo(req.usuario));
-    // Compatibilidad: también reconoce sectores donde el usuario figura como
-    // supervisor en la hoja Sectores. Así puede navegar todos sus calendarios
-    // aunque la sesión local sea anterior a la asignación múltiple.
-    if (req.usuario.rol === "supervisor") {
-      activos.filter(s => normalizarUsuario(s.supervisor) === normalizarUsuario(req.usuario.usuario)).forEach(s => sectoresSupervisor.add(s.id));
-      if (req.usuario.sector) sectoresSupervisor.add(req.usuario.sector);
-    }
-    const visibles = ["administrador","supervisor"].includes(req.usuario.rol)
+    if (!rolGestionSector(req.usuario) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
+
+    const sectoresSupervisor = req.usuario.rol === "supervisor"
+      ? await sectoresSupervisorPermitidos(req.usuario)
+      : new Set();
+
+    const visibles = rolGestionGlobal(req.usuario) || req.usuario.rol === "supervisor"
       ? activos
-      : activos.filter(s => s.id === req.usuario.sector);
-    if (!["administrador","supervisor"].includes(req.usuario.rol) && !visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
+      : activos.filter(s => s.id === req.usuario.sector || s.id === "administracion");
+
+    if (!visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
+
     await asegurarHojasHorarios();
     const ordenResp = await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A:D`});
     const ordenPorSector = new Map();
-    (ordenResp.data.values || []).slice(1).forEach(f => { const sec=normalizarTexto(f[0]), emp=normalizarTexto(f[1]), ord=Number(f[2]); if(sec&&emp&&Number.isFinite(ord)){ if(!ordenPorSector.has(sec)) ordenPorSector.set(sec,new Map()); ordenPorSector.get(sec).set(emp,ord); } });
-    const respuesta = visibles.map(s => ({
-      id: s.id,
-      nombre: s.nombre,
-      color: s.color,
-      activo: s.activo,
-      puedeEditar: req.usuario.rol === "administrador" || (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
-      empleados: usuarios.filter(u => u.activo && (u.sector === s.id || normalizarUsuario(u.usuario) === normalizarUsuario(s.supervisor)))
-        .filter((u, i, arr) => arr.findIndex(x => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario)) === i)
-        .sort((a, b) => { const mapa=ordenPorSector.get(s.id); const an=a.nombre||a.usuario,bn=b.nombre||b.usuario; const ao=mapa?.get(an),bo=mapa?.get(bn); if(Number.isFinite(ao)||Number.isFinite(bo)) return (Number.isFinite(ao)?ao:9999)-(Number.isFinite(bo)?bo:9999); return String(an).localeCompare(String(bn), "es", { sensitivity:"base" }); })
-        .map(u => u.nombre || u.usuario),
-      empleadosInfo: usuarios.filter(u=>u.activo&&(u.sector===s.id||normalizarUsuario(u.usuario)===normalizarUsuario(s.supervisor)))
-        .filter((u, i, arr) => arr.findIndex(x => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario)) === i)
-        .map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
-    }));
-    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: ["administrador","supervisor"].includes(req.usuario.rol), rol:req.usuario.rol });
+    (ordenResp.data.values || []).slice(1).forEach(f => {
+      const sec=normalizarTexto(f[0]), emp=normalizarTexto(f[1]), ord=Number(f[2]);
+      if(sec&&emp&&Number.isFinite(ord)){
+        if(!ordenPorSector.has(sec)) ordenPorSector.set(sec,new Map());
+        ordenPorSector.get(sec).set(emp,ord);
+      }
+    });
+
+    const respuesta = visibles.map(s => {
+      const empleadosSector = empleadosHorarioDelSector(s.id, usuarios, activos)
+        .sort((a, b) => {
+          const mapa=ordenPorSector.get(s.id);
+          const an=a.nombre||a.usuario,bn=b.nombre||b.usuario;
+          const ao=mapa?.get(an),bo=mapa?.get(bn);
+          if(Number.isFinite(ao)||Number.isFinite(bo)) return (Number.isFinite(ao)?ao:9999)-(Number.isFinite(bo)?bo:9999);
+          return String(an).localeCompare(String(bn), "es", { sensitivity:"base" });
+        });
+      return {
+        id: s.id,
+        nombre: s.nombre,
+        color: s.color,
+        activo: s.activo,
+        puedeEditar: rolGestionGlobal(req.usuario) || (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
+        empleados: empleadosSector.map(u => u.nombre || u.usuario),
+        empleadosInfo: empleadosSector.map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
+      };
+    });
+
+    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: rolGestionSector(req.usuario), rol:req.usuario.rol });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el contexto de horarios" });
   }
@@ -854,7 +997,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
 app.get("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
   try {
     const sector=normalizarTexto(req.query.sector);
-    if (!puedeAccederSectorHorarios(req.usuario,sector)) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
+    if (!(await puedeAccederSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
     await asegurarHojasHorarios();
     const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A:D`});
     const orden=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector).sort((a,b)=>Number(a[2])-Number(b[2])).map(f=>normalizarTexto(f[1])).filter(Boolean);
@@ -869,7 +1012,7 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
     if(!orden.length || new Set(orden).size!==orden.length) return res.status(400).json({ok:false,mensaje:"Orden de personal inválido"});
     const sectores=await obtenerSectores(), usuarios=await obtenerUsuarios(), sec=sectores.find(s=>s.id===sector&&s.activo);
     if(!sec) return res.status(404).json({ok:false,mensaje:"Sector inexistente"});
-    const permitidos=new Set(usuarios.filter(u=>u.activo&&(u.sector===sector||normalizarUsuario(u.usuario)===normalizarUsuario(sec.supervisor))).map(u=>u.nombre||u.usuario));
+    const permitidos=new Set(empleadosHorarioDelSector(sector, usuarios, sectores).map(u=>u.nombre||u.usuario));
     if(orden.some(x=>!permitidos.has(x)) || orden.length!==permitidos.size) return res.status(400).json({ok:false,mensaje:"El orden debe incluir una vez a todo el personal del sector"});
     await asegurarHojasHorarios();
     await ejecutarEnCola("orden-horarios",async()=>{ const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A:D`}); const otras=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])!==sector); const ahora=fechaHoraArgentinaIso(); const nuevas=orden.map((e,i)=>[sector,e,i+1,ahora]); const todas=[...otras,...nuevas], prev=Math.max(0,(r.data.values||[]).length-1); if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A2:D${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}}); if(prev>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A${todas.length+2}:D${prev+1}`}); });
@@ -880,8 +1023,8 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
 app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
-    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ ok:false, mensaje:"Solo el administrador o el supervisor asignado pueden modificar este sector" });
-    if (!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ ok:false, mensaje:"Solo Administración, Administrador o el Supervisor asignado pueden modificar este sector" });
+    if (!rolGestionSector(req.usuario)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
     const sectores = await obtenerSectores();
     const sectorEncontrado = sectores.find(s => s.id === sector && s.activo);
     if (!sectorEncontrado) return res.status(404).json({ ok:false, mensaje:"Sector inexistente o inactivo" });
@@ -1138,7 +1281,7 @@ async function guardarTareasServidor(tareas, usuario) {
 }
 async function sectoresTareasPermitidos(usuario) {
   const sectores=(await obtenerSectores()).filter(s=>s.activo);
-  if(usuario.rol==="administrador") return sectores;
+  if(rolGestionGlobal(usuario)) return sectores;
   if(usuario.rol==="supervisor") {
     const ids=new Set([usuario.sector,...(usuario.sectores||[])].filter(Boolean));
     sectores.filter(s=>normalizarUsuario(s.supervisor)===normalizarUsuario(usuario.usuario)).forEach(s=>ids.add(s.id));
@@ -1149,7 +1292,7 @@ async function sectoresTareasPermitidos(usuario) {
 app.get("/tareas/contexto", requerirSesion, async (req,res)=>{
   try {
     const sectores=await sectoresTareasPermitidos(req.usuario);
-    res.json({ok:true,rol:req.usuario.rol,sectores:sectores.map(s=>({id:s.id,nombre:s.nombre,color:s.color})),puedeAsignar:["administrador","supervisor"].includes(req.usuario.rol),puedeConfigurar:["administrador","supervisor"].includes(req.usuario.rol)});
+    res.json({ok:true,rol:req.usuario.rol,sectores:sectores.map(s=>({id:s.id,nombre:s.nombre,color:s.color})),puedeAsignar:rolGestionSector(req.usuario),puedeConfigurar:rolGestionSector(req.usuario)});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar el contexto de tareas"});}
 });
 
@@ -1167,13 +1310,13 @@ app.get("/tareas", requerirSesion, async (req,res)=>{
 
 app.put("/tareas", requerirSesion, async (req,res)=>{
   try {
-    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar tareas"});
+    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar tareas"});
     const entrantes=Array.isArray(req.body?.tareas)?req.body.tareas.map(normalizarTareaServidor):[];
     const eliminadas=new Set((Array.isArray(req.body?.deletedIds)?req.body.deletedIds:[]).map(normalizarTexto).filter(Boolean));
     const actuales=await obtenerTareasServidor();
     const sectores=await sectoresTareasPermitidos(req.usuario);
     const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    const puedeSector=t=>req.usuario.rol==="administrador"||permitidos.has(normalizarTexto(t.sector));
+    const puedeSector=t=>rolGestionGlobal(req.usuario)||permitidos.has(normalizarTexto(t.sector));
     const mapa=new Map(actuales.filter(t=>!(eliminadas.has(t.id)&&puedeSector(t))).map(t=>[t.id,t]));
     for(const tarea of entrantes){
       if(!puedeSector(tarea)) continue;
@@ -1181,19 +1324,19 @@ app.put("/tareas", requerirSesion, async (req,res)=>{
     }
     const fusion=[...mapa.values()];
     await guardarTareasServidor(fusion,req.usuario);
-    const visibles=req.usuario.rol==="administrador"?fusion:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)));
+    const visibles=rolGestionGlobal(req.usuario)?fusion:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)));
     res.json({ok:true,tareas:visibles});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron guardar las tareas"});}
 });
 
 app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
   try {
-    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
+    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
     const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
     const tareas=await obtenerTareasServidor(), tarea=tareas.find(t=>t.id===id);
     if(!tarea||!fecha||!["manana","tarde"].includes(turno)) return res.status(400).json({ok:false,mensaje:"Asignación inválida"});
     const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    if(req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
+    if(!rolGestionGlobal(req.usuario)&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
     tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
     const asignacionAnterior=tarea.asignaciones[fecha][turno]||{};
     const responsables=[...new Set((req.body?.responsables||[]).map(normalizarTexto).filter(Boolean))];
@@ -1205,13 +1348,13 @@ app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
 
 app.post("/tareas/asignaciones-lote", requerirSesion, async (req,res)=>{
   try {
-    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
+    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
     const ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(normalizarTexto).filter(Boolean))],fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno),responsable=normalizarTexto(req.body?.responsable),reemplazar=Boolean(req.body?.reemplazar);
     if((!ids.length&&!reemplazar)||!fecha||!["manana","tarde"].includes(turno)||!responsable) return res.status(400).json({ok:false,mensaje:"Asignación incompleta"});
     const tareas=await obtenerTareasServidor(), sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
     const seleccionadas=tareas.filter(t=>ids.includes(t.id));
     if(seleccionadas.length!==ids.length) return res.status(404).json({ok:false,mensaje:"Una o más tareas no existen"});
-    if(seleccionadas.some(t=>req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(t.sector)))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para una de las tareas"});
+    if(seleccionadas.some(t=>!rolGestionGlobal(req.usuario)&&!permitidos.has(normalizarTexto(t.sector)))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para una de las tareas"});
     if(reemplazar){
       for(const tarea of tareas){
         const asig=tarea.asignaciones?.[fecha]?.[turno];
@@ -1228,18 +1371,18 @@ app.post("/tareas/asignaciones-lote", requerirSesion, async (req,res)=>{
       tarea.asignaciones[fecha][turno]={...anterior,responsables,estado:anterior.estado||"pendiente",completadaPor:anterior.completadaPor||"",completadaHora:anterior.completadaHora||""};
     }
     await guardarTareasServidor(tareas,req.usuario);
-    const visibles=req.usuario.rol==="administrador"?tareas:tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
+    const visibles=rolGestionGlobal(req.usuario)?tareas:tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
     res.json({ok:true,asignadas:seleccionadas.length,responsable,tareas:visibles});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron asignar las tareas"});}
 });
 app.delete("/tareas/asignacion", requerirSesion, async (req,res)=>{
   try {
-    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para eliminar asignaciones"});
+    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para eliminar asignaciones"});
     const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
     const tareas=await obtenerTareasServidor(),tarea=tareas.find(t=>t.id===id);
     if(!tarea?.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
     const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    if(req.usuario.rol!=="administrador"&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
+    if(!rolGestionGlobal(req.usuario)&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
     delete tarea.asignaciones[fecha][turno]; if(!Object.keys(tarea.asignaciones[fecha]).length) delete tarea.asignaciones[fecha];
     await guardarTareasServidor(tareas,req.usuario); res.json({ok:true});
   } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo eliminar la asignación"});}
@@ -1247,7 +1390,7 @@ app.delete("/tareas/asignacion", requerirSesion, async (req,res)=>{
 app.get("/tareas/bano", requerirSesion, async(req,res)=>{try{res.json({ok:true,config:await leerBanoServidor()});}catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar la rotación"});}});
 app.put("/tareas/bano", requerirSesion, async(req,res)=>{
   try{
-    if(!["administrador","supervisor"].includes(req.usuario.rol)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar la rotación"});
+    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar la rotación"});
     const actual=await leerBanoServidor();
     const config=await guardarBanoServidor({...actual,participantes:req.body?.participantes||[],fechaAncla:req.body?.fechaAncla||actual.fechaAncla},req.usuario);
     res.json({ok:true,config});
@@ -1267,7 +1410,7 @@ app.post("/tareas/completar", requerirSesion, async (req,res)=>{
     const tareas=await obtenerTareasServidor(),t=tareas.find(x=>x.id===id);
     if(!t||!t.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
     const asig=t.asignaciones[fecha][turno];
-    if(req.usuario.rol!=="administrador") {
+    if(!rolGestionGlobal(req.usuario)) {
       const sectores=await sectoresTareasPermitidos(req.usuario);
       const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
       if(!permitidos.has(normalizarTexto(t.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para completar tareas de este sector"});
@@ -1287,7 +1430,7 @@ app.get("/tareas/usuarios", requerirSesion, async (req, res) => {
   try {
     const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), sectoresTareasPermitidos(req.usuario)]);
     const permitidos = new Set(sectores.map(s=>s.id));
-    const visibles = req.usuario.rol === "administrador" ? usuarios.filter(u=>u.activo) : usuarios.filter(u => u.activo && (permitidos.has(u.sector) || (u.sectores || []).some(s => permitidos.has(s))));
+    const visibles = rolGestionGlobal(req.usuario) ? usuarios.filter(u=>u.activo) : usuarios.filter(u => u.activo && (permitidos.has(u.sector) || (u.sectores || []).some(s => permitidos.has(s))));
     res.json({ok:true, usuarios:visibles.map(u=>({usuario:u.usuario,nombre:u.nombre,sector:u.sector,sectores:u.sectores||[]}))});
   } catch(error) { res.status(500).json({ok:false,mensaje:error.message || "No se pudieron cargar los usuarios"}); }
 });

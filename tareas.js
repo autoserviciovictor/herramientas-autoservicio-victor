@@ -29,6 +29,8 @@ let asignarUsuarioSeleccionado = "";
 let asignarTareasSeleccionadas = new Set();
 let activacionTareasEnCurso = null;
 const tareasCompletando = new Set();
+const ROLES_GESTION_TAREAS = ["administrador","administracion","supervisor"];
+function puedeGestionarTareasPorRol(){ return ROLES_GESTION_TAREAS.includes(usuario()?.rol); }
 
 function inicioDia(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function inicioSemana(d){ const x=inicioDia(d), day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return x; }
@@ -40,7 +42,7 @@ function guardarJSON(key,v){ localStorage.setItem(key,JSON.stringify(v)); }
 function leer(){ return tareasMemoria.length || localStorage.getItem(KEY) ? tareasMemoria : leerJSON(KEY,[]); }
 function guardarLocal(v){ tareasMemoria=Array.isArray(v)?v:[]; guardarJSON(KEY,tareasMemoria); }
 async function sincronizarTareas(v, deletedIds=[]){
-  if(!["administrador","supervisor"].includes(usuario()?.rol)) return false;
+  if(!puedeGestionarTareasPorRol()) return false;
   const anterior=leerJSON(PENDING_KEY,{tareas:[],deletedIds:[]});
   const pendientes={tareas:Array.isArray(v)?v:[],deletedIds:[...new Set([...(anterior?.deletedIds||[]),...deletedIds].filter(Boolean))]};
   guardarJSON(PENDING_KEY,pendientes);
@@ -61,17 +63,17 @@ async function cargarContextoTareas(){
     try{
       const r=await fetch(url),data=await r.json();
       if(r.ok&&data.ok&&Array.isArray(data.sectores)&&data.sectores.length){
-        contextoTareas={...contextoTareas,...data,puedeAsignar:data.puedeAsignar??["administrador","supervisor"].includes(usuario()?.rol),puedeConfigurar:data.puedeConfigurar??["administrador","supervisor"].includes(usuario()?.rol)};
+        contextoTareas={...contextoTareas,...data,puedeAsignar:data.puedeAsignar??puedeGestionarTareasPorRol(),puedeConfigurar:data.puedeConfigurar??puedeGestionarTareasPorRol()};
         return;
       }
     }catch{}
   }
-  contextoTareas={sectores:[],puedeAsignar:false,puedeConfigurar:["administrador","supervisor"].includes(usuario()?.rol),errorSectores:true};
+  contextoTareas={sectores:[],puedeAsignar:false,puedeConfigurar:puedeGestionarTareasPorRol(),errorSectores:true};
 }
 async function cargarTareasRemotas(){
   const locales=leerJSON(KEY,[]),pendientes=leerJSON(PENDING_KEY,null);
   try{
-    if(pendientes?.tareas&&["administrador","supervisor"].includes(usuario()?.rol)) await sincronizarTareas(pendientes.tareas,pendientes.deletedIds||[]);
+    if(pendientes?.tareas&&puedeGestionarTareasPorRol()) await sincronizarTareas(pendientes.tareas,pendientes.deletedIds||[]);
     const r=await fetch(`${API_BASE_URL}/tareas`),data=await r.json();
     if(!r.ok||!data.ok)throw new Error(data.mensaje||"No se pudieron cargar las tareas");
     tareasMemoria=Array.isArray(data.tareas)?data.tareas:[];
@@ -80,8 +82,8 @@ async function cargarTareasRemotas(){
   }catch{tareasMemoria=locales;}
 }
 function usuario(){ return window.AutoservicioAuth?.getUsuario?.() || {}; }
-function puedeAsignar(){ return contextoTareas.puedeAsignar || ["administrador","supervisor"].includes(usuario()?.rol); }
-function puedeConfigurar(){ return contextoTareas.puedeConfigurar || ["administrador","supervisor"].includes(usuario()?.rol); }
+function puedeAsignar(){ return contextoTareas.puedeAsignar || puedeGestionarTareasPorRol(); }
+function puedeConfigurar(){ return contextoTareas.puedeConfigurar || puedeGestionarTareasPorRol(); }
 function claveSector(v){ return String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es"); }
 function sectoresUnicos(valores){ const mapa=new Map(); for(const valor of valores){ const limpio=String(valor||"").trim(); if(!limpio)continue; const clave=claveSector(limpio); if(!mapa.has(clave))mapa.set(clave,limpio); } return [...mapa.values()]; }
 function sectoresUsuario(){ return sectoresUnicos((contextoTareas.sectores||[]).map(s=>s.nombre||s.id)); }
