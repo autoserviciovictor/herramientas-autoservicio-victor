@@ -1,58 +1,61 @@
 import { APP_VERSION } from "./config.js?v=12301";
 import {
-    cargarProductosDesdeServidor,
-    sincronizarProductosDesdeServidor,
-    obtenerProductoActualizadoPorCodigo,
-    buscarProductoPorCodigo,
-    buscarProductosPorTexto,
-    obtenerProductos,
-    obtenerProductosCargados,
-    guardarCantidadEnProducto,
-    modificarStockProducto,
-    obtenerCantidadProductos,
-    obtenerContador,
-    reiniciarContador,
-    obtenerConteosUbicacion,
-    listarVencimientos,
-    guardarVencimiento,
-    cargarCatalogoMaestroDesdeServidor,
-    buscarProductoMaestroLocalPorCodigo,
-    buscarProductosMaestrosPorTexto,
-    buscarProductoMaestroPorCodigo,
-    actualizarVencimiento,
-    eliminarVencimiento,
-    actualizarOfertaVencimiento
+  cargarProductosDesdeServidor,
+  sincronizarProductosDesdeServidor,
+  obtenerProductoActualizadoPorCodigo,
+  buscarProductoPorCodigo,
+  buscarProductosPorTexto,
+  obtenerProductos,
+  obtenerProductosCargados,
+  guardarCantidadEnProducto,
+  modificarStockProducto,
+  obtenerCantidadProductos,
+  obtenerContador,
+  reiniciarContador,
+  obtenerConteosUbicacion,
+  listarVencimientos,
+  guardarVencimiento,
+  cargarCatalogoMaestroDesdeServidor,
+  buscarProductoMaestroLocalPorCodigo,
+  buscarProductosMaestrosPorTexto,
+  buscarProductoMaestroPorCodigo,
+  actualizarVencimiento,
+  eliminarVencimiento,
+  actualizarOfertaVencimiento,
 } from "./excel.js?v=12301";
 
-import {
-    iniciarScanner,
-    detenerScanner
-} from "./scanner.js?v=12301";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=12301";
 
 import {
-    ocultarSplash,
-    cambiarPantalla,
-    mostrarMensaje,
-    actualizarEstadoExcel,
-    actualizarEstadoCamara,
-    actualizarUbicacion,
-    mostrarProducto,
-    mostrarProductoNoEncontrado,
-    limpiarProducto,
-    actualizarContador,
-    activarBotonGuardar,
-    configurarFeedback,
-    reproducirConfirmacion,
-    renderResultadosBusqueda,
-    mostrarEditorStock,
-    actualizarTotalEditor,
-    obtenerValoresEditor,
-    activarModoCantidad,
-    desactivarModoCantidad,
-    actualizarConteosUbicacion
+  ocultarSplash,
+  cambiarPantalla,
+  mostrarMensaje,
+  actualizarEstadoExcel,
+  actualizarEstadoCamara,
+  actualizarUbicacion,
+  mostrarProducto,
+  mostrarProductoNoEncontrado,
+  limpiarProducto,
+  actualizarContador,
+  activarBotonGuardar,
+  configurarFeedback,
+  reproducirConfirmacion,
+  renderResultadosBusqueda,
+  mostrarEditorStock,
+  actualizarTotalEditor,
+  obtenerValoresEditor,
+  activarModoCantidad,
+  desactivarModoCantidad,
+  actualizarConteosUbicacion,
 } from "./ui.js?v=12301";
 
-import { inicializarReposicion, refrescarReposicion, prepararReposicion, resolverSalidaReposicion, reiniciarReposicion } from "./reposicion.js?v=12301";
+import {
+  inicializarReposicion,
+  refrescarReposicion,
+  prepararReposicion,
+  resolverSalidaReposicion,
+  reiniciarReposicion,
+} from "./reposicion.js?v=12301";
 import { coincideBusqueda } from "./search.js?v=12301";
 
 let ubicacionActual = "salon";
@@ -69,6 +72,7 @@ let guardandoVencimiento = false;
 let vencimientosCache = [];
 let filtroVencimientos = "todos";
 let filtroOfertaVencimientos = "todos";
+let filtroRubroVencimientos = "todos";
 let busquedaVencimientos = "";
 let vencimientoSeleccionado = null;
 let vencTabActual = "cargar";
@@ -82,1293 +86,1921 @@ let resolucionCambiosPendientes = null;
 const $ = (id) => document.getElementById(id);
 
 const elementos = {
-    btnActualizarProductos: $("btnActualizarProductos"),
-    inventarioRecientes: $("inventarioRecientes"),
-    btnAbrirScanner: $("btnAbrirScanner"),
-    btnCerrarScanner: $("btnCerrarScanner"),
-    btnCodigoManualToggle: $("btnCodigoManualToggle"),
-    manualPanel: $("manualPanel"),
-    codigoManualInput: $("codigoManualInput"),
-    btnBuscarManual: $("btnBuscarManual"),
-    manualSugerencias: $("manualSugerencias"),
-    scanPanel: $("scanPanel"),
-    cameraCard: $("cameraCard"),
-    btnSalon: $("btnSalon"),
-    btnDeposito: $("btnDeposito"),
-    btnGuardarCantidad: $("btnGuardarCantidad"),
-    btnMenosCantidad: $("btnMenosCantidad"),
-    btnMasCantidad: $("btnMasCantidad"),
-    btnCancelarCantidad: $("btnCancelarCantidad"),
-    cantidadInput: $("cantidadInput"),
-    checkSonidos: $("checkSonidos"),
-    checkVibracion: $("checkVibracion"),
-    btnReiniciar: $("btnReiniciar"),
-    buscadorProducto: $("buscadorProducto"),
-    btnVolverProductos: $("btnVolverProductos"),
-    editarSalon: $("editarSalon"),
-    editarDeposito: $("editarDeposito"),
-    btnMenosSalon: $("btnMenosSalon"),
-    btnMasSalon: $("btnMasSalon"),
-    btnMenosDeposito: $("btnMenosDeposito"),
-    btnMasDeposito: $("btnMasDeposito"),
-    btnGuardarCorreccion: $("btnGuardarCorreccion"),
-    btnVencAbrirScanner: $("btnVencAbrirScanner"),
-    btnVencCerrarScanner: $("btnVencCerrarScanner"),
-    btnVencManualToggle: $("btnVencManualToggle"),
-    vencManualPanel: $("vencManualPanel"),
-    vencCodigoManualInput: $("vencCodigoManualInput"),
-    btnVencBuscarManual: $("btnVencBuscarManual"),
-    vencManualSugerencias: $("vencManualSugerencias"),
-    vencCameraCard: $("vencCameraCard"),
-    vencProductoCard: $("vencProductoCard"),
-    vencEstadoProducto: $("vencEstadoProducto"),
-    vencNombreProducto: $("vencNombreProducto"),
-    vencCodigoProducto: $("vencCodigoProducto"),
-    vencFormCard: $("vencFormCard"),
-    vencFechaInput: $("vencFechaInput"),
-    vencSalonInput: $("vencSalonInput"),
-    vencDepositoInput: $("vencDepositoInput"),
-    btnVencMenosSalon: $("btnVencMenosSalon"),
-    btnVencMasSalon: $("btnVencMasSalon"),
-    btnVencMenosDeposito: $("btnVencMenosDeposito"),
-    btnVencMasDeposito: $("btnVencMasDeposito"),
-    vencTotalTexto: $("vencTotalTexto"),
-    btnVencGuardar: $("btnVencGuardar"),
-    btnVencCancelarCarga: $("btnVencCancelarCarga"),
-    vencListado: $("vencListado"),
-    vencBuscador: $("vencBuscador"),
-    vencResumen: $("vencResumen"),
-    vencListadoTitulo: $("vencListadoTitulo"),
-    vencTabBtns: document.querySelectorAll("[data-venc-tab]"),
-    vencModal: $("vencModal"),
-    vencModalVista: $("vencModalVista"),
-    vencModalEditar: $("vencModalEditar"),
-    vencModalEliminar: $("vencModalEliminar"),
-    btnVencModalCerrar: $("btnVencModalCerrar"),
-    btnVencEditarAbrir: $("btnVencEditarAbrir"),
-    btnVencEliminarAbrir: $("btnVencEliminarAbrir"),
-    btnVencEliminarDesdeVista: $("btnVencEliminarDesdeVista"),
-    btnVencGuardarEdicion: $("btnVencGuardarEdicion"),
-    btnVencCancelarEdicion: $("btnVencCancelarEdicion"),
-    btnVencConfirmarEliminar: $("btnVencConfirmarEliminar"),
-    btnVencCancelarEliminar: $("btnVencCancelarEliminar"),
-    vencEditFechaInput: $("vencEditFechaInput"),
-    vencEditSalonInput: $("vencEditSalonInput"),
-    vencEditDepositoInput: $("vencEditDepositoInput"),
-    btnVencEditMenosSalon: $("btnVencEditMenosSalon"),
-    btnVencEditMasSalon: $("btnVencEditMasSalon"),
-    btnVencEditMenosDeposito: $("btnVencEditMenosDeposito"),
-    btnVencEditMasDeposito: $("btnVencEditMasDeposito"),
-    vencEditTotalTexto: $("vencEditTotalTexto"),
-    vencFiltroBtns: document.querySelectorAll("[data-venc-filtro]")
+  btnActualizarProductos: $("btnActualizarProductos"),
+  inventarioRecientes: $("inventarioRecientes"),
+  btnAbrirScanner: $("btnAbrirScanner"),
+  btnCerrarScanner: $("btnCerrarScanner"),
+  btnCodigoManualToggle: $("btnCodigoManualToggle"),
+  manualPanel: $("manualPanel"),
+  codigoManualInput: $("codigoManualInput"),
+  btnBuscarManual: $("btnBuscarManual"),
+  manualSugerencias: $("manualSugerencias"),
+  scanPanel: $("scanPanel"),
+  cameraCard: $("cameraCard"),
+  btnSalon: $("btnSalon"),
+  btnDeposito: $("btnDeposito"),
+  btnGuardarCantidad: $("btnGuardarCantidad"),
+  btnMenosCantidad: $("btnMenosCantidad"),
+  btnMasCantidad: $("btnMasCantidad"),
+  btnCancelarCantidad: $("btnCancelarCantidad"),
+  cantidadInput: $("cantidadInput"),
+  checkSonidos: $("checkSonidos"),
+  checkVibracion: $("checkVibracion"),
+  btnReiniciar: $("btnReiniciar"),
+  buscadorProducto: $("buscadorProducto"),
+  btnVolverProductos: $("btnVolverProductos"),
+  editarSalon: $("editarSalon"),
+  editarDeposito: $("editarDeposito"),
+  btnMenosSalon: $("btnMenosSalon"),
+  btnMasSalon: $("btnMasSalon"),
+  btnMenosDeposito: $("btnMenosDeposito"),
+  btnMasDeposito: $("btnMasDeposito"),
+  btnGuardarCorreccion: $("btnGuardarCorreccion"),
+  btnVencAbrirScanner: $("btnVencAbrirScanner"),
+  btnVencCerrarScanner: $("btnVencCerrarScanner"),
+  btnVencManualToggle: $("btnVencManualToggle"),
+  vencManualPanel: $("vencManualPanel"),
+  vencCodigoManualInput: $("vencCodigoManualInput"),
+  btnVencBuscarManual: $("btnVencBuscarManual"),
+  vencManualSugerencias: $("vencManualSugerencias"),
+  vencCameraCard: $("vencCameraCard"),
+  vencProductoCard: $("vencProductoCard"),
+  vencEstadoProducto: $("vencEstadoProducto"),
+  vencNombreProducto: $("vencNombreProducto"),
+  vencCodigoProducto: $("vencCodigoProducto"),
+  vencFormCard: $("vencFormCard"),
+  vencFechaInput: $("vencFechaInput"),
+  vencSalonInput: $("vencSalonInput"),
+  vencDepositoInput: $("vencDepositoInput"),
+  btnVencMenosSalon: $("btnVencMenosSalon"),
+  btnVencMasSalon: $("btnVencMasSalon"),
+  btnVencMenosDeposito: $("btnVencMenosDeposito"),
+  btnVencMasDeposito: $("btnVencMasDeposito"),
+  vencTotalTexto: $("vencTotalTexto"),
+  btnVencGuardar: $("btnVencGuardar"),
+  btnVencCancelarCarga: $("btnVencCancelarCarga"),
+  vencListado: $("vencListado"),
+  vencBuscador: $("vencBuscador"),
+  vencResumen: $("vencResumen"),
+  vencListadoTitulo: $("vencListadoTitulo"),
+  vencTabBtns: document.querySelectorAll("[data-venc-tab]"),
+  vencModal: $("vencModal"),
+  vencModalVista: $("vencModalVista"),
+  vencModalEditar: $("vencModalEditar"),
+  vencModalEliminar: $("vencModalEliminar"),
+  btnVencModalCerrar: $("btnVencModalCerrar"),
+  btnVencEditarAbrir: $("btnVencEditarAbrir"),
+  btnVencEliminarAbrir: $("btnVencEliminarAbrir"),
+  btnVencEliminarDesdeVista: $("btnVencEliminarDesdeVista"),
+  btnVencGuardarEdicion: $("btnVencGuardarEdicion"),
+  btnVencCancelarEdicion: $("btnVencCancelarEdicion"),
+  btnVencConfirmarEliminar: $("btnVencConfirmarEliminar"),
+  btnVencCancelarEliminar: $("btnVencCancelarEliminar"),
+  vencEditFechaInput: $("vencEditFechaInput"),
+  vencEditSalonInput: $("vencEditSalonInput"),
+  vencEditDepositoInput: $("vencEditDepositoInput"),
+  btnVencEditMenosSalon: $("btnVencEditMenosSalon"),
+  btnVencEditMasSalon: $("btnVencEditMasSalon"),
+  btnVencEditMenosDeposito: $("btnVencEditMenosDeposito"),
+  btnVencEditMasDeposito: $("btnVencEditMasDeposito"),
+  vencEditTotalTexto: $("vencEditTotalTexto"),
+  vencFiltroBtns: document.querySelectorAll("[data-venc-filtro]"),
 };
 
+function asegurarUIRubrosVencimientos() {
+  const form = $("vencFormCard");
+  if (form && !$("vencRubroInput")) {
+    const wrap = document.createElement("div");
+    wrap.className = "venc-rubro-field";
+    wrap.innerHTML = `<label for="vencRubroButton">Rubro</label>
+            <div class="app-select-custom" data-rubro-custom="carga">
+                <input type="hidden" id="vencRubroInput" value="">
+                <button type="button" id="vencRubroButton" class="app-select-custom__trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span>Seleccionar rubro</span>
+                    <span class="app-select-custom__chevron">⌄</span>
+                </button>
+                <div class="app-select-custom__menu oculto" role="listbox">
+                    <button type="button" class="app-select-custom__option" data-rubro-option="Almacén">Almacén</button>
+                    <button type="button" class="app-select-custom__option" data-rubro-option="Bebida">Bebida</button>
+                    <button type="button" class="app-select-custom__option" data-rubro-option="Fiambrería">Fiambrería</button>
+                </div>
+            </div>`;
+    const qty = form.querySelector(".venc-qty-grid");
+    form.insertBefore(wrap, qty || form.firstChild);
+  }
+
+  const edit = $("vencModalEditar");
+  if (edit && !$("vencEditRubroInput")) {
+    const wrap = document.createElement("div");
+    wrap.className = "venc-rubro-field";
+    wrap.innerHTML = `<label for="vencEditRubroButton">Rubro</label>
+            <div class="app-select-custom" data-rubro-custom="edicion">
+                <input type="hidden" id="vencEditRubroInput" value="">
+                <button type="button" id="vencEditRubroButton" class="app-select-custom__trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span>Seleccionar rubro</span>
+                    <span class="app-select-custom__chevron">⌄</span>
+                </button>
+                <div class="app-select-custom__menu oculto" role="listbox">
+                    <button type="button" class="app-select-custom__option" data-rubro-option="Almacén">Almacén</button>
+                    <button type="button" class="app-select-custom__option" data-rubro-option="Bebida">Bebida</button>
+                    <button type="button" class="app-select-custom__option" data-rubro-option="Fiambrería">Fiambrería</button>
+                </div>
+            </div>`;
+    const qty = edit.querySelector(".venc-qty-grid");
+    edit.insertBefore(wrap, qty || edit.firstChild);
+  }
+
+  if (edit && !$("vencEditError")) {
+    const error = document.createElement("div");
+    error.id = "vencEditError";
+    error.className = "venc-edit-error oculto";
+    error.setAttribute("role", "alert");
+    const qty = edit.querySelector(".venc-qty-grid");
+    edit.insertBefore(error, qty || null);
+  }
+
+  const listCard = $("vencListadoCard");
+  if (listCard && !$("vencRubrosFiltros")) {
+    const bar = document.createElement("div");
+    bar.id = "vencRubrosFiltros";
+    bar.className = "venc-rubro-filtros oculto";
+    bar.innerHTML = [`todos`, `almacen`, `bebida`, `fiambreria`]
+      .map((rubro) => {
+        const label = {
+          todos: "Todos",
+          almacen: "Almacén",
+          bebida: "Bebida",
+          fiambreria: "Fiambrería",
+        }[rubro];
+        return `<button type="button" data-venc-rubro="${rubro}" class="${rubro === "todos" ? "activo" : ""}">${label}</button>`;
+      })
+      .join("");
+    const listado = $("vencListado");
+    listCard.insertBefore(bar, listado || null);
+    bar.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-venc-rubro]");
+      if (!btn) return;
+      filtroRubroVencimientos = btn.dataset.vencRubro || "todos";
+      bar
+        .querySelectorAll("[data-venc-rubro]")
+        .forEach((b) => b.classList.toggle("activo", b === btn));
+      renderListadoVencimientos();
+    });
+  }
+
+  if (!$("vencRubrosStyles")) {
+    const style = document.createElement("style");
+    style.id = "vencRubrosStyles";
+    style.textContent = `
+            .venc-rubro-field{display:grid;gap:7px;margin:0 0 14px}.venc-rubro-field label{font-weight:800;color:#374151;font-size:13px}.app-select-custom{position:relative}.app-select-custom__trigger{width:100%;min-height:46px;border:1px solid #ddd7d3;border-radius:12px;background:#fff;padding:0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;color:#292524;text-align:left;cursor:pointer;box-sizing:border-box;transition:.16s ease}.app-select-custom__trigger:hover{background:#fbfaf9}.app-select-custom.is-open .app-select-custom__trigger,.app-select-custom__trigger:focus-visible{outline:none;border-color:#c72f37;box-shadow:0 0 0 3px rgba(199,47,55,.11)}.app-select-custom__chevron{font-size:19px;line-height:1;color:#6b625d;transition:transform .16s ease}.app-select-custom.is-open .app-select-custom__chevron{transform:rotate(180deg)}.app-select-custom__menu{position:absolute;z-index:120;left:0;right:0;top:calc(100% + 6px);padding:6px;background:#fff;border:1px solid #e5dfdb;border-radius:14px;box-shadow:0 16px 38px rgba(45,35,30,.16)}.app-select-custom__option{width:100%;min-height:42px;border:0;border-radius:10px;background:transparent;padding:0 12px;display:flex;align-items:center;font:inherit;font-weight:750;color:#2c2927;text-align:left;cursor:pointer}.app-select-custom__option:hover,.app-select-custom__option.is-selected{background:#fdebed;color:#b4232d}.app-select-custom__option+.app-select-custom__option{margin-top:2px}.venc-rubro-filtros{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}.venc-rubro-filtros button{border:1px solid #d8dde5;background:#fff;color:#4b5563;border-radius:999px;padding:8px 13px;font-weight:800;cursor:pointer}.venc-rubro-filtros button.activo{background:#ef393f;border-color:#ef393f;color:#fff}.venc-rubro-badge{display:inline-flex;align-items:center;width:max-content;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;letter-spacing:.025em;background:#f3f4f6;color:#4b5563;margin-top:5px}.venc-rubro-badge--almacen{background:#fff4d6;color:#8a5a00}.venc-rubro-badge--bebida{background:#e5f2ff;color:#17629d}.venc-rubro-badge--fiambreria{background:#fce8ee;color:#a33458}.venc-rubro-badge--sin-clasificar{background:#f3f4f6;color:#6b7280}.venc-edit-error{margin:0 0 12px;padding:10px 12px;border:1px solid #f2b8bd;border-radius:11px;background:#fff0f1;color:#b4232d;font-size:12px;font-weight:800;line-height:1.35}.venc-edit-error.oculto{display:none!important}@media(max-width:560px){.venc-rubro-filtros{display:grid;grid-template-columns:1fr 1fr}.venc-rubro-filtros button{width:100%}}`;
+    document.head.appendChild(style);
+  }
+}
+
+function cerrarMenusRubro(excepto = null) {
+  document.querySelectorAll(".app-select-custom.is-open").forEach((custom) => {
+    if (custom === excepto) return;
+    custom.classList.remove("is-open");
+    custom.querySelector(".app-select-custom__menu")?.classList.add("oculto");
+    custom
+      .querySelector(".app-select-custom__trigger")
+      ?.setAttribute("aria-expanded", "false");
+  });
+}
+
+function setRubroCustom(tipo, valor = "") {
+  const id = tipo === "edicion" ? "vencEditRubroInput" : "vencRubroInput";
+  const custom = document.querySelector(`[data-rubro-custom="${tipo}"]`);
+  const input = $(id);
+  const trigger = custom?.querySelector(".app-select-custom__trigger");
+  const label = trigger?.querySelector("span:first-child");
+  const valido = ["Almacén", "Bebida", "Fiambrería"].includes(valor)
+    ? valor
+    : "";
+  if (input) input.value = valido;
+  if (label) label.textContent = valido || "Seleccionar rubro";
+  custom?.querySelectorAll(".app-select-custom__option").forEach((op) => {
+    op.classList.toggle("is-selected", op.dataset.rubroOption === valido);
+  });
+}
+
+function configurarMenusRubro() {
+  document.querySelectorAll(".app-select-custom").forEach((custom) => {
+    if (custom.dataset.ready === "1") return;
+    custom.dataset.ready = "1";
+    const tipo = custom.dataset.rubroCustom || "carga";
+    const trigger = custom.querySelector(".app-select-custom__trigger");
+    const menu = custom.querySelector(".app-select-custom__menu");
+    trigger?.addEventListener("click", () => {
+      const abrir = !custom.classList.contains("is-open");
+      cerrarMenusRubro(custom);
+      custom.classList.toggle("is-open", abrir);
+      menu?.classList.toggle("oculto", !abrir);
+      trigger.setAttribute("aria-expanded", abrir ? "true" : "false");
+    });
+    custom.querySelectorAll(".app-select-custom__option").forEach((op) => {
+      op.addEventListener("click", () => {
+        setRubroCustom(tipo, op.dataset.rubroOption || "");
+        if (tipo === "edicion") limpiarErrorEdicionVencimiento();
+        custom.classList.remove("is-open");
+        menu?.classList.add("oculto");
+        trigger?.setAttribute("aria-expanded", "false");
+        trigger?.focus();
+      });
+    });
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".app-select-custom")) cerrarMenusRubro();
+});
+
+function normalizarRubroFiltro(valor) {
+  return String(valor || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-");
+}
+function etiquetaRubroVencimiento(item) {
+  const rubro =
+    String(item?.rubro || "Sin clasificar").trim() || "Sin clasificar";
+  return `<span class="venc-rubro-badge venc-rubro-badge--${normalizarRubroFiltro(rubro)}">${rubro}</span>`;
+}
+
+asegurarUIRubrosVencimientos();
+configurarMenusRubro();
 inicializar();
 
 let navegacionInternaActiva = false;
 
 function moduloDePantalla(nombre = pantallaActualApp) {
-    if (["inventario","productos","cargados","editarProducto"].includes(nombre)) return "inventario";
-    return nombre;
+  if (
+    ["inventario", "productos", "cargados", "editarProducto"].includes(nombre)
+  )
+    return "inventario";
+  return nombre;
 }
 
 function reiniciarEstadoModulo(modulo) {
-    if (!modulo || modulo === "inicio") return;
-    if (modulo === "inventario") {
-        cerrarScanner(true);
-        productoEditando = null;
-        snapshotProductoEditando = null;
-        tabProductosActual = "productos";
-        if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
-        if (elementos.codigoManualInput) elementos.codigoManualInput.value = "";
-        limpiarProducto();
-        desactivarModoCantidad();
-    }
-    if (modulo === "vencimientos") {
-        cerrarScannerVencimientos(false);
-        if (elementos.vencBuscador) elementos.vencBuscador.value = "";
-        if (elementos.vencCodigoManualInput) elementos.vencCodigoManualInput.value = "";
-        busquedaVencimientos = "";
-        filtroVencimientos = "todos";
-        filtroOfertaVencimientos = "todos";
-        cambiarTabVencimientos("cargar");
-    }
-    if (modulo === "anotar") reiniciarReposicion?.();
-    if (modulo === "precios") window.PreciosModule?.reiniciar?.();
-    if (modulo === "horarios") window.HorariosModule?.reiniciar?.();
-    if (modulo === "tareas") window.TareasModule?.reiniciar?.();
-    if (modulo === "admin") window.AdminModule?.reiniciar?.();
-    window.scrollTo({ top: 0, behavior: "auto" });
+  if (!modulo || modulo === "inicio") return;
+  if (modulo === "inventario") {
+    cerrarScanner(true);
+    productoEditando = null;
+    snapshotProductoEditando = null;
+    tabProductosActual = "productos";
+    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+    if (elementos.codigoManualInput) elementos.codigoManualInput.value = "";
+    limpiarProducto();
+    desactivarModoCantidad();
+  }
+  if (modulo === "vencimientos") {
+    cerrarScannerVencimientos(false);
+    if (elementos.vencBuscador) elementos.vencBuscador.value = "";
+    if (elementos.vencCodigoManualInput)
+      elementos.vencCodigoManualInput.value = "";
+    busquedaVencimientos = "";
+    filtroVencimientos = "todos";
+    filtroOfertaVencimientos = "todos";
+    filtroRubroVencimientos = "todos";
+    cambiarTabVencimientos("cargar");
+  }
+  if (modulo === "anotar") reiniciarReposicion?.();
+  if (modulo === "precios") window.PreciosModule?.reiniciar?.();
+  if (modulo === "horarios") window.HorariosModule?.reiniciar?.();
+  if (modulo === "tareas") window.TareasModule?.reiniciar?.();
+  if (modulo === "admin") window.AdminModule?.reiniciar?.();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function intentarBloquearOrientacion() {
-    try {
-        if (screen.orientation?.lock && (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone)) {
-            screen.orientation.lock("portrait").catch(() => {});
-        }
-    } catch (_) {}
+  try {
+    if (
+      screen.orientation?.lock &&
+      (window.matchMedia("(display-mode: standalone)").matches ||
+        navigator.standalone)
+    ) {
+      screen.orientation.lock("portrait").catch(() => {});
+    }
+  } catch (_) {}
 }
 
 function registrarEstadoNavegacion(nombre, reemplazar = false) {
-    const state = { autoservicio: true, pantalla: nombre, modulo: moduloDePantalla(nombre) };
-    const fn = reemplazar ? "replaceState" : "pushState";
-    history[fn](state, "", location.pathname + location.search);
+  const state = {
+    autoservicio: true,
+    pantalla: nombre,
+    modulo: moduloDePantalla(nombre),
+  };
+  const fn = reemplazar ? "replaceState" : "pushState";
+  history[fn](state, "", location.pathname + location.search);
 }
 
 function fechaHoyLocalIso() {
-    try {
-        const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
-        const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
-        return `${mapa.year}-${mapa.month}-${mapa.day}`;
-    } catch (_) {
-        return new Date().toISOString().slice(0, 10);
-    }
+  try {
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const mapa = Object.fromEntries(partes.map((p) => [p.type, p.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}`;
+  } catch (_) {
+    return new Date().toISOString().slice(0, 10);
+  }
 }
 
 function configurarFechasMinimasVencimientos() {
-    const hoy = fechaHoyLocalIso();
-    if (elementos.vencFechaInput) elementos.vencFechaInput.min = hoy;
-    if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.min = hoy;
+  const hoy = fechaHoyLocalIso();
+  if (elementos.vencFechaInput) elementos.vencFechaInput.min = hoy;
+  if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.min = hoy;
 }
 
 async function inicializar() {
-    ocultarSplash();
-    cambiarPantalla("inicio");
-    pantallaActualApp = "inicio";
-    registrarEstadoNavegacion("inicio", true);
-    intentarBloquearOrientacion();
-    actualizarUbicacion(ubicacionActual);
-    actualizarEstadoExcel(0);
-    actualizarContador(0);
-    actualizarConteosUbicacion({ salon: 0, deposito: 0 });
-    activarBotonGuardar(false);
-    actualizarEstadoCamara(false);
-    mostrarScannerCerrado();
-    limpiarProducto();
-    desactivarModoCantidad();
-    configurarFeedback({ sonidos: true, vibracion: true });
-    actualizarVersionConfiguracion();
-    configurarEventos();
-    configurarFechasMinimasVencimientos();
-    inicializarReposicion();
+  ocultarSplash();
+  cambiarPantalla("inicio");
+  pantallaActualApp = "inicio";
+  registrarEstadoNavegacion("inicio", true);
+  intentarBloquearOrientacion();
+  actualizarUbicacion(ubicacionActual);
+  actualizarEstadoExcel(0);
+  actualizarContador(0);
+  actualizarConteosUbicacion({ salon: 0, deposito: 0 });
+  activarBotonGuardar(false);
+  actualizarEstadoCamara(false);
+  mostrarScannerCerrado();
+  limpiarProducto();
+  desactivarModoCantidad();
+  configurarFeedback({ sonidos: true, vibracion: true });
+  actualizarVersionConfiguracion();
+  configurarEventos();
+  configurarFechasMinimasVencimientos();
+  inicializarReposicion();
 
-    await cargarProductos();
+  await cargarProductos();
 }
 
 async function entrarPantalla(nombre, opciones = {}) {
-    const pantallaAnterior = pantallaActualApp;
-    const moduloAnterior = moduloDePantalla(pantallaAnterior);
-    let moduloNuevo = moduloDePantalla(nombre);
-    if (!window.AutoservicioAuth?.puedeVerModulo?.(nombre)) {
-        window.AutoservicioDialog?.alert?.({ title: "Sin permiso", message: "Este módulo no está habilitado para tu usuario." });
-        nombre = "inicio";
-        moduloNuevo = "inicio";
+  const pantallaAnterior = pantallaActualApp;
+  const moduloAnterior = moduloDePantalla(pantallaAnterior);
+  let moduloNuevo = moduloDePantalla(nombre);
+  if (!window.AutoservicioAuth?.puedeVerModulo?.(nombre)) {
+    window.AutoservicioDialog?.alert?.({
+      title: "Sin permiso",
+      message: "Este módulo no está habilitado para tu usuario.",
+    });
+    nombre = "inicio";
+    moduloNuevo = "inicio";
+  }
+  if (!opciones.forzar) {
+    if (pantallaActualApp === "anotar" && nombre !== "anotar") {
+      resolverSalidaReposicion(() => entrarPantalla(nombre, { forzar: true }));
+      return;
     }
-    if (!opciones.forzar) {
-        if (pantallaActualApp === "anotar" && nombre !== "anotar") {
-            resolverSalidaReposicion(() => entrarPantalla(nombre, { forzar: true }));
-            return;
-        }
-        if (productoEditando && nombre !== "editarProducto") {
-            resolverSalidaProducto(() => entrarPantalla(nombre, { forzar: true }));
-            return;
-        }
-        if (estaEditandoVencimiento() && nombre !== "vencimientos") {
-            resolverSalidaVencimiento(() => entrarPantalla(nombre, { forzar: true }));
-            return;
-        }
+    if (productoEditando && nombre !== "editarProducto") {
+      resolverSalidaProducto(() => entrarPantalla(nombre, { forzar: true }));
+      return;
     }
-    if (moduloAnterior !== moduloNuevo && moduloAnterior !== "inicio") reiniciarEstadoModulo(moduloAnterior);
-
-    if (nombre !== "inventario") cerrarScanner(true);
-    if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
-    if (nombre !== "precios") window.PreciosModule?.desactivar?.();
-    if (nombre !== "horarios") window.HorariosModule?.desactivar?.();
-    if (nombre !== "tareas") window.TareasModule?.desactivar?.();
-
-    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
-    if (elementos.vencBuscador) elementos.vencBuscador.value = "";
-    busquedaVencimientos = "";
-
-    if (nombre === "productos" || nombre === "cargados") {
-        tabProductosActual = nombre === "cargados" ? "cargados" : "productos";
+    if (estaEditandoVencimiento() && nombre !== "vencimientos") {
+      resolverSalidaVencimiento(() => entrarPantalla(nombre, { forzar: true }));
+      return;
     }
+  }
+  if (moduloAnterior !== moduloNuevo && moduloAnterior !== "inicio")
+    reiniciarEstadoModulo(moduloAnterior);
 
-    cambiarPantalla(nombre);
-    pantallaActualApp = nombre;
-    if (!opciones.desdeHistorial && pantallaAnterior !== nombre) registrarEstadoNavegacion(nombre);
+  if (nombre !== "inventario") cerrarScanner(true);
+  if (nombre !== "vencimientos") cerrarScannerVencimientos(false);
+  if (nombre !== "precios") window.PreciosModule?.desactivar?.();
+  if (nombre !== "horarios") window.HorariosModule?.desactivar?.();
+  if (nombre !== "tareas") window.TareasModule?.desactivar?.();
 
-    if (nombre === "productos" || nombre === "cargados") mostrarCargandoEn($("resultadoBusqueda"), "Cargando productos...");
-    if (["inventario", "productos", "cargados", "ajustes"].includes(nombre)) {
-        await sincronizarEnSegundoPlano();
-        if (nombre === "productos" || nombre === "cargados") refrescarProductos();
-    }
-    if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
-    if (nombre === "anotar") { prepararReposicion(); await refrescarReposicion(); }
-    if (nombre === "precios") await window.PreciosModule?.activar?.();
-    if (nombre === "horarios") window.HorariosModule?.activar?.();
-    if (nombre === "tareas") window.TareasModule?.activar?.();
-    if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) { cambiarPantalla("inicio"); }
+  if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+  if (elementos.vencBuscador) elementos.vencBuscador.value = "";
+  busquedaVencimientos = "";
+
+  if (nombre === "productos" || nombre === "cargados") {
+    tabProductosActual = nombre === "cargados" ? "cargados" : "productos";
+  }
+
+  cambiarPantalla(nombre);
+  pantallaActualApp = nombre;
+  if (!opciones.desdeHistorial && pantallaAnterior !== nombre) {
+    const navegacionInternaInventario =
+      moduloAnterior === "inventario" && moduloNuevo === "inventario";
+    registrarEstadoNavegacion(nombre, navegacionInternaInventario);
+  }
+
+  if (nombre === "productos" || nombre === "cargados")
+    mostrarCargandoEn($("resultadoBusqueda"), "Cargando productos...");
+  if (["inventario", "productos", "cargados", "ajustes"].includes(nombre)) {
+    await sincronizarEnSegundoPlano();
+    if (nombre === "productos" || nombre === "cargados") refrescarProductos();
+  }
+  if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
+  if (nombre === "anotar") {
+    prepararReposicion();
+    await refrescarReposicion();
+  }
+  if (nombre === "precios") await window.PreciosModule?.activar?.();
+  if (nombre === "horarios") window.HorariosModule?.activar?.();
+  if (nombre === "tareas") window.TareasModule?.activar?.();
+  if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) {
+    cambiarPantalla("inicio");
+  }
 }
 
 window.AutoservicioNavigate = entrarPantalla;
 
 async function abrirDestinoNotificacion() {
-    const params = new URLSearchParams(window.location.search);
-    const modulo = params.get("modulo");
-    if (modulo === "tareas") {
-        await entrarPantalla("tareas");
-        const fecha = params.get("fecha");
-        if (fecha) window.TareasModule?.seleccionarFecha?.(fecha);
-        if (params.get("vista") === "bano") window.TareasModule?.mostrarBano?.();
-    } else if (modulo === "vencimientos") {
-        await entrarPantalla("vencimientos");
-        cambiarTabVencimientos("proximos");
-    } else return;
-    window.history.replaceState({}, document.title, window.location.pathname);
+  const params = new URLSearchParams(window.location.search);
+  const modulo = params.get("modulo");
+  if (modulo === "tareas") {
+    await entrarPantalla("tareas");
+    const fecha = params.get("fecha");
+    if (fecha) window.TareasModule?.seleccionarFecha?.(fecha);
+    if (params.get("vista") === "bano") window.TareasModule?.mostrarBano?.();
+  } else if (modulo === "vencimientos") {
+    await entrarPantalla("vencimientos");
+    cambiarTabVencimientos("proximos");
+  } else return;
+  window.history.replaceState({}, document.title, window.location.pathname);
 }
-
 
 function actualizarVersionConfiguracion() {
-    const version = document.getElementById("settingsAppVersion");
-    if (version) version.textContent = APP_VERSION;
+  const version = document.getElementById("settingsAppVersion");
+  if (version) version.textContent = APP_VERSION;
 }
 
-window.addEventListener("popstate", event => {
-    if (navegacionInternaActiva) return;
-    navegacionInternaActiva = true;
-    const destino = event.state?.pantalla || "inicio";
-    entrarPantalla(destino, { forzar: true, desdeHistorial: true })
-        .finally(() => { navegacionInternaActiva = false; });
+window.addEventListener("popstate", (event) => {
+  if (navegacionInternaActiva) return;
+  navegacionInternaActiva = true;
+  const destino = event.state?.pantalla || "inicio";
+  entrarPantalla(destino, { forzar: true, desdeHistorial: true }).finally(
+    () => {
+      navegacionInternaActiva = false;
+    },
+  );
 });
 window.addEventListener("orientationchange", intentarBloquearOrientacion);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) intentarBloquearOrientacion(); });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) intentarBloquearOrientacion();
+});
 
 function configurarEventos() {
-    document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.addEventListener("click", () => entrarPantalla(btn.dataset.pantalla));
-    });
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => entrarPantalla(btn.dataset.pantalla));
+  });
 
-    document.querySelectorAll("[data-modulo]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const destino = btn.dataset.modulo;
-            if (btn.id === "brandBackBtn" && destino === "inicio" && pantallaActualApp !== "inicio") {
-                history.back();
-                return;
-            }
-            entrarPantalla(destino);
-        });
+  document.querySelectorAll("[data-modulo]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const destino = btn.dataset.modulo;
+      if (
+        btn.id === "brandBackBtn" &&
+        destino === "inicio" &&
+        pantallaActualApp !== "inicio"
+      ) {
+        history.back();
+        return;
+      }
+      entrarPantalla(destino);
     });
+  });
 
-    elementos.btnActualizarProductos?.addEventListener("click", cargarProductos);
-    elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
-    elementos.btnCerrarScanner.addEventListener("click", () => cerrarScanner(true));
-    elementos.btnCodigoManualToggle.addEventListener("click", alternarCargaManual);
-    elementos.btnBuscarManual.addEventListener("click", procesarCodigoManual);
-    elementos.codigoManualInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") procesarCodigoManual();
-    });
-    elementos.codigoManualInput.addEventListener("input", () => renderSugerenciasManual("inventario"));
-    elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
-    elementos.btnDeposito.addEventListener("click", () => cambiarUbicacion("deposito"));
+  elementos.btnActualizarProductos?.addEventListener("click", cargarProductos);
+  elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
+  elementos.btnCerrarScanner.addEventListener("click", () =>
+    cerrarScanner(true),
+  );
+  elementos.btnCodigoManualToggle.addEventListener(
+    "click",
+    alternarCargaManual,
+  );
+  elementos.btnBuscarManual.addEventListener("click", procesarCodigoManual);
+  elementos.codigoManualInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") procesarCodigoManual();
+  });
+  elementos.codigoManualInput.addEventListener("input", () =>
+    renderSugerenciasManual("inventario"),
+  );
+  elementos.btnSalon.addEventListener("click", () => cambiarUbicacion("salon"));
+  elementos.btnDeposito.addEventListener("click", () =>
+    cambiarUbicacion("deposito"),
+  );
 
-    elementos.btnGuardarCantidad.addEventListener("click", guardarCantidadActual);
-    elementos.btnCancelarCantidad.addEventListener("click", cancelarProductoActual);
-    elementos.cantidadInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") guardarCantidadActual();
-    });
-    elementos.btnMenosCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, -1, 1));
-    elementos.btnMasCantidad.addEventListener("click", () => cambiarCantidad(elementos.cantidadInput, 1, 1));
+  elementos.btnGuardarCantidad.addEventListener("click", guardarCantidadActual);
+  elementos.btnCancelarCantidad.addEventListener(
+    "click",
+    cancelarProductoActual,
+  );
+  elementos.cantidadInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") guardarCantidadActual();
+  });
+  elementos.btnMenosCantidad.addEventListener("click", () =>
+    cambiarCantidad(elementos.cantidadInput, -1, 1),
+  );
+  elementos.btnMasCantidad.addEventListener("click", () =>
+    cambiarCantidad(elementos.cantidadInput, 1, 1),
+  );
 
-    elementos.checkSonidos?.addEventListener("change", actualizarPreferenciasFeedback);
-    elementos.checkVibracion?.addEventListener("change", actualizarPreferenciasFeedback);
-    elementos.btnReiniciar?.addEventListener("click", manejarReinicio);
+  elementos.checkSonidos?.addEventListener(
+    "change",
+    actualizarPreferenciasFeedback,
+  );
+  elementos.checkVibracion?.addEventListener(
+    "change",
+    actualizarPreferenciasFeedback,
+  );
+  elementos.btnReiniciar?.addEventListener("click", manejarReinicio);
 
-    elementos.buscadorProducto.addEventListener("input", refrescarProductos);
-    elementos.btnVolverProductos.addEventListener("click", cancelarEdicionProducto);
-    $("btnCancelarCorreccion")?.addEventListener("click", cancelarEdicionProducto);
+  elementos.buscadorProducto.addEventListener("input", refrescarProductos);
+  elementos.btnVolverProductos.addEventListener(
+    "click",
+    cancelarEdicionProducto,
+  );
+  $("btnCancelarCorreccion")?.addEventListener(
+    "click",
+    cancelarEdicionProducto,
+  );
 
-    elementos.editarSalon.addEventListener("input", actualizarTotalEditor);
-    elementos.editarDeposito.addEventListener("input", actualizarTotalEditor);
-    elementos.btnMenosSalon.addEventListener("click", () => cambiarCantidad(elementos.editarSalon, -1, 0, actualizarTotalEditor));
-    elementos.btnMasSalon.addEventListener("click", () => cambiarCantidad(elementos.editarSalon, 1, 0, actualizarTotalEditor));
-    elementos.btnMenosDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, -1, 0, actualizarTotalEditor));
-    elementos.btnMasDeposito.addEventListener("click", () => cambiarCantidad(elementos.editarDeposito, 1, 0, actualizarTotalEditor));
-    elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
+  elementos.editarSalon.addEventListener("input", actualizarTotalEditor);
+  elementos.editarDeposito.addEventListener("input", actualizarTotalEditor);
+  elementos.btnMenosSalon.addEventListener("click", () =>
+    cambiarCantidad(elementos.editarSalon, -1, 0, actualizarTotalEditor),
+  );
+  elementos.btnMasSalon.addEventListener("click", () =>
+    cambiarCantidad(elementos.editarSalon, 1, 0, actualizarTotalEditor),
+  );
+  elementos.btnMenosDeposito.addEventListener("click", () =>
+    cambiarCantidad(elementos.editarDeposito, -1, 0, actualizarTotalEditor),
+  );
+  elementos.btnMasDeposito.addEventListener("click", () =>
+    cambiarCantidad(elementos.editarDeposito, 1, 0, actualizarTotalEditor),
+  );
+  elementos.btnGuardarCorreccion.addEventListener("click", guardarCorreccion);
 
-    elementos.btnVencAbrirScanner?.addEventListener("click", abrirScannerVencimientos);
-    elementos.btnVencCerrarScanner?.addEventListener("click", () => cerrarScannerVencimientos(true));
-    elementos.btnVencManualToggle?.addEventListener("click", alternarCargaManualVencimientos);
-    elementos.btnVencBuscarManual?.addEventListener("click", procesarCodigoManualVencimientos);
-    elementos.vencCodigoManualInput?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") procesarCodigoManualVencimientos();
+  elementos.btnVencAbrirScanner?.addEventListener(
+    "click",
+    abrirScannerVencimientos,
+  );
+  elementos.btnVencCerrarScanner?.addEventListener("click", () =>
+    cerrarScannerVencimientos(true),
+  );
+  elementos.btnVencManualToggle?.addEventListener(
+    "click",
+    alternarCargaManualVencimientos,
+  );
+  elementos.btnVencBuscarManual?.addEventListener(
+    "click",
+    procesarCodigoManualVencimientos,
+  );
+  elementos.vencCodigoManualInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") procesarCodigoManualVencimientos();
+  });
+  elementos.vencCodigoManualInput?.addEventListener("input", () =>
+    renderSugerenciasManual("vencimientos"),
+  );
+  elementos.vencSalonInput?.addEventListener(
+    "input",
+    actualizarTotalVencimiento,
+  );
+  elementos.vencDepositoInput?.addEventListener(
+    "input",
+    actualizarTotalVencimiento,
+  );
+  elementos.btnVencMenosSalon?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencSalonInput,
+      -1,
+      0,
+      actualizarTotalVencimiento,
+    ),
+  );
+  elementos.btnVencMasSalon?.addEventListener("click", () =>
+    cambiarCantidad(elementos.vencSalonInput, 1, 0, actualizarTotalVencimiento),
+  );
+  elementos.btnVencMenosDeposito?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencDepositoInput,
+      -1,
+      0,
+      actualizarTotalVencimiento,
+    ),
+  );
+  elementos.btnVencMasDeposito?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencDepositoInput,
+      1,
+      0,
+      actualizarTotalVencimiento,
+    ),
+  );
+  elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
+  elementos.btnVencCancelarCarga?.addEventListener(
+    "click",
+    cancelarCargaVencimiento,
+  );
+  elementos.vencBuscador?.addEventListener("input", () => {
+    busquedaVencimientos = elementos.vencBuscador.value || "";
+    renderListadoVencimientos();
+  });
+  $("btnVencAbrirFiltros")?.addEventListener("click", abrirFiltrosVencimientos);
+  $("btnVencCerrarFiltros")?.addEventListener(
+    "click",
+    cerrarFiltrosVencimientos,
+  );
+  $("btnVencAplicarFiltros")?.addEventListener(
+    "click",
+    aplicarFiltrosDesdeModal,
+  );
+  $("btnVencLimpiarFiltros")?.addEventListener(
+    "click",
+    limpiarFiltrosVencimientos,
+  );
+  $("vencFiltrosModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "vencFiltrosModal") cerrarFiltrosVencimientos();
+  });
+  elementos.vencFiltroBtns?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      aplicarFiltroVencimientos(btn.dataset.vencFiltro || "todos");
     });
-    elementos.vencCodigoManualInput?.addEventListener("input", () => renderSugerenciasManual("vencimientos"));
-    elementos.vencSalonInput?.addEventListener("input", actualizarTotalVencimiento);
-    elementos.vencDepositoInput?.addEventListener("input", actualizarTotalVencimiento);
-    elementos.btnVencMenosSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencSalonInput, -1, 0, actualizarTotalVencimiento));
-    elementos.btnVencMasSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencSalonInput, 1, 0, actualizarTotalVencimiento));
-    elementos.btnVencMenosDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencDepositoInput, -1, 0, actualizarTotalVencimiento));
-    elementos.btnVencMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencDepositoInput, 1, 0, actualizarTotalVencimiento));
-    elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
-    elementos.btnVencCancelarCarga?.addEventListener("click", cancelarCargaVencimiento);
-    elementos.vencBuscador?.addEventListener("input", () => {
-        busquedaVencimientos = elementos.vencBuscador.value || "";
-        renderListadoVencimientos();
+  });
+  elementos.vencTabBtns?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      cambiarTabVencimientos(btn.dataset.vencTab || "cargar");
     });
-    $("btnVencAbrirFiltros")?.addEventListener("click", abrirFiltrosVencimientos);
-    $("btnVencCerrarFiltros")?.addEventListener("click", cerrarFiltrosVencimientos);
-    $("btnVencAplicarFiltros")?.addEventListener("click", aplicarFiltrosDesdeModal);
-    $("btnVencLimpiarFiltros")?.addEventListener("click", limpiarFiltrosVencimientos);
-    $("vencFiltrosModal")?.addEventListener("click", (e) => { if (e.target.id === "vencFiltrosModal") cerrarFiltrosVencimientos(); });
-    elementos.vencFiltroBtns?.forEach(btn => {
-        btn.addEventListener("click", () => {
-            aplicarFiltroVencimientos(btn.dataset.vencFiltro || "todos");
-        });
-    });
-    elementos.vencTabBtns?.forEach(btn => {
-        btn.addEventListener("click", () => {
-            cambiarTabVencimientos(btn.dataset.vencTab || "cargar");
-        });
-    });
-    elementos.vencListado?.addEventListener("click", manejarClickListadoVencimientos);
-    elementos.vencResumen?.addEventListener("click", manejarClickResumenVencimientos);
-    elementos.btnVencModalCerrar?.addEventListener("click", () => resolverSalidaVencimiento(cerrarModalVencimiento));
-    elementos.vencModal?.addEventListener("click", (e) => { if (e.target === elementos.vencModal) resolverSalidaVencimiento(cerrarModalVencimiento); });
-    elementos.btnVencEditarAbrir?.addEventListener("click", mostrarEdicionVencimiento);
-    elementos.btnVencEliminarAbrir?.addEventListener("click", mostrarConfirmacionEliminarVencimiento);
-    elementos.btnVencEliminarDesdeVista?.addEventListener("click", mostrarConfirmacionEliminarVencimiento);
-    elementos.btnVencCancelarEdicion?.addEventListener("click", () => resolverSalidaVencimiento(() => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado)));
-    elementos.btnVencCancelarEliminar?.addEventListener("click", () => vencimientoSeleccionado && abrirDetalleVencimiento(vencimientoSeleccionado));
-    elementos.btnVencGuardarEdicion?.addEventListener("click", guardarEdicionVencimiento);
-    elementos.btnVencConfirmarEliminar?.addEventListener("click", confirmarEliminarVencimiento);
-    elementos.vencEditSalonInput?.addEventListener("input", actualizarTotalEdicionVencimiento);
-    elementos.vencEditDepositoInput?.addEventListener("input", actualizarTotalEdicionVencimiento);
-    elementos.btnVencEditMenosSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencEditSalonInput, -1, 0, actualizarTotalEdicionVencimiento));
-    elementos.btnVencEditMasSalon?.addEventListener("click", () => cambiarCantidad(elementos.vencEditSalonInput, 1, 0, actualizarTotalEdicionVencimiento));
-    elementos.btnVencEditMenosDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, -1, 0, actualizarTotalEdicionVencimiento));
-    elementos.btnVencEditMasDeposito?.addEventListener("click", () => cambiarCantidad(elementos.vencEditDepositoInput, 1, 0, actualizarTotalEdicionVencimiento));
-    $("btnCambiosContinuar")?.addEventListener("click", () => { cerrarModalCambiosPendientes(); resolucionCambiosPendientes?.continuar?.(); resolucionCambiosPendientes=null; });
-    $("btnCambiosDescartar")?.addEventListener("click", () => { const fn=resolucionCambiosPendientes?.descartar; cerrarModalCambiosPendientes(); resolucionCambiosPendientes=null; fn?.(); });
-    $("btnCambiosGuardar")?.addEventListener("click", async () => { const fn=resolucionCambiosPendientes?.guardar; cerrarModalCambiosPendientes(); resolucionCambiosPendientes=null; await fn?.(); });
+  });
+  elementos.vencListado?.addEventListener(
+    "click",
+    manejarClickListadoVencimientos,
+  );
+  elementos.vencResumen?.addEventListener(
+    "click",
+    manejarClickResumenVencimientos,
+  );
+  elementos.btnVencModalCerrar?.addEventListener("click", () =>
+    resolverSalidaVencimiento(cerrarModalVencimiento),
+  );
+  elementos.vencModal?.addEventListener("click", (e) => {
+    if (e.target === elementos.vencModal)
+      resolverSalidaVencimiento(cerrarModalVencimiento);
+  });
+  elementos.btnVencEditarAbrir?.addEventListener(
+    "click",
+    mostrarEdicionVencimiento,
+  );
+  elementos.btnVencEliminarAbrir?.addEventListener(
+    "click",
+    mostrarConfirmacionEliminarVencimiento,
+  );
+  elementos.btnVencEliminarDesdeVista?.addEventListener(
+    "click",
+    mostrarConfirmacionEliminarVencimiento,
+  );
+  elementos.btnVencCancelarEdicion?.addEventListener("click", () =>
+    resolverSalidaVencimiento(
+      () =>
+        vencimientoSeleccionado &&
+        abrirDetalleVencimiento(vencimientoSeleccionado),
+    ),
+  );
+  elementos.btnVencCancelarEliminar?.addEventListener(
+    "click",
+    () =>
+      vencimientoSeleccionado &&
+      abrirDetalleVencimiento(vencimientoSeleccionado),
+  );
+  elementos.btnVencGuardarEdicion?.addEventListener(
+    "click",
+    guardarEdicionVencimiento,
+  );
+  elementos.btnVencConfirmarEliminar?.addEventListener(
+    "click",
+    confirmarEliminarVencimiento,
+  );
+  elementos.vencEditSalonInput?.addEventListener(
+    "input",
+    actualizarTotalEdicionVencimiento,
+  );
+  elementos.vencEditDepositoInput?.addEventListener(
+    "input",
+    actualizarTotalEdicionVencimiento,
+  );
+  elementos.btnVencEditMenosSalon?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencEditSalonInput,
+      -1,
+      0,
+      actualizarTotalEdicionVencimiento,
+    ),
+  );
+  elementos.btnVencEditMasSalon?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencEditSalonInput,
+      1,
+      0,
+      actualizarTotalEdicionVencimiento,
+    ),
+  );
+  elementos.btnVencEditMenosDeposito?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencEditDepositoInput,
+      -1,
+      0,
+      actualizarTotalEdicionVencimiento,
+    ),
+  );
+  elementos.btnVencEditMasDeposito?.addEventListener("click", () =>
+    cambiarCantidad(
+      elementos.vencEditDepositoInput,
+      1,
+      0,
+      actualizarTotalEdicionVencimiento,
+    ),
+  );
+  $("btnCambiosContinuar")?.addEventListener("click", () => {
+    cerrarModalCambiosPendientes();
+    resolucionCambiosPendientes?.continuar?.();
+    resolucionCambiosPendientes = null;
+  });
+  $("btnCambiosDescartar")?.addEventListener("click", () => {
+    const fn = resolucionCambiosPendientes?.descartar;
+    cerrarModalCambiosPendientes();
+    resolucionCambiosPendientes = null;
+    fn?.();
+  });
+  $("btnCambiosGuardar")?.addEventListener("click", async () => {
+    const fn = resolucionCambiosPendientes?.guardar;
+    cerrarModalCambiosPendientes();
+    resolucionCambiosPendientes = null;
+    await fn?.();
+  });
 }
 
 function cambiarTabVencimientos(tab) {
-    vencTabActual = tab || "cargar";
-    const titulos = { cargar: ["Vencimientos", "Registrar vencimiento"], proximos: ["Próximos", "Próximos vencimientos"], vencidos: ["Vencidos", "Productos vencidos"] };
-    const actual = titulos[vencTabActual] || titulos.cargar;
-    if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
-    if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
-    if (elementos.vencBuscador) elementos.vencBuscador.value = "";
-    busquedaVencimientos = "";
-    filtroVencimientos = "todos";
-    filtroOfertaVencimientos = "todos";
-    actualizarEtiquetaFiltros();
-    elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
-    elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
+  vencTabActual = tab || "cargar";
+  const titulos = {
+    cargar: ["Vencimientos", "Registrar vencimiento"],
+    proximos: ["Próximos", "Próximos vencimientos"],
+    vencidos: ["Vencidos", "Productos vencidos"],
+  };
+  const actual = titulos[vencTabActual] || titulos.cargar;
+  if ($("modulePageTitle")) $("modulePageTitle").textContent = actual[0];
+  if ($("modulePageSubtitle")) $("modulePageSubtitle").textContent = actual[1];
+  if (elementos.vencBuscador) elementos.vencBuscador.value = "";
+  busquedaVencimientos = "";
+  filtroVencimientos = "todos";
+  filtroOfertaVencimientos = "todos";
+  filtroRubroVencimientos = "todos";
+  actualizarEtiquetaFiltros();
+  elementos.vencTabBtns?.forEach((b) =>
+    b.classList.toggle(
+      "activo",
+      (b.dataset.vencTab || "cargar") === vencTabActual,
+    ),
+  );
+  elementos.vencFiltroBtns?.forEach((b) =>
+    b.classList.toggle(
+      "activo",
+      (b.dataset.vencFiltro || "todos") === filtroVencimientos,
+    ),
+  );
 
-    const enCarga = vencTabActual === "cargar";
-    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.toggle("oculto", !enCarga || Boolean(productoVencimientoActual));
-    if (!enCarga) {
-        elementos.vencCameraCard?.classList.add("oculto");
-        elementos.vencFormCard?.classList.add("oculto");
-        elementos.vencProductoCard?.classList.add("oculto");
-    } else {
-        elementos.vencProductoCard?.classList.toggle("oculto", !productoVencimientoActual);
-        if (productoVencimientoActual) elementos.vencFormCard?.classList.remove("oculto");
-    }
+  const enCarga = vencTabActual === "cargar";
+  elementos.btnVencAbrirScanner
+    ?.closest(".venc-actions-card")
+    ?.classList.toggle(
+      "oculto",
+      !enCarga || Boolean(productoVencimientoActual),
+    );
+  if (!enCarga) {
+    elementos.vencCameraCard?.classList.add("oculto");
+    elementos.vencFormCard?.classList.add("oculto");
+    elementos.vencProductoCard?.classList.add("oculto");
+  } else {
+    elementos.vencProductoCard?.classList.toggle(
+      "oculto",
+      !productoVencimientoActual,
+    );
+    if (productoVencimientoActual)
+      elementos.vencFormCard?.classList.remove("oculto");
+  }
 
-    actualizarVisibilidadPanelesVencimientos();
-    renderListadoVencimientos();
-    cargarListadoVencimientos();
+  actualizarVisibilidadPanelesVencimientos();
+  renderListadoVencimientos();
+  cargarListadoVencimientos();
 }
 
 function actualizarVisibilidadPanelesVencimientos() {
-    const enCarga = vencTabActual === "cargar";
-    const enProximos = vencTabActual === "proximos";
-    const resumenCard = $("vencResumenCard");
-    const filtros = document.querySelector(".venc-filter-toolbar");
-    const buscador = elementos.vencBuscador;
+  const enCarga = vencTabActual === "cargar";
+  const enProximos = vencTabActual === "proximos";
+  const resumenCard = $("vencResumenCard");
+  const filtros = document.querySelector(".venc-filter-toolbar");
+  const buscador = elementos.vencBuscador;
+  const rubros = $("vencRubrosFiltros");
 
-    resumenCard?.classList.toggle("oculto", !enCarga);
-    const cabeceraLista = document.querySelector("#pantallaVencimientos .venc-list-head");
-    cabeceraLista?.classList.remove("oculto");
-    filtros?.classList.toggle("oculto", !enProximos);
-    buscador?.classList.toggle("oculto", enCarga);
-    if (buscador && enCarga) buscador.value = "";
+  resumenCard?.classList.toggle("oculto", !enCarga);
+  const cabeceraLista = document.querySelector(
+    "#pantallaVencimientos .venc-list-head",
+  );
+  cabeceraLista?.classList.remove("oculto");
+  filtros?.classList.toggle("oculto", !enProximos);
+  rubros?.classList.toggle("oculto", enCarga);
+  buscador?.classList.toggle("oculto", enCarga);
+  if (buscador && enCarga) buscador.value = "";
 }
 
 function actualizarEtiquetaFiltros() {
-    const el = $("vencFiltrosActivos");
-    if (!el) return;
-    const estadoTxt = {todos:"Todos", "7":"7 días", "15":"15 días", "30":"30 días"}[filtroVencimientos] || "Todos";
-    const ofertaTxt = {todos:"", oferta:"Con oferta", sinOferta:"Sin oferta"}[filtroOfertaVencimientos] || "";
-    el.textContent = ofertaTxt ? `${estadoTxt} · ${ofertaTxt}` : estadoTxt;
+  const el = $("vencFiltrosActivos");
+  if (!el) return;
+  const estadoTxt =
+    { todos: "Todos", 7: "7 días", 15: "15 días", 30: "30 días" }[
+      filtroVencimientos
+    ] || "Todos";
+  const ofertaTxt =
+    { todos: "", oferta: "Con oferta", sinOferta: "Sin oferta" }[
+      filtroOfertaVencimientos
+    ] || "";
+  el.textContent = ofertaTxt ? `${estadoTxt} · ${ofertaTxt}` : estadoTxt;
 }
 function abrirFiltrosVencimientos() {
-    const modal = $("vencFiltrosModal");
-    if (!modal) return;
-    const e = modal.querySelector(`input[name="vencEstadoFiltro"][value="${filtroVencimientos}"]`);
-    const o = modal.querySelector(`input[name="vencOfertaFiltro"][value="${filtroOfertaVencimientos}"]`);
-    if (e) e.checked = true; if (o) o.checked = true;
-    modal.classList.remove("oculto"); modal.setAttribute("aria-hidden","false");
+  const modal = $("vencFiltrosModal");
+  if (!modal) return;
+  const e = modal.querySelector(
+    `input[name="vencEstadoFiltro"][value="${filtroVencimientos}"]`,
+  );
+  const o = modal.querySelector(
+    `input[name="vencOfertaFiltro"][value="${filtroOfertaVencimientos}"]`,
+  );
+  if (e) e.checked = true;
+  if (o) o.checked = true;
+  modal.classList.remove("oculto");
+  modal.setAttribute("aria-hidden", "false");
 }
-function cerrarFiltrosVencimientos() { const m=$("vencFiltrosModal"); m?.classList.add("oculto"); m?.setAttribute("aria-hidden","true"); }
+function cerrarFiltrosVencimientos() {
+  const m = $("vencFiltrosModal");
+  m?.classList.add("oculto");
+  m?.setAttribute("aria-hidden", "true");
+}
 function aplicarFiltrosDesdeModal() {
-    filtroVencimientos = document.querySelector('input[name="vencEstadoFiltro"]:checked')?.value || "todos";
-    filtroOfertaVencimientos = document.querySelector('input[name="vencOfertaFiltro"]:checked')?.value || "todos";
-    actualizarEtiquetaFiltros(); cerrarFiltrosVencimientos(); renderListadoVencimientos();
+  filtroVencimientos =
+    document.querySelector('input[name="vencEstadoFiltro"]:checked')?.value ||
+    "todos";
+  filtroOfertaVencimientos =
+    document.querySelector('input[name="vencOfertaFiltro"]:checked')?.value ||
+    "todos";
+  actualizarEtiquetaFiltros();
+  cerrarFiltrosVencimientos();
+  renderListadoVencimientos();
 }
 function limpiarFiltrosVencimientos() {
-    filtroVencimientos="todos"; filtroOfertaVencimientos="todos";
-    document.querySelector('input[name="vencEstadoFiltro"][value="todos"]')?.click();
-    document.querySelector('input[name="vencOfertaFiltro"][value="todos"]')?.click();
-    actualizarEtiquetaFiltros(); renderListadoVencimientos();
+  filtroVencimientos = "todos";
+  filtroOfertaVencimientos = "todos";
+  document
+    .querySelector('input[name="vencEstadoFiltro"][value="todos"]')
+    ?.click();
+  document
+    .querySelector('input[name="vencOfertaFiltro"][value="todos"]')
+    ?.click();
+  actualizarEtiquetaFiltros();
+  renderListadoVencimientos();
 }
 
 function aplicarFiltroVencimientos(filtro) {
-    filtroVencimientos = filtro || "todos";
-    if (["7", "15", "30", "oferta", "sinOferta"].includes(filtroVencimientos)) vencTabActual = "proximos";
-    if (filtroVencimientos === "vencidos") vencTabActual = "vencidos";
-    elementos.vencTabBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencTab || "cargar") === vencTabActual));
-    elementos.vencFiltroBtns?.forEach(b => b.classList.toggle("activo", (b.dataset.vencFiltro || "todos") === filtroVencimientos));
-    actualizarVisibilidadPanelesVencimientos();
-    renderListadoVencimientos();
+  filtroVencimientos = filtro || "todos";
+  if (["7", "15", "30", "oferta", "sinOferta"].includes(filtroVencimientos))
+    vencTabActual = "proximos";
+  if (filtroVencimientos === "vencidos") vencTabActual = "vencidos";
+  elementos.vencTabBtns?.forEach((b) =>
+    b.classList.toggle(
+      "activo",
+      (b.dataset.vencTab || "cargar") === vencTabActual,
+    ),
+  );
+  elementos.vencFiltroBtns?.forEach((b) =>
+    b.classList.toggle(
+      "activo",
+      (b.dataset.vencFiltro || "todos") === filtroVencimientos,
+    ),
+  );
+  actualizarVisibilidadPanelesVencimientos();
+  renderListadoVencimientos();
 }
 
 function manejarClickResumenVencimientos(event) {
-    const card = event.target.closest("[data-venc-resumen]");
-    if (!card) return;
-    aplicarFiltroVencimientos(card.dataset.vencResumen || "todos");
+  const card = event.target.closest("[data-venc-resumen]");
+  if (!card) return;
+  aplicarFiltroVencimientos(card.dataset.vencResumen || "todos");
 }
 
 async function cargarProductos() {
-    try {
-        activarBotonGuardar(false);
-        productoActual = null;
-        productoEditando = null;
-        limpiarProducto("Conectando con Google Sheets...");
-        desactivarModoCantidad();
-        mostrarMensaje("Cargando productos...", "ok");
+  try {
+    activarBotonGuardar(false);
+    productoActual = null;
+    productoEditando = null;
+    limpiarProducto("Conectando con Google Sheets...");
+    desactivarModoCantidad();
+    mostrarMensaje("Cargando productos...", "ok");
 
-        const cantidad = await cargarProductosDesdeServidor();
+    const cantidad = await cargarProductosDesdeServidor();
 
-        actualizarEstadoExcel(cantidad);
-        actualizarContador(obtenerContador());
-        actualizarConteosUbicacion(obtenerConteosUbicacion());
-        limpiarProducto("Esperando escaneo...");
-        refrescarProductos();
+    actualizarEstadoExcel(cantidad);
+    actualizarContador(obtenerContador());
+    actualizarConteosUbicacion(obtenerConteosUbicacion());
+    limpiarProducto("Esperando escaneo...");
+    refrescarProductos();
 
-        mostrarMensaje("Google Sheets conectado", "ok");
-        reproducirConfirmacion("guardado");
-        iniciarSincronizacionAutomatica();
-        mostrarScannerCerrado();
-    } catch (error) {
-        actualizarEstadoExcel(0);
-        limpiarProducto("Error de conexión");
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-        console.error(error);
-    }
+    mostrarMensaje("Google Sheets conectado", "ok");
+    reproducirConfirmacion("guardado");
+    iniciarSincronizacionAutomatica();
+    mostrarScannerCerrado();
+  } catch (error) {
+    actualizarEstadoExcel(0);
+    limpiarProducto("Error de conexión");
+    mostrarMensaje(error.message, "error");
+    reproducirConfirmacion("error");
+    console.error(error);
+  }
 }
 
 function cambiarUbicacion(ubicacion) {
-    ubicacionActual = ubicacion;
-    actualizarUbicacion(ubicacion);
-    mostrarMensaje(`Ubicación: ${ubicacion === "salon" ? "Salón" : "Depósito"}`, "ok");
+  ubicacionActual = ubicacion;
+  actualizarUbicacion(ubicacion);
+  mostrarMensaje(
+    `Ubicación: ${ubicacion === "salon" ? "Salón" : "Depósito"}`,
+    "ok",
+  );
 }
 
 function mostrarScannerCerrado() {
-    if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
-    if (elementos.scanPanel) elementos.scanPanel.classList.remove("oculto");
+  if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
+  if (elementos.scanPanel) elementos.scanPanel.classList.remove("oculto");
 }
 
 function mostrarScannerAbierto() {
-    if (elementos.scanPanel) elementos.scanPanel.classList.add("oculto");
-    if (elementos.cameraCard) elementos.cameraCard.classList.remove("oculto");
+  if (elementos.scanPanel) elementos.scanPanel.classList.add("oculto");
+  if (elementos.cameraCard) elementos.cameraCard.classList.remove("oculto");
 }
 
 function ocultarControlesEscaneo() {
-    if (elementos.scanPanel) elementos.scanPanel.classList.add("oculto");
-    if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
+  if (elementos.scanPanel) elementos.scanPanel.classList.add("oculto");
+  if (elementos.cameraCard) elementos.cameraCard.classList.add("oculto");
 }
 
 function limpiarSugerenciasManual(tipo) {
-    const contenedor = tipo === "vencimientos" ? elementos.vencManualSugerencias : elementos.manualSugerencias;
-    if (!contenedor) return;
-    contenedor.innerHTML = "";
-    contenedor.classList.add("oculto");
+  const contenedor =
+    tipo === "vencimientos"
+      ? elementos.vencManualSugerencias
+      : elementos.manualSugerencias;
+  if (!contenedor) return;
+  contenedor.innerHTML = "";
+  contenedor.classList.add("oculto");
 }
 
 async function renderSugerenciasManual(tipo) {
-    const input = tipo === "vencimientos" ? elementos.vencCodigoManualInput : elementos.codigoManualInput;
-    const contenedor = tipo === "vencimientos" ? elementos.vencManualSugerencias : elementos.manualSugerencias;
-    if (!input || !contenedor) return;
-    const consulta = String(input.value || "").trim();
-    if (consulta.length < 2) { limpiarSugerenciasManual(tipo); return; }
-    let resultados = [];
-    if (tipo === "vencimientos") {
-        try { await cargarCatalogoMaestroDesdeServidor(); } catch (error) { console.warn("No se pudo cargar Productos para Vencimientos", error); }
-        resultados = buscarProductosMaestrosPorTexto(consulta, 5);
-    } else {
-        resultados = buscarProductosPorTexto(consulta, 5, false);
+  const input =
+    tipo === "vencimientos"
+      ? elementos.vencCodigoManualInput
+      : elementos.codigoManualInput;
+  const contenedor =
+    tipo === "vencimientos"
+      ? elementos.vencManualSugerencias
+      : elementos.manualSugerencias;
+  if (!input || !contenedor) return;
+  const consulta = String(input.value || "").trim();
+  if (consulta.length < 2) {
+    limpiarSugerenciasManual(tipo);
+    return;
+  }
+  let resultados = [];
+  if (tipo === "vencimientos") {
+    try {
+      await cargarCatalogoMaestroDesdeServidor();
+    } catch (error) {
+      console.warn("No se pudo cargar Productos para Vencimientos", error);
     }
-    contenedor.innerHTML = "";
-    if (!resultados.length) {
-        contenedor.innerHTML = '<div class="manual-no-results">No se encontraron productos.</div>';
-        contenedor.classList.remove("oculto");
-        return;
-    }
-    resultados.forEach(producto => {
-        const boton = document.createElement("button");
-        boton.type = "button";
-        boton.className = "manual-suggestion-item";
-        boton.innerHTML = `<strong>${producto.articulo}</strong><span>${producto.codigo || "Sin código"}</span>`;
-        boton.addEventListener("click", async () => {
-            input.value = producto.codigo;
-            limpiarSugerenciasManual(tipo);
-            if (tipo === "vencimientos") await procesarCodigoManualVencimientos();
-            else await procesarCodigoManual();
-        });
-        contenedor.appendChild(boton);
-    });
+    resultados = buscarProductosMaestrosPorTexto(consulta, 5);
+  } else {
+    resultados = buscarProductosPorTexto(consulta, 5, false);
+  }
+  contenedor.innerHTML = "";
+  if (!resultados.length) {
+    contenedor.innerHTML =
+      '<div class="manual-no-results">No se encontraron productos.</div>';
     contenedor.classList.remove("oculto");
+    return;
+  }
+  resultados.forEach((producto) => {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "manual-suggestion-item";
+    boton.innerHTML = `<strong>${producto.articulo}</strong><span>${producto.codigo || "Sin código"}</span>`;
+    boton.addEventListener("click", async () => {
+      input.value = producto.codigo;
+      limpiarSugerenciasManual(tipo);
+      if (tipo === "vencimientos") await procesarCodigoManualVencimientos();
+      else await procesarCodigoManual();
+    });
+    contenedor.appendChild(boton);
+  });
+  contenedor.classList.remove("oculto");
 }
 
 function alternarCargaManual() {
-    const abrir = elementos.manualPanel.classList.contains("oculto");
-    elementos.manualPanel.classList.toggle("oculto", !abrir);
-    elementos.btnCodigoManualToggle.textContent = abrir ? "Cancelar ingreso manual" : "Ingresar producto manual";
-    if (abrir) elementos.codigoManualInput.focus();
-    else { elementos.codigoManualInput.value = ""; limpiarSugerenciasManual("inventario"); }
+  const abrir = elementos.manualPanel.classList.contains("oculto");
+  elementos.manualPanel.classList.toggle("oculto", !abrir);
+  elementos.btnCodigoManualToggle.textContent = abrir
+    ? "Cancelar ingreso manual"
+    : "Ingresar producto manual";
+  if (abrir) elementos.codigoManualInput.focus();
+  else {
+    elementos.codigoManualInput.value = "";
+    limpiarSugerenciasManual("inventario");
+  }
 }
 
 async function procesarCodigoManual() {
-    const consulta = String(elementos.codigoManualInput.value || "").trim();
-    if (!consulta) {
-        mostrarMensaje("Ingresá un código o nombre", "error");
-        return;
+  const consulta = String(elementos.codigoManualInput.value || "").trim();
+  if (!consulta) {
+    mostrarMensaje("Ingresá un código o nombre", "error");
+    return;
+  }
+  const exacto = buscarProductoPorCodigo(consulta);
+  let codigo = consulta;
+  if (!exacto.encontrado) {
+    const resultados = buscarProductosPorTexto(consulta, 5, false);
+    if (resultados.length !== 1) {
+      renderSugerenciasManual("inventario");
+      mostrarMensaje(
+        resultados.length
+          ? "Elegí un producto de la lista"
+          : "No se encontraron productos",
+        "error",
+      );
+      return;
     }
-    const exacto = buscarProductoPorCodigo(consulta);
-    let codigo = consulta;
-    if (!exacto.encontrado) {
-        const resultados = buscarProductosPorTexto(consulta, 5, false);
-        if (resultados.length !== 1) {
-            renderSugerenciasManual("inventario");
-            mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
-            return;
-        }
-        codigo = resultados[0].codigo;
-    }
-    elementos.codigoManualInput.value = "";
-    limpiarSugerenciasManual("inventario");
-    elementos.manualPanel.classList.add("oculto");
-    elementos.btnCodigoManualToggle.textContent = "Ingresar producto manual";
-    await manejarCodigoEscaneado(codigo);
+    codigo = resultados[0].codigo;
+  }
+  elementos.codigoManualInput.value = "";
+  limpiarSugerenciasManual("inventario");
+  elementos.manualPanel.classList.add("oculto");
+  elementos.btnCodigoManualToggle.textContent = "Ingresar producto manual";
+  await manejarCodigoEscaneado(codigo);
 }
 
 async function abrirScannerManual() {
-    if (obtenerCantidadProductos() === 0) {
-        mostrarMensaje("Primero conectá Google Sheets", "error");
-        return;
-    }
+  if (obtenerCantidadProductos() === 0) {
+    mostrarMensaje("Primero conectá Google Sheets", "error");
+    return;
+  }
 
-    if (scannerActivo) return;
+  if (scannerActivo) return;
 
-    try {
-        limpiarProducto("Esperando escaneo...");
-        desactivarModoCantidad();
-        productoActual = null;
-        mostrarScannerAbierto();
-        await iniciarScanner("video", manejarCodigoEscaneado);
-        scannerActivo = true;
-        actualizarEstadoCamara(true);
-        mostrarMensaje("Escáner activo", "ok");
-    } catch (error) {
-        scannerActivo = false;
-        actualizarEstadoCamara(false);
-        mostrarScannerCerrado();
-        mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
-        console.error(error);
-    }
+  try {
+    limpiarProducto("Esperando escaneo...");
+    desactivarModoCantidad();
+    productoActual = null;
+    mostrarScannerAbierto();
+    await iniciarScanner("video", manejarCodigoEscaneado);
+    scannerActivo = true;
+    actualizarEstadoCamara(true);
+    mostrarMensaje("Escáner activo", "ok");
+  } catch (error) {
+    scannerActivo = false;
+    actualizarEstadoCamara(false);
+    mostrarScannerCerrado();
+    mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
+    console.error(error);
+  }
 }
 
 function cerrarScanner(mostrarBoton = true) {
-    detenerScanner();
-    scannerActivo = false;
-    actualizarEstadoCamara(false);
+  detenerScanner();
+  scannerActivo = false;
+  actualizarEstadoCamara(false);
 
-    if (mostrarBoton) {
-        mostrarScannerCerrado();
-    } else {
-        ocultarControlesEscaneo();
-    }
+  if (mostrarBoton) {
+    mostrarScannerCerrado();
+  } else {
+    ocultarControlesEscaneo();
+  }
 }
 
 function cancelarProductoActual() {
-    productoActual = null;
-    elementos.cantidadInput.value = 1;
-    activarBotonGuardar(false);
-    desactivarModoCantidad();
-    limpiarProducto("Esperando escaneo...");
-    cerrarScanner(true);
-    mostrarMensaje("Carga cancelada", "ok");
+  productoActual = null;
+  elementos.cantidadInput.value = 1;
+  activarBotonGuardar(false);
+  desactivarModoCantidad();
+  limpiarProducto("Esperando escaneo...");
+  cerrarScanner(true);
+  mostrarMensaje("Carga cancelada", "ok");
 }
 
 async function manejarCodigoEscaneado(codigo) {
-    if (guardando) return;
+  if (guardando) return;
 
-    if (obtenerCantidadProductos() === 0) {
-        mostrarMensaje("Primero conectá Google Sheets", "error");
-        return;
+  if (obtenerCantidadProductos() === 0) {
+    mostrarMensaje("Primero conectá Google Sheets", "error");
+    return;
+  }
+
+  cerrarScanner(false);
+
+  let resultado = buscarProductoPorCodigo(codigo);
+
+  if (resultado.encontrado) {
+    try {
+      // V2.1.1: antes de contar, trae el dato actualizado desde Google Sheets.
+      resultado = await obtenerProductoActualizadoPorCodigo(codigo);
+    } catch (error) {
+      console.warn("No se pudo refrescar el producto antes de contar:", error);
     }
+  }
 
-    cerrarScanner(false);
+  if (!resultado.encontrado) {
+    productoActual = null;
+    mostrarProductoNoEncontrado(codigo);
+    activarBotonGuardar(false);
+    desactivarModoCantidad();
+    mostrarMensaje("Producto no encontrado", "error");
+    reproducirConfirmacion("error");
+    mostrarScannerCerrado();
+    return;
+  }
 
-    let resultado = buscarProductoPorCodigo(codigo);
-
-    if (resultado.encontrado) {
-        try {
-            // V2.1.1: antes de contar, trae el dato actualizado desde Google Sheets.
-            resultado = await obtenerProductoActualizadoPorCodigo(codigo);
-        } catch (error) {
-            console.warn("No se pudo refrescar el producto antes de contar:", error);
-        }
-    }
-
-    if (!resultado.encontrado) {
-        productoActual = null;
-        mostrarProductoNoEncontrado(codigo);
-        activarBotonGuardar(false);
-        desactivarModoCantidad();
-        mostrarMensaje("Producto no encontrado", "error");
-        reproducirConfirmacion("error");
-        mostrarScannerCerrado();
-        return;
-    }
-
-    productoActual = resultado.producto;
-    mostrarProducto(productoActual);
-    activarBotonGuardar(true);
-    elementos.cantidadInput.value = 1;
-    activarModoCantidad();
-    mostrarMensaje("Producto encontrado", "ok");
-    reproducirConfirmacion("ok");
+  productoActual = resultado.producto;
+  mostrarProducto(productoActual);
+  activarBotonGuardar(true);
+  elementos.cantidadInput.value = 1;
+  activarModoCantidad();
+  mostrarMensaje("Producto encontrado", "ok");
+  reproducirConfirmacion("ok");
 }
 
-
 function cargarRecientesInventario() {
-    try { return JSON.parse(localStorage.getItem(INVENTARIO_RECIENTES_KEY) || "[]").slice(0, 3); }
-    catch { return []; }
+  try {
+    return JSON.parse(
+      localStorage.getItem(INVENTARIO_RECIENTES_KEY) || "[]",
+    ).slice(0, 3);
+  } catch {
+    return [];
+  }
 }
 
 function renderRecientesInventario() {
-    const contenedor = elementos.inventarioRecientes;
-    if (!contenedor) return;
-    const recientes = cargarRecientesInventario();
-    if (!recientes.length) {
-        contenedor.innerHTML = '<div class="inventory-recent-empty">Todavía no escaneaste productos en este dispositivo.</div>';
-        return;
-    }
-    contenedor.innerHTML = recientes.map(item => `
+  const contenedor = elementos.inventarioRecientes;
+  if (!contenedor) return;
+  const recientes = cargarRecientesInventario();
+  if (!recientes.length) {
+    contenedor.innerHTML =
+      '<div class="inventory-recent-empty">Todavía no escaneaste productos en este dispositivo.</div>';
+    return;
+  }
+  contenedor.innerHTML = recientes
+    .map(
+      (item) => `
         <article class="inventory-recent-item">
             <span class="inventory-recent-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg></span>
             <div><strong>${String(item.nombre || "Producto")}</strong><small>${String(item.codigo || "-")} · ${item.ubicacion === "deposito" ? "Depósito" : "Salón"}</small></div>
             <div class="inventory-recent-meta"><strong>+${Number(item.cantidad || 0)}</strong><small>${String(item.hora || "")}</small></div>
-        </article>`).join("");
+        </article>`,
+    )
+    .join("");
 }
 
 function registrarRecienteInventario(producto, cantidad, ubicacion) {
-    const actuales = cargarRecientesInventario();
-    actuales.unshift({
-        nombre: producto?.articulo || producto?.nombre || "Producto",
-        codigo: producto?.codigo || "-",
-        cantidad, ubicacion,
-        hora: new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
-    });
-    localStorage.setItem(INVENTARIO_RECIENTES_KEY, JSON.stringify(actuales.slice(0, 3)));
-    renderRecientesInventario();
+  const actuales = cargarRecientesInventario();
+  actuales.unshift({
+    nombre: producto?.articulo || producto?.nombre || "Producto",
+    codigo: producto?.codigo || "-",
+    cantidad,
+    ubicacion,
+    hora: new Date().toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  });
+  localStorage.setItem(
+    INVENTARIO_RECIENTES_KEY,
+    JSON.stringify(actuales.slice(0, 3)),
+  );
+  renderRecientesInventario();
 }
 
 async function guardarCantidadActual() {
-    try {
-        if (guardando) return;
+  try {
+    if (guardando) return;
 
-        if (!productoActual) {
-            mostrarMensaje("Primero escaneá un producto", "error");
-            reproducirConfirmacion("error");
-            return;
-        }
-
-        const cantidad = Number(elementos.cantidadInput.value);
-        if (!cantidad || cantidad <= 0) {
-            mostrarMensaje("Ingresá una cantidad válida", "error");
-            elementos.cantidadInput.focus();
-            reproducirConfirmacion("error");
-            return;
-        }
-
-        guardando = true;
-        activarBotonGuardar(false);
-        mostrarMensaje("Guardando en Google Sheets...", "ok");
-
-        const resultado = await guardarCantidadEnProducto(productoActual.indice, cantidad, ubicacionActual);
-
-        actualizarContador(resultado.contador);
-        registrarRecienteInventario(productoActual, cantidad, ubicacionActual);
-        actualizarConteosUbicacion(obtenerConteosUbicacion());
-        refrescarProductos();
-        sincronizarEnSegundoPlano();
-        mostrarMensaje(`Guardado: +${cantidad}`, "ok");
-        reproducirConfirmacion("guardado");
-
-        productoActual = null;
-        elementos.cantidadInput.value = 1;
-
-        setTimeout(() => {
-            limpiarProducto("Esperando escaneo...");
-            desactivarModoCantidad();
-            mostrarScannerCerrado();
-        }, 350);
-    } catch (error) {
-        activarBotonGuardar(Boolean(productoActual));
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-    } finally {
-        guardando = false;
+    if (!productoActual) {
+      mostrarMensaje("Primero escaneá un producto", "error");
+      reproducirConfirmacion("error");
+      return;
     }
+
+    const cantidad = Number(elementos.cantidadInput.value);
+    if (!cantidad || cantidad <= 0) {
+      mostrarMensaje("Ingresá una cantidad válida", "error");
+      elementos.cantidadInput.focus();
+      reproducirConfirmacion("error");
+      return;
+    }
+
+    guardando = true;
+    activarBotonGuardar(false);
+    mostrarMensaje("Guardando en Google Sheets...", "ok");
+
+    const resultado = await guardarCantidadEnProducto(
+      productoActual.indice,
+      cantidad,
+      ubicacionActual,
+    );
+
+    actualizarContador(resultado.contador);
+    registrarRecienteInventario(productoActual, cantidad, ubicacionActual);
+    actualizarConteosUbicacion(obtenerConteosUbicacion());
+    refrescarProductos();
+    sincronizarEnSegundoPlano();
+    mostrarMensaje(`Guardado: +${cantidad}`, "ok");
+    reproducirConfirmacion("guardado");
+
+    productoActual = null;
+    elementos.cantidadInput.value = 1;
+
+    setTimeout(() => {
+      limpiarProducto("Esperando escaneo...");
+      desactivarModoCantidad();
+      mostrarScannerCerrado();
+    }, 350);
+  } catch (error) {
+    activarBotonGuardar(Boolean(productoActual));
+    mostrarMensaje(error.message, "error");
+    reproducirConfirmacion("error");
+  } finally {
+    guardando = false;
+  }
 }
 
 function cambiarCantidad(input, diferencia, minimo = 0, callback = null) {
-    const actual = Number(input.value) || 0;
-    const nuevo = Math.max(minimo, actual + diferencia);
-    input.value = nuevo;
-    if (callback) callback();
+  const actual = Number(input.value) || 0;
+  const nuevo = Math.max(minimo, actual + diferencia);
+  input.value = nuevo;
+  if (callback) callback();
 }
 
 renderRecientesInventario();
 
 function cambiarTabProductos(tab) {
-    tabProductosActual = tab === "cargados" ? "cargados" : "productos";
-    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
-    sincronizarEnSegundoPlano().finally(refrescarProductos);
+  tabProductosActual = tab === "cargados" ? "cargados" : "productos";
+  if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+  sincronizarEnSegundoPlano().finally(refrescarProductos);
 }
 
 function refrescarProductos() {
-    const total = obtenerCantidadProductos();
-    const texto = elementos.buscadorProducto.value || "";
-    const consulta = texto.trim();
+  const total = obtenerCantidadProductos();
+  const texto = elementos.buscadorProducto.value || "";
+  const consulta = texto.trim();
 
-    if (total === 0) {
-        renderResultadosBusqueda([], seleccionarProductoParaEditar, { tab: tabProductosActual, total: 0, consulta });
-        return;
-    }
-
-    let resultados;
-    if (tabProductosActual === "cargados") {
-        resultados = consulta
-            ? buscarProductosPorTexto(consulta, 80, true)
-            : obtenerProductosCargados(80);
-    } else {
-        resultados = consulta
-            ? buscarProductosPorTexto(consulta, 80, false)
-            : obtenerProductos(80);
-    }
-
-    renderResultadosBusqueda(resultados, seleccionarProductoParaEditar, {
-        tab: tabProductosActual,
-        total,
-        consulta
+  if (total === 0) {
+    renderResultadosBusqueda([], seleccionarProductoParaEditar, {
+      tab: tabProductosActual,
+      total: 0,
+      consulta,
     });
+    return;
+  }
+
+  let resultados;
+  if (tabProductosActual === "cargados") {
+    resultados = consulta
+      ? buscarProductosPorTexto(consulta, 80, true)
+      : obtenerProductosCargados(80);
+  } else {
+    resultados = consulta
+      ? buscarProductosPorTexto(consulta, 80, false)
+      : obtenerProductos(80);
+  }
+
+  renderResultadosBusqueda(resultados, seleccionarProductoParaEditar, {
+    tab: tabProductosActual,
+    total,
+    consulta,
+  });
 }
 
 function seleccionarProductoParaEditar(producto) {
-    productoEditando = producto;
-    snapshotProductoEditando = { salon: Number(producto.salon)||0, deposito: Number(producto.deposito)||0 };
-    mostrarEditorStock(producto);
-    pantallaActualApp = "editarProducto";
-    const volver = $("brandBackBtn");
-    if (volver) volver.dataset.modulo = tabProductosActual === "cargados" ? "cargados" : "productos";
+  productoEditando = producto;
+  snapshotProductoEditando = {
+    salon: Number(producto.salon) || 0,
+    deposito: Number(producto.deposito) || 0,
+  };
+  mostrarEditorStock(producto);
+  pantallaActualApp = "editarProducto";
+  const volver = $("brandBackBtn");
+  if (volver)
+    volver.dataset.modulo =
+      tabProductosActual === "cargados" ? "cargados" : "productos";
 }
 
 function cancelarEdicionProducto() {
-    if (productoEditando && hayCambiosProducto()) { resolverSalidaProducto(() => cancelarEdicionProductoForzado()); return; }
-    cancelarEdicionProductoForzado();
+  if (productoEditando && hayCambiosProducto()) {
+    resolverSalidaProducto(() => cancelarEdicionProductoForzado());
+    return;
+  }
+  cancelarEdicionProductoForzado();
 }
 function cancelarEdicionProductoForzado() {
-    productoEditando = null;
-    snapshotProductoEditando = null;
-    const destino = tabProductosActual === "cargados" ? "cargados" : "productos";
-    cambiarPantalla(destino);
-    pantallaActualApp = destino;
-    if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
-    refrescarProductos();
-    sincronizarEnSegundoPlano();
+  productoEditando = null;
+  snapshotProductoEditando = null;
+  const destino = tabProductosActual === "cargados" ? "cargados" : "productos";
+  cambiarPantalla(destino);
+  pantallaActualApp = destino;
+  if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
+  refrescarProductos();
+  sincronizarEnSegundoPlano();
 }
 
 async function guardarCorreccion() {
-    try {
-        if (corrigiendo) return;
+  try {
+    if (corrigiendo) return;
 
-        if (!productoEditando) {
-            mostrarMensaje("Seleccioná un producto", "error");
-            return;
-        }
-
-        corrigiendo = true;
-        elementos.btnGuardarCorreccion.disabled = true;
-        mostrarMensaje("Guardando corrección...", "ok");
-
-        const valores = obtenerValoresEditor();
-        const producto = await modificarStockProducto(productoEditando.indice, valores.salon, valores.deposito);
-
-        productoEditando = null;
-        snapshotProductoEditando = null;
-        const destinoEdicion = tabProductosActual === "cargados" ? "cargados" : "productos";
-        cambiarPantalla(destinoEdicion);
-        pantallaActualApp = destinoEdicion;
-        refrescarProductos();
-        sincronizarEnSegundoPlano();
-
-        if (productoActual && productoActual.codigo === producto.codigo) {
-            productoActual = producto;
-            mostrarProducto(producto);
-        }
-
-        mostrarMensaje("Stock corregido", "ok");
-        reproducirConfirmacion("guardado");
-        return true;
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-        return false;
-    } finally {
-        corrigiendo = false;
-        elementos.btnGuardarCorreccion.disabled = false;
+    if (!productoEditando) {
+      mostrarMensaje("Seleccioná un producto", "error");
+      return;
     }
+
+    corrigiendo = true;
+    elementos.btnGuardarCorreccion.disabled = true;
+    mostrarMensaje("Guardando corrección...", "ok");
+
+    const valores = obtenerValoresEditor();
+    const producto = await modificarStockProducto(
+      productoEditando.indice,
+      valores.salon,
+      valores.deposito,
+    );
+
+    productoEditando = null;
+    snapshotProductoEditando = null;
+    const destinoEdicion =
+      tabProductosActual === "cargados" ? "cargados" : "productos";
+    cambiarPantalla(destinoEdicion);
+    pantallaActualApp = destinoEdicion;
+    refrescarProductos();
+    sincronizarEnSegundoPlano();
+
+    if (productoActual && productoActual.codigo === producto.codigo) {
+      productoActual = producto;
+      mostrarProducto(producto);
+    }
+
+    mostrarMensaje("Stock corregido", "ok");
+    reproducirConfirmacion("guardado");
+    return true;
+  } catch (error) {
+    mostrarMensaje(error.message, "error");
+    reproducirConfirmacion("error");
+    return false;
+  } finally {
+    corrigiendo = false;
+    elementos.btnGuardarCorreccion.disabled = false;
+  }
 }
 
 function actualizarPreferenciasFeedback() {
-    configurarFeedback({
-        sonidos: elementos.checkSonidos.checked,
-        vibracion: elementos.checkVibracion.checked
-    });
+  configurarFeedback({
+    sonidos: elementos.checkSonidos.checked,
+    vibracion: elementos.checkVibracion.checked,
+  });
 }
 
 function manejarReinicio() {
-    const confirmar = confirm("¿Querés reiniciar los contadores locales de esta app?");
-    if (!confirmar) return;
+  const confirmar = confirm(
+    "¿Querés reiniciar los contadores locales de esta app?",
+  );
+  if (!confirmar) return;
 
-    const nuevoContador = reiniciarContador();
-    actualizarContador(nuevoContador);
-    actualizarConteosUbicacion(obtenerConteosUbicacion());
-    refrescarProductos();
-    mostrarMensaje("Contador local reiniciado", "ok");
+  const nuevoContador = reiniciarContador();
+  actualizarContador(nuevoContador);
+  actualizarConteosUbicacion(obtenerConteosUbicacion());
+  refrescarProductos();
+  mostrarMensaje("Contador local reiniciado", "ok");
 }
 
 function iniciarSincronizacionAutomatica() {
-    if (sincronizacionAutomatica) return;
+  if (sincronizacionAutomatica) return;
 
-    sincronizacionAutomatica = setInterval(() => {
-        sincronizarEnSegundoPlano();
-    }, INTERVALO_SINCRONIZACION);
+  sincronizacionAutomatica = setInterval(() => {
+    sincronizarEnSegundoPlano();
+  }, INTERVALO_SINCRONIZACION);
 }
 
 async function sincronizarEnSegundoPlano() {
-    if (sincronizando || guardando || corrigiendo || obtenerCantidadProductos() === 0) return;
+  if (
+    sincronizando ||
+    guardando ||
+    corrigiendo ||
+    obtenerCantidadProductos() === 0
+  )
+    return;
 
-    try {
-        sincronizando = true;
-        const cantidad = await sincronizarProductosDesdeServidor();
-        actualizarEstadoExcel(cantidad);
-        actualizarConteosUbicacion(obtenerConteosUbicacion());
+  try {
+    sincronizando = true;
+    const cantidad = await sincronizarProductosDesdeServidor();
+    actualizarEstadoExcel(cantidad);
+    actualizarConteosUbicacion(obtenerConteosUbicacion());
 
-        if (productoActual) {
-            const actualizado = buscarProductoPorCodigo(productoActual.codigo);
-            if (actualizado.encontrado) {
-                productoActual = actualizado.producto;
-                mostrarProducto(productoActual);
-            }
-        }
-
-        if (productoEditando) {
-            const actualizado = buscarProductoPorCodigo(productoEditando.codigo);
-            if (actualizado.encontrado) {
-                productoEditando = actualizado.producto;
-            }
-        }
-
-        refrescarProductos();
-    } catch (error) {
-        console.warn("No se pudo sincronizar en segundo plano:", error);
-    } finally {
-        sincronizando = false;
+    if (productoActual) {
+      const actualizado = buscarProductoPorCodigo(productoActual.codigo);
+      if (actualizado.encontrado) {
+        productoActual = actualizado.producto;
+        mostrarProducto(productoActual);
+      }
     }
+
+    if (productoEditando) {
+      const actualizado = buscarProductoPorCodigo(productoEditando.codigo);
+      if (actualizado.encontrado) {
+        productoEditando = actualizado.producto;
+      }
+    }
+
+    refrescarProductos();
+  } catch (error) {
+    console.warn("No se pudo sincronizar en segundo plano:", error);
+  } finally {
+    sincronizando = false;
+  }
 }
 
-
-
 function alternarCargaManualVencimientos() {
-    const abrir = elementos.vencManualPanel?.classList.contains("oculto");
-    elementos.vencManualPanel?.classList.toggle("oculto", !abrir);
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = abrir ? "Cancelar ingreso manual" : "Ingresar producto manual";
-    if (abrir) elementos.vencCodigoManualInput?.focus();
-    else if (elementos.vencCodigoManualInput) { elementos.vencCodigoManualInput.value = ""; limpiarSugerenciasManual("vencimientos"); }
+  const abrir = elementos.vencManualPanel?.classList.contains("oculto");
+  elementos.vencManualPanel?.classList.toggle("oculto", !abrir);
+  if (elementos.btnVencManualToggle)
+    elementos.btnVencManualToggle.textContent = abrir
+      ? "Cancelar ingreso manual"
+      : "Ingresar producto manual";
+  if (abrir) elementos.vencCodigoManualInput?.focus();
+  else if (elementos.vencCodigoManualInput) {
+    elementos.vencCodigoManualInput.value = "";
+    limpiarSugerenciasManual("vencimientos");
+  }
 }
 
 async function procesarCodigoManualVencimientos() {
-    const consulta = String(elementos.vencCodigoManualInput?.value || "").trim();
-    if (!consulta) {
-        mostrarMensaje("Ingresá un código o nombre", "error");
-        return;
+  const consulta = String(elementos.vencCodigoManualInput?.value || "").trim();
+  if (!consulta) {
+    mostrarMensaje("Ingresá un código o nombre", "error");
+    return;
+  }
+  try {
+    await cargarCatalogoMaestroDesdeServidor();
+  } catch (error) {
+    mostrarMensaje("No se pudo cargar el catálogo Productos", "error");
+    return;
+  }
+  const exacto = buscarProductoMaestroLocalPorCodigo(consulta);
+  let codigo = consulta;
+  if (!exacto.encontrado) {
+    const resultados = buscarProductosMaestrosPorTexto(consulta, 5);
+    if (resultados.length !== 1) {
+      await renderSugerenciasManual("vencimientos");
+      mostrarMensaje(
+        resultados.length
+          ? "Elegí un producto de la lista"
+          : "No se encontraron productos",
+        "error",
+      );
+      return;
     }
-    try { await cargarCatalogoMaestroDesdeServidor(); } catch (error) {
-        mostrarMensaje("No se pudo cargar el catálogo Productos", "error");
-        return;
-    }
-    const exacto = buscarProductoMaestroLocalPorCodigo(consulta);
-    let codigo = consulta;
-    if (!exacto.encontrado) {
-        const resultados = buscarProductosMaestrosPorTexto(consulta, 5);
-        if (resultados.length !== 1) {
-            await renderSugerenciasManual("vencimientos");
-            mostrarMensaje(resultados.length ? "Elegí un producto de la lista" : "No se encontraron productos", "error");
-            return;
-        }
-        codigo = resultados[0].codigo;
-    }
-    elementos.vencCodigoManualInput.value = "";
-    limpiarSugerenciasManual("vencimientos");
-    elementos.vencManualPanel?.classList.add("oculto");
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
-    await manejarCodigoVencimiento(codigo);
+    codigo = resultados[0].codigo;
+  }
+  elementos.vencCodigoManualInput.value = "";
+  limpiarSugerenciasManual("vencimientos");
+  elementos.vencManualPanel?.classList.add("oculto");
+  if (elementos.btnVencManualToggle)
+    elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
+  await manejarCodigoVencimiento(codigo);
 }
 
 function mostrarScannerVencimientosAbierto() {
-    elementos.vencCameraCard?.classList.remove("oculto");
-    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.add("oculto");
+  elementos.vencCameraCard?.classList.remove("oculto");
+  elementos.btnVencAbrirScanner
+    ?.closest(".venc-actions-card")
+    ?.classList.add("oculto");
 }
 
 function cerrarScannerVencimientos(mostrarMensajeCierre = false) {
-    detenerScanner();
-    scannerActivo = false;
-    elementos.vencCameraCard?.classList.add("oculto");
-    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
-    if (mostrarMensajeCierre) mostrarMensaje("Escáner cerrado", "ok");
+  detenerScanner();
+  scannerActivo = false;
+  elementos.vencCameraCard?.classList.add("oculto");
+  elementos.btnVencAbrirScanner
+    ?.closest(".venc-actions-card")
+    ?.classList.remove("oculto");
+  if (mostrarMensajeCierre) mostrarMensaje("Escáner cerrado", "ok");
 }
 
 function ocultarAccionesVencimientos() {
-    elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.add("oculto");
-    elementos.vencManualPanel?.classList.add("oculto");
+  elementos.btnVencAbrirScanner
+    ?.closest(".venc-actions-card")
+    ?.classList.add("oculto");
+  elementos.vencManualPanel?.classList.add("oculto");
 }
 
 function mostrarAccionesVencimientos() {
-    if (vencTabActual === "cargar") {
-        elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
-    }
+  if (vencTabActual === "cargar") {
+    elementos.btnVencAbrirScanner
+      ?.closest(".venc-actions-card")
+      ?.classList.remove("oculto");
+  }
 }
 
 function reiniciarFormularioVencimientos() {
-    productoVencimientoActual = null;
-    elementos.vencManualPanel?.classList.add("oculto");
-    if (elementos.btnVencManualToggle) elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
-    if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
-    if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
-    if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;
-    actualizarTotalVencimiento();
-    elementos.vencFormCard?.classList.add("oculto");
-    elementos.vencProductoCard?.classList.add("oculto");
-    elementos.vencProductoCard?.classList.remove("found", "error");
-    elementos.vencProductoCard?.classList.add("empty");
-    if (elementos.vencEstadoProducto) elementos.vencEstadoProducto.textContent = "Esperando código";
-    if (elementos.vencNombreProducto) elementos.vencNombreProducto.textContent = "Escaneá o ingresá un código...";
-    if (elementos.vencCodigoProducto) elementos.vencCodigoProducto.textContent = "-";
+  productoVencimientoActual = null;
+  elementos.vencManualPanel?.classList.add("oculto");
+  if (elementos.btnVencManualToggle)
+    elementos.btnVencManualToggle.textContent = "Ingresar producto manual";
+  if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
+  setRubroCustom("carga", "");
+  if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
+  if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;
+  actualizarTotalVencimiento();
+  elementos.vencFormCard?.classList.add("oculto");
+  elementos.vencProductoCard?.classList.add("oculto");
+  elementos.vencProductoCard?.classList.remove("found", "error");
+  elementos.vencProductoCard?.classList.add("empty");
+  if (elementos.vencEstadoProducto)
+    elementos.vencEstadoProducto.textContent = "Esperando código";
+  if (elementos.vencNombreProducto)
+    elementos.vencNombreProducto.textContent = "Escaneá o ingresá un código...";
+  if (elementos.vencCodigoProducto)
+    elementos.vencCodigoProducto.textContent = "-";
 }
 
 function cancelarCargaVencimiento() {
-    cerrarScannerVencimientos(false);
-    reiniciarFormularioVencimientos();
-    mostrarAccionesVencimientos();
-    mostrarMensaje("Carga cancelada", "ok");
+  cerrarScannerVencimientos(false);
+  reiniciarFormularioVencimientos();
+  mostrarAccionesVencimientos();
+  mostrarMensaje("Carga cancelada", "ok");
 }
 
 async function abrirScannerVencimientos() {
-    if (scannerActivo) return;
+  if (scannerActivo) return;
 
-    try {
-        productoVencimientoActual = null;
-        mostrarScannerVencimientosAbierto();
-        await iniciarScanner("videoVencimientos", manejarCodigoVencimiento);
-        scannerActivo = true;
-        mostrarMensaje("Escáner activo", "ok");
-    } catch (error) {
-        scannerActivo = false;
-        elementos.vencCameraCard?.classList.add("oculto");
-        elementos.btnVencAbrirScanner?.closest(".venc-actions-card")?.classList.remove("oculto");
-        mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
-        console.error(error);
-    }
+  try {
+    productoVencimientoActual = null;
+    mostrarScannerVencimientosAbierto();
+    await iniciarScanner("videoVencimientos", manejarCodigoVencimiento);
+    scannerActivo = true;
+    mostrarMensaje("Escáner activo", "ok");
+  } catch (error) {
+    scannerActivo = false;
+    elementos.vencCameraCard?.classList.add("oculto");
+    elementos.btnVencAbrirScanner
+      ?.closest(".venc-actions-card")
+      ?.classList.remove("oculto");
+    mostrarMensaje("No se pudo iniciar la cámara. Revisá permisos.", "error");
+    console.error(error);
+  }
 }
 
 async function manejarCodigoVencimiento(codigo) {
-    if (vencTabActual !== "cargar") cambiarTabVencimientos("cargar");
-    cerrarScannerVencimientos(false);
+  if (vencTabActual !== "cargar") cambiarTabVencimientos("cargar");
+  cerrarScannerVencimientos(false);
 
-    let resultado = { encontrado: false };
-    try {
-        resultado = await buscarProductoMaestroPorCodigo(codigo);
-    } catch (error) {
-        console.warn("No se encontró en Productos:", error);
-    }
+  let resultado = { encontrado: false };
+  try {
+    resultado = await buscarProductoMaestroPorCodigo(codigo);
+  } catch (error) {
+    console.warn("No se encontró en Productos:", error);
+  }
 
-    if (!resultado.encontrado) {
-        productoVencimientoActual = null;
-        elementos.vencProductoCard?.classList.remove("oculto");
-        elementos.vencProductoCard?.classList.remove("empty", "found");
-        elementos.vencProductoCard?.classList.add("error");
-        elementos.vencEstadoProducto.textContent = "Código no encontrado";
-        elementos.vencNombreProducto.textContent = "No encontramos este código en la base maestra.";
-        elementos.vencCodigoProducto.textContent = codigo;
-        elementos.vencFormCard?.classList.add("oculto");
-        mostrarAccionesVencimientos();
-        mostrarMensaje("Producto no encontrado", "error");
-        reproducirConfirmacion("error");
-        return;
-    }
-
-    productoVencimientoActual = resultado.producto;
+  if (!resultado.encontrado) {
+    productoVencimientoActual = null;
     elementos.vencProductoCard?.classList.remove("oculto");
-    elementos.vencProductoCard?.classList.remove("empty", "error");
-    elementos.vencProductoCard?.classList.add("found");
-    elementos.vencEstadoProducto.textContent = "Producto encontrado";
-    elementos.vencNombreProducto.textContent = productoVencimientoActual.articulo;
-    elementos.vencCodigoProducto.textContent = `Código: ${productoVencimientoActual.codigo}`;
-    elementos.vencFormCard?.classList.remove("oculto");
-    ocultarAccionesVencimientos();
-    elementos.vencFechaInput.focus();
-    actualizarTotalVencimiento();
-    mostrarMensaje("Producto encontrado", "ok");
-    reproducirConfirmacion("ok");
+    elementos.vencProductoCard?.classList.remove("empty", "found");
+    elementos.vencProductoCard?.classList.add("error");
+    elementos.vencEstadoProducto.textContent = "Código no encontrado";
+    elementos.vencNombreProducto.textContent =
+      "No encontramos este código en la base maestra.";
+    elementos.vencCodigoProducto.textContent = codigo;
+    elementos.vencFormCard?.classList.add("oculto");
+    mostrarAccionesVencimientos();
+    mostrarMensaje("Producto no encontrado", "error");
+    reproducirConfirmacion("error");
+    return;
+  }
+
+  productoVencimientoActual = resultado.producto;
+  elementos.vencProductoCard?.classList.remove("oculto");
+  elementos.vencProductoCard?.classList.remove("empty", "error");
+  elementos.vencProductoCard?.classList.add("found");
+  elementos.vencEstadoProducto.textContent = "Producto encontrado";
+  elementos.vencNombreProducto.textContent = productoVencimientoActual.articulo;
+  elementos.vencCodigoProducto.textContent = `Código: ${productoVencimientoActual.codigo}`;
+  elementos.vencFormCard?.classList.remove("oculto");
+  ocultarAccionesVencimientos();
+  elementos.vencFechaInput.focus();
+  actualizarTotalVencimiento();
+  mostrarMensaje("Producto encontrado", "ok");
+  reproducirConfirmacion("ok");
 }
 
 function actualizarTotalVencimiento() {
-    const salon = Number(elementos.vencSalonInput?.value) || 0;
-    const deposito = Number(elementos.vencDepositoInput?.value) || 0;
-    if (elementos.vencTotalTexto) elementos.vencTotalTexto.textContent = salon + deposito;
+  const salon = Number(elementos.vencSalonInput?.value) || 0;
+  const deposito = Number(elementos.vencDepositoInput?.value) || 0;
+  if (elementos.vencTotalTexto)
+    elementos.vencTotalTexto.textContent = salon + deposito;
 }
 
 async function guardarVencimientoActual() {
-    try {
-        if (guardandoVencimiento) return;
-        if (!productoVencimientoActual) {
-            mostrarMensaje("Primero escaneá un producto", "error");
-            return;
-        }
-        const vencimiento = elementos.vencFechaInput.value;
-        const salon = Number(elementos.vencSalonInput.value) || 0;
-        const deposito = Number(elementos.vencDepositoInput.value) || 0;
-        if (!vencimiento) {
-            mostrarMensaje("Cargá la fecha de vencimiento", "error");
-            elementos.vencFechaInput.focus();
-            return;
-        }
-        if (vencimiento < fechaHoyLocalIso()) {
-            mostrarMensaje("La fecha no puede ser anterior a hoy", "error");
-            elementos.vencFechaInput.focus();
-            return;
-        }
-        if (salon + deposito <= 0) {
-            mostrarMensaje("Cargá salón o depósito", "error");
-            return;
-        }
-
-        guardandoVencimiento = true;
-        elementos.btnVencGuardar.disabled = true;
-        mostrarMensaje("Guardando vencimiento...", "ok");
-
-        await guardarVencimiento({
-            codigo: productoVencimientoActual.codigo,
-            articulo: productoVencimientoActual.articulo,
-            vencimiento,
-            salon,
-            deposito
-        });
-
-        reiniciarFormularioVencimientos();
-        mostrarAccionesVencimientos();
-
-        await cargarListadoVencimientos();
-        mostrarMensaje("Vencimiento guardado", "ok");
-        reproducirConfirmacion("guardado");
-        return true;
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-    } finally {
-        guardandoVencimiento = false;
-        if (elementos.btnVencGuardar) elementos.btnVencGuardar.disabled = false;
+  try {
+    if (guardandoVencimiento) return;
+    if (!productoVencimientoActual) {
+      mostrarMensaje("Primero escaneá un producto", "error");
+      return;
     }
+    const vencimiento = elementos.vencFechaInput.value;
+    const salon = Number(elementos.vencSalonInput.value) || 0;
+    const deposito = Number(elementos.vencDepositoInput.value) || 0;
+    const rubro = $("vencRubroInput")?.value || "";
+    if (!vencimiento) {
+      mostrarMensaje("Cargá la fecha de vencimiento", "error");
+      elementos.vencFechaInput.focus();
+      return;
+    }
+    if (!rubro) {
+      mostrarMensaje("Seleccioná el rubro", "error");
+      $("vencRubroButton")?.focus();
+      return;
+    }
+    if (vencimiento < fechaHoyLocalIso()) {
+      mostrarMensaje("La fecha no puede ser anterior a hoy", "error");
+      elementos.vencFechaInput.focus();
+      return;
+    }
+    if (salon + deposito <= 0) {
+      mostrarMensaje("Cargá salón o depósito", "error");
+      return;
+    }
+
+    guardandoVencimiento = true;
+    elementos.btnVencGuardar.disabled = true;
+    mostrarMensaje("Guardando vencimiento...", "ok");
+
+    await guardarVencimiento({
+      codigo: productoVencimientoActual.codigo,
+      articulo: productoVencimientoActual.articulo,
+      vencimiento,
+      rubro,
+      salon,
+      deposito,
+    });
+
+    reiniciarFormularioVencimientos();
+    mostrarAccionesVencimientos();
+
+    await cargarListadoVencimientos();
+    mostrarMensaje("Vencimiento guardado", "ok");
+    reproducirConfirmacion("guardado");
+    return true;
+  } catch (error) {
+    mostrarMensaje(error.message, "error");
+    reproducirConfirmacion("error");
+  } finally {
+    guardandoVencimiento = false;
+    if (elementos.btnVencGuardar) elementos.btnVencGuardar.disabled = false;
+  }
 }
 
-async function cargarListadoVencimientos() {
-    try {
-        if (!elementos.vencListado) return;
-        mostrarCargandoEn(elementos.vencListado, "Cargando vencimientos...");
-        vencimientosCache = await listarVencimientos();
-        renderListadoVencimientos();
-    } catch (error) {
-        if (elementos.vencListado) elementos.vencListado.innerHTML = `<div class="venc-list-empty">${error.message}</div>`;
-    }
+function capturarVistaVencimientos(id = "") {
+  const tarjeta = id
+    ? elementos.vencListado?.querySelector(
+        `.venc-item[data-id="${CSS.escape(String(id))}"]`,
+      )
+    : null;
+  return {
+    id: id ? String(id) : "",
+    top: tarjeta ? tarjeta.getBoundingClientRect().top : null,
+    scrollY: window.scrollY,
+  };
+}
+
+function restaurarVistaVencimientos(vista) {
+  if (!vista) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const tarjeta = vista.id
+        ? elementos.vencListado?.querySelector(
+            `.venc-item[data-id="${CSS.escape(String(vista.id))}"]`,
+          )
+        : null;
+      if (tarjeta && Number.isFinite(vista.top)) {
+        const diferencia = tarjeta.getBoundingClientRect().top - vista.top;
+        if (Math.abs(diferencia) > 1)
+          window.scrollBy({ top: diferencia, left: 0, behavior: "auto" });
+        return;
+      }
+      window.scrollTo({ top: vista.scrollY || 0, left: 0, behavior: "auto" });
+    });
+  });
+}
+
+async function cargarListadoVencimientos(opciones = {}) {
+  try {
+    if (!elementos.vencListado) return;
+    const mantenerVista = Boolean(opciones.mantenerVista);
+    const vista = mantenerVista
+      ? opciones.vista || capturarVistaVencimientos(opciones.id || "")
+      : null;
+
+    // Cuando queremos mantener la posición no reemplazamos la lista por
+    // "Cargando...", porque al achicar el contenido el navegador sube la página.
+    if (!mantenerVista)
+      mostrarCargandoEn(elementos.vencListado, "Cargando vencimientos...");
+
+    vencimientosCache = await listarVencimientos();
+    renderListadoVencimientos();
+
+    if (mantenerVista) restaurarVistaVencimientos(vista);
+  } catch (error) {
+    if (elementos.vencListado)
+      elementos.vencListado.innerHTML = `<div class="venc-list-empty">${error.message}</div>`;
+  }
 }
 
 function diasHastaVencimiento(fecha) {
-    if (!fecha) return 99999;
-    const hoy = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
-    const vence = new Date(String(fecha) + "T00:00:00");
-    if (Number.isNaN(vence.getTime())) return 99999;
-    return Math.ceil((vence - hoy) / 86400000);
+  if (!fecha) return 99999;
+  const hoy = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  const vence = new Date(String(fecha) + "T00:00:00");
+  if (Number.isNaN(vence.getTime())) return 99999;
+  return Math.ceil((vence - hoy) / 86400000);
 }
 
 function formatearFecha(fecha) {
-    if (!fecha) return "-";
-    const partes = String(fecha).split("-");
-    if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
-    return fecha;
+  if (!fecha) return "-";
+  const partes = String(fecha).split("-");
+  if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  return fecha;
 }
 
 function tieneOferta(item) {
-    const texto = String(item.oferta || "").trim().toLowerCase();
-    return ["sí", "si", "true", "1", "oferta", "activo", "activa"].includes(texto);
+  const texto = String(item.oferta || "")
+    .trim()
+    .toLowerCase();
+  return ["sí", "si", "true", "1", "oferta", "activo", "activa"].includes(
+    texto,
+  );
 }
 
 function claseEstadoVencimiento(item) {
-    const estado = String(item.estado || "").toLowerCase();
-    const dias = diasHastaVencimiento(item.vencimiento);
-    if (estado.includes("vencido") || dias < 0) return "venc-vencido";
-    if (dias <= 7) return "venc-7";
-    if (dias <= 15) return "venc-15";
-    // Todo producto vigente con 16 días o más pertenece al grupo azul.
-    return "venc-30";
+  const estado = String(item.estado || "").toLowerCase();
+  const dias = diasHastaVencimiento(item.vencimiento);
+  if (estado.includes("vencido") || dias < 0) return "venc-vencido";
+  if (dias <= 7) return "venc-7";
+  if (dias <= 15) return "venc-15";
+  // Todo producto vigente con 16 días o más pertenece al grupo azul.
+  return "venc-30";
 }
 
 function textoEstadoVencimiento(item) {
-    const dias = diasHastaVencimiento(item.vencimiento);
-    if (dias < 0) {
-        const vencidoHace = Math.abs(dias);
-        return vencidoHace === 1 ? "Vencido ayer" : `Vencido hace ${vencidoHace} días`;
-    }
-    if (dias === 0) return "Vence hoy";
-    if (dias === 1) return "Falta 1 día";
-    return `Faltan ${dias} días`;
+  const dias = diasHastaVencimiento(item.vencimiento);
+  if (dias < 0) {
+    const vencidoHace = Math.abs(dias);
+    return vencidoHace === 1
+      ? "Vencido ayer"
+      : `Vencido hace ${vencidoHace} días`;
+  }
+  if (dias === 0) return "Vence hoy";
+  if (dias === 1) return "Falta 1 día";
+  return `Faltan ${dias} días`;
 }
 
 function bucketVencimiento(item) {
-    const dias = diasHastaVencimiento(item.vencimiento);
-    if (dias < 0) return "vencidos";
-    if (dias <= 7) return "7";
-    if (dias <= 15) return "15";
-    if (dias <= 30) return "30";
-    return "fuera";
+  const dias = diasHastaVencimiento(item.vencimiento);
+  if (dias < 0) return "vencidos";
+  if (dias <= 7) return "7";
+  if (dias <= 15) return "15";
+  if (dias <= 30) return "30";
+  return "fuera";
 }
 
 function fechaHoyArgentina() {
-    try {
-        const partes = new Intl.DateTimeFormat("en-CA", {
-            timeZone: "America/Argentina/Buenos_Aires",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit"
-        }).formatToParts(new Date());
-        const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
-        return `${mapa.year}-${mapa.month}-${mapa.day}`;
-    } catch (_) {
-        const ahora = new Date();
-        const desplazada = new Date(ahora.getTime() - (3 * 60 * 60 * 1000));
-        return desplazada.toISOString().slice(0, 10);
-    }
+  try {
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const mapa = Object.fromEntries(partes.map((p) => [p.type, p.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}`;
+  } catch (_) {
+    const ahora = new Date();
+    const desplazada = new Date(ahora.getTime() - 3 * 60 * 60 * 1000);
+    return desplazada.toISOString().slice(0, 10);
+  }
 }
 
 function fechaCargaVencimiento(item) {
-    const valor = String(item?.fecha_carga || item?.fechaCarga || "").trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
-    const matchLatino = valor.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-    if (matchLatino) {
-        const [, dia, mes, anio] = matchLatino;
-        return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
-    }
-    return "";
+  const valor = String(item?.fecha_carga || item?.fechaCarga || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+  const matchLatino = valor.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if (matchLatino) {
+    const [, dia, mes, anio] = matchLatino;
+    return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+  }
+  return "";
 }
 
 function fueCargadoHoy(item) {
-    return fechaCargaVencimiento(item) === fechaHoyArgentina();
+  return fechaCargaVencimiento(item) === fechaHoyArgentina();
 }
 
 function filtrarVencimientos() {
-    const q = vencTabActual === "cargar" ? "" : String(busquedaVencimientos || "").trim().toLowerCase();
-    return vencimientosCache.filter(item => {
-        if (vencTabActual === "cargar" && !fueCargadoHoy(item)) return false;
-        const bucket = bucketVencimiento(item);
+  const q =
+    vencTabActual === "cargar"
+      ? ""
+      : String(busquedaVencimientos || "")
+          .trim()
+          .toLowerCase();
+  return vencimientosCache.filter((item) => {
+    if (vencTabActual === "cargar" && !fueCargadoHoy(item)) return false;
+    const bucket = bucketVencimiento(item);
 
-        if (vencTabActual === "proximos" && !["7", "15", "30"].includes(bucket)) return false;
-        if (vencTabActual === "vencidos" && bucket !== "vencidos") return false;
+    if (vencTabActual === "proximos" && !["7", "15", "30"].includes(bucket))
+      return false;
+    if (vencTabActual === "vencidos" && bucket !== "vencidos") return false;
 
-        if (vencTabActual === "proximos") {
-            if (filtroVencimientos === "7" && bucket !== "7") return false;
-            if (filtroVencimientos === "15" && bucket !== "15") return false;
-            if (filtroVencimientos === "30" && bucket !== "30") return false;
-            if (filtroOfertaVencimientos === "oferta" && !tieneOferta(item)) return false;
-            if (filtroOfertaVencimientos === "sinOferta" && tieneOferta(item)) return false;
-        }
+    if (vencTabActual === "proximos") {
+      if (filtroVencimientos === "7" && bucket !== "7") return false;
+      if (filtroVencimientos === "15" && bucket !== "15") return false;
+      if (filtroVencimientos === "30" && bucket !== "30") return false;
+      if (filtroOfertaVencimientos === "oferta" && !tieneOferta(item))
+        return false;
+      if (filtroOfertaVencimientos === "sinOferta" && tieneOferta(item))
+        return false;
+    }
 
-        if (q && !coincideBusqueda(item, q, ["articulo", "codigo"])) return false;
-        return true;
-    });
+    if (vencTabActual !== "cargar" && filtroRubroVencimientos !== "todos") {
+      if (normalizarRubroFiltro(item.rubro) !== filtroRubroVencimientos)
+        return false;
+    }
+    if (q && !coincideBusqueda(item, q, ["articulo", "codigo", "rubro"]))
+      return false;
+    return true;
+  });
 }
 
 function renderResumenVencimientos() {
-    const contarRango = (bucket) => {
-        const items = vencimientosCache.filter(item => bucketVencimiento(item) === bucket);
-        return {
-            total: items.length,
-            oferta: items.filter(tieneOferta).length,
-        };
+  const contarRango = (bucket) => {
+    const items = vencimientosCache.filter(
+      (item) => bucketVencimiento(item) === bucket,
+    );
+    return {
+      total: items.length,
+      oferta: items.filter(tieneOferta).length,
     };
-    const resumen = {
-        siete: contarRango("7"),
-        quince: contarRango("15"),
-        treinta: contarRango("30"),
-        vencidos: contarRango("vencidos"),
-    };
-    const el = elementos.vencResumen || $("vencResumen");
-    if (!el) return;
-    const fila = (clase, filtro, titulo, datos) => `
+  };
+  const resumen = {
+    siete: contarRango("7"),
+    quince: contarRango("15"),
+    treinta: contarRango("30"),
+    vencidos: contarRango("vencidos"),
+  };
+  const el = elementos.vencResumen || $("vencResumen");
+  if (!el) return;
+  const fila = (clase, filtro, titulo, datos) => `
         <button type="button" class="venc-resumen-card ${clase}" data-venc-resumen="${filtro}">
             <span class="venc-resumen-rango">${titulo}</span>
             <span class="venc-resumen-datos"><strong>${datos.total}</strong><small>productos</small></span>
             <span class="venc-resumen-oferta"><strong>${datos.oferta}</strong><small>en oferta</small></span>
         </button>`;
-    el.innerHTML = [
-        fila("venc-resumen-7", "7", "7 días", resumen.siete),
-        fila("venc-resumen-15", "15", "15 días", resumen.quince),
-        fila("venc-resumen-30", "30", "30 días", resumen.treinta),
-        fila("venc-resumen-vencidos", "vencidos", "Vencidos", resumen.vencidos),
-    ].join("");
+  el.innerHTML = [
+    fila("venc-resumen-7", "7", "7 días", resumen.siete),
+    fila("venc-resumen-15", "15", "15 días", resumen.quince),
+    fila("venc-resumen-30", "30", "30 días", resumen.treinta),
+    fila("venc-resumen-vencidos", "vencidos", "Vencidos", resumen.vencidos),
+  ].join("");
 }
 
 function crearTarjetaVencimiento(item) {
-    const clase = claseEstadoVencimiento(item);
-    const cantidad = Number(item.total) || ((Number(item.salon) || 0) + (Number(item.deposito) || 0));
-    const articulo = item.articulo || "Sin descripción";
-    const codigo = item.codigo || "-";
-    const fecha = formatearFecha(item.vencimiento);
-    const estado = textoEstadoVencimiento(item);
-    const ofertaActiva = tieneOferta(item);
+  const clase = claseEstadoVencimiento(item);
+  const cantidad =
+    Number(item.total) ||
+    (Number(item.salon) || 0) + (Number(item.deposito) || 0);
+  const articulo = item.articulo || "Sin descripción";
+  const codigo = item.codigo || "-";
+  const fecha = formatearFecha(item.vencimiento);
+  const estado = textoEstadoVencimiento(item);
+  const ofertaActiva = tieneOferta(item);
 
-    if (vencTabActual === "cargar") {
-        return `
+  if (vencTabActual === "cargar") {
+    return `
             <article class="venc-item venc-item-reciente ${clase}" data-id="${item.id}">
                 <div class="venc-reciente-info">
                     <strong>${articulo}</strong>
+                    ${etiquetaRubroVencimiento(item)}
                     <div class="venc-reciente-meta">
                         <span><svg class="app-icon inline-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>${fecha}</span>
                         <em class="venc-reciente-dias ${clase}">${estado}</em>
@@ -1377,10 +2009,10 @@ function crearTarjetaVencimiento(item) {
                 <b>${cantidad}</b>
             </article>
         `;
-    }
+  }
 
-    if (vencTabActual === "vencidos") {
-        return `
+  if (vencTabActual === "vencidos") {
+    return `
             <article class="venc-item venc-item-vencido-registro venc-vencido expiry-compact expiry-compact--expired" data-id="${item.id}" tabindex="0">
                 <header class="expiry-compact__header">
                     <div class="expiry-compact__identity">
@@ -1398,14 +2030,15 @@ function crearTarjetaVencimiento(item) {
                 </button>
             </article>
         `;
-    }
+  }
 
-    return `
+  return `
         <article class="venc-item venc-item-proximo ${clase} ${ofertaActiva ? "venc-con-oferta" : ""} expiry-compact expiry-compact--upcoming" data-id="${item.id}" tabindex="0">
             <header class="expiry-compact__header">
                 <div class="expiry-compact__identity">
                     <strong>${articulo}</strong>
                     <span>Código: ${codigo}</span>
+                    ${etiquetaRubroVencimiento(item)}
                 </div>
                 <span class="expiry-compact__badge ${clase}">${estado}</span>
             </header>
@@ -1426,48 +2059,71 @@ function crearTarjetaVencimiento(item) {
 }
 
 function renderListadoVencimientos() {
-    if (!elementos.vencListado) return;
-    renderResumenVencimientos();
-    actualizarVisibilidadPanelesVencimientos();
+  if (!elementos.vencListado) return;
+  renderResumenVencimientos();
+  actualizarVisibilidadPanelesVencimientos();
 
-    if (elementos.vencListadoTitulo) {
-        elementos.vencListadoTitulo.textContent = vencTabActual === "cargar"
-            ? "Registros cargados hoy"
-            : (vencTabActual === "vencidos" ? "Productos vencidos" : "Próximos a vencer");
+  if (elementos.vencListadoTitulo) {
+    elementos.vencListadoTitulo.textContent =
+      vencTabActual === "cargar"
+        ? "Registros cargados hoy"
+        : vencTabActual === "vencidos"
+          ? "Productos vencidos"
+          : "Próximos a vencer";
+  }
+
+  const limite = vencTabActual === "cargar" ? 3 : 80;
+  const baseLista = filtrarVencimientos();
+  const ordenada = [...baseLista].sort((a, b) => {
+    if (vencTabActual === "cargar") {
+      return String(b.id || b.fecha_carga || b.fechaCarga || "").localeCompare(
+        String(a.id || a.fecha_carga || a.fechaCarga || ""),
+      );
     }
+    return (
+      diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento)
+    );
+  });
+  const lista = ordenada.slice(0, limite);
 
-    const limite = vencTabActual === "cargar" ? 3 : 80;
-    const baseLista = filtrarVencimientos();
-    const ordenada = [...baseLista].sort((a, b) => {
-        if (vencTabActual === "cargar") {
-            return String(b.id || b.fecha_carga || b.fechaCarga || "").localeCompare(String(a.id || a.fecha_carga || a.fechaCarga || ""));
-        }
-        return diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento);
-    });
-    const lista = ordenada.slice(0, limite);
-
-    if (!lista.length) {
-        elementos.vencListado.className = "venc-list-empty";
-        if (vencTabActual === "cargar") {
-            elementos.vencListado.textContent = "Todavía no se cargaron vencimientos hoy.";
-        } else {
-            elementos.vencListado.textContent = vencimientosCache.length ? "No hay registros con ese filtro." : "Todavía no hay vencimientos cargados.";
-        }
-        return;
+  if (!lista.length) {
+    elementos.vencListado.className = "venc-list-empty";
+    if (vencTabActual === "cargar") {
+      elementos.vencListado.textContent =
+        "Todavía no se cargaron vencimientos hoy.";
+    } else {
+      elementos.vencListado.textContent = vencimientosCache.length
+        ? "No hay registros con ese filtro."
+        : "Todavía no hay vencimientos cargados.";
     }
+    return;
+  }
 
-    const agruparTodos = vencTabActual === "proximos" && filtroVencimientos === "todos";
-    if (agruparTodos) {
-        const grupos = [
-            { bucket: "7", titulo: "Vencen dentro de 7 días", detalle: "0 a 7 días" },
-            { bucket: "15", titulo: "Vencen entre 8 y 15 días", detalle: "8 a 15 días" },
-            { bucket: "30", titulo: "Vencen entre 16 y 30 días", detalle: "16 a 30 días" },
-        ];
-        elementos.vencListado.className = "venc-list venc-list-proximos venc-list-grouped";
-        elementos.vencListado.innerHTML = grupos.map(grupo => {
-            const items = lista.filter(item => bucketVencimiento(item) === grupo.bucket);
-            if (!items.length) return "";
-            return `
+  const agruparTodos =
+    vencTabActual === "proximos" && filtroVencimientos === "todos";
+  if (agruparTodos) {
+    const grupos = [
+      { bucket: "7", titulo: "Vencen dentro de 7 días", detalle: "0 a 7 días" },
+      {
+        bucket: "15",
+        titulo: "Vencen entre 8 y 15 días",
+        detalle: "8 a 15 días",
+      },
+      {
+        bucket: "30",
+        titulo: "Vencen entre 16 y 30 días",
+        detalle: "16 a 30 días",
+      },
+    ];
+    elementos.vencListado.className =
+      "venc-list venc-list-proximos venc-list-grouped";
+    elementos.vencListado.innerHTML = grupos
+      .map((grupo) => {
+        const items = lista.filter(
+          (item) => bucketVencimiento(item) === grupo.bucket,
+        );
+        if (!items.length) return "";
+        return `
                 <section class="venc-range-group venc-range-group--${grupo.bucket}" aria-labelledby="vencGrupo${grupo.bucket}">
                     <header class="venc-range-group__header">
                         <div>
@@ -1481,226 +2137,396 @@ function renderListadoVencimientos() {
                     </div>
                 </section>
             `;
-        }).join("");
-        return;
-    }
+      })
+      .join("");
+    return;
+  }
 
-    elementos.vencListado.className = `venc-list venc-list-${vencTabActual}`;
-    elementos.vencListado.innerHTML = lista.map(crearTarjetaVencimiento).join("");
+  elementos.vencListado.className = `venc-list venc-list-${vencTabActual}`;
+  elementos.vencListado.innerHTML = lista.map(crearTarjetaVencimiento).join("");
 }
 
-function manejarClickListadoVencimientos(event) {
-    const card = event.target.closest(".venc-item");
-    if (!card) return;
-    const accion = event.target.closest("[data-venc-accion]")?.dataset.vencAccion;
-    const item = vencimientosCache.find(registro => String(registro.id) === String(card.dataset.id));
-    if (!item) return;
-    vencimientoSeleccionado = item;
+async function manejarClickListadoVencimientos(event) {
+  const card = event.target.closest(".venc-item");
+  if (!card) return;
+  const accion = event.target.closest("[data-venc-accion]")?.dataset.vencAccion;
+  const item = vencimientosCache.find(
+    (registro) => String(registro.id) === String(card.dataset.id),
+  );
+  if (!item) return;
+  vencimientoSeleccionado = item;
 
-    if (accion === "oferta" && vencTabActual === "proximos") {
-        alternarOfertaVencimiento(item);
-        return;
+  if (accion === "oferta" && vencTabActual === "proximos") {
+    alternarOfertaVencimiento(item);
+    return;
+  }
+
+  if (accion === "eliminar") {
+    abrirDetalleVencimiento(item);
+    mostrarConfirmacionEliminarVencimiento();
+    return;
+  }
+
+  if (!accion && vencTabActual === "cargar") {
+    // Desde "Registros cargados hoy" pasamos primero a Próximos,
+    // ubicamos el mismo producto en la lista y recién ahí abrimos el editor.
+    cambiarTabVencimientos("proximos");
+    await cargarListadoVencimientos();
+
+    const tarjetaDestino = elementos.vencListado?.querySelector(
+      `.venc-item[data-id="${CSS.escape(String(item.id))}"]`,
+    );
+
+    if (tarjetaDestino) {
+      tarjetaDestino.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+        inline: "nearest",
+      });
     }
 
-    if (accion === "eliminar") {
-        abrirDetalleVencimiento(item);
-        mostrarConfirmacionEliminarVencimiento();
-        return;
-    }
+    vencimientoSeleccionado =
+      vencimientosCache.find(
+        (registro) => String(registro.id) === String(item.id),
+      ) || item;
 
-    if (!accion && (vencTabActual === "proximos" || vencTabActual === "vencidos")) {
-        abrirDetalleVencimiento(item);
-    }
+    abrirDetalleVencimiento(vencimientoSeleccionado);
+    mostrarEdicionVencimiento();
+    return;
+  }
+
+  if (
+    !accion &&
+    (vencTabActual === "proximos" || vencTabActual === "vencidos")
+  ) {
+    abrirDetalleVencimiento(item);
+  }
 }
 
 async function alternarOfertaVencimiento(item) {
-    if (!item?.id) return;
-    try {
-        mostrarMensaje(tieneOferta(item) ? "Quitando oferta..." : "Marcando oferta...", "ok");
-        const nuevaOferta = !tieneOferta(item);
-        await actualizarOfertaVencimiento(item.id, nuevaOferta);
-        await cargarListadoVencimientos();
-        mostrarMensaje(nuevaOferta ? "Oferta marcada" : "Oferta quitada", "ok");
-        reproducirConfirmacion("guardado");
-        return true;
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-    }
+  if (!item?.id) return;
+  const vista = capturarVistaVencimientos(item.id);
+  try {
+    mostrarMensaje(
+      tieneOferta(item) ? "Quitando oferta..." : "Marcando oferta...",
+      "ok",
+    );
+    const nuevaOferta = !tieneOferta(item);
+    await actualizarOfertaVencimiento(item.id, nuevaOferta);
+    await cargarListadoVencimientos({
+      mantenerVista: true,
+      vista,
+      id: item.id,
+    });
+    mostrarMensaje(nuevaOferta ? "Oferta marcada" : "Oferta quitada", "ok");
+    reproducirConfirmacion("guardado");
+    return true;
+  } catch (error) {
+    restaurarVistaVencimientos(vista);
+    mostrarMensaje(error.message, "error");
+    reproducirConfirmacion("error");
+  }
 }
 
 function mostrarPanelModal(panel) {
-    [elementos.vencModalVista, elementos.vencModalEditar, elementos.vencModalEliminar].forEach(el => el?.classList.add("oculto"));
-    panel?.classList.remove("oculto");
+  [
+    elementos.vencModalVista,
+    elementos.vencModalEditar,
+    elementos.vencModalEliminar,
+  ].forEach((el) => el?.classList.add("oculto"));
+  panel?.classList.remove("oculto");
 }
 
 function abrirDetalleVencimiento(item) {
-    vencimientoSeleccionado = item;
-    const setText = (id, valor) => { const el = $(id); if (el) el.textContent = valor; };
-    setText("vencModalTitulo", item.articulo || "Sin descripción");
-    setText("vencModalCodigo", item.codigo || "-");
-    setText("vencModalFecha", formatearFecha(item.vencimiento));
-    setText("vencModalSalon", item.salon || 0);
-    setText("vencModalDeposito", item.deposito || 0);
-    setText("vencModalTotal", item.total || 0);
-    const estado = $("vencModalEstado");
-    if (estado) {
-        estado.textContent = textoEstadoVencimiento(item);
-        estado.className = `venc-modal-status ${claseEstadoVencimiento(item)}`;
-    }
-    const esVencido = bucketVencimiento(item) === "vencidos";
-    elementos.btnVencEditarAbrir?.classList.toggle("oculto", esVencido);
-    mostrarPanelModal(elementos.vencModalVista);
-    elementos.vencModal?.classList.remove("oculto");
-    elementos.vencModal?.setAttribute("aria-hidden", "false");
+  vencimientoSeleccionado = item;
+  const setText = (id, valor) => {
+    const el = $(id);
+    if (el) el.textContent = valor;
+  };
+  setText("vencModalTitulo", item.articulo || "Sin descripción");
+  setText("vencModalCodigo", item.codigo || "-");
+  setText("vencModalFecha", formatearFecha(item.vencimiento));
+  setText("vencModalSalon", item.salon || 0);
+  setText("vencModalDeposito", item.deposito || 0);
+  setText("vencModalTotal", item.total || 0);
+  const estado = $("vencModalEstado");
+  if (estado) {
+    estado.textContent = textoEstadoVencimiento(item);
+    estado.className = `venc-modal-status ${claseEstadoVencimiento(item)}`;
+  }
+  const esVencido = bucketVencimiento(item) === "vencidos";
+  elementos.btnVencEditarAbrir?.classList.toggle("oculto", esVencido);
+  mostrarPanelModal(elementos.vencModalVista);
+  elementos.vencModal?.classList.remove("oculto");
+  elementos.vencModal?.setAttribute("aria-hidden", "false");
 }
 
 function cerrarModalVencimiento() {
-    elementos.vencModal?.classList.add("oculto");
-    elementos.vencModal?.setAttribute("aria-hidden", "true");
-    vencimientoSeleccionado = null;
-    snapshotVencimientoEditando = null;
+  elementos.vencModal?.classList.add("oculto");
+  elementos.vencModal?.setAttribute("aria-hidden", "true");
+  vencimientoSeleccionado = null;
+  snapshotVencimientoEditando = null;
+}
+
+function limpiarErrorEdicionVencimiento() {
+  const error = $("vencEditError");
+  if (!error) return;
+  error.textContent = "";
+  error.classList.add("oculto");
+}
+
+function mostrarErrorEdicionVencimiento(mensaje, foco = null) {
+  const error = $("vencEditError");
+  if (error) {
+    error.textContent = mensaje;
+    error.classList.remove("oculto");
+  } else {
+    mostrarMensaje(mensaje, "error");
+  }
+  foco?.focus?.();
 }
 
 function mostrarEdicionVencimiento() {
-    const item = vencimientoSeleccionado;
-    if (!item) return;
-    const titulo = $("vencEditarTitulo");
-    if (titulo) titulo.textContent = item.articulo || "Editar registro";
-    if (elementos.vencEditFechaInput) elementos.vencEditFechaInput.value = item.vencimiento || "";
-    if (elementos.vencEditSalonInput) elementos.vencEditSalonInput.value = item.salon || 0;
-    if (elementos.vencEditDepositoInput) elementos.vencEditDepositoInput.value = item.deposito || 0;
-    snapshotVencimientoEditando = { vencimiento: item.vencimiento || "", salon: Number(item.salon)||0, deposito: Number(item.deposito)||0 };
-    actualizarTotalEdicionVencimiento();
-    mostrarPanelModal(elementos.vencModalEditar);
+  const item = vencimientoSeleccionado;
+  if (!item) return;
+  limpiarErrorEdicionVencimiento();
+  const titulo = $("vencEditarTitulo");
+  if (titulo) titulo.textContent = item.articulo || "Editar registro";
+  if (elementos.vencEditFechaInput)
+    elementos.vencEditFechaInput.value = item.vencimiento || "";
+  setRubroCustom(
+    "edicion",
+    ["Almacén", "Bebida", "Fiambrería"].includes(item.rubro) ? item.rubro : "",
+  );
+  if (elementos.vencEditSalonInput)
+    elementos.vencEditSalonInput.value = item.salon || 0;
+  if (elementos.vencEditDepositoInput)
+    elementos.vencEditDepositoInput.value = item.deposito || 0;
+  snapshotVencimientoEditando = {
+    vencimiento: item.vencimiento || "",
+    rubro: $("vencEditRubroInput")?.value || "",
+    salon: Number(item.salon) || 0,
+    deposito: Number(item.deposito) || 0,
+  };
+  actualizarTotalEdicionVencimiento();
+  mostrarPanelModal(elementos.vencModalEditar);
 }
 
 function actualizarTotalEdicionVencimiento() {
-    const salon = Number(elementos.vencEditSalonInput?.value) || 0;
-    const deposito = Number(elementos.vencEditDepositoInput?.value) || 0;
-    if (elementos.vencEditTotalTexto) elementos.vencEditTotalTexto.textContent = salon + deposito;
+  const salon = Number(elementos.vencEditSalonInput?.value) || 0;
+  const deposito = Number(elementos.vencEditDepositoInput?.value) || 0;
+  if (elementos.vencEditTotalTexto)
+    elementos.vencEditTotalTexto.textContent = salon + deposito;
 }
 
 async function guardarEdicionVencimiento() {
-    const item = vencimientoSeleccionado;
-    if (!item) return;
-    const vencimiento = elementos.vencEditFechaInput?.value;
-    const salon = Number(elementos.vencEditSalonInput?.value) || 0;
-    const deposito = Number(elementos.vencEditDepositoInput?.value) || 0;
-    if (!vencimiento) { mostrarMensaje("Cargá la fecha de vencimiento", "error"); return; }
-    if (vencimiento !== item.vencimiento && vencimiento < fechaHoyLocalIso()) { mostrarMensaje("La nueva fecha no puede ser anterior a hoy", "error"); elementos.vencEditFechaInput?.focus(); return; }
-    if (salon + deposito <= 0) { mostrarMensaje("Cargá salón o depósito", "error"); return; }
-    try {
-        elementos.btnVencGuardarEdicion.disabled = true;
-        mostrarMensaje("Actualizando registro...", "ok");
-        await actualizarVencimiento(item.id, { vencimiento, salon, deposito });
-        await cargarListadoVencimientos();
-        snapshotVencimientoEditando = null;
-        cerrarModalVencimiento();
-        mostrarMensaje("Registro actualizado", "ok");
-        reproducirConfirmacion("guardado");
-        return true;
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-        return false;
-    } finally {
-        if (elementos.btnVencGuardarEdicion) elementos.btnVencGuardarEdicion.disabled = false;
-    }
+  const item = vencimientoSeleccionado;
+  if (!item) return;
+  const vencimiento = elementos.vencEditFechaInput?.value;
+  const salon = Number(elementos.vencEditSalonInput?.value) || 0;
+  const deposito = Number(elementos.vencEditDepositoInput?.value) || 0;
+  const rubro = $("vencEditRubroInput")?.value || "";
+  if (!vencimiento) {
+    mostrarErrorEdicionVencimiento(
+      "Cargá la fecha de vencimiento",
+      elementos.vencEditFechaInput,
+    );
+    return;
+  }
+  if (!rubro) {
+    mostrarErrorEdicionVencimiento(
+      "Seleccioná el rubro",
+      $("vencEditRubroButton"),
+    );
+    return;
+  }
+  if (vencimiento !== item.vencimiento && vencimiento < fechaHoyLocalIso()) {
+    mostrarErrorEdicionVencimiento(
+      "La nueva fecha no puede ser anterior a hoy",
+      elementos.vencEditFechaInput,
+    );
+    return;
+  }
+  if (salon + deposito <= 0) {
+    mostrarErrorEdicionVencimiento("Cargá salón o depósito");
+    return;
+  }
+  const vista = capturarVistaVencimientos(item.id);
+  try {
+    elementos.btnVencGuardarEdicion.disabled = true;
+    mostrarMensaje("Actualizando registro...", "ok");
+    await actualizarVencimiento(item.id, {
+      vencimiento,
+      rubro,
+      salon,
+      deposito,
+    });
+    await cargarListadoVencimientos({
+      mantenerVista: true,
+      vista,
+      id: item.id,
+    });
+    snapshotVencimientoEditando = null;
+    cerrarModalVencimiento();
+    restaurarVistaVencimientos(vista);
+    mostrarMensaje("Registro actualizado", "ok");
+    reproducirConfirmacion("guardado");
+    return true;
+  } catch (error) {
+    mostrarErrorEdicionVencimiento(
+      error.message || "No se pudo actualizar el registro",
+    );
+    reproducirConfirmacion("error");
+    return false;
+  } finally {
+    if (elementos.btnVencGuardarEdicion)
+      elementos.btnVencGuardarEdicion.disabled = false;
+  }
 }
 
 function mostrarConfirmacionEliminarVencimiento() {
-    const item = vencimientoSeleccionado;
-    if (!item) return;
-    const texto = $("vencEliminarTexto");
-    if (texto) texto.textContent = `${item.articulo || "Producto"} · Vence ${formatearFecha(item.vencimiento)}`;
-    mostrarPanelModal(elementos.vencModalEliminar);
+  const item = vencimientoSeleccionado;
+  if (!item) return;
+  const texto = $("vencEliminarTexto");
+  if (texto)
+    texto.textContent = `${item.articulo || "Producto"} · Vence ${formatearFecha(item.vencimiento)}`;
+  mostrarPanelModal(elementos.vencModalEliminar);
 }
 
 async function confirmarEliminarVencimiento() {
-    const item = vencimientoSeleccionado;
-    if (!item) return;
-    try {
-        elementos.btnVencConfirmarEliminar.disabled = true;
-        mostrarMensaje("Eliminando registro...", "ok");
-        await eliminarVencimiento(item.id);
-        await cargarListadoVencimientos();
-        cerrarModalVencimiento();
-        mostrarMensaje("Registro eliminado", "ok");
-        reproducirConfirmacion("guardado");
-        return true;
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        reproducirConfirmacion("error");
-    } finally {
-        if (elementos.btnVencConfirmarEliminar) elementos.btnVencConfirmarEliminar.disabled = false;
-    }
+  const item = vencimientoSeleccionado;
+  if (!item) return;
+  try {
+    elementos.btnVencConfirmarEliminar.disabled = true;
+    mostrarMensaje("Eliminando registro...", "ok");
+    await eliminarVencimiento(item.id);
+    await cargarListadoVencimientos();
+    cerrarModalVencimiento();
+    mostrarMensaje("Registro eliminado", "ok");
+    reproducirConfirmacion("guardado");
+    return true;
+  } catch (error) {
+    mostrarMensaje(error.message, "error");
+    reproducirConfirmacion("error");
+  } finally {
+    if (elementos.btnVencConfirmarEliminar)
+      elementos.btnVencConfirmarEliminar.disabled = false;
+  }
 }
-
 
 function mostrarCargandoEn(contenedor, texto = "Cargando...") {
-    if (!contenedor) return;
-    contenedor.innerHTML = `<div class="app-loading"><span class="app-spinner" aria-hidden="true"></span><strong>${texto}</strong></div>`;
+  if (!contenedor) return;
+  contenedor.innerHTML = `<div class="app-loading"><span class="app-spinner" aria-hidden="true"></span><strong>${texto}</strong></div>`;
 }
 function hayCambiosProducto() {
-    if (!productoEditando || !snapshotProductoEditando) return false;
-    const valores = obtenerValoresEditor();
-    return Number(valores.salon)!==snapshotProductoEditando.salon || Number(valores.deposito)!==snapshotProductoEditando.deposito;
+  if (!productoEditando || !snapshotProductoEditando) return false;
+  const valores = obtenerValoresEditor();
+  return (
+    Number(valores.salon) !== snapshotProductoEditando.salon ||
+    Number(valores.deposito) !== snapshotProductoEditando.deposito
+  );
 }
 function estaEditandoVencimiento() {
-    return Boolean(snapshotVencimientoEditando && elementos.vencModalEditar && !elementos.vencModalEditar.classList.contains("oculto"));
+  return Boolean(
+    snapshotVencimientoEditando &&
+    elementos.vencModalEditar &&
+    !elementos.vencModalEditar.classList.contains("oculto"),
+  );
 }
 function hayCambiosVencimiento() {
-    if (!estaEditandoVencimiento()) return false;
-    return (elementos.vencEditFechaInput?.value||"")!==snapshotVencimientoEditando.vencimiento ||
-        (Number(elementos.vencEditSalonInput?.value)||0)!==snapshotVencimientoEditando.salon ||
-        (Number(elementos.vencEditDepositoInput?.value)||0)!==snapshotVencimientoEditando.deposito;
+  if (!estaEditandoVencimiento()) return false;
+  return (
+    (elementos.vencEditFechaInput?.value || "") !==
+      snapshotVencimientoEditando.vencimiento ||
+    ($("vencEditRubroInput")?.value || "") !==
+      snapshotVencimientoEditando.rubro ||
+    (Number(elementos.vencEditSalonInput?.value) || 0) !==
+      snapshotVencimientoEditando.salon ||
+    (Number(elementos.vencEditDepositoInput?.value) || 0) !==
+      snapshotVencimientoEditando.deposito
+  );
 }
-function abrirModalCambiosPendientes({ titulo, texto, guardar, descartar, continuar }) {
-    resolucionCambiosPendientes = { guardar, descartar, continuar };
-    $("cambiosPendientesTitulo").textContent = titulo;
-    $("cambiosPendientesTexto").textContent = texto;
-    $("cambiosPendientesModal")?.classList.remove("oculto");
-    document.body.classList.add("modal-abierto");
+function abrirModalCambiosPendientes({
+  titulo,
+  texto,
+  guardar,
+  descartar,
+  continuar,
+}) {
+  resolucionCambiosPendientes = { guardar, descartar, continuar };
+  $("cambiosPendientesTitulo").textContent = titulo;
+  $("cambiosPendientesTexto").textContent = texto;
+  $("cambiosPendientesModal")?.classList.remove("oculto");
+  document.body.classList.add("modal-abierto");
 }
 function cerrarModalCambiosPendientes() {
-    $("cambiosPendientesModal")?.classList.add("oculto");
-    document.body.classList.remove("modal-abierto");
+  $("cambiosPendientesModal")?.classList.add("oculto");
+  document.body.classList.remove("modal-abierto");
 }
 function resolverSalidaProducto(continuar) {
-    if (!productoEditando) { continuar?.(); return; }
-    if (!hayCambiosProducto()) { productoEditando=null; snapshotProductoEditando=null; continuar?.(); return; }
-    abrirModalCambiosPendientes({
-        titulo: "Cambios sin guardar",
-        texto: "¿Querés guardar los cambios del producto antes de salir?",
-        guardar: async () => { const ok=await guardarCorreccion(); if(ok) continuar?.(); },
-        descartar: () => { productoEditando=null; snapshotProductoEditando=null; continuar?.(); },
-        continuar: () => {}
-    });
+  if (!productoEditando) {
+    continuar?.();
+    return;
+  }
+  if (!hayCambiosProducto()) {
+    productoEditando = null;
+    snapshotProductoEditando = null;
+    continuar?.();
+    return;
+  }
+  abrirModalCambiosPendientes({
+    titulo: "Cambios sin guardar",
+    texto: "¿Querés guardar los cambios del producto antes de salir?",
+    guardar: async () => {
+      const ok = await guardarCorreccion();
+      if (ok) continuar?.();
+    },
+    descartar: () => {
+      productoEditando = null;
+      snapshotProductoEditando = null;
+      continuar?.();
+    },
+    continuar: () => {},
+  });
 }
 function resolverSalidaVencimiento(continuar) {
-    if (!estaEditandoVencimiento()) { continuar?.(); return; }
-    if (!hayCambiosVencimiento()) { snapshotVencimientoEditando=null; continuar?.(); return; }
-    abrirModalCambiosPendientes({
-        titulo: "Cambios sin guardar",
-        texto: "¿Querés guardar los cambios del vencimiento antes de salir?",
-        guardar: async () => { const ok=await guardarEdicionVencimiento(); if(ok) continuar?.(); },
-        descartar: () => { snapshotVencimientoEditando=null; cerrarModalVencimiento(); continuar?.(); },
-        continuar: () => {}
-    });
+  if (!estaEditandoVencimiento()) {
+    continuar?.();
+    return;
+  }
+  if (!hayCambiosVencimiento()) {
+    snapshotVencimientoEditando = null;
+    continuar?.();
+    return;
+  }
+  abrirModalCambiosPendientes({
+    titulo: "Cambios sin guardar",
+    texto: "¿Querés guardar los cambios del vencimiento antes de salir?",
+    guardar: async () => {
+      const ok = await guardarEdicionVencimiento();
+      if (ok) continuar?.();
+    },
+    descartar: () => {
+      snapshotVencimientoEditando = null;
+      cerrarModalVencimiento();
+      continuar?.();
+    },
+    continuar: () => {},
+  });
 }
 
 window.addEventListener("beforeunload", (event) => {
-    detenerScanner();
-    if (hayCambiosProducto() || hayCambiosVencimiento()) {
-        event.preventDefault();
-        event.returnValue = "";
-    }
+  detenerScanner();
+  if (hayCambiosProducto() || hayCambiosVencimiento()) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
 });
-
 
 document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) sincronizarEnSegundoPlano();
+  if (!document.hidden) sincronizarEnSegundoPlano();
 });
 
-window.addEventListener("autoservicio:sesion", () => abrirDestinoNotificacion().catch(() => {}));
+window.addEventListener("autoservicio:sesion", () =>
+  abrirDestinoNotificacion().catch(() => {}),
+);

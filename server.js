@@ -15,7 +15,10 @@ const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = "Stock";
 const PRODUCTOS_SHEET_NAME = "Productos";
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
-const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(
+  /\\n/g,
+  "\n",
+);
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const USER_SESSION_DAYS = 30;
@@ -35,31 +38,44 @@ const TAREAS_SHEET_NAME = "Tareas";
 const TAREAS_BANO_SHEET_NAME = "Tareas_Bano";
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
 const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
-const VAPID_SUBJECT = normalizarTexto(process.env.VAPID_SUBJECT || "mailto:administracion@autoserviciovictor.com");
-const NOTIFICATION_CRON_SECRET = normalizarTexto(process.env.NOTIFICATION_CRON_SECRET);
+const VAPID_SUBJECT = normalizarTexto(
+  process.env.VAPID_SUBJECT || "mailto:administracion@autoserviciovictor.com",
+);
+const NOTIFICATION_CRON_SECRET = normalizarTexto(
+  process.env.NOTIFICATION_CRON_SECRET,
+);
 const PUSH_CONFIGURED = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
-if (PUSH_CONFIGURED) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-const ADMIN_USERNAME = normalizarTexto(process.env.ADMIN_USERNAME || "admin").toLowerCase();
+if (PUSH_CONFIGURED)
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+const ADMIN_USERNAME = normalizarTexto(
+  process.env.ADMIN_USERNAME || "admin",
+).toLowerCase();
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
-  .map(origen => origen.trim())
+  .map((origen) => origen.trim())
   .filter(Boolean);
 
-app.use(cors({
-  origin(origen, callback) {
-    if (!origen || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origen)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Origen no permitido por CORS"));
-  }
-}));
+app.use(
+  cors({
+    origin(origen, callback) {
+      if (
+        !origen ||
+        ALLOWED_ORIGINS.length === 0 ||
+        ALLOWED_ORIGINS.includes(origen)
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("Origen no permitido por CORS"));
+    },
+  }),
+);
 app.use(express.json({ limit: "10mb" }));
 
 const auth = new google.auth.JWT(
   GOOGLE_CLIENT_EMAIL,
   null,
   GOOGLE_PRIVATE_KEY,
-  ["https://www.googleapis.com/auth/spreadsheets"]
+  ["https://www.googleapis.com/auth/spreadsheets"],
 );
 
 const sheets = google.sheets({ version: "v4", auth });
@@ -79,7 +95,7 @@ const CACHE_TTL = {
   calendarioHorarios: 15000,
   suscripcionesPush: 60000,
   clavesNotificaciones: 60000,
-  centroNotificaciones: 30000
+  centroNotificaciones: 30000,
 };
 
 async function leerConCache(clave, ttl, lector) {
@@ -107,7 +123,7 @@ async function leerConCache(clave, ttl, lector) {
 }
 
 function invalidarCache(...claves) {
-  claves.forEach(clave => cacheLecturas.delete(clave));
+  claves.forEach((clave) => cacheLecturas.delete(clave));
 }
 
 // Cola simple por recurso para soportar varios celulares sin pisar escrituras.
@@ -120,7 +136,9 @@ async function ejecutarEnCola(codigo, tarea) {
   const colaAnterior = colasPorCodigo.get(clave) || Promise.resolve();
 
   let liberar;
-  const colaActual = new Promise(resolve => { liberar = resolve; });
+  const colaActual = new Promise((resolve) => {
+    liberar = resolve;
+  });
   const colaEncadenada = colaAnterior.catch(() => {}).then(() => colaActual);
   colasPorCodigo.set(clave, colaEncadenada);
 
@@ -137,23 +155,26 @@ async function ejecutarEnCola(codigo, tarea) {
   }
 }
 
-
 function normalizarTexto(valor) {
   return String(valor ?? "").trim();
 }
 
 function expandirNotacionCientificaCodigo(texto) {
-  const coincidencia = String(texto).match(/^([+-]?)(\d+)(?:[.,](\d+))?[eE]([+-]?\d+)$/);
+  const coincidencia = String(texto).match(
+    /^([+-]?)(\d+)(?:[.,](\d+))?[eE]([+-]?\d+)$/,
+  );
   if (!coincidencia) return String(texto);
   const signo = coincidencia[1] === "-" ? "-" : "";
   const enteros = coincidencia[2];
   const decimales = coincidencia[3] || "";
   const exponente = Number(coincidencia[4]);
-  if (!Number.isInteger(exponente) || Math.abs(exponente) > 100) return String(texto);
+  if (!Number.isInteger(exponente) || Math.abs(exponente) > 100)
+    return String(texto);
   const digitos = enteros + decimales;
   const posicion = enteros.length + exponente;
   if (posicion <= 0) return signo + "0".repeat(-posicion) + digitos;
-  if (posicion >= digitos.length) return signo + digitos + "0".repeat(posicion - digitos.length);
+  if (posicion >= digitos.length)
+    return signo + digitos + "0".repeat(posicion - digitos.length);
   return signo + digitos.slice(0, posicion) + "." + digitos.slice(posicion);
 }
 
@@ -186,11 +207,15 @@ function numero(valor) {
 
 function numeroPrecio(valor) {
   if (valor === null || valor === undefined || valor === "") return null;
-  if (typeof valor === "number") return Number.isFinite(valor) && valor >= 0 ? valor : null;
+  if (typeof valor === "number")
+    return Number.isFinite(valor) && valor >= 0 ? valor : null;
   let texto = String(valor).trim().replace(/\s/g, "").replace(/\$/g, "");
   if (!texto) return null;
   if (texto.includes(",") && texto.includes(".")) {
-    texto = texto.lastIndexOf(",") > texto.lastIndexOf(".") ? texto.replace(/\./g, "").replace(",", ".") : texto.replace(/,/g, "");
+    texto =
+      texto.lastIndexOf(",") > texto.lastIndexOf(".")
+        ? texto.replace(/\./g, "").replace(",", ".")
+        : texto.replace(/,/g, "");
   } else if (texto.includes(",")) {
     texto = texto.replace(/\./g, "").replace(",", ".");
   }
@@ -213,9 +238,9 @@ function fechaArgentina(fecha = new Date()) {
     timeZone: TIME_ZONE,
     year: "numeric",
     month: "2-digit",
-    day: "2-digit"
+    day: "2-digit",
   }).formatToParts(fecha);
-  const obtener = tipo => partes.find(parte => parte.type === tipo)?.value;
+  const obtener = (tipo) => partes.find((parte) => parte.type === tipo)?.value;
   return `${obtener("year")}-${obtener("month")}-${obtener("day")}`;
 }
 
@@ -225,7 +250,9 @@ function diasDesdeHoyArgentina(fechaIso) {
   const hoy = fechaArgentina();
   const [hy, hm, hd] = hoy.split("-").map(Number);
   const [vy, vm, vd] = valor.split("-").map(Number);
-  return Math.round((Date.UTC(vy, vm - 1, vd) - Date.UTC(hy, hm - 1, hd)) / 86400000);
+  return Math.round(
+    (Date.UTC(vy, vm - 1, vd) - Date.UTC(hy, hm - 1, hd)) / 86400000,
+  );
 }
 
 function fechaNoAnteriorAHoy(fechaIso) {
@@ -242,11 +269,12 @@ function fechaHoraArgentinaIso(fecha = new Date()) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false
-  }).format(fecha).replace(" ", "T");
+    hour12: false,
+  })
+    .format(fecha)
+    .replace(" ", "T");
   return `${partes}-03:00`;
 }
-
 
 function base64Url(valor) {
   return Buffer.from(valor).toString("base64url");
@@ -255,7 +283,10 @@ function base64Url(valor) {
 function firmarTokenAdmin(payload) {
   if (!ADMIN_TOKEN_SECRET) return "";
   const cuerpo = base64Url(JSON.stringify(payload));
-  const firma = crypto.createHmac("sha256", ADMIN_TOKEN_SECRET).update(cuerpo).digest("base64url");
+  const firma = crypto
+    .createHmac("sha256", ADMIN_TOKEN_SECRET)
+    .update(cuerpo)
+    .digest("base64url");
   return `${cuerpo}.${firma}`;
 }
 
@@ -263,9 +294,18 @@ function verificarTokenAdmin(token) {
   try {
     if (!ADMIN_TOKEN_SECRET || !token || !token.includes(".")) return null;
     const [cuerpo, firma] = token.split(".");
-    const esperada = crypto.createHmac("sha256", ADMIN_TOKEN_SECRET).update(cuerpo).digest("base64url");
-    if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null;
-    const payload = JSON.parse(Buffer.from(cuerpo, "base64url").toString("utf8"));
+    const esperada = crypto
+      .createHmac("sha256", ADMIN_TOKEN_SECRET)
+      .update(cuerpo)
+      .digest("base64url");
+    if (
+      firma.length !== esperada.length ||
+      !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))
+    )
+      return null;
+    const payload = JSON.parse(
+      Buffer.from(cuerpo, "base64url").toString("utf8"),
+    );
     if (!payload.exp || Date.now() >= payload.exp) return null;
     return payload;
   } catch {
@@ -275,16 +315,21 @@ function verificarTokenAdmin(token) {
 
 function obtenerTokenAdmin(req) {
   const authorization = normalizarTexto(req.get("authorization"));
-  return authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
+  return authorization.toLowerCase().startsWith("bearer ")
+    ? authorization.slice(7).trim()
+    : "";
 }
 
 function requerirAdmin(req, res, next) {
   const sesion = verificarTokenAdmin(obtenerTokenAdmin(req));
-  if (!sesion) return res.status(401).json({ ok: false, mensaje: "Sesión de administrador inválida o vencida" });
+  if (!sesion)
+    return res.status(401).json({
+      ok: false,
+      mensaje: "Sesión de administrador inválida o vencida",
+    });
   req.admin = sesion;
   next();
 }
-
 
 function normalizarUsuario(valor) {
   return normalizarTexto(valor).toLowerCase().replace(/\s+/g, "");
@@ -301,7 +346,10 @@ function verificarPassword(password, guardado) {
     if (metodo !== "scrypt" || !salt || !hashHex) return false;
     const calculado = crypto.scryptSync(String(password), salt, 64);
     const esperado = Buffer.from(hashHex, "hex");
-    return calculado.length === esperado.length && crypto.timingSafeEqual(calculado, esperado);
+    return (
+      calculado.length === esperado.length &&
+      crypto.timingSafeEqual(calculado, esperado)
+    );
   } catch {
     return false;
   }
@@ -309,58 +357,128 @@ function verificarPassword(password, guardado) {
 
 let hojaUsuariosAsegurada = false;
 let promesaHojaUsuarios = null;
-const MODULOS_PERMITIDOS = ["inventario", "vencimientos", "anotar", "precios", "horarios", "tareas"];
-function normalizarRol(valor) { const rol = normalizarTexto(valor).toLowerCase(); return rol === "repositor" ? "personal" : (["administrador","administracion","supervisor","personal"].includes(rol) ? rol : "personal"); }
-function permisosPorDefecto() { return Object.fromEntries(MODULOS_PERMITIDOS.map(m => [m, true])); }
+const MODULOS_PERMITIDOS = [
+  "inventario",
+  "vencimientos",
+  "anotar",
+  "precios",
+  "horarios",
+  "tareas",
+];
+function normalizarRol(valor) {
+  const rol = normalizarTexto(valor).toLowerCase();
+  return rol === "repositor"
+    ? "personal"
+    : ["administrador", "administracion", "supervisor", "personal"].includes(
+          rol,
+        )
+      ? rol
+      : "personal";
+}
+function permisosPorDefecto() {
+  return Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, true]));
+}
 function normalizarPermisos(valor, rol = "personal") {
   if (rol === "administrador") return permisosPorDefecto();
   let entrada = valor;
-  if (typeof valor === "string" && valor.trim()) { try { entrada = JSON.parse(valor); } catch { entrada = {}; } }
-  if (!entrada || typeof entrada !== "object" || Array.isArray(entrada)) entrada = {};
-  return Object.fromEntries(MODULOS_PERMITIDOS.map(m => [m, entrada[m] !== false]));
+  if (typeof valor === "string" && valor.trim()) {
+    try {
+      entrada = JSON.parse(valor);
+    } catch {
+      entrada = {};
+    }
+  }
+  if (!entrada || typeof entrada !== "object" || Array.isArray(entrada))
+    entrada = {};
+  return Object.fromEntries(
+    MODULOS_PERMITIDOS.map((m) => [m, entrada[m] !== false]),
+  );
 }
-function serializarPermisos(permisos, rol) { return JSON.stringify(normalizarPermisos(permisos, rol)); }
+function serializarPermisos(permisos, rol) {
+  return JSON.stringify(normalizarPermisos(permisos, rol));
+}
 
 async function asegurarHojaUsuarios() {
   if (hojaUsuariosAsegurada) return;
   if (promesaHojaUsuarios) return promesaHojaUsuarios;
   promesaHojaUsuarios = (async () => {
     validarConfiguracion();
-    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-    const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === USUARIOS_SHEET_NAME);
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+    });
+    const existe = (meta.data.sheets || []).some(
+      (hoja) => hoja.properties?.title === USUARIOS_SHEET_NAME,
+    );
     if (!existe) {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
-        requestBody: { requests: [{ addSheet: { properties: { title: USUARIOS_SHEET_NAME } } }] }
+        requestBody: {
+          requests: [
+            { addSheet: { properties: { title: USUARIOS_SHEET_NAME } } },
+          ],
+        },
       });
     }
-    const encabezados = ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector", "Sectores a cargo"];
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A1:I2` });
+    const encabezados = [
+      "Usuario",
+      "Nombre",
+      "Password hash",
+      "Rol",
+      "Activo",
+      "Creado",
+      "Permisos módulos",
+      "Sector",
+      "Sectores a cargo",
+    ];
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${USUARIOS_SHEET_NAME}!A1:I2`,
+    });
     const filas = respuesta.data.values || [];
     if (!filas[0] || encabezados.some((titulo, i) => filas[0][i] !== titulo)) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USUARIOS_SHEET_NAME}!A1:I1`,
         valueInputOption: "USER_ENTERED",
-        requestBody: { values: [encabezados] }
+        requestBody: { values: [encabezados] },
       });
     }
-    const tieneUsuarios = filas.slice(1).some(f => normalizarUsuario(f[0]));
+    const tieneUsuarios = filas.slice(1).some((f) => normalizarUsuario(f[0]));
     if (!tieneUsuarios) {
-      if (!ADMIN_KEY) throw new Error("Configurá ADMIN_KEY en Render para crear el primer usuario administrador");
+      if (!ADMIN_KEY)
+        throw new Error(
+          "Configurá ADMIN_KEY en Render para crear el primer usuario administrador",
+        );
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USUARIOS_SHEET_NAME}!A:I`,
         valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
-        requestBody: { values: [[ADMIN_USERNAME, "Administrador", hashPassword(ADMIN_KEY), "administrador", "Sí", fechaHoraArgentinaIso(), serializarPermisos(null, "administrador"), "", ""]] }
+        requestBody: {
+          values: [
+            [
+              ADMIN_USERNAME,
+              "Administrador",
+              hashPassword(ADMIN_KEY),
+              "administrador",
+              "Sí",
+              fechaHoraArgentinaIso(),
+              serializarPermisos(null, "administrador"),
+              "",
+              "",
+            ],
+          ],
+        },
       });
     }
     hojaUsuariosAsegurada = true;
     invalidarCache("usuarios");
   })();
-  try { await promesaHojaUsuarios; }
-  finally { promesaHojaUsuarios = null; }
+  try {
+    await promesaHojaUsuarios;
+  } finally {
+    promesaHojaUsuarios = null;
+  }
 }
 
 function filaAUsuario(fila, index) {
@@ -374,36 +492,68 @@ function filaAUsuario(fila, index) {
     activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto),
     permisos: normalizarPermisos(fila[6], normalizarRol(fila[3])),
     sector: normalizarTexto(fila[7]),
-    sectores: [...new Set(normalizarTexto(fila[8]).split(",").map(x=>x.trim()).filter(Boolean))]
+    sectores: [
+      ...new Set(
+        normalizarTexto(fila[8])
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean),
+      ),
+    ],
   };
 }
 
 async function obtenerUsuarios() {
   await asegurarHojaUsuarios();
   return leerConCache("usuarios", CACHE_TTL.usuarios, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:I` });
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${USUARIOS_SHEET_NAME}!A:I`,
+    });
     const filas = respuesta.data.values || [];
-    return filas.slice(1).map(filaAUsuario).filter(u => u.usuario);
+    return filas
+      .slice(1)
+      .map(filaAUsuario)
+      .filter((u) => u.usuario);
   });
 }
 
 async function requerirSesion(req, res, next) {
   try {
     const sesion = verificarTokenAdmin(obtenerTokenAdmin(req));
-    if (!sesion?.usuario) return res.status(401).json({ ok: false, mensaje: "Iniciá sesión para continuar" });
+    if (!sesion?.usuario)
+      return res
+        .status(401)
+        .json({ ok: false, mensaje: "Iniciá sesión para continuar" });
     const usuarios = await obtenerUsuarios();
-    const usuario = usuarios.find(u => u.usuario === sesion.usuario);
-    if (!usuario || !usuario.activo) return res.status(401).json({ ok: false, mensaje: "Usuario inexistente o desactivado" });
-    req.usuario = { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos, sector: usuario.sector || "", sectores: usuario.sectores || [] };
+    const usuario = usuarios.find((u) => u.usuario === sesion.usuario);
+    if (!usuario || !usuario.activo)
+      return res
+        .status(401)
+        .json({ ok: false, mensaje: "Usuario inexistente o desactivado" });
+    req.usuario = {
+      usuario: usuario.usuario,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+      permisos: usuario.permisos,
+      sector: usuario.sector || "",
+      sectores: usuario.sectores || [],
+    };
     next();
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo validar la sesión" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo validar la sesión",
+    });
   }
 }
 
 async function requerirAdministrador(req, res, next) {
   await requerirSesion(req, res, () => {
-    if (req.usuario?.rol !== "administrador") return res.status(403).json({ ok: false, mensaje: "Acceso exclusivo para administradores" });
+    if (req.usuario?.rol !== "administrador")
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "Acceso exclusivo para administradores" });
     req.admin = req.usuario;
     next();
   });
@@ -411,7 +561,9 @@ async function requerirAdministrador(req, res, next) {
 
 function validarConfiguracion() {
   if (!SPREADSHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-    throw new Error("Faltan variables de entorno: SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY");
+    throw new Error(
+      "Faltan variables de entorno: SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY",
+    );
   }
 }
 
@@ -425,7 +577,7 @@ function filaAProducto(fila, index) {
     articulo: normalizarTexto(fila[1]),
     stock: salon + deposito,
     salon,
-    deposito
+    deposito,
   };
 }
 
@@ -434,18 +586,21 @@ async function obtenerProductos() {
   return leerConCache("productos", CACHE_TTL.productos, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:E`
+      range: `${SHEET_NAME}!A:E`,
     });
     const filas = respuesta.data.values || [];
     if (filas.length <= 1) return [];
-    return filas.slice(1).map(filaAProducto).filter(producto => producto.codigo || producto.articulo);
+    return filas
+      .slice(1)
+      .map(filaAProducto)
+      .filter((producto) => producto.codigo || producto.articulo);
   });
 }
 
 async function buscarProductoPorCodigo(codigoBuscado) {
   const productos = await obtenerProductos();
   const codigo = normalizarCodigo(codigoBuscado);
-  return productos.find(producto => producto.codigo === codigo) || null;
+  return productos.find((producto) => producto.codigo === codigo) || null;
 }
 
 async function actualizarProducto(producto) {
@@ -457,7 +612,7 @@ async function actualizarProducto(producto) {
     ...producto,
     stock,
     salon,
-    deposito
+    deposito,
   };
 
   await sheets.spreadsheets.values.update({
@@ -465,68 +620,107 @@ async function actualizarProducto(producto) {
     range: `${SHEET_NAME}!A${producto.filaGoogle}:E${producto.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[
-        productoActualizado.codigo,
-        productoActualizado.articulo,
-        productoActualizado.stock,
-        productoActualizado.salon,
-        productoActualizado.deposito
-      ]]
-    }
+      values: [
+        [
+          productoActualizado.codigo,
+          productoActualizado.articulo,
+          productoActualizado.stock,
+          productoActualizado.salon,
+          productoActualizado.deposito,
+        ],
+      ],
+    },
   });
 
   return productoActualizado;
 }
-
 
 function filaAProductoMaestro(fila, index) {
   return {
     filaGoogle: index + 2,
     codigo: normalizarTexto(fila[0]),
     articulo: normalizarTexto(fila[1]),
-    precio: numeroPrecio(fila[2])
+    precio: numeroPrecio(fila[2]),
   };
 }
 
 async function obtenerProductosMaestros() {
   validarConfiguracion();
-  return leerConCache("productosMaestros", CACHE_TTL.productosMaestros, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PRODUCTOS_SHEET_NAME}!A:C`
-    });
-    const filas = respuesta.data.values || [];
-    if (filas.length <= 1) return [];
-    return filas.slice(1).map(filaAProductoMaestro).filter(producto => producto.codigo || producto.articulo);
-  });
+  return leerConCache(
+    "productosMaestros",
+    CACHE_TTL.productosMaestros,
+    async () => {
+      const respuesta = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+      });
+      const filas = respuesta.data.values || [];
+      if (filas.length <= 1) return [];
+      return filas
+        .slice(1)
+        .map(filaAProductoMaestro)
+        .filter((producto) => producto.codigo || producto.articulo);
+    },
+  );
 }
 
 async function buscarProductoMaestroPorCodigo(codigoBuscado) {
   const productos = await obtenerProductosMaestros();
   const codigo = normalizarCodigo(codigoBuscado);
-  return productos.find(producto => producto.codigo === codigo) || null;
+  return productos.find((producto) => producto.codigo === codigo) || null;
 }
-
-
 
 app.post("/auth/login", async (req, res) => {
   try {
     const usuarioBuscado = normalizarUsuario(req.body?.usuario);
     const password = String(req.body?.password ?? "");
-    if (!usuarioBuscado || !password) return res.status(400).json({ ok: false, mensaje: "Ingresá usuario y contraseña" });
+    if (!usuarioBuscado || !password)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Ingresá usuario y contraseña" });
     const usuarios = await obtenerUsuarios();
-    const usuario = usuarios.find(item => item.usuario === usuarioBuscado);
-    if (!usuario || !usuario.activo || !verificarPassword(password, usuario.passwordHash)) {
-      return res.status(401).json({ ok: false, mensaje: "Usuario o contraseña incorrectos" });
+    const usuario = usuarios.find((item) => item.usuario === usuarioBuscado);
+    if (
+      !usuario ||
+      !usuario.activo ||
+      !verificarPassword(password, usuario.passwordHash)
+    ) {
+      return res
+        .status(401)
+        .json({ ok: false, mensaje: "Usuario o contraseña incorrectos" });
     }
-    if (!ADMIN_TOKEN_SECRET) return res.status(503).json({ ok: false, mensaje: "Configurá ADMIN_TOKEN_SECRET en Render" });
+    if (!ADMIN_TOKEN_SECRET)
+      return res
+        .status(503)
+        .json({ ok: false, mensaje: "Configurá ADMIN_TOKEN_SECRET en Render" });
     const ahora = Date.now();
     const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
-    const token = firmarTokenAdmin({ usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, iat: ahora, exp });
-    res.json({ ok: true, token, usuario: { usuario: usuario.usuario, nombre: usuario.nombre, rol: usuario.rol, permisos: usuario.permisos, sector: usuario.sector || "", sectores: usuario.sectores || [] }, expira: new Date(exp).toISOString() });
+    const token = firmarTokenAdmin({
+      usuario: usuario.usuario,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+      iat: ahora,
+      exp,
+    });
+    res.json({
+      ok: true,
+      token,
+      usuario: {
+        usuario: usuario.usuario,
+        nombre: usuario.nombre,
+        rol: usuario.rol,
+        permisos: usuario.permisos,
+        sector: usuario.sector || "",
+        sectores: usuario.sectores || [],
+      },
+      expira: new Date(exp).toISOString(),
+    });
   } catch (error) {
     console.error("Error en /auth/login:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo iniciar sesión" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo iniciar sesión",
+    });
   }
 });
 
@@ -544,11 +738,12 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
   try {
     // El panel general cuenta el catálogo maestro de la hoja Productos.
     // La hoja Stock queda reservada exclusivamente para el módulo Inventario.
-    const [productosCatalogo, productosInventario, vencimientos] = await Promise.all([
-      obtenerProductosMaestros(),
-      obtenerProductos(),
-      obtenerVencimientos()
-    ]);
+    const [productosCatalogo, productosInventario, vencimientos] =
+      await Promise.all([
+        obtenerProductosMaestros(),
+        obtenerProductos(),
+        obtenerVencimientos(),
+      ]);
     res.json({
       ok: true,
       version: APP_VERSION,
@@ -556,37 +751,134 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
       productosCatalogo: productosCatalogo.length,
       productosInventario: productosInventario.length,
       vencimientos: vencimientos.length,
-      servidor: "conectado"
+      servidor: "conectado",
     });
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el panel" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo cargar el panel",
+    });
   }
 });
 
-
-let hojaSectoresAsegurada=false;
-async function asegurarHojaSectores(){
- if(hojaSectoresAsegurada)return; validarConfiguracion(); const meta=await sheets.spreadsheets.get({spreadsheetId:SPREADSHEET_ID});
- if(!(meta.data.sheets||[]).some(h=>h.properties?.title===SECTORES_SHEET_NAME)) await sheets.spreadsheets.batchUpdate({spreadsheetId:SPREADSHEET_ID,requestBody:{requests:[{addSheet:{properties:{title:SECTORES_SHEET_NAME}}}]}});
- const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A1:E2`}); const f=r.data.values||[]; const h=["ID","Nombre","Color","Supervisor","Activo"];
- if(!f[0]||h.some((x,i)=>f[0][i]!==x)) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A1:E1`,valueInputOption:"USER_ENTERED",requestBody:{values:[h]}});
- if(!f.slice(1).some(x=>x[0])){const base=[["caja","Caja","#2563eb","","Sí"],["deposito","Depósito","#f59e0b","","Sí"],["verduleria","Verdulería","#16a34a","","Sí"],["fiambreria","Fiambrería","#db2777","","Sí"],["carniceria","Carnicería","#dc2626","","Sí"],["panaderia","Panadería","#a16207","","Sí"],["administracion","Administración","#6b7280","","Sí"]];await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A:E`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:base}})} hojaSectoresAsegurada=true;
+let hojaSectoresAsegurada = false;
+async function asegurarHojaSectores() {
+  if (hojaSectoresAsegurada) return;
+  validarConfiguracion();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  if (
+    !(meta.data.sheets || []).some(
+      (h) => h.properties?.title === SECTORES_SHEET_NAME,
+    )
+  )
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          { addSheet: { properties: { title: SECTORES_SHEET_NAME } } },
+        ],
+      },
+    });
+  const r = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SECTORES_SHEET_NAME}!A1:E2`,
+  });
+  const f = r.data.values || [];
+  const h = ["ID", "Nombre", "Color", "Supervisor", "Activo"];
+  if (!f[0] || h.some((x, i) => f[0][i] !== x))
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SECTORES_SHEET_NAME}!A1:E1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [h] },
+    });
+  if (!f.slice(1).some((x) => x[0])) {
+    const base = [
+      ["caja", "Caja", "#2563eb", "", "Sí"],
+      ["deposito", "Depósito", "#f59e0b", "", "Sí"],
+      ["verduleria", "Verdulería", "#16a34a", "", "Sí"],
+      ["fiambreria", "Fiambrería", "#db2777", "", "Sí"],
+      ["carniceria", "Carnicería", "#dc2626", "", "Sí"],
+      ["panaderia", "Panadería", "#a16207", "", "Sí"],
+      ["administracion", "Administración", "#6b7280", "", "Sí"],
+    ];
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SECTORES_SHEET_NAME}!A:E`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: base },
+    });
+  }
+  hojaSectoresAsegurada = true;
 }
-function idSector(nombre){return normalizarTexto(nombre).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)}
-async function obtenerSectores(){return leerConCache("sectores",CACHE_TTL.sectores,async()=>{await asegurarHojaSectores();const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A:E`});const usuarios=await obtenerUsuarios();return (r.data.values||[]).slice(1).map((f,i)=>({filaGoogle:i+2,id:normalizarTexto(f[0]),nombre:normalizarTexto(f[1]),color:/^#[0-9a-f]{6}$/i.test(f[2]||"")?f[2]:"#b72e35",supervisor:normalizarUsuario(f[3]),supervisorNombre:usuarios.find(u=>u.usuario===normalizarUsuario(f[3]))?.nombre||"",activo:["si","sí","true","1","activo"].includes(normalizarTexto(f[4]).toLowerCase())})).filter(s=>s.id)});}
+function idSector(nombre) {
+  return normalizarTexto(nombre)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+}
+async function obtenerSectores() {
+  return leerConCache("sectores", CACHE_TTL.sectores, async () => {
+    await asegurarHojaSectores();
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SECTORES_SHEET_NAME}!A:E`,
+    });
+    const usuarios = await obtenerUsuarios();
+    return (r.data.values || [])
+      .slice(1)
+      .map((f, i) => ({
+        filaGoogle: i + 2,
+        id: normalizarTexto(f[0]),
+        nombre: normalizarTexto(f[1]),
+        color: /^#[0-9a-f]{6}$/i.test(f[2] || "") ? f[2] : "#b72e35",
+        supervisor: normalizarUsuario(f[3]),
+        supervisorNombre:
+          usuarios.find((u) => u.usuario === normalizarUsuario(f[3]))?.nombre ||
+          "",
+        activo: ["si", "sí", "true", "1", "activo"].includes(
+          normalizarTexto(f[4]).toLowerCase(),
+        ),
+      }))
+      .filter((s) => s.id);
+  });
+}
 function usuarioPuedeVerHorarios(usuario) {
-  return usuario?.rol === "administrador" || usuario?.permisos?.horarios !== false;
+  return (
+    usuario?.rol === "administrador" || usuario?.permisos?.horarios !== false
+  );
 }
-function sectoresACargo(usuario){ return Array.isArray(usuario?.sectores) ? usuario.sectores : []; }
-function rolGestionGlobal(usuario) { return ["administrador","administracion"].includes(usuario?.rol); }
-function rolGestionSector(usuario) { return ["administrador","administracion","supervisor"].includes(usuario?.rol); }
+function sectoresACargo(usuario) {
+  return Array.isArray(usuario?.sectores) ? usuario.sectores : [];
+}
+function rolGestionGlobal(usuario) {
+  return ["administrador", "administracion"].includes(usuario?.rol);
+}
+function rolGestionSector(usuario) {
+  return ["administrador", "administracion", "supervisor"].includes(
+    usuario?.rol,
+  );
+}
 async function sectoresSupervisorPermitidos(usuario) {
-  const ids = new Set([usuario?.sector, ...sectoresACargo(usuario)].map(normalizarTexto).filter(Boolean));
+  const ids = new Set(
+    [usuario?.sector, ...sectoresACargo(usuario)]
+      .map(normalizarTexto)
+      .filter(Boolean),
+  );
   if (usuario?.rol === "supervisor") {
     const sectores = await obtenerSectores();
     sectores
-      .filter(s => s.activo && normalizarUsuario(s.supervisor) === normalizarUsuario(usuario?.usuario))
-      .forEach(s => ids.add(s.id));
+      .filter(
+        (s) =>
+          s.activo &&
+          normalizarUsuario(s.supervisor) ===
+            normalizarUsuario(usuario?.usuario),
+      )
+      .forEach((s) => ids.add(s.id));
   }
   return ids;
 }
@@ -598,31 +890,52 @@ async function puedeAccederSectorHorarios(usuario, sectorId) {
   // limitada a los sectores que tiene formalmente a cargo.
   if (usuario?.rol === "supervisor") return true;
   // Personal puede consultar su sector y Administración en modo solo lectura.
-  return sector === "administracion" || (Boolean(usuario?.sector) && normalizarTexto(usuario.sector) === sector);
+  return (
+    sector === "administracion" ||
+    (Boolean(usuario?.sector) && normalizarTexto(usuario.sector) === sector)
+  );
 }
 
 function empleadosHorarioDelSector(sectorId, usuarios, sectores) {
   const sector = normalizarTexto(sectorId);
-  const sec = sectores.find(s => s.id === sector && s.activo);
+  const sec = sectores.find((s) => s.id === sector && s.activo);
   if (!sec) return [];
-  const lista = usuarios.filter(u => u.activo && (
-    u.sector === sector ||
-    normalizarUsuario(u.usuario) === normalizarUsuario(sec.supervisor) ||
-    (sector === "administracion" && u.rol === "supervisor")
-  ));
-  return lista.filter((u, i, arr) => arr.findIndex(x => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario)) === i);
+  const lista = usuarios.filter(
+    (u) =>
+      u.activo &&
+      (u.sector === sector ||
+        normalizarUsuario(u.usuario) === normalizarUsuario(sec.supervisor) ||
+        (sector === "administracion" && u.rol === "supervisor")),
+  );
+  return lista.filter(
+    (u, i, arr) =>
+      arr.findIndex(
+        (x) => normalizarUsuario(x.usuario) === normalizarUsuario(u.usuario),
+      ) === i,
+  );
 }
 
 function sectoresHorarioSupervisor(usuarioSupervisor, sectores) {
-  const ids = new Set(["administracion", normalizarTexto(usuarioSupervisor?.sector)].filter(Boolean));
-  for (const id of Array.isArray(usuarioSupervisor?.sectores) ? usuarioSupervisor.sectores : []) {
+  const ids = new Set(
+    ["administracion", normalizarTexto(usuarioSupervisor?.sector)].filter(
+      Boolean,
+    ),
+  );
+  for (const id of Array.isArray(usuarioSupervisor?.sectores)
+    ? usuarioSupervisor.sectores
+    : []) {
     const normalizado = normalizarTexto(id);
     if (normalizado) ids.add(normalizado);
   }
   sectores
-    .filter(s => s.activo && normalizarUsuario(s.supervisor) === normalizarUsuario(usuarioSupervisor?.usuario))
-    .forEach(s => ids.add(s.id));
-  return [...ids].filter(id => sectores.some(s => s.activo && s.id === id));
+    .filter(
+      (s) =>
+        s.activo &&
+        normalizarUsuario(s.supervisor) ===
+          normalizarUsuario(usuarioSupervisor?.usuario),
+    )
+    .forEach((s) => ids.add(s.id));
+  return [...ids].filter((id) => sectores.some((s) => s.activo && s.id === id));
 }
 async function puedeModificarSectorHorarios(usuario, sectorId) {
   const sector = normalizarTexto(sectorId);
@@ -632,7 +945,11 @@ async function puedeModificarSectorHorarios(usuario, sectorId) {
 }
 async function requerirAccesoHorarios(req, res, next) {
   await requerirSesion(req, res, () => {
-    if (!usuarioPuedeVerHorarios(req.usuario)) return res.status(403).json({ ok:false, mensaje:"No tenés permiso para acceder a Horarios" });
+    if (!usuarioPuedeVerHorarios(req.usuario))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para acceder a Horarios",
+      });
     next();
   });
 }
@@ -642,23 +959,133 @@ async function asegurarHojasHorarios() {
   if (hojasHorariosAseguradas) return;
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const titulos = new Set((meta.data.sheets || []).map(h => h.properties?.title));
+  const titulos = new Set(
+    (meta.data.sheets || []).map((h) => h.properties?.title),
+  );
   const requests = [];
-  if (!titulos.has(CALENDARIO_HORARIOS_SHEET_NAME)) requests.push({ addSheet:{ properties:{ title:CALENDARIO_HORARIOS_SHEET_NAME } } });
-  if (!titulos.has(TURNOS_HORARIOS_SHEET_NAME)) requests.push({ addSheet:{ properties:{ title:TURNOS_HORARIOS_SHEET_NAME } } });
-  if (!titulos.has(DETALLES_HORARIOS_SHEET_NAME)) requests.push({ addSheet:{ properties:{ title:DETALLES_HORARIOS_SHEET_NAME } } });
-  if (!titulos.has(REEMPLAZOS_HORARIOS_SHEET_NAME)) requests.push({ addSheet:{ properties:{ title:REEMPLAZOS_HORARIOS_SHEET_NAME } } });
-  if (!titulos.has(ORDEN_HORARIOS_SHEET_NAME)) requests.push({ addSheet:{ properties:{ title:ORDEN_HORARIOS_SHEET_NAME } } });
-  if (requests.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId:SPREADSHEET_ID, requestBody:{ requests } });
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A1:H1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Mes","Empleado","Día","Turno","Actualizado","Usuario","Nombre"]] } });
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A1:J1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","ID","Inicio","Fin","Color","Activo","Actualizado","Tipo","Inicio 2","Fin 2"]] } });
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${DETALLES_HORARIOS_SHEET_NAME}!A1:I1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Mes","Empleado","Día","Tipo","Motivo","Observación","Actualizado","Usuario"]] } });
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${REEMPLAZOS_HORARIOS_SHEET_NAME}!A1:I1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Mes","Empleado original","Reemplazante","Desde","Hasta","Observación","Actualizado","Usuario"]] } });
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${ORDEN_HORARIOS_SHEET_NAME}!A1:D1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[["Sector","Empleado","Orden","Actualizado"]] } });
+  if (!titulos.has(CALENDARIO_HORARIOS_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: CALENDARIO_HORARIOS_SHEET_NAME } },
+    });
+  if (!titulos.has(TURNOS_HORARIOS_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: TURNOS_HORARIOS_SHEET_NAME } },
+    });
+  if (!titulos.has(DETALLES_HORARIOS_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: DETALLES_HORARIOS_SHEET_NAME } },
+    });
+  if (!titulos.has(REEMPLAZOS_HORARIOS_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: REEMPLAZOS_HORARIOS_SHEET_NAME } },
+    });
+  if (!titulos.has(ORDEN_HORARIOS_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: ORDEN_HORARIOS_SHEET_NAME } },
+    });
+  if (requests.length)
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests },
+    });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A1:H1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [
+        [
+          "Sector",
+          "Mes",
+          "Empleado",
+          "Día",
+          "Turno",
+          "Actualizado",
+          "Usuario",
+          "Nombre",
+        ],
+      ],
+    },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TURNOS_HORARIOS_SHEET_NAME}!A1:J1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [
+        [
+          "Sector",
+          "ID",
+          "Inicio",
+          "Fin",
+          "Color",
+          "Activo",
+          "Actualizado",
+          "Tipo",
+          "Inicio 2",
+          "Fin 2",
+        ],
+      ],
+    },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${DETALLES_HORARIOS_SHEET_NAME}!A1:I1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [
+        [
+          "Sector",
+          "Mes",
+          "Empleado",
+          "Día",
+          "Tipo",
+          "Motivo",
+          "Observación",
+          "Actualizado",
+          "Usuario",
+        ],
+      ],
+    },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${REEMPLAZOS_HORARIOS_SHEET_NAME}!A1:I1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [
+        [
+          "Sector",
+          "Mes",
+          "Empleado original",
+          "Reemplazante",
+          "Desde",
+          "Hasta",
+          "Observación",
+          "Actualizado",
+          "Usuario",
+        ],
+      ],
+    },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ORDEN_HORARIOS_SHEET_NAME}!A1:D1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [["Sector", "Empleado", "Orden", "Actualizado"]] },
+  });
   hojasHorariosAseguradas = true;
 }
-function mesHorariosValido(valor) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(normalizarTexto(valor)); }
-function turnoHorarioValido(valor) { return ["franco","vacaciones","ausente","licencia"].includes(valor) || /^\d{1,2}(?::\d{2})?\s*-\s*\d{1,2}(?::\d{2})?$/.test(valor) || /^[a-z0-9_-]{3,80}$/i.test(valor); }
+function mesHorariosValido(valor) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(normalizarTexto(valor));
+}
+function turnoHorarioValido(valor) {
+  return (
+    ["franco", "vacaciones", "ausente", "licencia"].includes(valor) ||
+    /^\d{1,2}(?::\d{2})?\s*-\s*\d{1,2}(?::\d{2})?$/.test(valor) ||
+    /^[a-z0-9_-]{3,80}$/i.test(valor)
+  );
+}
 function normalizarHoraHorario(valor) {
   const texto = normalizarTexto(valor).toUpperCase();
   const m = texto.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*([AP]M))?$/);
@@ -668,264 +1095,663 @@ function normalizarHoraHorario(valor) {
   if (m[3] === "PM" && hora < 12) hora += 12;
   if (m[3] === "AM" && hora === 12) hora = 0;
   if (hora < 0 || hora > 23 || minutos < 0 || minutos > 59) return "";
-  return `${String(hora).padStart(2,"0")}:${String(minutos).padStart(2,"0")}`;
+  return `${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
 }
 async function obtenerTurnosSector(sector) {
   await asegurarHojasHorarios();
-  return leerConCache(`turnosHorarios:${sector}`, CACHE_TTL.turnosHorarios, async () => {
-    const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TURNOS_HORARIOS_SHEET_NAME}!A:J` });
-    return (r.data.values || []).slice(1)
-      .filter(f => normalizarTexto(f[0]) === sector && !["no","false","0","inactivo"].includes(normalizarTexto(f[5]).toLowerCase()))
-      .map(f => ({
-        id:normalizarTexto(f[1]),
-        inicio:normalizarHoraHorario(f[2]),
-        fin:normalizarHoraHorario(f[3]),
-        color:/^#[0-9a-f]{6}$/i.test(f[4]||"") ? f[4] : "#64748b",
-        tipo:normalizarTexto(f[7]).toLowerCase()==='cortado'?'cortado':'continuo',
-        inicio2:normalizarHoraHorario(f[8]), fin2:normalizarHoraHorario(f[9])
-      }))
-      .filter(t => t.id && t.inicio && t.fin && (t.tipo!=='cortado' || (t.inicio2 && t.fin2)));
-  });
+  return leerConCache(
+    `turnosHorarios:${sector}`,
+    CACHE_TTL.turnosHorarios,
+    async () => {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J`,
+      });
+      return (r.data.values || [])
+        .slice(1)
+        .filter(
+          (f) =>
+            normalizarTexto(f[0]) === sector &&
+            !["no", "false", "0", "inactivo"].includes(
+              normalizarTexto(f[5]).toLowerCase(),
+            ),
+        )
+        .map((f) => ({
+          id: normalizarTexto(f[1]),
+          inicio: normalizarHoraHorario(f[2]),
+          fin: normalizarHoraHorario(f[3]),
+          color: /^#[0-9a-f]{6}$/i.test(f[4] || "") ? f[4] : "#64748b",
+          tipo:
+            normalizarTexto(f[7]).toLowerCase() === "cortado"
+              ? "cortado"
+              : "continuo",
+          inicio2: normalizarHoraHorario(f[8]),
+          fin2: normalizarHoraHorario(f[9]),
+        }))
+        .filter(
+          (t) =>
+            t.id &&
+            t.inicio &&
+            t.fin &&
+            (t.tipo !== "cortado" || (t.inicio2 && t.fin2)),
+        );
+    },
+  );
 }
 async function registrarAuditoriaHorario(usuario, sectorNombre, mes, accion) {
   await asegurarHojaAuditoriaHorarios();
-  await sheets.spreadsheets.values.append({ spreadsheetId:SPREADSHEET_ID, range:`${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`, valueInputOption:"USER_ENTERED", insertDataOption:"INSERT_ROWS", requestBody:{ values:[[fechaHoraArgentinaIso(), usuario.usuario, usuario.nombre, usuario.rol, sectorNombre, mes, accion]] } });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: {
+      values: [
+        [
+          fechaHoraArgentinaIso(),
+          usuario.usuario,
+          usuario.nombre,
+          usuario.rol,
+          sectorNombre,
+          mes,
+          accion,
+        ],
+      ],
+    },
+  });
 }
 
-app.get("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
+app.get("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.query.sector);
-    if (!(await puedeAccederSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
-    res.json({ok:true, sector, turnos:await obtenerTurnosSector(sector)});
-  } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudieron cargar los horarios del sector"}); }
+    if (!(await puedeAccederSectorHorarios(req.usuario, sector)))
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés acceso a ese sector" });
+    res.json({ ok: true, sector, turnos: await obtenerTurnosSector(sector) });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudieron cargar los horarios del sector",
+    });
+  }
 });
-app.put("/horarios/turnos", requerirAccesoHorarios, async (req,res) => {
+app.put("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
-    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar los horarios de este sector"});
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para configurar los horarios de este sector",
+      });
     const sectores = await obtenerSectores();
-    if (!sectores.some(s => s.id === sector)) return res.status(404).json({ok:false,mensaje:"Sector inexistente"});
-    const turnos = Array.isArray(req.body?.turnos) ? req.body.turnos.map(t => ({ id:normalizarTexto(t.id), tipo:normalizarTexto(t.tipo).toLowerCase()==='cortado'?'cortado':'continuo', inicio:normalizarTexto(t.inicio).slice(0,5), fin:normalizarTexto(t.fin).slice(0,5), inicio2:normalizarTexto(t.inicio2).slice(0,5), fin2:normalizarTexto(t.fin2).slice(0,5), color:/^#[0-9a-f]{6}$/i.test(t.color||"")?t.color:"#64748b" })) : [];
-    if (!turnos.length || turnos.some(t => !t.id || !/^\d{2}:\d{2}$/.test(t.inicio) || !/^\d{2}:\d{2}$/.test(t.fin) || (t.tipo==='cortado' && (!/^\d{2}:\d{2}$/.test(t.inicio2) || !/^\d{2}:\d{2}$/.test(t.fin2))))) return res.status(400).json({ok:false,mensaje:"Configuración de horarios inválida"});
+    if (!sectores.some((s) => s.id === sector))
+      return res.status(404).json({ ok: false, mensaje: "Sector inexistente" });
+    const turnos = Array.isArray(req.body?.turnos)
+      ? req.body.turnos.map((t) => ({
+          id: normalizarTexto(t.id),
+          tipo:
+            normalizarTexto(t.tipo).toLowerCase() === "cortado"
+              ? "cortado"
+              : "continuo",
+          inicio: normalizarTexto(t.inicio).slice(0, 5),
+          fin: normalizarTexto(t.fin).slice(0, 5),
+          inicio2: normalizarTexto(t.inicio2).slice(0, 5),
+          fin2: normalizarTexto(t.fin2).slice(0, 5),
+          color: /^#[0-9a-f]{6}$/i.test(t.color || "") ? t.color : "#64748b",
+        }))
+      : [];
+    if (
+      !turnos.length ||
+      turnos.some(
+        (t) =>
+          !t.id ||
+          !/^\d{2}:\d{2}$/.test(t.inicio) ||
+          !/^\d{2}:\d{2}$/.test(t.fin) ||
+          (t.tipo === "cortado" &&
+            (!/^\d{2}:\d{2}$/.test(t.inicio2) ||
+              !/^\d{2}:\d{2}$/.test(t.fin2))),
+      )
+    )
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Configuración de horarios inválida" });
     await asegurarHojasHorarios();
     await ejecutarEnCola("turnos-horarios", async () => {
-      const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A:J`});
-      const otras=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])!==sector);
-      const ahora=fechaHoraArgentinaIso();
-      const nuevas=turnos.map(t=>[sector,t.id,t.inicio,t.fin,t.color,"Sí",ahora,t.tipo,t.inicio2||"",t.fin2||""]);
-      const todas=[...otras,...nuevas], filasPrevias=Math.max(0,(r.data.values||[]).length-1);
-      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A2:J${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
-      if(filasPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TURNOS_HORARIOS_SHEET_NAME}!A${todas.length+2}:J${filasPrevias+1}`});
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J`,
+      });
+      const otras = (r.data.values || [])
+        .slice(1)
+        .filter((f) => normalizarTexto(f[0]) !== sector);
+      const ahora = fechaHoraArgentinaIso();
+      const nuevas = turnos.map((t) => [
+        sector,
+        t.id,
+        t.inicio,
+        t.fin,
+        t.color,
+        "Sí",
+        ahora,
+        t.tipo,
+        t.inicio2 || "",
+        t.fin2 || "",
+      ]);
+      const todas = [...otras, ...nuevas],
+        filasPrevias = Math.max(0, (r.data.values || []).length - 1);
+      if (todas.length)
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${TURNOS_HORARIOS_SHEET_NAME}!A2:J${todas.length + 1}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: todas },
+        });
+      if (filasPrevias > todas.length)
+        await sheets.spreadsheets.values.clear({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${TURNOS_HORARIOS_SHEET_NAME}!A${todas.length + 2}:J${filasPrevias + 1}`,
+        });
     });
     invalidarCache(`turnosHorarios:${sector}`);
-    res.json({ok:true,turnos});
-  } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudieron guardar los horarios"}); }
+    res.json({ ok: true, turnos });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudieron guardar los horarios",
+    });
+  }
 });
-app.get("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
+app.get("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
   try {
-    const sector=normalizarTexto(req.query.sector), mes=normalizarTexto(req.query.mes);
-    if(!(await puedeAccederSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
-    if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
+    const sector = normalizarTexto(req.query.sector),
+      mes = normalizarTexto(req.query.mes);
+    if (!(await puedeAccederSectorHorarios(req.usuario, sector)))
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés acceso a ese sector" });
+    if (!mesHorariosValido(mes))
+      return res.status(400).json({ ok: false, mensaje: "Mes inválido" });
     await asegurarHojasHorarios();
-    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
     const [r, dr, usuarios, sectores] = await Promise.all([
-      sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
-      sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`}),
+      sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
+      }),
+      sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${DETALLES_HORARIOS_SHEET_NAME}!A:I`,
+      }),
       obtenerUsuarios(),
-      obtenerSectores()
+      obtenerSectores(),
     ]);
-    const filasCalendario=(r.data.values||[]).slice(1);
-    const filasDetalles=(dr.data.values||[]).slice(1);
-    const propias=filasCalendario.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
-    const propiosDetalles=filasDetalles.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
-    const celdasMapa=new Map();
+    const filasCalendario = (r.data.values || []).slice(1);
+    const filasDetalles = (dr.data.values || []).slice(1);
+    const propias = filasCalendario.filter(
+      (f) => normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === mes,
+    );
+    const propiosDetalles = filasDetalles.filter(
+      (f) => normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === mes,
+    );
+    const celdasMapa = new Map();
     propias
-      .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),turno:normalizarTexto(f[4])}))
-      .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno)
-      .forEach(x=>celdasMapa.set(`${x.empleado}::${x.dia}`,x));
-    const detallesMapa=new Map();
+      .map((f) => ({
+        empleado: normalizarTexto(f[2]),
+        dia: Number(f[3]),
+        turno: normalizarTexto(f[4]),
+      }))
+      .filter(
+        (x) =>
+          x.empleado &&
+          Number.isInteger(x.dia) &&
+          x.dia >= 1 &&
+          x.dia <= 31 &&
+          x.turno,
+      )
+      .forEach((x) => celdasMapa.set(`${x.empleado}::${x.dia}`, x));
+    const detallesMapa = new Map();
     propiosDetalles
-      .map(f=>({empleado:normalizarTexto(f[2]),dia:Number(f[3]),tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])}))
-      .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31)
-      .forEach(x=>detallesMapa.set(`${x.empleado}::${x.dia}`,x));
+      .map((f) => ({
+        empleado: normalizarTexto(f[2]),
+        dia: Number(f[3]),
+        tipo: normalizarTexto(f[4]),
+        motivo: normalizarTexto(f[5]),
+        observacion: normalizarTexto(f[6]),
+      }))
+      .filter((x) => x.empleado && x.dia >= 1 && x.dia <= 31)
+      .forEach((x) => detallesMapa.set(`${x.empleado}::${x.dia}`, x));
 
     // Compatibilidad con calendarios anteriores: al consultar Administración,
     // si todavía no existe la copia sincronizada de un supervisor, se completa
     // visualmente desde su sector propio. Las futuras ediciones quedan guardadas
     // en ambos sectores por el PUT de calendario.
     if (sector === "administracion") {
-      const supervisores = usuarios.filter(u=>u.activo && u.rol === "supervisor");
+      const supervisores = usuarios.filter(
+        (u) => u.activo && u.rol === "supervisor",
+      );
       for (const supervisor of supervisores) {
         const nombre = supervisor.nombre || supervisor.usuario;
-        const sectoresFuente = sectoresHorarioSupervisor(supervisor, sectores).filter(id=>id!=="administracion");
+        const sectoresFuente = sectoresHorarioSupervisor(
+          supervisor,
+          sectores,
+        ).filter((id) => id !== "administracion");
         for (const sectorFuente of sectoresFuente) {
           filasCalendario
-            .filter(f=>normalizarTexto(f[0])===sectorFuente&&normalizarTexto(f[1])===mes&&normalizarTexto(f[2])===nombre)
-            .forEach(f=>{
-              const dia=Number(f[3]),turno=normalizarTexto(f[4]);
-              const key=`${nombre}::${dia}`;
-              if(!celdasMapa.has(key)&&Number.isInteger(dia)&&dia>=1&&dia<=31&&turno) celdasMapa.set(key,{empleado:nombre,dia,turno});
+            .filter(
+              (f) =>
+                normalizarTexto(f[0]) === sectorFuente &&
+                normalizarTexto(f[1]) === mes &&
+                normalizarTexto(f[2]) === nombre,
+            )
+            .forEach((f) => {
+              const dia = Number(f[3]),
+                turno = normalizarTexto(f[4]);
+              const key = `${nombre}::${dia}`;
+              if (
+                !celdasMapa.has(key) &&
+                Number.isInteger(dia) &&
+                dia >= 1 &&
+                dia <= 31 &&
+                turno
+              )
+                celdasMapa.set(key, { empleado: nombre, dia, turno });
             });
           filasDetalles
-            .filter(f=>normalizarTexto(f[0])===sectorFuente&&normalizarTexto(f[1])===mes&&normalizarTexto(f[2])===nombre)
-            .forEach(f=>{
-              const dia=Number(f[3]),key=`${nombre}::${dia}`;
-              if(!detallesMapa.has(key)&&dia>=1&&dia<=31) detallesMapa.set(key,{empleado:nombre,dia,tipo:normalizarTexto(f[4]),motivo:normalizarTexto(f[5]),observacion:normalizarTexto(f[6])});
+            .filter(
+              (f) =>
+                normalizarTexto(f[0]) === sectorFuente &&
+                normalizarTexto(f[1]) === mes &&
+                normalizarTexto(f[2]) === nombre,
+            )
+            .forEach((f) => {
+              const dia = Number(f[3]),
+                key = `${nombre}::${dia}`;
+              if (!detallesMapa.has(key) && dia >= 1 && dia <= 31)
+                detallesMapa.set(key, {
+                  empleado: nombre,
+                  dia,
+                  tipo: normalizarTexto(f[4]),
+                  motivo: normalizarTexto(f[5]),
+                  observacion: normalizarTexto(f[6]),
+                });
             });
         }
       }
     }
 
-    let turnos=await obtenerTurnosSector(sector);
+    let turnos = await obtenerTurnosSector(sector);
     if (sector === "administracion") {
-      const supervisores = usuarios.filter(u=>u.activo && u.rol === "supervisor");
-      const sectoresTurnos = new Set(supervisores.flatMap(u=>sectoresHorarioSupervisor(u, sectores)).filter(id=>id!=="administracion"));
+      const supervisores = usuarios.filter(
+        (u) => u.activo && u.rol === "supervisor",
+      );
+      const sectoresTurnos = new Set(
+        supervisores
+          .flatMap((u) => sectoresHorarioSupervisor(u, sectores))
+          .filter((id) => id !== "administracion"),
+      );
       for (const id of sectoresTurnos) {
         const extra = await obtenerTurnosSector(id);
-        const ids = new Set(turnos.map(t=>t.id));
-        for (const turno of extra) if (!ids.has(turno.id)) { turnos.push(turno); ids.add(turno.id); }
+        const ids = new Set(turnos.map((t) => t.id));
+        for (const turno of extra)
+          if (!ids.has(turno.id)) {
+            turnos.push(turno);
+            ids.add(turno.id);
+          }
       }
     }
-    res.json({ok:true,sector,mes,celdas:[...celdasMapa.values()],detalles:[...detallesMapa.values()],reemplazos:[],turnos});
-  } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo cargar el calendario"}); }
+    res.json({
+      ok: true,
+      sector,
+      mes,
+      celdas: [...celdasMapa.values()],
+      detalles: [...detallesMapa.values()],
+      reemplazos: [],
+      turnos,
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo cargar el calendario",
+    });
+  }
 });
-app.put("/horarios/calendario", requerirAccesoHorarios, async (req,res) => {
+app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
   try {
-    const sector=normalizarTexto(req.body?.sector), mes=normalizarTexto(req.body?.mes);
-    if(!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar este calendario"});
-    if(!mesHorariosValido(mes)) return res.status(400).json({ok:false,mensaje:"Mes inválido"});
-    const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
-    const sec=sectores.find(s=>s.id===sector&&s.activo);
-    if(!sec) return res.status(404).json({ok:false,mensaje:"Sector inexistente o inactivo"});
+    const sector = normalizarTexto(req.body?.sector),
+      mes = normalizarTexto(req.body?.mes);
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para modificar este calendario",
+      });
+    if (!mesHorariosValido(mes))
+      return res.status(400).json({ ok: false, mensaje: "Mes inválido" });
+    const [sectores, usuarios] = await Promise.all([
+      obtenerSectores(),
+      obtenerUsuarios(),
+    ]);
+    const sec = sectores.find((s) => s.id === sector && s.activo);
+    if (!sec)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Sector inexistente o inactivo" });
 
-    const empleadosBase=empleadosHorarioDelSector(sector, usuarios, sectores);
-    const empleadosPermitidos=new Set(empleadosBase.map(u=>u.nombre||u.usuario));
-    const supervisorPorNombre=new Map(
-      usuarios.filter(u=>u.activo&&u.rol==="supervisor").map(u=>[u.nombre||u.usuario,u])
+    const empleadosBase = empleadosHorarioDelSector(sector, usuarios, sectores);
+    const empleadosPermitidos = new Set(
+      empleadosBase.map((u) => u.nombre || u.usuario),
+    );
+    const supervisorPorNombre = new Map(
+      usuarios
+        .filter((u) => u.activo && u.rol === "supervisor")
+        .map((u) => [u.nombre || u.usuario, u]),
     );
 
-    let celdas=(Array.isArray(req.body?.celdas)?req.body.celdas:[])
-      .map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)}))
-      .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
-    let baseCeldas=(Array.isArray(req.body?.baseCeldas)?req.body.baseCeldas:[])
-      .map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),turno:normalizarTexto(x.turno)}))
-      .filter(x=>x.empleado&&Number.isInteger(x.dia)&&x.dia>=1&&x.dia<=31&&x.turno);
-    const clienteConBase=Array.isArray(req.body?.baseCeldas);
-    let detalles=(Array.isArray(req.body?.detalles)?req.body.detalles:[])
-      .map(x=>({empleado:normalizarTexto(x.empleado),dia:Number(x.dia),tipo:normalizarTexto(x.tipo).slice(0,30),motivo:normalizarTexto(x.motivo).slice(0,80),observacion:normalizarTexto(x.observacion).slice(0,300)}))
-      .filter(x=>x.empleado&&x.dia>=1&&x.dia<=31&&(x.tipo||x.motivo||x.observacion));
+    let celdas = (Array.isArray(req.body?.celdas) ? req.body.celdas : [])
+      .map((x) => ({
+        empleado: normalizarTexto(x.empleado),
+        dia: Number(x.dia),
+        turno: normalizarTexto(x.turno),
+      }))
+      .filter(
+        (x) =>
+          x.empleado &&
+          Number.isInteger(x.dia) &&
+          x.dia >= 1 &&
+          x.dia <= 31 &&
+          x.turno,
+      );
+    let baseCeldas = (
+      Array.isArray(req.body?.baseCeldas) ? req.body.baseCeldas : []
+    )
+      .map((x) => ({
+        empleado: normalizarTexto(x.empleado),
+        dia: Number(x.dia),
+        turno: normalizarTexto(x.turno),
+      }))
+      .filter(
+        (x) =>
+          x.empleado &&
+          Number.isInteger(x.dia) &&
+          x.dia >= 1 &&
+          x.dia <= 31 &&
+          x.turno,
+      );
+    const clienteConBase = Array.isArray(req.body?.baseCeldas);
+    let detalles = (Array.isArray(req.body?.detalles) ? req.body.detalles : [])
+      .map((x) => ({
+        empleado: normalizarTexto(x.empleado),
+        dia: Number(x.dia),
+        tipo: normalizarTexto(x.tipo).slice(0, 30),
+        motivo: normalizarTexto(x.motivo).slice(0, 80),
+        observacion: normalizarTexto(x.observacion).slice(0, 300),
+      }))
+      .filter(
+        (x) =>
+          x.empleado &&
+          x.dia >= 1 &&
+          x.dia <= 31 &&
+          (x.tipo || x.motivo || x.observacion),
+      );
 
-    if(celdas.some(x=>!empleadosPermitidos.has(x.empleado)) || detalles.some(x=>!empleadosPermitidos.has(x.empleado))) {
-      return res.status(400).json({ok:false,mensaje:"El calendario contiene empleados que no pertenecen al sector"});
+    if (
+      celdas.some((x) => !empleadosPermitidos.has(x.empleado)) ||
+      detalles.some((x) => !empleadosPermitidos.has(x.empleado))
+    ) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El calendario contiene empleados que no pertenecen al sector",
+      });
     }
-    if(celdas.some(x=>!turnoHorarioValido(x.turno))) return res.status(400).json({ok:false,mensaje:"El calendario contiene un turno inválido"});
+    if (celdas.some((x) => !turnoHorarioValido(x.turno)))
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El calendario contiene un turno inválido",
+      });
 
     await asegurarHojasHorarios();
-    await ejecutarEnCola("calendario-horarios", async()=>{
-      const [r,dr]=await Promise.all([
-        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`}),
-        sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A:I`})
+    await ejecutarEnCola("calendario-horarios", async () => {
+      const [r, dr] = await Promise.all([
+        sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
+        }),
+        sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${DETALLES_HORARIOS_SHEET_NAME}!A:I`,
+        }),
       ]);
-      const todasCalendarioPrevias=(r.data.values||[]).slice(1);
-      const todosDetallesPrevios=(dr.data.values||[]).slice(1);
-      const filasAnteriores=todasCalendarioPrevias.filter(f=>normalizarTexto(f[0])===sector&&normalizarTexto(f[1])===mes);
-      const anterior=new Map(filasAnteriores.map(f=>[`${normalizarTexto(f[2])}::${Number(f[3])}`,normalizarTexto(f[4])]));
-      const enviado=new Map(celdas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
-      const base=new Map(baseCeldas.map(x=>[`${x.empleado}::${x.dia}`,x.turno]));
-      const nuevoCompleto=new Map(anterior);
-      const clavesModificadas=clienteConBase
-        ? [...new Set([...base.keys(),...enviado.keys()])].filter(k=>(base.get(k)||"")!==(enviado.get(k)||""))
+      const todasCalendarioPrevias = (r.data.values || []).slice(1);
+      const todosDetallesPrevios = (dr.data.values || []).slice(1);
+      const filasAnteriores = todasCalendarioPrevias.filter(
+        (f) =>
+          normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === mes,
+      );
+      const anterior = new Map(
+        filasAnteriores.map((f) => [
+          `${normalizarTexto(f[2])}::${Number(f[3])}`,
+          normalizarTexto(f[4]),
+        ]),
+      );
+      const enviado = new Map(
+        celdas.map((x) => [`${x.empleado}::${x.dia}`, x.turno]),
+      );
+      const base = new Map(
+        baseCeldas.map((x) => [`${x.empleado}::${x.dia}`, x.turno]),
+      );
+      const nuevoCompleto = new Map(anterior);
+      const clavesModificadas = clienteConBase
+        ? [...new Set([...base.keys(), ...enviado.keys()])].filter(
+            (k) => (base.get(k) || "") !== (enviado.get(k) || ""),
+          )
         : [...enviado.keys()];
 
-      if(clienteConBase) {
-        const conflictos=clavesModificadas.filter(k=>{
-          const valorServidor=anterior.get(k)||"", valorBase=base.get(k)||"", valorCliente=enviado.get(k)||"";
-          return valorServidor!==valorBase && valorServidor!==valorCliente;
+      if (clienteConBase) {
+        const conflictos = clavesModificadas.filter((k) => {
+          const valorServidor = anterior.get(k) || "",
+            valorBase = base.get(k) || "",
+            valorCliente = enviado.get(k) || "";
+          return valorServidor !== valorBase && valorServidor !== valorCliente;
         });
-        if(conflictos.length) {
-          const error=new Error("El calendario fue modificado desde otro dispositivo. Volvé a cargarlo antes de guardar para no perder horarios.");
-          error.statusCode=409; throw error;
+        if (conflictos.length) {
+          const error = new Error(
+            "El calendario fue modificado desde otro dispositivo. Volvé a cargarlo antes de guardar para no perder horarios.",
+          );
+          error.statusCode = 409;
+          throw error;
         }
       }
 
-      for(const k of clavesModificadas) {
-        const valor=enviado.get(k)||"";
-        if(valor) nuevoCompleto.set(k,valor); else nuevoCompleto.delete(k);
+      for (const k of clavesModificadas) {
+        const valor = enviado.get(k) || "";
+        if (valor) nuevoCompleto.set(k, valor);
+        else nuevoCompleto.delete(k);
       }
 
-      const ahora=fechaHoraArgentinaIso();
-      const mapaFilas=new Map();
-      for(const f of todasCalendarioPrevias) {
-        const secId=normalizarTexto(f[0]), mesId=normalizarTexto(f[1]), emp=normalizarTexto(f[2]), dia=Number(f[3]);
-        if(secId&&mesId&&emp&&Number.isInteger(dia)) mapaFilas.set(`${secId}||${mesId}||${emp}||${dia}`,f);
+      const ahora = fechaHoraArgentinaIso();
+      const mapaFilas = new Map();
+      for (const f of todasCalendarioPrevias) {
+        const secId = normalizarTexto(f[0]),
+          mesId = normalizarTexto(f[1]),
+          emp = normalizarTexto(f[2]),
+          dia = Number(f[3]);
+        if (secId && mesId && emp && Number.isInteger(dia))
+          mapaFilas.set(`${secId}||${mesId}||${emp}||${dia}`, f);
       }
       // Reemplaza el sector/mes editado por la versión fusionada.
-      for(const key of [...mapaFilas.keys()]) if(key.startsWith(`${sector}||${mes}||`)) mapaFilas.delete(key);
-      for(const [k,turno] of nuevoCompleto.entries()) {
-        const pos=k.lastIndexOf("::"), empleado=k.slice(0,pos),dia=Number(k.slice(pos+2));
-        mapaFilas.set(`${sector}||${mes}||${empleado}||${dia}`,[sector,mes,empleado,dia,turno,ahora,req.usuario.usuario,req.usuario.nombre]);
+      for (const key of [...mapaFilas.keys()])
+        if (key.startsWith(`${sector}||${mes}||`)) mapaFilas.delete(key);
+      for (const [k, turno] of nuevoCompleto.entries()) {
+        const pos = k.lastIndexOf("::"),
+          empleado = k.slice(0, pos),
+          dia = Number(k.slice(pos + 2));
+        mapaFilas.set(`${sector}||${mes}||${empleado}||${dia}`, [
+          sector,
+          mes,
+          empleado,
+          dia,
+          turno,
+          ahora,
+          req.usuario.usuario,
+          req.usuario.nombre,
+        ]);
       }
 
       // Un supervisor tiene un único horario funcional. Todo cambio sobre su fila
       // se replica en Administración y en sus sectores propios, sin requerir una
       // segunda petición desde el navegador.
-      for(const k of clavesModificadas) {
-        const pos=k.lastIndexOf("::"), empleado=k.slice(0,pos), dia=Number(k.slice(pos+2));
-        const supervisor=supervisorPorNombre.get(empleado);
-        if(!supervisor) continue;
-        const valor=nuevoCompleto.get(k)||"";
-        for(const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
-          const claveDestino=`${destino}||${mes}||${empleado}||${dia}`;
-          if(valor) mapaFilas.set(claveDestino,[destino,mes,empleado,dia,valor,ahora,req.usuario.usuario,req.usuario.nombre]);
+      for (const k of clavesModificadas) {
+        const pos = k.lastIndexOf("::"),
+          empleado = k.slice(0, pos),
+          dia = Number(k.slice(pos + 2));
+        const supervisor = supervisorPorNombre.get(empleado);
+        if (!supervisor) continue;
+        const valor = nuevoCompleto.get(k) || "";
+        for (const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+          const claveDestino = `${destino}||${mes}||${empleado}||${dia}`;
+          if (valor)
+            mapaFilas.set(claveDestino, [
+              destino,
+              mes,
+              empleado,
+              dia,
+              valor,
+              ahora,
+              req.usuario.usuario,
+              req.usuario.nombre,
+            ]);
           else mapaFilas.delete(claveDestino);
         }
       }
 
-      const mapaDetalles=new Map();
-      for(const f of todosDetallesPrevios) {
-        const secId=normalizarTexto(f[0]), mesId=normalizarTexto(f[1]), emp=normalizarTexto(f[2]), dia=Number(f[3]);
-        if(secId&&mesId&&emp&&Number.isInteger(dia)) mapaDetalles.set(`${secId}||${mesId}||${emp}||${dia}`,f);
+      const mapaDetalles = new Map();
+      for (const f of todosDetallesPrevios) {
+        const secId = normalizarTexto(f[0]),
+          mesId = normalizarTexto(f[1]),
+          emp = normalizarTexto(f[2]),
+          dia = Number(f[3]);
+        if (secId && mesId && emp && Number.isInteger(dia))
+          mapaDetalles.set(`${secId}||${mesId}||${emp}||${dia}`, f);
       }
-      for(const key of [...mapaDetalles.keys()]) if(key.startsWith(`${sector}||${mes}||`)) mapaDetalles.delete(key);
-      for(const x of detalles) mapaDetalles.set(`${sector}||${mes}||${x.empleado}||${x.dia}`,[sector,mes,x.empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
+      for (const key of [...mapaDetalles.keys()])
+        if (key.startsWith(`${sector}||${mes}||`)) mapaDetalles.delete(key);
+      for (const x of detalles)
+        mapaDetalles.set(`${sector}||${mes}||${x.empleado}||${x.dia}`, [
+          sector,
+          mes,
+          x.empleado,
+          x.dia,
+          x.tipo,
+          x.motivo,
+          x.observacion,
+          ahora,
+          req.usuario.usuario,
+        ]);
 
       // Para supervisores sincroniza también licencias/motivos/observaciones.
-      const supervisoresEnSector=empleadosBase.filter(u=>u.rol==="supervisor");
-      for(const supervisor of supervisoresEnSector) {
-        const empleado=supervisor.nombre||supervisor.usuario;
-        const detalleEmpleado=detalles.filter(x=>x.empleado===empleado);
-        for(const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
-          for(const key of [...mapaDetalles.keys()]) {
-            if(key.startsWith(`${destino}||${mes}||${empleado}||`)) mapaDetalles.delete(key);
+      const supervisoresEnSector = empleadosBase.filter(
+        (u) => u.rol === "supervisor",
+      );
+      for (const supervisor of supervisoresEnSector) {
+        const empleado = supervisor.nombre || supervisor.usuario;
+        const detalleEmpleado = detalles.filter((x) => x.empleado === empleado);
+        for (const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+          for (const key of [...mapaDetalles.keys()]) {
+            if (key.startsWith(`${destino}||${mes}||${empleado}||`))
+              mapaDetalles.delete(key);
           }
-          for(const x of detalleEmpleado) mapaDetalles.set(`${destino}||${mes}||${empleado}||${x.dia}`,[destino,mes,empleado,x.dia,x.tipo,x.motivo,x.observacion,ahora,req.usuario.usuario]);
+          for (const x of detalleEmpleado)
+            mapaDetalles.set(`${destino}||${mes}||${empleado}||${x.dia}`, [
+              destino,
+              mes,
+              empleado,
+              x.dia,
+              x.tipo,
+              x.motivo,
+              x.observacion,
+              ahora,
+              req.usuario.usuario,
+            ]);
         }
       }
 
-      const todas=[...mapaFilas.values()];
-      const todosDetalles=[...mapaDetalles.values()];
-      const filasCalendarioPrevias=Math.max(0,(r.data.values||[]).length-1), filasDetallesPrevias=Math.max(0,(dr.data.values||[]).length-1);
-      if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}});
-      if(todosDetalles.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A2:I${todosDetalles.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todosDetalles}});
-      if(filasCalendarioPrevias>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A${todas.length+2}:H${filasCalendarioPrevias+1}`});
-      if(filasDetallesPrevias>todosDetalles.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${DETALLES_HORARIOS_SHEET_NAME}!A${todosDetalles.length+2}:I${filasDetallesPrevias+1}`});
-
-      const claves=new Set([...anterior.keys(),...nuevoCompleto.keys()]);
-      const cambios=[...claves].filter(k=>(anterior.get(k)||"")!==(nuevoCompleto.get(k)||""));
-      if(cambios.length){
-        await asegurarHojaAuditoriaHorarios();
-        const filas=cambios.map(k=>{
-          const [empleado,dia]=k.split("::");
-          return [ahora,req.usuario.usuario,req.usuario.nombre,req.usuario.rol,sec.nombre,mes,`Cambió ${empleado} día ${dia}: ${anterior.get(k)||"Sin asignar"} → ${nuevoCompleto.get(k)||"Sin asignar"}`];
+      const todas = [...mapaFilas.values()];
+      const todosDetalles = [...mapaDetalles.values()];
+      const filasCalendarioPrevias = Math.max(
+          0,
+          (r.data.values || []).length - 1,
+        ),
+        filasDetallesPrevias = Math.max(0, (dr.data.values || []).length - 1);
+      if (todas.length)
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${todas.length + 1}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: todas },
         });
-        await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:filas}});
+      if (todosDetalles.length)
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${DETALLES_HORARIOS_SHEET_NAME}!A2:I${todosDetalles.length + 1}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: todosDetalles },
+        });
+      if (filasCalendarioPrevias > todas.length)
+        await sheets.spreadsheets.values.clear({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A${todas.length + 2}:H${filasCalendarioPrevias + 1}`,
+        });
+      if (filasDetallesPrevias > todosDetalles.length)
+        await sheets.spreadsheets.values.clear({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${DETALLES_HORARIOS_SHEET_NAME}!A${todosDetalles.length + 2}:I${filasDetallesPrevias + 1}`,
+        });
+
+      const claves = new Set([...anterior.keys(), ...nuevoCompleto.keys()]);
+      const cambios = [...claves].filter(
+        (k) => (anterior.get(k) || "") !== (nuevoCompleto.get(k) || ""),
+      );
+      if (cambios.length) {
+        await asegurarHojaAuditoriaHorarios();
+        const filas = cambios.map((k) => {
+          const [empleado, dia] = k.split("::");
+          return [
+            ahora,
+            req.usuario.usuario,
+            req.usuario.nombre,
+            req.usuario.rol,
+            sec.nombre,
+            mes,
+            `Cambió ${empleado} día ${dia}: ${anterior.get(k) || "Sin asignar"} → ${nuevoCompleto.get(k) || "Sin asignar"}`,
+          ];
+        });
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,
+          valueInputOption: "USER_ENTERED",
+          insertDataOption: "INSERT_ROWS",
+          requestBody: { values: filas },
+        });
       }
     });
 
-    await registrarAuditoriaHorario(req.usuario,sec.nombre,mes,"Guardó calendario del sector");
+    await registrarAuditoriaHorario(
+      req.usuario,
+      sec.nombre,
+      mes,
+      "Guardó calendario del sector",
+    );
     invalidarCache(`calendarioHorarios:${sector}:${mes}`);
-    res.json({ok:true,guardadas:celdas.length});
-  } catch(e) { res.status(e.statusCode || 500).json({ok:false,mensaje:e.message || "No se pudo guardar el calendario"}); }
+    res.json({ ok: true, guardadas: celdas.length });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo guardar el calendario",
+    });
+  }
 });
 
 let hojaAuditoriaHorariosAsegurada = false;
@@ -933,108 +1759,283 @@ async function asegurarHojaAuditoriaHorarios() {
   if (hojaAuditoriaHorariosAsegurada) return;
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (!(meta.data.sheets || []).some(h => h.properties?.title === AUDITORIA_HORARIOS_SHEET_NAME)) {
-    await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody:{ requests:[{ addSheet:{ properties:{ title:AUDITORIA_HORARIOS_SHEET_NAME } } }] } });
+  if (
+    !(meta.data.sheets || []).some(
+      (h) => h.properties?.title === AUDITORIA_HORARIOS_SHEET_NAME,
+    )
+  ) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            addSheet: { properties: { title: AUDITORIA_HORARIOS_SHEET_NAME } },
+          },
+        ],
+      },
+    });
   }
-  const encabezados = ["Fecha y hora", "Usuario", "Nombre", "Rol", "Sector", "Mes", "Acción"];
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${AUDITORIA_HORARIOS_SHEET_NAME}!A1:G1`, valueInputOption:"USER_ENTERED", requestBody:{ values:[encabezados] } });
+  const encabezados = [
+    "Fecha y hora",
+    "Usuario",
+    "Nombre",
+    "Rol",
+    "Sector",
+    "Mes",
+    "Acción",
+  ];
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A1:G1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [encabezados] },
+  });
   hojaAuditoriaHorariosAsegurada = true;
 }
 app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
   try {
-    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
-    const activos = sectores.filter(s => s.activo);
-    if (!rolGestionSector(req.usuario) && !req.usuario.sector) return res.status(403).json({ ok:false, mensaje:"Tu usuario no tiene un sector asignado" });
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    const [sectores, usuarios] = await Promise.all([
+      obtenerSectores(),
+      obtenerUsuarios(),
+    ]);
+    const activos = sectores.filter((s) => s.activo);
+    if (!rolGestionSector(req.usuario) && !req.usuario.sector)
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "Tu usuario no tiene un sector asignado" });
 
-    const sectoresSupervisor = req.usuario.rol === "supervisor"
-      ? await sectoresSupervisorPermitidos(req.usuario)
-      : new Set();
+    const sectoresSupervisor =
+      req.usuario.rol === "supervisor"
+        ? await sectoresSupervisorPermitidos(req.usuario)
+        : new Set();
 
-    const visibles = rolGestionGlobal(req.usuario) || req.usuario.rol === "supervisor"
-      ? activos
-      : activos.filter(s => s.id === req.usuario.sector || s.id === "administracion");
+    const visibles =
+      rolGestionGlobal(req.usuario) || req.usuario.rol === "supervisor"
+        ? activos
+        : activos.filter(
+            (s) => s.id === req.usuario.sector || s.id === "administracion",
+          );
 
-    if (!visibles.length) return res.status(403).json({ ok:false, mensaje:"No tenés acceso a un sector activo" });
+    if (!visibles.length)
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés acceso a un sector activo" });
 
     await asegurarHojasHorarios();
-    const ordenResp = await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A:D`});
+    const ordenResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:D`,
+    });
     const ordenPorSector = new Map();
-    (ordenResp.data.values || []).slice(1).forEach(f => {
-      const sec=normalizarTexto(f[0]), emp=normalizarTexto(f[1]), ord=Number(f[2]);
-      if(sec&&emp&&Number.isFinite(ord)){
-        if(!ordenPorSector.has(sec)) ordenPorSector.set(sec,new Map());
-        ordenPorSector.get(sec).set(emp,ord);
+    (ordenResp.data.values || []).slice(1).forEach((f) => {
+      const sec = normalizarTexto(f[0]),
+        emp = normalizarTexto(f[1]),
+        ord = Number(f[2]);
+      if (sec && emp && Number.isFinite(ord)) {
+        if (!ordenPorSector.has(sec)) ordenPorSector.set(sec, new Map());
+        ordenPorSector.get(sec).set(emp, ord);
       }
     });
 
-    const respuesta = visibles.map(s => {
-      const empleadosSector = empleadosHorarioDelSector(s.id, usuarios, activos)
-        .sort((a, b) => {
-          const mapa=ordenPorSector.get(s.id);
-          const an=a.nombre||a.usuario,bn=b.nombre||b.usuario;
-          const ao=mapa?.get(an),bo=mapa?.get(bn);
-          if(Number.isFinite(ao)||Number.isFinite(bo)) return (Number.isFinite(ao)?ao:9999)-(Number.isFinite(bo)?bo:9999);
-          return String(an).localeCompare(String(bn), "es", { sensitivity:"base" });
+    const respuesta = visibles.map((s) => {
+      const empleadosSector = empleadosHorarioDelSector(
+        s.id,
+        usuarios,
+        activos,
+      ).sort((a, b) => {
+        const mapa = ordenPorSector.get(s.id);
+        const an = a.nombre || a.usuario,
+          bn = b.nombre || b.usuario;
+        const ao = mapa?.get(an),
+          bo = mapa?.get(bn);
+        if (Number.isFinite(ao) || Number.isFinite(bo))
+          return (
+            (Number.isFinite(ao) ? ao : 9999) -
+            (Number.isFinite(bo) ? bo : 9999)
+          );
+        return String(an).localeCompare(String(bn), "es", {
+          sensitivity: "base",
         });
+      });
       return {
         id: s.id,
         nombre: s.nombre,
         color: s.color,
         activo: s.activo,
-        puedeEditar: rolGestionGlobal(req.usuario) || (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
-        empleados: empleadosSector.map(u => u.nombre || u.usuario),
-        empleadosInfo: empleadosSector.map(u=>({nombre:u.nombre||u.usuario,rol:u.rol,usuario:u.usuario}))
+        puedeEditar:
+          rolGestionGlobal(req.usuario) ||
+          (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
+        empleados: empleadosSector.map((u) => u.nombre || u.usuario),
+        empleadosInfo: empleadosSector.map((u) => ({
+          nombre: u.nombre || u.usuario,
+          rol: u.rol,
+          usuario: u.usuario,
+        })),
       };
     });
 
-    res.json({ ok: true, sectores: respuesta, sectorUsuario: req.usuario.sector || "", puedeEditar: rolGestionSector(req.usuario), rol:req.usuario.rol });
+    res.json({
+      ok: true,
+      sectores: respuesta,
+      sectorUsuario: req.usuario.sector || "",
+      puedeEditar: rolGestionSector(req.usuario),
+      rol: req.usuario.rol,
+    });
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar el contexto de horarios" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo cargar el contexto de horarios",
+    });
   }
 });
 
-app.get("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
+app.get("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
   try {
-    const sector=normalizarTexto(req.query.sector);
-    if (!(await puedeAccederSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés acceso a ese sector"});
+    const sector = normalizarTexto(req.query.sector);
+    if (!(await puedeAccederSectorHorarios(req.usuario, sector)))
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés acceso a ese sector" });
     await asegurarHojasHorarios();
-    const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A:D`});
-    const orden=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])===sector).sort((a,b)=>Number(a[2])-Number(b[2])).map(f=>normalizarTexto(f[1])).filter(Boolean);
-    res.json({ok:true,sector,orden});
-  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar el orden"});}
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:D`,
+    });
+    const orden = (r.data.values || [])
+      .slice(1)
+      .filter((f) => normalizarTexto(f[0]) === sector)
+      .sort((a, b) => Number(a[2]) - Number(b[2]))
+      .map((f) => normalizarTexto(f[1]))
+      .filter(Boolean);
+    res.json({ ok: true, sector, orden });
+  } catch (e) {
+    res
+      .status(500)
+      .json({ ok: false, mensaje: e.message || "No se pudo cargar el orden" });
+  }
 });
-app.put("/horarios/orden", requerirAccesoHorarios, async (req,res) => {
+app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
   try {
-    const sector=normalizarTexto(req.body?.sector);
-    if(!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para ordenar el personal de este sector"});
-    const orden=(Array.isArray(req.body?.orden)?req.body.orden:[]).map(normalizarTexto).filter(Boolean);
-    if(!orden.length || new Set(orden).size!==orden.length) return res.status(400).json({ok:false,mensaje:"Orden de personal inválido"});
-    const sectores=await obtenerSectores(), usuarios=await obtenerUsuarios(), sec=sectores.find(s=>s.id===sector&&s.activo);
-    if(!sec) return res.status(404).json({ok:false,mensaje:"Sector inexistente"});
-    const permitidos=new Set(empleadosHorarioDelSector(sector, usuarios, sectores).map(u=>u.nombre||u.usuario));
-    if(orden.some(x=>!permitidos.has(x)) || orden.length!==permitidos.size) return res.status(400).json({ok:false,mensaje:"El orden debe incluir una vez a todo el personal del sector"});
+    const sector = normalizarTexto(req.body?.sector);
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para ordenar el personal de este sector",
+      });
+    const orden = (Array.isArray(req.body?.orden) ? req.body.orden : [])
+      .map(normalizarTexto)
+      .filter(Boolean);
+    if (!orden.length || new Set(orden).size !== orden.length)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Orden de personal inválido" });
+    const sectores = await obtenerSectores(),
+      usuarios = await obtenerUsuarios(),
+      sec = sectores.find((s) => s.id === sector && s.activo);
+    if (!sec)
+      return res.status(404).json({ ok: false, mensaje: "Sector inexistente" });
+    const permitidos = new Set(
+      empleadosHorarioDelSector(sector, usuarios, sectores).map(
+        (u) => u.nombre || u.usuario,
+      ),
+    );
+    if (
+      orden.some((x) => !permitidos.has(x)) ||
+      orden.length !== permitidos.size
+    )
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El orden debe incluir una vez a todo el personal del sector",
+      });
     await asegurarHojasHorarios();
-    await ejecutarEnCola("orden-horarios",async()=>{ const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A:D`}); const otras=(r.data.values||[]).slice(1).filter(f=>normalizarTexto(f[0])!==sector); const ahora=fechaHoraArgentinaIso(); const nuevas=orden.map((e,i)=>[sector,e,i+1,ahora]); const todas=[...otras,...nuevas], prev=Math.max(0,(r.data.values||[]).length-1); if(todas.length) await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A2:D${todas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:todas}}); if(prev>todas.length) await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${ORDEN_HORARIOS_SHEET_NAME}!A${todas.length+2}:D${prev+1}`}); });
-    res.json({ok:true,sector,orden});
-  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar el orden"});}
+    await ejecutarEnCola("orden-horarios", async () => {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${ORDEN_HORARIOS_SHEET_NAME}!A:D`,
+      });
+      const otras = (r.data.values || [])
+        .slice(1)
+        .filter((f) => normalizarTexto(f[0]) !== sector);
+      const ahora = fechaHoraArgentinaIso();
+      const nuevas = orden.map((e, i) => [sector, e, i + 1, ahora]);
+      const todas = [...otras, ...nuevas],
+        prev = Math.max(0, (r.data.values || []).length - 1);
+      if (todas.length)
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${ORDEN_HORARIOS_SHEET_NAME}!A2:D${todas.length + 1}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: todas },
+        });
+      if (prev > todas.length)
+        await sheets.spreadsheets.values.clear({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${ORDEN_HORARIOS_SHEET_NAME}!A${todas.length + 2}:D${prev + 1}`,
+        });
+    });
+    res.json({ ok: true, sector, orden });
+  } catch (e) {
+    res
+      .status(500)
+      .json({ ok: false, mensaje: e.message || "No se pudo guardar el orden" });
+  }
 });
 
 app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
-    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ ok:false, mensaje:"Solo Administración, Administrador o el Supervisor asignado pueden modificar este sector" });
-    if (!rolGestionSector(req.usuario)) return res.status(403).json({ ok:false, mensaje:"Tu usuario tiene acceso de solo lectura" });
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({
+        ok: false,
+        mensaje:
+          "Solo Administración, Administrador o el Supervisor asignado pueden modificar este sector",
+      });
+    if (!rolGestionSector(req.usuario))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "Tu usuario tiene acceso de solo lectura",
+      });
     const sectores = await obtenerSectores();
-    const sectorEncontrado = sectores.find(s => s.id === sector && s.activo);
-    if (!sectorEncontrado) return res.status(404).json({ ok:false, mensaje:"Sector inexistente o inactivo" });
+    const sectorEncontrado = sectores.find((s) => s.id === sector && s.activo);
+    if (!sectorEncontrado)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Sector inexistente o inactivo" });
     await asegurarHojaAuditoriaHorarios();
     const mes = normalizarTexto(req.body?.mes).slice(0, 80);
-    const accion = normalizarTexto(req.body?.accion || "Guardó cambios").slice(0, 120);
-    await sheets.spreadsheets.values.append({ spreadsheetId:SPREADSHEET_ID, range:`${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`, valueInputOption:"USER_ENTERED", insertDataOption:"INSERT_ROWS", requestBody:{ values:[[fechaHoraArgentinaIso(), req.usuario.usuario, req.usuario.nombre, req.usuario.rol, sectorEncontrado.nombre, mes, accion]] } });
-    res.json({ ok:true });
+    const accion = normalizarTexto(req.body?.accion || "Guardó cambios").slice(
+      0,
+      120,
+    );
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [
+          [
+            fechaHoraArgentinaIso(),
+            req.usuario.usuario,
+            req.usuario.nombre,
+            req.usuario.rol,
+            sectorEncontrado.nombre,
+            mes,
+            accion,
+          ],
+        ],
+      },
+    });
+    res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo registrar la auditoría" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo registrar la auditoría",
+    });
   }
 });
 async function actualizarFilaUsuario(usuario, cambios = {}) {
@@ -1049,7 +2050,21 @@ async function actualizarFilaUsuario(usuario, cambios = {}) {
     spreadsheetId: SPREADSHEET_ID,
     range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:I${usuario.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[usuario.usuario, nombre, passwordHash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
+    requestBody: {
+      values: [
+        [
+          usuario.usuario,
+          nombre,
+          passwordHash,
+          rol,
+          activo ? "Sí" : "No",
+          fechaHoraArgentinaIso(),
+          serializarPermisos(permisos, rol),
+          sector,
+          sectoresCargo.join(","),
+        ],
+      ],
+    },
   });
 }
 
@@ -1058,13 +2073,17 @@ async function actualizarFilaSector(sector, cambios = {}) {
     spreadsheetId: SPREADSHEET_ID,
     range: `${SECTORES_SHEET_NAME}!A${sector.filaGoogle}:E${sector.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[
-      sector.id,
-      cambios.nombre ?? sector.nombre,
-      cambios.color ?? sector.color,
-      cambios.supervisor ?? sector.supervisor ?? "",
-      (cambios.activo ?? sector.activo) ? "Sí" : "No"
-    ]] }
+    requestBody: {
+      values: [
+        [
+          sector.id,
+          cambios.nombre ?? sector.nombre,
+          cambios.color ?? sector.color,
+          cambios.supervisor ?? sector.supervisor ?? "",
+          (cambios.activo ?? sector.activo) ? "Sí" : "No",
+        ],
+      ],
+    },
   });
 }
 
@@ -1072,122 +2091,291 @@ async function quitarSupervisionDeUsuario(usuarioClave, exceptoSectorId = "") {
   const clave = normalizarUsuario(usuarioClave);
   if (!clave) return;
   const sectores = await obtenerSectores();
-  for (const sector of sectores.filter(s => s.supervisor === clave && s.id !== exceptoSectorId)) await actualizarFilaSector(sector, { supervisor: "" });
+  for (const sector of sectores.filter(
+    (s) => s.supervisor === clave && s.id !== exceptoSectorId,
+  ))
+    await actualizarFilaSector(sector, { supervisor: "" });
 }
 
-async function reconciliarSupervisorAnterior(usuarioClave, sectorPreferido = "") {
-  const clave = normalizarUsuario(usuarioClave); if (!clave) return;
-  invalidarCache("usuarios","sectores");
-  const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), obtenerSectores()]);
-  const usuario = usuarios.find(u => u.usuario === clave); if (!usuario || usuario.rol === "administrador") return;
-  const asignados = sectores.filter(s => s.supervisor === clave && s.activo).map(s => s.id).slice(0,2);
-  if (!asignados.length && usuario.rol === "supervisor") await actualizarFilaUsuario(usuario, { rol:"personal", sector:sectorPreferido || usuario.sector || "", sectores:[] });
-  else if (usuario.rol === "supervisor") await actualizarFilaUsuario(usuario, { sector:asignados[0] || "", sectores:asignados });
+async function reconciliarSupervisorAnterior(
+  usuarioClave,
+  sectorPreferido = "",
+) {
+  const clave = normalizarUsuario(usuarioClave);
+  if (!clave) return;
+  invalidarCache("usuarios", "sectores");
+  const [usuarios, sectores] = await Promise.all([
+    obtenerUsuarios(),
+    obtenerSectores(),
+  ]);
+  const usuario = usuarios.find((u) => u.usuario === clave);
+  if (!usuario || usuario.rol === "administrador") return;
+  const asignados = sectores
+    .filter((s) => s.supervisor === clave && s.activo)
+    .map((s) => s.id)
+    .slice(0, 2);
+  if (!asignados.length && usuario.rol === "supervisor")
+    await actualizarFilaUsuario(usuario, {
+      rol: "personal",
+      sector: sectorPreferido || usuario.sector || "",
+      sectores: [],
+    });
+  else if (usuario.rol === "supervisor")
+    await actualizarFilaUsuario(usuario, {
+      sector: asignados[0] || "",
+      sectores: asignados,
+    });
   invalidarCache("usuarios");
 }
 
 async function asignarSupervisorASector(usuarioClave, sectorId) {
-  const clave=normalizarUsuario(usuarioClave); if(!clave)return;
-  const [usuarios, sectores]=await Promise.all([obtenerUsuarios(),obtenerSectores()]);
-  const usuario=usuarios.find(u=>u.usuario===clave), sector=sectores.find(s=>s.id===sectorId);
-  if(!usuario) throw new Error("El supervisor seleccionado no existe");
-  if(!usuario.activo || usuario.rol!=="supervisor") throw new Error("Solo podés asignar usuarios activos con rol Supervisor");
-  if(!sector || !sector.activo) throw new Error("El sector seleccionado no existe o está inactivo");
-  const actuales=sectores.filter(s=>s.supervisor===clave && s.id!==sectorId);
-  if(actuales.length>=2) throw new Error("Este supervisor ya tiene dos sectores asignados");
-  const anterior=normalizarUsuario(sector.supervisor);
-  if(anterior && anterior!==clave) await reconciliarSupervisorAnterior(anterior, sector.id);
-  const ids=[...new Set([usuario.sector,...(usuario.sectores||[]),...actuales.map(s=>s.id),sectorId].filter(Boolean))].slice(0,2);
-  await actualizarFilaUsuario(usuario,{rol:"supervisor",sector:ids[0]||sectorId,sectores:ids});
+  const clave = normalizarUsuario(usuarioClave);
+  if (!clave) return;
+  const [usuarios, sectores] = await Promise.all([
+    obtenerUsuarios(),
+    obtenerSectores(),
+  ]);
+  const usuario = usuarios.find((u) => u.usuario === clave),
+    sector = sectores.find((s) => s.id === sectorId);
+  if (!usuario) throw new Error("El supervisor seleccionado no existe");
+  if (!usuario.activo || usuario.rol !== "supervisor")
+    throw new Error("Solo podés asignar usuarios activos con rol Supervisor");
+  if (!sector || !sector.activo)
+    throw new Error("El sector seleccionado no existe o está inactivo");
+  const actuales = sectores.filter(
+    (s) => s.supervisor === clave && s.id !== sectorId,
+  );
+  if (actuales.length >= 2)
+    throw new Error("Este supervisor ya tiene dos sectores asignados");
+  const anterior = normalizarUsuario(sector.supervisor);
+  if (anterior && anterior !== clave)
+    await reconciliarSupervisorAnterior(anterior, sector.id);
+  const ids = [
+    ...new Set(
+      [
+        usuario.sector,
+        ...(usuario.sectores || []),
+        ...actuales.map((s) => s.id),
+        sectorId,
+      ].filter(Boolean),
+    ),
+  ].slice(0, 2);
+  await actualizarFilaUsuario(usuario, {
+    rol: "supervisor",
+    sector: ids[0] || sectorId,
+    sectores: ids,
+  });
   invalidarCache("usuarios");
 }
 
-async function sincronizarUsuarioSupervisor(usuarioClave, rol, sectorId, activo = true, sectoresSolicitados = []) {
-  const clave=normalizarUsuario(usuarioClave); const sectores=await obtenerSectores();
-  const actuales=sectores.filter(s=>s.supervisor===clave);
-  if(rol!=="supervisor"){for(const s of actuales)await actualizarFilaSector(s,{supervisor:""});return;}
-  if(!activo) throw new Error("Un usuario inactivo no puede ser supervisor");
-  const ids=[...new Set([sectorId,...sectoresSolicitados].map(normalizarTexto).filter(Boolean))];
-  if(!ids.length) throw new Error("Asigná al menos un sector al supervisor");
-  if(ids.length>2) throw new Error("Un supervisor puede tener como máximo dos sectores");
-  for(const id of ids){const destino=sectores.find(s=>s.id===id&&s.activo);if(!destino)throw new Error("Uno de los sectores seleccionados no existe o está inactivo");}
-  for(const s of actuales.filter(s=>!ids.includes(s.id))) await actualizarFilaSector(s,{supervisor:""});
-  for(const id of ids){const destino=sectores.find(s=>s.id===id);const previo=normalizarUsuario(destino.supervisor);await actualizarFilaSector(destino,{supervisor:clave});if(previo&&previo!==clave)await reconciliarSupervisorAnterior(previo,destino.id);}
+async function sincronizarUsuarioSupervisor(
+  usuarioClave,
+  rol,
+  sectorId,
+  activo = true,
+  sectoresSolicitados = [],
+) {
+  const clave = normalizarUsuario(usuarioClave);
+  const sectores = await obtenerSectores();
+  const actuales = sectores.filter((s) => s.supervisor === clave);
+  if (rol !== "supervisor") {
+    for (const s of actuales) await actualizarFilaSector(s, { supervisor: "" });
+    return;
+  }
+  if (!activo) throw new Error("Un usuario inactivo no puede ser supervisor");
+  const ids = [
+    ...new Set(
+      [sectorId, ...sectoresSolicitados].map(normalizarTexto).filter(Boolean),
+    ),
+  ];
+  if (!ids.length) throw new Error("Asigná al menos un sector al supervisor");
+  if (ids.length > 2)
+    throw new Error("Un supervisor puede tener como máximo dos sectores");
+  for (const id of ids) {
+    const destino = sectores.find((s) => s.id === id && s.activo);
+    if (!destino)
+      throw new Error(
+        "Uno de los sectores seleccionados no existe o está inactivo",
+      );
+  }
+  for (const s of actuales.filter((s) => !ids.includes(s.id)))
+    await actualizarFilaSector(s, { supervisor: "" });
+  for (const id of ids) {
+    const destino = sectores.find((s) => s.id === id);
+    const previo = normalizarUsuario(destino.supervisor);
+    await actualizarFilaSector(destino, { supervisor: clave });
+    if (previo && previo !== clave)
+      await reconciliarSupervisorAnterior(previo, destino.id);
+  }
 }
 
 async function sincronizarSectorSupervisor(sector, nuevoSupervisor) {
-  const anterior=normalizarUsuario(sector.supervisor), nuevo=normalizarUsuario(nuevoSupervisor);
-  if(nuevo) await asignarSupervisorASector(nuevo,sector.id);
-  await actualizarFilaSector(sector,{supervisor:nuevo});
-  if(anterior&&anterior!==nuevo) await reconciliarSupervisorAnterior(anterior,sector.id);
-  invalidarCache("usuarios","sectores");
+  const anterior = normalizarUsuario(sector.supervisor),
+    nuevo = normalizarUsuario(nuevoSupervisor);
+  if (nuevo) await asignarSupervisorASector(nuevo, sector.id);
+  await actualizarFilaSector(sector, { supervisor: nuevo });
+  if (anterior && anterior !== nuevo)
+    await reconciliarSupervisorAnterior(anterior, sector.id);
+  invalidarCache("usuarios", "sectores");
 }
 
-app.get("/admin/sectores", requerirAdministrador, async (req,res) => {
-  try { res.json({ok:true, sectores:await obtenerSectores()}); }
-  catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudieron cargar los sectores"}); }
-});
-
-app.post("/admin/sectores", requerirAdministrador, async (req,res) => {
+app.get("/admin/sectores", requerirAdministrador, async (req, res) => {
   try {
-    const nombre=normalizarTexto(req.body?.nombre), id=idSector(nombre);
-    if(!nombre||!id) return res.status(400).json({ok:false,mensaje:"Ingresá un nombre válido"});
-    const ss=await obtenerSectores();
-    if(ss.some(s=>s.id===id||s.nombre.toLowerCase()===nombre.toLowerCase())) return res.status(409).json({ok:false,mensaje:"Ese sector ya existe"});
-    const color=/^#[0-9a-f]{6}$/i.test(req.body?.color||"")?req.body.color:"#b72e35";
-    const supervisor=normalizarUsuario(req.body?.supervisor);
-    await sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:`${SECTORES_SHEET_NAME}!A:E`,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",requestBody:{values:[[id,nombre,color,"","Sí"]]}});
-    const creado=(await obtenerSectores()).find(s=>s.id===id);
-    if (supervisor && creado) await sincronizarSectorSupervisor(creado, supervisor);
-    invalidarCache("usuarios","sectores");
-    res.json({ok:true, sector:{id,nombre,color,supervisor,activo:true}});
-  } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo crear el sector"}); }
+    res.json({ ok: true, sectores: await obtenerSectores() });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudieron cargar los sectores",
+    });
+  }
 });
 
-app.put("/admin/sectores/:id", requerirAdministrador, async (req,res) => {
+app.post("/admin/sectores", requerirAdministrador, async (req, res) => {
   try {
-    const ss=await obtenerSectores(), s=ss.find(x=>x.id===normalizarTexto(req.params.id));
-    if(!s) return res.status(404).json({ok:false,mensaje:"Sector no encontrado"});
-    const nombre=normalizarTexto(req.body?.nombre)||s.nombre;
-    const color=/^#[0-9a-f]{6}$/i.test(req.body?.color||"")?req.body.color:s.color;
-    const supervisor=normalizarUsuario(req.body?.supervisor);
-    const activo=req.body?.activo===undefined?s.activo:Boolean(req.body.activo);
-    if (!activo && supervisor) return res.status(400).json({ok:false,mensaje:"Un sector inactivo no puede conservar supervisor"});
-    await actualizarFilaSector(s,{nombre,color,activo,supervisor:s.supervisor});
-    await sincronizarSectorSupervisor({...s,nombre,color,activo}, supervisor); invalidarCache("sectores","usuarios");
-    res.json({ok:true, sector:{id:s.id,nombre,color,supervisor,activo}});
-  } catch(e) { res.status(500).json({ok:false,mensaje:e.message || "No se pudo actualizar el sector"}); }
+    const nombre = normalizarTexto(req.body?.nombre),
+      id = idSector(nombre);
+    if (!nombre || !id)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Ingresá un nombre válido" });
+    const ss = await obtenerSectores();
+    if (
+      ss.some(
+        (s) => s.id === id || s.nombre.toLowerCase() === nombre.toLowerCase(),
+      )
+    )
+      return res
+        .status(409)
+        .json({ ok: false, mensaje: "Ese sector ya existe" });
+    const color = /^#[0-9a-f]{6}$/i.test(req.body?.color || "")
+      ? req.body.color
+      : "#b72e35";
+    const supervisor = normalizarUsuario(req.body?.supervisor);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SECTORES_SHEET_NAME}!A:E`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[id, nombre, color, "", "Sí"]] },
+    });
+    const creado = (await obtenerSectores()).find((s) => s.id === id);
+    if (supervisor && creado)
+      await sincronizarSectorSupervisor(creado, supervisor);
+    invalidarCache("usuarios", "sectores");
+    res.json({
+      ok: true,
+      sector: { id, nombre, color, supervisor, activo: true },
+    });
+  } catch (e) {
+    res
+      .status(500)
+      .json({ ok: false, mensaje: e.message || "No se pudo crear el sector" });
+  }
 });
 
-
+app.put("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
+  try {
+    const ss = await obtenerSectores(),
+      s = ss.find((x) => x.id === normalizarTexto(req.params.id));
+    if (!s)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Sector no encontrado" });
+    const nombre = normalizarTexto(req.body?.nombre) || s.nombre;
+    const color = /^#[0-9a-f]{6}$/i.test(req.body?.color || "")
+      ? req.body.color
+      : s.color;
+    const supervisor = normalizarUsuario(req.body?.supervisor);
+    const activo =
+      req.body?.activo === undefined ? s.activo : Boolean(req.body.activo);
+    if (!activo && supervisor)
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Un sector inactivo no puede conservar supervisor",
+      });
+    await actualizarFilaSector(s, {
+      nombre,
+      color,
+      activo,
+      supervisor: s.supervisor,
+    });
+    await sincronizarSectorSupervisor(
+      { ...s, nombre, color, activo },
+      supervisor,
+    );
+    invalidarCache("sectores", "usuarios");
+    res.json({
+      ok: true,
+      sector: { id: s.id, nombre, color, supervisor, activo },
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo actualizar el sector",
+    });
+  }
+});
 
 let hojaTareasAsegurada = false;
 async function asegurarHojaTareas() {
   if (hojaTareasAsegurada) return;
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (!(meta.data.sheets || []).some(h => h.properties?.title === TAREAS_SHEET_NAME)) {
-    await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody:{ requests:[{ addSheet:{ properties:{ title:TAREAS_SHEET_NAME } } }] } });
+  if (
+    !(meta.data.sheets || []).some(
+      (h) => h.properties?.title === TAREAS_SHEET_NAME,
+    )
+  ) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: TAREAS_SHEET_NAME } } }],
+      },
+    });
   }
   await sheets.spreadsheets.values.update({
-    spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A1:I1`, valueInputOption:"USER_ENTERED",
-    requestBody:{ values:[["ID","Sector","Nombre","Duración","Activo","Asignaciones","Actualizado","Actualizado por","Días semana"]] }
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TAREAS_SHEET_NAME}!A1:I1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [
+        [
+          "ID",
+          "Sector",
+          "Nombre",
+          "Duración",
+          "Activo",
+          "Asignaciones",
+          "Actualizado",
+          "Actualizado por",
+          "Días semana",
+        ],
+      ],
+    },
   });
   hojaTareasAsegurada = true;
 }
 function normalizarTareaServidor(t) {
-  const asignaciones = t?.asignaciones && typeof t.asignaciones === "object" ? t.asignaciones : {};
+  const asignaciones =
+    t?.asignaciones && typeof t.asignaciones === "object" ? t.asignaciones : {};
   return {
     id: normalizarTexto(t?.id) || crypto.randomUUID(),
     sector: normalizarTexto(t?.sector) || "General",
     nombre: normalizarTexto(t?.nombre) || "Tarea",
-    duracionMin: Math.max(1, Math.min(480, Number(t?.duracionMin || t?.duracion || 10))),
-    diasSemana: (()=>{
-      const dias=Array.isArray(t?.diasSemana)?t.diasSemana.map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6):[];
-      return dias.length?[...new Set(dias)]:[0,1,2,3,4,5,6];
+    duracionMin: Math.max(
+      1,
+      Math.min(480, Number(t?.duracionMin || t?.duracion || 10)),
+    ),
+    diasSemana: (() => {
+      const dias = Array.isArray(t?.diasSemana)
+        ? t.diasSemana
+            .map(Number)
+            .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+        : [];
+      return dias.length ? [...new Set(dias)] : [0, 1, 2, 3, 4, 5, 6];
     })(),
     activo: t?.activo !== false,
-    asignaciones
+    asignaciones,
   };
 }
 function fusionarAsignacionesServidor(base = {}, entrada = {}) {
@@ -1196,251 +2384,697 @@ function fusionarAsignacionesServidor(base = {}, entrada = {}) {
     salida[fecha] = salida[fecha] || {};
     for (const [turno, asignacion] of Object.entries(turnos || {})) {
       if (asignacion == null) delete salida[fecha][turno];
-      else salida[fecha][turno] = { ...(salida[fecha][turno] || {}), ...asignacion };
+      else
+        salida[fecha][turno] = {
+          ...(salida[fecha][turno] || {}),
+          ...asignacion,
+        };
     }
     if (!Object.keys(salida[fecha]).length) delete salida[fecha];
   }
   return salida;
 }
 function fusionarTareaServidor(actual, entrante) {
-  const a = normalizarTareaServidor(actual || {}), e = normalizarTareaServidor(entrante || {});
-  return { ...a, ...e, asignaciones: fusionarAsignacionesServidor(a.asignaciones, e.asignaciones) };
+  const a = normalizarTareaServidor(actual || {}),
+    e = normalizarTareaServidor(entrante || {});
+  return {
+    ...a,
+    ...e,
+    asignaciones: fusionarAsignacionesServidor(a.asignaciones, e.asignaciones),
+  };
 }
 async function asegurarHojaBano() {
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (!(meta.data.sheets || []).some(h => h.properties?.title === TAREAS_BANO_SHEET_NAME)) {
-    await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody:{ requests:[{ addSheet:{ properties:{ title:TAREAS_BANO_SHEET_NAME } } }] } });
+  if (
+    !(meta.data.sheets || []).some(
+      (h) => h.properties?.title === TAREAS_BANO_SHEET_NAME,
+    )
+  ) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          { addSheet: { properties: { title: TAREAS_BANO_SHEET_NAME } } },
+        ],
+      },
+    });
   }
-  await sheets.spreadsheets.values.update({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_BANO_SHEET_NAME}!A1:D1`, valueInputOption:"USER_ENTERED", requestBody:{values:[["Clave","Datos","Actualizado","Actualizado por"]]} });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TAREAS_BANO_SHEET_NAME}!A1:D1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [["Clave", "Datos", "Actualizado", "Actualizado por"]],
+    },
+  });
 }
 async function leerBanoServidor() {
   await asegurarHojaBano();
-  const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_BANO_SHEET_NAME}!A:D`});
-  const filas=(r.data.values||[]).slice(1);
-  const mapa=new Map(filas.map(f=>[f[0],f]));
-  let config={participantes:[],fechaAncla:new Date().toISOString().slice(0,10),historial:[]};
-  try{ if(mapa.get("config")?.[1]) config={...config,...JSON.parse(mapa.get("config")[1])}; }catch{}
-  try{ if(mapa.get("historial")?.[1]) config.historial=JSON.parse(mapa.get("historial")[1])||[]; }catch{}
-  config.participantes=Array.isArray(config.participantes)?config.participantes:[];
-  config.historial=Array.isArray(config.historial)?config.historial:[];
+  const r = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TAREAS_BANO_SHEET_NAME}!A:D`,
+  });
+  const filas = (r.data.values || []).slice(1);
+  const mapa = new Map(filas.map((f) => [f[0], f]));
+  let config = {
+    participantes: [],
+    fechaAncla: new Date().toISOString().slice(0, 10),
+    historial: [],
+  };
+  try {
+    if (mapa.get("config")?.[1])
+      config = { ...config, ...JSON.parse(mapa.get("config")[1]) };
+  } catch {}
+  try {
+    if (mapa.get("historial")?.[1])
+      config.historial = JSON.parse(mapa.get("historial")[1]) || [];
+  } catch {}
+  config.participantes = Array.isArray(config.participantes)
+    ? config.participantes
+    : [];
+  config.historial = Array.isArray(config.historial) ? config.historial : [];
   return config;
 }
 async function guardarBanoServidor(config, usuario) {
-  return ejecutarEnCola("tareas-bano",async()=>{
+  return ejecutarEnCola("tareas-bano", async () => {
     await asegurarHojaBano();
-    const limpio={participantes:[...new Set((config.participantes||[]).map(normalizarTexto).filter(Boolean))],fechaAncla:normalizarTexto(config.fechaAncla)||new Date().toISOString().slice(0,10)};
-    const historial=Array.isArray(config.historial)?config.historial:[];
-    await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_BANO_SHEET_NAME}!A2:D3`,valueInputOption:"USER_ENTERED",requestBody:{values:[
-      ["config",JSON.stringify(limpio),fechaHoraArgentinaIso(),usuario?.usuario||""],
-      ["historial",JSON.stringify(historial),fechaHoraArgentinaIso(),usuario?.usuario||""]
-    ]}});
-    return {...limpio,historial};
+    const limpio = {
+      participantes: [
+        ...new Set(
+          (config.participantes || []).map(normalizarTexto).filter(Boolean),
+        ),
+      ],
+      fechaAncla:
+        normalizarTexto(config.fechaAncla) ||
+        new Date().toISOString().slice(0, 10),
+    };
+    const historial = Array.isArray(config.historial) ? config.historial : [];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${TAREAS_BANO_SHEET_NAME}!A2:D3`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [
+          [
+            "config",
+            JSON.stringify(limpio),
+            fechaHoraArgentinaIso(),
+            usuario?.usuario || "",
+          ],
+          [
+            "historial",
+            JSON.stringify(historial),
+            fechaHoraArgentinaIso(),
+            usuario?.usuario || "",
+          ],
+        ],
+      },
+    });
+    return { ...limpio, historial };
   });
 }
 async function obtenerTareasServidor() {
   await asegurarHojaTareas();
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${TAREAS_SHEET_NAME}!A:I` });
-  const filasTareas=(r.data.values || []).slice(1).filter(f=>f[0]);
-  cantidadFilasTareasConocida=filasTareas.length;
-  return filasTareas.map(f=>{
-    let asignaciones={}; try{asignaciones=JSON.parse(f[5]||"{}");}catch{}
-    let diasSemana=[]; try{diasSemana=JSON.parse(f[8]||"[]");}catch{}
-    return normalizarTareaServidor({id:f[0],sector:f[1],nombre:f[2],duracionMin:Number(f[3]),activo:!["no","false","0","inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),asignaciones,diasSemana});
+  const r = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TAREAS_SHEET_NAME}!A:I`,
+  });
+  const filasTareas = (r.data.values || []).slice(1).filter((f) => f[0]);
+  cantidadFilasTareasConocida = filasTareas.length;
+  return filasTareas.map((f) => {
+    let asignaciones = {};
+    try {
+      asignaciones = JSON.parse(f[5] || "{}");
+    } catch {}
+    let diasSemana = [];
+    try {
+      diasSemana = JSON.parse(f[8] || "[]");
+    } catch {}
+    return normalizarTareaServidor({
+      id: f[0],
+      sector: f[1],
+      nombre: f[2],
+      duracionMin: Number(f[3]),
+      activo: !["no", "false", "0", "inactivo"].includes(
+        normalizarTexto(f[4]).toLowerCase(),
+      ),
+      asignaciones,
+      diasSemana,
+    });
   });
 }
 let cantidadFilasTareasConocida = null;
 function esErrorCuotaGoogle(error) {
-  const status=Number(error?.response?.status||error?.code||error?.status||0);
-  const reason=error?.response?.data?.error?.errors?.[0]?.reason||"";
-  return status===429 || reason==="rateLimitExceeded" || reason==="userRateLimitExceeded";
+  const status = Number(
+    error?.response?.status || error?.code || error?.status || 0,
+  );
+  const reason = error?.response?.data?.error?.errors?.[0]?.reason || "";
+  return (
+    status === 429 ||
+    reason === "rateLimitExceeded" ||
+    reason === "userRateLimitExceeded"
+  );
 }
-async function ejecutarGoogleConReintento(operacion, intentos=4) {
+async function ejecutarGoogleConReintento(operacion, intentos = 4) {
   let ultimoError;
-  for(let intento=0;intento<intentos;intento++){
-    try{return await operacion();}
-    catch(error){
-      ultimoError=error;
-      if(!esErrorCuotaGoogle(error)||intento===intentos-1)throw error;
-      const espera=700*Math.pow(2,intento)+Math.floor(Math.random()*250);
-      await new Promise(resolve=>setTimeout(resolve,espera));
+  for (let intento = 0; intento < intentos; intento++) {
+    try {
+      return await operacion();
+    } catch (error) {
+      ultimoError = error;
+      if (!esErrorCuotaGoogle(error) || intento === intentos - 1) throw error;
+      const espera =
+        700 * Math.pow(2, intento) + Math.floor(Math.random() * 250);
+      await new Promise((resolve) => setTimeout(resolve, espera));
     }
   }
   throw ultimoError;
 }
 async function guardarTareasServidor(tareas, usuario) {
-  return ejecutarEnCola("tareas", async()=>{
+  return ejecutarEnCola("tareas", async () => {
     await asegurarHojaTareas();
-    const filas=(tareas||[]).map(normalizarTareaServidor).map(t=>[t.id,t.sector,t.nombre,t.duracionMin,t.activo?"Sí":"No",JSON.stringify(t.asignaciones||{}),fechaHoraArgentinaIso(),usuario?.usuario||"",JSON.stringify(t.diasSemana||[0,1,2,3,4,5,6])]);
-    const prevCount=Number.isInteger(cantidadFilasTareasConocida)?cantidadFilasTareasConocida:filas.length;
-    if(filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A2:I${filas.length+1}`,valueInputOption:"USER_ENTERED",requestBody:{values:filas}}));
-    if(prevCount>filas.length) await ejecutarGoogleConReintento(()=>sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${TAREAS_SHEET_NAME}!A${filas.length+2}:I${prevCount+1}`}));
-    cantidadFilasTareasConocida=filas.length;
+    const filas = (tareas || [])
+      .map(normalizarTareaServidor)
+      .map((t) => [
+        t.id,
+        t.sector,
+        t.nombre,
+        t.duracionMin,
+        t.activo ? "Sí" : "No",
+        JSON.stringify(t.asignaciones || {}),
+        fechaHoraArgentinaIso(),
+        usuario?.usuario || "",
+        JSON.stringify(t.diasSemana || [0, 1, 2, 3, 4, 5, 6]),
+      ]);
+    const prevCount = Number.isInteger(cantidadFilasTareasConocida)
+      ? cantidadFilasTareasConocida
+      : filas.length;
+    if (filas.length)
+      await ejecutarGoogleConReintento(() =>
+        sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${TAREAS_SHEET_NAME}!A2:I${filas.length + 1}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: filas },
+        }),
+      );
+    if (prevCount > filas.length)
+      await ejecutarGoogleConReintento(() =>
+        sheets.spreadsheets.values.clear({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${TAREAS_SHEET_NAME}!A${filas.length + 2}:I${prevCount + 1}`,
+        }),
+      );
+    cantidadFilasTareasConocida = filas.length;
     invalidarCache("tareas");
   });
 }
 async function sectoresTareasPermitidos(usuario) {
-  const sectores=(await obtenerSectores()).filter(s=>s.activo);
-  if(rolGestionGlobal(usuario)) return sectores;
-  if(usuario.rol==="supervisor") {
-    const ids=new Set([usuario.sector,...(usuario.sectores||[])].filter(Boolean));
-    sectores.filter(s=>normalizarUsuario(s.supervisor)===normalizarUsuario(usuario.usuario)).forEach(s=>ids.add(s.id));
-    return sectores.filter(s=>ids.has(s.id));
+  const sectores = (await obtenerSectores()).filter((s) => s.activo);
+  if (rolGestionGlobal(usuario)) return sectores;
+  if (usuario.rol === "supervisor") {
+    const ids = new Set(
+      [usuario.sector, ...(usuario.sectores || [])].filter(Boolean),
+    );
+    sectores
+      .filter(
+        (s) =>
+          normalizarUsuario(s.supervisor) ===
+          normalizarUsuario(usuario.usuario),
+      )
+      .forEach((s) => ids.add(s.id));
+    return sectores.filter((s) => ids.has(s.id));
   }
-  return sectores.filter(s=>s.id===usuario.sector);
+  return sectores.filter((s) => s.id === usuario.sector);
 }
-app.get("/tareas/contexto", requerirSesion, async (req,res)=>{
+app.get("/tareas/contexto", requerirSesion, async (req, res) => {
   try {
-    const sectores=await sectoresTareasPermitidos(req.usuario);
-    res.json({ok:true,rol:req.usuario.rol,sectores:sectores.map(s=>({id:s.id,nombre:s.nombre,color:s.color})),puedeAsignar:rolGestionSector(req.usuario),puedeConfigurar:rolGestionSector(req.usuario)});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar el contexto de tareas"});}
+    const sectores = await sectoresTareasPermitidos(req.usuario);
+    res.json({
+      ok: true,
+      rol: req.usuario.rol,
+      sectores: sectores.map((s) => ({
+        id: s.id,
+        nombre: s.nombre,
+        color: s.color,
+      })),
+      puedeAsignar: rolGestionSector(req.usuario),
+      puedeConfigurar: rolGestionSector(req.usuario),
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo cargar el contexto de tareas",
+    });
+  }
 });
 
-app.get("/tareas", requerirSesion, async (req,res)=>{
+app.get("/tareas", requerirSesion, async (req, res) => {
   try {
-    const [tareas,sectores]=await Promise.all([obtenerTareasServidor(),sectoresTareasPermitidos(req.usuario)]);
-    const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
+    const [tareas, sectores] = await Promise.all([
+      obtenerTareasServidor(),
+      sectoresTareasPermitidos(req.usuario),
+    ]);
+    const permitidos = new Set(
+      sectores.flatMap((s) => [
+        normalizarTexto(s.id),
+        normalizarTexto(s.nombre),
+      ]),
+    );
     // Las tareas pertenecen al sector: todo usuario activo del sector puede verlas,
     // aunque la asignación indique otro responsable. Los permisos de edición se
     // siguen resolviendo por rol en /tareas/contexto y en los endpoints de escritura.
-    const visibles=tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
-    res.json({ok:true,tareas:visibles});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron cargar las tareas"});}
+    const visibles = tareas.filter((t) =>
+      permitidos.has(normalizarTexto(t.sector)),
+    );
+    res.json({ ok: true, tareas: visibles });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudieron cargar las tareas",
+    });
+  }
 });
 
-app.put("/tareas", requerirSesion, async (req,res)=>{
+app.put("/tareas", requerirSesion, async (req, res) => {
   try {
-    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para modificar tareas"});
-    const entrantes=Array.isArray(req.body?.tareas)?req.body.tareas.map(normalizarTareaServidor):[];
-    const eliminadas=new Set((Array.isArray(req.body?.deletedIds)?req.body.deletedIds:[]).map(normalizarTexto).filter(Boolean));
-    const actuales=await obtenerTareasServidor();
-    const sectores=await sectoresTareasPermitidos(req.usuario);
-    const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    const puedeSector=t=>rolGestionGlobal(req.usuario)||permitidos.has(normalizarTexto(t.sector));
-    const mapa=new Map(actuales.filter(t=>!(eliminadas.has(t.id)&&puedeSector(t))).map(t=>[t.id,t]));
-    for(const tarea of entrantes){
-      if(!puedeSector(tarea)) continue;
-      mapa.set(tarea.id, mapa.has(tarea.id) ? fusionarTareaServidor(mapa.get(tarea.id), tarea) : tarea);
+    if (!rolGestionSector(req.usuario))
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés permiso para modificar tareas" });
+    const entrantes = Array.isArray(req.body?.tareas)
+      ? req.body.tareas.map(normalizarTareaServidor)
+      : [];
+    const eliminadas = new Set(
+      (Array.isArray(req.body?.deletedIds) ? req.body.deletedIds : [])
+        .map(normalizarTexto)
+        .filter(Boolean),
+    );
+    const actuales = await obtenerTareasServidor();
+    const sectores = await sectoresTareasPermitidos(req.usuario);
+    const permitidos = new Set(
+      sectores.flatMap((s) => [
+        normalizarTexto(s.id),
+        normalizarTexto(s.nombre),
+      ]),
+    );
+    const puedeSector = (t) =>
+      rolGestionGlobal(req.usuario) ||
+      permitidos.has(normalizarTexto(t.sector));
+    const mapa = new Map(
+      actuales
+        .filter((t) => !(eliminadas.has(t.id) && puedeSector(t)))
+        .map((t) => [t.id, t]),
+    );
+    for (const tarea of entrantes) {
+      if (!puedeSector(tarea)) continue;
+      mapa.set(
+        tarea.id,
+        mapa.has(tarea.id)
+          ? fusionarTareaServidor(mapa.get(tarea.id), tarea)
+          : tarea,
+      );
     }
-    const fusion=[...mapa.values()];
-    await guardarTareasServidor(fusion,req.usuario);
-    const visibles=rolGestionGlobal(req.usuario)?fusion:fusion.filter(t=>permitidos.has(normalizarTexto(t.sector)));
-    res.json({ok:true,tareas:visibles});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron guardar las tareas"});}
+    const fusion = [...mapa.values()];
+    await guardarTareasServidor(fusion, req.usuario);
+    const visibles = rolGestionGlobal(req.usuario)
+      ? fusion
+      : fusion.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+    res.json({ ok: true, tareas: visibles });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudieron guardar las tareas",
+    });
+  }
 });
 
-app.post("/tareas/asignacion", requerirSesion, async (req,res)=>{
+app.post("/tareas/asignacion", requerirSesion, async (req, res) => {
   try {
-    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
-    const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
-    const tareas=await obtenerTareasServidor(), tarea=tareas.find(t=>t.id===id);
-    if(!tarea||!fecha||!["manana","tarde"].includes(turno)) return res.status(400).json({ok:false,mensaje:"Asignación inválida"});
-    const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    if(!rolGestionGlobal(req.usuario)&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
-    tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
-    const asignacionAnterior=tarea.asignaciones[fecha][turno]||{};
-    const responsables=[...new Set((req.body?.responsables||[]).map(normalizarTexto).filter(Boolean))];
-    tarea.asignaciones[fecha][turno]={...asignacionAnterior,responsables,estado:normalizarTexto(req.body?.estado)||"pendiente",completadaPor:"",completadaHora:""};
-    await guardarTareasServidor(tareas,req.usuario);
-    res.json({ok:true,asignacion:tarea.asignaciones[fecha][turno]});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar la asignación"});}
+    if (!rolGestionSector(req.usuario))
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés permiso para asignar tareas" });
+    const id = normalizarTexto(req.body?.id),
+      fecha = normalizarTexto(req.body?.fecha),
+      turno = normalizarTexto(req.body?.turno);
+    const tareas = await obtenerTareasServidor(),
+      tarea = tareas.find((t) => t.id === id);
+    if (!tarea || !fecha || !["manana", "tarde"].includes(turno))
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Asignación inválida" });
+    const sectores = await sectoresTareasPermitidos(req.usuario),
+      permitidos = new Set(
+        sectores.flatMap((s) => [
+          normalizarTexto(s.id),
+          normalizarTexto(s.nombre),
+        ]),
+      );
+    if (
+      !rolGestionGlobal(req.usuario) &&
+      !permitidos.has(normalizarTexto(tarea.sector))
+    )
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés permiso para este sector" });
+    tarea.asignaciones = tarea.asignaciones || {};
+    tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
+    const asignacionAnterior = tarea.asignaciones[fecha][turno] || {};
+    const responsables = [
+      ...new Set(
+        (req.body?.responsables || []).map(normalizarTexto).filter(Boolean),
+      ),
+    ];
+    tarea.asignaciones[fecha][turno] = {
+      ...asignacionAnterior,
+      responsables,
+      estado: normalizarTexto(req.body?.estado) || "pendiente",
+      completadaPor: "",
+      completadaHora: "",
+    };
+    await guardarTareasServidor(tareas, req.usuario);
+    res.json({ ok: true, asignacion: tarea.asignaciones[fecha][turno] });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo guardar la asignación",
+    });
+  }
 });
 
-app.post("/tareas/asignaciones-lote", requerirSesion, async (req,res)=>{
+app.post("/tareas/asignaciones-lote", requerirSesion, async (req, res) => {
   try {
-    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para asignar tareas"});
-    const ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(normalizarTexto).filter(Boolean))],fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno),responsable=normalizarTexto(req.body?.responsable),reemplazar=Boolean(req.body?.reemplazar);
-    if((!ids.length&&!reemplazar)||!fecha||!["manana","tarde"].includes(turno)||!responsable) return res.status(400).json({ok:false,mensaje:"Asignación incompleta"});
-    const tareas=await obtenerTareasServidor(), sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    const seleccionadas=tareas.filter(t=>ids.includes(t.id));
-    if(seleccionadas.length!==ids.length) return res.status(404).json({ok:false,mensaje:"Una o más tareas no existen"});
-    if(seleccionadas.some(t=>!rolGestionGlobal(req.usuario)&&!permitidos.has(normalizarTexto(t.sector)))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para una de las tareas"});
-    if(reemplazar){
-      for(const tarea of tareas){
-        const asig=tarea.asignaciones?.[fecha]?.[turno];
-        if(!asig) continue;
-        const restantes=(asig.responsables||[]).map(normalizarTexto).filter(r=>r&&normalizarUsuario(r)!==normalizarUsuario(responsable));
-        if(restantes.length) asig.responsables=[...new Set(restantes)];
-        else { delete tarea.asignaciones[fecha][turno]; if(!Object.keys(tarea.asignaciones[fecha]).length) delete tarea.asignaciones[fecha]; }
+    if (!rolGestionSector(req.usuario))
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés permiso para asignar tareas" });
+    const ids = [
+        ...new Set(
+          (Array.isArray(req.body?.ids) ? req.body.ids : [])
+            .map(normalizarTexto)
+            .filter(Boolean),
+        ),
+      ],
+      fecha = normalizarTexto(req.body?.fecha),
+      turno = normalizarTexto(req.body?.turno),
+      responsable = normalizarTexto(req.body?.responsable),
+      reemplazar = Boolean(req.body?.reemplazar);
+    if (
+      (!ids.length && !reemplazar) ||
+      !fecha ||
+      !["manana", "tarde"].includes(turno) ||
+      !responsable
+    )
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Asignación incompleta" });
+    const tareas = await obtenerTareasServidor(),
+      sectores = await sectoresTareasPermitidos(req.usuario),
+      permitidos = new Set(
+        sectores.flatMap((s) => [
+          normalizarTexto(s.id),
+          normalizarTexto(s.nombre),
+        ]),
+      );
+    const seleccionadas = tareas.filter((t) => ids.includes(t.id));
+    if (seleccionadas.length !== ids.length)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Una o más tareas no existen" });
+    if (
+      seleccionadas.some(
+        (t) =>
+          !rolGestionGlobal(req.usuario) &&
+          !permitidos.has(normalizarTexto(t.sector)),
+      )
+    )
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para una de las tareas",
+      });
+    if (reemplazar) {
+      for (const tarea of tareas) {
+        const asig = tarea.asignaciones?.[fecha]?.[turno];
+        if (!asig) continue;
+        const restantes = (asig.responsables || [])
+          .map(normalizarTexto)
+          .filter(
+            (r) => r && normalizarUsuario(r) !== normalizarUsuario(responsable),
+          );
+        if (restantes.length) asig.responsables = [...new Set(restantes)];
+        else {
+          delete tarea.asignaciones[fecha][turno];
+          if (!Object.keys(tarea.asignaciones[fecha]).length)
+            delete tarea.asignaciones[fecha];
+        }
       }
     }
-    for(const tarea of seleccionadas){
-      tarea.asignaciones=tarea.asignaciones||{}; tarea.asignaciones[fecha]=tarea.asignaciones[fecha]||{};
-      const anterior=tarea.asignaciones[fecha][turno]||{};
-      const responsables=[...new Set([...(anterior.responsables||[]).map(normalizarTexto).filter(Boolean),responsable])];
-      tarea.asignaciones[fecha][turno]={...anterior,responsables,estado:anterior.estado||"pendiente",completadaPor:anterior.completadaPor||"",completadaHora:anterior.completadaHora||""};
+    for (const tarea of seleccionadas) {
+      tarea.asignaciones = tarea.asignaciones || {};
+      tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
+      const anterior = tarea.asignaciones[fecha][turno] || {};
+      const responsables = [
+        ...new Set([
+          ...(anterior.responsables || []).map(normalizarTexto).filter(Boolean),
+          responsable,
+        ]),
+      ];
+      tarea.asignaciones[fecha][turno] = {
+        ...anterior,
+        responsables,
+        estado: anterior.estado || "pendiente",
+        completadaPor: anterior.completadaPor || "",
+        completadaHora: anterior.completadaHora || "",
+      };
     }
-    await guardarTareasServidor(tareas,req.usuario);
-    const visibles=rolGestionGlobal(req.usuario)?tareas:tareas.filter(t=>permitidos.has(normalizarTexto(t.sector)));
-    res.json({ok:true,asignadas:seleccionadas.length,responsable,tareas:visibles});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudieron asignar las tareas"});}
+    await guardarTareasServidor(tareas, req.usuario);
+    const visibles = rolGestionGlobal(req.usuario)
+      ? tareas
+      : tareas.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+    res.json({
+      ok: true,
+      asignadas: seleccionadas.length,
+      responsable,
+      tareas: visibles,
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudieron asignar las tareas",
+    });
+  }
 });
-app.delete("/tareas/asignacion", requerirSesion, async (req,res)=>{
+app.delete("/tareas/asignacion", requerirSesion, async (req, res) => {
   try {
-    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para eliminar asignaciones"});
-    const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
-    const tareas=await obtenerTareasServidor(),tarea=tareas.find(t=>t.id===id);
-    if(!tarea?.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
-    const sectores=await sectoresTareasPermitidos(req.usuario),permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-    if(!rolGestionGlobal(req.usuario)&&!permitidos.has(normalizarTexto(tarea.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para este sector"});
-    delete tarea.asignaciones[fecha][turno]; if(!Object.keys(tarea.asignaciones[fecha]).length) delete tarea.asignaciones[fecha];
-    await guardarTareasServidor(tareas,req.usuario); res.json({ok:true});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo eliminar la asignación"});}
+    if (!rolGestionSector(req.usuario))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para eliminar asignaciones",
+      });
+    const id = normalizarTexto(req.body?.id),
+      fecha = normalizarTexto(req.body?.fecha),
+      turno = normalizarTexto(req.body?.turno);
+    const tareas = await obtenerTareasServidor(),
+      tarea = tareas.find((t) => t.id === id);
+    if (!tarea?.asignaciones?.[fecha]?.[turno])
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Asignación no encontrada" });
+    const sectores = await sectoresTareasPermitidos(req.usuario),
+      permitidos = new Set(
+        sectores.flatMap((s) => [
+          normalizarTexto(s.id),
+          normalizarTexto(s.nombre),
+        ]),
+      );
+    if (
+      !rolGestionGlobal(req.usuario) &&
+      !permitidos.has(normalizarTexto(tarea.sector))
+    )
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "No tenés permiso para este sector" });
+    delete tarea.asignaciones[fecha][turno];
+    if (!Object.keys(tarea.asignaciones[fecha]).length)
+      delete tarea.asignaciones[fecha];
+    await guardarTareasServidor(tareas, req.usuario);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo eliminar la asignación",
+    });
+  }
 });
-app.get("/tareas/bano", requerirSesion, async(req,res)=>{try{res.json({ok:true,config:await leerBanoServidor()});}catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo cargar la rotación"});}});
-app.put("/tareas/bano", requerirSesion, async(req,res)=>{
-  try{
-    if(!rolGestionSector(req.usuario)) return res.status(403).json({ok:false,mensaje:"No tenés permiso para configurar la rotación"});
-    const actual=await leerBanoServidor();
-    const config=await guardarBanoServidor({...actual,participantes:req.body?.participantes||[],fechaAncla:req.body?.fechaAncla||actual.fechaAncla},req.usuario);
-    res.json({ok:true,config});
-  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo guardar la rotación"});}
+app.get("/tareas/bano", requerirSesion, async (req, res) => {
+  try {
+    res.json({ ok: true, config: await leerBanoServidor() });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo cargar la rotación",
+    });
+  }
 });
-app.post("/tareas/bano/confirmar", requerirSesion, async(req,res)=>{
-  try{
-    const fecha=normalizarTexto(req.body?.fecha)||new Date().toISOString().slice(0,10),actual=await leerBanoServidor();
-    if(!actual.historial.some(x=>x.fecha===fecha)) actual.historial.unshift({fecha,usuario:req.usuario.nombre||req.usuario.usuario,hora:new Date().toLocaleTimeString("es-AR",{timeZone:TIME_ZONE,hour:"2-digit",minute:"2-digit"})});
-    const config=await guardarBanoServidor(actual,req.usuario);res.json({ok:true,config});
-  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo confirmar la limpieza"});}
+app.put("/tareas/bano", requerirSesion, async (req, res) => {
+  try {
+    if (!rolGestionSector(req.usuario))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para configurar la rotación",
+      });
+    const actual = await leerBanoServidor();
+    const config = await guardarBanoServidor(
+      {
+        ...actual,
+        participantes: req.body?.participantes || [],
+        fechaAncla: req.body?.fechaAncla || actual.fechaAncla,
+      },
+      req.usuario,
+    );
+    res.json({ ok: true, config });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo guardar la rotación",
+    });
+  }
+});
+app.post("/tareas/bano/confirmar", requerirSesion, async (req, res) => {
+  try {
+    const fecha =
+        normalizarTexto(req.body?.fecha) ||
+        new Date().toISOString().slice(0, 10),
+      actual = await leerBanoServidor();
+    if (!actual.historial.some((x) => x.fecha === fecha))
+      actual.historial.unshift({
+        fecha,
+        usuario: req.usuario.nombre || req.usuario.usuario,
+        hora: new Date().toLocaleTimeString("es-AR", {
+          timeZone: TIME_ZONE,
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      });
+    const config = await guardarBanoServidor(actual, req.usuario);
+    res.json({ ok: true, config });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo confirmar la limpieza",
+    });
+  }
 });
 
-app.post("/tareas/completar", requerirSesion, async (req,res)=>{
+app.post("/tareas/completar", requerirSesion, async (req, res) => {
   try {
-    const id=normalizarTexto(req.body?.id),fecha=normalizarTexto(req.body?.fecha),turno=normalizarTexto(req.body?.turno);
-    const tareas=await obtenerTareasServidor(),t=tareas.find(x=>x.id===id);
-    if(!t||!t.asignaciones?.[fecha]?.[turno]) return res.status(404).json({ok:false,mensaje:"Asignación no encontrada"});
-    const asig=t.asignaciones[fecha][turno];
-    if(!rolGestionGlobal(req.usuario)) {
-      const sectores=await sectoresTareasPermitidos(req.usuario);
-      const permitidos=new Set(sectores.flatMap(s=>[normalizarTexto(s.id),normalizarTexto(s.nombre)]));
-      if(!permitidos.has(normalizarTexto(t.sector))) return res.status(403).json({ok:false,mensaje:"No tenés permiso para completar tareas de este sector"});
+    const id = normalizarTexto(req.body?.id),
+      fecha = normalizarTexto(req.body?.fecha),
+      turno = normalizarTexto(req.body?.turno);
+    const tareas = await obtenerTareasServidor(),
+      t = tareas.find((x) => x.id === id);
+    if (!t || !t.asignaciones?.[fecha]?.[turno])
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Asignación no encontrada" });
+    const asig = t.asignaciones[fecha][turno];
+    if (!rolGestionGlobal(req.usuario)) {
+      const sectores = await sectoresTareasPermitidos(req.usuario);
+      const permitidos = new Set(
+        sectores.flatMap((s) => [
+          normalizarTexto(s.id),
+          normalizarTexto(s.nombre),
+        ]),
+      );
+      if (!permitidos.has(normalizarTexto(t.sector)))
+        return res.status(403).json({
+          ok: false,
+          mensaje: "No tenés permiso para completar tareas de este sector",
+        });
     }
-    const yaEstabaCompletada = normalizarTexto(asig.estado).toLowerCase() === "completada";
-    asig.estado="completada"; asig.completadaPor=req.usuario.nombre||req.usuario.usuario; asig.completadaHora=new Date().toLocaleTimeString("es-AR",{timeZone:TIME_ZONE,hour:"2-digit",minute:"2-digit"});
-    await guardarTareasServidor(tareas,req.usuario);
+    const yaEstabaCompletada =
+      normalizarTexto(asig.estado).toLowerCase() === "completada";
+    asig.estado = "completada";
+    asig.completadaPor = req.usuario.nombre || req.usuario.usuario;
+    asig.completadaHora = new Date().toLocaleTimeString("es-AR", {
+      timeZone: TIME_ZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    await guardarTareasServidor(tareas, req.usuario);
     if (!yaEstabaCompletada) {
-      setImmediate(() => notificarSupervisorTareaCompletada({ tarea:t, fecha, turno, asignacion:asig, completadaPor:req.usuario })
-        .catch(error => console.error("Error notificando tarea completada al supervisor:", error)));
+      setImmediate(() =>
+        notificarSupervisorTareaCompletada({
+          tarea: t,
+          fecha,
+          turno,
+          asignacion: asig,
+          completadaPor: req.usuario,
+        }).catch((error) =>
+          console.error(
+            "Error notificando tarea completada al supervisor:",
+            error,
+          ),
+        ),
+      );
     }
-    res.json({ok:true,asignacion:asig});
-  } catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo completar la tarea"});}
+    res.json({ ok: true, asignacion: asig });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo completar la tarea",
+    });
+  }
 });
 
 app.get("/tareas/usuarios", requerirSesion, async (req, res) => {
   try {
-    const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), sectoresTareasPermitidos(req.usuario)]);
-    const permitidos = new Set(sectores.map(s=>s.id));
-    const visibles = rolGestionGlobal(req.usuario) ? usuarios.filter(u=>u.activo) : usuarios.filter(u => u.activo && (permitidos.has(u.sector) || (u.sectores || []).some(s => permitidos.has(s))));
-    res.json({ok:true, usuarios:visibles.map(u=>({usuario:u.usuario,nombre:u.nombre,sector:u.sector,sectores:u.sectores||[]}))});
-  } catch(error) { res.status(500).json({ok:false,mensaje:error.message || "No se pudieron cargar los usuarios"}); }
+    const [usuarios, sectores] = await Promise.all([
+      obtenerUsuarios(),
+      sectoresTareasPermitidos(req.usuario),
+    ]);
+    const permitidos = new Set(sectores.map((s) => s.id));
+    const visibles = rolGestionGlobal(req.usuario)
+      ? usuarios.filter((u) => u.activo)
+      : usuarios.filter(
+          (u) =>
+            u.activo &&
+            (permitidos.has(u.sector) ||
+              (u.sectores || []).some((s) => permitidos.has(s))),
+        );
+    res.json({
+      ok: true,
+      usuarios: visibles.map((u) => ({
+        usuario: u.usuario,
+        nombre: u.nombre,
+        sector: u.sector,
+        sectores: u.sectores || [],
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron cargar los usuarios",
+    });
+  }
 });
 
 app.get("/admin/usuarios", requerirAdministrador, async (req, res) => {
   try {
     const usuarios = await obtenerUsuarios();
-    res.json({ ok: true, usuarios: usuarios.map(({ passwordHash, filaGoogle, ...usuario }) => usuario) });
+    res.json({
+      ok: true,
+      usuarios: usuarios.map(
+        ({ passwordHash, filaGoogle, ...usuario }) => usuario,
+      ),
+    });
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudieron cargar los usuarios" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron cargar los usuarios",
+    });
   }
 });
 
@@ -1452,31 +3086,110 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
     const rolEntrada = normalizarTexto(req.body?.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
     const sector = normalizarTexto(req.body?.sector);
-    const sectoresCargo = [...new Set((Array.isArray(req.body?.sectores)?req.body.sectores:[]).map(normalizarTexto).filter(Boolean))];
+    const sectoresCargo = [
+      ...new Set(
+        (Array.isArray(req.body?.sectores) ? req.body.sectores : [])
+          .map(normalizarTexto)
+          .filter(Boolean),
+      ),
+    ];
     const permisos = normalizarPermisos(req.body?.permisos, rol);
     if (sector) {
       const sectores = await obtenerSectores();
-      if (!sectores.some(s => s.id === sector && s.activo)) return res.status(400).json({ ok:false, mensaje:"El sector seleccionado no existe o está inactivo" });
+      if (!sectores.some((s) => s.id === sector && s.activo))
+        return res.status(400).json({
+          ok: false,
+          mensaje: "El sector seleccionado no existe o está inactivo",
+        });
     }
-    if (rol === "supervisor" && ![sector,...sectoresCargo].filter(Boolean).length) return res.status(400).json({ ok:false, mensaje:"Asigná al menos un sector al supervisor" });
-    if ([...new Set([sector,...sectoresCargo].filter(Boolean))].length > 2) return res.status(400).json({ok:false,mensaje:"Un supervisor puede tener como máximo dos sectores"});
-    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores a cargo no existe o está inactivo"}); }
-    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return res.status(400).json({ ok:false, mensaje:"El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo" });
-    if (password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
+    if (
+      rol === "supervisor" &&
+      ![sector, ...sectoresCargo].filter(Boolean).length
+    )
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Asigná al menos un sector al supervisor",
+      });
+    if ([...new Set([sector, ...sectoresCargo].filter(Boolean))].length > 2)
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Un supervisor puede tener como máximo dos sectores",
+      });
+    if (sectoresCargo.length) {
+      const sectores = await obtenerSectores();
+      if (
+        sectoresCargo.some(
+          (id) => !sectores.some((s) => s.id === id && s.activo),
+        )
+      )
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Uno de los sectores a cargo no existe o está inactivo",
+        });
+    }
+    if (!/^[a-z0-9._-]{3,30}$/.test(usuario))
+      return res.status(400).json({
+        ok: false,
+        mensaje:
+          "El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo",
+      });
+    if (password.length < 4)
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La contraseña debe tener al menos 4 caracteres",
+      });
     const usuarios = await obtenerUsuarios();
-    if (usuarios.some(item => item.usuario === usuario)) return res.status(409).json({ ok:false, mensaje:"Ese usuario ya existe" });
+    if (usuarios.some((item) => item.usuario === usuario))
+      return res
+        .status(409)
+        .json({ ok: false, mensaje: "Ese usuario ya existe" });
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: `${USUARIOS_SHEET_NAME}!A:I`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[usuario, nombre, hashPassword(password), rol, "Sí", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
+      requestBody: {
+        values: [
+          [
+            usuario,
+            nombre,
+            hashPassword(password),
+            rol,
+            "Sí",
+            fechaHoraArgentinaIso(),
+            serializarPermisos(permisos, rol),
+            sector,
+            sectoresCargo.join(","),
+          ],
+        ],
+      },
     });
     invalidarCache("usuarios");
-    await sincronizarUsuarioSupervisor(usuario, rol, sector, true, sectoresCargo);
-    res.json({ ok:true, mensaje:"Usuario creado", usuario:{ usuario, nombre, rol, activo:true, permisos, sector, sectores:sectoresCargo } });
+    await sincronizarUsuarioSupervisor(
+      usuario,
+      rol,
+      sector,
+      true,
+      sectoresCargo,
+    );
+    res.json({
+      ok: true,
+      mensaje: "Usuario creado",
+      usuario: {
+        usuario,
+        nombre,
+        rol,
+        activo: true,
+        permisos,
+        sector,
+        sectores: sectoresCargo,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo crear el usuario" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo crear el usuario",
+    });
   }
 });
 
@@ -1484,85 +3197,263 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
   try {
     const clave = normalizarUsuario(req.params.usuario);
     const usuarios = await obtenerUsuarios();
-    const actual = usuarios.find(item => item.usuario === clave);
-    if (!actual) return res.status(404).json({ ok:false, mensaje:"Usuario no encontrado" });
+    const actual = usuarios.find((item) => item.usuario === clave);
+    if (!actual)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Usuario no encontrado" });
     const nombre = normalizarTexto(req.body?.nombre) || actual.nombre;
-    const rolEntrada = req.body?.rol === undefined ? actual.rol : normalizarTexto(req.body.rol).toLowerCase();
+    const rolEntrada =
+      req.body?.rol === undefined
+        ? actual.rol
+        : normalizarTexto(req.body.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
-    const sector = req.body?.sector === undefined ? (actual.sector || "") : normalizarTexto(req.body.sector);
-    const sectoresCargo = req.body?.sectores === undefined ? (actual.sectores || []) : [...new Set((Array.isArray(req.body.sectores)?req.body.sectores:[]).map(normalizarTexto).filter(Boolean))];
-    const activo = req.body?.activo === undefined ? actual.activo : Boolean(req.body.activo);
-    const permisos = req.body?.permisos === undefined ? normalizarPermisos(actual.permisos, rol) : normalizarPermisos(req.body.permisos, rol);
+    const sector =
+      req.body?.sector === undefined
+        ? actual.sector || ""
+        : normalizarTexto(req.body.sector);
+    const sectoresCargo =
+      req.body?.sectores === undefined
+        ? actual.sectores || []
+        : [
+            ...new Set(
+              (Array.isArray(req.body.sectores) ? req.body.sectores : [])
+                .map(normalizarTexto)
+                .filter(Boolean),
+            ),
+          ];
+    const activo =
+      req.body?.activo === undefined ? actual.activo : Boolean(req.body.activo);
+    const permisos =
+      req.body?.permisos === undefined
+        ? normalizarPermisos(actual.permisos, rol)
+        : normalizarPermisos(req.body.permisos, rol);
     const password = String(req.body?.password || "");
     if (sector) {
       const sectores = await obtenerSectores();
-      if (!sectores.some(s => s.id === sector && s.activo)) return res.status(400).json({ ok:false, mensaje:"El sector seleccionado no existe o está inactivo" });
+      if (!sectores.some((s) => s.id === sector && s.activo))
+        return res.status(400).json({
+          ok: false,
+          mensaje: "El sector seleccionado no existe o está inactivo",
+        });
     }
-    if (rol === "supervisor" && ![sector,...sectoresCargo].filter(Boolean).length) return res.status(400).json({ ok:false, mensaje:"Asigná al menos un sector al supervisor" });
-    if ([...new Set([sector,...sectoresCargo].filter(Boolean))].length > 2) return res.status(400).json({ok:false,mensaje:"Un supervisor puede tener como máximo dos sectores"});
-    if (sectoresCargo.length) { const sectores=await obtenerSectores(); if (sectoresCargo.some(id=>!sectores.some(s=>s.id===id&&s.activo))) return res.status(400).json({ok:false,mensaje:"Uno de los sectores a cargo no existe o está inactivo"}); }
+    if (
+      rol === "supervisor" &&
+      ![sector, ...sectoresCargo].filter(Boolean).length
+    )
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Asigná al menos un sector al supervisor",
+      });
+    if ([...new Set([sector, ...sectoresCargo].filter(Boolean))].length > 2)
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Un supervisor puede tener como máximo dos sectores",
+      });
+    if (sectoresCargo.length) {
+      const sectores = await obtenerSectores();
+      if (
+        sectoresCargo.some(
+          (id) => !sectores.some((s) => s.id === id && s.activo),
+        )
+      )
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Uno de los sectores a cargo no existe o está inactivo",
+        });
+    }
     if (clave === req.usuario.usuario && (!activo || rol !== "administrador")) {
-      return res.status(400).json({ ok:false, mensaje:"No podés desactivar tu propia cuenta ni quitarte el rol de administrador" });
+      return res.status(400).json({
+        ok: false,
+        mensaje:
+          "No podés desactivar tu propia cuenta ni quitarte el rol de administrador",
+      });
     }
-    if (password && password.length < 4) return res.status(400).json({ ok:false, mensaje:"La contraseña debe tener al menos 4 caracteres" });
+    if (password && password.length < 4)
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La contraseña debe tener al menos 4 caracteres",
+      });
     const hash = password ? hashPassword(password) : actual.passwordHash;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:I${actual.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[clave, nombre, hash, rol, activo ? "Sí" : "No", fechaHoraArgentinaIso(), serializarPermisos(permisos, rol), sector, sectoresCargo.join(",")]] }
+      requestBody: {
+        values: [
+          [
+            clave,
+            nombre,
+            hash,
+            rol,
+            activo ? "Sí" : "No",
+            fechaHoraArgentinaIso(),
+            serializarPermisos(permisos, rol),
+            sector,
+            sectoresCargo.join(","),
+          ],
+        ],
+      },
     });
     invalidarCache("usuarios");
-    await sincronizarUsuarioSupervisor(clave, rol, sector, activo, sectoresCargo);
-    res.json({ ok:true, mensaje:"Usuario actualizado", usuario:{ usuario:clave, nombre, rol, activo, permisos, sector, sectores:sectoresCargo } });
+    await sincronizarUsuarioSupervisor(
+      clave,
+      rol,
+      sector,
+      activo,
+      sectoresCargo,
+    );
+    res.json({
+      ok: true,
+      mensaje: "Usuario actualizado",
+      usuario: {
+        usuario: clave,
+        nombre,
+        rol,
+        activo,
+        permisos,
+        sector,
+        sectores: sectoresCargo,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar el usuario" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo actualizar el usuario",
+    });
   }
 });
 
-
 async function eliminarFilaDeHoja(nombreHoja, filaGoogle) {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields:"sheets(properties(sheetId,title))" });
-  const hoja = (meta.data.sheets || []).find(h => h.properties?.title === nombreHoja);
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: "sheets(properties(sheetId,title))",
+  });
+  const hoja = (meta.data.sheets || []).find(
+    (h) => h.properties?.title === nombreHoja,
+  );
   if (!hoja) throw new Error(`No existe la hoja ${nombreHoja}`);
-  await sheets.spreadsheets.batchUpdate({ spreadsheetId:SPREADSHEET_ID, requestBody:{ requests:[{ deleteDimension:{ range:{ sheetId:hoja.properties.sheetId, dimension:"ROWS", startIndex:filaGoogle-1, endIndex:filaGoogle } } }] } });
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: hoja.properties.sheetId,
+              dimension: "ROWS",
+              startIndex: filaGoogle - 1,
+              endIndex: filaGoogle,
+            },
+          },
+        },
+      ],
+    },
+  });
 }
 async function eliminarRegistrosSector(nombreHoja, sectorId, columnas) {
-  const r=await sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:`${nombreHoja}!A:${columnas}`});
-  const filas=r.data.values||[]; if(!filas.length)return;
-  const restantes=[filas[0],...filas.slice(1).filter(f=>normalizarTexto(f[0])!==sectorId)];
-  await sheets.spreadsheets.values.clear({spreadsheetId:SPREADSHEET_ID,range:`${nombreHoja}!A:${columnas}`});
-  await sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`${nombreHoja}!A1:${columnas}${restantes.length}`,valueInputOption:"USER_ENTERED",requestBody:{values:restantes}});
+  const r = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${nombreHoja}!A:${columnas}`,
+  });
+  const filas = r.data.values || [];
+  if (!filas.length) return;
+  const restantes = [
+    filas[0],
+    ...filas.slice(1).filter((f) => normalizarTexto(f[0]) !== sectorId),
+  ];
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${nombreHoja}!A:${columnas}`,
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${nombreHoja}!A1:${columnas}${restantes.length}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: restantes },
+  });
 }
-app.delete("/admin/usuarios/:usuario", requerirAdministrador, async (req,res)=>{
-  try{
-    const clave=normalizarUsuario(req.params.usuario), usuarios=await obtenerUsuarios();
-    const actual=usuarios.find(u=>u.usuario===clave); if(!actual)return res.status(404).json({ok:false,mensaje:"Usuario no encontrado"});
-    if(clave===req.usuario.usuario)return res.status(400).json({ok:false,mensaje:"No podés eliminar tu propia cuenta"});
-    if(actual.rol==="administrador" && usuarios.filter(u=>u.activo&&u.rol==="administrador").length<=1)return res.status(400).json({ok:false,mensaje:"No se puede eliminar el último administrador"});
-    const sectores=await obtenerSectores();
-    for(const sector of sectores.filter(s=>s.supervisor===clave)) await actualizarFilaSector(sector,{supervisor:""});
-    await eliminarFilaDeHoja(USUARIOS_SHEET_NAME,actual.filaGoogle); invalidarCache("usuarios");
-    res.json({ok:true,mensaje:"Usuario eliminado"});
-  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo eliminar el usuario"});}
-});
-app.delete("/admin/sectores/:id", requerirAdministrador, async (req,res)=>{
-  try{
-    const id=normalizarTexto(req.params.id), [sectores,usuarios]=await Promise.all([obtenerSectores(),obtenerUsuarios()]);
-    const sector=sectores.find(s=>s.id===id); if(!sector)return res.status(404).json({ok:false,mensaje:"Sector no encontrado"});
-    const asignados=usuarios.filter(u=>u.sector===id); if(asignados.length)return res.status(409).json({ok:false,mensaje:`No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s). Reasignalos primero.`});
+app.delete(
+  "/admin/usuarios/:usuario",
+  requerirAdministrador,
+  async (req, res) => {
+    try {
+      const clave = normalizarUsuario(req.params.usuario),
+        usuarios = await obtenerUsuarios();
+      const actual = usuarios.find((u) => u.usuario === clave);
+      if (!actual)
+        return res
+          .status(404)
+          .json({ ok: false, mensaje: "Usuario no encontrado" });
+      if (clave === req.usuario.usuario)
+        return res
+          .status(400)
+          .json({ ok: false, mensaje: "No podés eliminar tu propia cuenta" });
+      if (
+        actual.rol === "administrador" &&
+        usuarios.filter((u) => u.activo && u.rol === "administrador").length <=
+          1
+      )
+        return res.status(400).json({
+          ok: false,
+          mensaje: "No se puede eliminar el último administrador",
+        });
+      const sectores = await obtenerSectores();
+      for (const sector of sectores.filter((s) => s.supervisor === clave))
+        await actualizarFilaSector(sector, { supervisor: "" });
+      await eliminarFilaDeHoja(USUARIOS_SHEET_NAME, actual.filaGoogle);
+      invalidarCache("usuarios");
+      res.json({ ok: true, mensaje: "Usuario eliminado" });
+    } catch (e) {
+      res.status(500).json({
+        ok: false,
+        mensaje: e.message || "No se pudo eliminar el usuario",
+      });
+    }
+  },
+);
+app.delete("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
+  try {
+    const id = normalizarTexto(req.params.id),
+      [sectores, usuarios] = await Promise.all([
+        obtenerSectores(),
+        obtenerUsuarios(),
+      ]);
+    const sector = sectores.find((s) => s.id === id);
+    if (!sector)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Sector no encontrado" });
+    const asignados = usuarios.filter((u) => u.sector === id);
+    if (asignados.length)
+      return res.status(409).json({
+        ok: false,
+        mensaje: `No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s). Reasignalos primero.`,
+      });
     await asegurarHojasHorarios();
     await Promise.all([
-      eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME,id,"H"), eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME,id,"J"),
-      eliminarRegistrosSector(DETALLES_HORARIOS_SHEET_NAME,id,"I"), eliminarRegistrosSector(REEMPLAZOS_HORARIOS_SHEET_NAME,id,"I"), eliminarRegistrosSector(ORDEN_HORARIOS_SHEET_NAME,id,"D")
+      eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME, id, "H"),
+      eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME, id, "J"),
+      eliminarRegistrosSector(DETALLES_HORARIOS_SHEET_NAME, id, "I"),
+      eliminarRegistrosSector(REEMPLAZOS_HORARIOS_SHEET_NAME, id, "I"),
+      eliminarRegistrosSector(ORDEN_HORARIOS_SHEET_NAME, id, "D"),
     ]);
-    await eliminarFilaDeHoja(SECTORES_SHEET_NAME,sector.filaGoogle); hojaSectoresAsegurada=false; invalidarCache("usuarios","sectores");
-    res.json({ok:true,mensaje:"Sector eliminado"});
-  }catch(e){res.status(500).json({ok:false,mensaje:e.message||"No se pudo eliminar el sector"});}
+    await eliminarFilaDeHoja(SECTORES_SHEET_NAME, sector.filaGoogle);
+    hojaSectoresAsegurada = false;
+    invalidarCache("usuarios", "sectores");
+    res.json({ ok: true, mensaje: "Sector eliminado" });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo eliminar el sector",
+    });
+  }
 });
 
 app.get("/", (req, res) => {
-  res.send(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`);
+  res.send(
+    `Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando`,
+  );
 });
 
 const IMPORTACION_MAX_FILAS = 30000;
@@ -1583,27 +3474,35 @@ async function asegurarColumnasCatalogo() {
     spreadsheetId: SPREADSHEET_ID,
     range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
     valueInputOption: "RAW",
-    requestBody: { values: [["codigo", "articulo", "precio"]] }
+    requestBody: { values: [["codigo", "articulo", "precio"]] },
   });
 
   const metadata = await sheets.spreadsheets.get({
     spreadsheetId: SPREADSHEET_ID,
-    fields: "sheets(properties(sheetId,title))"
+    fields: "sheets(properties(sheetId,title))",
   });
-  const hoja = (metadata.data.sheets || []).find(item => item.properties?.title === PRODUCTOS_SHEET_NAME);
+  const hoja = (metadata.data.sheets || []).find(
+    (item) => item.properties?.title === PRODUCTOS_SHEET_NAME,
+  );
   if (!hoja) throw new Error(`No existe la hoja ${PRODUCTOS_SHEET_NAME}`);
 
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
     requestBody: {
-      requests: [{
-        repeatCell: {
-          range: { sheetId: hoja.properties.sheetId, startColumnIndex: 0, endColumnIndex: 1 },
-          cell: { userEnteredFormat: { numberFormat: { type: "TEXT" } } },
-          fields: "userEnteredFormat.numberFormat"
-        }
-      }]
-    }
+      requests: [
+        {
+          repeatCell: {
+            range: {
+              sheetId: hoja.properties.sheetId,
+              startColumnIndex: 0,
+              endColumnIndex: 1,
+            },
+            cell: { userEnteredFormat: { numberFormat: { type: "TEXT" } } },
+            fields: "userEnteredFormat.numberFormat",
+          },
+        },
+      ],
+    },
   });
 }
 
@@ -1624,7 +3523,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     const clave = producto.codigo;
     if (codigosVistos.has(clave)) {
       duplicadosArchivo++;
-      const indice = catalogo.findIndex(actual => actual.codigo === clave);
+      const indice = catalogo.findIndex((actual) => actual.codigo === clave);
       if (indice >= 0) catalogo[indice] = producto;
       continue;
     }
@@ -1632,7 +3531,10 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     catalogo.push(producto);
   }
 
-  if (!catalogo.length) throw new Error("No se encontraron productos válidos para reemplazar el catálogo");
+  if (!catalogo.length)
+    throw new Error(
+      "No se encontraron productos válidos para reemplazar el catálogo",
+    );
 
   if (aplicarCambios) {
     await asegurarColumnasCatalogo();
@@ -1640,17 +3542,17 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     const actualResp = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-      valueRenderOption: "FORMATTED_VALUE"
+      valueRenderOption: "FORMATTED_VALUE",
     });
     const filasActuales = (actualResp.data.values || []).length;
 
     const filasFinales = [
       ["codigo", "articulo", "precio"],
-      ...catalogo.map(producto => [
+      ...catalogo.map((producto) => [
         String(producto.codigo),
         producto.articulo || "",
-        producto.precio ?? ""
-      ])
+        producto.precio ?? "",
+      ]),
     ];
 
     // Primero se escribe el catálogo completo en una única operación lógica.
@@ -1661,7 +3563,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
       const filaInicio = i + 1;
       data.push({
         range: `${PRODUCTOS_SHEET_NAME}!A${filaInicio}:C${filaInicio + bloque.length - 1}`,
-        values: bloque
+        values: bloque,
       });
     }
 
@@ -1669,15 +3571,15 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
       spreadsheetId: SPREADSHEET_ID,
       requestBody: {
         valueInputOption: "RAW",
-        data
-      }
+        data,
+      },
     });
 
     if (filasActuales > filasFinales.length) {
       await sheets.spreadsheets.values.clear({
         spreadsheetId: SPREADSHEET_ID,
         range: `${PRODUCTOS_SHEET_NAME}!A${filasFinales.length + 1}:C${filasActuales}`,
-        requestBody: {}
+        requestBody: {},
       });
     }
 
@@ -1688,32 +3590,63 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     procesados: catalogo.length,
     totalCatalogo: catalogo.length,
     duplicadosArchivo,
-    reemplazoCompleto: true
+    reemplazoCompleto: true,
   };
 }
 
-app.post("/admin/importar-productos", requerirAdministrador, async (req,res)=>{
-  try {
-    const entrada=Array.isArray(req.body?.productos)?req.body.productos:[];
-    if (!entrada.length) return res.status(400).json({ok:false,mensaje:"El archivo no contiene productos válidos"});
-    if (entrada.length>IMPORTACION_MAX_FILAS) return res.status(400).json({ok:false,mensaje:`El archivo supera el máximo de ${IMPORTACION_MAX_FILAS} productos`});
-    const items=entrada.map(normalizarProductoImportado).filter(Boolean);
-    if(!items.length) return res.status(400).json({ok:false,mensaje:"No se encontraron códigos y artículos válidos"});
-    const confirmar = req.body?.confirmar === true;
-    if (!confirmar) {
-      const resumen = await ejecutarImportacionProductos(items, false);
-      return res.json({ok:true,mensaje:"Vista previa del reemplazo calculada",vistaPrevia:true,resumen});
+app.post(
+  "/admin/importar-productos",
+  requerirAdministrador,
+  async (req, res) => {
+    try {
+      const entrada = Array.isArray(req.body?.productos)
+        ? req.body.productos
+        : [];
+      if (!entrada.length)
+        return res.status(400).json({
+          ok: false,
+          mensaje: "El archivo no contiene productos válidos",
+        });
+      if (entrada.length > IMPORTACION_MAX_FILAS)
+        return res.status(400).json({
+          ok: false,
+          mensaje: `El archivo supera el máximo de ${IMPORTACION_MAX_FILAS} productos`,
+        });
+      const items = entrada.map(normalizarProductoImportado).filter(Boolean);
+      if (!items.length)
+        return res.status(400).json({
+          ok: false,
+          mensaje: "No se encontraron códigos y artículos válidos",
+        });
+      const confirmar = req.body?.confirmar === true;
+      if (!confirmar) {
+        const resumen = await ejecutarImportacionProductos(items, false);
+        return res.json({
+          ok: true,
+          mensaje: "Vista previa del reemplazo calculada",
+          vistaPrevia: true,
+          resumen,
+        });
+      }
+      const tarea = importacionProductosEnCurso
+        .catch(() => {})
+        .then(() => ejecutarImportacionProductos(items, true));
+      importacionProductosEnCurso = tarea.catch(() => {});
+      const resumen = await tarea;
+      res.json({
+        ok: true,
+        mensaje: "Catálogo reemplazado correctamente",
+        resumen,
+      });
+    } catch (error) {
+      console.error("Error importando productos:", error);
+      res.status(500).json({
+        ok: false,
+        mensaje: error.message || "No se pudo importar el archivo",
+      });
     }
-    const tarea=importacionProductosEnCurso.catch(()=>{}).then(()=>ejecutarImportacionProductos(items, true));
-    importacionProductosEnCurso=tarea.catch(()=>{});
-    const resumen=await tarea;
-    res.json({ok:true,mensaje:"Catálogo reemplazado correctamente",resumen});
-  } catch(error) {
-    console.error("Error importando productos:",error);
-    res.status(500).json({ok:false,mensaje:error.message||"No se pudo importar el archivo"});
-  }
-});
-
+  },
+);
 
 app.get("/productos", async (req, res) => {
   try {
@@ -1721,7 +3654,10 @@ app.get("/productos", async (req, res) => {
     res.json({ ok: true, total: productos.length, productos });
   } catch (error) {
     console.error("Error en /productos:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener productos" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al obtener productos",
+    });
   }
 });
 
@@ -1730,16 +3666,20 @@ app.get("/producto/:codigo", async (req, res) => {
     const producto = await buscarProductoPorCodigo(req.params.codigo);
 
     if (!producto) {
-      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Producto no encontrado" });
     }
 
     res.json({ ok: true, producto });
   } catch (error) {
     console.error("Error en /producto/:codigo:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener producto" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al obtener producto",
+    });
   }
 });
-
 
 app.get("/productos-maestro", async (req, res) => {
   try {
@@ -1751,7 +3691,10 @@ app.get("/productos-maestro", async (req, res) => {
     res.json({ ok: true, total: productos.length, productos });
   } catch (error) {
     console.error("Error en /productos-maestro:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener productos maestros" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al obtener productos maestros",
+    });
   }
 });
 
@@ -1759,12 +3702,17 @@ app.get("/producto-maestro/:codigo", async (req, res) => {
   try {
     const producto = await buscarProductoMaestroPorCodigo(req.params.codigo);
     if (!producto) {
-      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado en Productos" });
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Producto no encontrado en Productos" });
     }
     res.json({ ok: true, producto });
   } catch (error) {
     console.error("Error en /producto-maestro/:codigo:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener producto maestro" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al obtener producto maestro",
+    });
   }
 });
 
@@ -1783,32 +3731,45 @@ app.post("/guardar", async (req, res) => {
     }
 
     if (cantidadNumerica === null) {
-      return res.status(400).json({ ok: false, mensaje: "La cantidad debe ser un número entero mayor a 0" });
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La cantidad debe ser un número entero mayor a 0",
+      });
     }
 
-    const productoActualizado = await ejecutarEnCola(codigoBuscado, async () => {
-      const producto = await buscarProductoPorCodigo(codigoBuscado);
+    const productoActualizado = await ejecutarEnCola(
+      codigoBuscado,
+      async () => {
+        const producto = await buscarProductoPorCodigo(codigoBuscado);
 
-      if (!producto) {
-        const error = new Error("Producto no encontrado");
-        error.statusCode = 404;
-        throw error;
-      }
+        if (!producto) {
+          const error = new Error("Producto no encontrado");
+          error.statusCode = 404;
+          throw error;
+        }
 
-      if (ubicacion === "deposito") {
-        producto.deposito = numero(producto.deposito) + cantidadNumerica;
-      } else {
-        producto.salon = numero(producto.salon) + cantidadNumerica;
-      }
+        if (ubicacion === "deposito") {
+          producto.deposito = numero(producto.deposito) + cantidadNumerica;
+        } else {
+          producto.salon = numero(producto.salon) + cantidadNumerica;
+        }
 
-      return await actualizarProducto(producto);
-    });
+        return await actualizarProducto(producto);
+      },
+    );
 
     invalidarCache("productos");
-    res.json({ ok: true, mensaje: "Producto guardado", producto: productoActualizado });
+    res.json({
+      ok: true,
+      mensaje: "Producto guardado",
+      producto: productoActualizado,
+    });
   } catch (error) {
     console.error("Error en /guardar:", error);
-    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al guardar producto" });
+    res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "Error al guardar producto",
+    });
   }
 });
 
@@ -1824,29 +3785,43 @@ app.post("/corregir", async (req, res) => {
     const salonValidado = enteroNoNegativo(salon);
     const depositoValidado = enteroNoNegativo(deposito);
     if (salonValidado === null || depositoValidado === null) {
-      return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser números enteros iguales o mayores a 0" });
+      return res.status(400).json({
+        ok: false,
+        mensaje:
+          "Salón y depósito deben ser números enteros iguales o mayores a 0",
+      });
     }
 
-    const productoActualizado = await ejecutarEnCola(codigoBuscado, async () => {
-      const producto = await buscarProductoPorCodigo(codigoBuscado);
+    const productoActualizado = await ejecutarEnCola(
+      codigoBuscado,
+      async () => {
+        const producto = await buscarProductoPorCodigo(codigoBuscado);
 
-      if (!producto) {
-        const error = new Error("Producto no encontrado");
-        error.statusCode = 404;
-        throw error;
-      }
+        if (!producto) {
+          const error = new Error("Producto no encontrado");
+          error.statusCode = 404;
+          throw error;
+        }
 
-      producto.salon = salonValidado;
-      producto.deposito = depositoValidado;
+        producto.salon = salonValidado;
+        producto.deposito = depositoValidado;
 
-      return await actualizarProducto(producto);
-    });
+        return await actualizarProducto(producto);
+      },
+    );
 
     invalidarCache("productos");
-    res.json({ ok: true, mensaje: "Producto corregido", producto: productoActualizado });
+    res.json({
+      ok: true,
+      mensaje: "Producto corregido",
+      producto: productoActualizado,
+    });
   } catch (error) {
     console.error("Error en /corregir:", error);
-    res.status(error.statusCode || 500).json({ ok: false, mensaje: error.message || "Error al corregir producto" });
+    res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "Error al corregir producto",
+    });
   }
 });
 
@@ -1857,8 +3832,12 @@ function fechaIsoHoy() {
 }
 
 function generarIdVencimiento() {
-  const marca = fechaHoraArgentinaIso().replace(/[-:T+]/g, "").slice(0, 14);
-  return `V${marca}${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
+  const marca = fechaHoraArgentinaIso()
+    .replace(/[-:T+]/g, "")
+    .slice(0, 14);
+  return `V${marca}${Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0")}`;
 }
 
 function calcularEstadoVencimiento(fechaVencimiento) {
@@ -1876,7 +3855,20 @@ function calcularEstadoVencimiento(fechaVencimiento) {
 
 function normalizarOfertaVencimiento(valor) {
   const texto = normalizarTexto(valor).toLowerCase();
-  return ["si", "sí", "true", "1", "oferta", "activo", "activa"].includes(texto) ? "Sí" : "No";
+  return ["si", "sí", "true", "1", "oferta", "activo", "activa"].includes(texto)
+    ? "Sí"
+    : "No";
+}
+
+function normalizarRubroVencimiento(valor) {
+  const texto = normalizarTexto(valor)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (texto === "almacen") return "Almacén";
+  if (texto === "bebida" || texto === "bebidas") return "Bebida";
+  if (texto === "fiambreria") return "Fiambrería";
+  return "Sin clasificar";
 }
 
 let hojaVencimientosAsegurada = false;
@@ -1885,37 +3877,63 @@ async function asegurarHojaVencimientos() {
   if (hojaVencimientosAsegurada) return;
   if (promesaHojaVencimientos) return promesaHojaVencimientos;
   promesaHojaVencimientos = (async () => {
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some(hoja => hoja.properties?.title === VENCIMIENTOS_SHEET_NAME);
-
-  if (!existe) {
-    await sheets.spreadsheets.batchUpdate({
+    validarConfiguracion();
+    const meta = await sheets.spreadsheets.get({
       spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: VENCIMIENTOS_SHEET_NAME } } }] }
     });
-  }
+    const existe = (meta.data.sheets || []).some(
+      (hoja) => hoja.properties?.title === VENCIMIENTOS_SHEET_NAME,
+    );
 
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${VENCIMIENTOS_SHEET_NAME}!A1:J1`
-  });
+    if (!existe) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+          requests: [
+            { addSheet: { properties: { title: VENCIMIENTOS_SHEET_NAME } } },
+          ],
+        },
+      });
+    }
 
-  const encabezado = respuesta.data.values?.[0] || [];
-  const correcto = ["ID", "Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado", "Oferta"];
-  const necesitaEncabezado = encabezado.length === 0 || encabezado[0] !== "ID" || encabezado.length < 10;
-  if (necesitaEncabezado) {
-    await sheets.spreadsheets.values.update({
+    const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A1:J1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [correcto] }
+      range: `${VENCIMIENTOS_SHEET_NAME}!A1:K1`,
     });
-  }
-  hojaVencimientosAsegurada = true;
+
+    const encabezado = respuesta.data.values?.[0] || [];
+    const correcto = [
+      "ID",
+      "Fecha carga",
+      "Código",
+      "Artículo",
+      "Vencimiento",
+      "Salón",
+      "Depósito",
+      "Total",
+      "Estado",
+      "Oferta",
+      "Rubro",
+    ];
+    const necesitaEncabezado =
+      encabezado.length === 0 ||
+      encabezado[0] !== "ID" ||
+      encabezado.length < 11;
+    if (necesitaEncabezado) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${VENCIMIENTOS_SHEET_NAME}!A1:K1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [correcto] },
+      });
+    }
+    hojaVencimientosAsegurada = true;
   })();
-  try { await promesaHojaVencimientos; }
-  finally { promesaHojaVencimientos = null; }
+  try {
+    await promesaHojaVencimientos;
+  } finally {
+    promesaHojaVencimientos = null;
+  }
 }
 
 function filaAVencimiento(fila, index) {
@@ -1930,7 +3948,8 @@ function filaAVencimiento(fila, index) {
     deposito: numero(fila[6]),
     total: numero(fila[7]),
     estado: calcularEstadoVencimiento(fila[4]),
-    oferta: normalizarOfertaVencimiento(fila[9])
+    oferta: normalizarOfertaVencimiento(fila[9]),
+    rubro: normalizarRubroVencimiento(fila[10]),
   };
 }
 
@@ -1939,13 +3958,15 @@ async function obtenerVencimientos() {
   return leerConCache("vencimientos", CACHE_TTL.vencimientos, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:J`
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:K`,
     });
     const filas = respuesta.data.values || [];
-    return filas.slice(1).map(filaAVencimiento).filter(item => item.codigo || item.articulo || item.id);
+    return filas
+      .slice(1)
+      .map(filaAVencimiento)
+      .filter((item) => item.codigo || item.articulo || item.id);
   });
 }
-
 
 let hojasNotificacionesAseguradas = false;
 let procesandoNotificaciones = false;
@@ -1954,39 +3975,110 @@ const clavesNotificacionEnProceso = new Set();
 async function asegurarHojasNotificaciones() {
   if (hojasNotificacionesAseguradas) return;
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const titulos = new Set((meta.data.sheets || []).map(h => h.properties?.title));
+  const titulos = new Set(
+    (meta.data.sheets || []).map((h) => h.properties?.title),
+  );
   const requests = [];
-  if (!titulos.has(PUSH_SUBSCRIPTIONS_SHEET_NAME)) requests.push({ addSheet: { properties: { title: PUSH_SUBSCRIPTIONS_SHEET_NAME } } });
-  if (!titulos.has(NOTIFICATION_LOG_SHEET_NAME)) requests.push({ addSheet: { properties: { title: NOTIFICATION_LOG_SHEET_NAME } } });
-  if (!titulos.has(NOTIFICATION_CENTER_SHEET_NAME)) requests.push({ addSheet: { properties: { title: NOTIFICATION_CENTER_SHEET_NAME } } });
-  if (requests.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { requests } });
+  if (!titulos.has(PUSH_SUBSCRIPTIONS_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: PUSH_SUBSCRIPTIONS_SHEET_NAME } },
+    });
+  if (!titulos.has(NOTIFICATION_LOG_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: NOTIFICATION_LOG_SHEET_NAME } },
+    });
+  if (!titulos.has(NOTIFICATION_CENTER_SHEET_NAME))
+    requests.push({
+      addSheet: { properties: { title: NOTIFICATION_CENTER_SHEET_NAME } },
+    });
+  if (requests.length)
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests },
+    });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A1:G1`, valueInputOption: "RAW",
-    requestBody: { values: [["Endpoint", "P256DH", "Auth", "Usuario", "Nombre", "Activo", "Actualizado"]] }
+    range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A1:G1`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [
+        [
+          "Endpoint",
+          "P256DH",
+          "Auth",
+          "Usuario",
+          "Nombre",
+          "Activo",
+          "Actualizado",
+        ],
+      ],
+    },
   });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${NOTIFICATION_LOG_SHEET_NAME}!A1:G1`, valueInputOption: "RAW",
-    requestBody: { values: [["Clave", "Fecha envío", "Tipo", "ID", "Código", "Vencimiento", "Detalle"]] }
+    range: `${NOTIFICATION_LOG_SHEET_NAME}!A1:G1`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [
+        [
+          "Clave",
+          "Fecha envío",
+          "Tipo",
+          "ID",
+          "Código",
+          "Vencimiento",
+          "Detalle",
+        ],
+      ],
+    },
   });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${NOTIFICATION_CENTER_SHEET_NAME}!A1:I1`, valueInputOption: "RAW",
-    requestBody: { values: [["ID", "Usuario", "Tipo", "Título", "Mensaje", "URL", "Fecha", "Leída", "Clave"]] }
+    range: `${NOTIFICATION_CENTER_SHEET_NAME}!A1:I1`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [
+        [
+          "ID",
+          "Usuario",
+          "Tipo",
+          "Título",
+          "Mensaje",
+          "URL",
+          "Fecha",
+          "Leída",
+          "Clave",
+        ],
+      ],
+    },
   });
   hojasNotificacionesAseguradas = true;
 }
 
 async function obtenerSuscripcionesPush() {
   await asegurarHojasNotificaciones();
-  return leerConCache("suscripcionesPush", CACHE_TTL.suscripcionesPush, async () => {
-    const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G` });
-    return (r.data.values || []).slice(1).map((f, i) => ({
-      filaGoogle: i + 2, endpoint: normalizarTexto(f[0]), p256dh: normalizarTexto(f[1]), auth: normalizarTexto(f[2]),
-      usuario: normalizarTexto(f[3]), nombre: normalizarTexto(f[4]), activo: normalizarTexto(f[5]).toLowerCase() !== "no"
-    })).filter(s => s.endpoint && s.p256dh && s.auth && s.activo);
-  });
+  return leerConCache(
+    "suscripcionesPush",
+    CACHE_TTL.suscripcionesPush,
+    async () => {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`,
+      });
+      return (r.data.values || [])
+        .slice(1)
+        .map((f, i) => ({
+          filaGoogle: i + 2,
+          endpoint: normalizarTexto(f[0]),
+          p256dh: normalizarTexto(f[1]),
+          auth: normalizarTexto(f[2]),
+          usuario: normalizarTexto(f[3]),
+          nombre: normalizarTexto(f[4]),
+          activo: normalizarTexto(f[5]).toLowerCase() !== "no",
+        }))
+        .filter((s) => s.endpoint && s.p256dh && s.auth && s.activo);
+    },
+  );
 }
 
 async function guardarSuscripcionPush(req) {
@@ -1994,35 +4086,65 @@ async function guardarSuscripcionPush(req) {
   const endpoint = normalizarTexto(req.body?.subscription?.endpoint);
   const p256dh = normalizarTexto(req.body?.subscription?.keys?.p256dh);
   const authKey = normalizarTexto(req.body?.subscription?.keys?.auth);
-  if (!endpoint || !p256dh || !authKey) throw new Error("Suscripción push incompleta");
+  if (!endpoint || !p256dh || !authKey)
+    throw new Error("Suscripción push incompleta");
   const existentes = await obtenerSuscripcionesPush();
-  const actual = existentes.find(s => s.endpoint === endpoint);
-  const fila = [endpoint, p256dh, authKey, req.usuario.usuario, req.usuario.nombre, "Sí", fechaHoraArgentinaIso()];
+  const actual = existentes.find((s) => s.endpoint === endpoint);
+  const fila = [
+    endpoint,
+    p256dh,
+    authKey,
+    req.usuario.usuario,
+    req.usuario.nombre,
+    "Sí",
+    fechaHoraArgentinaIso(),
+  ];
   if (actual) {
-    await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A${actual.filaGoogle}:G${actual.filaGoogle}`, valueInputOption: "RAW", requestBody: { values: [fila] } });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A${actual.filaGoogle}:G${actual.filaGoogle}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [fila] },
+    });
   } else {
-    await sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS", requestBody: { values: [fila] } });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [fila] },
+    });
   }
   invalidarCache("suscripcionesPush");
 }
-
 
 // v12.3.1.5 — Cola global para escrituras de notificaciones en Google Sheets.
 let colaEscriturasNotificaciones = Promise.resolve();
 let ultimaEscrituraNotificaciones = 0;
 const idsCentroNotificacionPendientes = new Set();
 
-function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function esErrorCuotaSheets(error) {
-  return Number(error?.code || error?.status || error?.response?.status) === 429 ||
-    String(error?.message || '').toLowerCase().includes('quota exceeded') ||
-    String(error?.message || '').toLowerCase().includes('rate limit');
+  return (
+    Number(error?.code || error?.status || error?.response?.status) === 429 ||
+    String(error?.message || "")
+      .toLowerCase()
+      .includes("quota exceeded") ||
+    String(error?.message || "")
+      .toLowerCase()
+      .includes("rate limit")
+  );
 }
 
 function encolarEscrituraNotificaciones(operacion) {
   const ejecutar = async () => {
-    const esperaMinima = Math.max(0, 1150 - (Date.now() - ultimaEscrituraNotificaciones));
+    const esperaMinima = Math.max(
+      0,
+      1150 - (Date.now() - ultimaEscrituraNotificaciones),
+    );
     if (esperaMinima) await esperar(esperaMinima);
     let intento = 0;
     while (true) {
@@ -2032,7 +4154,9 @@ function encolarEscrituraNotificaciones(operacion) {
         return resultado;
       } catch (error) {
         if (!esErrorCuotaSheets(error) || intento >= 5) throw error;
-        const demora = Math.min(30000, 1800 * (2 ** intento)) + Math.floor(Math.random() * 700);
+        const demora =
+          Math.min(30000, 1800 * 2 ** intento) +
+          Math.floor(Math.random() * 700);
         intento += 1;
         console.warn(`Google Sheets 429: reintento ${intento} en ${demora} ms`);
         await esperar(demora);
@@ -2046,74 +4170,157 @@ function encolarEscrituraNotificaciones(operacion) {
 
 async function clavesNotificacionesEnviadas() {
   await asegurarHojasNotificaciones();
-  const claves = await leerConCache("clavesNotificaciones", CACHE_TTL.clavesNotificaciones, async () => {
-    const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G` });
-    const resultado = new Set();
-    for (const fila of (r.data.values || []).slice(1)) {
-      const guardada = normalizarTexto(fila[0]);
-      if (guardada) resultado.add(guardada);
-      const fechaEnvio = normalizarTexto(fila[1]).slice(0, 10);
-      const tipo = normalizarTexto(fila[2]);
-      const codigo = normalizarCodigo(fila[4]);
-      const vencimiento = normalizarTexto(fila[5]);
-      if (codigo && vencimiento && tipo && fechaEnvio) resultado.add([codigo, vencimiento, tipo, fechaEnvio].join("|"));
-    }
-    return resultado;
-  });
+  const claves = await leerConCache(
+    "clavesNotificaciones",
+    CACHE_TTL.clavesNotificaciones,
+    async () => {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`,
+      });
+      const resultado = new Set();
+      for (const fila of (r.data.values || []).slice(1)) {
+        const guardada = normalizarTexto(fila[0]);
+        if (guardada) resultado.add(guardada);
+        const fechaEnvio = normalizarTexto(fila[1]).slice(0, 10);
+        const tipo = normalizarTexto(fila[2]);
+        const codigo = normalizarCodigo(fila[4]);
+        const vencimiento = normalizarTexto(fila[5]);
+        if (codigo && vencimiento && tipo && fechaEnvio)
+          resultado.add([codigo, vencimiento, tipo, fechaEnvio].join("|"));
+      }
+      return resultado;
+    },
+  );
   return new Set(claves);
 }
 
 async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
-  await encolarEscrituraNotificaciones(() => sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [[clave, fechaHoraArgentinaIso(), tipo, registro.id, registro.codigo, registro.vencimiento, detalle]] } }));
+  await encolarEscrituraNotificaciones(() =>
+    sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [
+          [
+            clave,
+            fechaHoraArgentinaIso(),
+            tipo,
+            registro.id,
+            registro.codigo,
+            registro.vencimiento,
+            detalle,
+          ],
+        ],
+      },
+    }),
+  );
   const guardado = cacheLecturas.get("clavesNotificaciones");
   if (guardado?.valor instanceof Set) {
     const actualizado = new Set(guardado.valor);
     actualizado.add(clave);
-    cacheLecturas.set("clavesNotificaciones", { fecha: Date.now(), valor: actualizado });
+    cacheLecturas.set("clavesNotificaciones", {
+      fecha: Date.now(),
+      valor: actualizado,
+    });
   } else invalidarCache("clavesNotificaciones");
 }
 
-
 async function leerFilasCentroNotificaciones() {
   await asegurarHojasNotificaciones();
-  return leerConCache("centroNotificaciones", CACHE_TTL.centroNotificaciones, async () => {
-    const r = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I` });
-    return r.data.values || [];
-  });
+  return leerConCache(
+    "centroNotificaciones",
+    CACHE_TTL.centroNotificaciones,
+    async () => {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`,
+      });
+      return r.data.values || [];
+    },
+  );
 }
 
-async function registrarCentroNotificacion({ usuario, tipo, titulo, mensaje, url = "./", clave = "" }) {
+async function registrarCentroNotificacion({
+  usuario,
+  tipo,
+  titulo,
+  mensaje,
+  url = "./",
+  clave = "",
+}) {
   await asegurarHojasNotificaciones();
   const usuarioNorm = normalizarUsuario(usuario);
   if (!usuarioNorm) return;
   const claveNorm = normalizarTexto(clave || `${tipo}|${titulo}|${mensaje}`);
-  const id = crypto.createHash("sha1").update(`${usuarioNorm}|${claveNorm}`).digest("hex").slice(0, 20);
+  const id = crypto
+    .createHash("sha1")
+    .update(`${usuarioNorm}|${claveNorm}`)
+    .digest("hex")
+    .slice(0, 20);
   const filas = await leerFilasCentroNotificaciones();
-  if (filas.slice(1).some(f => normalizarTexto(f[0]) === id) || idsCentroNotificacionPendientes.has(id)) return;
-  const nuevaFila = [id, usuarioNorm, normalizarTexto(tipo), normalizarTexto(titulo), normalizarTexto(mensaje), normalizarTexto(url || "./"), fechaHoraArgentinaIso(), "No", claveNorm];
+  if (
+    filas.slice(1).some((f) => normalizarTexto(f[0]) === id) ||
+    idsCentroNotificacionPendientes.has(id)
+  )
+    return;
+  const nuevaFila = [
+    id,
+    usuarioNorm,
+    normalizarTexto(tipo),
+    normalizarTexto(titulo),
+    normalizarTexto(mensaje),
+    normalizarTexto(url || "./"),
+    fechaHoraArgentinaIso(),
+    "No",
+    claveNorm,
+  ];
   idsCentroNotificacionPendientes.add(id);
   try {
-    await encolarEscrituraNotificaciones(() => sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [nuevaFila] }
-    }));
+    await encolarEscrituraNotificaciones(() =>
+      sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`,
+        valueInputOption: "RAW",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [nuevaFila] },
+      }),
+    );
   } finally {
     idsCentroNotificacionPendientes.delete(id);
   }
   const cache = cacheLecturas.get("centroNotificaciones");
-  if (cache?.valor) cacheLecturas.set("centroNotificaciones", { fecha: Date.now(), valor: [...cache.valor, nuevaFila] });
+  if (cache?.valor)
+    cacheLecturas.set("centroNotificaciones", {
+      fecha: Date.now(),
+      valor: [...cache.valor, nuevaFila],
+    });
   else invalidarCache("centroNotificaciones");
 }
 
 async function obtenerCentroNotificaciones(usuario) {
   const clave = normalizarUsuario(usuario);
   const filas = await leerFilasCentroNotificaciones();
-  return filas.slice(1).map((f, i) => ({
-    filaGoogle: i + 2, id: normalizarTexto(f[0]), usuario: normalizarUsuario(f[1]), tipo: normalizarTexto(f[2]),
-    titulo: normalizarTexto(f[3]), mensaje: normalizarTexto(f[4]), url: normalizarTexto(f[5]) || "./", fecha: normalizarTexto(f[6]),
-    leida: normalizarTexto(f[7]).toLowerCase() === "sí" || normalizarTexto(f[7]).toLowerCase() === "si"
-  })).filter(n => n.usuario === clave).sort((a,b) => String(b.fecha).localeCompare(String(a.fecha))).slice(0,10);
+  return filas
+    .slice(1)
+    .map((f, i) => ({
+      filaGoogle: i + 2,
+      id: normalizarTexto(f[0]),
+      usuario: normalizarUsuario(f[1]),
+      tipo: normalizarTexto(f[2]),
+      titulo: normalizarTexto(f[3]),
+      mensaje: normalizarTexto(f[4]),
+      url: normalizarTexto(f[5]) || "./",
+      fecha: normalizarTexto(f[6]),
+      leida:
+        normalizarTexto(f[7]).toLowerCase() === "sí" ||
+        normalizarTexto(f[7]).toLowerCase() === "si",
+    }))
+    .filter((n) => n.usuario === clave)
+    .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
+    .slice(0, 10);
 }
 
 async function marcarCentroNotificacion(usuario, id = "", todas = false) {
@@ -2123,62 +4330,105 @@ async function marcarCentroNotificacion(usuario, id = "", todas = false) {
   filas.slice(1).forEach((f, i) => {
     if (normalizarUsuario(f[1]) !== clave) return;
     if (!todas && normalizarTexto(f[0]) !== normalizarTexto(id)) return;
-    if ((normalizarTexto(f[7]).toLowerCase() === "sí" || normalizarTexto(f[7]).toLowerCase() === "si")) return;
-    updates.push({ range: `${NOTIFICATION_CENTER_SHEET_NAME}!H${i+2}`, values: [["Sí"]] });
+    if (
+      normalizarTexto(f[7]).toLowerCase() === "sí" ||
+      normalizarTexto(f[7]).toLowerCase() === "si"
+    )
+      return;
+    updates.push({
+      range: `${NOTIFICATION_CENTER_SHEET_NAME}!H${i + 2}`,
+      values: [["Sí"]],
+    });
   });
   if (updates.length) {
-    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId: SPREADSHEET_ID, requestBody: { valueInputOption: "RAW", data: updates } });
-    const actualizado = filas.map(f => [...f]);
-    updates.forEach(u => {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { valueInputOption: "RAW", data: updates },
+    });
+    const actualizado = filas.map((f) => [...f]);
+    updates.forEach((u) => {
       const match = /!H(\d+)$/.exec(u.range);
       if (match) actualizado[Number(match[1]) - 1][7] = "Sí";
     });
-    cacheLecturas.set("centroNotificaciones", { fecha: Date.now(), valor: actualizado });
+    cacheLecturas.set("centroNotificaciones", {
+      fecha: Date.now(),
+      valor: actualizado,
+    });
   }
   return updates.length;
 }
 
 async function desactivarSuscripcionPush(filaGoogle) {
   if (!filaGoogle) return;
-  await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!F${filaGoogle}:F${filaGoogle}`, valueInputOption: "RAW", requestBody: { values: [["No"]] } }).catch(() => {});
+  await sheets.spreadsheets.values
+    .update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!F${filaGoogle}:F${filaGoogle}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [["No"]] },
+    })
+    .catch(() => {});
   invalidarCache("suscripcionesPush");
 }
 
 async function obtenerSuscripcionesVencimientosPermitidas() {
-  const [suscripciones, usuarios] = await Promise.all([obtenerSuscripcionesPush(), obtenerUsuarios()]);
-  const porUsuario = new Map(usuarios.map(u => [u.usuario, u]));
-  return suscripciones.filter(s => {
+  const [suscripciones, usuarios] = await Promise.all([
+    obtenerSuscripcionesPush(),
+    obtenerUsuarios(),
+  ]);
+  const porUsuario = new Map(usuarios.map((u) => [u.usuario, u]));
+  return suscripciones.filter((s) => {
     const usuario = porUsuario.get(normalizarUsuario(s.usuario));
-    return Boolean(usuario && usuario.activo && usuario.permisos?.vencimientos === true);
+    return Boolean(
+      usuario && usuario.activo && usuario.permisos?.vencimientos === true,
+    );
   });
 }
 
 async function obtenerSuscripcionesUsuarioModulo(usuarioClave, modulo) {
   const clave = normalizarUsuario(usuarioClave);
   if (!clave) return [];
-  const [suscripciones, usuarios] = await Promise.all([obtenerSuscripcionesPush(), obtenerUsuarios()]);
-  const usuario = usuarios.find(u => u.usuario === clave);
-  if (!usuario || !usuario.activo || usuario.permisos?.[modulo] !== true) return [];
-  return suscripciones.filter(s => normalizarUsuario(s.usuario) === clave && s.activo);
+  const [suscripciones, usuarios] = await Promise.all([
+    obtenerSuscripcionesPush(),
+    obtenerUsuarios(),
+  ]);
+  const usuario = usuarios.find((u) => u.usuario === clave);
+  if (!usuario || !usuario.activo || usuario.permisos?.[modulo] !== true)
+    return [];
+  return suscripciones.filter(
+    (s) => normalizarUsuario(s.usuario) === clave && s.activo,
+  );
 }
 
 async function enviarPushASuscripciones(suscripciones, payload) {
-  if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false, destinatarios: 0 };
+  if (!PUSH_CONFIGURED)
+    return { enviados: 0, configurado: false, destinatarios: 0 };
   let enviados = 0;
-  await Promise.all((suscripciones || []).map(async s => {
-    try {
-      await webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify(payload),
-        { TTL: 86400 }
-      );
-      enviados += 1;
-    } catch (error) {
-      if ([404, 410].includes(error?.statusCode)) await desactivarSuscripcionPush(s.filaGoogle);
-      else console.error("Error enviando notificación push:", error?.statusCode || error?.message || error);
-    }
-  }));
-  return { enviados, configurado: true, destinatarios: (suscripciones || []).length };
+  await Promise.all(
+    (suscripciones || []).map(async (s) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          JSON.stringify(payload),
+          { TTL: 86400 },
+        );
+        enviados += 1;
+      } catch (error) {
+        if ([404, 410].includes(error?.statusCode))
+          await desactivarSuscripcionPush(s.filaGoogle);
+        else
+          console.error(
+            "Error enviando notificación push:",
+            error?.statusCode || error?.message || error,
+          );
+      }
+    }),
+  );
+  return {
+    enviados,
+    configurado: true,
+    destinatarios: (suscripciones || []).length,
+  };
 }
 
 let ultimoMinutoProcesadoTareas = "";
@@ -2186,79 +4436,118 @@ let ultimoMinutoProcesadoTareas = "";
 function resolverUsuarioPorResponsable(usuarios, responsable) {
   const clave = normalizarUsuario(responsable);
   if (!clave) return null;
-  return usuarios.find(u => normalizarUsuario(u.usuario) === clave)
-    || usuarios.find(u => normalizarUsuario(u.nombre) === clave)
-    || null;
+  return (
+    usuarios.find((u) => normalizarUsuario(u.usuario) === clave) ||
+    usuarios.find((u) => normalizarUsuario(u.nombre) === clave) ||
+    null
+  );
 }
 
 function horaInicioDesdeTurnoValor(valorTurno, turnosSector) {
   const valor = normalizarTexto(valorTurno).toLowerCase();
-  if (!valor || ["franco","vacaciones","ausente","licencia"].includes(valor)) return "";
-  const configurado = (turnosSector || []).find(t => normalizarTexto(t.id).toLowerCase() === valor);
+  if (!valor || ["franco", "vacaciones", "ausente", "licencia"].includes(valor))
+    return "";
+  const configurado = (turnosSector || []).find(
+    (t) => normalizarTexto(t.id).toLowerCase() === valor,
+  );
   if (configurado?.inicio) return configurado.inicio;
   const match = normalizarTexto(valorTurno).match(/(\d{1,2})(?::(\d{2}))?/);
   if (!match) return "";
-  const hora = Number(match[1]), minuto = Number(match[2] || 0);
+  const hora = Number(match[1]),
+    minuto = Number(match[2] || 0);
   if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) return "";
-  return `${String(hora).padStart(2,"0")}:${String(minuto).padStart(2,"0")}`;
+  return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
 }
 
 async function datosHorarioEntradaHoy() {
   const fecha = fechaArgentina();
-  const mes = fecha.slice(0,7);
-  const dia = Number(fecha.slice(8,10));
-  return leerConCache(`notificacionesTareasHorario:${fecha}`, 45000, async () => {
-    await asegurarHojasHorarios();
-    const [calendarioResp, sectores, usuarios] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId:SPREADSHEET_ID, range:`${CALENDARIO_HORARIOS_SHEET_NAME}!A:H` }),
-      obtenerSectores(),
-      obtenerUsuarios()
-    ]);
-    const filas = (calendarioResp.data.values || []).slice(1)
-      .filter(f => normalizarTexto(f[1]) === mes && Number(f[3]) === dia);
-    const porEmpleadoSector = new Map();
-    for (const f of filas) {
-      porEmpleadoSector.set(`${normalizarTexto(f[0])}|${normalizarUsuario(f[2])}`, normalizarTexto(f[4]));
-    }
-    return { fecha, mes, dia, sectores, usuarios, porEmpleadoSector };
-  });
+  const mes = fecha.slice(0, 7);
+  const dia = Number(fecha.slice(8, 10));
+  return leerConCache(
+    `notificacionesTareasHorario:${fecha}`,
+    45000,
+    async () => {
+      await asegurarHojasHorarios();
+      const [calendarioResp, sectores, usuarios] = await Promise.all([
+        sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
+        }),
+        obtenerSectores(),
+        obtenerUsuarios(),
+      ]);
+      const filas = (calendarioResp.data.values || [])
+        .slice(1)
+        .filter((f) => normalizarTexto(f[1]) === mes && Number(f[3]) === dia);
+      const porEmpleadoSector = new Map();
+      for (const f of filas) {
+        porEmpleadoSector.set(
+          `${normalizarTexto(f[0])}|${normalizarUsuario(f[2])}`,
+          normalizarTexto(f[4]),
+        );
+      }
+      return { fecha, mes, dia, sectores, usuarios, porEmpleadoSector };
+    },
+  );
 }
 
 async function procesarNotificacionesInicioTareas() {
   const ahora = horaMinutoArgentina();
-  const minutoActual = `${fechaArgentina()}|${String(ahora.hora).padStart(2,"0")}:${String(ahora.minuto).padStart(2,"0")}`;
+  const minutoActual = `${fechaArgentina()}|${String(ahora.hora).padStart(2, "0")}:${String(ahora.minuto).padStart(2, "0")}`;
   if (ultimoMinutoProcesadoTareas === minutoActual) return;
   ultimoMinutoProcesadoTareas = minutoActual;
 
   const horaActual = minutoActual.slice(-5);
-  const [{ fecha, sectores, usuarios, porEmpleadoSector }, tareas] = await Promise.all([
-    datosHorarioEntradaHoy(),
-    obtenerTareasServidor()
-  ]);
+  const [{ fecha, sectores, usuarios, porEmpleadoSector }, tareas] =
+    await Promise.all([datosHorarioEntradaHoy(), obtenerTareasServidor()]);
   const sectoresPorIdONombre = new Map();
-  sectores.forEach(s => { sectoresPorIdONombre.set(normalizarTexto(s.id),s); sectoresPorIdONombre.set(normalizarTexto(s.nombre),s); });
+  sectores.forEach((s) => {
+    sectoresPorIdONombre.set(normalizarTexto(s.id), s);
+    sectoresPorIdONombre.set(normalizarTexto(s.nombre), s);
+  });
   const grupos = new Map();
 
   for (const tarea of tareas) {
     const asignacionesDia = tarea.asignaciones?.[fecha] || {};
     for (const [turnoTarea, asignacion] of Object.entries(asignacionesDia)) {
-      if (!asignacion || normalizarTexto(asignacion.estado).toLowerCase() === "completada") continue;
-      const sectorInfo = sectoresPorIdONombre.get(normalizarTexto(tarea.sector));
+      if (
+        !asignacion ||
+        normalizarTexto(asignacion.estado).toLowerCase() === "completada"
+      )
+        continue;
+      const sectorInfo = sectoresPorIdONombre.get(
+        normalizarTexto(tarea.sector),
+      );
       if (!sectorInfo) continue;
       const turnosSector = await obtenerTurnosSector(sectorInfo.id);
       for (const responsable of asignacion.responsables || []) {
         const usuario = resolverUsuarioPorResponsable(usuarios, responsable);
-        if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true) continue;
-        const clavesEmpleado = [usuario.nombre, usuario.usuario].map(normalizarUsuario).filter(Boolean);
+        if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true)
+          continue;
+        const clavesEmpleado = [usuario.nombre, usuario.usuario]
+          .map(normalizarUsuario)
+          .filter(Boolean);
         let valorTurno = "";
         for (const claveEmpleado of clavesEmpleado) {
-          valorTurno = porEmpleadoSector.get(`${sectorInfo.id}|${claveEmpleado}`) || valorTurno;
+          valorTurno =
+            porEmpleadoSector.get(`${sectorInfo.id}|${claveEmpleado}`) ||
+            valorTurno;
         }
         const horaEntrada = horaInicioDesdeTurnoValor(valorTurno, turnosSector);
         if (!horaEntrada || horaEntrada !== horaActual) continue;
         const claveGrupo = `${usuario.usuario}|${sectorInfo.id}|${fecha}|${horaEntrada}`;
-        const grupo = grupos.get(claveGrupo) || { usuario, sector:sectorInfo, fecha, horaEntrada, tareas:[] };
-        grupo.tareas.push({ id:tarea.id, nombre:tarea.nombre, turno:turnoTarea });
+        const grupo = grupos.get(claveGrupo) || {
+          usuario,
+          sector: sectorInfo,
+          fecha,
+          horaEntrada,
+          tareas: [],
+        };
+        grupo.tareas.push({
+          id: tarea.id,
+          nombre: tarea.nombre,
+          turno: turnoTarea,
+        });
         grupos.set(claveGrupo, grupo);
       }
     }
@@ -2272,49 +4561,113 @@ async function procesarNotificacionesInicioTareas() {
     const cantidad = grupo.tareas.length;
     const payload = {
       title: cantidad === 1 ? "Tarea para hoy" : "Tareas para tu turno",
-      body: cantidad === 1
-        ? `${grupo.tareas[0].nombre} · ${grupo.sector.nombre}`
-        : `Tenés ${cantidad} tareas asignadas hoy en ${grupo.sector.nombre}`,
+      body:
+        cantidad === 1
+          ? `${grupo.tareas[0].nombre} · ${grupo.sector.nombre}`
+          : `Tenés ${cantidad} tareas asignadas hoy en ${grupo.sector.nombre}`,
       tag: clave,
-      data: { url:`./?modulo=tareas&fecha=${encodeURIComponent(grupo.fecha)}&sector=${encodeURIComponent(grupo.sector.id)}` }
+      data: {
+        url: `./?modulo=tareas&fecha=${encodeURIComponent(grupo.fecha)}&sector=${encodeURIComponent(grupo.sector.id)}`,
+      },
     };
-    await registrarCentroNotificacion({ usuario:grupo.usuario.usuario, tipo:"tarea", titulo:payload.title, mensaje:payload.body, url:payload.data.url, clave });
-    const suscripciones = await obtenerSuscripcionesUsuarioModulo(grupo.usuario.usuario, "tareas");
+    await registrarCentroNotificacion({
+      usuario: grupo.usuario.usuario,
+      tipo: "tarea",
+      titulo: payload.title,
+      mensaje: payload.body,
+      url: payload.data.url,
+      clave,
+    });
+    const suscripciones = await obtenerSuscripcionesUsuarioModulo(
+      grupo.usuario.usuario,
+      "tareas",
+    );
     await enviarPushASuscripciones(suscripciones, payload);
-    await registrarNotificacionEnviada(clave, "tareas-inicio", { id:grupo.usuario.usuario, codigo:grupo.sector.id, vencimiento:grupo.fecha }, payload.body);
+    await registrarNotificacionEnviada(
+      clave,
+      "tareas-inicio",
+      {
+        id: grupo.usuario.usuario,
+        codigo: grupo.sector.id,
+        vencimiento: grupo.fecha,
+      },
+      payload.body,
+    );
     enviadas.add(clave);
   }
 }
 
-async function notificarSupervisorTareaCompletada({ tarea, fecha, turno, asignacion, completadaPor }) {
-  const [sectores, usuarios, enviadas] = await Promise.all([obtenerSectores(), obtenerUsuarios(), clavesNotificacionesEnviadas()]);
-  const sector = sectores.find(s => [normalizarTexto(s.id), normalizarTexto(s.nombre)].includes(normalizarTexto(tarea.sector)));
+async function notificarSupervisorTareaCompletada({
+  tarea,
+  fecha,
+  turno,
+  asignacion,
+  completadaPor,
+}) {
+  const [sectores, usuarios, enviadas] = await Promise.all([
+    obtenerSectores(),
+    obtenerUsuarios(),
+    clavesNotificacionesEnviadas(),
+  ]);
+  const sector = sectores.find((s) =>
+    [normalizarTexto(s.id), normalizarTexto(s.nombre)].includes(
+      normalizarTexto(tarea.sector),
+    ),
+  );
   if (!sector?.supervisor) return;
-  const supervisor = usuarios.find(u => normalizarUsuario(u.usuario) === normalizarUsuario(sector.supervisor));
-  if (!supervisor || !supervisor.activo || supervisor.permisos?.tareas !== true) return;
+  const supervisor = usuarios.find(
+    (u) =>
+      normalizarUsuario(u.usuario) === normalizarUsuario(sector.supervisor),
+  );
+  if (!supervisor || !supervisor.activo || supervisor.permisos?.tareas !== true)
+    return;
   const clave = `tarea-completada|${tarea.id}|${fecha}|${turno}`;
   if (enviadas.has(clave)) return;
-  const quien = normalizarTexto(asignacion?.completadaPor || completadaPor?.nombre || completadaPor?.usuario || "Un usuario");
+  const quien = normalizarTexto(
+    asignacion?.completadaPor ||
+      completadaPor?.nombre ||
+      completadaPor?.usuario ||
+      "Un usuario",
+  );
   const payload = {
-    title:"Tarea completada",
-    body:`${quien} completó “${tarea.nombre}” en ${sector.nombre}`,
-    tag:clave,
-    data:{ url:`./?modulo=tareas&fecha=${encodeURIComponent(fecha)}&sector=${encodeURIComponent(sector.id)}` }
+    title: "Tarea completada",
+    body: `${quien} completó “${tarea.nombre}” en ${sector.nombre}`,
+    tag: clave,
+    data: {
+      url: `./?modulo=tareas&fecha=${encodeURIComponent(fecha)}&sector=${encodeURIComponent(sector.id)}`,
+    },
   };
-  await registrarCentroNotificacion({ usuario:supervisor.usuario, tipo:"tarea", titulo:payload.title, mensaje:payload.body, url:payload.data.url, clave });
-  const suscripciones = await obtenerSuscripcionesUsuarioModulo(supervisor.usuario, "tareas");
+  await registrarCentroNotificacion({
+    usuario: supervisor.usuario,
+    tipo: "tarea",
+    titulo: payload.title,
+    mensaje: payload.body,
+    url: payload.data.url,
+    clave,
+  });
+  const suscripciones = await obtenerSuscripcionesUsuarioModulo(
+    supervisor.usuario,
+    "tareas",
+  );
   await enviarPushASuscripciones(suscripciones, payload);
-  await registrarNotificacionEnviada(clave, "tarea-completada", { id:tarea.id, codigo:supervisor.usuario, vencimiento:fecha }, payload.body);
+  await registrarNotificacionEnviada(
+    clave,
+    "tarea-completada",
+    { id: tarea.id, codigo: supervisor.usuario, vencimiento: fecha },
+    payload.body,
+  );
 }
 
-
 function diasEntreFechasIso(fechaA, fechaB) {
-  const parsear = valor => {
+  const parsear = (valor) => {
     const m = normalizarTexto(valor).match(/^(\d{4})-(\d{2})-(\d{2})$/);
     return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : NaN;
   };
-  const a = parsear(fechaA), b = parsear(fechaB);
-  return Number.isFinite(a) && Number.isFinite(b) ? Math.floor((b - a) / 86400000) : null;
+  const a = parsear(fechaA),
+    b = parsear(fechaB);
+  return Number.isFinite(a) && Number.isFinite(b)
+    ? Math.floor((b - a) / 86400000)
+    : null;
 }
 
 function responsableBanoParaFecha(config, fechaIso) {
@@ -2326,7 +4679,9 @@ function responsableBanoParaFecha(config, fechaIso) {
   const dias = diasEntreFechasIso(fechaAncla, fechaIso);
   if (dias === null || ((dias % 2) + 2) % 2 !== 0) return "";
   const turno = Math.floor(dias / 2);
-  const indice = ((turno % participantes.length) + participantes.length) % participantes.length;
+  const indice =
+    ((turno % participantes.length) + participantes.length) %
+    participantes.length;
   return participantes[indice] || "";
 }
 
@@ -2334,14 +4689,17 @@ async function resolverUsuarioResponsableBano(valor) {
   const clave = normalizarUsuario(valor);
   if (!clave) return null;
   const usuarios = await obtenerUsuarios();
-  return usuarios.find(u => u.usuario === clave)
-    || usuarios.find(u => normalizarUsuario(u.nombre) === clave)
-    || null;
+  return (
+    usuarios.find((u) => u.usuario === clave) ||
+    usuarios.find((u) => normalizarUsuario(u.nombre) === clave) ||
+    null
+  );
 }
 
 function limpiezaBanoConfirmada(config, fechaIso) {
-  return (Array.isArray(config?.historial) ? config.historial : [])
-    .some(item => normalizarTexto(item?.fecha) === fechaIso);
+  return (Array.isArray(config?.historial) ? config.historial : []).some(
+    (item) => normalizarTexto(item?.fecha) === fechaIso,
+  );
 }
 
 function claveNotificacionBano(fechaIso, tipo, usuario) {
@@ -2354,61 +4712,103 @@ async function procesarNotificacionBano(tipo) {
   const config = await leerBanoServidor();
   const participante = responsableBanoParaFecha(config, fecha);
   if (!participante) return { enviados: 0, descanso: true };
-  if (tipo === "16" && limpiezaBanoConfirmada(config, fecha)) return { enviados: 0, confirmada: true };
+  if (tipo === "16" && limpiezaBanoConfirmada(config, fecha))
+    return { enviados: 0, confirmada: true };
 
   const usuario = await resolverUsuarioResponsableBano(participante);
-  if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true) return { enviados: 0, sinDestinatario: true };
+  if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true)
+    return { enviados: 0, sinDestinatario: true };
 
   const clave = claveNotificacionBano(fecha, tipo, usuario.usuario);
   const enviadas = await clavesNotificacionesEnviadas();
   if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
 
-  const payload = tipo === "08"
-    ? {
-        title: "Hoy te corresponde limpiar el baño",
-        body: "Tu turno es hoy. Confirmá la limpieza cuando termines.",
-        tag: `bano-${fecha}-08-${usuario.usuario}`,
-        data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` }
-      }
-    : {
-        title: "Limpieza del baño pendiente",
-        body: "Todavía no registraste la limpieza de hoy.",
-        tag: `bano-${fecha}-16-${usuario.usuario}`,
-        data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` }
-      };
+  const payload =
+    tipo === "08"
+      ? {
+          title: "Hoy te corresponde limpiar el baño",
+          body: "Tu turno es hoy. Confirmá la limpieza cuando termines.",
+          tag: `bano-${fecha}-08-${usuario.usuario}`,
+          data: {
+            url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}`,
+          },
+        }
+      : {
+          title: "Limpieza del baño pendiente",
+          body: "Todavía no registraste la limpieza de hoy.",
+          tag: `bano-${fecha}-16-${usuario.usuario}`,
+          data: {
+            url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}`,
+          },
+        };
 
-  await registrarCentroNotificacion({ usuario: usuario.usuario, tipo: "bano", titulo: payload.title, mensaje: payload.body, url: payload.data.url, clave: payload.tag });
-  const suscripciones = await obtenerSuscripcionesUsuarioModulo(usuario.usuario, "tareas");
-  const resultado = suscripciones.length ? await enviarPushASuscripciones(suscripciones, payload) : { enviados: 0, sinSuscripciones: true };
+  await registrarCentroNotificacion({
+    usuario: usuario.usuario,
+    tipo: "bano",
+    titulo: payload.title,
+    mensaje: payload.body,
+    url: payload.data.url,
+    clave: payload.tag,
+  });
+  const suscripciones = await obtenerSuscripcionesUsuarioModulo(
+    usuario.usuario,
+    "tareas",
+  );
+  const resultado = suscripciones.length
+    ? await enviarPushASuscripciones(suscripciones, payload)
+    : { enviados: 0, sinSuscripciones: true };
   if (resultado.enviados > 0) {
-    await registrarNotificacionEnviada(clave, `bano-${tipo}`, {
-      id: `bano-${fecha}`,
-      codigo: usuario.usuario,
-      vencimiento: fecha
-    }, payload.body);
+    await registrarNotificacionEnviada(
+      clave,
+      `bano-${tipo}`,
+      {
+        id: `bano-${fecha}`,
+        codigo: usuario.usuario,
+        vencimiento: fecha,
+      },
+      payload.body,
+    );
   }
   return resultado;
 }
 
 async function enviarPushVencimientos(payload) {
-  if (!PUSH_CONFIGURED) return { enviados: 0, configurado: false, destinatarios: 0 };
+  if (!PUSH_CONFIGURED)
+    return { enviados: 0, configurado: false, destinatarios: 0 };
   const suscripciones = await obtenerSuscripcionesVencimientosPermitidas();
   let enviados = 0;
-  await Promise.all(suscripciones.map(async s => {
-    try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload), { TTL: 86400 });
-      enviados += 1;
-    } catch (error) {
-      if ([404, 410].includes(error?.statusCode)) await desactivarSuscripcionPush(s.filaGoogle);
-      else console.error("Error enviando notificación push:", error?.statusCode || error?.message || error);
-    }
-  }));
+  await Promise.all(
+    suscripciones.map(async (s) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          JSON.stringify(payload),
+          { TTL: 86400 },
+        );
+        enviados += 1;
+      } catch (error) {
+        if ([404, 410].includes(error?.statusCode))
+          await desactivarSuscripcionPush(s.filaGoogle);
+        else
+          console.error(
+            "Error enviando notificación push:",
+            error?.statusCode || error?.message || error,
+          );
+      }
+    }),
+  );
   return { enviados, configurado: true, destinatarios: suscripciones.length };
 }
 
 function claveUnicaAlertaVencimiento(registro, tipo) {
-  if (tipo === "nuevo") return ["vencimiento-nuevo", normalizarTexto(registro.id)].join("|");
-  return [normalizarCodigo(registro.codigo), normalizarTexto(registro.vencimiento), normalizarTexto(tipo), fechaIsoHoy()].join("|");
+  if (tipo === "nuevo")
+    return ["vencimiento-nuevo", normalizarTexto(registro.id)].join("|");
+  return [
+    normalizarCodigo(registro.codigo),
+    normalizarTexto(registro.vencimiento),
+    normalizarTexto(tipo),
+    fechaIsoHoy(),
+  ].join("|");
 }
 
 function payloadNuevoVencimiento(registro) {
@@ -2418,27 +4818,40 @@ function payloadNuevoVencimiento(registro) {
     title: "Nuevo vencimiento cargado",
     body: `${registro.articulo} · ${unidades} · vence ${registro.vencimiento}`,
     tag: `venc-${registro.id}-nuevo`,
-    data: { url: "./?modulo=vencimientos&vista=proximos" }
+    data: { url: "./?modulo=vencimientos&vista=proximos" },
   };
 }
 
-async function enviarAlertaRegistro(registro, dias, tipo, clave = claveUnicaAlertaVencimiento(registro, tipo), clavesConocidas = null) {
+async function enviarAlertaRegistro(
+  registro,
+  dias,
+  tipo,
+  clave = claveUnicaAlertaVencimiento(registro, tipo),
+  clavesConocidas = null,
+) {
   if (tipo !== "nuevo") return { enviados: 0, omitida: true };
-  if (clavesNotificacionEnProceso.has(clave)) return { enviados: 0, duplicada: true };
+  if (clavesNotificacionEnProceso.has(clave))
+    return { enviados: 0, duplicada: true };
   clavesNotificacionEnProceso.add(clave);
   try {
-    const enviadas = clavesConocidas || await clavesNotificacionesEnviadas();
+    const enviadas = clavesConocidas || (await clavesNotificacionesEnviadas());
     if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
     const payload = payloadNuevoVencimiento(registro);
-    const usuarios = (await obtenerUsuarios()).filter(u => u.activo && u.permisos?.vencimientos === true);
-    await Promise.all(usuarios.map(u => registrarCentroNotificacion({
-      usuario: u.usuario,
-      tipo: "vencimientos",
-      titulo: payload.title,
-      mensaje: payload.body,
-      url: payload.data.url,
-      clave: `${clave}|${u.usuario}`
-    })));
+    const usuarios = (await obtenerUsuarios()).filter(
+      (u) => u.activo && u.permisos?.vencimientos === true,
+    );
+    await Promise.all(
+      usuarios.map((u) =>
+        registrarCentroNotificacion({
+          usuario: u.usuario,
+          tipo: "vencimientos",
+          titulo: payload.title,
+          mensaje: payload.body,
+          url: payload.data.url,
+          clave: `${clave}|${u.usuario}`,
+        }),
+      ),
+    );
     const resultado = await enviarPushVencimientos(payload);
     if (resultado.enviados > 0) {
       await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
@@ -2458,48 +4871,65 @@ function payloadResumenVencimientos(tipo, cantidad) {
   if (tipo === "vencidos") {
     return {
       title: "Productos vencidos",
-      body: cantidad === 1 ? "Hay 1 producto vencido." : `Hay ${cantidad} productos vencidos.`,
+      body:
+        cantidad === 1
+          ? "Hay 1 producto vencido."
+          : `Hay ${cantidad} productos vencidos.`,
       tag: `resumen-vencidos-${fechaIsoHoy()}`,
-      data: { url: "./?modulo=vencimientos&vista=vencidos" }
+      data: { url: "./?modulo=vencimientos&vista=vencidos" },
     };
   }
   const dias = Number(tipo);
   const titulo = dias === 1 ? "Vencen en 1 día" : `Vencen en ${dias} días`;
   return {
     title: titulo,
-    body: cantidad === 1
-      ? `Hay 1 producto que vence en ${dias === 1 ? "1 día" : `${dias} días`}.`
-      : `Hay ${cantidad} productos que vencen en ${dias === 1 ? "1 día" : `${dias} días`}.`,
+    body:
+      cantidad === 1
+        ? `Hay 1 producto que vence en ${dias === 1 ? "1 día" : `${dias} días`}.`
+        : `Hay ${cantidad} productos que vencen en ${dias === 1 ? "1 día" : `${dias} días`}.`,
     tag: `resumen-vencimientos-${fechaIsoHoy()}-${dias}`,
-    data: { url: `./?modulo=vencimientos&vista=proximos&dias=${dias}` }
+    data: { url: `./?modulo=vencimientos&vista=proximos&dias=${dias}` },
   };
 }
 
 async function enviarResumenVencimientos(tipo, registros, enviadas) {
-  if (!Array.isArray(registros) || !registros.length) return { enviados: 0, vacio: true };
+  if (!Array.isArray(registros) || !registros.length)
+    return { enviados: 0, vacio: true };
   const fecha = fechaIsoHoy();
   const clave = claveResumenVencimientos(fecha, tipo);
-  if (enviadas.has(clave) || clavesNotificacionEnProceso.has(clave)) return { enviados: 0, duplicada: true };
+  if (enviadas.has(clave) || clavesNotificacionEnProceso.has(clave))
+    return { enviados: 0, duplicada: true };
   clavesNotificacionEnProceso.add(clave);
   try {
     const payload = payloadResumenVencimientos(tipo, registros.length);
-    const usuarios = (await obtenerUsuarios()).filter(u => u.activo && u.permisos?.vencimientos === true);
-    await Promise.all(usuarios.map(u => registrarCentroNotificacion({
-      usuario: u.usuario,
-      tipo: "vencimientos",
-      titulo: payload.title,
-      mensaje: payload.body,
-      url: payload.data.url,
-      clave: `${clave}|${u.usuario}`
-    })));
+    const usuarios = (await obtenerUsuarios()).filter(
+      (u) => u.activo && u.permisos?.vencimientos === true,
+    );
+    await Promise.all(
+      usuarios.map((u) =>
+        registrarCentroNotificacion({
+          usuario: u.usuario,
+          tipo: "vencimientos",
+          titulo: payload.title,
+          mensaje: payload.body,
+          url: payload.data.url,
+          clave: `${clave}|${u.usuario}`,
+        }),
+      ),
+    );
     const resultado = await enviarPushVencimientos(payload);
     if (resultado.enviados > 0) {
       const registroResumen = {
         id: `resumen-${tipo}-${fecha}`,
         codigo: tipo,
-        vencimiento: fecha
+        vencimiento: fecha,
       };
-      await registrarNotificacionEnviada(clave, `resumen-${tipo}`, registroResumen, payload.body);
+      await registrarNotificacionEnviada(
+        clave,
+        `resumen-${tipo}`,
+        registroResumen,
+        payload.body,
+      );
       enviadas.add(clave);
     }
     return resultado;
@@ -2512,22 +4942,29 @@ let limpiezaVencimientosEnCurso = false;
 let ultimaLimpiezaVencimientos = 0;
 
 async function reescribirHoja(nombreHoja, encabezados, filas) {
-  await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: `${nombreHoja}!A:Z` });
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${nombreHoja}!A:Z`,
+  });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `${nombreHoja}!A1`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [encabezados, ...filas] }
+    requestBody: { values: [encabezados, ...filas] },
   });
 }
 
 async function limpiarVencimientosAntiguos({ forzar = false } = {}) {
   const ahora = Date.now();
-  if (limpiezaVencimientosEnCurso || (!forzar && ahora - ultimaLimpiezaVencimientos < 60 * 60 * 1000)) return { eliminados: 0 };
+  if (
+    limpiezaVencimientosEnCurso ||
+    (!forzar && ahora - ultimaLimpiezaVencimientos < 60 * 60 * 1000)
+  )
+    return { eliminados: 0 };
   limpiezaVencimientosEnCurso = true;
   try {
     const vencimientos = await obtenerVencimientos();
-    const antiguos = vencimientos.filter(item => {
+    const antiguos = vencimientos.filter((item) => {
       const dias = diasDesdeHoyArgentina(item.vencimiento);
       return dias !== null && dias <= -7;
     });
@@ -2536,32 +4973,90 @@ async function limpiarVencimientosAntiguos({ forzar = false } = {}) {
       return { eliminados: 0 };
     }
 
-    const ids = new Set(antiguos.map(item => item.id));
-    const vigentes = vencimientos.filter(item => !ids.has(item.id));
-    await reescribirHoja(VENCIMIENTOS_SHEET_NAME,
-      ["ID", "Fecha carga", "Código", "Artículo", "Vencimiento", "Salón", "Depósito", "Total", "Estado", "Oferta"],
-      vigentes.map(item => [item.id, item.fecha_carga, item.codigo, item.articulo, item.vencimiento, item.salon, item.deposito, item.total, item.estado, item.oferta])
+    const ids = new Set(antiguos.map((item) => item.id));
+    const vigentes = vencimientos.filter((item) => !ids.has(item.id));
+    await reescribirHoja(
+      VENCIMIENTOS_SHEET_NAME,
+      [
+        "ID",
+        "Fecha carga",
+        "Código",
+        "Artículo",
+        "Vencimiento",
+        "Salón",
+        "Depósito",
+        "Total",
+        "Estado",
+        "Oferta",
+        "Rubro",
+      ],
+      vigentes.map((item) => [
+        item.id,
+        item.fecha_carga,
+        item.codigo,
+        item.articulo,
+        item.vencimiento,
+        item.salon,
+        item.deposito,
+        item.total,
+        item.estado,
+        item.oferta,
+        item.rubro,
+      ]),
     );
 
     await asegurarHojaHistorialVencimientos();
-    const historialResp = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J` });
-    const historialFilas = (historialResp.data.values || []).slice(1).filter(fila => !ids.has(normalizarTexto(fila[5])));
-    await reescribirHoja(HISTORIAL_VENCIMIENTOS_SHEET_NAME,
-      ["Fecha", "Hora", "Usuario", "Nombre", "Acción", "ID", "Código", "Artículo", "Vencimiento", "Detalle"],
-      historialFilas
+    const historialResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
+    });
+    const historialFilas = (historialResp.data.values || [])
+      .slice(1)
+      .filter((fila) => !ids.has(normalizarTexto(fila[5])));
+    await reescribirHoja(
+      HISTORIAL_VENCIMIENTOS_SHEET_NAME,
+      [
+        "Fecha",
+        "Hora",
+        "Usuario",
+        "Nombre",
+        "Acción",
+        "ID",
+        "Código",
+        "Artículo",
+        "Vencimiento",
+        "Detalle",
+      ],
+      historialFilas,
     );
 
     await asegurarHojasNotificaciones();
-    const notifResp = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G` });
-    const notifFilas = (notifResp.data.values || []).slice(1).filter(fila => !ids.has(normalizarTexto(fila[3])));
-    await reescribirHoja(NOTIFICATION_LOG_SHEET_NAME,
-      ["Clave", "Fecha envío", "Tipo", "ID", "Código", "Vencimiento", "Detalle"],
-      notifFilas
+    const notifResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`,
+    });
+    const notifFilas = (notifResp.data.values || [])
+      .slice(1)
+      .filter((fila) => !ids.has(normalizarTexto(fila[3])));
+    await reescribirHoja(
+      NOTIFICATION_LOG_SHEET_NAME,
+      [
+        "Clave",
+        "Fecha envío",
+        "Tipo",
+        "ID",
+        "Código",
+        "Vencimiento",
+        "Detalle",
+      ],
+      notifFilas,
     );
 
     invalidarCache("vencimientos");
     ultimaLimpiezaVencimientos = ahora;
-    console.log(`Limpieza automática: ${antiguos.length} vencimiento(s) eliminado(s) después de 7 días.`);
+    console.log(
+      `Limpieza automática: ${antiguos.length} vencimiento(s) eliminado(s) después de 7 días.`,
+    );
     return { eliminados: antiguos.length };
   } finally {
     limpiezaVencimientosEnCurso = false;
@@ -2573,8 +5068,11 @@ async function procesarAlertasVencimientos() {
   procesandoNotificaciones = true;
   try {
     await limpiarVencimientosAntiguos();
-    const [vencimientos, enviadas] = await Promise.all([obtenerVencimientos(), clavesNotificacionesEnviadas()]);
-    const grupos = { "1": [], "3": [], "7": [], "15": [], vencidos: [] };
+    const [vencimientos, enviadas] = await Promise.all([
+      obtenerVencimientos(),
+      clavesNotificacionesEnviadas(),
+    ]);
+    const grupos = { 1: [], 3: [], 7: [], 15: [], vencidos: [] };
 
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
@@ -2588,37 +5086,89 @@ async function procesarAlertasVencimientos() {
     }
   } catch (error) {
     console.error("Error procesando alertas agrupadas de vencimientos:", error);
-  } finally { procesandoNotificaciones = false; }
+  } finally {
+    procesandoNotificaciones = false;
+  }
 }
 
 app.get("/notificaciones/centro", requerirSesion, async (req, res) => {
   try {
-    const notificaciones = await obtenerCentroNotificaciones(req.usuario.usuario);
+    const notificaciones = await obtenerCentroNotificaciones(
+      req.usuario.usuario,
+    );
     res.set("Cache-Control", "private, max-age=15, stale-while-revalidate=30");
-    res.json({ ok: true, notificaciones, noLeidas: notificaciones.filter(n => !n.leida).length });
-  } catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron cargar las notificaciones" }); }
+    res.json({
+      ok: true,
+      notificaciones,
+      noLeidas: notificaciones.filter((n) => !n.leida).length,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron cargar las notificaciones",
+    });
+  }
 });
 
-app.patch("/notificaciones/centro/:id/leida", requerirSesion, async (req, res) => {
-  try { await marcarCentroNotificacion(req.usuario.usuario, req.params.id, false); res.json({ ok:true }); }
-  catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudo actualizar la notificación" }); }
-});
+app.patch(
+  "/notificaciones/centro/:id/leida",
+  requerirSesion,
+  async (req, res) => {
+    try {
+      await marcarCentroNotificacion(req.usuario.usuario, req.params.id, false);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        mensaje: error.message || "No se pudo actualizar la notificación",
+      });
+    }
+  },
+);
 
 app.patch("/notificaciones/centro-leidas", requerirSesion, async (req, res) => {
-  try { const actualizadas = await marcarCentroNotificacion(req.usuario.usuario, "", true); res.json({ ok:true, actualizadas }); }
-  catch (error) { res.status(500).json({ ok:false, mensaje:error.message || "No se pudieron actualizar las notificaciones" }); }
+  try {
+    const actualizadas = await marcarCentroNotificacion(
+      req.usuario.usuario,
+      "",
+      true,
+    );
+    res.json({ ok: true, actualizadas });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron actualizar las notificaciones",
+    });
+  }
 });
 
 app.get("/notificaciones/public-key", (req, res) => {
-  res.json({ ok: true, configurado: PUSH_CONFIGURED, publicKey: VAPID_PUBLIC_KEY || "" });
+  res.json({
+    ok: true,
+    configurado: PUSH_CONFIGURED,
+    publicKey: VAPID_PUBLIC_KEY || "",
+  });
 });
 
 app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
   try {
-    if (!PUSH_CONFIGURED) return res.status(503).json({ ok: false, mensaje: "Las notificaciones todavía no están configuradas en Render" });
+    if (!PUSH_CONFIGURED)
+      return res.status(503).json({
+        ok: false,
+        mensaje: "Las notificaciones todavía no están configuradas en Render",
+      });
     await guardarSuscripcionPush(req);
-    res.json({ ok: true, mensaje: "Notificaciones activadas. Los avisos diarios se envían a las 08:00." });
-  } catch (error) { res.status(400).json({ ok: false, mensaje: error.message || "No se pudo guardar la suscripción" }); }
+    res.json({
+      ok: true,
+      mensaje:
+        "Notificaciones activadas. Los avisos diarios se envían a las 08:00.",
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      mensaje: error.message || "No se pudo guardar la suscripción",
+    });
+  }
 });
 
 app.post("/notificaciones/procesar", requerirSesion, async (req, res) => {
@@ -2628,7 +5178,10 @@ app.post("/notificaciones/procesar", requerirSesion, async (req, res) => {
 
 app.all("/notificaciones/cron", async (req, res) => {
   const secreto = normalizarTexto(req.get("x-cron-secret") || req.query.secret);
-  if (!NOTIFICATION_CRON_SECRET || secreto !== NOTIFICATION_CRON_SECRET) return res.status(403).json({ ok: false, mensaje: "Secreto de cron inválido" });
+  if (!NOTIFICATION_CRON_SECRET || secreto !== NOTIFICATION_CRON_SECRET)
+    return res
+      .status(403)
+      .json({ ok: false, mensaje: "Secreto de cron inválido" });
   await procesarAlertasVencimientos();
   res.json({ ok: true });
 });
@@ -2640,7 +5193,10 @@ app.get("/vencimientos", async (req, res) => {
     res.json({ ok: true, total: vencimientos.length, vencimientos });
   } catch (error) {
     console.error("Error en /vencimientos:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al obtener vencimientos" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al obtener vencimientos",
+    });
   }
 });
 
@@ -2650,16 +5206,39 @@ app.post("/vencimientos", async (req, res) => {
     const vencimiento = normalizarTexto(req.body.vencimiento);
     const salon = enteroNoNegativo(req.body.salon);
     const deposito = enteroNoNegativo(req.body.deposito);
+    const rubro = normalizarRubroVencimiento(req.body.rubro);
     const total = salon === null || deposito === null ? null : salon + deposito;
 
-    if (!codigo) return res.status(400).json({ ok: false, mensaje: "Falta el código" });
-    if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
-    if (!fechaNoAnteriorAHoy(vencimiento)) return res.status(400).json({ ok: false, mensaje: "La fecha de vencimiento no puede ser anterior a hoy" });
-    if (total === null || total <= 0) return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad" });
+    if (!codigo)
+      return res.status(400).json({ ok: false, mensaje: "Falta el código" });
+    if (!vencimiento)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
+    if (rubro === "Sin clasificar")
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Seleccioná un rubro: Almacén, Bebida o Fiambrería",
+      });
+    if (!fechaNoAnteriorAHoy(vencimiento))
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La fecha de vencimiento no puede ser anterior a hoy",
+      });
+    if (total === null || total <= 0)
+      return res.status(400).json({
+        ok: false,
+        mensaje:
+          "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad",
+      });
 
     const producto = await buscarProductoMaestroPorCodigo(codigo);
     const articulo = normalizarTexto(req.body.articulo) || producto?.articulo;
-    if (!articulo) return res.status(404).json({ ok: false, mensaje: "Producto no encontrado en la hoja Productos" });
+    if (!articulo)
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Producto no encontrado en la hoja Productos",
+      });
 
     await asegurarHojaVencimientos();
     const registro = {
@@ -2672,19 +5251,41 @@ app.post("/vencimientos", async (req, res) => {
       deposito,
       total,
       estado: calcularEstadoVencimiento(vencimiento),
-      oferta: normalizarOfertaVencimiento(req.body.oferta)
+      oferta: normalizarOfertaVencimiento(req.body.oferta),
+      rubro,
     };
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:J`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:K`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[registro.id, registro.fecha_carga, registro.codigo, registro.articulo, registro.vencimiento, registro.salon, registro.deposito, registro.total, registro.estado, registro.oferta]] }
+      requestBody: {
+        values: [
+          [
+            registro.id,
+            registro.fecha_carga,
+            registro.codigo,
+            registro.articulo,
+            registro.vencimiento,
+            registro.salon,
+            registro.deposito,
+            registro.total,
+            registro.estado,
+            registro.oferta,
+            registro.rubro,
+          ],
+        ],
+      },
     });
 
     invalidarCache("vencimientos");
-    await registrarHistorialVencimiento(req, "Creó", registro, `Salón: ${registro.salon} · Depósito: ${registro.deposito}`);
+    await registrarHistorialVencimiento(
+      req,
+      "Creó",
+      registro,
+      `Salón: ${registro.salon} · Depósito: ${registro.deposito}`,
+    );
     const diasRestantes = diasDesdeHoyArgentina(registro.vencimiento);
     if (PUSH_CONFIGURED) {
       const tipo = "nuevo";
@@ -2692,14 +5293,27 @@ app.post("/vencimientos", async (req, res) => {
       setImmediate(async () => {
         try {
           const enviadas = await clavesNotificacionesEnviadas();
-          if (!enviadas.has(clave)) await enviarAlertaRegistro(registro, diasRestantes, tipo, clave);
-        } catch (error) { console.error("No se pudo enviar la notificación de nuevo vencimiento:", error); }
+          if (!enviadas.has(clave))
+            await enviarAlertaRegistro(registro, diasRestantes, tipo, clave);
+        } catch (error) {
+          console.error(
+            "No se pudo enviar la notificación de nuevo vencimiento:",
+            error,
+          );
+        }
       });
     }
-    res.json({ ok: true, mensaje: "Vencimiento guardado", vencimiento: registro });
+    res.json({
+      ok: true,
+      mensaje: "Vencimiento guardado",
+      vencimiento: registro,
+    });
   } catch (error) {
     console.error("Error en POST /vencimientos:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al guardar vencimiento" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al guardar vencimiento",
+    });
   }
 });
 
@@ -2707,30 +5321,97 @@ app.put("/vencimientos/:id", async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
     const vencimientos = await obtenerVencimientos();
-    const registro = vencimientos.find(item => item.id === id);
-    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+    const registro = vencimientos.find((item) => item.id === id);
+    if (!registro)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Registro no encontrado" });
 
     const salon = enteroNoNegativo(req.body.salon);
     const deposito = enteroNoNegativo(req.body.deposito);
     const vencimiento = normalizarTexto(req.body.vencimiento);
+    const rubro =
+      req.body.rubro === undefined
+        ? registro.rubro
+        : normalizarRubroVencimiento(req.body.rubro);
     const total = salon === null || deposito === null ? null : salon + deposito;
-    if (!vencimiento) return res.status(400).json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
-    if (vencimiento !== registro.vencimiento && !fechaNoAnteriorAHoy(vencimiento)) return res.status(400).json({ ok: false, mensaje: "La nueva fecha de vencimiento no puede ser anterior a hoy" });
-    if (total === null || total <= 0) return res.status(400).json({ ok: false, mensaje: "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad" });
+    if (!vencimiento)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Falta la fecha de vencimiento" });
+    if (rubro === "Sin clasificar")
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Seleccioná un rubro: Almacén, Bebida o Fiambrería",
+      });
+    if (
+      vencimiento !== registro.vencimiento &&
+      !fechaNoAnteriorAHoy(vencimiento)
+    )
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La nueva fecha de vencimiento no puede ser anterior a hoy",
+      });
+    if (total === null || total <= 0)
+      return res.status(400).json({
+        ok: false,
+        mensaje:
+          "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad",
+      });
 
-    const actualizado = { ...registro, vencimiento, salon, deposito, total, estado: calcularEstadoVencimiento(vencimiento), oferta: req.body.oferta === undefined ? registro.oferta : normalizarOfertaVencimiento(req.body.oferta) };
+    const actualizado = {
+      ...registro,
+      vencimiento,
+      salon,
+      deposito,
+      total,
+      rubro,
+      estado: calcularEstadoVencimiento(vencimiento),
+      oferta:
+        req.body.oferta === undefined
+          ? registro.oferta
+          : normalizarOfertaVencimiento(req.body.oferta),
+    };
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:J${registro.filaGoogle}`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:K${registro.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
+      requestBody: {
+        values: [
+          [
+            actualizado.id,
+            actualizado.fecha_carga,
+            actualizado.codigo,
+            actualizado.articulo,
+            actualizado.vencimiento,
+            actualizado.salon,
+            actualizado.deposito,
+            actualizado.total,
+            actualizado.estado,
+            actualizado.oferta,
+            actualizado.rubro,
+          ],
+        ],
+      },
     });
     invalidarCache("vencimientos");
-    await registrarHistorialVencimiento(req, "Editó", actualizado, `Antes: ${registro.vencimiento} / ${registro.total} · Después: ${actualizado.vencimiento} / ${actualizado.total}`);
-    res.json({ ok: true, mensaje: "Vencimiento actualizado", vencimiento: actualizado });
+    await registrarHistorialVencimiento(
+      req,
+      "Editó",
+      actualizado,
+      `Antes: ${registro.vencimiento} / ${registro.total} · Después: ${actualizado.vencimiento} / ${actualizado.total}`,
+    );
+    res.json({
+      ok: true,
+      mensaje: "Vencimiento actualizado",
+      vencimiento: actualizado,
+    });
   } catch (error) {
     console.error("Error en PUT /vencimientos/:id:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar vencimiento" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al actualizar vencimiento",
+    });
   }
 });
 
@@ -2738,22 +5419,48 @@ app.patch("/vencimientos/:id/oferta", async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
     const vencimientos = await obtenerVencimientos();
-    const registro = vencimientos.find(item => item.id === id);
-    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+    const registro = vencimientos.find((item) => item.id === id);
+    if (!registro)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Registro no encontrado" });
 
     const oferta = normalizarOfertaVencimiento(req.body.oferta);
     const actualizado = { ...registro, oferta };
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:J${registro.filaGoogle}`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:K${registro.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [[actualizado.id, actualizado.fecha_carga, actualizado.codigo, actualizado.articulo, actualizado.vencimiento, actualizado.salon, actualizado.deposito, actualizado.total, actualizado.estado, actualizado.oferta]] }
+      requestBody: {
+        values: [
+          [
+            actualizado.id,
+            actualizado.fecha_carga,
+            actualizado.codigo,
+            actualizado.articulo,
+            actualizado.vencimiento,
+            actualizado.salon,
+            actualizado.deposito,
+            actualizado.total,
+            actualizado.estado,
+            actualizado.oferta,
+            actualizado.rubro,
+          ],
+        ],
+      },
     });
     invalidarCache("vencimientos");
-    res.json({ ok: true, mensaje: oferta === "Sí" ? "Oferta marcada" : "Oferta quitada", vencimiento: actualizado });
+    res.json({
+      ok: true,
+      mensaje: oferta === "Sí" ? "Oferta marcada" : "Oferta quitada",
+      vencimiento: actualizado,
+    });
   } catch (error) {
     console.error("Error en PATCH /vencimientos/:id/oferta:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al actualizar oferta" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al actualizar oferta",
+    });
   }
 });
 
@@ -2761,44 +5468,106 @@ app.delete("/vencimientos/:id", async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
     const vencimientos = await obtenerVencimientos();
-    const registro = vencimientos.find(item => item.id === id);
-    if (!registro) return res.status(404).json({ ok: false, mensaje: "Registro no encontrado" });
+    const registro = vencimientos.find((item) => item.id === id);
+    if (!registro)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Registro no encontrado" });
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ deleteDimension: { range: { sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME), dimension: "ROWS", startIndex: registro.filaGoogle - 1, endIndex: registro.filaGoogle } } }] }
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME),
+                dimension: "ROWS",
+                startIndex: registro.filaGoogle - 1,
+                endIndex: registro.filaGoogle,
+              },
+            },
+          },
+        ],
+      },
     });
     invalidarCache("vencimientos");
-    await registrarHistorialVencimiento(req, "Eliminó", registro, `Cantidad total: ${registro.total}`);
+    await registrarHistorialVencimiento(
+      req,
+      "Eliminó",
+      registro,
+      `Cantidad total: ${registro.total}`,
+    );
     res.json({ ok: true, mensaje: "Vencimiento eliminado" });
   } catch (error) {
     console.error("Error en DELETE /vencimientos/:id:", error);
-    res.status(500).json({ ok: false, mensaje: error.message || "Error al eliminar vencimiento" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al eliminar vencimiento",
+    });
   }
 });
 
-
 async function asegurarHojaHistorialVencimientos() {
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some(h => h.properties?.title === HISTORIAL_VENCIMIENTOS_SHEET_NAME);
+  const existe = (meta.data.sheets || []).some(
+    (h) => h.properties?.title === HISTORIAL_VENCIMIENTOS_SHEET_NAME,
+  );
   if (!existe) {
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: HISTORIAL_VENCIMIENTOS_SHEET_NAME } } }] }
+      requestBody: {
+        requests: [
+          {
+            addSheet: {
+              properties: { title: HISTORIAL_VENCIMIENTOS_SHEET_NAME },
+            },
+          },
+        ],
+      },
     });
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A1:J1`,
       valueInputOption: "RAW",
-      requestBody: { values: [["Fecha", "Hora", "Usuario", "Nombre", "Acción", "ID", "Código", "Artículo", "Vencimiento", "Detalle"]] }
+      requestBody: {
+        values: [
+          [
+            "Fecha",
+            "Hora",
+            "Usuario",
+            "Nombre",
+            "Acción",
+            "ID",
+            "Código",
+            "Artículo",
+            "Vencimiento",
+            "Detalle",
+          ],
+        ],
+      },
     });
   }
 }
 
-async function registrarHistorialVencimiento(req, accion, registro, detalle = "") {
+async function registrarHistorialVencimiento(
+  req,
+  accion,
+  registro,
+  detalle = "",
+) {
   await asegurarHojaHistorialVencimientos();
   const ahora = new Date();
-  const partes = new Intl.DateTimeFormat("es-AR", { timeZone: TIME_ZONE, day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }).formatToParts(ahora);
-  const get = t => partes.find(x => x.type === t)?.value || "";
+  const partes = new Intl.DateTimeFormat("es-AR", {
+    timeZone: TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(ahora);
+  const get = (t) => partes.find((x) => x.type === t)?.value || "";
   const fecha = `${get("day")}/${get("month")}/${get("year")}`;
   const hora = `${get("hour")}:${get("minute")}:${get("second")}`;
   await sheets.spreadsheets.values.append({
@@ -2806,119 +5575,257 @@ async function registrarHistorialVencimiento(req, accion, registro, detalle = ""
     range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [[fecha, hora, req.usuario?.usuario || "desconocido", req.usuario?.nombre || "", accion, registro?.id || "", registro?.codigo || "", registro?.articulo || "", registro?.vencimiento || "", detalle]] }
+    requestBody: {
+      values: [
+        [
+          fecha,
+          hora,
+          req.usuario?.usuario || "desconocido",
+          req.usuario?.nombre || "",
+          accion,
+          registro?.id || "",
+          registro?.codigo || "",
+          registro?.articulo || "",
+          registro?.vencimiento || "",
+          detalle,
+        ],
+      ],
+    },
   });
 }
 
-app.get("/admin/historial-vencimientos", requerirAdministrador, async (req, res) => {
-  try {
-    await asegurarHojaHistorialVencimientos();
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J` });
-    const filas = respuesta.data.values || [];
-    const historial = filas.slice(1).reverse().map(f => ({ fecha:f[0]||"", hora:f[1]||"", usuario:f[2]||"", nombre:f[3]||"", accion:f[4]||"", id:f[5]||"", codigo:f[6]||"", articulo:f[7]||"", vencimiento:f[8]||"", detalle:f[9]||"" }));
-    res.json({ ok:true, historial });
-  } catch (error) {
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo obtener el historial" });
-  }
-});
+app.get(
+  "/admin/historial-vencimientos",
+  requerirAdministrador,
+  async (req, res) => {
+    try {
+      await asegurarHojaHistorialVencimientos();
+      const respuesta = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
+      });
+      const filas = respuesta.data.values || [];
+      const historial = filas
+        .slice(1)
+        .reverse()
+        .map((f) => ({
+          fecha: f[0] || "",
+          hora: f[1] || "",
+          usuario: f[2] || "",
+          nombre: f[3] || "",
+          accion: f[4] || "",
+          id: f[5] || "",
+          codigo: f[6] || "",
+          articulo: f[7] || "",
+          vencimiento: f[8] || "",
+          detalle: f[9] || "",
+        }));
+      res.json({ ok: true, historial });
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        mensaje: error.message || "No se pudo obtener el historial",
+      });
+    }
+  },
+);
 
 async function obtenerSheetId(nombreHoja) {
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const hoja = (meta.data.sheets || []).find(item => item.properties?.title === nombreHoja);
+  const hoja = (meta.data.sheets || []).find(
+    (item) => item.properties?.title === nombreHoja,
+  );
   if (!hoja) throw new Error(`No existe la hoja ${nombreHoja}`);
   return hoja.properties.sheetId;
 }
 
-
 // V6.1.7 - Reposición persistente en Google Sheets, individual y con dos listas por usuario.
 const LISTAS_SHEET_NAME = "Listas";
-const LISTAS_HEADERS = ["ID", "Usuario", "Lista", "Código", "Artículo", "Cantidad", "Estado", "Orden", "Actualizado"];
+const LISTAS_HEADERS = [
+  "ID",
+  "Usuario",
+  "Lista",
+  "Código",
+  "Artículo",
+  "Cantidad",
+  "Estado",
+  "Orden",
+  "Actualizado",
+];
 let promesaHojaListasLista = null;
 
-function normalizarNumeroLista(valor) { return String(valor) === "2" ? "2" : "1"; }
-function crearIdReposicion() { return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`; }
+function normalizarNumeroLista(valor) {
+  return String(valor) === "2" ? "2" : "1";
+}
+function crearIdReposicion() {
+  return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
+}
 
 async function asegurarHojaListas() {
   if (promesaHojaListasLista) return promesaHojaListasLista;
   promesaHojaListasLista = (async () => {
-    const meta = await leerConCache("metadata-hoja-listas", CACHE_TTL.metadata, async () =>
-      sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID })
+    const meta = await leerConCache(
+      "metadata-hoja-listas",
+      CACHE_TTL.metadata,
+      async () => sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID }),
     );
-    const existe = (meta.data.sheets || []).some(s => s.properties?.title === LISTAS_SHEET_NAME);
+    const existe = (meta.data.sheets || []).some(
+      (s) => s.properties?.title === LISTAS_SHEET_NAME,
+    );
     if (!existe) {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
-        requestBody: { requests: [{ addSheet: { properties: { title: LISTAS_SHEET_NAME } } }] }
+        requestBody: {
+          requests: [
+            { addSheet: { properties: { title: LISTAS_SHEET_NAME } } },
+          ],
+        },
       });
       invalidarCache("metadata-hoja-listas");
     }
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A1:I1` });
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${LISTAS_SHEET_NAME}!A1:I1`,
+    });
     if (!(respuesta.data.values || []).length) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
         range: `${LISTAS_SHEET_NAME}!A1:I1`,
         valueInputOption: "RAW",
-        requestBody: { values: [LISTAS_HEADERS] }
+        requestBody: { values: [LISTAS_HEADERS] },
       });
     }
     return true;
-  })().catch(error => { promesaHojaListasLista = null; throw error; });
+  })().catch((error) => {
+    promesaHojaListasLista = null;
+    throw error;
+  });
   return promesaHojaListasLista;
 }
 
 function filaARegistroReposicion(fila = [], indice = 0) {
   return {
-    id: normalizarTexto(fila[0]), usuario: normalizarUsuario(fila[1]), lista: normalizarNumeroLista(fila[2]),
-    codigo: normalizarCodigo(fila[3]), articulo: normalizarTexto(fila[4]), cantidad: enteroPositivo(fila[5]) || 1,
-    estado: normalizarTexto(fila[6]).toLowerCase() === "completado" ? "completado" : "pendiente",
-    orden: Number.isFinite(Number(fila[7])) && Number(fila[7]) > 0 ? Number(fila[7]) : indice + 1, actualizado: normalizarTexto(fila[8])
+    id: normalizarTexto(fila[0]),
+    usuario: normalizarUsuario(fila[1]),
+    lista: normalizarNumeroLista(fila[2]),
+    codigo: normalizarCodigo(fila[3]),
+    articulo: normalizarTexto(fila[4]),
+    cantidad: enteroPositivo(fila[5]) || 1,
+    estado:
+      normalizarTexto(fila[6]).toLowerCase() === "completado"
+        ? "completado"
+        : "pendiente",
+    orden:
+      Number.isFinite(Number(fila[7])) && Number(fila[7]) > 0
+        ? Number(fila[7])
+        : indice + 1,
+    actualizado: normalizarTexto(fila[8]),
   };
 }
 function registroAFilaReposicion(r) {
-  return [r.id, r.usuario, r.lista, r.codigo, r.articulo, r.cantidad, r.estado, r.orden || 0, r.actualizado || fechaHoraArgentinaIso()];
+  return [
+    r.id,
+    r.usuario,
+    r.lista,
+    r.codigo,
+    r.articulo,
+    r.cantidad,
+    r.estado,
+    r.orden || 0,
+    r.actualizado || fechaHoraArgentinaIso(),
+  ];
 }
 async function leerTodasLasListas() {
   await asegurarHojaListas();
-  const registros = await leerConCache("listas-reposicion", 120000, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
-    return (respuesta.data.values || []).map((fila, indice) => filaARegistroReposicion(fila, indice)).filter(r => r.id && r.usuario && r.codigo);
-  });
-  return registros.map(r => ({ ...r }));
+  const registros = await leerConCache(
+    "listas-reposicion",
+    120000,
+    async () => {
+      const respuesta = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${LISTAS_SHEET_NAME}!A2:I`,
+      });
+      return (respuesta.data.values || [])
+        .map((fila, indice) => filaARegistroReposicion(fila, indice))
+        .filter((r) => r.id && r.usuario && r.codigo);
+    },
+  );
+  return registros.map((r) => ({ ...r }));
 }
 async function escribirTodasLasListas(registros) {
   await asegurarHojaListas();
-  await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I` });
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${LISTAS_SHEET_NAME}!A2:I`,
+  });
   if (registros.length) {
     await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID, range: `${LISTAS_SHEET_NAME}!A2:I${registros.length + 1}`,
-      valueInputOption: "RAW", requestBody: { values: registros.map(registroAFilaReposicion) }
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${LISTAS_SHEET_NAME}!A2:I${registros.length + 1}`,
+      valueInputOption: "RAW",
+      requestBody: { values: registros.map(registroAFilaReposicion) },
     });
   }
-  cacheLecturas.set("listas-reposicion", { fecha: Date.now(), valor: registros.map(r => ({ ...r })) });
+  cacheLecturas.set("listas-reposicion", {
+    fecha: Date.now(),
+    valor: registros.map((r) => ({ ...r })),
+  });
 }
 async function obtenerListaReposicionPersistente(usuario, numeroLista) {
-  const claveUsuario = normalizarUsuario(usuario); const lista = normalizarNumeroLista(numeroLista);
+  const claveUsuario = normalizarUsuario(usuario);
+  const lista = normalizarNumeroLista(numeroLista);
   const todos = await leerTodasLasListas();
-  return todos.filter(r => r.usuario === claveUsuario && r.lista === lista)
-    .sort((a,b) => (a.estado === b.estado ? (a.orden - b.orden) : (a.estado === "pendiente" ? -1 : 1)));
+  return todos
+    .filter((r) => r.usuario === claveUsuario && r.lista === lista)
+    .sort((a, b) =>
+      a.estado === b.estado
+        ? a.orden - b.orden
+        : a.estado === "pendiente"
+          ? -1
+          : 1,
+    );
 }
 function limpiarRegistroReposicion(registro, numeroLista = "1") {
-  return { id:registro.id, fecha:registro.actualizado, codigo:registro.codigo, articulo:registro.articulo,
-    cantidad:enteroPositivo(registro.cantidad)||1, estado:registro.estado === "completado" ? "completado":"pendiente",
-    actualizado:registro.actualizado, usuario:registro.usuario, lista:normalizarNumeroLista(numeroLista), orden:Number(registro.orden)||0 };
+  return {
+    id: registro.id,
+    fecha: registro.actualizado,
+    codigo: registro.codigo,
+    articulo: registro.articulo,
+    cantidad: enteroPositivo(registro.cantidad) || 1,
+    estado: registro.estado === "completado" ? "completado" : "pendiente",
+    actualizado: registro.actualizado,
+    usuario: registro.usuario,
+    lista: normalizarNumeroLista(numeroLista),
+    orden: Number(registro.orden) || 0,
+  };
 }
 function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
-  let i = lista.findIndex(x => normalizarTexto(x.id) === normalizarTexto(id));
-  if (i < 0 && normalizarCodigo(codigo)) i = lista.findIndex(x => x.codigo === normalizarCodigo(codigo));
+  let i = lista.findIndex((x) => normalizarTexto(x.id) === normalizarTexto(id));
+  if (i < 0 && normalizarCodigo(codigo))
+    i = lista.findIndex((x) => x.codigo === normalizarCodigo(codigo));
   return i;
 }
 
 app.get("/reposicion", async (req, res) => {
   try {
     const numeroLista = normalizarNumeroLista(req.query.lista);
-    const registros = (await obtenerListaReposicionPersistente(req.usuario.usuario, numeroLista)).map(r => limpiarRegistroReposicion(r, numeroLista));
-    res.json({ ok:true, total:registros.length, lista:numeroLista, usuario:req.usuario, registros });
-  } catch(error) { console.error("Error en GET /reposicion:", error); res.status(500).json({ok:false,mensaje:error.message||"Error al obtener reposición"}); }
+    const registros = (
+      await obtenerListaReposicionPersistente(req.usuario.usuario, numeroLista)
+    ).map((r) => limpiarRegistroReposicion(r, numeroLista));
+    res.json({
+      ok: true,
+      total: registros.length,
+      lista: numeroLista,
+      usuario: req.usuario,
+      registros,
+    });
+  } catch (error) {
+    console.error("Error en GET /reposicion:", error);
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al obtener reposición",
+    });
+  }
 });
 
 app.post("/reposicion/lote", async (req, res) => {
@@ -2926,116 +5833,330 @@ app.post("/reposicion/lote", async (req, res) => {
     const usuario = normalizarUsuario(req.usuario.usuario);
     const numeroLista = normalizarNumeroLista(req.body.lista);
     const entradas = Array.isArray(req.body.items) ? req.body.items : [];
-    const items = entradas.map((item, indice) => ({
-      codigo: normalizarCodigo(item?.codigo || `ESCRITO-${Date.now()}-${indice + 1}`),
-      articulo: normalizarTexto(item?.articulo),
-      cantidad: enteroPositivo(item?.cantidad)
-    })).filter(item => item.codigo && item.articulo && item.cantidad !== null);
-    if (!items.length) return res.status(400).json({ok:false,mensaje:"Escribí al menos un producto válido"});
+    const items = entradas
+      .map((item, indice) => ({
+        codigo: normalizarCodigo(
+          item?.codigo || `ESCRITO-${Date.now()}-${indice + 1}`,
+        ),
+        articulo: normalizarTexto(item?.articulo),
+        cantidad: enteroPositivo(item?.cantidad),
+      }))
+      .filter((item) => item.codigo && item.articulo && item.cantidad !== null);
+    if (!items.length)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Escribí al menos un producto válido" });
 
-    const resultados = await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async () => {
-      const todos = await leerTodasLasListas();
-      const ahora = fechaHoraArgentinaIso();
-      let orden = Math.max(0, ...todos.filter(x => x.usuario === usuario && x.lista === numeroLista).map(x => Number(x.orden) || 0));
-      const guardados = [];
-      for (const item of items) {
-        let r = todos.find(x => x.usuario === usuario && x.lista === numeroLista && x.codigo === item.codigo);
-        if (r) {
-          r.cantidad += item.cantidad;
-          r.estado = "pendiente";
-          r.actualizado = ahora;
-          // En listas escritas se conserva el texto más reciente exactamente como fue ingresado.
-          r.articulo = item.articulo;
-        } else {
-          orden += 1;
-          r = {id:crearIdReposicion(),usuario,lista:numeroLista,codigo:item.codigo,articulo:item.articulo,cantidad:item.cantidad,estado:"pendiente",orden,actualizado:ahora};
-          todos.push(r);
+    const resultados = await ejecutarEnCola(
+      `listas:${usuario}:${numeroLista}`,
+      async () => {
+        const todos = await leerTodasLasListas();
+        const ahora = fechaHoraArgentinaIso();
+        let orden = Math.max(
+          0,
+          ...todos
+            .filter((x) => x.usuario === usuario && x.lista === numeroLista)
+            .map((x) => Number(x.orden) || 0),
+        );
+        const guardados = [];
+        for (const item of items) {
+          let r = todos.find(
+            (x) =>
+              x.usuario === usuario &&
+              x.lista === numeroLista &&
+              x.codigo === item.codigo,
+          );
+          if (r) {
+            r.cantidad += item.cantidad;
+            r.estado = "pendiente";
+            r.actualizado = ahora;
+            // En listas escritas se conserva el texto más reciente exactamente como fue ingresado.
+            r.articulo = item.articulo;
+          } else {
+            orden += 1;
+            r = {
+              id: crearIdReposicion(),
+              usuario,
+              lista: numeroLista,
+              codigo: item.codigo,
+              articulo: item.articulo,
+              cantidad: item.cantidad,
+              estado: "pendiente",
+              orden,
+              actualizado: ahora,
+            };
+            todos.push(r);
+          }
+          guardados.push(r);
         }
-        guardados.push(r);
-      }
-      await escribirTodasLasListas(todos);
-      return guardados;
-    });
+        await escribirTodasLasListas(todos);
+        return guardados;
+      },
+    );
 
     res.json({
-      ok:true,
-      lista:numeroLista,
-      total:resultados.length,
-      mensaje:`${resultados.length} producto${resultados.length === 1 ? "" : "s"} agregado${resultados.length === 1 ? "" : "s"}`,
-      registros:resultados.map(r => limpiarRegistroReposicion(r, numeroLista))
+      ok: true,
+      lista: numeroLista,
+      total: resultados.length,
+      mensaje: `${resultados.length} producto${resultados.length === 1 ? "" : "s"} agregado${resultados.length === 1 ? "" : "s"}`,
+      registros: resultados.map((r) =>
+        limpiarRegistroReposicion(r, numeroLista),
+      ),
     });
-  } catch(error) {
+  } catch (error) {
     console.error("Error en POST /reposicion/lote:", error);
-    res.status(500).json({ok:false,mensaje:error.message||"No se pudo guardar la lista escrita"});
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo guardar la lista escrita",
+    });
   }
 });
 
 app.post("/reposicion", async (req, res) => {
   try {
-    const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista);
-    const codigo=normalizarCodigo(req.body.codigo), articulo=normalizarTexto(req.body.articulo), cantidad=enteroPositivo(req.body.cantidad);
-    if(!codigo||!articulo) return res.status(400).json({ok:false,mensaje:"Falta el producto"});
-    if(cantidad===null) return res.status(400).json({ok:false,mensaje:"Ingresá una cantidad entera mayor a 0"});
-    const resultado=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async()=>{
-      const todos=await leerTodasLasListas();
-      let r=todos.find(x=>x.usuario===usuario&&x.lista===numeroLista&&x.codigo===codigo);
-      const ahora=fechaHoraArgentinaIso();
-      if(r){ r.cantidad+=cantidad; r.estado="pendiente"; r.actualizado=ahora; }
-      else { const orden=Math.max(0,...todos.filter(x=>x.usuario===usuario&&x.lista===numeroLista).map(x=>Number(x.orden)||0))+1;
-        r={id:crearIdReposicion(),usuario,lista:numeroLista,codigo,articulo,cantidad,estado:"pendiente",orden,actualizado:ahora}; todos.push(r); }
-      await escribirTodasLasListas(todos); return r;
+    const usuario = normalizarUsuario(req.usuario.usuario),
+      numeroLista = normalizarNumeroLista(req.body.lista);
+    const codigo = normalizarCodigo(req.body.codigo),
+      articulo = normalizarTexto(req.body.articulo),
+      cantidad = enteroPositivo(req.body.cantidad);
+    if (!codigo || !articulo)
+      return res.status(400).json({ ok: false, mensaje: "Falta el producto" });
+    if (cantidad === null)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
+    const resultado = await ejecutarEnCola(
+      `listas:${usuario}:${numeroLista}`,
+      async () => {
+        const todos = await leerTodasLasListas();
+        let r = todos.find(
+          (x) =>
+            x.usuario === usuario &&
+            x.lista === numeroLista &&
+            x.codigo === codigo,
+        );
+        const ahora = fechaHoraArgentinaIso();
+        if (r) {
+          r.cantidad += cantidad;
+          r.estado = "pendiente";
+          r.actualizado = ahora;
+        } else {
+          const orden =
+            Math.max(
+              0,
+              ...todos
+                .filter((x) => x.usuario === usuario && x.lista === numeroLista)
+                .map((x) => Number(x.orden) || 0),
+            ) + 1;
+          r = {
+            id: crearIdReposicion(),
+            usuario,
+            lista: numeroLista,
+            codigo,
+            articulo,
+            cantidad,
+            estado: "pendiente",
+            orden,
+            actualizado: ahora,
+          };
+          todos.push(r);
+        }
+        await escribirTodasLasListas(todos);
+        return r;
+      },
+    );
+    res.json({
+      ok: true,
+      lista: numeroLista,
+      mensaje: `Producto agregado a Lista ${numeroLista}`,
+      registro: limpiarRegistroReposicion(resultado, numeroLista),
     });
-    res.json({ok:true,lista:numeroLista,mensaje:`Producto agregado a Lista ${numeroLista}`,registro:limpiarRegistroReposicion(resultado,numeroLista)});
-  } catch(error){console.error("Error en POST /reposicion:",error);res.status(500).json({ok:false,mensaje:error.message||"Error al guardar reposición"});}
+  } catch (error) {
+    console.error("Error en POST /reposicion:", error);
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "Error al guardar reposición",
+    });
+  }
 });
 
-app.put("/reposicion/:id", async (req,res)=>{
-  try{
-    const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista||req.query.lista), id=normalizarTexto(req.params.id);
-    const cantidad=enteroPositivo(req.body.cantidad), estado=normalizarTexto(req.body.estado).toLowerCase();
-    if(cantidad===null||!["pendiente","completado"].includes(estado)) return res.status(400).json({ok:false,mensaje:"Datos de reposición inválidos"});
-    const r=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=await leerTodasLasListas();
-      const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.body.codigo)));
-      if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}
-      todos[i].cantidad=cantidad; todos[i].estado=estado; todos[i].actualizado=fechaHoraArgentinaIso(); await escribirTodasLasListas(todos); return todos[i];});
-    res.json({ok:true,lista:numeroLista,mensaje:"Producto actualizado",registro:limpiarRegistroReposicion(r,numeroLista)});
-  }catch(error){console.error("Error en PUT /reposicion/:id:",error);res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"Error al actualizar reposición"});}
+app.put("/reposicion/:id", async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.usuario.usuario),
+      numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista),
+      id = normalizarTexto(req.params.id);
+    const cantidad = enteroPositivo(req.body.cantidad),
+      estado = normalizarTexto(req.body.estado).toLowerCase();
+    if (cantidad === null || !["pendiente", "completado"].includes(estado))
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "Datos de reposición inválidos" });
+    const r = await ejecutarEnCola(
+      `listas:${usuario}:${numeroLista}`,
+      async () => {
+        const todos = await leerTodasLasListas();
+        const i = todos.findIndex(
+          (x) =>
+            x.usuario === usuario &&
+            x.lista === numeroLista &&
+            (x.id === id || x.codigo === normalizarCodigo(req.body.codigo)),
+        );
+        if (i < 0) {
+          const e = new Error(`Registro no encontrado en Lista ${numeroLista}`);
+          e.statusCode = 404;
+          throw e;
+        }
+        todos[i].cantidad = cantidad;
+        todos[i].estado = estado;
+        todos[i].actualizado = fechaHoraArgentinaIso();
+        await escribirTodasLasListas(todos);
+        return todos[i];
+      },
+    );
+    res.json({
+      ok: true,
+      lista: numeroLista,
+      mensaje: "Producto actualizado",
+      registro: limpiarRegistroReposicion(r, numeroLista),
+    });
+  } catch (error) {
+    console.error("Error en PUT /reposicion/:id:", error);
+    res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "Error al actualizar reposición",
+    });
+  }
 });
 
-app.patch("/reposicion", async(req,res)=>{
-  try{
-    const usuario=normalizarUsuario(req.usuario.usuario), numeroLista=normalizarNumeroLista(req.body.lista||req.query.lista), cambios=Array.isArray(req.body.cambios)?req.body.cambios:[];
-    if(!cambios.length) return res.status(400).json({ok:false,mensaje:"No hay cambios para guardar"});
-    const resultado=await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{let todos=await leerTodasLasListas();
-      for(const c of cambios){const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===normalizarTexto(c.id)||x.codigo===normalizarCodigo(c.codigo)));
-        if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}
-        if(c.eliminar===true){todos.splice(i,1);continue;} const q=enteroPositivo(c.cantidad); if(q===null){const e=new Error("Cantidad inválida");e.statusCode=400;throw e;}
-        todos[i].cantidad=q; todos[i].actualizado=fechaHoraArgentinaIso();}
-      await escribirTodasLasListas(todos); return todos.filter(x=>x.usuario===usuario&&x.lista===numeroLista).map(x=>limpiarRegistroReposicion(x,numeroLista));});
-    res.json({ok:true,lista:numeroLista,registros:resultado,mensaje:"Cambios guardados"});
-  }catch(error){console.error("Error en PATCH /reposicion:",error);res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"No se pudieron guardar los cambios"});}
+app.patch("/reposicion", async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.usuario.usuario),
+      numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista),
+      cambios = Array.isArray(req.body.cambios) ? req.body.cambios : [];
+    if (!cambios.length)
+      return res
+        .status(400)
+        .json({ ok: false, mensaje: "No hay cambios para guardar" });
+    const resultado = await ejecutarEnCola(
+      `listas:${usuario}:${numeroLista}`,
+      async () => {
+        let todos = await leerTodasLasListas();
+        for (const c of cambios) {
+          const i = todos.findIndex(
+            (x) =>
+              x.usuario === usuario &&
+              x.lista === numeroLista &&
+              (x.id === normalizarTexto(c.id) ||
+                x.codigo === normalizarCodigo(c.codigo)),
+          );
+          if (i < 0) {
+            const e = new Error(
+              `Registro no encontrado en Lista ${numeroLista}`,
+            );
+            e.statusCode = 404;
+            throw e;
+          }
+          if (c.eliminar === true) {
+            todos.splice(i, 1);
+            continue;
+          }
+          const q = enteroPositivo(c.cantidad);
+          if (q === null) {
+            const e = new Error("Cantidad inválida");
+            e.statusCode = 400;
+            throw e;
+          }
+          todos[i].cantidad = q;
+          todos[i].actualizado = fechaHoraArgentinaIso();
+        }
+        await escribirTodasLasListas(todos);
+        return todos
+          .filter((x) => x.usuario === usuario && x.lista === numeroLista)
+          .map((x) => limpiarRegistroReposicion(x, numeroLista));
+      },
+    );
+    res.json({
+      ok: true,
+      lista: numeroLista,
+      registros: resultado,
+      mensaje: "Cambios guardados",
+    });
+  } catch (error) {
+    console.error("Error en PATCH /reposicion:", error);
+    res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron guardar los cambios",
+    });
+  }
 });
 
-app.delete("/reposicion/:id", async(req,res)=>{
-  try{const usuario=normalizarUsuario(req.usuario.usuario),numeroLista=normalizarNumeroLista(req.query.lista),id=normalizarTexto(req.params.id);
-    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=await leerTodasLasListas();const i=todos.findIndex(x=>x.usuario===usuario&&x.lista===numeroLista&&(x.id===id||x.codigo===normalizarCodigo(req.query.codigo)));
-      if(i<0){const e=new Error(`Registro no encontrado en Lista ${numeroLista}`);e.statusCode=404;throw e;}todos.splice(i,1);await escribirTodasLasListas(todos);});
-    res.json({ok:true,lista:numeroLista,mensaje:`Producto eliminado de Lista ${numeroLista}`});
-  }catch(error){res.status(error.statusCode||500).json({ok:false,mensaje:error.message||"Error al eliminar reposición"});}
+app.delete("/reposicion/:id", async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.usuario.usuario),
+      numeroLista = normalizarNumeroLista(req.query.lista),
+      id = normalizarTexto(req.params.id);
+    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async () => {
+      const todos = await leerTodasLasListas();
+      const i = todos.findIndex(
+        (x) =>
+          x.usuario === usuario &&
+          x.lista === numeroLista &&
+          (x.id === id || x.codigo === normalizarCodigo(req.query.codigo)),
+      );
+      if (i < 0) {
+        const e = new Error(`Registro no encontrado en Lista ${numeroLista}`);
+        e.statusCode = 404;
+        throw e;
+      }
+      todos.splice(i, 1);
+      await escribirTodasLasListas(todos);
+    });
+    res.json({
+      ok: true,
+      lista: numeroLista,
+      mensaje: `Producto eliminado de Lista ${numeroLista}`,
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "Error al eliminar reposición",
+    });
+  }
 });
 
-app.delete("/reposicion", async(req,res)=>{
-  try{const usuario=normalizarUsuario(req.usuario.usuario),numeroLista=normalizarNumeroLista(req.query.lista||req.body?.lista);
-    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`,async()=>{const todos=(await leerTodasLasListas()).filter(x=>!(x.usuario===usuario&&x.lista===numeroLista));await escribirTodasLasListas(todos);});
-    res.json({ok:true,lista:numeroLista,mensaje:`Lista ${numeroLista} lista para comenzar`});
-  }catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo vaciar la lista"});}
+app.delete("/reposicion", async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.usuario.usuario),
+      numeroLista = normalizarNumeroLista(req.query.lista || req.body?.lista);
+    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async () => {
+      const todos = (await leerTodasLasListas()).filter(
+        (x) => !(x.usuario === usuario && x.lista === numeroLista),
+      );
+      await escribirTodasLasListas(todos);
+    });
+    res.json({
+      ok: true,
+      lista: numeroLista,
+      mensaje: `Lista ${numeroLista} lista para comenzar`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo vaciar la lista",
+    });
+  }
 });
-
 
 const ejecucionesDiariasNotificaciones = new Set();
 function horaMinutoArgentina(fecha = new Date()) {
-  const partes = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(fecha);
-  const valor = tipo => Number(partes.find(parte => parte.type === tipo)?.value || 0);
+  const partes = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(fecha);
+  const valor = (tipo) =>
+    Number(partes.find((parte) => parte.type === tipo)?.value || 0);
   return { hora: valor("hour"), minuto: valor("minute") };
 }
 async function ejecutarNotificacionesDiariasSiCorresponde() {
@@ -3045,8 +6166,12 @@ async function ejecutarNotificacionesDiariasSiCorresponde() {
     const id = `${hoy}|${clave}`;
     if (ejecucionesDiariasNotificaciones.has(id)) return;
     ejecucionesDiariasNotificaciones.add(id);
-    try { await tarea(); }
-    catch (error) { ejecucionesDiariasNotificaciones.delete(id); throw error; }
+    try {
+      await tarea();
+    } catch (error) {
+      ejecucionesDiariasNotificaciones.delete(id);
+      throw error;
+    }
   };
 
   if (hora === 8) {
@@ -3060,12 +6185,28 @@ async function ejecutarNotificacionesDiariasSiCorresponde() {
   await procesarNotificacionesInicioTareas();
 
   for (const clave of [...ejecucionesDiariasNotificaciones]) {
-    if (!clave.startsWith(`${hoy}|`)) ejecucionesDiariasNotificaciones.delete(clave);
+    if (!clave.startsWith(`${hoy}|`))
+      ejecucionesDiariasNotificaciones.delete(clave);
   }
 }
 // Revisión frecuente; los avisos se envían a las 08:00 y 16:00 de Argentina.
-setInterval(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error en horario diario de notificaciones:", error)), 60 * 1000);
-setTimeout(() => ejecutarNotificacionesDiariasSiCorresponde().catch(error => console.error("Error inicializando horario diario de notificaciones:", error)), 5000);
+setInterval(
+  () =>
+    ejecutarNotificacionesDiariasSiCorresponde().catch((error) =>
+      console.error("Error en horario diario de notificaciones:", error),
+    ),
+  60 * 1000,
+);
+setTimeout(
+  () =>
+    ejecutarNotificacionesDiariasSiCorresponde().catch((error) =>
+      console.error(
+        "Error inicializando horario diario de notificaciones:",
+        error,
+      ),
+    ),
+  5000,
+);
 
 async function migrarEstructuraHorariosV812() {
   validarConfiguracion();
@@ -3082,25 +6223,48 @@ async function migrarEstructuraHorariosV812() {
       TURNOS_HORARIOS_SHEET_NAME,
       DETALLES_HORARIOS_SHEET_NAME,
       REEMPLAZOS_HORARIOS_SHEET_NAME,
-      AUDITORIA_HORARIOS_SHEET_NAME
+      AUDITORIA_HORARIOS_SHEET_NAME,
     ],
-    columnasUsuarios: ["Usuario", "Nombre", "Password hash", "Rol", "Activo", "Creado", "Permisos módulos", "Sector"]
+    columnasUsuarios: [
+      "Usuario",
+      "Nombre",
+      "Password hash",
+      "Rol",
+      "Activo",
+      "Creado",
+      "Permisos módulos",
+      "Sector",
+    ],
   };
 }
 
 app.post("/admin/migrar-horarios", requerirAdministrador, async (req, res) => {
   try {
     const resultado = await migrarEstructuraHorariosV812();
-    res.json({ ok:true, mensaje:"Migración de Google Sheets completada", ...resultado });
+    res.json({
+      ok: true,
+      mensaje: "Migración de Google Sheets completada",
+      ...resultado,
+    });
   } catch (error) {
     console.error("Error en migración de horarios:", error);
-    res.status(500).json({ ok:false, mensaje:error.message || "No se pudo migrar Google Sheets" });
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo migrar Google Sheets",
+    });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`);
+  console.log(
+    `Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`,
+  );
   migrarEstructuraHorariosV812()
-    .then(r => console.log("Migración 8.1.4 lista:", r.hojas.join(", ")))
-    .catch(error => console.error("No se pudo ejecutar la migración automática 8.1.4:", error));
+    .then((r) => console.log("Migración 8.1.4 lista:", r.hojas.join(", ")))
+    .catch((error) =>
+      console.error(
+        "No se pudo ejecutar la migración automática 8.1.4:",
+        error,
+      ),
+    );
 });

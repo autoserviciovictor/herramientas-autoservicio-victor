@@ -22,7 +22,7 @@ let resumenHoyClave = "";
 const HORARIOS_CACHE_TTL = 30000;
 const horariosPeticiones = new Map();
 function cacheHorariosKey(tipo, extra = "") {
-  return `autoservicio_horarios_cache_v1033:${tipo}:${extra}`;
+  return `autoservicio_horarios_cache_v1040:${tipo}:${extra}`;
 }
 function leerCacheHorarios(tipo, extra = "") {
   try {
@@ -65,7 +65,10 @@ function usuarioHorarios() {
 function rolHorarios() {
   return String(usuarioHorarios().rol || "")
     .trim()
-    .toLowerCase();
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
 }
 function esAdministradorHorarios() {
   return rolHorarios() === "administrador";
@@ -101,11 +104,12 @@ function puedeEditarEmpleado(nombre) {
 }
 async function cargarContextoHorarios() {
   const usuario = usuarioHorarios();
-  const contextoCacheKey = `contexto:${usuario.usuario || "anon"}:${usuario.rol || "sin-rol"}`;
+  const contextoCacheKey = `contexto-v1040:${usuario.usuario || "anon"}:${rolHorarios() || "sin-rol"}:${usuario.sector || "sin-sector"}:${(usuario.sectores || []).join(",")}`;
   try {
     const data = await fetchHorariosUnico(
       `${API_BASE_URL}/horarios/contexto`,
       contextoCacheKey,
+      { forzar: true },
     );
     sectoresHorarios = (data.sectores || []).filter((s) => s.activo !== false);
     permisoEdicionServidor = data.puedeEditar === true;
@@ -285,6 +289,88 @@ cargarTurnosConfigurados();
 const datos = new Map();
 const $ = (id) => document.getElementById(id);
 const keyCelda = (empleado, dia) => `${empleado}::${dia}`;
+
+/* =========================================================
+   Feriados nacionales Argentina 2026
+   ========================================================= */
+const FERIADOS_ARGENTINA_2026 = new Map([
+  ["2026-01-01", "Año Nuevo"],
+  ["2026-02-16", "Carnaval"],
+  ["2026-02-17", "Carnaval"],
+  ["2026-03-23", "Día no laborable con fines turísticos"],
+  ["2026-03-24", "Día Nacional de la Memoria por la Verdad y la Justicia"],
+  ["2026-04-02", "Día del Veterano y de los Caídos en la Guerra de Malvinas"],
+  ["2026-04-03", "Viernes Santo"],
+  ["2026-05-01", "Día del Trabajo"],
+  ["2026-05-25", "Día de la Revolución de Mayo"],
+  ["2026-06-15", "Paso a la Inmortalidad del General Martín Miguel de Güemes"],
+  ["2026-06-20", "Paso a la Inmortalidad del General Manuel Belgrano"],
+  ["2026-07-09", "Día de la Independencia"],
+  ["2026-07-10", "Día no laborable con fines turísticos"],
+  ["2026-08-17", "Paso a la Inmortalidad del General José de San Martín"],
+  ["2026-10-12", "Día del Respeto a la Diversidad Cultural"],
+  ["2026-11-23", "Día de la Soberanía Nacional"],
+  ["2026-12-07", "Día no laborable con fines turísticos"],
+  ["2026-12-08", "Día de la Inmaculada Concepción de María"],
+  ["2026-12-25", "Navidad"],
+]);
+
+function claveFechaHorarios(fecha) {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+}
+function obtenerFeriadoDia(dia, fecha = fechaVista) {
+  const f = new Date(fecha.getFullYear(), fecha.getMonth(), dia);
+  return FERIADOS_ARGENTINA_2026.get(claveFechaHorarios(f)) || "";
+}
+function asegurarEstilosFeriadosHorarios() {
+  if (document.getElementById("horariosFeriadosStyles")) return;
+  const style = document.createElement("style");
+  style.id = "horariosFeriadosStyles";
+  style.textContent = `
+    #horariosTablaHead th.dia-hoy:not(.dia-feriado){
+      background:#dbeafe!important;
+      box-shadow:inset 2px 0 0 rgba(37,99,235,.38),inset -2px 0 0 rgba(37,99,235,.38)
+    }
+    #horariosTablaHead th.dia-hoy:not(.dia-feriado)>span,
+    #horariosTablaHead th.dia-hoy:not(.dia-feriado)>strong{color:#1d4ed8!important}
+    #horariosTablaBody td.dia-hoy:not(.dia-feriado){
+      background:rgba(59,130,246,.20)!important;
+      box-shadow:inset 1px 0 0 rgba(37,99,235,.30),inset -1px 0 0 rgba(37,99,235,.30)
+    }
+    #horariosTablaBody td.dia-hoy .horario-cell,
+    #horariosTablaBody td.dia-feriado .horario-cell{
+      filter:none!important;
+      opacity:1!important;
+    }
+    #horariosTablaBody .horario-cell{
+      border-width:1px!important;
+      border-style:solid!important;
+    }
+    #horariosTablaBody .horario-cell.turno-configurable{
+      border-color:var(--turno-color)!important;
+    }
+    /* Los turnos configurables usan fondos semitransparentes.
+       Sobre una columna coloreada se mezclaban con el azul/rojo del fondo.
+       Los reconstruimos contra blanco para conservar exactamente su aspecto. */
+    #horariosTablaBody td.dia-hoy .horario-cell.turno-configurable,
+    #horariosTablaBody td.dia-feriado .horario-cell.turno-configurable{
+      background:color-mix(in srgb, var(--turno-color) 13.33%, white)!important;
+    }
+    #horariosTablaHead th.dia-feriado{background:#ffd9dd!important;box-shadow:inset 2px 0 0 rgba(199,40,52,.38),inset -2px 0 0 rgba(199,40,52,.38)}
+    #horariosTablaHead th.dia-feriado>span,#horariosTablaHead th.dia-feriado>strong{color:#b4232d!important}
+    #horariosTablaBody td.dia-feriado{background:rgba(217,65,65,.14)!important;box-shadow:inset 1px 0 0 rgba(199,40,52,.28),inset -1px 0 0 rgba(199,40,52,.28)}
+    #horariosTablaHead th.dia-hoy.dia-feriado{
+      box-shadow:inset 0 0 0 2px rgba(37,99,235,.65),inset 3px 0 0 rgba(199,40,52,.18),inset -3px 0 0 rgba(199,40,52,.18)
+    }
+    #horariosTablaBody td.dia-hoy.dia-feriado{
+      box-shadow:inset 2px 0 0 rgba(37,99,235,.35),inset -2px 0 0 rgba(37,99,235,.35)
+    }
+    .feriado-mini{display:block;width:max-content;margin:2px auto 1px;padding:2px 4px;border-radius:5px;background:#c72834;color:#fff!important;font-size:7px!important;line-height:1;font-weight:900;letter-spacing:.03em;white-space:nowrap}
+    #horariosTablaBody td.dia-feriado .horario-cell{position:relative}
+    @media(max-width:700px){.feriado-mini{font-size:6px!important;padding:2px 3px}}
+  `;
+  document.head.appendChild(style);
+}
 
 function claveMes(fecha, empleado, dia) {
   return `${sectorActual || "general"}|${fecha.getFullYear()}-${fecha.getMonth()}-${dia}-${empleado}`;
@@ -967,8 +1053,9 @@ function renderTabla() {
       const d = i + 1,
         f = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d),
         finde = [0, 6].includes(f.getDay()),
+        feriado = obtenerFeriadoDia(d),
         c = coberturaDia(d);
-      return `<th class="${finde ? "fin-semana" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${d}"><span>${nombreDia(d)}</span><strong>${d}</strong><small class="cobertura-mini"><b>☀${c.manana}</b><b>☾${c.tarde}</b></small></th>`;
+      return `<th class="${finde ? "fin-semana" : ""} ${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${d}" ${feriado ? `title="${feriado}"` : ""}><span>${nombreDia(d)}</span><strong>${d}</strong>${feriado ? '<small class="feriado-mini">FERIADO</small>' : ""}<small class="cobertura-mini"><b>☀${c.manana}</b><b>☾${c.tarde}</b></small></th>`;
     },
   ).join("")}</tr>`;
   const empleadosTabla = empleadosVisiblesEnTabla();
@@ -980,12 +1067,13 @@ function renderTabla() {
               { length: diasDelMes() },
               (_, i) => {
                 const d = i + 1,
+                  feriado = obtenerFeriadoDia(d),
                   id = obtenerTurno(e, d),
                   t = obtenerDefinicion(id),
                   sel = seleccion.has(keyCelda(e, d));
                 const detalle = detalles.get(keyCelda(e, d));
                 const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ""}`;
-                return `<td class="${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}"><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ""}" data-tooltip="${t.label}">${formatoCelda(id)}${marcas}</button></td>`;
+                return `<td class="${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}" ${feriado ? `title="${feriado}"` : ""}><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ""}" data-tooltip="${t.label}">${formatoCelda(id)}${marcas}</button></td>`;
               },
             ).join("")}</tr>`,
         )
@@ -1802,6 +1890,7 @@ function desactivar() {
   restaurarBottomNav = [];
 }
 
+asegurarEstilosFeriadosHorarios();
 configurarEventos();
 cargarContextoHorarios();
 window.HorariosModule = {
