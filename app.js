@@ -79,6 +79,7 @@ let vencTabActual = "cargar";
 const INTERVALO_SINCRONIZACION = 7000;
 const INVENTARIO_RECIENTES_KEY = "autoservicio_inventario_recientes_v118";
 let pantallaActualApp = "inicio";
+let inventarioRetornoCarga = "productos";
 let snapshotProductoEditando = null;
 let snapshotVencimientoEditando = null;
 let resolucionCambiosPendientes = null;
@@ -87,6 +88,10 @@ const $ = (id) => document.getElementById(id);
 
 const elementos = {
   btnActualizarProductos: $("btnActualizarProductos"),
+  inventarioFab: $("inventarioFab"),
+  inventarioCargaModal: $("inventarioCargaModal"),
+  btnCerrarCamaraInventario: $("btnCerrarCamaraInventario"),
+  btnManualDesdeScanner: $("btnManualDesdeScanner"),
   inventarioRecientes: $("inventarioRecientes"),
   btnAbrirScanner: $("btnAbrirScanner"),
   btnCerrarScanner: $("btnCerrarScanner"),
@@ -343,6 +348,58 @@ function moduloDePantalla(nombre = pantallaActualApp) {
   return nombre;
 }
 
+function actualizarFabInventario() {
+  const visible = ["productos", "cargados"].includes(pantallaActualApp);
+  elementos.inventarioFab?.classList.toggle("oculto", !visible);
+}
+
+function resetearCargaInventario() {
+  cerrarScanner(false);
+  productoActual = null;
+  if (elementos.cantidadInput) elementos.cantidadInput.value = 1;
+  activarBotonGuardar(false);
+  desactivarModoCantidad();
+  limpiarProducto("Esperando escaneo...");
+  elementos.manualPanel?.classList.add("oculto");
+  if (elementos.codigoManualInput) elementos.codigoManualInput.value = "";
+  limpiarSugerenciasManual("inventario");
+  if (elementos.btnCodigoManualToggle)
+    elementos.btnCodigoManualToggle.textContent = "Ingresar producto manual";
+  mostrarScannerCerrado();
+}
+
+async function abrirCargaInventario() {
+  if (!["productos", "cargados"].includes(pantallaActualApp)) return;
+  inventarioRetornoCarga = pantallaActualApp;
+  resetearCargaInventario();
+  elementos.inventarioCargaModal?.classList.remove("oculto");
+  elementos.inventarioCargaModal?.setAttribute("aria-hidden", "false");
+  document.body.classList.add("inventory-scan-open");
+
+  // Esperamos a que el modal quede visible antes de pedir la cámara.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      abrirScannerManual();
+    });
+  });
+}
+
+function abrirIngresoManualDesdeScanner() {
+  cerrarScanner(true);
+  if (elementos.manualPanel) elementos.manualPanel.classList.remove("oculto");
+  if (elementos.btnCodigoManualToggle)
+    elementos.btnCodigoManualToggle.textContent = "Cancelar ingreso manual";
+  setTimeout(() => elementos.codigoManualInput?.focus(), 50);
+}
+
+function cerrarCargaInventario(mensaje = "") {
+  resetearCargaInventario();
+  elementos.inventarioCargaModal?.classList.add("oculto");
+  elementos.inventarioCargaModal?.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("inventory-scan-open");
+  if (mensaje) mostrarMensaje(mensaje, "ok");
+}
+
 function reiniciarEstadoModulo(modulo) {
   if (!modulo || modulo === "inicio") return;
   if (modulo === "inventario") {
@@ -421,6 +478,7 @@ async function inicializar() {
   ocultarSplash();
   cambiarPantalla("inicio");
   pantallaActualApp = "inicio";
+  actualizarFabInventario();
   registrarEstadoNavegacion("inicio", true);
   intentarBloquearOrientacion();
   actualizarUbicacion(ubicacionActual);
@@ -442,6 +500,7 @@ async function inicializar() {
 }
 
 async function entrarPantalla(nombre, opciones = {}) {
+  if (nombre === "inventario") nombre = "productos";
   const pantallaAnterior = pantallaActualApp;
   const moduloAnterior = moduloDePantalla(pantallaAnterior);
   let moduloNuevo = moduloDePantalla(nombre);
@@ -486,6 +545,7 @@ async function entrarPantalla(nombre, opciones = {}) {
 
   cambiarPantalla(nombre);
   pantallaActualApp = nombre;
+  actualizarFabInventario();
   if (!opciones.desdeHistorial && pantallaAnterior !== nombre) {
     const navegacionInternaInventario =
       moduloAnterior === "inventario" && moduloNuevo === "inventario";
@@ -569,10 +629,22 @@ function configurarEventos() {
   });
 
   elementos.btnActualizarProductos?.addEventListener("click", cargarProductos);
+  elementos.inventarioFab?.addEventListener("click", abrirCargaInventario);
+  elementos.inventarioCargaModal
+    ?.querySelector("[data-inventory-scan-close]")
+    ?.addEventListener("click", () => cerrarCargaInventario());
   elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
-  elementos.btnCerrarScanner.addEventListener("click", () =>
-    cerrarScanner(true),
+  elementos.btnManualDesdeScanner?.addEventListener(
+    "click",
+    abrirIngresoManualDesdeScanner,
   );
+  elementos.btnCerrarScanner.addEventListener("click", () =>
+    cerrarCargaInventario("Carga cerrada"),
+  );
+  elementos.btnCerrarCamaraInventario?.addEventListener("click", () => {
+    cerrarScanner(true);
+    mostrarMensaje("Cámara cerrada", "ok");
+  });
   elementos.btnCodigoManualToggle.addEventListener(
     "click",
     alternarCargaManual,
@@ -1188,12 +1260,7 @@ function cerrarScanner(mostrarBoton = true) {
 }
 
 function cancelarProductoActual() {
-  productoActual = null;
-  elementos.cantidadInput.value = 1;
-  activarBotonGuardar(false);
-  desactivarModoCantidad();
-  limpiarProducto("Esperando escaneo...");
-  cerrarScanner(true);
+  resetearCargaInventario();
   mostrarMensaje("Carga cancelada", "ok");
 }
 
@@ -1327,11 +1394,9 @@ async function guardarCantidadActual() {
     productoActual = null;
     elementos.cantidadInput.value = 1;
 
-    setTimeout(() => {
-      limpiarProducto("Esperando escaneo...");
-      desactivarModoCantidad();
-      mostrarScannerCerrado();
-    }, 350);
+    // Cierra inmediatamente y refresca la vista desde la que se abrió.
+    cerrarCargaInventario();
+    refrescarProductos();
   } catch (error) {
     activarBotonGuardar(Boolean(productoActual));
     mostrarMensaje(error.message, "error");

@@ -426,135 +426,187 @@
         </section>
       </main>
 
-      <main id="pantallaInventario" class="pantalla">
+      <main
+        id="pantallaInventario"
+        class="pantalla inventario-legacy-screen"
+        aria-hidden="true"
+      ></main>
+
+      <div
+        id="inventarioCargaModal"
+        class="inventory-scan-modal oculto"
+        aria-hidden="true"
+      >
+        <div class="inventory-scan-backdrop" data-inventory-scan-close></div>
+
         <section
-          class="inventory-location-card"
-          aria-label="Ubicación de conteo"
+          class="inventory-scan-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="inventarioCargaTitulo"
         >
-          <span>¿Dónde estás contando?</span>
-          <div class="location-grid">
-            <button type="button" id="btnSalon" class="location-btn activo">
-              <svg class="app-icon" aria-hidden="true">
-                <use href="#icon-store"></use></svg
-              ><span>Salón</span>
-            </button>
-            <button type="button" id="btnDeposito" class="location-btn">
-              <svg class="app-icon" aria-hidden="true">
-                <use href="#icon-warehouse"></use></svg
-              ><span>Depósito</span>
-            </button>
-          </div>
-        </section>
-
-        <section id="scanPanel" class="scan-panel">
-          <button type="button" id="btnAbrirScanner" class="scan-open-btn">
-            <svg class="app-icon" aria-hidden="true">
-              <use href="#icon-camera"></use></svg
-            ><span>Abrir escáner</span>
-          </button>
-          <button
-            type="button"
-            id="btnCodigoManualToggle"
-            class="manual-link-btn"
-          >
-            Ingresar producto manual
-          </button>
-          <div id="manualPanel" class="manual-panel oculto">
-            <input
-              type="text"
-              id="codigoManualInput"
-              inputmode="text"
-              autocomplete="off"
-              placeholder="Código o nombre del artículo"
-            />
-            <button type="button" id="btnBuscarManual">Buscar</button>
-            <div id="manualSugerencias" class="manual-suggestions oculto"></div>
-          </div>
-        </section>
-
-        <section class="camera-card oculto" id="cameraCard">
-          <div class="scanner-topbar">
-            <strong>Escáner activo</strong>
-            <button id="btnCerrarScanner" type="button">✕ Cerrar</button>
-          </div>
-          <video id="video" autoplay muted playsinline></video>
-          <div class="camera-overlay">
-            <span id="estadoCamaraTexto">Escáner activo</span>
-            <strong id="textoCamara">Apuntá al código de barras</strong>
-            <div class="corner corner-tl"></div>
-            <div class="corner corner-tr"></div>
-            <div class="corner corner-bl"></div>
-            <div class="corner corner-br"></div>
-          </div>
-        </section>
-
-        <section id="productoCard" class="product-card empty oculto">
-          <div class="product-status" id="estadoProducto">Esperando código</div>
-          <h2 id="nombreProducto">Esperando escaneo...</h2>
-          <p id="codigoProducto">-</p>
-          <div class="stock-row">
-            <div><span>Salón</span><strong id="stockSalon">0</strong></div>
+          <header class="inventory-scan-head">
             <div>
-              <span>Depósito</span><strong id="stockDeposito">0</strong>
+              <span class="inventory-scan-kicker">INVENTARIO</span>
+              <h2 id="inventarioCargaTitulo">Cargar producto</h2>
+              <p id="inventarioCargaSubtitulo">
+                Escaneá un código o buscá el producto manualmente.
+              </p>
             </div>
-            <div><span>Total</span><strong id="stockTotal">0</strong></div>
-          </div>
-        </section>
-
-        <section id="quantityCard" class="quantity-card oculto">
-          <p>Cantidad a agregar</p>
-          <div class="quantity-control">
-            <button type="button" id="btnMenosCantidad">−</button>
-            <input
-              type="number"
-              id="cantidadInput"
-              min="1"
-              step="1"
-              value="1"
-              inputmode="numeric"
-            />
-            <button type="button" id="btnMasCantidad">+</button>
-          </div>
-          <div class="action-row">
-            <button id="btnCancelarCantidad" class="cancel-btn" type="button">
-              Cancelar ✕
+            <button
+              id="btnCerrarScanner"
+              class="inventory-scan-close"
+              type="button"
+              aria-label="Cerrar"
+            >
+              ×
             </button>
+          </header>
+
+          <section id="scanPanel" class="inventory-scan-start">
             <button
               type="button"
-              id="btnGuardarCantidad"
-              class="save-btn"
-              disabled
+              id="btnAbrirScanner"
+              class="inventory-camera-launch"
             >
-              Guardar ✓
+              <svg class="app-icon" aria-hidden="true">
+                <use href="#icon-camera"></use>
+              </svg>
+              <span>Abrir cámara</span>
             </button>
-          </div>
-        </section>
 
-        <section class="bottom-info">
-          <div>
-            <span>Salón contado</span><strong id="contadorSalonTexto">0</strong>
-          </div>
-          <div>
-            <span>Depósito contado</span
-            ><strong id="contadorDepositoTexto">0</strong>
-          </div>
-        </section>
+            <button
+              type="button"
+              id="btnCodigoManualToggle"
+              class="inventory-manual-open"
+            >
+              Ingresar producto manual
+            </button>
 
-        <section class="inventory-recent-card">
-          <div class="inventory-recent-head">
-            <div>
-              <h2>Últimos escaneados</h2>
-              <p>Este dispositivo</p>
+            <div
+              id="manualPanel"
+              class="manual-panel inventory-manual-panel oculto"
+            >
+              <input
+                type="text"
+                id="codigoManualInput"
+                inputmode="text"
+                autocomplete="off"
+                placeholder="Código o nombre del artículo"
+              />
+              <button type="button" id="btnBuscarManual">Buscar</button>
+              <div
+                id="manualSugerencias"
+                class="manual-suggestions oculto"
+              ></div>
             </div>
-            <span>3</span>
-          </div>
-          <div id="inventarioRecientes" class="inventory-recent-list">
-            <div class="inventory-recent-empty">
-              Todavía no escaneaste productos en este dispositivo.
+          </section>
+
+          <section
+            class="camera-card inventory-camera-card oculto"
+            id="cameraCard"
+          >
+            <div class="scanner-topbar inventory-scanner-topbar">
+              <strong>Escáner activo</strong>
+              <div class="inventory-scanner-actions">
+                <button id="btnManualDesdeScanner" type="button">
+                  Ingresar manual
+                </button>
+                <button id="btnCerrarCamaraInventario" type="button">
+                  ✕ Cerrar cámara
+                </button>
+              </div>
             </div>
+            <video id="video" autoplay muted playsinline></video>
+            <div class="camera-overlay">
+              <span id="estadoCamaraTexto">Escáner activo</span>
+              <strong id="textoCamara">Apuntá al código de barras</strong>
+              <div class="corner corner-tl"></div>
+              <div class="corner corner-tr"></div>
+              <div class="corner corner-bl"></div>
+              <div class="corner corner-br"></div>
+            </div>
+          </section>
+
+          <section
+            id="productoCard"
+            class="inventory-product-result product-card empty oculto"
+          >
+            <div class="product-status" id="estadoProducto">
+              Esperando código
+            </div>
+            <h2 id="nombreProducto">Esperando escaneo...</h2>
+            <p id="codigoProducto">-</p>
+
+            <!-- Se conservan estos nodos porque ui.js actualiza el stock al
+                 inicializar y al leer un producto. Visualmente no se muestran
+                 en este nuevo flujo compacto. -->
+            <div class="stock-row inventory-stock-compat" aria-hidden="true">
+              <div><span>Salón</span><strong id="stockSalon">0</strong></div>
+              <div>
+                <span>Depósito</span><strong id="stockDeposito">0</strong>
+              </div>
+              <div><span>Total</span><strong id="stockTotal">0</strong></div>
+            </div>
+          </section>
+
+          <section
+            id="quantityCard"
+            class="inventory-count-form quantity-card oculto"
+          >
+            <div class="inventory-location-inline">
+              <span>Ubicación</span>
+              <div class="location-grid">
+                <button type="button" id="btnSalon" class="location-btn activo">
+                  <svg class="app-icon" aria-hidden="true">
+                    <use href="#icon-store"></use>
+                  </svg>
+                  <span>Salón</span>
+                </button>
+                <button type="button" id="btnDeposito" class="location-btn">
+                  <svg class="app-icon" aria-hidden="true">
+                    <use href="#icon-warehouse"></use>
+                  </svg>
+                  <span>Depósito</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="inventory-qty-label">Cantidad a agregar</div>
+            <div class="quantity-control">
+              <button type="button" id="btnMenosCantidad">−</button>
+              <input
+                type="number"
+                id="cantidadInput"
+                min="1"
+                step="1"
+                value="1"
+                inputmode="numeric"
+              />
+              <button type="button" id="btnMasCantidad">+</button>
+            </div>
+
+            <div class="action-row">
+              <button id="btnCancelarCantidad" class="cancel-btn" type="button">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                id="btnGuardarCantidad"
+                class="save-btn"
+                disabled
+              >
+                Guardar
+              </button>
+            </div>
+          </section>
+
+          <div class="inventory-scan-status oculto" aria-hidden="true">
+            <strong id="contadorSalonTexto">0</strong>
+            <strong id="contadorDepositoTexto">0</strong>
           </div>
         </section>
-      </main>
+      </div>
 
       <main id="pantallaProductos" class="pantalla">
         <header class="header-simple">
@@ -1426,15 +1478,20 @@
         </nav>
       </main>
 
+      <button
+        id="inventarioFab"
+        class="inventory-fab oculto"
+        type="button"
+        aria-label="Cargar producto"
+        title="Cargar producto"
+      >
+        <span aria-hidden="true">+</span>
+      </button>
+
       <nav
         class="bottom-nav app-bottom-nav"
         aria-label="Navegación de inventario"
       >
-        <button type="button" class="nav-btn" data-pantalla="inventario">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8" /></svg
-          ><span>Cargar</span>
-        </button>
         <button type="button" class="nav-btn" data-pantalla="productos">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5" /></svg

@@ -22684,3 +22684,337 @@ body.tareas-plan-modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   INVENTARIO · CARGA CONTEXTUAL CON BOTÓN FLOTANTE
+   ========================================================= */
+body.en-modulo-inventario .bottom-nav.app-bottom-nav {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.inventory-fab {
+  position: fixed;
+  z-index: 920;
+  right: max(18px, calc((100vw - min(520px, 100vw)) / 2 + 18px));
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 19px;
+  background: linear-gradient(145deg, #ef393f, #d92734);
+  color: #fff;
+  box-shadow:
+    0 14px 30px rgba(205, 39, 52, 0.34),
+    0 3px 8px rgba(36, 39, 44, 0.16);
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
+}
+.inventory-fab > span {
+  display: block;
+  margin-top: -3px;
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 300;
+}
+.inventory-fab:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 17px 34px rgba(205, 39, 52, 0.4),
+    0 4px 10px rgba(36, 39, 44, 0.16);
+}
+.inventory-fab:active {
+  transform: translateY(0) scale(0.96);
+}
+.inventory-fab:focus-visible {
+  outline: 3px solid rgba(239, 57, 63, 0.22);
+  outline-offset: 4px;
+}
+.inventory-fab.oculto {
+  display: none !important;
+}
+body[data-screen="inventario"] #pantallaInventario {
+  padding-bottom: 24px;
+}
+body[data-screen="inventario"] .bottom-nav.app-bottom-nav,
+body[data-screen="inventario"] .inventory-fab {
+  display: none !important;
+}
+@media (min-width: 901px) {
+  .inventory-fab {
+    right: 28px;
+    bottom: 28px;
+    width: 62px;
+    height: 62px;
+    border-radius: 20px;
+  }
+  .inventory-fab > span {
+    font-size: 40px;
+  }
+}
+
+/* =========================================================
+   INVENTARIO · ESCÁNER DIRECTO EN MODAL
+   ========================================================= */
+.inventario-legacy-screen {
+  display: none !important;
+}
+body.inventory-scan-open {
+  overflow: hidden;
+}
+
+.inventory-scan-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.inventory-scan-modal.oculto {
+  display: none !important;
+}
+.inventory-scan-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.58);
+  backdrop-filter: blur(5px);
+}
+.inventory-scan-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(560px, calc(100vw - 28px));
+  max-height: calc(100dvh - 30px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
+}
+.inventory-scan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eceff3;
+}
+.inventory-scan-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #d92734;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+}
+.inventory-scan-head h2 {
+  margin: 0;
+  color: #182230;
+  font-size: 22px;
+  line-height: 1.15;
+}
+.inventory-scan-head p {
+  margin: 5px 0 0;
+  color: #7b8491;
+  font-size: 11px;
+  font-weight: 650;
+}
+.inventory-scan-close {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 12px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 26px;
+  cursor: pointer;
+}
+.inventory-scan-start {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+}
+.inventory-camera-launch {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 14px;
+  background: #cf293e;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(207, 41, 62, 0.18);
+}
+.inventory-camera-launch .app-icon {
+  width: 20px;
+  height: 20px;
+}
+.inventory-manual-open {
+  min-height: 46px;
+  border: 1px solid #e1e5ea;
+  border-radius: 13px;
+  background: #fff;
+  color: #475467;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.inventory-manual-panel {
+  margin-top: 0 !important;
+  padding: 10px;
+  border: 1px solid #e4e7ec;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+.inventory-camera-card {
+  height: min(55vh, 420px) !important;
+  margin: 16px 0 0 !important;
+  border-radius: 18px !important;
+}
+.inventory-product-result {
+  min-height: 0 !important;
+  margin: 16px 0 0 !important;
+  padding: 15px !important;
+  border: 1px solid #e4e7ec !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  background: #f9fafb !important;
+}
+.inventory-product-result .product-status {
+  margin-bottom: 8px !important;
+  padding: 5px 8px !important;
+  font-size: 10px !important;
+}
+.inventory-product-result h2 {
+  min-height: 0 !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+.inventory-product-result p {
+  margin-top: 6px !important;
+  font-size: 11px !important;
+}
+.inventory-product-result .stock-row {
+  display: none !important;
+}
+
+.inventory-count-form {
+  margin: 10px 0 0 !important;
+  padding: 15px !important;
+  border: 1px solid #e4e7ec !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+.inventory-location-inline {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.inventory-location-inline > span,
+.inventory-qty-label {
+  color: #344054;
+  font-size: 11px;
+  font-weight: 900;
+}
+.inventory-location-inline .location-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.inventory-location-inline .location-btn {
+  min-height: 50px;
+  border: 1px solid #e1e5ea;
+  border-radius: 13px;
+  background: #fff;
+  color: #475467;
+  box-shadow: none;
+}
+.inventory-location-inline .location-btn.activo {
+  border-color: #d92734;
+  background: #fff2f3;
+  color: #c42337;
+  box-shadow: 0 0 0 3px rgba(217, 39, 52, 0.08);
+}
+.inventory-count-form .quantity-control {
+  margin-top: 8px !important;
+}
+.inventory-count-form .action-row {
+  margin-top: 8px;
+}
+.inventory-scan-status {
+  display: none !important;
+}
+
+/* El botón + queda contextual en Productos/Cargados. */
+.inventory-fab {
+  z-index: 930 !important;
+}
+
+@media (max-width: 640px) {
+  .inventory-scan-modal {
+    align-items: end;
+    padding: 0;
+  }
+  .inventory-scan-sheet {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 24px 24px 0 0;
+    padding: 15px;
+    padding-bottom: calc(15px + env(safe-area-inset-bottom));
+  }
+  .inventory-camera-card {
+    height: 46dvh !important;
+  }
+  .inventory-scan-head h2 {
+    font-size: 20px;
+  }
+}
+
+.inventory-stock-compat {
+  display: none !important;
+}
+
+/* Inventario · cámara automática + acceso manual desde el scanner */
+.inventory-scanner-topbar {
+  align-items: flex-start !important;
+}
+.inventory-scanner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inventory-scanner-actions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #344054;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.inventory-scanner-actions #btnCerrarCamaraInventario {
+  color: #c8243a;
+}
+@media (max-width: 640px) {
+  .inventory-scanner-actions {
+    gap: 5px;
+  }
+  .inventory-scanner-actions button {
+    padding: 7px 9px;
+    font-size: 9px;
+  }
+}
