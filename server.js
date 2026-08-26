@@ -66,12 +66,13 @@ const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
 app.use(
   cors({
     origin(origen, callback) {
-      if (!origen) return callback(null, true);
-      if (ALLOWED_ORIGINS.includes(origen)) return callback(null, true);
-      // En desarrollo se conserva la comodidad anterior. En producción, si no
-      // se configura ALLOWED_ORIGINS, los navegadores quedan bloqueados por defecto.
-      if (process.env.NODE_ENV !== "production" && ALLOWED_ORIGINS.length === 0)
+      if (
+        !origen ||
+        ALLOWED_ORIGINS.length === 0 ||
+        ALLOWED_ORIGINS.includes(origen)
+      ) {
         return callback(null, true);
+      }
       return callback(new Error("Origen no permitido por CORS"));
     },
   }),

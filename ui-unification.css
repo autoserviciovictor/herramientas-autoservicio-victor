@@ -1856,3 +1856,377 @@ html[data-theme="dark"] :is(.app-select-custom__option:hover,.app-select-custom_
 
 }
 
+
+/* ========================================================================== 
+   2026-08-26 · DARK MODE CANÓNICO · INICIO / VENCIMIENTOS / HISTORIAL / LISTA
+   Esta capa se carga última y es la única autoridad visual de dark mode para
+   estas vistas. Evita fondos grises heredados y fuerza iconos a currentColor.
+   ========================================================================== */
+html[data-theme="dark"] {
+  --app-dark-bg: var(--pro-bg, #071321);
+  --app-dark-panel: var(--pro-panel, #122238);
+  --app-dark-panel-2: var(--pro-panel-2, #192d46);
+  --app-dark-panel-3: #203651;
+  --app-dark-text: var(--pro-text, #f7f9fc);
+  --app-dark-muted: var(--pro-muted, #aab8ca);
+  --app-dark-border: var(--pro-border, #30445e);
+  --app-dark-border-strong: var(--pro-border-strong, #405772);
+}
+
+html[data-theme="dark"] :is(
+  #pantallaInicio,
+  #pantallaVencimientos,
+  #vencHistorialAdmin,
+  #pantallaAnotar
+) {
+  color: var(--app-dark-text) !important;
+}
+
+html[data-theme="dark"] :is(
+  #pantallaInicio,
+  #pantallaVencimientos,
+  #vencHistorialAdmin,
+  #pantallaAnotar
+) :is(.app-icon, svg.app-icon) {
+  color: currentColor;
+  stroke: currentColor !important;
+}
+
+/* Inicio */
+html[data-theme="dark"] #pantallaInicio :is(
+  .pro-metric-card,
+  .pro-operation-card,
+  .pro-home-panel,
+  .pro-home-live-card,
+  .pro-home-task-card,
+  .pro-welcome-card
+) {
+  background: var(--app-dark-panel) !important;
+  border-color: var(--app-dark-border) !important;
+  color: var(--app-dark-text) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] #pantallaInicio :is(
+  .pro-home-live-row,
+  .pro-home-task-row,
+  .pro-home-task-footer,
+  .pro-home-operation-footer
+) { border-color: var(--app-dark-border) !important; }
+html[data-theme="dark"] #pantallaInicio :is(
+  .pro-welcome-copy p,
+  .pro-home-panel p,
+  .pro-home-live-meta,
+  .pro-home-task-meta,
+  .pro-home-task-sector-label
+) { color: var(--app-dark-muted) !important; }
+html[data-theme="dark"] #pantallaInicio .pro-progress { background: var(--app-dark-panel-3) !important; }
+html[data-theme="dark"] #pantallaInicio .pro-bathroom-banner {
+  border-color: rgba(255,85,113,.48) !important;
+  box-shadow: 0 10px 26px rgba(0,0,0,.18) !important;
+}
+
+/* Vencimientos: paneles, filtros, tarjetas e iconografía. */
+html[data-theme="dark"] #pantallaVencimientos {
+  --venc-panel: var(--app-dark-panel);
+  --venc-panel-soft: var(--app-dark-panel-2);
+  --venc-text: var(--app-dark-text);
+  --venc-muted: var(--app-dark-muted);
+  --venc-border: var(--app-dark-border);
+}
+html[data-theme="dark"] #pantallaVencimientos :is(
+  .venc-resumen-card,
+  .venc-pro-toolbar,
+  .venc-range-group,
+  .venc-product-card,
+  .venc-list-row,
+  .venc-pro-search,
+  .venc-pro-rubros,
+  .venc-sort-control,
+  .venc-view-toggle
+) {
+  background: var(--app-dark-panel) !important;
+  border-color: var(--app-dark-border) !important;
+  color: var(--app-dark-text) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] #pantallaVencimientos :is(
+  .venc-pro-search input,
+  .venc-sort-control select,
+  .venc-product-card__identity strong,
+  .venc-product-card__data b,
+  .venc-range-group__title strong
+) { color: var(--app-dark-text) !important; }
+html[data-theme="dark"] #pantallaVencimientos :is(
+  .venc-pro-search input::placeholder,
+  .venc-product-card__identity span,
+  .venc-product-card__data small,
+  .venc-range-group__title span,
+  .venc-resumen-datos small
+) { color: var(--app-dark-muted) !important; }
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card__data .app-icon {
+  color: #91a6bd !important;
+  stroke: currentColor !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-pro-search .app-icon,
+html[data-theme="dark"] #pantallaVencimientos .venc-view-toggle .app-icon {
+  color: #9fb0c4 !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-pro-rubros button:not(.activo) {
+  background: var(--app-dark-panel-2) !important;
+  border-color: var(--app-dark-border) !important;
+  color: #c8d4e2 !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-view-toggle button:not(.activo) {
+  background: transparent !important;
+  color: #9fb0c4 !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card:not(.is-offer-active) {
+  background: #13253b !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card.is-offer-active,
+html[data-theme="dark"] #pantallaVencimientos .venc-list-row.is-offer-active {
+  background: linear-gradient(0deg, rgba(16,185,129,.10), rgba(16,185,129,.10)), #13253b !important;
+  border-color: #2c8064 !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-header-history-btn {
+  background: var(--app-dark-panel) !important;
+  border-color: #ff5571 !important;
+  color: #ff7189 !important;
+}
+
+/* Historial de vencimientos: reemplaza la paleta gris heredada por el azul canónico. */
+html[data-theme="dark"] #vencHistorialAdmin.admin-history-venc-screen {
+  background: var(--app-dark-bg) !important;
+  color: var(--app-dark-text) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin :is(
+  .admin-history-filter-surface,
+  .admin-history-filter-control,
+  .admin-history-search,
+  .admin-history-summary,
+  .admin-history-total-card,
+  .history-user-stat,
+  .admin-history-table-surface,
+  .admin-history-card,
+  .admin-history-toggle,
+  .admin-history-pagination,
+  .app-select-custom__trigger,
+  .app-select-custom__menu
+) {
+  background: var(--app-dark-panel) !important;
+  border-color: var(--app-dark-border) !important;
+  color: var(--app-dark-text) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-table-head {
+  background: var(--app-dark-panel-2) !important;
+  border-color: var(--app-dark-border) !important;
+  color: #b8c5d5 !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin :is(
+  .admin-history-filter-control small,
+  .admin-history-product small,
+  .admin-history-detail-summary small,
+  .admin-history-total-card small,
+  .admin-history-total-card span,
+  .admin-history-date small,
+  .admin-history-page-heading p
+) { color: var(--app-dark-muted) !important; }
+html[data-theme="dark"] #vencHistorialAdmin :is(
+  .admin-history-filter-control strong,
+  .admin-history-product strong,
+  .admin-history-detail-summary strong,
+  .admin-history-date strong,
+  .admin-history-user strong,
+  #adminHistorialBuscar
+) { color: var(--app-dark-text) !important; }
+html[data-theme="dark"] #vencHistorialAdmin #adminHistorialBuscar::placeholder { color: #879ab1 !important; }
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-card.abierta .admin-history-toggle,
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail {
+  background: var(--app-dark-panel-2) !important;
+  border-color: var(--app-dark-border-strong) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .admin-period-btn:not(.activo):hover,
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-toggle:hover {
+  background: var(--app-dark-panel-2) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .app-select-custom__option { color: #dce5ef !important; }
+html[data-theme="dark"] #vencHistorialAdmin .app-select-custom__option:hover { background: var(--app-dark-panel-3) !important; }
+
+/* Mi lista / Reposición */
+html[data-theme="dark"] #pantallaAnotar :is(
+  .repo-list-selector,
+  .repo-main-card,
+  .repo-summary-card,
+  .repo-recent-card,
+  .repo-search-box,
+  .repo-filter-btn,
+  .repo-load-menu,
+  .repo-row,
+  .repo-product-row
+) {
+  background: var(--app-dark-panel) !important;
+  border-color: var(--app-dark-border) !important;
+  color: var(--app-dark-text) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-list-selector {
+  background: var(--app-dark-panel-2) !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-list-selector button {
+  color: #b9c6d6 !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-list-selector button.activo {
+  background: #243552 !important;
+  color: #ff7189 !important;
+  box-shadow: inset 0 -2px 0 #ff365b !important;
+}
+html[data-theme="dark"] #pantallaAnotar :is(
+  .repo-pro-header h1,
+  .repo-main-card h2,
+  .repo-summary-card h2,
+  .repo-recent-card h2,
+  .repo-row-product strong,
+  .repo-empty-state strong
+) { color: var(--app-dark-text) !important; }
+html[data-theme="dark"] #pantallaAnotar :is(
+  .repo-pro-header p,
+  .repo-search-box input::placeholder,
+  .repo-row-product small,
+  .repo-summary-row > span:nth-child(2),
+  .repo-recent-empty,
+  .repo-empty-state p,
+  .repo-load-menu small
+) { color: var(--app-dark-muted) !important; }
+html[data-theme="dark"] #pantallaAnotar .repo-search-box input {
+  background: transparent !important;
+  color: var(--app-dark-text) !important;
+}
+html[data-theme="dark"] #pantallaAnotar :is(.repo-search-box .app-icon,.repo-filter-btn .app-icon,.repo-recent-empty .app-icon) {
+  color: #9fb0c4 !important;
+  stroke: currentColor !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-empty-icon {
+  background: #2a2633 !important;
+  color: #e6aab5 !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-summary-icon,
+html[data-theme="dark"] #pantallaAnotar .repo-load-option-icon {
+  background: rgba(255,54,91,.14) !important;
+  color: #ff7189 !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-load-menu > button:hover {
+  background: var(--app-dark-panel-2) !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-edit-list-btn:not(.guardar) {
+  background: var(--app-dark-panel) !important;
+  border-color: var(--app-dark-border) !important;
+  color: #dce5ef !important;
+}
+html[data-theme="dark"] #pantallaAnotar .repo-edit-list-btn:not(.guardar):hover {
+  border-color: #ff7189 !important;
+  color: #ff7189 !important;
+}
+
+/* ========================================================================== 
+   2026-08-26 · DARK MODE FINAL — Inicio + Historial de vencimientos
+   Capa canónica final. Este archivo se carga último en index.html y neutraliza
+   las superficies claras legacy que todavía usan #fff / pasteles de light mode.
+   ========================================================================== */
+
+/* INICIO · Vencimientos de hoy / Tareas de hoy */
+html[data-theme="dark"] #pantallaInicio .pro-home-live-icon-expiry{
+  background:#49331c !important;
+  color:#ffc074 !important;
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-live-badge.is-danger{
+  background:#47202c !important;
+  color:#ff8ba0 !important;
+  border:1px solid rgba(255,139,160,.20) !important;
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-live-badge.is-success{
+  background:#12392f !important;
+  color:#70e3bc !important;
+  border:1px solid rgba(112,227,188,.18) !important;
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-live-badge.is-pending{
+  background:#49331c !important;
+  color:#ffc074 !important;
+  border:1px solid rgba(255,192,116,.18) !important;
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-dot{
+  background:#e59a24 !important;
+  box-shadow:0 0 0 4px #49331c !important;
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-dot.is-complete{
+  background:#37c99a !important;
+  box-shadow:0 0 0 4px #12392f !important;
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-total{
+  background:#192d46 !important;
+  border-color:#405772 !important;
+  color:#eef3f9 !important;
+  box-shadow:none !important;
+}
+
+/* HISTORIAL · eliminar definitivamente pastillas claras heredadas */
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat{
+  background:var(--app-dark-panel,#122238) !important;
+  border-color:var(--app-dark-border,#30445e) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat.tone-red>b{
+  background:#47202c !important;
+  color:#ff8ba0 !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat.tone-violet>b{
+  background:#302652 !important;
+  color:#b9a6ff !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat.tone-green>b{
+  background:#12392f !important;
+  color:#70e3bc !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat.tone-amber>b{
+  background:#49331c !important;
+  color:#ffc074 !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat.tone-blue>b{
+  background:#193b61 !important;
+  color:#8fc4ff !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .history-user-stat.tone-cyan>b{
+  background:#143944 !important;
+  color:#76d9eb !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .accion-edito .admin-history-action{
+  background:#49331c !important;
+  color:#ffc074 !important;
+  border:1px solid rgba(255,192,116,.18) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .accion-elimino .admin-history-action{
+  background:#47202c !important;
+  color:#ff8ba0 !important;
+  border:1px solid rgba(255,139,160,.18) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .accion-creo .admin-history-action{
+  background:#12392f !important;
+  color:#70e3bc !important;
+  border:1px solid rgba(112,227,188,.18) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-user-avatar{
+  background:#47202c !important;
+  color:#ff8ba0 !important;
+  border:1px solid rgba(255,139,160,.18) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-total-icon{
+  background:#47202c !important;
+  color:#ff7189 !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-card,
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-toggle{
+  background:var(--app-dark-panel,#122238) !important;
+}
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-card.abierta .admin-history-toggle,
+html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
+  background:var(--app-dark-panel-2,#192d46) !important;
+}
