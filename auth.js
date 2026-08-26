@@ -1,14 +1,22 @@
-import { API_BASE_URL } from "./config.js?v=12301";
+import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
 const REMEMBER_USER_KEY = "autoservicio_login_usuario_recordado";
 const originalFetch = window.fetch.bind(window);
-let token = localStorage.getItem(TOKEN_KEY) || "";
+const storageSesion = sessionStorage.getItem(TOKEN_KEY)
+  ? sessionStorage
+  : localStorage;
+let token = storageSesion.getItem(TOKEN_KEY) || "";
 let usuarioActual = null;
 try {
-  usuarioActual = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+  usuarioActual = JSON.parse(storageSesion.getItem(USER_KEY) || "null");
 } catch {}
+
+let googleLoginClientId = "";
+let googleCredentialPendiente = "";
+let googleLoginInicializado = false;
+let googleScriptPromise = null;
 
 const $ = (id) => document.getElementById(id);
 const MODULOS_DISPONIBLES = [
@@ -28,14 +36,14 @@ function permisosUsuario(usuario = usuarioActual) {
       ? usuario.permisos
       : {};
   return Object.fromEntries(
-    MODULOS_DISPONIBLES.map((m) => [m, recibidos[m] !== false]),
+    MODULOS_DISPONIBLES.map((m) => [m, recibidos[m] === true]),
   );
 }
 
 function puedeVerModulo(modulo, usuario = usuarioActual) {
   if (["inicio", "ajustes"].includes(modulo)) return true;
   if (modulo === "admin") return usuario?.rol === "administrador";
-  return permisosUsuario(usuario)[modulo] !== false;
+  return permisosUsuario(usuario)[modulo] === true;
 }
 
 function esApi(url) {
@@ -53,21 +61,83 @@ const OFFLINE_QUEUE_KEY = "autoservicio_offline_queue_v1";
 const OFFLINE_CACHE_PREFIX = "autoservicio_api_cache_v1:";
 let sincronizandoOffline = false;
 
-function leerColaOffline() {
+function leerColaOfflineCompleta() {
   try {
-    return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]");
+    const cola = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]");
+    if (!Array.isArray(cola)) return [];
+    // Migración segura de V19.5: las operaciones antiguas no tenían usuario.
+    // Si hay una sesión conocida, se asocian a ese mismo usuario una sola vez.
+    let cambio = false;
+    const migrada = cola.map((op) => {
+      if (!op?.usuario && usuarioActual?.usuario) {
+        cambio = true;
+        return { ...op, usuario: usuarioActual.usuario };
+      }
+      return op;
+    });
+    if (cambio)
+      localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(migrada));
+    return migrada;
   } catch {
     return [];
   }
 }
-function guardarColaOffline(cola) {
+function leerColaOffline(usuario = usuarioActual?.usuario) {
+  const clave = String(usuario || "")
+    .trim()
+    .toLowerCase();
+  if (!clave) return [];
+  return leerColaOfflineCompleta().filter(
+    (op) =>
+      String(op.usuario || "")
+        .trim()
+        .toLowerCase() === clave,
+  );
+}
+function guardarColaOfflineCompleta(cola) {
   localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(cola));
+  const pendientes = leerColaOffline().length;
   window.dispatchEvent(
     new CustomEvent("autoservicio:offline", {
-      detail: { online: navigator.onLine, pendientes: cola.length },
+      detail: { online: navigator.onLine, pendientes },
     }),
   );
 }
+function reemplazarColaUsuario(usuario, operaciones) {
+  const clave = String(usuario || "")
+    .trim()
+    .toLowerCase();
+  const otras = leerColaOfflineCompleta().filter(
+    (op) =>
+      String(op.usuario || "")
+        .trim()
+        .toLowerCase() !== clave,
+  );
+  guardarColaOfflineCompleta([...otras, ...operaciones]);
+}
+function cacheOfflineKey(ruta, usuario = usuarioActual?.usuario) {
+  return `${OFFLINE_CACHE_PREFIX}${String(usuario || "anon")
+    .trim()
+    .toLowerCase()}:${ruta}`;
+}
+function limpiarCacheOfflineUsuario(usuario) {
+  const prefijo = `${OFFLINE_CACHE_PREFIX}${String(usuario || "")
+    .trim()
+    .toLowerCase()}:`;
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith(prefijo)) localStorage.removeItem(key);
+  });
+}
+function limpiarCacheOfflineLegada() {
+  Object.keys(localStorage).forEach((key) => {
+    if (
+      key.startsWith(OFFLINE_CACHE_PREFIX) &&
+      key.slice(OFFLINE_CACHE_PREFIX.length).startsWith("/")
+    )
+      localStorage.removeItem(key);
+  });
+}
+limpiarCacheOfflineLegada();
 function rutaApi(input) {
   try {
     const u = new URL(
@@ -91,7 +161,8 @@ function esOperacionOfflinePermitida(method, ruta) {
     ruta.startsWith("/guardar") ||
     ruta.startsWith("/corregir") ||
     ruta.startsWith("/vencimientos") ||
-    ruta.startsWith("/reposicion")
+    ruta.startsWith("/reposicion") ||
+    ruta.startsWith("/producto-maestro/")
   );
 }
 async function serializarBody(input, init) {
@@ -105,31 +176,103 @@ async function serializarBody(input, init) {
 }
 async function sincronizarColaOffline() {
   if (sincronizandoOffline || !navigator.onLine || !token) return;
-  const cola = leerColaOffline();
+  const usuarioClave = usuarioActual?.usuario;
+  const cola = leerColaOffline(usuarioClave);
   if (!cola.length) return;
+
   sincronizandoOffline = true;
   const restantes = [];
-  for (const op of cola) {
-    try {
-      const headers = new Headers(op.headers || {});
-      headers.set("Authorization", `Bearer ${token}`);
-      headers.set("X-Offline-Operation-Id", op.id);
-      const r = await originalFetch(`${API_BASE_URL}${op.ruta}`, {
-        method: op.method,
-        headers,
-        body: op.body || undefined,
-      });
-      if (!r.ok) {
-        if (r.status >= 500) restantes.push(op);
+  let sesionInvalida = false;
+
+  try {
+    for (let i = 0; i < cola.length; i += 1) {
+      const op = cola[i];
+      if (op?.requiereRevision) {
+        restantes.push(op);
+        continue;
       }
-    } catch {
-      restantes.push(op);
+      if (Number(op?.reintentarDespues) > Date.now()) {
+        restantes.push(op);
+        continue;
+      }
+
+      try {
+        const headers = new Headers(op.headers || {});
+        headers.set("Authorization", `Bearer ${token}`);
+        headers.set("X-Offline-Operation-Id", op.id);
+        const r = await originalFetch(`${API_BASE_URL}${op.ruta}`, {
+          method: op.method,
+          headers,
+          body: op.body || undefined,
+        });
+        if (r.ok) continue;
+
+        let mensaje = "";
+        try {
+          const data = await r.clone().json();
+          mensaje = String(data?.mensaje || "");
+        } catch {}
+
+        if (r.status === 401) {
+          restantes.push({
+            ...op,
+            ultimoError: mensaje || "La sesión venció antes de sincronizar.",
+            ultimoStatus: r.status,
+          });
+          restantes.push(...cola.slice(i + 1));
+          sesionInvalida = true;
+          break;
+        }
+
+        if (r.status === 429 || r.status >= 500) {
+          const retryAfter = Number(r.headers.get("Retry-After"));
+          const esperaMs = Number.isFinite(retryAfter) && retryAfter > 0
+            ? retryAfter * 1000
+            : 60 * 1000;
+          restantes.push({
+            ...op,
+            ultimoError: mensaje || `Error temporal ${r.status}`,
+            ultimoStatus: r.status,
+            reintentarDespues: Date.now() + esperaMs,
+          });
+          continue;
+        }
+
+        // Un 4xx distinto de 401 no se descarta: puede ser un conflicto,
+        // un permiso cambiado o un dato que requiere corrección manual.
+        restantes.push({
+          ...op,
+          requiereRevision: true,
+          ultimoError: mensaje || `La operación requiere revisión (${r.status}).`,
+          ultimoStatus: r.status,
+        });
+      } catch (error) {
+        restantes.push({
+          ...op,
+          ultimoError: error?.message || "Sin conexión",
+          reintentarDespues: Date.now() + 30 * 1000,
+        });
+      }
     }
+
+    reemplazarColaUsuario(usuarioClave, restantes);
+    if (!restantes.length)
+      window.dispatchEvent(new CustomEvent("autoservicio:sincronizado"));
+    else
+      window.dispatchEvent(
+        new CustomEvent("autoservicio:offline", {
+          detail: {
+            online: navigator.onLine,
+            pendientes: restantes.length,
+            revision: restantes.filter((op) => op?.requiereRevision).length,
+          },
+        }),
+      );
+  } finally {
+    sincronizandoOffline = false;
   }
-  guardarColaOffline(restantes);
-  sincronizandoOffline = false;
-  if (!restantes.length)
-    window.dispatchEvent(new CustomEvent("autoservicio:sincronizado"));
+
+  if (sesionInvalida) cerrarSesion(false);
 }
 
 window.fetch = async (input, init = {}) => {
@@ -158,14 +301,14 @@ window.fetch = async (input, init = {}) => {
       respuesta
         .clone()
         .text()
-        .then((text) => localStorage.setItem(OFFLINE_CACHE_PREFIX + ruta, text))
+        .then((text) => localStorage.setItem(cacheOfflineKey(ruta), text))
         .catch(() => {});
     }
     return respuesta;
   } catch (error) {
     if (!esApi(input)) throw error;
     if (method === "GET") {
-      const cache = localStorage.getItem(OFFLINE_CACHE_PREFIX + ruta);
+      const cache = localStorage.getItem(cacheOfflineKey(ruta));
       if (cache)
         return new Response(cache, {
           status: 200,
@@ -178,8 +321,10 @@ window.fetch = async (input, init = {}) => {
     }
     if (esOperacionOfflinePermitida(method, ruta)) {
       const body = await serializarBody(input, opciones);
-      const cola = leerColaOffline();
+      if (!usuarioActual?.usuario) throw error;
+      const cola = leerColaOfflineCompleta();
       cola.push({
+        usuario: usuarioActual.usuario,
         id: crypto.randomUUID
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random()}`,
@@ -192,7 +337,7 @@ window.fetch = async (input, init = {}) => {
         },
         creado: Date.now(),
       });
-      guardarColaOffline(cola);
+      guardarColaOfflineCompleta(cola);
       return respuestaJson({
         ok: true,
         offline: true,
@@ -218,6 +363,7 @@ function mostrarLogin(mensaje = "") {
     estado.className = `login-status${mensaje ? " error" : ""}`;
   }
   setTimeout(() => $("loginUsuario")?.focus(), 100);
+  inicializarGoogleLogin().catch(() => {});
 }
 
 function ocultarLogin() {
@@ -228,7 +374,6 @@ function ocultarLogin() {
 
 function actualizarInterfazUsuario() {
   const nombre = usuarioActual?.nombre || usuarioActual?.usuario || "";
-  if ($("sesionNombre")) $("sesionNombre").textContent = nombre;
   const textoRol =
     usuarioActual?.rol === "administrador"
       ? "Administrador"
@@ -237,10 +382,12 @@ function actualizarInterfazUsuario() {
         : usuarioActual?.rol === "supervisor"
           ? "Supervisor"
           : "Personal";
-  if ($("sesionRol")) $("sesionRol").textContent = textoRol;
   if ($("menuSesionNombre"))
     $("menuSesionNombre").textContent = nombre || "Usuario";
   if ($("menuSesionRol")) $("menuSesionRol").textContent = textoRol;
+  if ($("desktopSesionNombre"))
+    $("desktopSesionNombre").textContent = nombre || "Usuario";
+  if ($("desktopSesionRol")) $("desktopSesionRol").textContent = textoRol;
   const esAdministrador = usuarioActual?.rol === "administrador";
   document.querySelectorAll(".module-card[data-modulo]").forEach((card) => {
     card.classList.toggle("oculto", !puedeVerModulo(card.dataset.modulo));
@@ -261,23 +408,170 @@ function actualizarInterfazUsuario() {
   );
 }
 
-function guardarSesion(nuevoToken, usuario) {
+function guardarSesion(nuevoToken, usuario, recordar = false) {
   token = nuevoToken;
   usuarioActual = usuario;
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(usuario));
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  const destino = recordar ? localStorage : sessionStorage;
+  destino.setItem(TOKEN_KEY, token);
+  destino.setItem(USER_KEY, JSON.stringify(usuario));
+  googleCredentialPendiente = "";
+  document.querySelector(".login-v2-auth")?.classList.remove("google-link-pending");
   actualizarInterfazUsuario();
   ocultarLogin();
+  sincronizarColaOffline();
 }
 
 function cerrarSesion(mostrar = true) {
+  const usuarioSaliente = usuarioActual?.usuario || "";
   token = "";
   usuarioActual = null;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  limpiarCacheOfflineUsuario(usuarioSaliente);
+  googleCredentialPendiente = "";
+  document.querySelector(".login-v2-auth")?.classList.remove("google-link-pending");
+  try {
+    window.google?.accounts?.id?.disableAutoSelect?.();
+  } catch {}
   actualizarInterfazUsuario();
   if (mostrar) mostrarLogin();
   else mostrarLogin("La sesión venció. Volvé a ingresar.");
+}
+
+
+function actualizarEstadoLogin(mensaje = "", tipo = "") {
+  const estado = $("loginEstado");
+  if (!estado) return;
+  estado.textContent = mensaje;
+  estado.className = `login-status${tipo ? ` ${tipo}` : ""}`;
+}
+
+function cargarGoogleIdentityScript() {
+  if (window.google?.accounts?.id) return Promise.resolve(window.google);
+  if (googleScriptPromise) return googleScriptPromise;
+
+  googleScriptPromise = new Promise((resolve, reject) => {
+    const existente = document.getElementById("googleIdentityServicesScript");
+    if (existente) {
+      existente.addEventListener("load", () => resolve(window.google), { once: true });
+      existente.addEventListener("error", () => reject(new Error("No se pudo cargar Google")), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "googleIdentityServicesScript";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(window.google);
+    script.onerror = () => reject(new Error("No se pudo cargar Google"));
+    document.head.appendChild(script);
+  });
+  return googleScriptPromise;
+}
+
+async function procesarGoogleCredential(respuesta) {
+  const credential = String(respuesta?.credential || "").trim();
+  if (!credential) return;
+  const recordar = Boolean($("loginRecordarme")?.checked);
+  const contenedor = $("googleSignInButton");
+
+  if (contenedor) {
+    contenedor.classList.add("cargando");
+    contenedor.setAttribute("aria-busy", "true");
+  }
+  actualizarEstadoLogin("Validando cuenta de Google…");
+
+  try {
+    const r = await originalFetch(`${API_BASE_URL}/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential }),
+    });
+    const data = await r.json().catch(() => ({}));
+
+    if (r.status === 409 && data?.vinculacionRequerida) {
+      googleCredentialPendiente = credential;
+      document.querySelector(".login-v2-auth")?.classList.add("google-link-pending");
+      actualizarEstadoLogin(
+        `Cuenta Google verificada${data.email ? ` (${data.email})` : ""}. Ingresá una vez con tu usuario y contraseña para vincularla.`,
+        "success",
+      );
+      setTimeout(() => $("loginUsuario")?.focus(), 80);
+      return;
+    }
+
+    if (!r.ok || !data.ok)
+      throw new Error(data.mensaje || "No se pudo ingresar con Google");
+
+    guardarSesion(data.token, data.usuario, recordar);
+  } catch (error) {
+    actualizarEstadoLogin(error.message || "No se pudo ingresar con Google", "error");
+  } finally {
+    if (contenedor) {
+      contenedor.classList.remove("cargando");
+      contenedor.removeAttribute("aria-busy");
+    }
+  }
+}
+
+function renderizarBotonGoogle() {
+  const contenedor = $("googleSignInButton");
+  if (!contenedor || !window.google?.accounts?.id || !googleLoginClientId) return;
+
+  const ancho = Math.max(
+    220,
+    Math.min(400, Math.floor(contenedor.getBoundingClientRect().width || 400)),
+  );
+  contenedor.innerHTML = "";
+  window.google.accounts.id.renderButton(contenedor, {
+    type: "standard",
+    theme: "outline",
+    size: "large",
+    text: "continue_with",
+    shape: "rectangular",
+    logo_alignment: "left",
+    width: ancho,
+  });
+}
+
+async function inicializarGoogleLogin() {
+  if (googleLoginInicializado) {
+    if (window.google?.accounts?.id) renderizarBotonGoogle();
+    return;
+  }
+
+  const fallback = $("btnGoogleFallback");
+  try {
+    const r = await originalFetch(`${API_BASE_URL}/auth/google/config`, {
+      headers: { Accept: "application/json" },
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data?.enabled || !data?.clientId) {
+      fallback?.setAttribute("data-google-disabled", "true");
+      return;
+    }
+
+    googleLoginClientId = String(data.clientId);
+    await cargarGoogleIdentityScript();
+    if (!window.google?.accounts?.id) throw new Error("Google no está disponible");
+
+    window.google.accounts.id.initialize({
+      client_id: googleLoginClientId,
+      callback: procesarGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+    googleLoginInicializado = true;
+    renderizarBotonGoogle();
+  } catch {
+    fallback?.setAttribute("data-google-disabled", "true");
+  }
 }
 
 async function iniciarSesion() {
@@ -302,12 +596,16 @@ async function iniciarSesion() {
     const r = await originalFetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuario, password }),
+      body: JSON.stringify({
+        usuario,
+        password,
+        googleCredential: googleCredentialPendiente || undefined,
+      }),
     });
     const data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo ingresar");
-    guardarSesion(data.token, data.usuario);
+    guardarSesion(data.token, data.usuario, recordar);
     if (recordar) localStorage.setItem(REMEMBER_USER_KEY, usuario);
     else localStorage.removeItem(REMEMBER_USER_KEY);
     if ($("loginPassword")) $("loginPassword").value = "";
@@ -332,7 +630,10 @@ async function validarSesion() {
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error();
     usuarioActual = data.usuario;
-    localStorage.setItem(USER_KEY, JSON.stringify(usuarioActual));
+    (sessionStorage.getItem(TOKEN_KEY) ? sessionStorage : localStorage).setItem(
+      USER_KEY,
+      JSON.stringify(usuarioActual),
+    );
     actualizarInterfazUsuario();
     ocultarLogin();
   } catch {
@@ -367,6 +668,8 @@ window.AutoservicioAuth = {
   cerrarSesion,
   sincronizarOffline: sincronizarColaOffline,
   pendientesOffline: () => leerColaOffline().length,
+  pendientesOfflineRevision: () =>
+    leerColaOffline().filter((op) => op?.requiereRevision).length,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -376,6 +679,20 @@ document.addEventListener("DOMContentLoaded", () => {
   if ($("loginRecordarme"))
     $("loginRecordarme").checked = Boolean(usuarioRecordado);
   $("btnLoginIngresar")?.addEventListener("click", iniciarSesion);
+  $("btnGoogleFallback")?.addEventListener("click", async () => {
+    await inicializarGoogleLogin().catch(() => {});
+    if (!googleLoginInicializado) {
+      actualizarEstadoLogin(
+        "El acceso con Google todavía no está configurado. Podés ingresar con tu usuario y contraseña.",
+        "error",
+      );
+    }
+  });
+  $("btnLoginOlvidePassword")?.addEventListener("click", () => {
+    actualizarEstadoLogin(
+      "Pedile a un administrador que restablezca tu contraseña.",
+    );
+  });
   $("btnTogglePassword")?.addEventListener("click", () => {
     const input = $("loginPassword");
     const boton = $("btnTogglePassword");
@@ -410,10 +727,11 @@ document.addEventListener("DOMContentLoaded", () => {
     cerrarMenuUsuario();
     window.AutoservicioNavigate?.("ajustes");
   });
-  $("btnMenuCerrarSesion")?.addEventListener("click", () => {
+  const cerrarSesionDesdeInterfaz = () => {
     cerrarMenuUsuario();
     cerrarSesion(true);
-  });
+  };
+  window.AutoservicioCerrarSesion = cerrarSesionDesdeInterfaz;
   document.addEventListener("click", cerrarMenuUsuario);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") cerrarMenuUsuario();
@@ -424,12 +742,19 @@ document.addEventListener("DOMContentLoaded", () => {
 function actualizarEstadoOffline(evento) {
   const el = document.getElementById("offlineStatus");
   if (!el) return;
-  const pendientes = evento?.detail?.pendientes ?? leerColaOffline().length;
+  const colaActual = leerColaOffline();
+  const pendientes = evento?.detail?.pendientes ?? colaActual.length;
+  const revision =
+    evento?.detail?.revision ??
+    colaActual.filter((op) => op?.requiereRevision).length;
   const online = evento?.detail?.online ?? navigator.onLine;
   if (!online) {
     el.textContent = pendientes
       ? `Sin Internet · ${pendientes} cambios pendientes`
       : "Sin conexión";
+    el.className = "offline-status error";
+  } else if (revision) {
+    el.textContent = `${revision} cambio${revision === 1 ? "" : "s"} pendiente${revision === 1 ? "" : "s"} de revisión`;
     el.className = "offline-status error";
   } else if (pendientes) {
     el.textContent = `Sincronizando ${pendientes} cambios pendientes…`;

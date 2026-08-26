@@ -1,4 +1,35 @@
-import { API_BASE_URL } from "./config.js?v=12301";
+import { API_BASE_URL, APP_ASSET_BUILD } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+
+const XLSX_SCRIPT_URL = new URL(`./xlsx.full.min.js?v=${APP_ASSET_BUILD}`, import.meta.url).href;
+let promesaCargaXLSX = null;
+
+async function asegurarXLSX() {
+  if (globalThis.XLSX?.read && globalThis.XLSX?.utils) return globalThis.XLSX;
+  if (!promesaCargaXLSX) {
+    promesaCargaXLSX = new Promise((resolve, reject) => {
+      let script = document.querySelector('script[data-autoservicio-xlsx="1"]');
+      const completar = () => {
+        if (globalThis.XLSX?.read && globalThis.XLSX?.utils) resolve(globalThis.XLSX);
+        else reject(new Error("El lector de Excel no quedó disponible."));
+      };
+      const fallar = () => reject(new Error("No se pudo cargar el lector de Excel."));
+      if (!script) {
+        script = document.createElement("script");
+        script.src = XLSX_SCRIPT_URL;
+        script.async = true;
+        script.dataset.autoservicioXlsx = "1";
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", completar, { once: true });
+      script.addEventListener("error", fallar, { once: true });
+      if (globalThis.XLSX?.read && globalThis.XLSX?.utils) completar();
+    }).catch((error) => {
+      promesaCargaXLSX = null;
+      throw error;
+    });
+  }
+  return promesaCargaXLSX;
+}
 
 const $ = (id) => document.getElementById(id);
 const MODULOS_PERMISO = [
@@ -9,14 +40,6 @@ const MODULOS_PERMISO = [
   "horarios",
   "tareas",
 ];
-const NOMBRES_MODULO = {
-  inventario: "Inventario",
-  vencimientos: "Vencimientos",
-  anotar: "Lista",
-  precios: "Precios",
-  horarios: "Horarios",
-  tareas: "Tareas",
-};
 function permisosCompatibles(permisos, rol = "personal") {
   if (rol === "administrador")
     return Object.fromEntries(MODULOS_PERMISO.map((m) => [m, true]));
@@ -60,17 +83,86 @@ function actualizarResumenPermisosUsuario() {
     ...document.querySelectorAll("[data-permiso-modulo]"),
   ].filter((input) => input.checked).length;
   const resumen = boton.querySelector(".admin-permissions-toggle-summary");
-  if (resumen)
+  if (resumen) {
     resumen.textContent =
-      rol === "administrador"
+      rol === "administrador" || marcados === MODULOS_PERMISO.length
         ? "Acceso completo"
-        : `${marcados} de ${MODULOS_PERMISO.length} módulos`;
+        : marcados === 0
+          ? "Sin módulos"
+          : `${marcados} de ${MODULOS_PERMISO.length} módulos`;
+  }
+}
+
+function posicionarSelectorPermisosUsuario() {
+  const panel = $("adminUsuarioPermisosPanel");
+  const boton = $("adminUsuarioPermisosToggle");
+  if (!panel || panel.hidden || !boton) return;
+
+  const rect = boton.getBoundingClientRect();
+  const margen = 8;
+  const separacion = 6;
+  const anchoDisponible = Math.max(180, window.innerWidth - margen * 2);
+  const ancho = Math.min(Math.max(rect.width, 180), anchoDisponible);
+  const izquierda = Math.min(
+    Math.max(margen, rect.left),
+    Math.max(margen, window.innerWidth - margen - ancho),
+  );
+  const altoDeseado = Math.min(panel.scrollHeight || 0, 290);
+  const espacioAbajo = Math.max(
+    0,
+    window.innerHeight - rect.bottom - separacion - margen,
+  );
+  const espacioArriba = Math.max(0, rect.top - separacion - margen);
+  const abreArriba = altoDeseado > espacioAbajo && espacioArriba > espacioAbajo;
+  const espacioElegido = abreArriba ? espacioArriba : espacioAbajo;
+  const altoMaximo = Math.max(110, Math.min(290, espacioElegido));
+
+  panel.classList.toggle("opens-up", abreArriba);
+  panel.style.position = "fixed";
+  panel.style.left = `${Math.round(izquierda)}px`;
+  panel.style.right = "auto";
+  panel.style.width = `${Math.round(ancho)}px`;
+  panel.style.maxHeight = `${Math.round(altoMaximo)}px`;
+  if (abreArriba) {
+    panel.style.top = "auto";
+    panel.style.bottom = `${Math.round(window.innerHeight - rect.top + separacion)}px`;
+  } else {
+    panel.style.bottom = "auto";
+    panel.style.top = `${Math.round(rect.bottom + separacion)}px`;
+  }
+}
+
+function abrirSelectorPermisosUsuario() {
+  const panel = $("adminUsuarioPermisosPanel");
+  const boton = $("adminUsuarioPermisosToggle");
+  const fieldset = $("adminUsuarioPermisos");
+  if (!panel || !boton || !fieldset) return;
+
+  const cuerpo = fieldset.closest(".admin-user-modal-body");
+  const scrollTop = cuerpo?.scrollTop ?? 0;
+
+  cerrarSelectoresInlineUsuario();
+  if (panel.parentNode !== document.body) document.body.appendChild(panel);
+  panel.classList.add("is-portal");
+  panel.hidden = false;
+  boton.setAttribute("aria-expanded", "true");
+  fieldset.classList.add("desplegado");
+  posicionarSelectorPermisosUsuario();
+
+  if (cuerpo) {
+    cuerpo.scrollTop = scrollTop;
+    requestAnimationFrame(() => {
+      cuerpo.scrollTop = scrollTop;
+      posicionarSelectorPermisosUsuario();
+    });
+  }
 }
 
 function prepararSelectorPermisosUsuario() {
   const fieldset = $("adminUsuarioPermisos");
   if (!fieldset || fieldset.dataset.dropdownReady === "1") return;
   fieldset.dataset.dropdownReady = "1";
+  fieldset.classList.add("admin-permissions-select");
 
   const legend = fieldset.querySelector("legend");
   const descripcion = fieldset.querySelector(":scope > p");
@@ -78,23 +170,22 @@ function prepararSelectorPermisosUsuario() {
   const nota = $("adminPermisosAdminAviso");
   if (!grid) return;
 
-  if (legend) legend.classList.add("admin-permissions-legend-hidden");
+  if (legend) legend.classList.add("admin-permissions-legend-visible");
 
   const boton = document.createElement("button");
   boton.type = "button";
   boton.id = "adminUsuarioPermisosToggle";
-  boton.className = "admin-permissions-toggle";
+  boton.className = "admin-permissions-toggle app-select-custom__trigger";
   boton.setAttribute("aria-expanded", "false");
+  boton.setAttribute("aria-haspopup", "listbox");
   boton.innerHTML = `
-    <span class="admin-permissions-toggle-copy">
-      <strong>Módulos visibles</strong>
-      <small class="admin-permissions-toggle-summary">0 de ${MODULOS_PERMISO.length} módulos</small>
-    </span>
-    <svg class="app-icon admin-permissions-toggle-icon" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>`;
+    <span class="app-select-custom__value admin-permissions-toggle-summary">Acceso completo</span>
+    <span class="app-select-custom__chevron" aria-hidden="true"><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></span>`;
 
   const panel = document.createElement("div");
   panel.id = "adminUsuarioPermisosPanel";
   panel.className = "admin-permissions-dropdown-panel";
+  panel.setAttribute("role", "listbox");
   panel.hidden = true;
   if (descripcion) panel.appendChild(descripcion);
   panel.appendChild(grid);
@@ -105,13 +196,21 @@ function prepararSelectorPermisosUsuario() {
 
   boton.addEventListener("click", () => {
     const abrir = panel.hidden;
-    panel.hidden = !abrir;
-    boton.setAttribute("aria-expanded", String(abrir));
-    fieldset.classList.toggle("desplegado", abrir);
+    window.AppSelect?.closeAll?.();
+    if (abrir) abrirSelectorPermisosUsuario();
+    else cerrarSelectorPermisosUsuario();
   });
   fieldset.querySelectorAll("[data-permiso-modulo]").forEach((input) => {
     input.addEventListener("change", actualizarResumenPermisosUsuario);
   });
+  document.addEventListener("click", (event) => {
+    if (!fieldset.contains(event.target) && !panel.contains(event.target))
+      cerrarSelectorPermisosUsuario();
+  });
+  window.addEventListener("resize", posicionarSelectorPermisosUsuario, {
+    passive: true,
+  });
+  document.addEventListener("scroll", posicionarSelectorPermisosUsuario, true);
   actualizarResumenPermisosUsuario();
 }
 
@@ -119,88 +218,51 @@ function cerrarSelectorPermisosUsuario() {
   const panel = $("adminUsuarioPermisosPanel");
   const boton = $("adminUsuarioPermisosToggle");
   const fieldset = $("adminUsuarioPermisos");
-  if (panel) panel.hidden = true;
+  if (panel) {
+    panel.hidden = true;
+    panel.classList.remove("is-portal", "opens-up");
+    [
+      "position",
+      "left",
+      "right",
+      "top",
+      "bottom",
+      "width",
+      "max-height",
+    ].forEach((prop) => panel.style.removeProperty(prop));
+    if (fieldset && panel.parentNode !== fieldset) fieldset.appendChild(panel);
+  }
   boton?.setAttribute("aria-expanded", "false");
   fieldset?.classList.remove("desplegado");
 }
 
-function instalarEstilosAdminUsuariosV3() {
-  if ($("adminUsuariosV3Styles")) return;
-  const style = document.createElement("style");
-  style.id = "adminUsuariosV3Styles";
-  style.textContent = `
-    /* Administrador > Usuarios v3: tarjetas legibles + modal compacto */
-    #adminUsuariosLista.admin-users-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
-    #adminUsuariosLista .admin-user-card.admin-user-card-v1203{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"main status" "buttons buttons"!important;gap:11px 14px!important;min-height:0!important;padding:14px 15px!important;align-items:start!important}
-    #adminUsuariosLista .admin-user-main{grid-area:main!important;display:grid!important;grid-template-columns:42px minmax(0,1fr)!important;gap:11px!important;align-items:start!important;min-width:0!important;padding:0!important}
-    #adminUsuariosLista .admin-avatar{width:42px!important;height:42px!important;border-radius:12px!important;flex:none!important}
-    #adminUsuariosLista .admin-user-copy{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:2px!important;min-width:0!important}
-    #adminUsuariosLista .admin-user-copy>strong{width:100%!important;font-size:14px!important;line-height:1.2!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important}
-    #adminUsuariosLista .admin-user-copy>span{width:100%!important;font-size:11px!important;line-height:1.28!important;color:#756e69!important;white-space:normal!important;overflow-wrap:anywhere!important}
-    #adminUsuariosLista .admin-user-module-count{margin-top:6px!important;display:inline-flex!important;align-items:center!important;gap:5px!important;width:auto!important;max-width:100%!important;padding:5px 8px!important;font-size:10px!important;white-space:normal!important}
-    #adminUsuariosLista .admin-user-status-corner{grid-area:status!important;position:static!important;justify-self:end!important;align-self:start!important;white-space:nowrap!important}
-    #adminUsuariosLista .admin-user-card-buttons{grid-area:buttons!important;display:flex!important;justify-content:flex-end!important;gap:7px!important;width:100%!important;padding-top:9px!important;border-top:1px solid #eee9e5!important}
-    #adminUsuariosLista .admin-user-card-buttons button{min-width:92px!important;min-height:34px!important}
+function preservarScrollModalEnSelect(trigger) {
+  const cuerpo = trigger?.closest(
+    ".admin-user-modal-body, .admin-sector-modal-body",
+  );
+  if (!trigger || !cuerpo || trigger.dataset.stableModalScroll === "1") return;
+  trigger.dataset.stableModalScroll = "1";
+  let scrollGuardado = cuerpo.scrollTop;
 
-    #adminUsuarioModal .admin-user-modal-v2{width:min(570px,calc(100vw - 28px))!important;max-height:min(820px,calc(100dvh - 28px))!important;padding:0!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important}
-    #adminUsuarioModal .admin-user-modal-head{padding:17px 19px 14px!important;border-bottom:1px solid #eee8e3!important;gap:11px!important}
-    #adminUsuarioModal .admin-user-modal-head h2{margin:1px 0 2px!important;font-size:21px!important;line-height:1.1!important}
-    #adminUsuarioModal .admin-user-modal-head small{font-size:11px!important}
-    #adminUsuarioModal .admin-user-modal-body{overflow:auto!important;padding:14px 19px 16px!important;display:grid!important;gap:13px!important}
-    #adminUsuarioModal .admin-form-section{margin:0!important;padding:0!important;display:grid!important;gap:9px!important}
-    #adminUsuarioModal .admin-form-section+.admin-form-section{padding-top:12px!important;border-top:1px solid #eee9e5!important}
-    #adminUsuarioModal .admin-form-section-title{text-align:left!important;display:grid!important;gap:1px!important;margin:0!important}
-    #adminUsuarioModal .admin-form-section-title strong{font-size:13px!important;line-height:1.2!important}
-    #adminUsuarioModal .admin-form-section-title span{font-size:10.5px!important;color:#817973!important;line-height:1.3!important}
-    #adminUsuarioModal .admin-form-grid{gap:9px!important}
-    #adminUsuarioModal .admin-user-modal label{margin:0!important;gap:4px!important;font-size:11.5px!important}
-    #adminUsuarioModal .admin-user-modal input:not([type=checkbox]):not([type=hidden]),#adminUsuarioModal .visual-select-button{min-height:42px!important;padding:9px 11px!important;border-radius:11px!important;font-size:13px!important}
-    #adminUsuarioModal .admin-user-modal label>small{font-size:9.5px!important;color:#8a827d!important;line-height:1.25!important}
-    #adminUsuarioModal .admin-permissions-fieldset{border:0!important;padding:0!important;margin:0!important;min-width:0!important}
-    #adminUsuarioModal .admin-permissions-legend-hidden{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important}
-    #adminUsuarioModal .admin-permissions-toggle{width:100%!important;min-height:50px!important;border:1px solid #ded7d1!important;border-radius:12px!important;background:#fff!important;padding:9px 12px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;text-align:left!important;color:#292522!important}
-    #adminUsuarioModal .admin-permissions-toggle-copy{display:grid!important;gap:2px!important}
-    #adminUsuarioModal .admin-permissions-toggle-copy strong{font-size:12px!important}
-    #adminUsuarioModal .admin-permissions-toggle-copy small{font-size:10.5px!important;color:#786f69!important;font-weight:700!important}
-    #adminUsuarioModal .admin-permissions-toggle-icon{width:17px!important;height:17px!important;transition:transform .18s ease!important}
-    #adminUsuarioModal .admin-permissions-toggle[aria-expanded="true"] .admin-permissions-toggle-icon{transform:rotate(180deg)!important}
-    #adminUsuarioModal .admin-permissions-dropdown-panel{margin-top:7px!important;padding:10px!important;border:1px solid #e4ddd8!important;border-radius:12px!important;background:#faf8f6!important}
-    #adminUsuarioModal .admin-permissions-dropdown-panel[hidden]{display:none!important}
-    #adminUsuarioModal .admin-permissions-dropdown-panel>p{margin:0 0 8px!important;text-align:left!important;font-size:10.5px!important;color:#7c746e!important}
-    #adminUsuarioModal .admin-permissions-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
-    #adminUsuarioModal .admin-permissions-grid label{min-height:42px!important;padding:7px 9px!important;margin:0!important;border-radius:10px!important}
-    #adminUsuarioModal .admin-permissions-grid label span{font-size:11px!important}
-    #adminUsuarioModal .admin-permissions-note{display:block!important;margin-top:8px!important;font-size:10px!important}
-    #adminUsuarioModal .admin-permissions-note.oculto{display:none!important}
-    #adminUsuarioModal .admin-active-row{margin:0!important;padding:10px 11px!important;border:1px solid #e4ddd8!important;border-radius:12px!important;background:#faf9f7!important}
-    #adminUsuarioModal .admin-modal-actions-sticky{display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important;padding:11px 19px 13px!important;margin:0!important;border-top:1px solid #e8e1dc!important;background:rgba(255,255,255,.98)!important}
-    #adminUsuarioModalMensaje{grid-column:1/-1!important;margin:0!important;width:100%!important}
-    #adminUsuarioModal .admin-modal-actions-sticky button{min-height:42px!important;padding:9px 11px!important}
-
-    @media(max-width:760px){
-      #adminUsuariosLista.admin-users-list{grid-template-columns:1fr!important}
-      #adminUsuariosLista .admin-user-card.admin-user-card-v1203{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"main status" "buttons buttons"!important;padding:13px!important}
-      #adminUsuariosLista .admin-user-card-buttons{display:grid!important;grid-template-columns:1fr 1fr!important}
-      #adminUsuariosLista .admin-user-card-buttons button{width:100%!important;min-width:0!important}
-      #adminUsuarioModal .admin-user-modal-v2{width:min(100%,calc(100vw - 18px))!important;max-height:calc(100dvh - 18px)!important}
-      #adminUsuarioModal .admin-user-modal-head{padding:14px 15px 12px!important}
-      #adminUsuarioModal .admin-user-modal-body{padding:12px 15px 14px!important;gap:11px!important}
-      #adminUsuarioModal .admin-form-grid{grid-template-columns:1fr!important}
-      #adminUsuarioModal .admin-permissions-grid{grid-template-columns:1fr 1fr!important}
-      #adminUsuarioModal .admin-modal-actions-sticky{padding:10px 15px 12px!important}
-    }
-    @media(max-width:390px){
-      #adminUsuariosLista .admin-user-card.admin-user-card-v1203{grid-template-columns:1fr!important;grid-template-areas:"status" "main" "buttons"!important}
-      #adminUsuariosLista .admin-user-status-corner{justify-self:start!important}
-      #adminUsuarioModal .admin-permissions-grid{grid-template-columns:1fr!important}
-    }
-  `;
-  document.head.appendChild(style);
+  trigger.addEventListener(
+    "pointerdown",
+    () => {
+      scrollGuardado = cuerpo.scrollTop;
+    },
+    { passive: true },
+  );
+  trigger.addEventListener("click", () => {
+    cuerpo.scrollTop = scrollGuardado;
+    requestAnimationFrame(() => {
+      cuerpo.scrollTop = scrollGuardado;
+    });
+  });
 }
 
 let usuarios = [];
 let sectores = [];
 let historialVencimientos = [];
+let historialAdministracion = [];
 let historialPeriodo = "hoy";
 let historialLimite = 20;
 let historialBusquedaTimer = null;
@@ -208,6 +270,18 @@ let importacionPendiente = null;
 let importacionResumenPendiente = null;
 let usuarioModalInicial = "";
 let sectorModalInicial = "";
+let resumenSistema = {};
+let adminUsuariosPagina = 1;
+let adminUsuariosPorPagina = 8;
+let adminUsuariosVista = "grid";
+let adminUsuariosSeleccionados = new Set();
+let adminUsuariosCargados = false;
+let historialPagina = 1;
+let historialPorPagina = 10;
+let adminUltimaActualizacion = null;
+let adminActividadExpandida = false;
+let adminSectoresPagina = 1;
+const adminSectoresPorPagina = 6;
 
 const IMPORTACION_HOJA_ESPERADA = "RptStockInventarioValuado";
 const IMPORTACION_MIN_PRODUCTOS = 1000;
@@ -251,22 +325,73 @@ function mostrarPanel() {
     panel.classList.add("activa");
     panel.setAttribute("aria-hidden", "false");
   }
-  cambiarTab("usuarios");
+  cambiarTab("inicio");
   cargarTodo();
+}
+
+function fechaHoyArgentinaAdmin() {
+  try {
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const mapa = Object.fromEntries(partes.map((parte) => [parte.type, parte.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}`;
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
 }
 
 async function cargarResumen() {
   const data = await api("/admin/resumen");
-  $("adminProductos").textContent = data.productos;
-  $("adminVencimientos").textContent = data.vencimientos;
-  $("adminServidorEstado").textContent = "● Servidor conectado";
-  if ($("adminVersionSistema"))
-    $("adminVersionSistema").textContent = data.version;
+  if (!Number.isFinite(Number(data.vencimientosHoy))) {
+    try {
+      const listado = await api("/vencimientos");
+      const hoy = fechaHoyArgentinaAdmin();
+      data.vencimientosHoy = (listado.vencimientos || []).filter(
+        (item) => String(item?.vencimiento || "").trim() === hoy,
+      ).length;
+    } catch {
+      data.vencimientosHoy = 0;
+    }
+  }
+  resumenSistema = data || {};
+  establecerTexto("adminProductos", Number.isFinite(Number(data.productos)) ? Number(data.productos).toLocaleString("es-AR") : "—");
+  establecerTexto("adminProductosDetalle", "En catálogo");
+
+  const tieneProximos30 = Number.isFinite(Number(data.vencimientosProximos30));
+  establecerTexto("adminVencimientos", tieneProximos30 ? Number(data.vencimientosProximos30).toLocaleString("es-AR") : (data.vencimientos ?? "—"));
+  establecerTexto("adminVencimientosDetalle", tieneProximos30 ? "Próximos 30 días" : "Registrados");
+
+  establecerTexto("adminServidorEstado", "Activo");
+  const version = String(data.version || "").trim();
+  establecerTexto("adminVersionSistema", version ? `v${version.replace(/^v/i, "")}` : "—");
+  establecerTexto("adminVersionDetalle", data.build ? `Build ${data.build}` : "Versión actual");
+
+  adminUltimaActualizacion = new Date();
+  const ultima = $("adminUltimaActualizacion");
+  const operador = window.AutoservicioAuth?.getUsuario?.()?.nombre || window.AutoservicioAuth?.getUsuario?.()?.usuario || "Administrador";
+  if (ultima) {
+    const fecha = adminUltimaActualizacion.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const hora = adminUltimaActualizacion.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    ultima.textContent = `${fecha} ${hora} por ${operador}`;
+  }
+  const storage = $("adminStorageLabel");
+  if (storage) storage.textContent = "Capacidad no expuesta por el servidor";
+  const storageBar = $("adminStorageBar");
+  if (storageBar) {
+    storageBar.classList.add("is-unavailable");
+    storageBar.querySelector("i")?.style.setProperty("width", "0%");
+  }
+  actualizarMetricasAdmin();
 }
 
 async function cargarSectores() {
   const data = await api("/admin/sectores");
   sectores = data.sectores || [];
+  poblarFiltroSectoresUsuarios();
   renderSectores();
   poblarSectoresUsuario();
 }
@@ -283,107 +408,133 @@ function etiquetaRol(valor) {
     }[valor] || "Personal"
   );
 }
+
+function establecerTexto(id, valor) {
+  const el = $(id);
+  if (el) el.textContent = valor;
+}
+
+function usuariosDelSector(id) {
+  if (!id) return [];
+  return usuarios.filter((u) => {
+    const todos = new Set([u.sector, ...(Array.isArray(u.sectores) ? u.sectores : [])].filter(Boolean));
+    return todos.has(id);
+  });
+}
+
+function actualizarMetricasAdmin() {
+  const activos = usuarios.filter((u) => u.activo !== false).length;
+  const inactivos = Math.max(0, usuarios.length - activos);
+  const sectoresActivos = sectores.filter((s) => s.activo !== false).length;
+  const sectoresInactivos = Math.max(0, sectores.length - sectoresActivos);
+  const supervisores = usuarios.filter((u) => u.activo !== false && u.rol === "supervisor").length;
+  const asignados = usuarios.filter((u) => u.sector || (Array.isArray(u.sectores) && u.sectores.some(Boolean))).length;
+  const porcentaje = sectores.length ? Math.round((sectoresActivos / sectores.length) * 100) : 0;
+
+  establecerTexto("adminHomeUsuariosActivos", activos || 0);
+  establecerTexto("adminHomeUsuariosDetalle", `${inactivos} inactivos`);
+  establecerTexto("adminHomeSectores", sectores.length || 0);
+  establecerTexto("adminHomeSectoresDetalle", `${sectoresActivos} activos`);
+  establecerTexto("adminHomeEstado", resumenSistema.servidor === "conectado" ? "Óptimo" : "Activo");
+  establecerTexto("adminHomeEstadoDetalle", "");
+  const vencimientosHoy = Number(resumenSistema.vencimientosHoy);
+  establecerTexto(
+    "adminHomeVencimientos",
+    Number.isFinite(vencimientosHoy) ? vencimientosHoy.toLocaleString("es-AR") : "0",
+  );
+  establecerTexto("adminHomeVencimientosDetalle", "Vencen hoy");
+  establecerTexto("adminHomeUsuariosCardActivos", activos || 0);
+  establecerTexto("adminHomeUsuariosCardInactivos", inactivos || 0);
+  establecerTexto("adminHomeSectoresCardActivos", sectoresActivos || 0);
+  establecerTexto("adminHomeSectoresCardInactivos", sectoresInactivos || 0);
+  establecerTexto("adminHomeProductosCard", resumenSistema.productos ?? "—");
+  establecerTexto("adminHomeVersionCard", resumenSistema.version || "—");
+
+  establecerTexto("adminUsuariosActivosMetrica", activos || 0);
+  establecerTexto("adminUsuariosActivosDetalle", `${usuarios.length || 0} registrados`);
+  establecerTexto("adminUsuariosSectoresMetrica", sectoresActivos || 0);
+  establecerTexto("adminUsuariosModulosMetrica", MODULOS_PERMISO.length);
+  establecerTexto("adminUsuariosSaludMetrica", resumenSistema.servidor === "conectado" ? "Óptimo" : "Activo");
+  establecerTexto("adminUsuariosTotalMetrica", usuarios.length || 0);
+  establecerTexto("adminUsuariosSistema", activos || 0);
+  establecerTexto("adminUsuariosSistemaDetalle", "Activos");
+
+  establecerTexto("adminSectoresActivosMetrica", sectoresActivos || 0);
+  establecerTexto("adminSectoresActivosDetalle", `${porcentaje}% del total`);
+  establecerTexto("adminSectoresUsuariosMetrica", asignados || 0);
+  establecerTexto("adminSectoresSupervisoresMetrica", supervisores || 0);
+  establecerTexto("adminSectoresProductosMetrica", Number(resumenSistema.productos) ? Number(resumenSistema.productos).toLocaleString("es-AR") : "—");
+  establecerTexto("adminSectoresProductosDetalle", Number(resumenSistema.productos) ? "Productos disponibles en el catálogo" : "Sin datos de catálogo");
+  establecerTexto("adminSectoresOperativosMetrica", `${porcentaje}%`);
+}
+
+function poblarFiltroSectoresUsuarios() {
+  const select = $("adminUsuariosFiltroSector");
+  if (!select) return;
+  const actual = select.value || "todos";
+  select.innerHTML = '<option value="todos">Todos</option><option value="sin-sector">Sin sector</option>' + sectores
+    .slice()
+    .sort((a,b) => String(a.nombre||"").localeCompare(String(b.nombre||""), "es"))
+    .map((s) => `<option value="${escaparHtml(s.id)}">${escaparHtml(s.nombre)}</option>`)
+    .join("");
+  if ([...select.options].some((o) => o.value === actual)) select.value = actual;
+}
+
+function colorRol(rol) {
+  return ({ administrador: "role-admin", administracion: "role-adminops", supervisor: "role-supervisor", personal: "role-personal" }[rol] || "role-personal");
+}
+
+function renderHomeActividad() {
+  const cont = $("adminHomeActividad");
+  if (!cont) return;
+  const items = historialAdministracion.slice(0, adminActividadExpandida ? 12 : 4);
+  const botonVerTodas = $("adminHomeVerHistorial");
+  if (botonVerTodas) {
+    botonVerTodas.textContent = adminActividadExpandida ? "Ver menos" : "Ver todas";
+    botonVerTodas.disabled = historialAdministracion.length <= 4;
+  }
+  cont.classList.toggle("is-empty", !items.length);
+  if (!items.length) {
+    cont.innerHTML = '<div class="admin-empty-compact">Todavía no hay actividad administrativa registrada.</div>';
+    return;
+  }
+  const iconos = { usuario: "#icon-user", sector: "#icon-building", sistema: "#icon-settings", catalogo: "#icon-box" };
+  cont.innerHTML = items.map((h) => {
+    const clase = accionNormalizada(h.accion);
+    const accion = escaparHtml(h.accion || "Movimiento");
+    const entidad = escaparHtml(h.entidad || "Sistema");
+    const identificador = escaparHtml(h.identificador || "");
+    const responsable = escaparHtml(h.nombre || h.usuario || "Administrador");
+    const descripcion = escaparHtml(h.detalle || [entidad, identificador].filter(Boolean).join(" · ") || "Actividad administrativa");
+    const icono = iconos[String(h.entidad || "").toLowerCase()] || "#icon-clipboard";
+    return `<div class="admin-home-activity-item action-${clase}"><span class="admin-home-activity-icon"><svg class="app-icon"><use href="${icono}"></use></svg></span><div><strong>${accion}${identificador ? ` · ${identificador}` : ""}</strong><small>${descripcion}</small></div><span class="admin-home-activity-user">${responsable}</span><time>${escaparHtml(h.fecha || "")} ${escaparHtml(h.hora || "")}</time></div>`;
+  }).join("");
+}
+
+async function cargarHistorialAdministracion() {
+  try {
+    const data = await api("/admin/historial-administracion");
+    historialAdministracion = Array.isArray(data.historial) ? data.historial : [];
+  } catch (error) {
+    historialAdministracion = [];
+  }
+  renderHomeActividad();
+}
+
 function actualizarSelectoresUsuario() {
-  const rol = $("adminUsuarioRol"),
-    rb = $("adminUsuarioRolButton"),
-    sec = $("adminUsuarioSector"),
-    sb = $("adminUsuarioSectorButton"),
-    sec2 = $("adminUsuarioSectorSecundario"),
-    sb2 = $("adminUsuarioSectorSecundarioButton"),
-    fila2 = $("adminUsuarioSectorSecundarioFila");
-  if (rb && rol) rb.querySelector("span").textContent = etiquetaRol(rol.value);
-  if (sb && sec)
-    sb.querySelector("span").textContent =
-      sec.options[sec.selectedIndex]?.textContent || "Sin sector";
-  if (sb2 && sec2)
-    sb2.querySelector("span").textContent =
-      sec2.options[sec2.selectedIndex]?.textContent || "Sin segundo sector";
+  const rol = $("adminUsuarioRol");
+  const sec2 = $("adminUsuarioSectorSecundario");
+  const fila2 = $("adminUsuarioSectorSecundarioFila");
   const esSupervisor = rol?.value === "supervisor";
   fila2?.classList.toggle("oculto", !esSupervisor);
-  if (!esSupervisor && sec2) {
-    sec2.value = "";
-    if (sb2) sb2.querySelector("span").textContent = "Sin segundo sector";
-  }
+  if (!esSupervisor && sec2) sec2.value = "";
+  ["adminUsuarioRol", "adminUsuarioSector", "adminUsuarioSectorSecundario"].forEach(
+    (id) => window.AppSelect?.refresh?.(id),
+  );
 }
-async function abrirSelectorRolUsuario() {
-  const sel = $("adminUsuarioRol");
-  const v = await window.AppChoicePicker.open({
-    title: "Seleccionar rol",
-    kicker: "Permisos",
-    value: sel.value,
-    options: [
-      {
-        value: "personal",
-        label: "Personal",
-        description: "Acceso según módulos asignados",
-      },
-      {
-        value: "supervisor",
-        label: "Supervisor",
-        description: "Administra horarios de sus sectores",
-      },
-      {
-        value: "administracion",
-        label: "Administración",
-        description: "Acceso administrativo limitado",
-      },
-      {
-        value: "administrador",
-        label: "Administrador",
-        description: "Acceso completo al sistema",
-      },
-    ],
-  });
-  if (v) {
-    sel.value = v;
-    sel.dispatchEvent(new Event("change", { bubbles: true }));
-    actualizarSelectoresUsuario();
-  }
-}
-async function abrirSelectorSectorUsuario(secundario = false) {
-  const sel = $(
-    secundario ? "adminUsuarioSectorSecundario" : "adminUsuarioSector",
-  );
-  if (!sel) return;
-  if (!sectores.length) await cargarSectores().catch(() => {});
-  const otro =
-    $(secundario ? "adminUsuarioSector" : "adminUsuarioSectorSecundario")
-      ?.value || "";
-  poblarSectoresUsuario(
-    $("adminUsuarioSector")?.value || "",
-    $("adminUsuarioSectorSecundario")?.value || "",
-  );
-  const opcionesSectores = sectores.filter(
-    (s) => (s.activo || s.id === sel.value) && s.id !== otro,
-  );
-  const options = [
-    {
-      value: "",
-      label: secundario ? "Sin segundo sector" : "Sin sector asignado",
-      description: secundario
-        ? "No asignar un segundo sector"
-        : "Dejar al usuario sin sector",
-    },
-    ...opcionesSectores.map((s) => ({
-      value: s.id,
-      label: s.nombre,
-      color: s.color || null,
-      description: secundario
-        ? "Asignar como segundo sector"
-        : "Asignar como sector principal",
-    })),
-  ];
-  const v = await window.AppChoicePicker.open({
-    title: secundario ? "Seleccionar segundo sector" : "Seleccionar sector",
-    kicker: "Usuario",
-    value: sel.value,
-    options,
-  });
-  if (v !== null) {
-    sel.value = v;
-    sel.dispatchEvent(new Event("change", { bubbles: true }));
-    actualizarSelectoresUsuario();
-  }
+
+function cerrarSelectoresInlineUsuario() {
+  window.AppSelect?.closeAll?.();
 }
 
 const COLORES_ADMIN = [
@@ -444,58 +595,142 @@ function renderPaletaColor(tipo, valor) {
         x.setAttribute("aria-checked", String(activo));
       });
       if (nombre) nombre.textContent = nombreColor(elegido);
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     }),
   );
 }
 
-function poblarSectoresUsuario(valorPreferido = null) {
-  const sel = $("adminUsuarioSector");
-  if (!sel) return;
-  const actual =
-    valorPreferido === null ? sel.value : String(valorPreferido || "");
-  const opciones = sectores.filter((s) => s.activo || s.id === actual);
-  sel.innerHTML =
+function poblarSectoresUsuario(valorPrincipal = null, valorSecundario = null) {
+  const principal = $("adminUsuarioSector");
+  const secundario = $("adminUsuarioSectorSecundario");
+  if (!principal || !secundario) return;
+
+  const actualPrincipal =
+    valorPrincipal === null ? principal.value : String(valorPrincipal || "");
+  const actualSecundario =
+    valorSecundario === null ? secundario.value : String(valorSecundario || "");
+
+  const opcionesPrincipal = sectores.filter(
+    (sector) =>
+      (sector.activo || sector.id === actualPrincipal) &&
+      sector.id !== actualSecundario,
+  );
+  const opcionesSecundario = sectores.filter(
+    (sector) =>
+      (sector.activo || sector.id === actualSecundario) &&
+      sector.id !== actualPrincipal,
+  );
+
+  principal.innerHTML =
     `<option value="">Sin sector</option>` +
-    opciones
+    opcionesPrincipal
       .map(
-        (s) =>
-          `<option value="${s.id}">${escaparHtml(s.nombre)}${s.activo ? "" : " (inactivo)"}</option>`,
+        (sector) =>
+          `<option value="${sector.id}">${escaparHtml(sector.nombre)}${sector.activo ? "" : " (inactivo)"}</option>`,
       )
       .join("");
-  sel.value = opciones.some((s) => s.id === actual) ? actual : "";
+  secundario.innerHTML =
+    `<option value="">Sin segundo sector</option>` +
+    opcionesSecundario
+      .map(
+        (sector) =>
+          `<option value="${sector.id}">${escaparHtml(sector.nombre)}${sector.activo ? "" : " (inactivo)"}</option>`,
+      )
+      .join("");
+
+  principal.value = opcionesPrincipal.some((sector) => sector.id === actualPrincipal)
+    ? actualPrincipal
+    : "";
+  secundario.value = opcionesSecundario.some((sector) => sector.id === actualSecundario)
+    ? actualSecundario
+    : "";
+  if (principal.value && principal.value === secundario.value) secundario.value = "";
   actualizarSelectoresUsuario();
 }
+function iconoSector(sec) {
+  const nombre = normalizarTexto(sec?.nombre || "");
+  if (/deposito|almacen/.test(nombre)) return "#icon-warehouse";
+  if (/verduler|fruta|vegetal/.test(nombre)) return "#icon-leaf";
+  if (/fiambr|lacteo|queso/.test(nombre)) return "#icon-food";
+  if (/carnicer|carne/.test(nombre)) return "#icon-tag";
+  if (/admin|oficina/.test(nombre)) return "#icon-clipboard";
+  if (/caja|checkout|venta/.test(nombre)) return "#icon-store";
+  return "#icon-building";
+}
+
+function renderPaginacionSectores(total) {
+  const cont = $("adminSectoresPaginacion");
+  if (!cont) return;
+  if (!total) { cont.innerHTML = ""; return; }
+  const paginas = Math.max(1, Math.ceil(total / adminSectoresPorPagina));
+  adminSectoresPagina = Math.min(Math.max(1, adminSectoresPagina), paginas);
+  const botones = [];
+  botones.push(`<button type="button" data-sector-page="${Math.max(1, adminSectoresPagina - 1)}" ${adminSectoresPagina === 1 ? "disabled" : ""} aria-label="Página anterior">‹</button>`);
+  for (let i = 1; i <= paginas; i += 1) {
+    if (paginas > 7 && i > 2 && i < paginas - 1 && Math.abs(i - adminSectoresPagina) > 1) {
+      if (!botones.at(-1)?.includes("ellipsis")) botones.push('<span class="admin-pagination-ellipsis">…</span>');
+      continue;
+    }
+    botones.push(`<button type="button" data-sector-page="${i}" class="${i === adminSectoresPagina ? "activo" : ""}">${i}</button>`);
+  }
+  botones.push(`<button type="button" data-sector-page="${Math.min(paginas, adminSectoresPagina + 1)}" ${adminSectoresPagina === paginas ? "disabled" : ""} aria-label="Página siguiente">›</button>`);
+  cont.innerHTML = botones.join("");
+  cont.querySelectorAll("button[data-sector-page]").forEach((btn) => btn.addEventListener("click", () => {
+    adminSectoresPagina = Number(btn.dataset.sectorPage) || 1;
+    renderSectores();
+  }));
+}
+
 function renderSectores() {
   const cont = $("adminSectoresLista");
   if (!cont) return;
-  if (!sectores.length) {
-    cont.innerHTML = `<div class="empty-state">No hay sectores.</div>`;
+  const q = normalizarTexto($("adminSectoresBuscar")?.value || "");
+  const estado = $("adminSectoresFiltroEstado")?.value || "todos";
+  const filtrados = sectores.filter((sec) => {
+    if (estado === "activo" && sec.activo === false) return false;
+    if (estado === "inactivo" && sec.activo !== false) return false;
+    if (q && !normalizarTexto(`${sec.nombre || ""} ${sec.supervisorNombre || ""}`).includes(q)) return false;
+    return true;
+  });
+
+  const paginas = Math.max(1, Math.ceil(filtrados.length / adminSectoresPorPagina));
+  adminSectoresPagina = Math.min(Math.max(1, adminSectoresPagina), paginas);
+  const inicio = (adminSectoresPagina - 1) * adminSectoresPorPagina;
+  const visibles = filtrados.slice(inicio, inicio + adminSectoresPorPagina);
+
+  if (!filtrados.length) {
+    cont.innerHTML = `<div class="empty-state">No hay sectores que coincidan con la búsqueda.</div>`;
+    establecerTexto("adminSectoresPaginacionResumen", `0 de ${sectores.length} sectores`);
+    renderPaginacionSectores(0);
+    actualizarMetricasAdmin();
     return;
   }
-  cont.innerHTML = sectores
-    .map(
-      (
-        s,
-      ) => `<article class="admin-sector-card ${s.activo ? "" : "inactivo"}" data-sector-id="${s.id}">
-    <span class="admin-sector-color" style="background:${s.color}"></span>
-    <div class="admin-sector-info"><strong>${escaparHtml(s.nombre)}</strong><span>Supervisor: ${escaparHtml(s.supervisorNombre || "Sin asignar")}</span></div>
-    <div class="admin-user-actions"><span class="user-status ${s.activo ? "activo" : "inactivo"}">${s.activo ? "Activo" : "Inactivo"}</span><button type="button" class="btn-editar-sector">Editar</button></div>
-  </article>`,
-    )
-    .join("");
-  cont
-    .querySelectorAll(".btn-editar-sector")
-    .forEach((b) =>
-      b.addEventListener("click", () =>
-        abrirSectorModal(
-          sectorPorId(b.closest("[data-sector-id]").dataset.sectorId),
-        ),
-      ),
-    );
+
+  cont.innerHTML = visibles.map((sec) => {
+    const asignados = usuariosDelSector(sec.id).length;
+    const icono = iconoSector(sec);
+    return `<article class="admin-sector-row ${sec.activo === false ? "inactivo" : ""}" data-sector-id="${escaparHtml(sec.id)}">
+      <div class="admin-sector-cell-main"><span class="admin-sector-row-icon" style="--sector-color:${escaparHtml(sec.color || "#ef3340")}"><svg class="app-icon"><use href="${icono}"></use></svg></span><div><strong>${escaparHtml(sec.nombre)}</strong><small>${escaparHtml(sec.colorNombre || "Color asignado al sector")}</small></div></div>
+      <div class="admin-sector-supervisor">${escaparHtml(sec.supervisorNombre || "Sin asignar")}</div>
+      <div class="admin-sector-users-count"><strong>${asignados}</strong><span>${asignados === 1 ? "usuario" : "usuarios"}</span></div>
+      <div class="admin-sector-products-count"><strong>—</strong><span>sin relación</span></div>
+      <div><span class="user-status ${sec.activo === false ? "inactivo" : "activo"}">${sec.activo === false ? "Inactivo" : "Activo"}</span></div>
+      <div class="admin-sector-row-actions"><button type="button" class="btn-editar-sector"><svg class="app-icon"><use href="#icon-edit"></use></svg><span>Editar</span></button><button type="button" class="admin-more-btn" aria-label="Más opciones"><svg class="app-icon"><use href="#icon-more"></use></svg></button></div>
+    </article>`;
+  }).join("");
+
+  cont.querySelectorAll(".btn-editar-sector").forEach((b) => b.addEventListener("click", () => abrirSectorModal(sectorPorId(b.closest("[data-sector-id]").dataset.sectorId))));
+  cont.querySelectorAll(".admin-more-btn").forEach((b) => b.addEventListener("click", () => abrirSectorModal(sectorPorId(b.closest("[data-sector-id]").dataset.sectorId))));
+
+  const desde = inicio + 1;
+  const hasta = inicio + visibles.length;
+  establecerTexto("adminSectoresPaginacionResumen", `Mostrando ${desde} a ${hasta} de ${filtrados.length} sectores`);
+  renderPaginacionSectores(filtrados.length);
+  actualizarMetricasAdmin();
 }
+
 function poblarSupervisoresSector(actual = "") {
-  const sel = $("adminSectorSupervisor"),
-    btn = $("adminSectorSupervisorButton");
+  const sel = $("adminSectorSupervisor");
   if (!sel) return;
   const candidatos = usuarios.filter(
     (u) =>
@@ -513,49 +748,30 @@ function poblarSupervisoresSector(actual = "") {
       )
       .join("");
   sel.value = candidatos.some((u) => u.usuario === actual) ? actual : "";
-  if (btn)
-    btn.querySelector("span").textContent =
-      sel.options[sel.selectedIndex]?.textContent || "Sin supervisor";
+  window.AppSelect?.refresh?.("adminSectorSupervisor");
 }
-async function abrirSelectorSupervisorSector() {
-  const sel = $("adminSectorSupervisor");
-  if (!sel) return;
-  const options = [...sel.options].map((o) => ({
-    value: o.value,
-    label: o.textContent,
-    description: o.value
-      ? "Supervisor activo"
-      : "Dejar el sector sin supervisor",
-  }));
-  const v = await window.AppChoicePicker.open({
-    title: "Seleccionar supervisor",
-    kicker: "Sector",
-    value: sel.value,
-    options,
-  });
-  if (v !== null) {
-    sel.value = v;
-    sel.dispatchEvent(new Event("change", { bubbles: true }));
-    $("adminSectorSupervisorButton")?.querySelector("span") &&
-      ($("adminSectorSupervisorButton").querySelector("span").textContent =
-        sel.options[sel.selectedIndex]?.textContent || "Sin supervisor");
-  }
-}
+
 async function abrirSectorModal(sec = null) {
   if (!usuarios.length) await cargarUsuarios().catch(() => {});
-  $("adminSectorModalTitulo").textContent = sec
-    ? "Editar sector"
-    : "Nuevo sector";
+  $("adminSectorModalTitulo").textContent = sec ? "Editar sector" : "Nuevo sector";
+  if ($("adminSectorModalResumen")) $("adminSectorModalResumen").textContent = sec
+    ? "Actualizá la información y configuración del sector."
+    : "Creá un nuevo sector y definí su configuración.";
+  if ($("btnAdminGuardarSector")) $("btnAdminGuardarSector").textContent = sec ? "Guardar cambios" : "Crear sector";
   $("adminSectorOriginal").value = sec?.id || "";
   $("adminSectorNombre").value = sec?.nombre || "";
   renderPaletaColor("sector", sec?.color || "#b72e35");
   $("adminSectorActivo").checked = sec?.activo !== false;
-  $("adminSectorActivoFila").classList.toggle("oculto", !sec);
+  $("adminSectorActivoFila")?.classList.remove("oculto");
   $("btnAdminEliminarSector")?.classList.toggle("oculto", !sec);
+  $("adminSectorDangerZone")?.classList.toggle("oculto", !sec);
   poblarSupervisoresSector(sec?.supervisor || "");
   $("adminSectorModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
+  const cuerpoSector = $("adminSectorModal")?.querySelector(".admin-sector-modal-body");
+  if (cuerpoSector) cuerpoSector.scrollTop = 0;
   sectorModalInicial = estadoSectorModal();
+  actualizarEstadoGuardarSector();
 }
 function estadoSectorModal() {
   return JSON.stringify({
@@ -564,6 +780,13 @@ function estadoSectorModal() {
     supervisor: $("adminSectorSupervisor")?.value || "",
     activo: Boolean($("adminSectorActivo")?.checked),
   });
+}
+function actualizarEstadoGuardarSector() {
+  const boton = $("btnAdminGuardarSector");
+  if (!boton || !sectorModalInicial) return;
+  const editando = Boolean($("adminSectorOriginal")?.value);
+  const nombreValido = Boolean($("adminSectorNombre")?.value.trim());
+  boton.disabled = !nombreValido || (editando && estadoSectorModal() === sectorModalInicial);
 }
 function cerrarSectorModalDirecto() {
   $("adminSectorModal")?.classList.add("oculto");
@@ -618,7 +841,7 @@ async function eliminarSectorActual() {
       method: "DELETE",
     });
     cerrarSectorModalDirecto();
-    await Promise.all([cargarSectores(), cargarUsuarios()]);
+    await Promise.all([cargarSectores(), cargarUsuarios(), cargarHistorialAdministracion()]);
     mensajeSectores("Sector eliminado.");
   } catch (e) {
     mensajeSectores(e.message, "error");
@@ -652,79 +875,163 @@ async function guardarSector() {
         body: JSON.stringify(payload),
       });
     cerrarSectorModalDirecto();
-    await Promise.all([cargarSectores(), cargarUsuarios()]);
+    await Promise.all([cargarSectores(), cargarUsuarios(), cargarHistorialAdministracion()]);
     mensajeSectores(original ? "Sector actualizado." : "Sector creado.");
   } catch (e) {
     mensajeSectores(e.message, "error");
   } finally {
-    if (boton) boton.disabled = false;
+    if (boton && !$("adminSectorModal")?.classList.contains("oculto")) actualizarEstadoGuardarSector();
   }
+}
+
+function cantidadModulosUsuario(u) {
+  return u?.rol === "administrador"
+    ? MODULOS_PERMISO.length
+    : MODULOS_PERMISO.filter((m) => permisosCompatibles(u?.permisos)[m]).length;
+}
+
+function tonoAvatarUsuario(u) {
+  const clave = String(u?.usuario || u?.nombre || "usuario");
+  let hash = 0;
+  for (let i = 0; i < clave.length; i += 1) hash = ((hash << 5) - hash + clave.charCodeAt(i)) | 0;
+  return `avatar-tone-${Math.abs(hash) % 5}`;
 }
 
 async function cargarUsuarios() {
   const data = await api("/admin/usuarios");
-  usuarios = data.usuarios || [];
-  if ($("adminUsuariosSistema"))
-    $("adminUsuariosSistema").textContent = usuarios.length;
+  let recibidos = Array.isArray(data.usuarios) ? data.usuarios : [];
+  // Evita presentar un cero transitorio si Google Sheets responde vacío durante una recarga.
+  if (!recibidos.length && !adminUsuariosCargados) {
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    const reintento = await api("/admin/usuarios").catch(() => null);
+    if (Array.isArray(reintento?.usuarios) && reintento.usuarios.length) recibidos = reintento.usuarios;
+  }
+  usuarios = recibidos;
+  adminUsuariosCargados = true;
+  adminUsuariosSeleccionados = new Set([...adminUsuariosSeleccionados].filter((id) => usuarios.some((u) => u.usuario === id)));
+  establecerTexto("adminUsuariosSistema", usuarios.filter((u) => u.activo !== false).length);
+  establecerTexto("adminUsuariosSistemaDetalle", "Activos");
+  poblarFiltroSectoresUsuarios();
+  actualizarMetricasAdmin();
   renderUsuarios();
 }
 
 function renderUsuarios() {
   const cont = $("adminUsuariosLista");
   if (!cont) return;
-  if (!usuarios.length) {
-    cont.innerHTML = '<div class="empty-state">No hay usuarios.</div>';
-    return;
+  const q = normalizarTexto($("adminUsuariosBuscar")?.value || "");
+  const estado = $("adminUsuariosFiltroEstado")?.value || "todos";
+  const sector = $("adminUsuariosFiltroSector")?.value || "todos";
+  const rol = $("adminUsuariosFiltroRol")?.value || "todos";
+  const orden = $("adminUsuariosOrden")?.value || "nombre";
+  const soloSinSector = Boolean($("adminUsuariosSoloSinSector")?.checked);
+  const minModulos = Number($("adminUsuariosMinModulos")?.value || 0);
+  adminUsuariosPorPagina = Number($("adminUsuariosPorPagina")?.value || adminUsuariosPorPagina || 8);
+  let filtrados = usuarios.filter((u) => {
+    if (estado === "activo" && u.activo === false) return false;
+    if (estado === "inactivo" && u.activo !== false) return false;
+    if (rol !== "todos" && u.rol !== rol) return false;
+    const idsSectores = [u.sector, ...(Array.isArray(u.sectores) ? u.sectores : [])].filter(Boolean);
+    if (sector === "sin-sector" && idsSectores.length) return false;
+    if (sector !== "todos" && sector !== "sin-sector" && !idsSectores.includes(sector)) return false;
+    if (soloSinSector && idsSectores.length) return false;
+    if (minModulos && cantidadModulosUsuario(u) < minModulos) return false;
+    if (q) {
+      const nombresSectores = idsSectores.map((id) => sectorPorId(id)?.nombre || "").join(" ");
+      const texto = normalizarTexto(`${u.nombre || ""} ${u.usuario || ""} ${etiquetaRol(u.rol)} ${nombresSectores}`);
+      if (!texto.includes(q)) return false;
+    }
+    return true;
+  });
+  filtrados.sort((a,b) => {
+    if (orden === "rol") return etiquetaRol(a.rol).localeCompare(etiquetaRol(b.rol), "es") || String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario), "es");
+    if (orden === "estado") return Number(a.activo === false) - Number(b.activo === false) || String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario), "es");
+    return String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario), "es");
+  });
+  const paginas = Math.max(1, Math.ceil(filtrados.length / adminUsuariosPorPagina));
+  adminUsuariosPagina = Math.min(Math.max(1, adminUsuariosPagina), paginas);
+  const inicio = (adminUsuariosPagina - 1) * adminUsuariosPorPagina;
+  const visibles = filtrados.slice(inicio, inicio + adminUsuariosPorPagina);
+  cont.classList.toggle("vista-lista", adminUsuariosVista === "list");
+  if (!visibles.length) {
+    const mensajeVacio = adminUsuariosCargados && !usuarios.length ? "No hay usuarios registrados en el sistema." : "No hay usuarios que coincidan con los filtros.";
+    cont.innerHTML = `<div class="empty-state">${mensajeVacio}</div>`;
+  } else {
+    cont.innerHTML = visibles.map((u) => {
+      const cantidadModulos = cantidadModulosUsuario(u);
+      const rolTexto = etiquetaRol(u.rol);
+      const sectorTexto = u.rol === "administrador" ? "Todos los sectores" : (sectorPorId(u.sector)?.nombre || "Sin sector");
+      const iniciales = (u.nombre || u.usuario || "U").split(/\s+/).map((p) => p[0]).join("").slice(0,2).toUpperCase();
+      const seleccionado = adminUsuariosSeleccionados.has(u.usuario);
+      const tonoAvatar = tonoAvatarUsuario(u);
+      return `<article class="admin-user-card admin-user-card-official ${u.activo === false ? "inactivo" : ""}" data-usuario="${escaparHtml(u.usuario)}">
+        <label class="admin-user-card-check"><input type="checkbox" class="admin-user-select" aria-label="Seleccionar ${escaparHtml(u.nombre || u.usuario)}" ${seleccionado ? "checked" : ""}></label>
+        <div class="admin-user-card-top"><span class="admin-avatar ${tonoAvatar}">${escaparHtml(iniciales)}</span><div class="admin-user-title"><strong>${escaparHtml(u.nombre || u.usuario)}</strong><span>@${escaparHtml(u.usuario)}</span></div><span class="user-status ${u.activo === false ? "inactivo" : "activo"}">${u.activo === false ? "Inactivo" : "Activo"}</span></div>
+        <span class="admin-role-pill ${colorRol(u.rol)}">${escaparHtml(rolTexto)}</span>
+        <div class="admin-user-card-meta"><div><small>Sector</small><strong>${escaparHtml(sectorTexto)}</strong></div><div><small>Módulos</small><strong class="admin-module-badge">${cantidadModulos}</strong></div></div>
+        <div class="admin-user-card-buttons"><button type="button" class="btn-editar-usuario"><svg class="app-icon"><use href="#icon-edit"></use></svg><span>Editar</span></button><button type="button" class="btn-eliminar-usuario"><svg class="app-icon"><use href="#icon-close"></use></svg><span>Eliminar</span></button></div>
+      </article>`;
+    }).join("");
   }
-  cont.innerHTML = usuarios
-    .map((u) => {
-      const cantidadModulos =
-        u.rol === "administrador"
-          ? MODULOS_PERMISO.length
-          : MODULOS_PERMISO.filter((m) => permisosCompatibles(u.permisos)[m])
-              .length;
-      const textoModulos = `${cantidadModulos} ${cantidadModulos === 1 ? "módulo disponible" : "módulos disponibles"}`;
-      const rol =
-        u.rol === "administrador"
-          ? "Administrador"
-          : u.rol === "administracion"
-            ? "Administración"
-            : u.rol === "supervisor"
-              ? "Supervisor"
-              : "Personal";
-      return `
-    <article class="admin-user-card admin-user-card-v1203 ${u.activo ? "" : "inactivo"}" data-usuario="${u.usuario}">
-      <span class="user-status admin-user-status-corner ${u.activo ? "activo" : "inactivo"}">${u.activo ? "Activo" : "Inactivo"}</span>
-      <div class="admin-user-main">
-        <div class="admin-avatar">${(u.nombre || u.usuario).slice(0, 1).toUpperCase()}</div>
-        <div class="admin-user-copy">
-          <strong>${escaparHtml(u.nombre || u.usuario)}</strong>
-          <span>@${escaparHtml(u.usuario)} · ${rol}</span>
-          <span>${escaparHtml(sectorPorId(u.sector)?.nombre || "Sin sector")}</span>
-          <div class="admin-user-module-count"><svg class="app-icon" aria-hidden="true"><use href="#icon-tasks"></use></svg><span>${textoModulos}</span></div>
-        </div>
-      </div>
-      <div class="admin-user-card-buttons">
-        <button type="button" class="btn-editar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button>
-        <button type="button" class="btn-eliminar-usuario"><svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg><span>Eliminar</span></button>
-      </div>
-    </article>`;
-    })
-    .join("");
-  cont
-    .querySelectorAll(".btn-editar-usuario")
-    .forEach((btn) =>
-      btn.addEventListener("click", () =>
-        abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario),
-      ),
-    );
-  cont
-    .querySelectorAll(".btn-eliminar-usuario")
-    .forEach((btn) =>
-      btn.addEventListener("click", () =>
-        eliminarUsuario(btn.closest("[data-usuario]").dataset.usuario),
-      ),
-    );
+  cont.querySelectorAll(".btn-editar-usuario").forEach((btn) => btn.addEventListener("click", () => abrirEditarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+  cont.querySelectorAll(".btn-eliminar-usuario").forEach((btn) => btn.addEventListener("click", () => eliminarUsuario(btn.closest("[data-usuario]").dataset.usuario)));
+  cont.querySelectorAll(".admin-user-select").forEach((input) => input.addEventListener("change", () => {
+    const clave = input.closest("[data-usuario]")?.dataset.usuario;
+    if (!clave) return;
+    if (input.checked) adminUsuariosSeleccionados.add(clave); else adminUsuariosSeleccionados.delete(clave);
+    actualizarSeleccionUsuarios(visibles);
+  }));
+
+  const resumen = $("adminUsuariosPaginacionResumen");
+  if (resumen) resumen.textContent = filtrados.length ? `Mostrando ${inicio + 1} a ${Math.min(inicio + visibles.length, filtrados.length)} de ${filtrados.length} usuarios` : `0 usuarios`;
+  const pag = $("adminUsuariosPaginacion");
+  if (pag) {
+    const botones = [];
+    botones.push(`<button type="button" data-page="${Math.max(1, adminUsuariosPagina-1)}" ${adminUsuariosPagina===1?'disabled':''}>‹</button>`);
+    for (let i=1; i<=paginas; i++) {
+      if (paginas > 7 && i > 2 && i < paginas-1 && Math.abs(i-adminUsuariosPagina)>1) { if (!botones.some((x)=>x.includes('data-ellipsis'))) botones.push('<span data-ellipsis>…</span>'); continue; }
+      botones.push(`<button type="button" data-page="${i}" class="${i===adminUsuariosPagina?'activo':''}">${i}</button>`);
+    }
+    botones.push(`<button type="button" data-page="${Math.min(paginas, adminUsuariosPagina+1)}" ${adminUsuariosPagina===paginas?'disabled':''}>›</button>`);
+    pag.innerHTML = botones.join("");
+    pag.querySelectorAll("button[data-page]").forEach((b) => b.addEventListener("click", () => { adminUsuariosPagina = Number(b.dataset.page)||1; renderUsuarios(); }));
+  }
+  actualizarSeleccionUsuarios(visibles);
+  actualizarMetricasAdmin();
+}
+
+function actualizarSeleccionUsuarios(visibles = []) {
+  const cantidad = adminUsuariosSeleccionados.size;
+  establecerTexto("adminUsuariosSeleccionResumen", `${cantidad} seleccionado${cantidad === 1 ? "" : "s"}`);
+  const accion = $("adminUsuariosAccionMasiva");
+  if (accion) accion.disabled = cantidad === 0;
+  const todos = $("adminUsuariosSeleccionarTodos");
+  if (todos) {
+    const claves = visibles.map((u) => u.usuario);
+    todos.checked = Boolean(claves.length && claves.every((id) => adminUsuariosSeleccionados.has(id)));
+    todos.indeterminate = Boolean(claves.some((id) => adminUsuariosSeleccionados.has(id)) && !todos.checked);
+  }
+}
+
+async function aplicarAccionMasivaUsuarios(accion) {
+  const seleccion = usuarios.filter((u) => adminUsuariosSeleccionados.has(u.usuario));
+  if (!seleccion.length || !["activar", "desactivar"].includes(accion)) return;
+  const activo = accion === "activar";
+  const confirmado = await window.AppDialog?.confirm({
+    titulo: activo ? "Activar usuarios" : "Desactivar usuarios",
+    mensaje: `${activo ? "Se activarán" : "Se desactivarán"} ${seleccion.length} usuario${seleccion.length === 1 ? "" : "s"}.`,
+    confirmarTexto: activo ? "Activar" : "Desactivar",
+    cancelarTexto: "Cancelar",
+    peligro: !activo,
+  });
+  if (!confirmado) return;
+  for (const u of seleccion) {
+    if (!activo && u.usuario === window.AutoservicioAuth?.getUsuario?.()?.usuario) continue;
+    await api(`/admin/usuarios/${encodeURIComponent(u.usuario)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ activo }) });
+  }
+  adminUsuariosSeleccionados.clear();
+  await cargarUsuarios();
+  mensaje(activo ? "Usuarios activados." : "Usuarios desactivados.", "ok");
 }
 
 async function eliminarUsuario(clave) {
@@ -747,12 +1054,19 @@ async function eliminarUsuario(clave) {
     await api(`/admin/usuarios/${encodeURIComponent(clave)}`, {
       method: "DELETE",
     });
-    await Promise.all([cargarUsuarios(), cargarSectores()]);
+    await Promise.all([cargarUsuarios(), cargarSectores(), cargarHistorialAdministracion()]);
     mensaje("Usuario eliminado", "ok");
   } catch (e) {
     mensaje(e.message, "error");
     botones.forEach((b) => (b.disabled = false));
   }
+}
+
+function actualizarAccionesModalUsuario(editando) {
+  const eliminar = $("btnAdminEliminarUsuario");
+  const acciones = $("adminUsuarioModalAcciones");
+  eliminar?.classList.toggle("oculto", !editando);
+  acciones?.classList.toggle("solo-guardar", !editando);
 }
 
 async function abrirNuevoUsuario() {
@@ -766,18 +1080,27 @@ async function abrirNuevoUsuario() {
   $("adminUsuarioUsuario").value = "";
   $("adminUsuarioUsuario").disabled = false;
   $("adminUsuarioPassword").value = "";
-  $("adminUsuarioPassword").placeholder = "Mínimo 4 caracteres";
+  restablecerVisibilidadPasswordUsuario();
+  $("adminUsuarioPassword").placeholder = "Mínimo 8 caracteres";
+  if ($("adminUsuarioPasswordAyuda")) $("adminUsuarioPasswordAyuda").textContent = "Mínimo 8 caracteres.";
+  if ($("btnAdminGuardarUsuario")) $("btnAdminGuardarUsuario").textContent = "Crear usuario";
+  actualizarAccionesModalUsuario(false);
   $("adminUsuarioRol").value = "personal";
-  poblarSectoresUsuario("");
+  poblarSectoresUsuario("", "");
   aplicarPermisosModal(null, "personal");
   $("adminUsuarioActivo").checked = true;
   $("adminUsuarioActivoFila").classList.add("oculto");
+  $("adminUsuarioEstadoSeccion")?.classList.add("oculto");
   limpiarMensajeUsuarioModal();
   cerrarSelectorPermisosUsuario();
+  cerrarSelectoresInlineUsuario();
   actualizarResumenPermisosUsuario();
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
+  const cuerpoUsuario = $("adminUsuarioModal")?.querySelector(".admin-user-modal-body");
+  if (cuerpoUsuario) cuerpoUsuario.scrollTop = 0;
   usuarioModalInicial = estadoUsuarioModal();
+  actualizarEstadoGuardarUsuario();
 }
 
 function abrirEditarUsuario(clave) {
@@ -795,7 +1118,11 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioUsuario").value = u.usuario;
   $("adminUsuarioUsuario").disabled = true;
   $("adminUsuarioPassword").value = "";
+  restablecerVisibilidadPasswordUsuario();
   $("adminUsuarioPassword").placeholder = "Dejar vacío para no cambiar";
+  if ($("adminUsuarioPasswordAyuda")) $("adminUsuarioPasswordAyuda").textContent = "Dejá el campo vacío para conservar la contraseña actual.";
+  if ($("btnAdminGuardarUsuario")) $("btnAdminGuardarUsuario").textContent = "Guardar cambios";
+  actualizarAccionesModalUsuario(true);
   const rol = [
     "administrador",
     "administracion",
@@ -810,14 +1137,19 @@ function abrirEditarUsuario(clave) {
     (u.sectores || []).find((x) => x && x !== u.sector) || "",
   );
   aplicarPermisosModal(u.permisos, rol);
-  $("adminUsuarioActivo").checked = u.activo;
+  $("adminUsuarioActivo").checked = u.activo !== false;
   $("adminUsuarioActivoFila").classList.remove("oculto");
+  $("adminUsuarioEstadoSeccion")?.classList.remove("oculto");
   limpiarMensajeUsuarioModal();
   cerrarSelectorPermisosUsuario();
+  cerrarSelectoresInlineUsuario();
   actualizarResumenPermisosUsuario();
   $("adminUsuarioModal").classList.remove("oculto");
   document.body.classList.add("modal-abierto");
+  const cuerpoUsuario = $("adminUsuarioModal")?.querySelector(".admin-user-modal-body");
+  if (cuerpoUsuario) cuerpoUsuario.scrollTop = 0;
   usuarioModalInicial = estadoUsuarioModal();
+  actualizarEstadoGuardarUsuario();
 }
 
 function estadoUsuarioModal() {
@@ -831,6 +1163,41 @@ function estadoUsuarioModal() {
     permisos: leerPermisosModal(),
     password: $("adminUsuarioPassword")?.value || "",
   });
+}
+
+function actualizarEstadoGuardarUsuario() {
+  const boton = $("btnAdminGuardarUsuario");
+  if (!boton || $("adminUsuarioModal")?.classList.contains("oculto")) return;
+  const editando = Boolean($("adminUsuarioOriginal")?.value);
+  const sinCambios = editando && Boolean(usuarioModalInicial) && estadoUsuarioModal() === usuarioModalInicial;
+  boton.disabled = sinCambios;
+  boton.setAttribute("aria-disabled", String(sinCambios));
+  boton.title = sinCambios ? "Modificá algún dato para guardar cambios" : "";
+}
+
+function restablecerVisibilidadPasswordUsuario() {
+  const input = $("adminUsuarioPassword");
+  const boton = $("btnAdminUsuarioPasswordVisible");
+  if (input) input.type = "password";
+  if (boton) {
+    boton.setAttribute("aria-pressed", "false");
+    boton.setAttribute("aria-label", "Mostrar contraseña");
+    const use = boton.querySelector("use");
+    if (use) use.setAttribute("href", "#icon-eye");
+  }
+}
+
+function alternarVisibilidadPasswordUsuario() {
+  const input = $("adminUsuarioPassword");
+  const boton = $("btnAdminUsuarioPasswordVisible");
+  if (!input || !boton) return;
+  const mostrar = input.type === "password";
+  input.type = mostrar ? "text" : "password";
+  boton.setAttribute("aria-pressed", String(mostrar));
+  boton.setAttribute("aria-label", mostrar ? "Ocultar contraseña" : "Mostrar contraseña");
+  const use = boton.querySelector("use");
+  if (use) use.setAttribute("href", mostrar ? "#icon-eye-off" : "#icon-eye");
+  input.focus({ preventScroll: true });
 }
 
 function asegurarMensajeUsuarioModal() {
@@ -877,6 +1244,8 @@ function limpiarMensajeUsuarioModal() {
 function cerrarUsuarioModalDirecto() {
   limpiarMensajeUsuarioModal();
   cerrarSelectorPermisosUsuario();
+  cerrarSelectoresInlineUsuario();
+  restablecerVisibilidadPasswordUsuario();
   $("adminUsuarioModal")?.classList.add("oculto");
   document.body.classList.remove("modal-abierto");
   usuarioModalInicial = "";
@@ -923,17 +1292,17 @@ async function guardarUsuario() {
       "error",
     );
   }
-  if (!original && payload.password.length < 4) {
+  if (!original && payload.password.length < 8) {
     $("adminUsuarioPassword")?.focus();
     return mensajeUsuarioModal(
-      "La contraseña debe tener al menos 4 caracteres.",
+      "La contraseña debe tener al menos 8 caracteres.",
       "error",
     );
   }
-  if (original && payload.password && payload.password.length < 4) {
+  if (original && payload.password && payload.password.length < 8) {
     $("adminUsuarioPassword")?.focus();
     return mensajeUsuarioModal(
-      "La contraseña debe tener al menos 4 caracteres.",
+      "La contraseña debe tener al menos 8 caracteres.",
       "error",
     );
   }
@@ -967,7 +1336,7 @@ async function guardarUsuario() {
       });
     cerrarUsuarioModalDirecto();
     mensaje(original ? "Usuario actualizado" : "Usuario creado", "ok");
-    await Promise.all([cargarUsuarios(), cargarSectores()]);
+    await Promise.all([cargarUsuarios(), cargarSectores(), cargarHistorialAdministracion()]);
   } catch (e) {
     mensajeUsuarioModal(e.message, "error");
   } finally {
@@ -1081,27 +1450,101 @@ function actualizarUsuariosHistorial() {
     select.value = actual;
 }
 
+function inicialesHistorial(nombre = "") {
+  return String(nombre || "U")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((parte) => parte[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "U";
+}
+
+function formatearHoraVisible(valor = "") {
+  const match = String(valor || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(valor || "").trim();
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function datosAccionHistorial(accion = "") {
+  const clave = accionNormalizada(accion);
+  if (clave === "elimino") return { clave, etiqueta: "Eliminó", icono: "#icon-trash" };
+  if (clave === "creo") return { clave, etiqueta: "Creó", icono: "#icon-plus-circle" };
+  if (clave === "edito") return { clave, etiqueta: "Editó", icono: "#icon-edit" };
+  return { clave: clave || "movimiento", etiqueta: accion || "Movimiento", icono: "#icon-clock" };
+}
+
+function datosCambioHistorial(item = {}) {
+  const detalle = String(item.detalle || "").trim();
+  const match = detalle.match(/Antes:\s*([^·]+?)\s*·\s*Después:\s*(.+)$/i);
+  if (!match) return null;
+  const antes = match[1].trim().split(/\s*\/\s*/);
+  const despues = match[2].trim().split(/\s*\/\s*/);
+  return {
+    fechaAntes: formatearFechaVisible(antes[0] || ""),
+    fechaDespues: formatearFechaVisible(despues[0] || ""),
+    cantidadAntes: String(antes[1] || "").trim(),
+    cantidadDespues: String(despues[1] || "").trim(),
+  };
+}
+
+function valorVencimientoHistorial(item = {}) {
+  const cambio = datosCambioHistorial(item);
+  const actual = formatearFechaVisible(item.vencimiento || "") || "—";
+  if (accionNormalizada(item.accion) === "edito" && cambio?.fechaAntes && cambio?.fechaDespues && cambio.fechaAntes !== cambio.fechaDespues) {
+    return `<span>${escaparHtml(cambio.fechaAntes)}</span><b class="admin-history-arrow">→</b><span>${escaparHtml(cambio.fechaDespues)}</span>`;
+  }
+  return `<span>${escaparHtml(actual)}</span>`;
+}
+
+function cantidadDetalleHistorial(item = {}) {
+  const detalle = String(item.detalle || "").trim();
+  const match = detalle.match(/(?:^|[·;\s])Cantidad:\s*(-?\d+(?:[.,]\d+)?)/i);
+  return match ? String(match[1]).replace(",", ".").trim() : "";
+}
+
+function valorCantidadHistorial(item = {}) {
+  const cambio = datosCambioHistorial(item);
+  const actual = String(item.cantidad ?? "").trim();
+  if (accionNormalizada(item.accion) === "edito" && cambio?.cantidadAntes && cambio?.cantidadDespues && cambio.cantidadAntes !== cambio.cantidadDespues) {
+    return `<span>${escaparHtml(cambio.cantidadAntes)}</span><b class="admin-history-arrow">→</b><span>${escaparHtml(cambio.cantidadDespues)}</span>`;
+  }
+  const cantidad = actual || cambio?.cantidadDespues || cantidadDetalleHistorial(item);
+  return `<span>${escaparHtml(cantidad || "—")}</span>`;
+}
+
 function renderResumenHistorial(items) {
   const cont = $("adminHistorialResumen");
   if (!cont) return;
+  const periodoTexto = historialPeriodo === "hoy" ? "Hoy" : historialPeriodo === "todo" ? "Todo el historial" : `Últimos ${historialPeriodo} días`;
+  const total = `<div class="admin-history-total-card"><span class="admin-history-total-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-trend-up"></use></svg></span><div><small>Movimientos totales</small><strong>${items.length}</strong><span>${items.length ? periodoTexto : "Sin resultados"}</span></div></div>`;
   if (!items.length) {
-    cont.innerHTML = "";
+    cont.innerHTML = total;
+    cont.classList.add("is-empty");
     return;
   }
+  cont.classList.remove("is-empty");
   const usuarios = new Map();
   items.forEach((item) => {
     const nombre = item.nombre || item.usuario || "Sin usuario";
     usuarios.set(nombre, (usuarios.get(nombre) || 0) + 1);
   });
+  const tonos = ["red", "violet", "green", "amber", "blue", "cyan"];
   const detalle = [...usuarios.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))
     .slice(0, 6)
-    .map(
-      ([nombre, cantidad]) =>
-        `<span><strong>${escaparHtml(nombre)}</strong> ${cantidad}</span>`,
-    )
+    .map(([nombre, cantidad], index) => `<span class="history-user-stat tone-${tonos[index % tonos.length]}"><b>${escaparHtml(inicialesHistorial(nombre))}</b><em><strong>${escaparHtml(nombre)}</strong><small>${cantidad}</small></em></span>`)
     .join("");
-  cont.innerHTML = `<div><strong>${items.length}</strong><span>${items.length === 1 ? "movimiento" : "movimientos"}</span></div><div class="admin-history-summary-users">${detalle}</div>`;
+  cont.innerHTML = `${total}<div class="admin-history-summary-users">${detalle}</div>`;
+}
+
+function formatearFechaVisible(valor = "") {
+  const texto = String(valor || "").trim();
+  if (!texto) return "";
+  const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return texto.replace(/(\d{4})-(\d{2})-(\d{2})/g, (_, y, m, d) => `${d}/${m}/${y}`);
 }
 
 function renderHistorialVencimientos() {
@@ -1111,50 +1554,73 @@ function renderHistorialVencimientos() {
   const filtrados = obtenerHistorialFiltrado();
   renderResumenHistorial(filtrados);
   if (!filtrados.length) {
-    cont.innerHTML =
-      '<div class="empty-state">No hay movimientos que coincidan con los filtros.</div>';
+    cont.innerHTML = '<div class="empty-state admin-history-empty"><svg class="app-icon"><use href="#icon-clock"></use></svg><strong>Sin movimientos</strong><span>No hay movimientos que coincidan con los filtros.</span></div>';
     botonMas?.classList.add("oculto");
+    renderPaginacionHistorial(0, 1);
     return;
   }
-  const visibles = filtrados.slice(0, historialLimite);
-  cont.innerHTML = visibles
-    .map((h, indice) => {
-      const accion = escaparHtml(h.accion || "Movimiento");
-      const articulo = escaparHtml(h.articulo || "Producto");
-      const usuario = escaparHtml(h.nombre || h.usuario || "Sin usuario");
-      const codigo = escaparHtml(h.codigo || "");
-      const vencimiento = escaparHtml(h.vencimiento || "");
-      const detalle = escaparHtml(h.detalle || "");
-      const claseAccion = accionNormalizada(h.accion);
-      return `<article class="admin-history-card accion-${claseAccion}" data-history-index="${indice}">
-      <button type="button" class="admin-history-toggle" aria-expanded="false">
-        <span class="admin-history-action">${accion}</span>
-        <span class="admin-history-main"><strong>${articulo}</strong><small>${escaparHtml(h.fecha || "")} ${escaparHtml(h.hora || "")} · ${usuario}</small></span>
-        <span class="admin-history-chevron" aria-hidden="true">⌄</span>
-      </button>
-      <div class="admin-history-detail oculto">
-        ${codigo ? `<p><b>Código:</b> ${codigo}</p>` : ""}
-        ${vencimiento ? `<p><b>Vencimiento:</b> ${vencimiento}</p>` : ""}
-        ${detalle ? `<p><b>Detalle:</b> ${detalle}</p>` : ""}
+  historialPorPagina = Math.max(1, Number($("adminHistorialPorPagina")?.value || historialPorPagina || 10));
+  const paginas = Math.max(1, Math.ceil(filtrados.length / historialPorPagina));
+  historialPagina = Math.min(Math.max(1, historialPagina), paginas);
+  const inicioPagina = (historialPagina - 1) * historialPorPagina;
+  const visibles = filtrados.slice(inicioPagina, inicioPagina + historialPorPagina);
+  cont.innerHTML = visibles.map((h, indice) => {
+    const accion = datosAccionHistorial(h.accion);
+    const articulo = escaparHtml(h.articulo || "Producto");
+    const usuarioNombre = h.nombre || h.usuario || "Sin usuario";
+    const usuario = escaparHtml(usuarioNombre);
+    const codigo = escaparHtml(h.codigo || "");
+    const fecha = escaparHtml(formatearFechaVisible(h.fecha || "—"));
+    const hora = escaparHtml(formatearHoraVisible(h.hora || ""));
+    return `<article class="admin-history-card accion-${accion.clave}" data-history-index="${inicioPagina + indice}">
+      <div class="admin-history-toggle">
+        <span class="admin-history-action"><svg class="app-icon" aria-hidden="true"><use href="${accion.icono}"></use></svg><span>${escaparHtml(accion.etiqueta)}</span></span>
+        <span class="admin-history-product"><strong>${articulo}</strong><small>${codigo ? `Código: ${codigo}` : "Sin código"}</small></span>
+        <span class="admin-history-detail-summary"><strong>${valorVencimientoHistorial(h)}</strong></span>
+        <span class="admin-history-date"><strong><span>${fecha}</span>${hora ? `<span>${hora}</span>` : ""}</strong></span>
+        <span class="admin-history-user"><span class="admin-history-user-avatar">${escaparHtml(inicialesHistorial(usuarioNombre))}</span><strong>${usuario}</strong></span>
+        <span class="admin-history-quantity"><strong>${valorCantidadHistorial(h)}</strong></span>
       </div>
     </article>`;
-    })
-    .join("");
-  cont.querySelectorAll(".admin-history-toggle").forEach((boton) =>
-    boton.addEventListener("click", () => {
-      const tarjeta = boton.closest(".admin-history-card");
-      const detalle = tarjeta?.querySelector(".admin-history-detail");
-      const abrir = detalle?.classList.contains("oculto");
-      detalle?.classList.toggle("oculto", !abrir);
-      boton.setAttribute("aria-expanded", abrir ? "true" : "false");
-      tarjeta?.classList.toggle("abierta", Boolean(abrir));
-    }),
-  );
-  botonMas?.classList.toggle("oculto", filtrados.length <= historialLimite);
+  }).join("");
+  botonMas?.classList.add("oculto");
+  renderPaginacionHistorial(filtrados.length, paginas);
+}
+
+function renderPaginacionHistorial(total, paginas) {
+  const cont = $("adminHistorialPaginacion");
+  if (!cont) return;
+  if (!total) {
+    cont.innerHTML = "";
+    return;
+  }
+  const botones = [];
+  botones.push(`<button type="button" data-history-page="${Math.max(1, historialPagina - 1)}" ${historialPagina === 1 ? "disabled" : ""} aria-label="Página anterior">«</button>`);
+  const visibles = new Set();
+  if (paginas <= 7) {
+    for (let i = 1; i <= paginas; i += 1) visibles.add(i);
+  } else {
+    [1, 2, 3, paginas, historialPagina - 1, historialPagina, historialPagina + 1].forEach((n) => {
+      if (n >= 1 && n <= paginas) visibles.add(n);
+    });
+  }
+  const orden = [...visibles].sort((a, b) => a - b);
+  let anterior = 0;
+  orden.forEach((pagina) => {
+    if (anterior && pagina - anterior > 1) botones.push('<span class="admin-pagination-ellipsis" aria-hidden="true">…</span>');
+    botones.push(`<button type="button" data-history-page="${pagina}" class="${pagina === historialPagina ? "activo" : ""}">${pagina}</button>`);
+    anterior = pagina;
+  });
+  botones.push(`<button type="button" data-history-page="${Math.min(paginas, historialPagina + 1)}" ${historialPagina === paginas ? "disabled" : ""} aria-label="Página siguiente">»</button>`);
+  cont.innerHTML = botones.join("");
+  cont.querySelectorAll("button[data-history-page]").forEach((btn) => btn.addEventListener("click", () => {
+    historialPagina = Number(btn.dataset.historyPage) || 1;
+    renderHistorialVencimientos();
+  }));
 }
 
 function reiniciarPaginacionHistorial() {
-  historialLimite = 20;
+  historialPagina = 1;
   renderHistorialVencimientos();
 }
 
@@ -1166,40 +1632,62 @@ async function cargarHistorialVencimientos() {
 }
 
 async function cargarTodo() {
-  $("adminServidorEstado").textContent = "Consultando servidor…";
+  establecerTexto("adminHomeNombre", window.AutoservicioAuth?.getUsuario?.()?.nombre || window.AutoservicioAuth?.getUsuario?.()?.usuario || "Administrador");
+  if ($("adminServidorEstado")) $("adminServidorEstado").textContent = "Comprobando";
   try {
     await cargarUsuarios();
-    await Promise.all([
-      cargarResumen(),
-      cargarSectores(),
-      cargarHistorialVencimientos(),
-    ]);
+    await Promise.all([cargarResumen(), cargarSectores(), cargarHistorialVencimientos(), cargarHistorialAdministracion()]);
+    actualizarMetricasAdmin();
+    return true;
   } catch (e) {
-    $("adminServidorEstado").textContent = e.message;
+    if ($("adminServidorEstado")) $("adminServidorEstado").textContent = "Sin conexión";
+    establecerTexto("adminHomeEstado", "Revisar");
+    establecerTexto("adminHomeEstadoDetalle", e.message || "No se pudo consultar el servidor");
     mensaje(e.message, "error");
+    return false;
   }
 }
 
 function cambiarTab(tab) {
-  document
-    .querySelectorAll(".admin-tab")
-    .forEach((b) => b.classList.toggle("activo", b.dataset.adminTab === tab));
-  document
-    .querySelectorAll(".admin-tab-panel")
-    .forEach((p) => p.classList.toggle("oculto", p.id !== `adminTab-${tab}`));
-  const encabezados = {
-    usuarios: ["Usuarios", "Gestión de usuarios", "#icon-user"],
-    sectores: ["Sectores", "Gestión de sectores", "#icon-building"],
-    historial: ["Historial", "Actividad del sistema", "#icon-clipboard"],
-    sistema: ["Sistema", "Configuración general", "#icon-settings"],
-  };
-  const actual = encabezados[tab] || encabezados.usuarios;
-  const titulo = document.getElementById("modulePageTitle");
-  const subtitulo = document.getElementById("modulePageSubtitle");
-  const icono = document.getElementById("modulePageIconUse");
-  if (titulo) titulo.textContent = actual[0];
-  if (subtitulo) subtitulo.textContent = actual[1];
-  if (icono) icono.setAttribute("href", actual[2]);
+  const destino = ["inicio", "usuarios", "sectores", "sistema"].includes(tab) ? tab : "inicio";
+  document.querySelectorAll(".admin-tab-panel").forEach((p) => p.classList.toggle("oculto", p.id !== `adminTab-${destino}`));
+  document.body.dataset.adminView = destino;
+  if (destino === "usuarios") renderUsuarios();
+  if (destino === "sectores") renderSectores();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function actualizarAccionBotonVolverGlobal() {
+  const boton = $("adminHeaderBackBtn");
+  if (!boton) return;
+  const desdeHistorial = document.body.classList.contains("venc-historial-open");
+  const etiqueta = desdeHistorial ? "Volver a Vencimientos" : "Volver al inicio de Administración";
+  boton.setAttribute("aria-label", etiqueta);
+  boton.setAttribute("title", etiqueta);
+}
+
+function abrirHistorialVencimientosUI() {
+  if (!window.AutoservicioAuth?.esAdmin?.()) return;
+  const shell = document.querySelector("#pantallaVencimientos > .venc-pro-shell");
+  const historial = $("vencHistorialAdmin");
+  shell?.classList.add("oculto");
+  historial?.classList.remove("oculto");
+  historial?.setAttribute("aria-hidden", "false");
+  document.body.classList.add("venc-historial-open");
+  actualizarAccionBotonVolverGlobal();
+  cargarHistorialVencimientos().catch((e) => mensaje(e.message, "error"));
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function cerrarHistorialVencimientosUI() {
+  const shell = document.querySelector("#pantallaVencimientos > .venc-pro-shell");
+  const historial = $("vencHistorialAdmin");
+  historial?.classList.add("oculto");
+  historial?.setAttribute("aria-hidden", "true");
+  shell?.classList.remove("oculto");
+  document.body.classList.remove("venc-historial-open");
+  actualizarAccionBotonVolverGlobal();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function abrirAdmin() {
@@ -1477,7 +1965,7 @@ function extraerProductosImportacion(filas, columnas) {
 }
 
 async function importarArchivoCatalogo(archivo) {
-  if (!window.XLSX) throw new Error("No se pudo cargar el lector de Excel");
+  await asegurarXLSX();
   const estado = $("adminImportarEstado");
   estado.textContent = "Validando archivo…";
 
@@ -1617,32 +2105,186 @@ async function confirmarImportacionCatalogo() {
     importacionPendiente = null;
     importacionResumenPendiente = null;
     mensaje("Catálogo reemplazado", "ok");
-    await cargarResumen();
+    await Promise.all([cargarResumen(), cargarHistorialAdministracion()]);
   } finally {
     boton.disabled = false;
     boton.textContent = "Reemplazar catálogo";
   }
 }
 
+async function actualizarSistemaDesdeUI(boton, etiqueta = "Actualizar ahora") {
+  if (!boton || boton.disabled) return;
+  const htmlOriginal = boton.innerHTML;
+  boton.disabled = true;
+  boton.setAttribute("aria-busy", "true");
+  boton.innerHTML = `<svg class="app-icon spin"><use href="#icon-refresh"></use></svg> Actualizando…`;
+  try {
+    const correcto = await cargarTodo();
+    if (correcto) {
+      establecerTexto("adminSyncStatus", "Sincronizado");
+      mensaje("Datos del sistema actualizados.", "ok");
+    }
+  } catch (error) {
+    mensaje(error.message || "No se pudo actualizar el sistema.", "error");
+  } finally {
+    boton.disabled = false;
+    boton.removeAttribute("aria-busy");
+    boton.innerHTML = htmlOriginal || etiqueta;
+  }
+}
+
+async function procesarArchivoImportacionDesdeUI(archivo) {
+  if (!archivo) return;
+  try {
+    await importarArchivoCatalogo(archivo);
+  } catch (error) {
+    establecerTexto("adminImportarEstado", error.message);
+    mensaje(error.message, "error");
+    importacionPendiente = null;
+  }
+}
+
+function exportarRespaldoAdministrativo() {
+  const contenido = {
+    generado: new Date().toISOString(),
+    version: resumenSistema.version || null,
+    build: resumenSistema.build || null,
+    resumen: resumenSistema,
+    usuarios: usuarios.map(({ passwordHash, ...u }) => u),
+    sectores,
+  };
+  const blob = new Blob([JSON.stringify(contenido, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `respaldo-administracion-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 300);
+  mensaje("Respaldo administrativo generado.", "ok");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  instalarEstilosAdminUsuariosV3();
+  [
+    "adminUsuarioRol",
+    "adminUsuarioSector",
+    "adminUsuarioSectorSecundario",
+    "adminSectorSupervisor",
+  ].forEach((id) => {
+    window.AppSelect?.enhance?.(id);
+    const select = $(id);
+    const wrapper = select?.closest(".app-select-custom");
+    wrapper?.classList.add("admin-rubro-app-select");
+    wrapper?.querySelector(".app-select-custom__menu")?.classList.add("admin-rubro-select-menu");
+    const trigger = wrapper?.querySelector(".app-select-custom__trigger");
+    trigger?.addEventListener("click", cerrarSelectorPermisosUsuario, true);
+    preservarScrollModalEnSelect(trigger);
+  });
   prepararSelectorPermisosUsuario();
+  $("adminHeaderBackBtn")?.addEventListener("click", (event) => {
+    if (!document.body.classList.contains("venc-historial-open")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    cerrarHistorialVencimientosUI();
+  }, true);
+  $("adminHeaderBackBtn")?.addEventListener("click", () => cambiarTab("inicio"));
+  document.querySelectorAll('.pro-global-nav[data-modulo="admin"]').forEach((btn) =>
+    btn.addEventListener("click", () =>
+      setTimeout(() => {
+        cambiarTab("inicio");
+        cargarTodo();
+      }, 0),
+    ),
+  );
+  document.querySelectorAll("[data-admin-open]").forEach((btn) => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminOpen)));
+  $("adminUsuariosBuscar")?.addEventListener("input", () => { adminUsuariosPagina = 1; renderUsuarios(); });
+  $("btnAdminMasFiltros")?.addEventListener("click", () => {
+    const panel = $("adminUsuariosFiltrosAvanzados");
+    if (!panel) return;
+    const abrir = panel.classList.contains("oculto");
+    panel.classList.toggle("oculto", !abrir);
+    $("btnAdminMasFiltros")?.setAttribute("aria-expanded", abrir ? "true" : "false");
+  });
+  ["adminUsuariosFiltroEstado", "adminUsuariosFiltroSector", "adminUsuariosFiltroRol", "adminUsuariosOrden", "adminUsuariosPorPagina", "adminUsuariosSoloSinSector", "adminUsuariosMinModulos"].forEach((id) => $(id)?.addEventListener("change", () => { adminUsuariosPagina = 1; renderUsuarios(); }));
+  $("btnAdminLimpiarFiltrosUsuarios")?.addEventListener("click", () => {
+    if ($("adminUsuariosBuscar")) $("adminUsuariosBuscar").value = "";
+    ["adminUsuariosFiltroEstado","adminUsuariosFiltroSector","adminUsuariosFiltroRol","adminUsuariosMinModulos"].forEach((id) => {
+      const select = $(id);
+      if (!select) return;
+      select.value = id === "adminUsuariosMinModulos" ? "0" : "todos";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    if ($("adminUsuariosSoloSinSector")) $("adminUsuariosSoloSinSector").checked = false;
+    adminUsuariosPagina = 1;
+    renderUsuarios();
+  });
+  $("adminUsuariosVistaGrid")?.addEventListener("click", () => { adminUsuariosVista = "grid"; $("adminUsuariosVistaGrid")?.classList.add("activo"); $("adminUsuariosVistaLista")?.classList.remove("activo"); renderUsuarios(); });
+  $("adminUsuariosVistaLista")?.addEventListener("click", () => { adminUsuariosVista = "list"; $("adminUsuariosVistaLista")?.classList.add("activo"); $("adminUsuariosVistaGrid")?.classList.remove("activo"); renderUsuarios(); });
+  $("adminUsuariosSeleccionarTodos")?.addEventListener("change", (event) => { const inputs = [...document.querySelectorAll("#adminUsuariosLista .admin-user-select")]; inputs.forEach((input) => { input.checked = event.target.checked; const clave = input.closest("[data-usuario]")?.dataset.usuario; if (!clave) return; if (event.target.checked) adminUsuariosSeleccionados.add(clave); else adminUsuariosSeleccionados.delete(clave); }); const visibles = inputs.map((input) => ({ usuario: input.closest("[data-usuario]")?.dataset.usuario })).filter((u) => u.usuario); actualizarSeleccionUsuarios(visibles); });
+  $("adminUsuariosAccionMasiva")?.addEventListener("change", async (event) => { const accion = event.target.value; event.target.value = ""; if (accion) await aplicarAccionMasivaUsuarios(accion).catch((e) => mensaje(e.message, "error")); });
+  $("adminSectoresBuscar")?.addEventListener("input", () => { adminSectoresPagina = 1; renderSectores(); });
+  $("adminSectoresFiltroEstado")?.addEventListener("change", () => { adminSectoresPagina = 1; renderSectores(); });
+  $("adminQuickActualizar")?.addEventListener("click", cargarTodo);
+  $("adminQuickImportar")?.addEventListener("click", () => { cambiarTab("sistema"); setTimeout(() => $("adminImportarArchivo")?.click(), 80); });
+  $("adminQuickAyuda")?.addEventListener("click", async () => {
+    const ir = await window.AppDialog?.confirm({
+      titulo: "Centro de ayuda",
+      mensaje: "Usuarios administra cuentas y permisos. Sectores organiza responsables y áreas. Sistema concentra sincronización, catálogo y respaldo. El historial de vencimientos se consulta desde Vencimientos.",
+      confirmarTexto: "Ir a Vencimientos",
+      cancelarTexto: "Cerrar",
+    });
+    if (ir) window.AutoservicioNavigate?.("vencimientos");
+  });
+  document.querySelectorAll("#adminTab-inicio [data-admin-kpi-target]").forEach((tarjeta) => {
+    if (tarjeta.dataset.adminKpiBound === "1") return;
+    tarjeta.dataset.adminKpiBound = "1";
+    const abrir = () => {
+      const destino = tarjeta.dataset.adminKpiTarget;
+      if (destino === "vencimientos") window.AutoservicioNavigate?.("vencimientos");
+      else if (["usuarios", "sectores", "sistema"].includes(destino)) cambiarTab(destino);
+    };
+    tarjeta.addEventListener("click", abrir);
+    tarjeta.addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      abrir();
+    });
+  });
+  $("adminHomeVerHistorial")?.addEventListener("click", () => {
+    adminActividadExpandida = !adminActividadExpandida;
+    renderHomeActividad();
+  });
+  $("btnVencHistorialHeader")?.addEventListener("click", abrirHistorialVencimientosUI);
+  $("btnVencHistorialMobile")?.addEventListener("click", abrirHistorialVencimientosUI);
+  const adminScreenObserver = new MutationObserver(() => {
+    if (document.body.dataset.screen !== "vencimientos" && document.body.classList.contains("venc-historial-open")) cerrarHistorialVencimientosUI();
+  });
+  adminScreenObserver.observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
   $("btnAbrirAdminHome")?.addEventListener("click", abrirAdmin);
-  $("btnAdminActualizar")?.addEventListener("click", cargarTodo);
+  $("btnAdminActualizar")?.addEventListener("click", (event) => actualizarSistemaDesdeUI(event.currentTarget));
+  $("btnAdminSincronizar")?.addEventListener("click", (event) => actualizarSistemaDesdeUI(event.currentTarget, "Sincronizar"));
+  $("btnAdminVerHistorialSistema")?.addEventListener("click", () => {
+    adminActividadExpandida = true;
+    cambiarTab("inicio");
+    renderHomeActividad();
+    setTimeout(() => $("adminHomeActividad")?.closest(".admin-recent-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  });
+  $("btnAdminReportes")?.addEventListener("click", () => { window.AutoservicioNavigate?.("vencimientos"); setTimeout(abrirHistorialVencimientosUI, 80); });
+  $("btnAdminExportarConfig")?.addEventListener("click", exportarRespaldoAdministrativo);
+  $("btnAdminStorageDetalles")?.addEventListener("click", () => cambiarTab("sistema"));
   $("btnAdminNuevoUsuario")?.addEventListener("click", abrirNuevoUsuario);
   $("btnAdminNuevoSector")?.addEventListener("click", () => abrirSectorModal());
   $("btnAdminCerrarSector")?.addEventListener("click", cerrarSectorModal);
-  $("btnAdminCancelarSector")?.addEventListener("click", cerrarSectorModal);
   $("btnAdminGuardarSector")?.addEventListener("click", guardarSector);
   $("adminSectorModal")?.addEventListener("click", (e) => {
     if (e.target.id === "adminSectorModal") cerrarSectorModal();
   });
-  document
-    .querySelector('[data-admin-tab="sectores"]')
-    ?.addEventListener("click", cargarSectores);
+  $("adminSectorModal")?.addEventListener("input", actualizarEstadoGuardarSector);
+  $("adminSectorModal")?.addEventListener("change", actualizarEstadoGuardarSector);
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
-  $("btnAdminCancelarUsuario")?.addEventListener("click", cerrarUsuarioModal);
   $("btnAdminGuardarUsuario")?.addEventListener("click", guardarUsuario);
+  $("btnAdminUsuarioPasswordVisible")?.addEventListener("click", alternarVisibilidadPasswordUsuario);
   $("btnAdminEliminarUsuario")?.addEventListener("click", async () => {
     const usuario = $("adminUsuarioOriginal")?.value;
     if (!usuario) return;
@@ -1653,21 +2295,31 @@ document.addEventListener("DOMContentLoaded", () => {
   $("adminUsuarioModal")?.addEventListener("click", (e) => {
     if (e.target.id === "adminUsuarioModal") cerrarUsuarioModal();
   });
-  $("adminUsuarioModal")?.addEventListener("input", limpiarMensajeUsuarioModal);
-  $("adminUsuarioModal")?.addEventListener(
-    "change",
-    limpiarMensajeUsuarioModal,
-  );
+  $("adminUsuarioModal")?.addEventListener("input", () => {
+    limpiarMensajeUsuarioModal();
+    actualizarEstadoGuardarUsuario();
+  });
+  $("adminUsuarioModal")?.addEventListener("change", () => {
+    limpiarMensajeUsuarioModal();
+    actualizarEstadoGuardarUsuario();
+  });
   $("btnAdminEliminarSector")?.addEventListener("click", eliminarSectorActual);
-  $("adminUsuarioRol")?.addEventListener(
-    "change",
-    actualizarEstadoPermisosPorRol,
-  );
-  document
-    .querySelectorAll(".admin-tab")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => cambiarTab(btn.dataset.adminTab)),
+  $("adminUsuarioRol")?.addEventListener("change", () => {
+    actualizarEstadoPermisosPorRol();
+    actualizarSelectoresUsuario();
+  });
+  $("adminUsuarioSector")?.addEventListener("change", () => {
+    poblarSectoresUsuario(
+      $("adminUsuarioSector")?.value || "",
+      $("adminUsuarioSectorSecundario")?.value || "",
     );
+  });
+  $("adminUsuarioSectorSecundario")?.addEventListener("change", () => {
+    poblarSectoresUsuario(
+      $("adminUsuarioSector")?.value || "",
+      $("adminUsuarioSectorSecundario")?.value || "",
+    );
+  });
   document.querySelectorAll(".admin-period-btn").forEach((btn) =>
     btn.addEventListener("click", () => {
       historialPeriodo = btn.dataset.periodo || "hoy";
@@ -1677,14 +2329,17 @@ document.addEventListener("DOMContentLoaded", () => {
       reiniciarPaginacionHistorial();
     }),
   );
-  $("adminHistorialUsuario")?.addEventListener(
-    "change",
-    reiniciarPaginacionHistorial,
-  );
-  $("adminHistorialAccion")?.addEventListener(
-    "change",
-    reiniciarPaginacionHistorial,
-  );
+  $("adminHistorialUsuario")?.addEventListener("change", () => {
+    const select = $("adminHistorialUsuario");
+    establecerTexto("adminHistorialUsuarioTexto", select?.value ? select.options[select.selectedIndex]?.textContent : "Todos los usuarios");
+    reiniciarPaginacionHistorial();
+  });
+  $("adminHistorialAccion")?.addEventListener("change", () => {
+    const select = $("adminHistorialAccion");
+    establecerTexto("adminHistorialAccionTexto", select?.value ? select.options[select.selectedIndex]?.textContent : "Todas las acciones");
+    reiniciarPaginacionHistorial();
+  });
+  $("adminHistorialPorPagina")?.addEventListener("change", () => { historialPagina = 1; renderHistorialVencimientos(); });
   $("adminHistorialBuscar")?.addEventListener("input", () => {
     clearTimeout(historialBusquedaTimer);
     historialBusquedaTimer = setTimeout(reiniciarPaginacionHistorial, 180);
@@ -1694,16 +2349,28 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   $("adminImportarArchivo")?.addEventListener("change", async (event) => {
     const archivo = event.target.files?.[0];
-    if (!archivo) return;
-    try {
-      await importarArchivoCatalogo(archivo);
-    } catch (error) {
-      $("adminImportarEstado").textContent = error.message;
-      mensaje(error.message, "error");
-      importacionPendiente = null;
-    } finally {
-      event.target.value = "";
+    if (archivo) await procesarArchivoImportacionDesdeUI(archivo);
+    event.target.value = "";
+  });
+  const dropzone = $("adminImportDropzone");
+  dropzone?.addEventListener("click", () => $("adminImportarArchivo")?.click());
+  dropzone?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      $("adminImportarArchivo")?.click();
     }
+  });
+  ["dragenter", "dragover"].forEach((tipo) => dropzone?.addEventListener(tipo, (event) => {
+    event.preventDefault();
+    dropzone.classList.add("is-dragover");
+  }));
+  ["dragleave", "drop"].forEach((tipo) => dropzone?.addEventListener(tipo, (event) => {
+    event.preventDefault();
+    dropzone.classList.remove("is-dragover");
+  }));
+  dropzone?.addEventListener("drop", async (event) => {
+    const archivo = event.dataTransfer?.files?.[0];
+    if (archivo) await procesarArchivoImportacionDesdeUI(archivo);
   });
   $("btnAdminCancelarImportacion")?.addEventListener("click", () => {
     cerrarVistaPreviaImportacion();
@@ -1729,24 +2396,18 @@ document.addEventListener("DOMContentLoaded", () => {
     historialLimite += 20;
     renderHistorialVencimientos();
   });
+  $("btnVencHistorialHeader")?.classList.toggle("oculto", !window.AutoservicioAuth?.esAdmin?.());
+  $("btnVencHistorialMobile")?.classList.toggle("oculto", !window.AutoservicioAuth?.esAdmin?.());
   ocultarPanelAdmin();
   window.addEventListener("autoservicio:sesion", (event) => {
-    if (event.detail?.rol !== "administrador") ocultarPanelAdmin();
+    const esAdmin = event.detail?.rol === "administrador";
+    $("btnVencHistorialHeader")?.classList.toggle("oculto", !esAdmin);
+    $("btnVencHistorialMobile")?.classList.toggle("oculto", !esAdmin);
+    establecerTexto("adminHomeNombre", event.detail?.nombre || event.detail?.usuario || "Administrador");
+    if (!esAdmin) { ocultarPanelAdmin(); cerrarHistorialVencimientosUI(); }
   });
 });
 
-document
-  .getElementById("adminUsuarioRolButton")
-  ?.addEventListener("click", abrirSelectorRolUsuario);
-document
-  .getElementById("adminUsuarioSectorButton")
-  ?.addEventListener("click", () => abrirSelectorSectorUsuario(false));
-document
-  .getElementById("adminUsuarioSectorSecundarioButton")
-  ?.addEventListener("click", () => abrirSelectorSectorUsuario(true));
-document
-  .getElementById("adminSectorSupervisorButton")
-  ?.addEventListener("click", abrirSelectorSupervisorSector);
 document
   .getElementById("adminUsuarioNombre")
   ?.addEventListener("input", (e) => {
@@ -1756,8 +2417,12 @@ document
   });
 
 window.AdminModule = {
+  async abrirTab(tab = "inicio") {
+    await cargarTodo();
+    cambiarTab(tab);
+  },
   reiniciar() {
-    cambiarTab("usuarios");
+    cambiarTab("inicio");
     const buscar = document.getElementById("adminHistorialBuscar");
     if (buscar) buscar.value = "";
     const usuario = document.getElementById("adminHistorialUsuario");

@@ -1,0 +1,12 @@
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
+const ui=read('ui.js'), dc=read('design-components.css'), style=read('style.css'), hor=read('horarios-redesign.css'), uni=read('ui-unification.css');
+if(ui.includes('app-choice-cancel')) throw new Error('El selector compartido conserva el botón Cancelar redundante');
+if(!dc.includes('AUDITORÍA ETAPA 5 · COMPONENTES COMPARTIDOS')) throw new Error('Falta la fuente canónica de componentes');
+if((style.match(/\.app-choice-overlay\s*\{/g)||[]).length) throw new Error('style.css conserva reglas viejas de AppChoice');
+if(hor.includes('horarios-selector-sector-abierto .app-choice-sheet') || hor.includes('horarios-selector-turno-abierto .app-choice-sheet')) throw new Error('Horarios todavía pisa el selector global');
+if(uni.includes('Selector de opciones compartido:')) throw new Error('ui-unification conserva override viejo del selector');
+if(!dc.includes('body.modal-abierto :is(.inventory-fab')) throw new Error('Los FAB no se ocultan con modal abierto');
+console.log('auditoria-mobile-etapa5 OK');

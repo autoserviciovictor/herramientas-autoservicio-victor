@@ -1,0 +1,18 @@
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
+const tareas=read('tareas-redesign.css');
+const horarios=read('horarios-redesign.css');
+const style=read('style.css');
+const index=read('index.html');
+const version=JSON.parse(read('version.json'));
+if(!version.assetBuild || !index.includes(`?v=${version.assetBuild}`)) throw new Error('Build D21 vigente ausente');
+if(tareas.includes('grid-template-columns: 154px repeat(7, 111px)')) throw new Error('Planificación conserva columnas móviles comprimidas');
+if(tareas.includes('white-space: nowrap !important;\n    overflow: hidden !important;\n    text-overflow: ellipsis !important;\n    overflow-wrap: normal !important;')) throw new Error('Planificación conserva truncado viejo');
+if(!tareas.includes('grid-template-columns: 180px repeat(7, 124px)')) throw new Error('Planificación no usa ancho legible');
+if(!horarios.includes('width: 1686px !important')) throw new Error('Calendario no amplió columnas móviles');
+if(horarios.includes('width: 1552px !important')) throw new Error('Calendario conserva ancho móvil viejo');
+if(!style.includes('max-height: min(46dvh, 360px)')) throw new Error('Precios no limita sugerencias móvil');
+if(!style.includes('.repo-write-actions .cancel-btn { display:none !important; }')) throw new Error('Escribir lista conserva Cancelar redundante');
+console.log('auditoria-mobile-etapa6 OK');

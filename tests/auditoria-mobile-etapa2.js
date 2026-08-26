@@ -1,0 +1,21 @@
+const fs = require('fs');
+const assert = require('assert');
+const app = fs.readFileSync('app.js','utf8');
+const excel = fs.readFileSync('excel.js','utf8');
+const server = fs.readFileSync('server.js','utf8');
+const tareas = fs.readFileSync('tareas.js','utf8');
+const ui = fs.readFileSync('ui-unification.css','utf8');
+const version = JSON.parse(fs.readFileSync('version.json','utf8'));
+
+assert(/^1960-d21-[a-z0-9-]+$/.test(version.assetBuild));
+assert(app.includes('cargarCatalogoMaestroDesdeServidor')); 
+assert(app.includes('asegurarProductoInventarioLocalDesdeMaestro'));
+assert(excel.includes('export function asegurarProductoInventarioLocalDesdeMaestro'));
+assert(server.includes('crearProductoInventarioDesdeMaestro'));
+assert(server.includes('Producto no encontrado en el catálogo'));
+assert(tareas.includes('function opcionSectorTareas'));
+assert(tareas.includes('Sector actual'));
+assert(ui.includes('Auditoría móvil · etapa 2'));
+assert(ui.includes('--app-mobile-gutter: 12px'));
+assert(ui.includes('--app-mobile-control-font: 13px'));
+console.log('Auditoría móvil etapa 2: OK');

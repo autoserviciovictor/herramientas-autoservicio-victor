@@ -1,12 +1,10 @@
-import { API_BASE_URL } from "./config.js?v=12301";
-import { ordenarPorBusqueda } from "./search.js?v=12301";
-import { obtenerJsonCacheado } from "./api-cache.js?v=12301";
+import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { ordenarPorBusqueda } from "./search.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { obtenerJsonCacheado } from "./api-cache.js?v=1960-d21-auditoria-correcciones-260826-d";
 
 let datos = [];
 let catalogoMaestro = [];
 let catalogoMaestroCargado = false;
-let contador = 0;
-let ultimosEscaneados = [];
 const CLAVE_MODIFICACIONES = "inventario_modificaciones_v1";
 
 function leerModificaciones() {
@@ -54,15 +52,30 @@ function normalizarTexto(valor) {
   return String(valor ?? "").trim();
 }
 
+function normalizarCodigo(valor) {
+  let texto = normalizarTexto(valor)
+    .replace(/^'+/, "")
+    .replace(/\s+/g, "");
+  if (!texto) return "";
+  return texto.replace(/^(\d+)[.,]0+$/, "$1");
+}
+
 function armarProducto(fila, indice) {
   const salon = normalizarNumero(fila.salon);
   const deposito = normalizarNumero(fila.deposito);
-  const stock = salon + deposito;
+  const stockUbicaciones = salon + deposito;
+  const stockServidor = normalizarNumero(fila.stock);
+  // Compatibilidad con inventarios históricos: varias filas existentes tienen
+  // stock total cargado aunque Salón/Depósito todavía estén vacíos. No debemos
+  // hacerlas desaparecer de la vista por recalcular el total exclusivamente
+  // desde esas dos columnas. Cuando existen cantidades por ubicación, ellas
+  // siguen siendo la fuente principal.
+  const stock = stockUbicaciones > 0 ? stockUbicaciones : stockServidor;
 
   return {
     indice,
     filaGoogle: fila.filaGoogle,
-    codigo: normalizarTexto(fila.codigo),
+    codigo: normalizarCodigo(fila.codigo),
     articulo: normalizarTexto(fila.articulo) || "Sin descripción",
     salon,
     deposito,
@@ -71,9 +84,9 @@ function armarProducto(fila, indice) {
 }
 
 function guardarProductoLocal(productoActualizado) {
-  const codigo = normalizarTexto(productoActualizado.codigo);
+  const codigo = normalizarCodigo(productoActualizado.codigo);
   const indice = datos.findIndex(
-    (item) => normalizarTexto(item.codigo) === codigo,
+    (item) => normalizarCodigo(item.codigo) === codigo,
   );
 
   const producto = {
@@ -82,7 +95,11 @@ function guardarProductoLocal(productoActualizado) {
     articulo: normalizarTexto(productoActualizado.articulo),
     salon: normalizarNumero(productoActualizado.salon),
     deposito: normalizarNumero(productoActualizado.deposito),
-    stock: normalizarNumero(productoActualizado.stock),
+    stock: Math.max(
+      normalizarNumero(productoActualizado.stock),
+      normalizarNumero(productoActualizado.salon) +
+        normalizarNumero(productoActualizado.deposito),
+    ),
   };
 
   if (indice >= 0) {
@@ -92,14 +109,6 @@ function guardarProductoLocal(productoActualizado) {
 
   datos.push(producto);
   return armarProducto(producto, datos.length - 1);
-}
-
-function registrarUltimo(producto) {
-  ultimosEscaneados = ultimosEscaneados.filter(
-    (item) => item.codigo !== producto.codigo,
-  );
-  ultimosEscaneados.unshift(producto);
-  if (ultimosEscaneados.length > 20) ultimosEscaneados.pop();
 }
 
 async function pedirJson(ruta, opciones = {}) {
@@ -141,7 +150,7 @@ export async function cargarProductosDesdeServidor() {
   const data = await pedirJson("/productos");
   datos = (data.productos || []).map((producto, indice) => ({
     filaGoogle: producto.filaGoogle,
-    codigo: normalizarTexto(producto.codigo),
+    codigo: normalizarCodigo(producto.codigo),
     articulo: normalizarTexto(producto.articulo),
     stock: normalizarNumero(producto.stock),
     salon: normalizarNumero(producto.salon),
@@ -162,7 +171,7 @@ export async function cargarCatalogoMaestroDesdeServidor({
   });
   catalogoMaestro = (data.productos || []).map((producto) => ({
     filaGoogle: producto.filaGoogle,
-    codigo: normalizarTexto(producto.codigo),
+    codigo: normalizarCodigo(producto.codigo),
     articulo: normalizarTexto(producto.articulo) || "Sin descripción",
     precio: Number(producto.precio) || 0,
   }));
@@ -171,9 +180,9 @@ export async function cargarCatalogoMaestroDesdeServidor({
 }
 
 export function buscarProductoMaestroLocalPorCodigo(codigoBuscado) {
-  const codigo = normalizarTexto(codigoBuscado);
+  const codigo = normalizarCodigo(codigoBuscado);
   const producto = catalogoMaestro.find(
-    (item) => normalizarTexto(item.codigo) === codigo,
+    (item) => normalizarCodigo(item.codigo) === codigo,
   );
   return producto ? { encontrado: true, producto } : { encontrado: false };
 }
@@ -194,7 +203,7 @@ export async function sincronizarProductosDesdeServidor() {
 }
 
 export async function obtenerProductoActualizadoPorCodigo(codigoBuscado) {
-  const codigo = normalizarTexto(codigoBuscado);
+  const codigo = normalizarCodigo(codigoBuscado);
   if (!codigo) return { encontrado: false };
 
   const data = await pedirJson(`/producto/${encodeURIComponent(codigo)}`);
@@ -206,9 +215,6 @@ export function obtenerCantidadProductos() {
   return datos.length;
 }
 
-export function obtenerContador() {
-  return contador;
-}
 
 export function obtenerConteosUbicacion() {
   // V3.1.2: los contadores muestran productos distintos contados, no unidades.
@@ -224,9 +230,6 @@ export function obtenerConteosUbicacion() {
   );
 }
 
-export function obtenerUltimosEscaneados() {
-  return [...ultimosEscaneados];
-}
 
 export function obtenerProductos(limite = 40) {
   return datos
@@ -242,14 +245,27 @@ export function obtenerProductosCargados(limite = 80) {
     .slice(0, limite);
 }
 
-export function reiniciarContador() {
-  contador = 0;
-  ultimosEscaneados = [];
-  return contador;
+
+
+export function asegurarProductoInventarioLocalDesdeMaestro(productoMaestro) {
+  const codigo = normalizarCodigo(productoMaestro?.codigo);
+  if (!codigo) return { encontrado: false };
+  const existente = buscarProductoPorCodigo(codigo);
+  if (existente.encontrado) return existente;
+
+  const producto = guardarProductoLocal({
+    filaGoogle: null,
+    codigo,
+    articulo: normalizarTexto(productoMaestro?.articulo) || "Sin descripción",
+    salon: 0,
+    deposito: 0,
+    stock: 0,
+  });
+  return { encontrado: true, producto };
 }
 
 export function buscarProductoPorCodigo(codigoBuscado) {
-  const codigo = normalizarTexto(codigoBuscado);
+  const codigo = normalizarCodigo(codigoBuscado);
   const indice = datos.findIndex(
     (fila) => normalizarTexto(fila.codigo) === codigo,
   );
@@ -295,20 +311,34 @@ export async function guardarCantidadEnProducto(indice, cantidad, ubicacion) {
     method: "POST",
     body: JSON.stringify({
       codigo: productoBase.codigo,
+      articulo: productoBase.articulo,
       ubicacion,
       cantidad: cantidadNumerica,
     }),
   });
 
-  const producto = guardarProductoLocal(data.producto);
+  let producto;
+  if (data.producto) {
+    producto = guardarProductoLocal(data.producto);
+  } else if (data.pendiente || data.offline) {
+    // Auth puede encolar una escritura cuando se corta la red. En ese caso el
+    // backend no devuelve `producto`; mantener la copia local utilizable.
+    const salonActual = normalizarNumero(productoBase.salon);
+    const depositoActual = normalizarNumero(productoBase.deposito);
+    const salon = ubicacion === "salon" ? salonActual + cantidadNumerica : salonActual;
+    const deposito = ubicacion === "deposito" ? depositoActual + cantidadNumerica : depositoActual;
+    producto = guardarProductoLocal({
+      ...productoBase,
+      salon,
+      deposito,
+      stock: normalizarNumero(productoBase.stock) + cantidadNumerica,
+    });
+  } else {
+    throw new Error("El servidor no devolvió el producto actualizado");
+  }
 
-  contador++;
-  // El contador general sigue contando guardados locales.
-  // Los contadores de Salón/Depósito se recalculan aparte por productos con valor > 0.
-
-  registrarUltimo(producto);
   registrarModificacion(producto.codigo);
-  return { producto, contador, ultimos: obtenerUltimosEscaneados() };
+  return { producto, pendiente: Boolean(data.pendiente || data.offline) };
 }
 
 export async function modificarStockProducto(indice, salon, deposito) {
@@ -326,18 +356,66 @@ export async function modificarStockProducto(indice, salon, deposito) {
   });
 
   const producto = guardarProductoLocal(data.producto);
-  registrarUltimo(producto);
   registrarModificacion(producto.codigo);
   return producto;
 }
 
+function enteroVencimientoCompatible(valor) {
+  if (Number.isInteger(valor) && valor >= 0) return valor;
+  const texto = String(valor ?? "").trim();
+  if (!texto) return null;
+  const match = texto.match(/^\d+/);
+  if (!match) return null;
+  const numero = Number(match[0]);
+  return Number.isInteger(numero) && numero >= 0 ? numero : null;
+}
+
+function cantidadVencimientoCompatible(registro = {}) {
+  // V19.6 usa `cantidad`, pero el servidor de producción puede seguir
+  // devolviendo temporalmente el esquema anterior (total / salon / deposito).
+  // Priorizamos cualquier cantidad positiva existente sin inventar valores.
+  const candidatos = [
+    registro.cantidad,
+    registro.total,
+    registro.cantidad_total,
+    registro.cantidadTotal,
+    registro.cantidad_lote,
+    registro.cantidadLote,
+    registro.stock_lote,
+    registro.stockLote,
+    registro.unidades,
+  ];
+  for (const valor of candidatos) {
+    const numero = enteroVencimientoCompatible(valor);
+    if (numero !== null && numero > 0) return numero;
+  }
+
+  const salon = enteroVencimientoCompatible(registro.salon ?? registro["salón"]);
+  const deposito = enteroVencimientoCompatible(
+    registro.deposito ?? registro["depósito"],
+  );
+  const sumaLegacy = Math.max(0, salon || 0) + Math.max(0, deposito || 0);
+  if (sumaLegacy > 0) return sumaLegacy;
+
+  // Solo devolvemos 0 cuando realmente no llegó ninguna cantidad positiva.
+  const cantidad = enteroVencimientoCompatible(registro.cantidad);
+  return cantidad !== null ? cantidad : 0;
+}
+
+function normalizarVencimientoServidor(registro = {}) {
+  return {
+    ...registro,
+    cantidad: cantidadVencimientoCompatible(registro),
+  };
+}
+
 export async function listarVencimientos() {
   const data = await pedirJson("/vencimientos");
-  return data.vencimientos || [];
+  return (data.vencimientos || []).map(normalizarVencimientoServidor);
 }
 
 export async function buscarProductoMaestroPorCodigo(codigoBuscado) {
-  const codigo = normalizarTexto(codigoBuscado);
+  const codigo = normalizarCodigo(codigoBuscado);
   if (!codigo) return { encontrado: false };
   const data = await pedirJson(
     `/producto-maestro/${encodeURIComponent(codigo)}`,
@@ -346,6 +424,7 @@ export async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 export async function guardarVencimiento(registro) {
+  const cantidad = normalizarEntero(registro.cantidad);
   const data = await pedirJson("/vencimientos", {
     method: "POST",
     body: JSON.stringify({
@@ -353,24 +432,30 @@ export async function guardarVencimiento(registro) {
       articulo: normalizarTexto(registro.articulo),
       vencimiento: normalizarTexto(registro.vencimiento),
       rubro: normalizarTexto(registro.rubro),
-      salon: normalizarEntero(registro.salon),
-      deposito: normalizarEntero(registro.deposito),
+      cantidad,
+      // Puente temporal para el backend V19 anterior todavía desplegado:
+      // el backend V19.6 prioriza `cantidad`; el anterior calcula salon+deposito.
+      salon: cantidad,
+      deposito: 0,
     }),
   });
-  return data.vencimiento;
+  return data.vencimiento ? normalizarVencimientoServidor(data.vencimiento) : data.vencimiento;
 }
 
 export async function actualizarVencimiento(id, registro) {
+  const cantidad = normalizarEntero(registro.cantidad);
   const data = await pedirJson(`/vencimientos/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify({
       vencimiento: normalizarTexto(registro.vencimiento),
       rubro: normalizarTexto(registro.rubro),
-      salon: normalizarEntero(registro.salon),
-      deposito: normalizarEntero(registro.deposito),
+      cantidad,
+      // Compatibilidad de escritura con el esquema previo; no aparece en UI.
+      salon: cantidad,
+      deposito: 0,
     }),
   });
-  return data.vencimiento;
+  return data.vencimiento ? normalizarVencimientoServidor(data.vencimiento) : data.vencimiento;
 }
 
 export async function actualizarOfertaVencimiento(id, oferta) {

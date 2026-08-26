@@ -1,345 +1,270 @@
 /* =========================================================
-   v10.4 — App Shell compartido
-   Layout global; no altera la lógica interna de los módulos.
+   D22 · App Shell canónico
+   Una sola base para viewport, anchos, navegación y capas.
+   Las hojas de cada módulo definen únicamente su contenido interno.
    ========================================================= */
 
 :root {
-  --app-shell-header-height: 78px;
-  --app-shell-sidebar-width: 232px;
-  --app-shell-content-max: 1680px;
+  --app-shell-header-height-mobile: 68px;
+  --app-shell-header-height-desktop: 76px;
+  --app-shell-sidebar-width: 236px;
+  --app-shell-desktop-max: 1380px;
+  --app-shell-desktop-edge: 36px;
+  --app-shell-desktop-inline: 0px;
+  --app-shell-mobile-inline: 12px;
+  --app-shell-mobile-top-gap: 12px;
+
+  --app-z-header: 1200;
+  --app-z-fab: 1180;
+  --app-z-drawer: 1400;
+  --app-z-overlay: 2000;
+  --app-z-dialog: 2100;
+  --app-z-notification: 2200;
 }
 
-/* Aísla cada pantalla para evitar que reglas de un módulo contaminen otro. */
-.pantalla { min-width: 0; }
-.pantalla > * { box-sizing: border-box; }
-
-@media (min-width: 901px) {
-  .app {
-    min-height: 100dvh;
-    padding-top: var(--app-shell-header-height) !important;
-  }
-
-  .brand-header {
-    height: var(--app-shell-header-height) !important;
-    min-height: var(--app-shell-header-height) !important;
-  }
-
-  .desktop-module-sidebar {
-    top: var(--app-shell-header-height) !important;
-    width: var(--app-shell-sidebar-width) !important;
-    overflow-x: hidden !important;
-    overscroll-behavior: contain;
-  }
-
-  .desktop-sidebar-nav {
-    align-content: start;
-    min-width: 0;
-  }
-
-  .desktop-sidebar-button {
-    box-sizing: border-box;
-    min-width: 0;
-  }
-
-  .desktop-sidebar-button > span:last-child,
-  .desktop-sidebar-button strong {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  body:not(.en-inicio) .module-page-header,
-  body:not(.en-inicio) .pantalla {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-  }
-
-  body:not(.en-inicio) .module-page-header {
-    position: relative;
-    z-index: 2;
-  }
-
-  body:not(.en-inicio) .pantalla.activa {
-    min-height: calc(100dvh - var(--app-shell-header-height));
-  }
-
-  /* El contenido conserva su ancho útil sin quedar pegado al borde. */
-  body:not(.en-inicio) .pantalla.activa > :not(.app-bottom-nav):not(.venc-bottom-nav) {
-    max-width: var(--app-shell-content-max);
-  }
+html,
+body {
+  min-height: 100%;
 }
 
-@media (max-width: 900px) {
-  :root { --app-shell-header-height: 72px; }
-  body { overflow-x: hidden; }
-  .desktop-module-sidebar { display: none !important; }
+body:not(.login-bloqueado) {
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
+body:not(.login-bloqueado) .app {
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  position: relative;
+}
 
-/* Horarios ya participa del App Shell global; no conserva un sidebar interno. */
+/* Un solo bloqueo de scroll para todos los flujos modales de Entrega 2. */
+body.app-dialog-open,
+body.notification-center-open,
+body.inventory-scan-open,
+body.venc-scan-open,
+body.repo-scan-open,
+body.repo-write-open,
+body.repo-mobile-load-open,
+body.precio-scan-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+.pantalla {
+  min-width: 0;
+}
+
+.pantalla > * {
+  box-sizing: border-box;
+}
+
+/* Horarios ya forma parte del shell general; no conserva columnas laterales
+   internas de implementaciones anteriores. */
 .horarios-shell {
   display: block !important;
   grid-template-columns: none !important;
   min-width: 0;
 }
-.horarios-content { min-width: 0; }
 
-/* Las versiones se mantienen en metadatos, no como ruido visual del shell. */
-.settings-version-card,
-#adminVersionSistema { display: none !important; }
-
-/* =========================================================
-   v12.3.1.2 — Centrado global y anchos responsive
-   Esta hoja carga al final para prevalecer sobre estilos previos.
-   ========================================================= */
-
-/* Escritorio: centrar el encabezado dentro del área útil real,
-   descontando el menú lateral. */
-@media (min-width: 901px) {
-  body:not(.en-inicio) .module-page-header {
-    width: min(var(--module-header-width, 760px), calc(100vw - var(--app-shell-sidebar-width) - 40px)) !important;
-    max-width: var(--module-header-width, 760px) !important;
-    margin-left: max(
-      calc(var(--app-shell-sidebar-width) + 20px),
-      calc(var(--app-shell-sidebar-width) + (100vw - var(--app-shell-sidebar-width) - var(--module-header-width, 760px)) / 2)
-    ) !important;
-    margin-right: 0 !important;
-  }
-
-  /* Calendario conserva su tratamiento de ancho completo. */
-  body.en-horarios.horarios-vista-calendario .module-page-header {
-    width: calc(100vw - var(--app-shell-sidebar-width) - 32px) !important;
-    max-width: none !important;
-    margin-left: calc(var(--app-shell-sidebar-width) + 16px) !important;
-    margin-right: 16px !important;
-  }
-}
-
-/* Móvil y tablet: encabezados amplios y con la misma caja exterior
-   que los bloques principales del módulo. */
-@media (max-width: 900px) {
-  body:not(.en-inicio) .module-page-header,
-  body.en-horarios.horarios-vista-calendario .module-page-header {
-    width: calc(100% - 20px) !important;
-    max-width: none !important;
-    margin: 12px 10px 13px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* En Calendario, mes, sector y editor comparten el mismo ancho exterior. */
-  #pantallaHorarios .horarios-control-deck {
-    width: calc(100% - 20px) !important;
-    margin-left: 10px !important;
-    margin-right: 10px !important;
-    box-sizing: border-box !important;
-  }
+.horarios-content {
+  min-width: 0;
 }
 
 /* =========================================================
-   v12.3.1.3 — Alineación completa del contenido
-   El encabezado y todos los bloques de cada vista comparten
-   el mismo eje central. Calendario móvil recupera ancho útil.
+   MÓVIL / TABLET
    ========================================================= */
-
-@media (min-width: 901px) {
-  /* Centrar el contenido real, no solamente el encabezado. */
-  #pantallaInventario > section,
-  #pantallaProductos > section,
-  #pantallaEditarProducto > section,
-  #pantallaAjustes > section,
-  #pantallaVencimientos > section,
-  #pantallaPrecios > .precios-vista,
-  #pantallaAnotar > section,
-  #pantallaTareas > .tareas-view,
-  #pantallaAdmin > .admin-tab-panel {
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
-  /* Las vistas internas también deben centrar sus tarjetas. */
-  #pantallaPrecios .precios-vista > section,
-  #pantallaAnotar #repoCargaVista > section,
-  #pantallaAnotar #repoRegistroVista > section,
-  #pantallaAnotar #repoEscritaVista > section,
-  #pantallaTareas .tareas-shell,
-  #pantallaAdmin .admin-tab-panel {
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
-  /* Ancho compartido para las pantallas estándar. */
-  body:not(.en-horarios) .pantalla.activa > :not(nav):not(.modal-overlay),
-  body.en-horarios:not(.horarios-vista-calendario) .horarios-content > :not(.horarios-control-deck) {
-    box-sizing: border-box !important;
-  }
-
-  /* Administrador ocupa el área útil y centra cada panel. */
-  #pantallaAdmin.admin-screen {
-    max-width: none !important;
-  }
-  #pantallaAdmin > .admin-tab-panel {
-    width: min(920px, calc(100% - 40px)) !important;
-    max-width: 920px !important;
-  }
-
-  /* Inventario y módulos operativos: mismo centro que el título. */
-  #pantallaInventario,
-  #pantallaProductos,
-  #pantallaEditarProducto,
-  #pantallaAjustes,
-  #pantallaVencimientos,
-  #pantallaPrecios,
-  #pantallaAnotar,
-  #pantallaTareas {
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-  }
-}
-
 @media (max-width: 900px) {
-  /* Calendario móvil: eliminar el límite heredado de escritorio. */
-  body.en-horarios.horarios-vista-calendario #pantallaHorarios,
-  body.en-horarios.horarios-vista-calendario .horarios-shell,
-  body.en-horarios.horarios-vista-calendario .horarios-content,
-  body.en-horarios.horarios-vista-calendario #horariosEquipoView {
+  :root {
+    --app-shell-header-height: calc(
+      var(--app-shell-header-height-mobile) + env(safe-area-inset-top)
+    );
+  }
+
+  body:not(.login-bloqueado) .app {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .pro-desktop-sidebar{
+    display: none !important;
+  }
+
+  /* Inicio conserva su bienvenida propia. En los demás módulos se omite el
+     bloque de título para priorizar contenido, tal como quedó definido. */
+  .mobile-page-title-block { display: none !important; }
+
+  body:not(.en-inicio) .pantalla.activa {
     width: 100% !important;
     max-width: none !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Eje móvil compartido: 12 px por lado en todas las pantallas principales. */
+  #pantallaProductos > .inventory-page-shell,
+  #pantallaVencimientos > .venc-pro-shell,
+  #pantallaPrecios > .precios-pro-shell,
+  #pantallaPrecios > .precios-vista,
+  #pantallaHorarios > .horarios-shell,
+  #pantallaAnotar > .repo-pro-shell,
+  #pantallaAjustes > .user-settings-shell,
+  #pantallaAdmin > .admin-message,
+  #pantallaAdmin > .admin-tab-panel {
+    width: calc(100% - (var(--app-shell-mobile-inline) * 2)) !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .pro-topbar.brand-header {
+    z-index: var(--app-z-header) !important;
+  }
+
+  
+
+  .inventory-fab,
+  .vencimientos-fab,
+  .repo-fab,
+  .precios-fab {
+    position: fixed !important;
+    z-index: var(--app-z-fab) !important;
+    right: max(18px, calc((100vw - min(520px, 100vw)) / 2 + 18px)) !important;
+    left: auto !important;
+    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+    width: 58px !important;
+    min-width: 58px !important;
+    max-width: 58px !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+    display: grid !important;
+    place-items: center !important;
+    flex: 0 0 58px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 19px !important;
+    background: linear-gradient(145deg, #ef393f, #d92734) !important;
+    color: #fff !important;
+    box-shadow: 0 14px 30px rgba(205, 39, 52, .34), 0 3px 8px rgba(36, 39, 44, .16) !important;
+    cursor: pointer !important;
+    touch-action: manipulation;
+    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease !important;
+    pointer-events: auto !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-fab > span,
+  .vencimientos-fab > span,
+  .repo-fab > span,
+  .precios-fab > span {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 38px !important;
+    line-height: 1 !important;
+    font-weight: 300 !important;
+    transform: none !important;
+  }
+
+  .inventory-fab:active,
+  .vencimientos-fab:active,
+  .repo-fab:active,
+  .precios-fab:active {
+    transform: scale(.96) !important;
+  }
+
+  .inventory-fab:focus-visible,
+  .vencimientos-fab:focus-visible,
+  .repo-fab:focus-visible,
+  .precios-fab:focus-visible {
+    outline: 3px solid rgba(239, 57, 63, .24) !important;
+    outline-offset: 4px !important;
+  }
+
+  .inventory-fab.oculto,
+  .vencimientos-fab.oculto,
+  .repo-fab.oculto,
+  .precios-fab.oculto {
+    display: none !important;
+  }
+
+  
+
+  #userDropdown.pro-mobile-drawer {
+    z-index: var(--app-z-drawer) !important;
+  }
+
+  /* Entrega 2 fix 3 · Mi lista
+     FAB y selector viven portalizados en <body> y por encima de cualquier
+     tarjeta, navegación o stacking-context heredado del módulo. */
+  body[data-screen="anotar"] #repoFab,
+  body.en-anotar #repoFab {
+    z-index: 22040 !important;
+    pointer-events: auto !important;
+    isolation: isolate;
+  }
+
+  #repoMobileLoadMenu.repo-mobile-load-sheet {
+    z-index: 22060 !important;
+    pointer-events: auto !important;
+  }
+
+  #repoMobileLoadMenu .repo-mobile-load-backdrop,
+  #repoMobileLoadMenu .repo-mobile-load-dialog,
+  #repoMobileLoadMenu .repo-mobile-load-options,
+  #repoMobileLoadMenu .repo-mobile-load-options > button {
+    pointer-events: auto !important;
+  }
+
+}
+
+/* =========================================================
+   ESCRITORIO
+   La propia .app reserva el sidebar. Ningún <main> vuelve a sumar ese ancho.
+   ========================================================= */
+@media (min-width: 901px) {
+  .inventory-fab,
+  .vencimientos-fab,
+  .repo-fab,
+  .precios-fab {
+    display: none !important;
+  }
+
+  body:not(.login-bloqueado) .app {
+    min-height: 100dvh !important;
+  }
+
+  .pro-desktop-sidebar{
+    width: var(--app-shell-sidebar-width) !important;
+  }
+
+  
+
+  
+
+  
+
+  /* El ancho exterior de los módulos se define en desktop-layout.css.
+     Acá sólo se garantiza que cada pantalla parta del área útil ya reservada. */
+  body:not(.en-inicio) .pantalla.activa {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
     box-sizing: border-box !important;
-  }
-
-  body.en-horarios.horarios-vista-calendario .horarios-content {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-
-  /* Encabezado y controles usan el mismo margen que las tarjetas móviles. */
-  body.en-horarios.horarios-vista-calendario .module-page-header,
-  body.en-horarios.horarios-vista-calendario #horariosControlDeck {
-    width: calc(100% - 20px) !important;
-    max-width: none !important;
-    margin-left: 10px !important;
-    margin-right: 10px !important;
-  }
-
-  body.en-horarios.horarios-vista-calendario .horarios-board-card,
-  body.en-horarios.horarios-vista-calendario .horarios-estadisticas,
-  body.en-horarios.horarios-vista-calendario .horarios-bottom-grid {
-    width: calc(100% - 20px) !important;
-    max-width: none !important;
-    margin-left: 10px !important;
-    margin-right: 10px !important;
-    box-sizing: border-box !important;
-  }
-
-  body.en-horarios.horarios-vista-calendario .horarios-table-wrap {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-}
-
-/* =========================================================
-   v12.3.1.5 — Layout Desktop unificado
-   Todas las vistas estándar comparten ancho y eje. Calendario es excepción.
-   ========================================================= */
-:root{--desktop-page-width:980px}
-@media (min-width:901px){
-  body:not(.en-inicio):not(.horarios-vista-calendario) .module-page-header{
-    width:min(var(--desktop-page-width),calc(100vw - var(--app-shell-sidebar-width) - 40px))!important;
-    max-width:var(--desktop-page-width)!important;
-    margin-left:calc(var(--app-shell-sidebar-width) + (100vw - var(--app-shell-sidebar-width) - min(var(--desktop-page-width),calc(100vw - var(--app-shell-sidebar-width) - 40px))) / 2)!important;
-    margin-right:0!important;
-    left:auto!important;
-  }
-
-  /* Contenedor base de pantallas estándar. */
-  body:not(.en-inicio):not(.horarios-vista-calendario) .pantalla.activa{
-    padding-left:20px!important;
-    padding-right:20px!important;
-    box-sizing:border-box!important;
-  }
-  body:not(.en-inicio):not(.horarios-vista-calendario) .pantalla.activa > :not(.app-bottom-nav):not(.venc-bottom-nav):not(.modal-overlay):not(.desktop-module-sidebar),
-  body:not(.en-inicio):not(.horarios-vista-calendario) #pantallaHorarios .horarios-content > :not(.horarios-bottom-nav){
-    width:min(var(--desktop-page-width),100%)!important;
-    max-width:var(--desktop-page-width)!important;
-    margin-left:auto!important;
-    margin-right:auto!important;
-    box-sizing:border-box!important;
-  }
-
-  /* Vistas internas que antes conservaban un ancho/margen propio. */
-  #pantallaPrecios .precios-vista,
-  #pantallaAnotar .repo-view,
-  #pantallaTareas .tareas-view,
-  #pantallaTareas .tareas-shell,
-  #pantallaAdmin .admin-tab-panel,
-  #pantallaHorarios #miHorarioView,
-  #pantallaHorarios #horariosConfigView,
-  #pantallaHorarios .horarios-config-view{
-    width:min(var(--desktop-page-width),100%)!important;
-    max-width:var(--desktop-page-width)!important;
-    margin-left:auto!important;
-    margin-right:auto!important;
-    box-sizing:border-box!important;
-  }
-
-  /* Calendario: única vista de ancho completo. */
-  body.en-horarios.horarios-vista-calendario .module-page-header{
-    width:calc(100vw - var(--app-shell-sidebar-width) - 32px)!important;
-    max-width:none!important;
-    margin-left:calc(var(--app-shell-sidebar-width) + 16px)!important;
-  }
-}
-
-/* Usuarios: información sin superposición y acciones al pie. */
-@media (min-width:901px){
-  #adminUsuariosLista .admin-user-card-v1203{
-    display:grid!important;
-    grid-template-rows:auto auto!important;
-    min-height:154px!important;
-    padding:16px!important;
-    gap:12px!important;
-  }
-  #adminUsuariosLista .admin-user-main{
-    display:grid!important;
-    grid-template-columns:44px minmax(0,1fr)!important;
-    align-items:start!important;
-    gap:11px!important;
-    padding-right:78px!important;
-  }
-  #adminUsuariosLista .admin-user-copy{
-    display:flex!important;
-    flex-direction:column!important;
-    align-items:flex-start!important;
-    gap:2px!important;
-    min-width:0!important;
-  }
-  #adminUsuariosLista .admin-user-copy>strong,
-  #adminUsuariosLista .admin-user-copy>span{
-    display:block!important;
-    width:100%!important;
-    max-width:100%!important;
-    white-space:nowrap!important;
-    overflow:hidden!important;
-    text-overflow:ellipsis!important;
-  }
-  #adminUsuariosLista .admin-user-module-count{
-    position:static!important;
-    grid-column:auto!important;
-    grid-row:auto!important;
-    margin-top:6px!important;
-    width:max-content!important;
-    max-width:100%!important;
-    white-space:nowrap!important;
-  }
-  #adminUsuariosLista .admin-user-card-buttons{
-    align-self:end!important;
-    margin-top:auto!important;
-    width:100%!important;
-    display:grid!important;
-    grid-template-columns:1fr 1fr!important;
-    gap:8px!important;
   }
 }

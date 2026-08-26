@@ -1,0 +1,11 @@
+const fs = require('fs');
+const assert = require('assert');
+const app = fs.readFileSync('app.js','utf8');
+const excel = fs.readFileSync('excel.js','utf8');
+const server = fs.readFileSync('server.js','utf8');
+assert(!app.includes('obtenerCantidadProductos() === 0\n  )\n    return'), 'Inventario no debe bloquear sincronización cuando está vacío');
+assert(app.includes('No se pudo recargar Inventario después del login'), 'Debe recargar Inventario tras validar sesión');
+assert(app.includes('if (window.AutoservicioAuth?.getToken?.()) await cargarProductos();'), 'No debe leer inventario protegido antes de tener token');
+assert(excel.includes('else if (data.pendiente || data.offline)'), 'La carga debe tolerar respuesta offline encolada');
+assert(server.includes('codigo: normalizarCodigo(fila[0])'), 'Backend debe normalizar códigos de Stock');
+console.log('Inventario fix5 regression tests: OK');

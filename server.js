@@ -8,20 +8,26 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const APP_VERSION = "12.4.2";
+app.set("trust proxy", 1);
+const APP_VERSION = "19.6.0";
+const APP_BUILD = "D21";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = "Stock";
 const PRODUCTOS_SHEET_NAME = "Productos";
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
+const GOOGLE_LOGIN_CLIENT_ID = normalizarTexto(process.env.GOOGLE_LOGIN_CLIENT_ID);
+const GOOGLE_LOGIN_DOMAIN = normalizarTexto(process.env.GOOGLE_LOGIN_DOMAIN).toLowerCase();
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(
   /\\n/g,
   "\n",
 );
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
-const USER_SESSION_DAYS = 30;
+const USER_SESSION_DAYS = Math.max(1, Math.min(30, Number(process.env.USER_SESSION_DAYS) || 7));
+const AUTO_MIGRATE_SHEETS =
+  String(process.env.AUTO_MIGRATE_SHEETS || "").trim().toLowerCase() === "true";
 const USUARIOS_SHEET_NAME = "Usuarios";
 const SECTORES_SHEET_NAME = "Sectores";
 const AUDITORIA_HORARIOS_SHEET_NAME = "Auditoría Horarios";
@@ -31,9 +37,11 @@ const ORDEN_HORARIOS_SHEET_NAME = "Orden Personal Horarios";
 const DETALLES_HORARIOS_SHEET_NAME = "Detalles Horarios";
 const REEMPLAZOS_HORARIOS_SHEET_NAME = "Reemplazos Horarios";
 const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
+const HISTORIAL_ADMIN_SHEET_NAME = "Historial Administración";
 const PUSH_SUBSCRIPTIONS_SHEET_NAME = "Notificaciones Suscripciones";
 const NOTIFICATION_LOG_SHEET_NAME = "Notificaciones Vencimientos";
 const NOTIFICATION_CENTER_SHEET_NAME = "Centro Notificaciones";
+const OFFLINE_OPERATIONS_SHEET_NAME = "Operaciones Offline";
 const TAREAS_SHEET_NAME = "Tareas";
 const TAREAS_BANO_SHEET_NAME = "Tareas_Bano";
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
@@ -58,18 +66,31 @@ const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
 app.use(
   cors({
     origin(origen, callback) {
-      if (
-        !origen ||
-        ALLOWED_ORIGINS.length === 0 ||
-        ALLOWED_ORIGINS.includes(origen)
-      ) {
+      if (!origen) return callback(null, true);
+      if (ALLOWED_ORIGINS.includes(origen)) return callback(null, true);
+      // En desarrollo se conserva la comodidad anterior. En producción, si no
+      // se configura ALLOWED_ORIGINS, los navegadores quedan bloqueados por defecto.
+      if (process.env.NODE_ENV !== "production" && ALLOWED_ORIGINS.length === 0)
         return callback(null, true);
-      }
       return callback(new Error("Origen no permitido por CORS"));
     },
   }),
 );
+app.disable("x-powered-by");
 app.use(express.json({ limit: "10mb" }));
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
+    "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  });
+  if (process.env.NODE_ENV === "production") {
+    res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
 
 const auth = new google.auth.JWT(
   GOOGLE_CLIENT_EMAIL,
@@ -79,6 +100,7 @@ const auth = new google.auth.JWT(
 );
 
 const sheets = google.sheets({ version: "v4", auth });
+const googleLoginAuth = new google.auth.OAuth2();
 
 // V5.1.1 - Caché breve y deduplicación de lecturas para no exceder la cuota de Google Sheets.
 const cacheLecturas = new Map();
@@ -91,8 +113,9 @@ const CACHE_TTL = {
   metadata: 300000,
   usuarios: 15000,
   sectores: 20000,
-  turnosHorarios: 20000,
-  calendarioHorarios: 15000,
+  turnosHorarios: 300000,
+  calendarioHorarios: 60000,
+  tareas: 60000,
   suscripcionesPush: 60000,
   clavesNotificaciones: 60000,
   centroNotificaciones: 30000,
@@ -191,14 +214,6 @@ function normalizarCodigo(codigo) {
   return texto;
 }
 
-function claveCodigo(codigo) {
-  const texto = normalizarCodigo(codigo);
-  if (!texto) return "";
-  // Para comparar códigos exclusivamente numéricos, ignorar ceros iniciales.
-  // El código original se conserva para mostrarlo y escribirlo en Productos.
-  if (/^\d+$/.test(texto)) return texto.replace(/^0+(?=\d)/, "");
-  return texto;
-}
 
 function numero(valor) {
   const n = Number(valor);
@@ -320,19 +335,13 @@ function obtenerTokenAdmin(req) {
     : "";
 }
 
-function requerirAdmin(req, res, next) {
-  const sesion = verificarTokenAdmin(obtenerTokenAdmin(req));
-  if (!sesion)
-    return res.status(401).json({
-      ok: false,
-      mensaje: "Sesión de administrador inválida o vencida",
-    });
-  req.admin = sesion;
-  next();
-}
 
 function normalizarUsuario(valor) {
   return normalizarTexto(valor).toLowerCase().replace(/\s+/g, "");
+}
+
+function normalizarEmail(valor) {
+  return normalizarTexto(valor).trim().toLowerCase();
 }
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
@@ -378,20 +387,34 @@ function normalizarRol(valor) {
 function permisosPorDefecto() {
   return Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, true]));
 }
+function permisosDenegados() {
+  return Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, false]));
+}
 function normalizarPermisos(valor, rol = "personal") {
   if (rol === "administrador") return permisosPorDefecto();
+
+  // Compatibilidad con usuarios históricos que tenían la celda vacía:
+  // se conservan sus módulos actuales. En cambio, JSON inválido u objetos
+  // incompletos quedan cerrados por defecto para evitar permisos "fail-open".
+  const esVacio =
+    valor === undefined ||
+    valor === null ||
+    (typeof valor === "string" && !valor.trim());
+  if (esVacio) return permisosPorDefecto();
+
   let entrada = valor;
-  if (typeof valor === "string" && valor.trim()) {
+  if (typeof valor === "string") {
     try {
       entrada = JSON.parse(valor);
     } catch {
-      entrada = {};
+      return permisosDenegados();
     }
   }
   if (!entrada || typeof entrada !== "object" || Array.isArray(entrada))
-    entrada = {};
+    return permisosDenegados();
+
   return Object.fromEntries(
-    MODULOS_PERMITIDOS.map((m) => [m, entrada[m] !== false]),
+    MODULOS_PERMITIDOS.map((m) => [m, entrada[m] === true]),
   );
 }
 function serializarPermisos(permisos, rol) {
@@ -429,21 +452,38 @@ async function asegurarHojaUsuarios() {
       "Permisos módulos",
       "Sector",
       "Sectores a cargo",
+      "Versión sesión",
+      "Email Google",
     ];
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A1:I2`,
+      range: `${USUARIOS_SHEET_NAME}!A1:K`,
     });
     const filas = respuesta.data.values || [];
     if (!filas[0] || encabezados.some((titulo, i) => filas[0][i] !== titulo)) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A1:I1`,
+        range: `${USUARIOS_SHEET_NAME}!A1:K1`,
         valueInputOption: "USER_ENTERED",
         requestBody: { values: [encabezados] },
       });
     }
-    const tieneUsuarios = filas.slice(1).some((f) => normalizarUsuario(f[0]));
+    const filasUsuarios = filas
+      .slice(1)
+      .map((fila, i) => ({ fila, filaGoogle: i + 2 }))
+      .filter(({ fila }) => normalizarUsuario(fila[0]));
+    for (const { fila, filaGoogle } of filasUsuarios) {
+      const versionSesion = Number.parseInt(fila[9], 10);
+      if (!Number.isInteger(versionSesion) || versionSesion < 1) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${USUARIOS_SHEET_NAME}!J${filaGoogle}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [["1"]] },
+        });
+      }
+    }
+    const tieneUsuarios = filasUsuarios.length > 0;
     if (!tieneUsuarios) {
       if (!ADMIN_KEY)
         throw new Error(
@@ -451,7 +491,7 @@ async function asegurarHojaUsuarios() {
         );
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A:I`,
+        range: `${USUARIOS_SHEET_NAME}!A:K`,
         valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
         requestBody: {
@@ -465,6 +505,8 @@ async function asegurarHojaUsuarios() {
               fechaHoraArgentinaIso(),
               serializarPermisos(null, "administrador"),
               "",
+              "",
+              "1",
               "",
             ],
           ],
@@ -500,6 +542,8 @@ function filaAUsuario(fila, index) {
           .filter(Boolean),
       ),
     ],
+    sessionVersion: Math.max(1, Number.parseInt(fila[9], 10) || 1),
+    googleEmail: normalizarEmail(fila[10]),
   };
 }
 
@@ -508,7 +552,7 @@ async function obtenerUsuarios() {
   return leerConCache("usuarios", CACHE_TTL.usuarios, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A:I`,
+      range: `${USUARIOS_SHEET_NAME}!A:K`,
     });
     const filas = respuesta.data.values || [];
     return filas
@@ -531,6 +575,12 @@ async function requerirSesion(req, res, next) {
       return res
         .status(401)
         .json({ ok: false, mensaje: "Usuario inexistente o desactivado" });
+    const versionToken = Math.max(1, Number.parseInt(sesion.sv, 10) || 1);
+    if (versionToken !== usuario.sessionVersion)
+      return res.status(401).json({
+        ok: false,
+        mensaje: "La sesión fue invalidada. Volvé a iniciar sesión.",
+      });
     req.usuario = {
       usuario: usuario.usuario,
       nombre: usuario.nombre,
@@ -548,16 +598,31 @@ async function requerirSesion(req, res, next) {
   }
 }
 
-async function requerirAdministrador(req, res, next) {
-  await requerirSesion(req, res, () => {
+function requerirAdministrador(req, res, next) {
+  const autorizar = () => {
     if (req.usuario?.rol !== "administrador")
       return res
         .status(403)
         .json({ ok: false, mensaje: "Acceso exclusivo para administradores" });
     req.admin = req.usuario;
-    next();
-  });
+    return next();
+  };
+  if (req.usuario) return autorizar();
+  return requerirSesion(req, res, autorizar);
 }
+
+function requerirAlgunModulo(...modulos) {
+  const permitidos = modulos.filter((m) => MODULOS_PERMITIDOS.includes(m));
+  return (req, res, next) => {
+    if (req.usuario?.rol === "administrador") return next();
+    if (permitidos.some((m) => req.usuario?.permisos?.[m] === true)) return next();
+    return res.status(403).json({
+      ok: false,
+      mensaje: `No tenés permiso para acceder a ${permitidos.join(" / ")}`,
+    });
+  };
+}
+
 
 function validarConfiguracion() {
   if (!SPREADSHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
@@ -568,14 +633,18 @@ function validarConfiguracion() {
 }
 
 function filaAProducto(fila, index) {
+  const stockHoja = numero(fila[2]);
   const salon = numero(fila[3]);
   const deposito = numero(fila[4]);
+  const stockUbicaciones = salon + deposito;
 
   return {
     filaGoogle: index + 2,
-    codigo: normalizarTexto(fila[0]),
+    codigo: normalizarCodigo(fila[0]),
     articulo: normalizarTexto(fila[1]),
-    stock: salon + deposito,
+    // C es el stock total persistido. D y E son el detalle por ubicación.
+    // Los productos históricos pueden tener C > 0 y D/E todavía vacíos.
+    stock: Math.max(stockHoja, stockUbicaciones),
     salon,
     deposito,
   };
@@ -603,10 +672,61 @@ async function buscarProductoPorCodigo(codigoBuscado) {
   return productos.find((producto) => producto.codigo === codigo) || null;
 }
 
-async function actualizarProducto(producto) {
+async function crearProductoInventario(codigoBuscado, articuloSugerido = "") {
+  const codigo = normalizarCodigo(codigoBuscado);
+  if (!codigo) return null;
+
+  // Para altas nuevas no dependemos de una segunda lectura de Inventario.
+  // Google Sheets devuelve el rango de la fila recién agregada y lo usamos
+  // inmediatamente como filaGoogle. Esto evita que caché/latencia hagan que
+  // un producto recién creado parezca inexistente.
+  let articulo = normalizarTexto(articuloSugerido);
+  if (!articulo) {
+    const maestro = await buscarProductoMaestroPorCodigo(codigo);
+    articulo = normalizarTexto(maestro?.articulo);
+  }
+  if (!articulo) return null;
+
+  const respuesta = await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A:E`,
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: {
+      values: [[codigo, articulo, 0, 0, 0]],
+    },
+  });
+
+  const rangoActualizado = normalizarTexto(respuesta?.data?.updates?.updatedRange);
+  const coincidenciaFila = rangoActualizado.match(/![A-Z]+(\d+)(?::[A-Z]+\d+)?$/i);
+  const filaGoogle = coincidenciaFila ? Number(coincidenciaFila[1]) : 0;
+  invalidarCache("productos");
+
+  if (!filaGoogle) {
+    // Fallback excepcional por si la API no devuelve updatedRange.
+    const productoCreado = await buscarProductoPorCodigo(codigo);
+    if (productoCreado) return productoCreado;
+    throw new Error("Google Sheets no informó la fila del producto creado");
+  }
+
+  return {
+    filaGoogle,
+    codigo,
+    articulo,
+    stock: 0,
+    salon: 0,
+    deposito: 0,
+  };
+}
+
+async function actualizarProducto(producto, { recalcularTotal = false } = {}) {
   const salon = numero(producto.salon);
   const deposito = numero(producto.deposito);
-  const stock = salon + deposito;
+  const stockUbicaciones = salon + deposito;
+  const stockActual = numero(producto.stock);
+  const stock = recalcularTotal
+    ? stockUbicaciones
+    : Math.max(stockActual, stockUbicaciones);
 
   const productoActualizado = {
     ...producto,
@@ -638,7 +758,7 @@ async function actualizarProducto(producto) {
 function filaAProductoMaestro(fila, index) {
   return {
     filaGoogle: index + 2,
-    codigo: normalizarTexto(fila[0]),
+    codigo: normalizarCodigo(fila[0]),
     articulo: normalizarTexto(fila[1]),
     precio: numeroPrecio(fila[2]),
   };
@@ -670,14 +790,193 @@ async function buscarProductoMaestroPorCodigo(codigoBuscado) {
   return productos.find((producto) => producto.codigo === codigo) || null;
 }
 
-app.post("/auth/login", async (req, res) => {
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 8;
+const intentosLogin = new Map();
+const limpiezaIntentosLogin = setInterval(() => {
+  const ahora = Date.now();
+  for (const [clave, estado] of intentosLogin) {
+    if (!estado?.inicio || ahora - estado.inicio >= LOGIN_WINDOW_MS)
+      intentosLogin.delete(clave);
+  }
+}, LOGIN_WINDOW_MS);
+limpiezaIntentosLogin.unref?.();
+
+function claveLimiteLogin(req) {
+  const identidad = normalizarUsuario(req.body?.usuario) || (req.body?.credential ? "google" : "anon");
+  return `${req.ip || req.socket?.remoteAddress || "ip"}:${identidad}`;
+}
+
+function limitarLogin(req, res, next) {
+  const ahora = Date.now();
+  const clave = claveLimiteLogin(req);
+  const actual = intentosLogin.get(clave);
+  const estado = !actual || ahora - actual.inicio >= LOGIN_WINDOW_MS
+    ? { inicio: ahora, intentos: 0 }
+    : actual;
+  if (estado.intentos >= LOGIN_MAX_ATTEMPTS) {
+    const espera = Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (ahora - estado.inicio)) / 1000));
+    res.set("Retry-After", String(espera));
+    return res.status(429).json({
+      ok: false,
+      mensaje: "Demasiados intentos de ingreso. Esperá unos minutos y volvé a probar.",
+    });
+  }
+  estado.intentos += 1;
+  intentosLogin.set(clave, estado);
+  next();
+}
+
+function limpiarLimiteLogin(req) {
+  intentosLogin.delete(claveLimiteLogin(req));
+}
+
+function datosSesionUsuario(usuario) {
+  return {
+    usuario: usuario.usuario,
+    nombre: usuario.nombre,
+    rol: usuario.rol,
+    permisos: usuario.permisos,
+    sector: usuario.sector || "",
+    sectores: usuario.sectores || [],
+  };
+}
+
+function responderSesion(res, usuario, extra = {}) {
+  if (!ADMIN_TOKEN_SECRET)
+    return res
+      .status(503)
+      .json({ ok: false, mensaje: "Configurá ADMIN_TOKEN_SECRET en Render" });
+
+  const ahora = Date.now();
+  const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
+  const token = firmarTokenAdmin({
+    usuario: usuario.usuario,
+    nombre: usuario.nombre,
+    rol: usuario.rol,
+    sv: usuario.sessionVersion,
+    iat: ahora,
+    exp,
+  });
+
+  return res.json({
+    ok: true,
+    token,
+    usuario: datosSesionUsuario(usuario),
+    expira: new Date(exp).toISOString(),
+    ...extra,
+  });
+}
+
+async function verificarCredencialGoogle(credential) {
+  if (!GOOGLE_LOGIN_CLIENT_ID) {
+    const error = new Error("El acceso con Google todavía no está configurado");
+    error.status = 503;
+    throw error;
+  }
+  const token = normalizarTexto(credential);
+  if (!token) {
+    const error = new Error("Falta la credencial de Google");
+    error.status = 400;
+    throw error;
+  }
+
+  try {
+    const ticket = await googleLoginAuth.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_LOGIN_CLIENT_ID,
+    });
+    const payload = ticket.getPayload() || {};
+    const email = normalizarEmail(payload.email);
+    if (!email || payload.email_verified !== true) {
+      const error = new Error("Google no pudo verificar el correo de la cuenta");
+      error.status = 401;
+      throw error;
+    }
+    if (
+      GOOGLE_LOGIN_DOMAIN &&
+      !email.endsWith(`@${GOOGLE_LOGIN_DOMAIN}`)
+    ) {
+      const error = new Error(
+        `Usá una cuenta de Google del dominio ${GOOGLE_LOGIN_DOMAIN}`,
+      );
+      error.status = 403;
+      throw error;
+    }
+    return {
+      email,
+      nombre: normalizarTexto(payload.name),
+      subject: normalizarTexto(payload.sub),
+    };
+  } catch (error) {
+    if (error?.status) throw error;
+    const authError = new Error("La sesión de Google no es válida o venció");
+    authError.status = 401;
+    throw authError;
+  }
+}
+
+app.get("/auth/google/config", (req, res) => {
+  res.json({
+    ok: true,
+    enabled: Boolean(GOOGLE_LOGIN_CLIENT_ID),
+    clientId: GOOGLE_LOGIN_CLIENT_ID || "",
+  });
+});
+
+app.use("/auth", (req, res, next) => {
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, private",
+    Pragma: "no-cache",
+    Expires: "0",
+  });
+  next();
+});
+
+app.post("/auth/google", limitarLogin, async (req, res) => {
+  try {
+    const cuentaGoogle = await verificarCredencialGoogle(req.body?.credential);
+    const usuarios = await obtenerUsuarios();
+    const usuario = usuarios.find(
+      (item) => normalizarEmail(item.googleEmail) === cuentaGoogle.email,
+    );
+
+    if (!usuario) {
+      return res.status(409).json({
+        ok: false,
+        vinculacionRequerida: true,
+        email: cuentaGoogle.email,
+        mensaje:
+          "Esta cuenta de Google todavía no está vinculada. Ingresá una vez con tu usuario y contraseña para vincularla.",
+      });
+    }
+    if (!usuario.activo)
+      return res
+        .status(403)
+        .json({ ok: false, mensaje: "Este usuario está desactivado" });
+
+    limpiarLimiteLogin(req);
+    return responderSesion(res, usuario, { metodo: "google" });
+  } catch (error) {
+    console.error("Error en /auth/google:", error);
+    return res.status(error?.status || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo iniciar sesión con Google",
+    });
+  }
+});
+
+app.post("/auth/login", limitarLogin, async (req, res) => {
   try {
     const usuarioBuscado = normalizarUsuario(req.body?.usuario);
     const password = String(req.body?.password ?? "");
+    const googleCredential = normalizarTexto(req.body?.googleCredential);
+
     if (!usuarioBuscado || !password)
       return res
         .status(400)
         .json({ ok: false, mensaje: "Ingresá usuario y contraseña" });
+
     const usuarios = await obtenerUsuarios();
     const usuario = usuarios.find((item) => item.usuario === usuarioBuscado);
     if (
@@ -689,35 +988,50 @@ app.post("/auth/login", async (req, res) => {
         .status(401)
         .json({ ok: false, mensaje: "Usuario o contraseña incorrectos" });
     }
-    if (!ADMIN_TOKEN_SECRET)
-      return res
-        .status(503)
-        .json({ ok: false, mensaje: "Configurá ADMIN_TOKEN_SECRET en Render" });
-    const ahora = Date.now();
-    const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
-    const token = firmarTokenAdmin({
-      usuario: usuario.usuario,
-      nombre: usuario.nombre,
-      rol: usuario.rol,
-      iat: ahora,
-      exp,
-    });
-    res.json({
-      ok: true,
-      token,
-      usuario: {
-        usuario: usuario.usuario,
-        nombre: usuario.nombre,
-        rol: usuario.rol,
-        permisos: usuario.permisos,
-        sector: usuario.sector || "",
-        sectores: usuario.sectores || [],
-      },
-      expira: new Date(exp).toISOString(),
+
+    let googleVinculado = false;
+    if (googleCredential) {
+      const cuentaGoogle = await verificarCredencialGoogle(googleCredential);
+      const otroUsuario = usuarios.find(
+        (item) =>
+          item.usuario !== usuario.usuario &&
+          normalizarEmail(item.googleEmail) === cuentaGoogle.email,
+      );
+      if (otroUsuario)
+        return res.status(409).json({
+          ok: false,
+          mensaje: "Esa cuenta de Google ya está vinculada a otro usuario",
+        });
+
+      const emailActual = normalizarEmail(usuario.googleEmail);
+      if (emailActual && emailActual !== cuentaGoogle.email)
+        return res.status(409).json({
+          ok: false,
+          mensaje:
+            "Este usuario ya está vinculado a otra cuenta de Google. Contactá a un administrador para cambiarla.",
+        });
+
+      if (!emailActual) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${USUARIOS_SHEET_NAME}!K${usuario.filaGoogle}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [[cuentaGoogle.email]] },
+        });
+        invalidarCache("usuarios");
+        usuario.googleEmail = cuentaGoogle.email;
+        googleVinculado = true;
+      }
+    }
+
+    limpiarLimiteLogin(req);
+    return responderSesion(res, usuario, {
+      metodo: "usuario",
+      googleVinculado,
     });
   } catch (error) {
     console.error("Error en /auth/login:", error);
-    res.status(500).json({
+    return res.status(error?.status || 500).json({
       ok: false,
       mensaje: error.message || "No se pudo iniciar sesión",
     });
@@ -725,13 +1039,401 @@ app.post("/auth/login", async (req, res) => {
 });
 
 app.get("/auth/session", requerirSesion, (req, res) => {
-  res.json({ ok: true, usuario: req.usuario, version: APP_VERSION });
+  res.json({ ok: true, usuario: req.usuario, version: APP_VERSION, build: APP_BUILD });
 });
 
 // Desde aquí, toda la API de trabajo requiere una sesión válida.
 app.use((req, res, next) => {
   if (req.path === "/" || req.path === "/notificaciones/cron") return next();
   return requerirSesion(req, res, next);
+});
+
+let hojaOperacionesOfflineAsegurada = false;
+const ENCABEZADOS_OPERACIONES_OFFLINE = [
+  "ID", "Usuario", "Fecha", "Método", "Ruta", "Estado", "Respuesta"
+];
+
+async function asegurarHojaOperacionesOffline() {
+  if (hojaOperacionesOfflineAsegurada) return;
+  validarConfiguracion();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some(
+    (h) => h.properties?.title === OFFLINE_OPERATIONS_SHEET_NAME,
+  );
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: OFFLINE_OPERATIONS_SHEET_NAME } } }] },
+    });
+  }
+  const datos = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A1:G2`,
+  });
+  const encabezado = datos.data.values?.[0] || [];
+  if (!encabezado.length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A1:G1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [ENCABEZADOS_OPERACIONES_OFFLINE] },
+    });
+  } else if (!ENCABEZADOS_OPERACIONES_OFFLINE.every((v, i) => encabezado[i] === v)) {
+    throw new Error("La hoja Operaciones Offline tiene un esquema desconocido; no se modificó automáticamente");
+  }
+  hojaOperacionesOfflineAsegurada = true;
+}
+
+async function buscarOperacionOffline(id, usuario) {
+  await asegurarHojaOperacionesOffline();
+  const datos = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A:G`,
+  });
+  const filas = datos.data.values || [];
+  for (let i = filas.length - 1; i >= 1; i -= 1) {
+    const f = filas[i];
+    if (normalizarTexto(f[0]) === id && normalizarUsuario(f[1]) === normalizarUsuario(usuario)) {
+      return { filaGoogle: i + 1, estado: normalizarTexto(f[5]), respuesta: normalizarTexto(f[6]) };
+    }
+  }
+  return null;
+}
+
+async function reservarOperacionOffline(id, req) {
+  return ejecutarEnCola(`offline-${id}`, async () => {
+    const existente = await buscarOperacionOffline(id, req.usuario?.usuario);
+    if (existente) return existente;
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A:G`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[
+        id, req.usuario?.usuario || "", fechaHoraArgentinaIso(), req.method, req.originalUrl, "En proceso", ""
+      ]] },
+    });
+    return null;
+  });
+}
+
+async function finalizarOperacionOffline(id, usuario, statusCode, payload) {
+  try {
+    const op = await buscarOperacionOffline(id, usuario);
+    if (!op) return;
+    const respuesta = JSON.stringify(payload ?? {}).slice(0, 45000);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${OFFLINE_OPERATIONS_SHEET_NAME}!F${op.filaGoogle}:G${op.filaGoogle}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[statusCode >= 200 && statusCode < 300 ? "Completada" : "Error", respuesta]] },
+    });
+  } catch (error) {
+    console.error("No se pudo finalizar la operación offline idempotente:", error);
+  }
+}
+
+async function protegerOperacionOffline(req, res, next) {
+  if (!['POST','PUT','PATCH','DELETE'].includes(req.method)) return next();
+  const id = normalizarTexto(req.get("X-Offline-Operation-Id"));
+  if (!id) return next();
+  if (!/^[A-Za-z0-9._:-]{8,120}$/.test(id))
+    return res.status(400).json({ ok: false, mensaje: "Identificador offline inválido" });
+  try {
+    const existente = await reservarOperacionOffline(id, req);
+    if (existente) {
+      if (existente.estado === "Completada" && existente.respuesta) {
+        try {
+          const payload = JSON.parse(existente.respuesta);
+          return res.status(200).json({ ...payload, offlineReplay: true });
+        } catch {}
+      }
+      return res.status(202).json({
+        ok: true, offlineReplay: true, pendiente: existente.estado === "En proceso",
+        mensaje: "Esta operación offline ya fue recibida y no se ejecutará nuevamente.",
+      });
+    }
+    const usuario = req.usuario?.usuario || "";
+    const originalJson = res.json.bind(res);
+    res.json = (payload) => {
+      finalizarOperacionOffline(id, usuario, res.statusCode, payload);
+      return originalJson(payload);
+    };
+    next();
+  } catch (error) {
+    console.error("Error al proteger operación offline:", error);
+    res.status(503).json({ ok: false, mensaje: "No se pudo reservar la operación offline; reintentá luego" });
+  }
+}
+
+app.use(protegerOperacionOffline);
+
+
+function minutosDeHoraHorario(valor) {
+  const normalizada = normalizarHoraHorario(valor);
+  if (!normalizada) return null;
+  const [hora, minuto] = normalizada.split(":").map(Number);
+  return hora * 60 + minuto;
+}
+
+function minutoDentroDeRango(minutoActual, inicio, fin) {
+  const desde = minutosDeHoraHorario(inicio);
+  const hasta = minutosDeHoraHorario(fin);
+  if (desde === null || hasta === null || desde === hasta) return false;
+  // También soporta turnos que cruzan medianoche (por ejemplo 22:00-06:00).
+  return hasta > desde
+    ? minutoActual >= desde && minutoActual < hasta
+    : minutoActual >= desde || minutoActual < hasta;
+}
+
+function turnoActivoEnMinuto(valorTurno, turnosSector, minutoActual) {
+  const valor = normalizarTexto(valorTurno);
+  const clave = valor.toLowerCase();
+  if (!clave || ["franco", "vacaciones", "ausente", "licencia"].includes(clave))
+    return false;
+
+  const configurado = (turnosSector || []).find(
+    (turno) => normalizarTexto(turno.id).toLowerCase() === clave,
+  );
+  if (configurado) {
+    if (minutoDentroDeRango(minutoActual, configurado.inicio, configurado.fin))
+      return true;
+    return configurado.tipo === "cortado" &&
+      minutoDentroDeRango(minutoActual, configurado.inicio2, configurado.fin2);
+  }
+
+  const directo = valor.match(
+    /^\s*(\d{1,2}(?::\d{2})?)\s*-\s*(\d{1,2}(?::\d{2})?)\s*$/,
+  );
+  return directo
+    ? minutoDentroDeRango(minutoActual, directo[1], directo[2])
+    : false;
+}
+
+async function contarPersonalEnTurnoActual() {
+  const fecha = fechaArgentina();
+  const mes = fecha.slice(0, 7);
+  const dia = Number(fecha.slice(8, 10));
+  const ahora = horaMinutoArgentina();
+  const minutoActual = ahora.hora * 60 + ahora.minuto;
+  const bloqueCincoMinutos = Math.floor(minutoActual / 5);
+
+  return leerConCache(
+    `dashboardPersonal:${fecha}:${bloqueCincoMinutos}`,
+    30_000,
+    async () => {
+      await asegurarHojasHorarios();
+      const [calendarioResp, usuarios] = await Promise.all([
+        sheets.spreadsheets.values.get(
+          {
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
+          },
+          { retry: false },
+        ),
+        obtenerUsuarios(),
+      ]);
+      const usuariosActivos = new Set();
+      usuarios
+        .filter((usuario) => usuario.activo !== false)
+        .forEach((usuario) => {
+          [usuario.nombre, usuario.usuario]
+            .map(normalizarUsuario)
+            .filter(Boolean)
+            .forEach((clave) => usuariosActivos.add(clave));
+        });
+
+      const filasHoy = (calendarioResp.data.values || [])
+        .slice(1)
+        .filter(
+          (fila) =>
+            normalizarTexto(fila[1]) === mes &&
+            Number(fila[3]) === dia &&
+            normalizarTexto(fila[0]) &&
+            normalizarTexto(fila[2]) &&
+            normalizarTexto(fila[4]),
+        );
+      const sectores = [...new Set(filasHoy.map((fila) => normalizarTexto(fila[0])))];
+      const turnosPorSector = new Map(
+        await Promise.all(
+          sectores.map(async (sector) => [sector, await obtenerTurnosSector(sector)]),
+        ),
+      );
+      const presentes = new Set();
+      for (const fila of filasHoy) {
+        const sector = normalizarTexto(fila[0]);
+        const empleado = normalizarUsuario(fila[2]);
+        if (!usuariosActivos.has(empleado)) continue;
+        if (turnoActivoEnMinuto(fila[4], turnosPorSector.get(sector), minutoActual))
+          presentes.add(empleado);
+      }
+      return presentes.size;
+    },
+  );
+}
+
+function sumarDiasIso(fechaIso, dias) {
+  const [y, m, d] = String(fechaIso).split("-").map(Number);
+  const fecha = new Date(Date.UTC(y, m - 1, d));
+  fecha.setUTCDate(fecha.getUTCDate() + dias);
+  return fecha.toISOString().slice(0, 10);
+}
+
+function fechasSemanaActualArgentina() {
+  const hoy = fechaArgentina();
+  const [y, m, d] = hoy.split("-").map(Number);
+  const fecha = new Date(Date.UTC(y, m - 1, d));
+  const diaSemana = fecha.getUTCDay();
+  const desplazamientoLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const lunes = sumarDiasIso(hoy, desplazamientoLunes);
+  return new Set(Array.from({ length: 7 }, (_, i) => sumarDiasIso(lunes, i)));
+}
+
+function resumirTareasDia(tareas, fecha = fechaArgentina()) {
+  let total = 0;
+  let completadas = 0;
+  for (const tarea of tareas || []) {
+    const asignacionesDia = tarea?.asignaciones?.[fecha];
+    if (!asignacionesDia || typeof asignacionesDia !== "object") continue;
+    for (const asignacion of Object.values(asignacionesDia)) {
+      if (!asignacion || typeof asignacion !== "object") continue;
+      total += 1;
+      if (normalizarTexto(asignacion.estado).toLowerCase() === "completada") completadas += 1;
+    }
+  }
+  return {
+    total,
+    completadas,
+    porcentaje: total ? Math.round((completadas / total) * 100) : 0,
+  };
+}
+
+function resumirTareasSemana(tareas) {
+  const fechasSemana = fechasSemanaActualArgentina();
+  let total = 0;
+  let completadas = 0;
+  for (const tarea of tareas || []) {
+    for (const [fecha, asignacionesDia] of Object.entries(tarea.asignaciones || {})) {
+      if (!fechasSemana.has(fecha) || !asignacionesDia || typeof asignacionesDia !== "object")
+        continue;
+      for (const asignacion of Object.values(asignacionesDia)) {
+        if (!asignacion || typeof asignacion !== "object") continue;
+        const responsables = Array.isArray(asignacion.responsables)
+          ? asignacion.responsables.map(normalizarTexto).filter(Boolean)
+          : [];
+        const cantidad = responsables.length;
+        total += cantidad;
+        if (normalizarTexto(asignacion.estado).toLowerCase() === "completada")
+          completadas += cantidad;
+      }
+    }
+  }
+  return {
+    total,
+    completadas,
+    porcentaje: total ? Math.round((completadas / total) * 100) : 0,
+  };
+}
+
+async function obtenerResumenDashboard(usuario) {
+  const esAdmin = usuario?.rol === "administrador";
+  const puede = (modulo) => esAdmin || usuario?.permisos?.[modulo] === true;
+  const rolesSelectorGlobal = new Set(["administrador", "administracion", "supervisor"]);
+  const puedeVerTareasInicio = rolesSelectorGlobal.has(usuario?.rol) || puede("tareas");
+  const [productos, vencimientos, tareas, personalEnTurno, sectoresActivos] = await Promise.all([
+    puede("inventario") ? obtenerProductos() : Promise.resolve(null),
+    puede("vencimientos") ? obtenerVencimientos() : Promise.resolve(null),
+    puedeVerTareasInicio ? obtenerTareasServidor() : Promise.resolve(null),
+    puede("horarios") ? contarPersonalEnTurnoActual() : Promise.resolve(null),
+    puedeVerTareasInicio ? obtenerSectores().then((lista) => lista.filter((sector) => sector.activo)) : Promise.resolve([]),
+  ]);
+  const hoy = fechaArgentina();
+  const tareasSemana = tareas ? resumirTareasSemana(tareas) : null;
+  const tareasHoy = tareas ? resumirTareasDia(tareas, hoy) : null;
+  const stockContado = productos
+    ? productos.filter((producto) => Number(producto.stock) > 0).length
+    : null;
+  const vencimientosCriticos = vencimientos
+    ? vencimientos.filter((item) => {
+        const dias = diasDesdeHoyArgentina(item.vencimiento);
+        return dias !== null && dias >= 0 && dias <= 7;
+      }).length
+    : null;
+  const vencimientosHoyDetalle = vencimientos
+    ? vencimientos
+        .filter((item) => normalizarTexto(item.vencimiento) === hoy)
+        .map((item) => ({
+          id: item.id,
+          articulo: item.articulo,
+          codigo: item.codigo,
+          cantidad: Math.max(0, Number(item.cantidad) || 0),
+          rubro: item.rubro || "Sin clasificar",
+        }))
+    : [];
+
+  const puedeElegirSectorTareasInicio = rolesSelectorGlobal.has(usuario?.rol);
+  const sectoresTareasInicio = puedeElegirSectorTareasInicio
+    ? sectoresActivos
+    : sectoresActivos.filter((sector) => normalizarTexto(sector.id) === normalizarTexto(usuario?.sector));
+  const sectoresNormalizados = sectoresTareasInicio.map((sector) => ({
+    id: sector.id,
+    nombre: sector.nombre || sector.id,
+    color: sector.color || "#718096",
+  }));
+  const permitidos = new Set(
+    sectoresNormalizados.flatMap((sector) => [normalizarTexto(sector.id), normalizarTexto(sector.nombre)]),
+  );
+  const tareasHoyDetalle = [];
+  for (const tarea of tareas || []) {
+    if (!permitidos.has(normalizarTexto(tarea.sector))) continue;
+    const asignacionesDia = tarea?.asignaciones?.[hoy];
+    if (!asignacionesDia || typeof asignacionesDia !== "object") continue;
+    for (const [turno, asignacion] of Object.entries(asignacionesDia)) {
+      if (!asignacion || typeof asignacion !== "object") continue;
+      tareasHoyDetalle.push({
+        id: tarea.id,
+        nombre: tarea.nombre || "Tarea",
+        sector: tarea.sector || "General",
+        turno,
+        estado: normalizarTexto(asignacion.estado).toLowerCase() === "completada" ? "completada" : "pendiente",
+        responsables: Array.isArray(asignacion.responsables)
+          ? asignacion.responsables.map(normalizarTexto).filter(Boolean)
+          : [],
+      });
+    }
+  }
+
+  return {
+    stockContado,
+    vencimientosCriticos,
+    vencimientosHoy: vencimientosHoyDetalle.length,
+    vencimientosHoyDetalle,
+    personalEnTurno,
+    tareasCompletadasHoy: tareasHoy?.completadas ?? null,
+    tareasAsignadasHoy: tareasHoy?.total ?? null,
+    tareasPorcentajeHoy: tareasHoy?.porcentaje ?? null,
+    // Compatibilidad: otros consumidores todavía pueden usar el resumen semanal.
+    tareasCompletadasSemana: tareasSemana?.completadas ?? null,
+    tareasAsignadasSemana: tareasSemana?.total ?? null,
+    tareasPorcentajeSemana: tareasSemana?.porcentaje ?? null,
+    puedeElegirSectorTareasInicio,
+    sectoresTareasInicio: sectoresNormalizados,
+    tareasHoyDetalle,
+  };
+}
+
+app.get("/dashboard/resumen", requerirSesion, async (req, res) => {
+  try {
+    const resumen = await obtenerResumenDashboard(req.usuario);
+    res.set("Cache-Control", "private, max-age=20, must-revalidate");
+    res.json({ ok: true, ...resumen, actualizado: fechaHoraArgentinaIso() });
+  } catch (error) {
+    console.error("Error en /dashboard/resumen:", error);
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo cargar el resumen del inicio",
+    });
+  }
 });
 
 app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
@@ -744,13 +1446,22 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
         obtenerProductos(),
         obtenerVencimientos(),
       ]);
+    const hoyIso = fechaArgentina();
+    const vencimientosHoy = vencimientos.filter((item) => normalizarTexto(item.vencimiento) === hoyIso).length;
+    const vencimientosProximos30 = vencimientos.filter((item) => {
+      const dias = diasDesdeHoyArgentina(item.vencimiento);
+      return dias !== null && dias >= 0 && dias <= 30;
+    }).length;
     res.json({
       ok: true,
       version: APP_VERSION,
+      build: APP_BUILD,
       productos: productosCatalogo.length,
       productosCatalogo: productosCatalogo.length,
       productosInventario: productosInventario.length,
       vencimientos: vencimientos.length,
+      vencimientosHoy,
+      vencimientosProximos30,
       servidor: "conectado",
     });
   } catch (error) {
@@ -758,6 +1469,70 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
       ok: false,
       mensaje: error.message || "No se pudo cargar el panel",
     });
+  }
+});
+
+let hojaHistorialAdministracionAsegurada = false;
+async function asegurarHojaHistorialAdministracion() {
+  if (hojaHistorialAdministracionAsegurada) return;
+  validarConfiguracion();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some((h) => h.properties?.title === HISTORIAL_ADMIN_SHEET_NAME);
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: HISTORIAL_ADMIN_SHEET_NAME } } }] },
+    });
+  }
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${HISTORIAL_ADMIN_SHEET_NAME}!A1:H1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [["Fecha", "Hora", "Usuario", "Nombre", "Acción", "Entidad", "Identificador", "Detalle"]] },
+  });
+  hojaHistorialAdministracionAsegurada = true;
+}
+
+async function registrarHistorialAdministracion(req, accion, entidad, identificador = "", detalle = "") {
+  try {
+    await asegurarHojaHistorialAdministracion();
+    const ahora = new Date();
+    const partes = new Intl.DateTimeFormat("es-AR", {
+      timeZone: TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    }).formatToParts(ahora);
+    const get = (tipo) => partes.find((p) => p.type === tipo)?.value || "";
+    const fecha = `${get("day")}/${get("month")}/${get("year")}`;
+    const hora = `${get("hour")}:${get("minute")}:${get("second")}`;
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${HISTORIAL_ADMIN_SHEET_NAME}!A:H`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[
+        fecha, hora, req.usuario?.usuario || "desconocido", req.usuario?.nombre || "",
+        normalizarTexto(accion), normalizarTexto(entidad), normalizarTexto(identificador), String(detalle || "").slice(0, 500),
+      ]] },
+    });
+  } catch (error) {
+    console.error("No se pudo registrar el historial de Administración:", error);
+  }
+}
+
+app.get("/admin/historial-administracion", requerirAdministrador, async (req, res) => {
+  try {
+    await asegurarHojaHistorialAdministracion();
+    const respuesta = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${HISTORIAL_ADMIN_SHEET_NAME}!A:H`,
+    });
+    const historial = (respuesta.data.values || []).slice(1).reverse().slice(0, 100).map((fila) => ({
+      fecha: fila[0] || "", hora: fila[1] || "", usuario: fila[2] || "", nombre: fila[3] || "",
+      accion: fila[4] || "", entidad: fila[5] || "", identificador: fila[6] || "", detalle: fila[7] || "",
+    }));
+    res.json({ ok: true, historial });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo obtener la actividad administrativa" });
   }
 });
 
@@ -849,7 +1624,7 @@ async function obtenerSectores() {
 }
 function usuarioPuedeVerHorarios(usuario) {
   return (
-    usuario?.rol === "administrador" || usuario?.permisos?.horarios !== false
+    usuario?.rol === "administrador" || usuario?.permisos?.horarios === true
   );
 }
 function sectoresACargo(usuario) {
@@ -915,6 +1690,13 @@ function empleadosHorarioDelSector(sectorId, usuarios, sectores) {
   );
 }
 
+function habilitadoCalendarioHorarios(valor) {
+  const estado = normalizarTexto(valor).toLowerCase();
+  // Compatibilidad hacia atrás: filas anteriores no tienen la columna E.
+  if (!estado) return true;
+  return !["no", "false", "0", "inactivo", "deshabilitado", "oculto"].includes(estado);
+}
+
 function sectoresHorarioSupervisor(usuarioSupervisor, sectores) {
   const ids = new Set(
     ["administracion", normalizarTexto(usuarioSupervisor?.sector)].filter(
@@ -943,15 +1725,17 @@ async function puedeModificarSectorHorarios(usuario, sectorId) {
   if (usuario?.rol !== "supervisor") return false;
   return (await sectoresSupervisorPermitidos(usuario)).has(sector);
 }
-async function requerirAccesoHorarios(req, res, next) {
-  await requerirSesion(req, res, () => {
+function requerirAccesoHorarios(req, res, next) {
+  const autorizar = () => {
     if (!usuarioPuedeVerHorarios(req.usuario))
       return res.status(403).json({
         ok: false,
         mensaje: "No tenés permiso para acceder a Horarios",
       });
-    next();
-  });
+    return next();
+  };
+  if (req.usuario) return autorizar();
+  return requerirSesion(req, res, autorizar);
 }
 
 let hojasHorariosAseguradas = false;
@@ -1070,9 +1854,11 @@ async function asegurarHojasHorarios() {
   });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${ORDEN_HORARIOS_SHEET_NAME}!A1:D1`,
+    range: `${ORDEN_HORARIOS_SHEET_NAME}!A1:E1`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [["Sector", "Empleado", "Orden", "Actualizado"]] },
+    requestBody: {
+      values: [["Sector", "Empleado", "Orden", "Actualizado", "Habilitado calendario"]],
+    },
   });
   hojasHorariosAseguradas = true;
 }
@@ -1217,7 +2003,7 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
         .status(400)
         .json({ ok: false, mensaje: "Configuración de horarios inválida" });
     await asegurarHojasHorarios();
-    await ejecutarEnCola("turnos-horarios", async () => {
+    await ejecutarEnCola("horarios-global", async () => {
       const r = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J`,
@@ -1513,7 +2299,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
       });
 
     await asegurarHojasHorarios();
-    await ejecutarEnCola("calendario-horarios", async () => {
+    await ejecutarEnCola("horarios-global", async () => {
       const [r, dr] = await Promise.all([
         sheets.spreadsheets.values.get({
           spreadsheetId: SPREADSHEET_ID,
@@ -1828,17 +2614,21 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
     await asegurarHojasHorarios();
     const ordenResp = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:D`,
+      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
     });
     const ordenPorSector = new Map();
+    const habilitadosPorSector = new Map();
     (ordenResp.data.values || []).slice(1).forEach((f) => {
       const sec = normalizarTexto(f[0]),
         emp = normalizarTexto(f[1]),
         ord = Number(f[2]);
-      if (sec && emp && Number.isFinite(ord)) {
+      if (!sec || !emp) return;
+      if (Number.isFinite(ord)) {
         if (!ordenPorSector.has(sec)) ordenPorSector.set(sec, new Map());
         ordenPorSector.get(sec).set(emp, ord);
       }
+      if (!habilitadosPorSector.has(sec)) habilitadosPorSector.set(sec, new Map());
+      habilitadosPorSector.get(sec).set(emp, habilitadoCalendarioHorarios(f[4]));
     });
 
     const respuesta = visibles.map((s) => {
@@ -1861,6 +2651,16 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
           sensitivity: "base",
         });
       });
+      const habilitados = habilitadosPorSector.get(s.id);
+      const personalConfig = empleadosSector.map((u) => {
+        const nombre = u.nombre || u.usuario;
+        return {
+          nombre,
+          rol: u.rol,
+          usuario: u.usuario,
+          habilitadoCalendario: habilitados?.get(nombre) !== false,
+        };
+      });
       return {
         id: s.id,
         nombre: s.nombre,
@@ -1869,12 +2669,11 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
         puedeEditar:
           rolGestionGlobal(req.usuario) ||
           (req.usuario.rol === "supervisor" && sectoresSupervisor.has(s.id)),
-        empleados: empleadosSector.map((u) => u.nombre || u.usuario),
-        empleadosInfo: empleadosSector.map((u) => ({
-          nombre: u.nombre || u.usuario,
-          rol: u.rol,
-          usuario: u.usuario,
-        })),
+        empleados: personalConfig
+          .filter((u) => u.habilitadoCalendario)
+          .map((u) => u.nombre),
+        empleadosConfiguracion: personalConfig.map((u) => u.nombre),
+        empleadosInfo: personalConfig,
       };
     });
 
@@ -1903,7 +2702,7 @@ app.get("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
     await asegurarHojasHorarios();
     const r = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:D`,
+      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
     });
     const orden = (r.data.values || [])
       .slice(1)
@@ -1952,29 +2751,39 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
         mensaje: "El orden debe incluir una vez a todo el personal del sector",
       });
     await asegurarHojasHorarios();
-    await ejecutarEnCola("orden-horarios", async () => {
+    await ejecutarEnCola("horarios-global", async () => {
       const r = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${ORDEN_HORARIOS_SHEET_NAME}!A:D`,
+        range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
       });
-      const otras = (r.data.values || [])
-        .slice(1)
-        .filter((f) => normalizarTexto(f[0]) !== sector);
+      const filasPrevias = (r.data.values || []).slice(1);
+      const otras = filasPrevias.filter((f) => normalizarTexto(f[0]) !== sector);
+      const habilitadoPrevio = new Map(
+        filasPrevias
+          .filter((f) => normalizarTexto(f[0]) === sector)
+          .map((f) => [normalizarTexto(f[1]), f[4] || "Sí"]),
+      );
       const ahora = fechaHoraArgentinaIso();
-      const nuevas = orden.map((e, i) => [sector, e, i + 1, ahora]);
+      const nuevas = orden.map((e, i) => [
+        sector,
+        e,
+        i + 1,
+        ahora,
+        habilitadoPrevio.get(e) || "Sí",
+      ]);
       const todas = [...otras, ...nuevas],
-        prev = Math.max(0, (r.data.values || []).length - 1);
+        prev = Math.max(0, filasPrevias.length);
       if (todas.length)
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${ORDEN_HORARIOS_SHEET_NAME}!A2:D${todas.length + 1}`,
+          range: `${ORDEN_HORARIOS_SHEET_NAME}!A2:E${todas.length + 1}`,
           valueInputOption: "USER_ENTERED",
           requestBody: { values: todas },
         });
       if (prev > todas.length)
         await sheets.spreadsheets.values.clear({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${ORDEN_HORARIOS_SHEET_NAME}!A${todas.length + 2}:D${prev + 1}`,
+          range: `${ORDEN_HORARIOS_SHEET_NAME}!A${todas.length + 2}:E${prev + 1}`,
         });
     });
     res.json({ ok: true, sector, orden });
@@ -1982,6 +2791,80 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
     res
       .status(500)
       .json({ ok: false, mensaje: e.message || "No se pudo guardar el orden" });
+  }
+});
+
+app.put("/horarios/personal-visibilidad", requerirAccesoHorarios, async (req, res) => {
+  try {
+    const sector = normalizarTexto(req.body?.sector);
+    const empleado = normalizarTexto(req.body?.empleado);
+    const habilitado = req.body?.habilitado !== false;
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "No tenés permiso para modificar el personal de este sector",
+      });
+    if (!empleado)
+      return res.status(400).json({ ok: false, mensaje: "Empleado inválido" });
+
+    const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
+    const permitidos = empleadosHorarioDelSector(sector, usuarios, sectores).map(
+      (u) => u.nombre || u.usuario,
+    );
+    if (!permitidos.includes(empleado))
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El usuario no pertenece al sector seleccionado",
+      });
+
+    await asegurarHojasHorarios();
+    await ejecutarEnCola("horarios-global", async () => {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
+      });
+      const filas = (r.data.values || []).slice(1);
+      const indice = filas.findIndex(
+        (f) => normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === empleado,
+      );
+      const ahora = fechaHoraArgentinaIso();
+      if (indice >= 0) {
+        const fila = filas[indice];
+        const numeroFila = indice + 2;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${ORDEN_HORARIOS_SHEET_NAME}!A${numeroFila}:E${numeroFila}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [[
+              sector,
+              empleado,
+              Number(fila[2]) || indice + 1,
+              ahora,
+              habilitado ? "Sí" : "No",
+            ]],
+          },
+        });
+      } else {
+        const ordenSector = filas.filter((f) => normalizarTexto(f[0]) === sector).length + 1;
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
+          valueInputOption: "USER_ENTERED",
+          insertDataOption: "INSERT_ROWS",
+          requestBody: {
+            values: [[sector, empleado, ordenSector, ahora, habilitado ? "Sí" : "No"]],
+          },
+        });
+      }
+    });
+
+    res.json({ ok: true, sector, empleado, habilitado });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo actualizar la visibilidad del usuario",
+    });
   }
 });
 
@@ -2048,7 +2931,7 @@ async function actualizarFilaUsuario(usuario, cambios = {}) {
   const passwordHash = cambios.passwordHash ?? usuario.passwordHash;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:I${usuario.filaGoogle}`,
+    range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:K${usuario.filaGoogle}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [
@@ -2062,6 +2945,8 @@ async function actualizarFilaUsuario(usuario, cambios = {}) {
           serializarPermisos(permisos, rol),
           sector,
           sectoresCargo.join(","),
+          Math.max(1, Number(usuario.sessionVersion) || 1),
+          normalizarEmail(cambios.googleEmail ?? usuario.googleEmail),
         ],
       ],
     },
@@ -2087,15 +2972,6 @@ async function actualizarFilaSector(sector, cambios = {}) {
   });
 }
 
-async function quitarSupervisionDeUsuario(usuarioClave, exceptoSectorId = "") {
-  const clave = normalizarUsuario(usuarioClave);
-  if (!clave) return;
-  const sectores = await obtenerSectores();
-  for (const sector of sectores.filter(
-    (s) => s.supervisor === clave && s.id !== exceptoSectorId,
-  ))
-    await actualizarFilaSector(sector, { supervisor: "" });
-}
 
 async function reconciliarSupervisorAnterior(
   usuarioClave,
@@ -2262,6 +3138,7 @@ app.post("/admin/sectores", requerirAdministrador, async (req, res) => {
     if (supervisor && creado)
       await sincronizarSectorSupervisor(creado, supervisor);
     invalidarCache("usuarios", "sectores");
+    await registrarHistorialAdministracion(req, "Creó sector", "Sector", nombre, `Supervisor: ${supervisor || "Sin asignar"}`);
     res.json({
       ok: true,
       sector: { id, nombre, color, supervisor, activo: true },
@@ -2304,6 +3181,7 @@ app.put("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
       supervisor,
     );
     invalidarCache("sectores", "usuarios");
+    await registrarHistorialAdministracion(req, "Editó sector", "Sector", nombre, `Supervisor: ${supervisor || "Sin asignar"} · Estado: ${activo ? "Activo" : "Inactivo"}`);
     res.json({
       ok: true,
       sector: { id: s.id, nombre, color, supervisor, activo },
@@ -2494,33 +3372,38 @@ async function guardarBanoServidor(config, usuario) {
     return { ...limpio, historial };
   });
 }
-async function obtenerTareasServidor() {
+async function obtenerTareasServidor({ sinReintento = false } = {}) {
   await asegurarHojaTareas();
-  const r = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TAREAS_SHEET_NAME}!A:I`,
-  });
-  const filasTareas = (r.data.values || []).slice(1).filter((f) => f[0]);
-  cantidadFilasTareasConocida = filasTareas.length;
-  return filasTareas.map((f) => {
-    let asignaciones = {};
-    try {
-      asignaciones = JSON.parse(f[5] || "{}");
-    } catch {}
-    let diasSemana = [];
-    try {
-      diasSemana = JSON.parse(f[8] || "[]");
-    } catch {}
-    return normalizarTareaServidor({
-      id: f[0],
-      sector: f[1],
-      nombre: f[2],
-      duracionMin: Number(f[3]),
-      activo: !["no", "false", "0", "inactivo"].includes(
-        normalizarTexto(f[4]).toLowerCase(),
-      ),
-      asignaciones,
-      diasSemana,
+  return leerConCache("tareas", CACHE_TTL.tareas, async () => {
+    const r = await sheets.spreadsheets.values.get(
+      {
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${TAREAS_SHEET_NAME}!A:I`,
+      },
+      sinReintento ? { retry: false } : undefined,
+    );
+    const filasTareas = (r.data.values || []).slice(1).filter((f) => f[0]);
+    cantidadFilasTareasConocida = filasTareas.length;
+    return filasTareas.map((f) => {
+      let asignaciones = {};
+      try {
+        asignaciones = JSON.parse(f[5] || "{}");
+      } catch {}
+      let diasSemana = [];
+      try {
+        diasSemana = JSON.parse(f[8] || "[]");
+      } catch {}
+      return normalizarTareaServidor({
+        id: f[0],
+        sector: f[1],
+        nombre: f[2],
+        duracionMin: Number(f[3]),
+        activo: !["no", "false", "0", "inactivo"].includes(
+          normalizarTexto(f[4]).toLowerCase(),
+        ),
+        asignaciones,
+        diasSemana,
+      });
     });
   });
 }
@@ -2608,7 +3491,7 @@ async function sectoresTareasPermitidos(usuario) {
   }
   return sectores.filter((s) => s.id === usuario.sector);
 }
-app.get("/tareas/contexto", requerirSesion, async (req, res) => {
+app.get("/tareas/contexto", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const sectores = await sectoresTareasPermitidos(req.usuario);
     res.json({
@@ -2630,7 +3513,7 @@ app.get("/tareas/contexto", requerirSesion, async (req, res) => {
   }
 });
 
-app.get("/tareas", requerirSesion, async (req, res) => {
+app.get("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const [tareas, sectores] = await Promise.all([
       obtenerTareasServidor(),
@@ -2657,7 +3540,7 @@ app.get("/tareas", requerirSesion, async (req, res) => {
   }
 });
 
-app.put("/tareas", requerirSesion, async (req, res) => {
+app.put("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res
@@ -2710,7 +3593,7 @@ app.put("/tareas", requerirSesion, async (req, res) => {
   }
 });
 
-app.post("/tareas/asignacion", requerirSesion, async (req, res) => {
+app.post("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res
@@ -2764,7 +3647,7 @@ app.post("/tareas/asignacion", requerirSesion, async (req, res) => {
   }
 });
 
-app.post("/tareas/asignaciones-lote", requerirSesion, async (req, res) => {
+app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res
@@ -2866,7 +3749,7 @@ app.post("/tareas/asignaciones-lote", requerirSesion, async (req, res) => {
     });
   }
 });
-app.delete("/tareas/asignacion", requerirSesion, async (req, res) => {
+app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res.status(403).json({
@@ -2908,7 +3791,7 @@ app.delete("/tareas/asignacion", requerirSesion, async (req, res) => {
     });
   }
 });
-app.get("/tareas/bano", requerirSesion, async (req, res) => {
+app.get("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     res.json({ ok: true, config: await leerBanoServidor() });
   } catch (e) {
@@ -2918,7 +3801,7 @@ app.get("/tareas/bano", requerirSesion, async (req, res) => {
     });
   }
 });
-app.put("/tareas/bano", requerirSesion, async (req, res) => {
+app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res.status(403).json({
@@ -2942,7 +3825,7 @@ app.put("/tareas/bano", requerirSesion, async (req, res) => {
     });
   }
 });
-app.post("/tareas/bano/confirmar", requerirSesion, async (req, res) => {
+app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const fecha =
         normalizarTexto(req.body?.fecha) ||
@@ -2968,7 +3851,7 @@ app.post("/tareas/bano/confirmar", requerirSesion, async (req, res) => {
   }
 });
 
-app.post("/tareas/completar", requerirSesion, async (req, res) => {
+app.post("/tareas/completar", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const id = normalizarTexto(req.body?.id),
       fecha = normalizarTexto(req.body?.fecha),
@@ -3029,7 +3912,7 @@ app.post("/tareas/completar", requerirSesion, async (req, res) => {
   }
 });
 
-app.get("/tareas/usuarios", requerirSesion, async (req, res) => {
+app.get("/tareas/usuarios", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const [usuarios, sectores] = await Promise.all([
       obtenerUsuarios(),
@@ -3093,7 +3976,10 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
           .filter(Boolean),
       ),
     ];
-    const permisos = normalizarPermisos(req.body?.permisos, rol);
+    const permisos =
+      req.body?.permisos === undefined && rol !== "administrador"
+        ? permisosDenegados()
+        : normalizarPermisos(req.body?.permisos, rol);
     if (sector) {
       const sectores = await obtenerSectores();
       if (!sectores.some((s) => s.id === sector && s.activo))
@@ -3133,10 +4019,10 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
         mensaje:
           "El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo",
       });
-    if (password.length < 4)
+    if (password.length < 8)
       return res.status(400).json({
         ok: false,
-        mensaje: "La contraseña debe tener al menos 4 caracteres",
+        mensaje: "La contraseña debe tener al menos 8 caracteres",
       });
     const usuarios = await obtenerUsuarios();
     if (usuarios.some((item) => item.usuario === usuario))
@@ -3145,7 +4031,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
         .json({ ok: false, mensaje: "Ese usuario ya existe" });
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A:I`,
+      range: `${USUARIOS_SHEET_NAME}!A:K`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
@@ -3160,6 +4046,8 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
             serializarPermisos(permisos, rol),
             sector,
             sectoresCargo.join(","),
+            1,
+            "",
           ],
         ],
       },
@@ -3172,6 +4060,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
       true,
       sectoresCargo,
     );
+    await registrarHistorialAdministracion(req, "Creó usuario", "Usuario", nombre || usuario, `Rol: ${rol} · Sector: ${sector || "Sin sector"}`);
     res.json({
       ok: true,
       mensaje: "Usuario creado",
@@ -3269,15 +4158,18 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
           "No podés desactivar tu propia cuenta ni quitarte el rol de administrador",
       });
     }
-    if (password && password.length < 4)
+    if (password && password.length < 8)
       return res.status(400).json({
         ok: false,
-        mensaje: "La contraseña debe tener al menos 4 caracteres",
+        mensaje: "La contraseña debe tener al menos 8 caracteres",
       });
     const hash = password ? hashPassword(password) : actual.passwordHash;
+    const sessionVersion = password
+      ? Math.max(1, Number(actual.sessionVersion) || 1) + 1
+      : Math.max(1, Number(actual.sessionVersion) || 1);
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:I${actual.filaGoogle}`,
+      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:K${actual.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -3291,6 +4183,8 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
             serializarPermisos(permisos, rol),
             sector,
             sectoresCargo.join(","),
+            sessionVersion,
+            actual.googleEmail || "",
           ],
         ],
       },
@@ -3303,6 +4197,13 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       activo,
       sectoresCargo,
     );
+    const cambiosUsuario = [];
+    if (nombre !== actual.nombre) cambiosUsuario.push(`Nombre: ${actual.nombre} → ${nombre}`);
+    if (rol !== actual.rol) cambiosUsuario.push(`Rol: ${actual.rol} → ${rol}`);
+    if ((actual.sector || "") !== sector) cambiosUsuario.push(`Sector: ${actual.sector || "Sin sector"} → ${sector || "Sin sector"}`);
+    if (activo !== actual.activo) cambiosUsuario.push(`Estado: ${actual.activo ? "Activo" : "Inactivo"} → ${activo ? "Activo" : "Inactivo"}`);
+    if (password) cambiosUsuario.push("Contraseña actualizada");
+    await registrarHistorialAdministracion(req, "Editó usuario", "Usuario", nombre || clave, cambiosUsuario.join(" · ") || "Permisos o configuración actualizados");
     res.json({
       ok: true,
       mensaje: "Usuario actualizado",
@@ -3403,6 +4304,7 @@ app.delete(
         await actualizarFilaSector(sector, { supervisor: "" });
       await eliminarFilaDeHoja(USUARIOS_SHEET_NAME, actual.filaGoogle);
       invalidarCache("usuarios");
+      await registrarHistorialAdministracion(req, "Eliminó usuario", "Usuario", actual.nombre || clave, `Cuenta @${clave} eliminada`);
       res.json({ ok: true, mensaje: "Usuario eliminado" });
     } catch (e) {
       res.status(500).json({
@@ -3431,16 +4333,19 @@ app.delete("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
         mensaje: `No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s). Reasignalos primero.`,
       });
     await asegurarHojasHorarios();
-    await Promise.all([
-      eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME, id, "H"),
-      eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME, id, "J"),
-      eliminarRegistrosSector(DETALLES_HORARIOS_SHEET_NAME, id, "I"),
-      eliminarRegistrosSector(REEMPLAZOS_HORARIOS_SHEET_NAME, id, "I"),
-      eliminarRegistrosSector(ORDEN_HORARIOS_SHEET_NAME, id, "D"),
-    ]);
+    await ejecutarEnCola("horarios-global", async () => {
+      // Comparte el lock con todas las escrituras de Horarios y evita
+      // reescrituras cruzadas mientras se elimina un sector.
+      await eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME, id, "H");
+      await eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME, id, "J");
+      await eliminarRegistrosSector(DETALLES_HORARIOS_SHEET_NAME, id, "I");
+      await eliminarRegistrosSector(REEMPLAZOS_HORARIOS_SHEET_NAME, id, "I");
+      await eliminarRegistrosSector(ORDEN_HORARIOS_SHEET_NAME, id, "E");
+    });
     await eliminarFilaDeHoja(SECTORES_SHEET_NAME, sector.filaGoogle);
     hojaSectoresAsegurada = false;
     invalidarCache("usuarios", "sectores");
+    await registrarHistorialAdministracion(req, "Eliminó sector", "Sector", sector.nombre || id, `Sector ${sector.nombre || id} eliminado`);
     res.json({ ok: true, mensaje: "Sector eliminado" });
   } catch (e) {
     res.status(500).json({
@@ -3633,6 +4538,7 @@ app.post(
         .then(() => ejecutarImportacionProductos(items, true));
       importacionProductosEnCurso = tarea.catch(() => {});
       const resumen = await tarea;
+      await registrarHistorialAdministracion(req, "Importó catálogo", "Catálogo", "Productos", `${resumen.procesados || 0} productos procesados`);
       res.json({
         ok: true,
         mensaje: "Catálogo reemplazado correctamente",
@@ -3648,7 +4554,7 @@ app.post(
   },
 );
 
-app.get("/productos", async (req, res) => {
+app.get("/productos", requerirAlgunModulo("inventario"), async (req, res) => {
   try {
     const productos = await obtenerProductos();
     res.json({ ok: true, total: productos.length, productos });
@@ -3661,7 +4567,7 @@ app.get("/productos", async (req, res) => {
   }
 });
 
-app.get("/producto/:codigo", async (req, res) => {
+app.get("/producto/:codigo", requerirAlgunModulo("inventario"), async (req, res) => {
   try {
     const producto = await buscarProductoPorCodigo(req.params.codigo);
 
@@ -3681,7 +4587,7 @@ app.get("/producto/:codigo", async (req, res) => {
   }
 });
 
-app.get("/productos-maestro", async (req, res) => {
+app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar"), async (req, res) => {
   try {
     const productos = await obtenerProductosMaestros();
     const etag = `"${crypto.createHash("sha1").update(JSON.stringify(productos)).digest("hex")}"`;
@@ -3698,7 +4604,7 @@ app.get("/productos-maestro", async (req, res) => {
   }
 });
 
-app.get("/producto-maestro/:codigo", async (req, res) => {
+app.get("/producto-maestro/:codigo", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar"), async (req, res) => {
   try {
     const producto = await buscarProductoMaestroPorCodigo(req.params.codigo);
     if (!producto) {
@@ -3716,9 +4622,10 @@ app.get("/producto-maestro/:codigo", async (req, res) => {
   }
 });
 
-app.post("/guardar", async (req, res) => {
+
+app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
   try {
-    const { codigo, ubicacion, cantidad } = req.body;
+    const { codigo, articulo, ubicacion, cantidad } = req.body;
     const codigoBuscado = normalizarCodigo(codigo);
     const cantidadNumerica = enteroPositivo(cantidad);
 
@@ -3740,14 +4647,28 @@ app.post("/guardar", async (req, res) => {
     const productoActualizado = await ejecutarEnCola(
       codigoBuscado,
       async () => {
-        const producto = await buscarProductoPorCodigo(codigoBuscado);
+        let producto = await buscarProductoPorCodigo(codigoBuscado);
+
+        // Un miss puede provenir de una caché breve desactualizada si otro
+        // dispositivo creó o modificó el producto segundos antes. Releer una
+        // sola vez antes de intentar un alta evita falsos 404 sin aumentar
+        // las lecturas del camino normal.
+        if (!producto) {
+          invalidarCache("productos");
+          producto = await buscarProductoPorCodigo(codigoBuscado);
+        }
+
+        if (!producto)
+          producto = await crearProductoInventario(codigoBuscado, articulo);
 
         if (!producto) {
-          const error = new Error("Producto no encontrado");
+          const error = new Error("Producto no encontrado en el catálogo");
           error.statusCode = 404;
           throw error;
         }
 
+        // Preservar stock histórico de C y sumar la nueva entrada.
+        producto.stock = numero(producto.stock) + cantidadNumerica;
         if (ubicacion === "deposito") {
           producto.deposito = numero(producto.deposito) + cantidadNumerica;
         } else {
@@ -3765,15 +4686,17 @@ app.post("/guardar", async (req, res) => {
       producto: productoActualizado,
     });
   } catch (error) {
-    console.error("Error en /guardar:", error);
-    res.status(error.statusCode || 500).json({
+    const status = Number(error.statusCode || 500);
+    if (status >= 500) console.error("Error en /guardar:", error);
+    else console.warn(`Solicitud /guardar rechazada (${status}): ${error.message}`);
+    res.status(status).json({
       ok: false,
       mensaje: error.message || "Error al guardar producto",
     });
   }
 });
 
-app.post("/corregir", async (req, res) => {
+app.post("/corregir", requerirAlgunModulo("inventario"), async (req, res) => {
   try {
     const { codigo, salon, deposito } = req.body;
     const codigoBuscado = normalizarCodigo(codigo);
@@ -3806,7 +4729,7 @@ app.post("/corregir", async (req, res) => {
         producto.salon = salonValidado;
         producto.deposito = depositoValidado;
 
-        return await actualizarProducto(producto);
+        return await actualizarProducto(producto, { recalcularTotal: true });
       },
     );
 
@@ -3868,11 +4791,36 @@ function normalizarRubroVencimiento(valor) {
   if (texto === "almacen") return "Almacén";
   if (texto === "bebida" || texto === "bebidas") return "Bebida";
   if (texto === "fiambreria") return "Fiambrería";
+  if (texto === "lacteo" || texto === "lacteos") return "Lácteos";
   return "Sin clasificar";
+}
+
+function cantidadVencimientoDesdeBody(body = {}) {
+  const cantidadDirecta = enteroNoNegativo(body.cantidad);
+  if (cantidadDirecta !== null) return cantidadDirecta;
+
+  // Compatibilidad temporal con clientes V19 cacheados. El esquema persistido
+  // y las respuestas públicas usan únicamente `cantidad`.
+  const salonAnterior = enteroNoNegativo(body.salon);
+  const depositoAnterior = enteroNoNegativo(body.deposito);
+  if (salonAnterior === null && depositoAnterior === null) return null;
+  return Math.max(0, salonAnterior || 0) + Math.max(0, depositoAnterior || 0);
 }
 
 let hojaVencimientosAsegurada = false;
 let promesaHojaVencimientos = null;
+const ENCABEZADOS_VENCIMIENTOS = [
+  "ID",
+  "Fecha carga",
+  "Código",
+  "Artículo",
+  "Vencimiento",
+  "Cantidad",
+  "Estado",
+  "Oferta",
+  "Rubro",
+];
+
 async function asegurarHojaVencimientos() {
   if (hojaVencimientosAsegurada) return;
   if (promesaHojaVencimientos) return promesaHojaVencimientos;
@@ -3898,34 +4846,58 @@ async function asegurarHojaVencimientos() {
 
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A1:K1`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A1:K`,
     });
+    const valores = respuesta.data.values || [];
+    const encabezado = valores[0] || [];
+    const esEsquemaAnterior =
+      encabezado[5] === "Salón" ||
+      encabezado[6] === "Depósito" ||
+      encabezado[7] === "Total";
 
-    const encabezado = respuesta.data.values?.[0] || [];
-    const correcto = [
-      "ID",
-      "Fecha carga",
-      "Código",
-      "Artículo",
-      "Vencimiento",
-      "Salón",
-      "Depósito",
-      "Total",
-      "Estado",
-      "Oferta",
-      "Rubro",
-    ];
-    const necesitaEncabezado =
-      encabezado.length === 0 ||
-      encabezado[0] !== "ID" ||
-      encabezado.length < 11;
-    if (necesitaEncabezado) {
+    const hojaVacia = !encabezado.some((valor) => normalizarTexto(valor));
+
+    if (hojaVacia) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${VENCIMIENTOS_SHEET_NAME}!A1:K1`,
+        range: `${VENCIMIENTOS_SHEET_NAME}!A1:I1`,
         valueInputOption: "USER_ENTERED",
-        requestBody: { values: [correcto] },
+        requestBody: { values: [ENCABEZADOS_VENCIMIENTOS] },
       });
+    } else if (esEsquemaAnterior) {
+      const filasMigradas = valores.slice(1).map((fila) => {
+        const cantidadTotal = numero(fila[7]);
+        const cantidad =
+          cantidadTotal > 0 ? cantidadTotal : numero(fila[5]) + numero(fila[6]);
+        return [
+          fila[0] || "",
+          fila[1] || "",
+          fila[2] || "",
+          fila[3] || "",
+          fila[4] || "",
+          cantidad,
+          calcularEstadoVencimiento(fila[4]),
+          normalizarOfertaVencimiento(fila[9]),
+          normalizarRubroVencimiento(fila[10]),
+        ];
+      });
+      await reescribirHoja(
+        VENCIMIENTOS_SHEET_NAME,
+        ENCABEZADOS_VENCIMIENTOS,
+        filasMigradas,
+      );
+      console.log(
+        `Migración de Vencimientos completada: ${filasMigradas.length} registro(s) al esquema Cantidad.`,
+      );
+    } else {
+      const correcto = ENCABEZADOS_VENCIMIENTOS.every(
+        (valor, index) => encabezado[index] === valor,
+      );
+      if (!correcto) {
+        throw new Error(
+          "La hoja Vencimientos tiene un esquema desconocido. Se detuvo la migración para proteger los datos existentes.",
+        );
+      }
     }
     hojaVencimientosAsegurada = true;
   })();
@@ -3944,12 +4916,10 @@ function filaAVencimiento(fila, index) {
     codigo: normalizarTexto(fila[2]),
     articulo: normalizarTexto(fila[3]),
     vencimiento: normalizarTexto(fila[4]),
-    salon: numero(fila[5]),
-    deposito: numero(fila[6]),
-    total: numero(fila[7]),
+    cantidad: numero(fila[5]),
     estado: calcularEstadoVencimiento(fila[4]),
-    oferta: normalizarOfertaVencimiento(fila[9]),
-    rubro: normalizarRubroVencimiento(fila[10]),
+    oferta: normalizarOfertaVencimiento(fila[7]),
+    rubro: normalizarRubroVencimiento(fila[8]),
   };
 }
 
@@ -3958,7 +4928,7 @@ async function obtenerVencimientos() {
   return leerConCache("vencimientos", CACHE_TTL.vencimientos, async () => {
     const respuesta = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:K`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
     });
     const filas = respuesta.data.values || [];
     return filas
@@ -4491,7 +5461,17 @@ async function datosHorarioEntradaHoy() {
   );
 }
 
-async function procesarNotificacionesInicioTareas() {
+function horaEnVentanaNotificacion(horaObjetivo, horaActual, minutosGracia = 2) {
+  const a = normalizarTexto(horaObjetivo).match(/^(\d{2}):(\d{2})$/);
+  const b = normalizarTexto(horaActual).match(/^(\d{2}):(\d{2})$/);
+  if (!a || !b) return false;
+  const objetivo = Number(a[1]) * 60 + Number(a[2]);
+  const actual = Number(b[1]) * 60 + Number(b[2]);
+  const diferencia = actual - objetivo;
+  return diferencia >= 0 && diferencia <= minutosGracia;
+}
+
+async function procesarNotificacionesInicioTareasInterno() {
   const ahora = horaMinutoArgentina();
   const minutoActual = `${fechaArgentina()}|${String(ahora.hora).padStart(2, "0")}:${String(ahora.minuto).padStart(2, "0")}`;
   if (ultimoMinutoProcesadoTareas === minutoActual) return;
@@ -4499,7 +5479,10 @@ async function procesarNotificacionesInicioTareas() {
 
   const horaActual = minutoActual.slice(-5);
   const [{ fecha, sectores, usuarios, porEmpleadoSector }, tareas] =
-    await Promise.all([datosHorarioEntradaHoy(), obtenerTareasServidor()]);
+    await Promise.all([
+      datosHorarioEntradaHoy(),
+      obtenerTareasServidor({ sinReintento: true }),
+    ]);
   const sectoresPorIdONombre = new Map();
   sectores.forEach((s) => {
     sectoresPorIdONombre.set(normalizarTexto(s.id), s);
@@ -4534,7 +5517,8 @@ async function procesarNotificacionesInicioTareas() {
             valorTurno;
         }
         const horaEntrada = horaInicioDesdeTurnoValor(valorTurno, turnosSector);
-        if (!horaEntrada || horaEntrada !== horaActual) continue;
+        if (!horaEntrada || !horaEnVentanaNotificacion(horaEntrada, horaActual))
+          continue;
         const claveGrupo = `${usuario.usuario}|${sectorInfo.id}|${fecha}|${horaEntrada}`;
         const grupo = grupos.get(claveGrupo) || {
           usuario,
@@ -4595,6 +5579,32 @@ async function procesarNotificacionesInicioTareas() {
     );
     enviadas.add(clave);
   }
+}
+
+let promesaNotificacionesInicioTareas = null;
+let pausaNotificacionesTareasHasta = 0;
+const PAUSA_CUOTA_NOTIFICACIONES_MS = 70 * 1000;
+
+async function procesarNotificacionesInicioTareas() {
+  if (Date.now() < pausaNotificacionesTareasHasta) return false;
+  if (promesaNotificacionesInicioTareas) return promesaNotificacionesInicioTareas;
+
+  promesaNotificacionesInicioTareas = procesarNotificacionesInicioTareasInterno()
+    .catch((error) => {
+      if (esErrorCuotaGoogle(error)) {
+        pausaNotificacionesTareasHasta = Date.now() + PAUSA_CUOTA_NOTIFICACIONES_MS;
+        console.warn(
+          "Notificaciones de tareas pausadas 70 segundos por cuota de Google Sheets (429).",
+        );
+        return false;
+      }
+      throw error;
+    })
+    .finally(() => {
+      promesaNotificacionesInicioTareas = null;
+    });
+
+  return promesaNotificacionesInicioTareas;
 }
 
 async function notificarSupervisorTareaCompletada({
@@ -4812,8 +5822,8 @@ function claveUnicaAlertaVencimiento(registro, tipo) {
 }
 
 function payloadNuevoVencimiento(registro) {
-  const total = numero(registro.total);
-  const unidades = `${total} ${total === 1 ? "unidad" : "unidades"}`;
+  const cantidad = numero(registro.cantidad);
+  const unidades = `${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}`;
   return {
     title: "Nuevo vencimiento cargado",
     body: `${registro.articulo} · ${unidades} · vence ${registro.vencimiento}`,
@@ -4938,136 +5948,10 @@ async function enviarResumenVencimientos(tipo, registros, enviadas) {
   }
 }
 
-let limpiezaVencimientosEnCurso = false;
-let ultimaLimpiezaVencimientos = 0;
-
-async function reescribirHoja(nombreHoja, encabezados, filas) {
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${nombreHoja}!A:Z`,
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${nombreHoja}!A1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [encabezados, ...filas] },
-  });
-}
-
-async function limpiarVencimientosAntiguos({ forzar = false } = {}) {
-  const ahora = Date.now();
-  if (
-    limpiezaVencimientosEnCurso ||
-    (!forzar && ahora - ultimaLimpiezaVencimientos < 60 * 60 * 1000)
-  )
-    return { eliminados: 0 };
-  limpiezaVencimientosEnCurso = true;
-  try {
-    const vencimientos = await obtenerVencimientos();
-    const antiguos = vencimientos.filter((item) => {
-      const dias = diasDesdeHoyArgentina(item.vencimiento);
-      return dias !== null && dias <= -7;
-    });
-    if (!antiguos.length) {
-      ultimaLimpiezaVencimientos = ahora;
-      return { eliminados: 0 };
-    }
-
-    const ids = new Set(antiguos.map((item) => item.id));
-    const vigentes = vencimientos.filter((item) => !ids.has(item.id));
-    await reescribirHoja(
-      VENCIMIENTOS_SHEET_NAME,
-      [
-        "ID",
-        "Fecha carga",
-        "Código",
-        "Artículo",
-        "Vencimiento",
-        "Salón",
-        "Depósito",
-        "Total",
-        "Estado",
-        "Oferta",
-        "Rubro",
-      ],
-      vigentes.map((item) => [
-        item.id,
-        item.fecha_carga,
-        item.codigo,
-        item.articulo,
-        item.vencimiento,
-        item.salon,
-        item.deposito,
-        item.total,
-        item.estado,
-        item.oferta,
-        item.rubro,
-      ]),
-    );
-
-    await asegurarHojaHistorialVencimientos();
-    const historialResp = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
-    });
-    const historialFilas = (historialResp.data.values || [])
-      .slice(1)
-      .filter((fila) => !ids.has(normalizarTexto(fila[5])));
-    await reescribirHoja(
-      HISTORIAL_VENCIMIENTOS_SHEET_NAME,
-      [
-        "Fecha",
-        "Hora",
-        "Usuario",
-        "Nombre",
-        "Acción",
-        "ID",
-        "Código",
-        "Artículo",
-        "Vencimiento",
-        "Detalle",
-      ],
-      historialFilas,
-    );
-
-    await asegurarHojasNotificaciones();
-    const notifResp = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`,
-    });
-    const notifFilas = (notifResp.data.values || [])
-      .slice(1)
-      .filter((fila) => !ids.has(normalizarTexto(fila[3])));
-    await reescribirHoja(
-      NOTIFICATION_LOG_SHEET_NAME,
-      [
-        "Clave",
-        "Fecha envío",
-        "Tipo",
-        "ID",
-        "Código",
-        "Vencimiento",
-        "Detalle",
-      ],
-      notifFilas,
-    );
-
-    invalidarCache("vencimientos");
-    ultimaLimpiezaVencimientos = ahora;
-    console.log(
-      `Limpieza automática: ${antiguos.length} vencimiento(s) eliminado(s) después de 7 días.`,
-    );
-    return { eliminados: antiguos.length };
-  } finally {
-    limpiezaVencimientosEnCurso = false;
-  }
-}
-
 async function procesarAlertasVencimientos() {
   if (procesandoNotificaciones || !PUSH_CONFIGURED) return;
   procesandoNotificaciones = true;
   try {
-    await limpiarVencimientosAntiguos();
     const [vencimientos, enviadas] = await Promise.all([
       obtenerVencimientos(),
       clavesNotificacionesEnviadas(),
@@ -5171,7 +6055,7 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
   }
 });
 
-app.post("/notificaciones/procesar", requerirSesion, async (req, res) => {
+app.post("/notificaciones/procesar", requerirAlgunModulo("vencimientos"), async (req, res) => {
   await procesarAlertasVencimientos();
   res.json({ ok: true });
 });
@@ -5186,9 +6070,8 @@ app.all("/notificaciones/cron", async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/vencimientos", async (req, res) => {
+app.get("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) => {
   try {
-    await limpiarVencimientosAntiguos();
     const vencimientos = (await obtenerVencimientos()).reverse();
     res.json({ ok: true, total: vencimientos.length, vencimientos });
   } catch (error) {
@@ -5200,14 +6083,12 @@ app.get("/vencimientos", async (req, res) => {
   }
 });
 
-app.post("/vencimientos", async (req, res) => {
+app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) => {
   try {
     const codigo = normalizarCodigo(req.body.codigo);
     const vencimiento = normalizarTexto(req.body.vencimiento);
-    const salon = enteroNoNegativo(req.body.salon);
-    const deposito = enteroNoNegativo(req.body.deposito);
+    const cantidad = cantidadVencimientoDesdeBody(req.body);
     const rubro = normalizarRubroVencimiento(req.body.rubro);
-    const total = salon === null || deposito === null ? null : salon + deposito;
 
     if (!codigo)
       return res.status(400).json({ ok: false, mensaje: "Falta el código" });
@@ -5218,18 +6099,17 @@ app.post("/vencimientos", async (req, res) => {
     if (rubro === "Sin clasificar")
       return res.status(400).json({
         ok: false,
-        mensaje: "Seleccioná un rubro: Almacén, Bebida o Fiambrería",
+        mensaje: "Seleccioná un rubro: Almacén, Bebidas, Fiambrería o Lácteos",
       });
     if (!fechaNoAnteriorAHoy(vencimiento))
       return res.status(400).json({
         ok: false,
         mensaje: "La fecha de vencimiento no puede ser anterior a hoy",
       });
-    if (total === null || total <= 0)
+    if (cantidad === null || cantidad <= 0)
       return res.status(400).json({
         ok: false,
-        mensaje:
-          "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad",
+        mensaje: "La cantidad debe ser un número entero mayor a 0",
       });
 
     const producto = await buscarProductoMaestroPorCodigo(codigo);
@@ -5247,9 +6127,7 @@ app.post("/vencimientos", async (req, res) => {
       codigo,
       articulo,
       vencimiento,
-      salon,
-      deposito,
-      total,
+      cantidad,
       estado: calcularEstadoVencimiento(vencimiento),
       oferta: normalizarOfertaVencimiento(req.body.oferta),
       rubro,
@@ -5257,7 +6135,7 @@ app.post("/vencimientos", async (req, res) => {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:K`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
@@ -5268,9 +6146,7 @@ app.post("/vencimientos", async (req, res) => {
             registro.codigo,
             registro.articulo,
             registro.vencimiento,
-            registro.salon,
-            registro.deposito,
-            registro.total,
+            registro.cantidad,
             registro.estado,
             registro.oferta,
             registro.rubro,
@@ -5284,7 +6160,7 @@ app.post("/vencimientos", async (req, res) => {
       req,
       "Creó",
       registro,
-      `Salón: ${registro.salon} · Depósito: ${registro.deposito}`,
+      `Cantidad: ${registro.cantidad}`,
     );
     const diasRestantes = diasDesdeHoyArgentina(registro.vencimiento);
     if (PUSH_CONFIGURED) {
@@ -5317,7 +6193,7 @@ app.post("/vencimientos", async (req, res) => {
   }
 });
 
-app.put("/vencimientos/:id", async (req, res) => {
+app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
     const vencimientos = await obtenerVencimientos();
@@ -5327,14 +6203,12 @@ app.put("/vencimientos/:id", async (req, res) => {
         .status(404)
         .json({ ok: false, mensaje: "Registro no encontrado" });
 
-    const salon = enteroNoNegativo(req.body.salon);
-    const deposito = enteroNoNegativo(req.body.deposito);
+    const cantidad = cantidadVencimientoDesdeBody(req.body);
     const vencimiento = normalizarTexto(req.body.vencimiento);
     const rubro =
       req.body.rubro === undefined
         ? registro.rubro
         : normalizarRubroVencimiento(req.body.rubro);
-    const total = salon === null || deposito === null ? null : salon + deposito;
     if (!vencimiento)
       return res
         .status(400)
@@ -5342,7 +6216,7 @@ app.put("/vencimientos/:id", async (req, res) => {
     if (rubro === "Sin clasificar")
       return res.status(400).json({
         ok: false,
-        mensaje: "Seleccioná un rubro: Almacén, Bebida o Fiambrería",
+        mensaje: "Seleccioná un rubro: Almacén, Bebidas, Fiambrería o Lácteos",
       });
     if (
       vencimiento !== registro.vencimiento &&
@@ -5352,19 +6226,26 @@ app.put("/vencimientos/:id", async (req, res) => {
         ok: false,
         mensaje: "La nueva fecha de vencimiento no puede ser anterior a hoy",
       });
-    if (total === null || total <= 0)
+    const cantidadOriginal = Math.max(0, Number(registro.cantidad) || 0);
+    // Los registros migrados sin cantidad positiva pueden conservar 0.
+    // Un registro que ya tenía cantidad positiva no puede bajarse a 0.
+    if (
+      cantidad === null ||
+      cantidad < 0 ||
+      (cantidad === 0 && cantidadOriginal > 0)
+    )
       return res.status(400).json({
         ok: false,
         mensaje:
-          "Salón y depósito deben ser cantidades enteras; cargá al menos una unidad",
+          cantidadOriginal === 0
+            ? "La cantidad debe ser un número entero válido"
+            : "La cantidad debe ser un número entero mayor a 0",
       });
 
     const actualizado = {
       ...registro,
       vencimiento,
-      salon,
-      deposito,
-      total,
+      cantidad,
       rubro,
       estado: calcularEstadoVencimiento(vencimiento),
       oferta:
@@ -5374,7 +6255,7 @@ app.put("/vencimientos/:id", async (req, res) => {
     };
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:K${registro.filaGoogle}`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:I${registro.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -5384,9 +6265,7 @@ app.put("/vencimientos/:id", async (req, res) => {
             actualizado.codigo,
             actualizado.articulo,
             actualizado.vencimiento,
-            actualizado.salon,
-            actualizado.deposito,
-            actualizado.total,
+            actualizado.cantidad,
             actualizado.estado,
             actualizado.oferta,
             actualizado.rubro,
@@ -5399,7 +6278,7 @@ app.put("/vencimientos/:id", async (req, res) => {
       req,
       "Editó",
       actualizado,
-      `Antes: ${registro.vencimiento} / ${registro.total} · Después: ${actualizado.vencimiento} / ${actualizado.total}`,
+      `Antes: ${registro.vencimiento} / ${registro.cantidad} · Después: ${actualizado.vencimiento} / ${actualizado.cantidad}`,
     );
     res.json({
       ok: true,
@@ -5415,7 +6294,7 @@ app.put("/vencimientos/:id", async (req, res) => {
   }
 });
 
-app.patch("/vencimientos/:id/oferta", async (req, res) => {
+app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
     const vencimientos = await obtenerVencimientos();
@@ -5429,7 +6308,7 @@ app.patch("/vencimientos/:id/oferta", async (req, res) => {
     const actualizado = { ...registro, oferta };
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:K${registro.filaGoogle}`,
+      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:I${registro.filaGoogle}`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -5439,9 +6318,7 @@ app.patch("/vencimientos/:id/oferta", async (req, res) => {
             actualizado.codigo,
             actualizado.articulo,
             actualizado.vencimiento,
-            actualizado.salon,
-            actualizado.deposito,
-            actualizado.total,
+            actualizado.cantidad,
             actualizado.estado,
             actualizado.oferta,
             actualizado.rubro,
@@ -5464,7 +6341,7 @@ app.patch("/vencimientos/:id/oferta", async (req, res) => {
   }
 });
 
-app.delete("/vencimientos/:id", async (req, res) => {
+app.delete("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, res) => {
   try {
     const id = normalizarTexto(req.params.id);
     const vencimientos = await obtenerVencimientos();
@@ -5495,7 +6372,7 @@ app.delete("/vencimientos/:id", async (req, res) => {
       req,
       "Eliminó",
       registro,
-      `Cantidad total: ${registro.total}`,
+      `Cantidad: ${registro.cantidad}`,
     );
     res.json({ ok: true, mensaje: "Vencimiento eliminado" });
   } catch (error) {
@@ -5547,6 +6424,12 @@ async function asegurarHojaHistorialVencimientos() {
       },
     });
   }
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!K1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [["Cantidad"]] },
+  });
 }
 
 async function registrarHistorialVencimiento(
@@ -5572,7 +6455,7 @@ async function registrarHistorialVencimiento(
   const hora = `${get("hour")}:${get("minute")}:${get("second")}`;
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
+    range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:K`,
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
@@ -5588,6 +6471,7 @@ async function registrarHistorialVencimiento(
           registro?.articulo || "",
           registro?.vencimiento || "",
           detalle,
+          registro?.cantidad ?? "",
         ],
       ],
     },
@@ -5602,13 +6486,147 @@ app.get(
       await asegurarHojaHistorialVencimientos();
       const respuesta = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:J`,
+        range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:K`,
       });
       const filas = respuesta.data.values || [];
-      const historial = filas
-        .slice(1)
-        .reverse()
-        .map((f) => ({
+      const registros = filas.slice(1);
+      const cantidadDesdeDetalle = (detalle = "", preferirAntes = false) => {
+        const texto = String(detalle || "").trim();
+        let match = texto.match(/Cantidad\s*:\s*(-?\d+(?:[.,]\d+)?)/i);
+        if (match) return String(match[1]).replace(",", ".");
+        match = texto.match(/Antes:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)\s*·\s*Después:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)/i);
+        if (match) return String(preferirAntes ? match[1] : match[2]).replace(",", ".");
+        return "";
+      };
+      const cantidadCambio = (detalle = "") => {
+        const texto = String(detalle || "").trim();
+        const match = texto.match(/Antes:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)\s*·\s*Después:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)/i);
+        if (!match) return null;
+        return { antes: String(match[1]).replace(",", "."), despues: String(match[2]).replace(",", ".") };
+      };
+      const claveTexto = (valor) => normalizarTexto(valor).toLowerCase();
+      const clavesRegistro = (f) => {
+        const id = claveTexto(f[5]);
+        const codigo = claveTexto(f[6]);
+        const articulo = claveTexto(f[7]);
+        const vencimiento = claveTexto(f[8]);
+        return [...new Set([
+          id ? `id:${id}` : "",
+          codigo ? `codigo:${codigo}` : "",
+          articulo && vencimiento ? `av:${articulo}|${vencimiento}` : "",
+        ].filter(Boolean))];
+      };
+      const clavePrincipal = (f) => clavesRegistro(f)[0] || "";
+      const mismaEntidad = (a, b) => {
+        const ka = new Set(clavesRegistro(a));
+        return clavesRegistro(b).some((k) => ka.has(k));
+      };
+
+      let vencimientosActuales = [];
+      try { vencimientosActuales = await obtenerVencimientos(); } catch (_) { vencimientosActuales = []; }
+      const cantidadActualPorClave = new Map();
+      vencimientosActuales.forEach((v) => {
+        const cantidad = v?.cantidad;
+        const falsas = [v?.id, v?.codigo, v?.articulo && v?.vencimiento ? `${v.articulo}|${v.vencimiento}` : ""];
+        const prefijos = ["id:", "codigo:", "av:"];
+        falsas.forEach((valor, i) => {
+          const k = claveTexto(valor);
+          if (k) cantidadActualPorClave.set(`${prefijos[i]}${k}`, cantidad);
+        });
+      });
+
+      const cantidadesResueltas = new Array(registros.length).fill("");
+      const estadoCantidad = new Map();
+
+      // Primera pasada cronológica: conserva el estado conocido de cada registro.
+      registros.forEach((f, indice) => {
+        const claves = clavesRegistro(f);
+        const accion = claveTexto(f[4]);
+        const detalle = f[9] || "";
+        const directaColumna = String(f[10] ?? "").trim();
+        const directaDetalle = cantidadDesdeDetalle(detalle);
+        const cambio = cantidadCambio(detalle);
+        const estadoPrevio = claves.map((k) => String(estadoCantidad.get(k) ?? "")).find((v) => v !== "") || "";
+
+        let resuelta = directaColumna || directaDetalle;
+        if (accion.includes("edit") && cambio) resuelta = directaColumna || cambio.despues || estadoPrevio;
+        else if (accion.includes("elimin")) resuelta = directaColumna || directaDetalle || estadoPrevio;
+        else if (!resuelta) resuelta = estadoPrevio;
+
+        cantidadesResueltas[indice] = resuelta;
+
+        if (accion.includes("elimin")) {
+          claves.forEach((k) => estadoCantidad.delete(k));
+        } else {
+          const siguiente = accion.includes("edit") && cambio ? (cambio.despues || resuelta) : resuelta;
+          if (siguiente !== "") claves.forEach((k) => estadoCantidad.set(k, siguiente));
+        }
+      });
+
+      // Segunda pasada: reconstruye filas antiguas sin K usando eventos vecinos del mismo vencimiento.
+      registros.forEach((f, indice) => {
+        if (cantidadesResueltas[indice] !== "") return;
+        const accion = claveTexto(f[4]);
+        if (accion.includes("cre")) {
+          for (let j = indice + 1; j < registros.length; j += 1) {
+            if (!mismaEntidad(f, registros[j])) continue;
+            const cambio = cantidadCambio(registros[j][9] || "");
+            const directa = String(registros[j][10] ?? "").trim() || cantidadDesdeDetalle(registros[j][9] || "", true);
+            if (cambio?.antes) { cantidadesResueltas[indice] = cambio.antes; break; }
+            if (directa !== "") { cantidadesResueltas[indice] = directa; break; }
+          }
+        } else if (accion.includes("elimin")) {
+          for (let j = indice - 1; j >= 0; j -= 1) {
+            if (!mismaEntidad(f, registros[j])) continue;
+            const cambio = cantidadCambio(registros[j][9] || "");
+            const directa = cantidadesResueltas[j] || String(registros[j][10] ?? "").trim() || cantidadDesdeDetalle(registros[j][9] || "");
+            if (cambio?.despues) { cantidadesResueltas[indice] = cambio.despues; break; }
+            if (directa !== "") { cantidadesResueltas[indice] = directa; break; }
+          }
+        }
+      });
+
+      // Tercera pasada: para CREÓ aún activo, usa la cantidad actual por ID/código/artículo+fecha.
+      registros.forEach((f, indice) => {
+        if (cantidadesResueltas[indice] !== "") return;
+        const accion = claveTexto(f[4]);
+        if (!accion.includes("cre")) return;
+        const clave = clavesRegistro(f).find((k) => cantidadActualPorClave.has(k));
+        if (clave) cantidadesResueltas[indice] = String(cantidadActualPorClave.get(clave) ?? "");
+      });
+
+      // Migra de forma segura filas históricas anteriores a la columna Cantidad.
+      // Sólo completa K cuando está vacía y la cantidad pudo reconstruirse con datos
+      // existentes; nunca sobrescribe un valor histórico ya guardado.
+      const backfillCantidad = registros
+        .map((f, indice) => ({
+          fila: indice + 2,
+          original: String(f[10] ?? "").trim(),
+          cantidad: String(cantidadesResueltas[indice] ?? "").trim(),
+        }))
+        .filter((item) => !item.original && item.cantidad !== "");
+      if (backfillCantidad.length) {
+        try {
+          await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: {
+              valueInputOption: "USER_ENTERED",
+              data: backfillCantidad.map((item) => ({
+                range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!K${item.fila}`,
+                values: [[item.cantidad]],
+              })),
+            },
+          });
+        } catch (errorBackfill) {
+          console.warn(
+            "No se pudo completar Cantidad en historial legacy:",
+            errorBackfill?.message || errorBackfill,
+          );
+        }
+      }
+
+      const historial = registros
+        .map((f, indice) => ({
           fecha: f[0] || "",
           hora: f[1] || "",
           usuario: f[2] || "",
@@ -5619,7 +6637,9 @@ app.get(
           articulo: f[7] || "",
           vencimiento: f[8] || "",
           detalle: f[9] || "",
-        }));
+          cantidad: cantidadesResueltas[indice] || "",
+        }))
+        .reverse();
       res.json({ ok: true, historial });
     } catch (error) {
       res.status(500).json({
@@ -5799,14 +6819,8 @@ function limpiarRegistroReposicion(registro, numeroLista = "1") {
     orden: Number(registro.orden) || 0,
   };
 }
-function buscarIndiceRegistroReposicion(lista, id, codigo = "") {
-  let i = lista.findIndex((x) => normalizarTexto(x.id) === normalizarTexto(id));
-  if (i < 0 && normalizarCodigo(codigo))
-    i = lista.findIndex((x) => x.codigo === normalizarCodigo(codigo));
-  return i;
-}
 
-app.get("/reposicion", async (req, res) => {
+app.get("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const numeroLista = normalizarNumeroLista(req.query.lista);
     const registros = (
@@ -5828,7 +6842,7 @@ app.get("/reposicion", async (req, res) => {
   }
 });
 
-app.post("/reposicion/lote", async (req, res) => {
+app.post("/reposicion/lote", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario);
     const numeroLista = normalizarNumeroLista(req.body.lista);
@@ -5848,7 +6862,7 @@ app.post("/reposicion/lote", async (req, res) => {
         .json({ ok: false, mensaje: "Escribí al menos un producto válido" });
 
     const resultados = await ejecutarEnCola(
-      `listas:${usuario}:${numeroLista}`,
+      "listas-global",
       async () => {
         const todos = await leerTodasLasListas();
         const ahora = fechaHoraArgentinaIso();
@@ -5912,7 +6926,7 @@ app.post("/reposicion/lote", async (req, res) => {
   }
 });
 
-app.post("/reposicion", async (req, res) => {
+app.post("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.body.lista);
@@ -5926,7 +6940,7 @@ app.post("/reposicion", async (req, res) => {
         .status(400)
         .json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
     const resultado = await ejecutarEnCola(
-      `listas:${usuario}:${numeroLista}`,
+      "listas-global",
       async () => {
         const todos = await leerTodasLasListas();
         let r = todos.find(
@@ -5980,7 +6994,7 @@ app.post("/reposicion", async (req, res) => {
   }
 });
 
-app.put("/reposicion/:id", async (req, res) => {
+app.put("/reposicion/:id", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista),
@@ -5992,7 +7006,7 @@ app.put("/reposicion/:id", async (req, res) => {
         .status(400)
         .json({ ok: false, mensaje: "Datos de reposición inválidos" });
     const r = await ejecutarEnCola(
-      `listas:${usuario}:${numeroLista}`,
+      "listas-global",
       async () => {
         const todos = await leerTodasLasListas();
         const i = todos.findIndex(
@@ -6028,7 +7042,7 @@ app.put("/reposicion/:id", async (req, res) => {
   }
 });
 
-app.patch("/reposicion", async (req, res) => {
+app.patch("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.body.lista || req.query.lista),
@@ -6038,7 +7052,7 @@ app.patch("/reposicion", async (req, res) => {
         .status(400)
         .json({ ok: false, mensaje: "No hay cambios para guardar" });
     const resultado = await ejecutarEnCola(
-      `listas:${usuario}:${numeroLista}`,
+      "listas-global",
       async () => {
         let todos = await leerTodasLasListas();
         for (const c of cambios) {
@@ -6090,12 +7104,12 @@ app.patch("/reposicion", async (req, res) => {
   }
 });
 
-app.delete("/reposicion/:id", async (req, res) => {
+app.delete("/reposicion/:id", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.query.lista),
       id = normalizarTexto(req.params.id);
-    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async () => {
+    await ejecutarEnCola("listas-global", async () => {
       const todos = await leerTodasLasListas();
       const i = todos.findIndex(
         (x) =>
@@ -6124,11 +7138,11 @@ app.delete("/reposicion/:id", async (req, res) => {
   }
 });
 
-app.delete("/reposicion", async (req, res) => {
+app.delete("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.query.lista || req.body?.lista);
-    await ejecutarEnCola(`listas:${usuario}:${numeroLista}`, async () => {
+    await ejecutarEnCola("listas-global", async () => {
       const todos = (await leerTodasLasListas()).filter(
         (x) => !(x.usuario === usuario && x.lista === numeroLista),
       );
@@ -6234,6 +7248,8 @@ async function migrarEstructuraHorariosV812() {
       "Creado",
       "Permisos módulos",
       "Sector",
+      "Sectores a cargo",
+      "Versión sesión",
     ],
   };
 }
@@ -6259,12 +7275,20 @@ app.listen(PORT, () => {
   console.log(
     `Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`,
   );
-  migrarEstructuraHorariosV812()
-    .then((r) => console.log("Migración 8.1.4 lista:", r.hojas.join(", ")))
-    .catch((error) =>
-      console.error(
-        "No se pudo ejecutar la migración automática 8.1.4:",
-        error,
-      ),
+  if (AUTO_MIGRATE_SHEETS) {
+    migrarEstructuraHorariosV812()
+      .then((r) =>
+        console.log("Estructura de Horarios verificada:", r.hojas.join(", ")),
+      )
+      .catch((error) =>
+        console.error(
+          "No se pudo verificar automáticamente la estructura de Horarios:",
+          error,
+        ),
+      );
+  } else {
+    console.log(
+      "Migración automática desactivada (AUTO_MIGRATE_SHEETS=false). Las hojas se aseguran al utilizar cada módulo.",
     );
+  }
 });

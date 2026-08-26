@@ -1,7 +1,7 @@
 // Buscador inteligente compartido - V5.2.2
 // Tolera acentos, palabras en distinto orden, códigos parciales y errores breves.
 
-export function normalizarBusqueda(valor) {
+function normalizarBusqueda(valor) {
   return String(valor ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -31,7 +31,7 @@ function distanciaLimitada(a, b, limite = 2) {
       actual[j] = Math.min(
         anterior[j] + 1,
         actual[j - 1] + 1,
-        anterior[j - 1] + costo
+        anterior[j - 1] + costo,
       );
       minimoFila = Math.min(minimoFila, actual[j]);
     }
@@ -54,18 +54,24 @@ function puntuarToken(token, palabras, textoCompleto, textoCompacto) {
   for (const palabra of palabras) {
     if (palabra === token) return 125;
     if (palabra.startsWith(token)) mejor = Math.max(mejor, 105);
-    else if (token.length >= 4 && palabra.includes(token)) mejor = Math.max(mejor, 88);
+    else if (token.length >= 4 && palabra.includes(token))
+      mejor = Math.max(mejor, 88);
     else if (token.length >= 4 && palabra.length >= 4) {
       const limite = token.length >= 8 ? 2 : 1;
       const distancia = distanciaLimitada(token, palabra, limite);
       const proporcion = distancia / Math.max(token.length, palabra.length);
-      if (distancia <= limite && proporcion <= 0.24) mejor = Math.max(mejor, 72 - distancia * 8);
+      if (distancia <= limite && proporcion <= 0.24)
+        mejor = Math.max(mejor, 72 - distancia * 8);
     }
   }
   return mejor;
 }
 
-export function puntuarBusqueda(consulta, item, campos = ["articulo", "codigo"]) {
+function puntuarBusqueda(
+  consulta,
+  item,
+  campos = ["articulo", "codigo"],
+) {
   const q = normalizarBusqueda(consulta);
   if (!q) return 1;
 
@@ -78,7 +84,9 @@ export function puntuarBusqueda(consulta, item, campos = ["articulo", "codigo"])
     if (codigoCompacto.includes(qCompacta)) return 5500;
   }
 
-  const texto = normalizarBusqueda(campos.map(campo => item?.[campo] ?? "").join(" "));
+  const texto = normalizarBusqueda(
+    campos.map((campo) => item?.[campo] ?? "").join(" "),
+  );
   const textoCompacto = compacto(texto);
   const palabras = texto.split(" ").filter(Boolean);
   const tokens = q.split(" ").filter(Boolean);
@@ -104,8 +112,12 @@ export function ordenarPorBusqueda(items, consulta, opciones = {}) {
   if (!q) return items.slice(0, limite);
 
   return items
-    .map((item, indice) => ({ item, indice, puntos: puntuarBusqueda(q, item, campos) }))
-    .filter(resultado => resultado.puntos > 0)
+    .map((item, indice) => ({
+      item,
+      indice,
+      puntos: puntuarBusqueda(q, item, campos),
+    }))
+    .filter((resultado) => resultado.puntos > 0)
     .sort((a, b) => {
       if (b.puntos !== a.puntos) return b.puntos - a.puntos;
       if (typeof desempate === "function") {
@@ -115,9 +127,13 @@ export function ordenarPorBusqueda(items, consulta, opciones = {}) {
       return a.indice - b.indice;
     })
     .slice(0, limite)
-    .map(resultado => resultado.item);
+    .map((resultado) => resultado.item);
 }
 
-export function coincideBusqueda(item, consulta, campos = ["articulo", "codigo"]) {
+export function coincideBusqueda(
+  item,
+  consulta,
+  campos = ["articulo", "codigo"],
+) {
   return puntuarBusqueda(consulta, item, campos) > 0;
 }

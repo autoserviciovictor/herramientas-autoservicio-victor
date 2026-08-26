@@ -1,0 +1,13 @@
+const fs = require("fs");
+const assert = require("assert");
+const server = fs.readFileSync("server.js", "utf8");
+const excel = fs.readFileSync("excel.js", "utf8");
+const app = fs.readFileSync("app.js", "utf8");
+const version = JSON.parse(fs.readFileSync("version.json", "utf8"));
+assert(server.includes("async function crearProductoInventario(codigoBuscado, articuloSugerido"));
+assert(!server.includes("crearProductoInventarioDesdeMaestro"));
+assert(server.includes("respuesta?.data?.updates?.updatedRange"));
+assert(server.includes("crearProductoInventario(codigoBuscado, articulo)"));
+assert(excel.includes("articulo: productoBase.articulo"));
+assert(app.includes(`?v=${version.assetBuild}`));
+console.log("Inventario fix6 alta directa: OK");

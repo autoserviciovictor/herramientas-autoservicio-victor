@@ -6,18 +6,18 @@
   /* Marca */
   --ds-brand-50: #fff4f4;
   --ds-brand-100: #ffe4e5;
-  --ds-brand-500: #df4a4f;
-  --ds-brand-600: #cf3f44;
-  --ds-brand-700: #b93237;
+  --ds-brand-500: #f02246;
+  --ds-brand-600: #dc1f3f;
+  --ds-brand-700: #c91f35;
 
   /* Neutros */
-  --ds-bg: #f7f5ef;
+  --ds-bg: #f7f9fc;
   --ds-surface: #ffffff;
-  --ds-surface-muted: #fbfaf7;
-  --ds-text: #262b27;
-  --ds-text-muted: #737970;
-  --ds-border: #ebe6dc;
-  --ds-border-strong: #dcd5ca;
+  --ds-surface-muted: #f8fafc;
+  --ds-text: #101828;
+  --ds-text-muted: #596579;
+  --ds-border: #e3e8ef;
+  --ds-border-strong: #cfd8e4;
 
   /* Estados */
   --ds-success: #3f8758;
@@ -51,19 +51,35 @@
   --ds-shadow-md: 0 10px 24px rgba(34, 39, 35, .08);
   --ds-shadow-lg: 0 18px 45px rgba(34, 39, 35, .13);
 
-  /* Tipografía */
-  --ds-font-family: Arial, Helvetica, sans-serif;
-  --ds-text-xs: 12px;
+  /* Tipografía — alineada con la referencia oficial y con el shell de la app. */
+  --ds-font-family: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --ds-font-display: "Segoe UI Variable Display", "Segoe UI", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --ds-text-xs: 13px;
   --ds-text-sm: 14px;
-  --ds-text-md: 16px;
+  --ds-text-md: 15px;
   --ds-text-lg: 18px;
   --ds-text-xl: 22px;
-  --ds-text-2xl: 30px;
+  --ds-text-2xl: 28px;
+  --ds-leading-tight: 1.2;
+  --ds-leading-body: 1.5;
+  --ds-weight-regular: 400;
+  --ds-weight-medium: 500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold: 700;
+
+  /* Geometría canónica de escritorio */
+  --ds-page-max: 1380px;
+  --ds-page-edge: 36px;
+  --ds-page-top: 26px;
+  --ds-page-bottom: 42px;
+  --ds-card-padding: 18px;
+  --ds-section-gap: 16px;
 
   /* Controles */
-  --ds-control-height: 48px;
-  --ds-control-height-lg: 54px;
-  --ds-focus-ring: 0 0 0 3px rgba(223, 74, 79, .20);
+  --ds-control-height-sm: 40px;
+  --ds-control-height: 46px;
+  --ds-control-height-lg: 50px;
+  --ds-focus-ring: 0 0 0 3px rgba(240, 34, 70, .16);
 
   /* Compatibilidad con variables históricas */
   --bg: var(--ds-bg);
@@ -80,4 +96,49 @@
   --border: var(--ds-border);
   --shadow: var(--ds-shadow-md);
   --radius: var(--ds-radius-lg);
+}
+
+
+/* =========================================================
+   D22 · Tokens semánticos de tema
+   Los componentes compartidos cambian de tema desde una sola fuente.
+   ========================================================= */
+:root {
+  --ds-overlay: rgba(15, 23, 42, .48);
+  --ds-control-bg: var(--ds-surface);
+  --ds-control-text: var(--ds-text);
+  --ds-control-border: var(--ds-border-strong);
+  --ds-card-bg: var(--ds-surface);
+  --ds-card-border: var(--ds-border);
+}
+
+html[data-theme="dark"] {
+  --ds-brand-50: #351627;
+  --ds-brand-100: #4a1b2c;
+  --ds-brand-500: #ff365b;
+  --ds-brand-600: #ff5471;
+  --ds-brand-700: #ff7189;
+
+  --ds-bg: #071321;
+  --ds-surface: #122238;
+  --ds-surface-muted: #192d46;
+  --ds-text: #f7f9fc;
+  --ds-text-muted: #aab8ca;
+  --ds-border: #30445e;
+  --ds-border-strong: #405772;
+
+  --ds-success: #18b67d;
+  --ds-success-soft: #0b352d;
+  --ds-warning: #f3ad31;
+  --ds-warning-soft: #3a2a12;
+  --ds-danger: #ff5571;
+  --ds-danger-soft: #3c1b2b;
+  --ds-info: #5f9cff;
+  --ds-info-soft: #132f56;
+
+  --ds-shadow-sm: 0 2px 8px rgba(0, 0, 0, .16);
+  --ds-shadow-md: 0 12px 28px rgba(0, 0, 0, .22);
+  --ds-shadow-lg: 0 24px 70px rgba(0, 0, 0, .34);
+  --ds-focus-ring: 0 0 0 3px rgba(255, 54, 91, .24);
+  --ds-overlay: rgba(2, 8, 18, .68);
 }

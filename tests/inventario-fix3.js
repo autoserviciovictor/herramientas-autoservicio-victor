@@ -1,0 +1,13 @@
+const fs = require('fs');
+const assert = require('assert');
+const excel = fs.readFileSync('excel.js','utf8');
+const app = fs.readFileSync('app.js','utf8');
+const config = fs.readFileSync('config.js','utf8');
+const version = JSON.parse(fs.readFileSync('version.json','utf8'));
+assert(excel.includes('const stockServidor = normalizarNumero(fila.stock);'), 'debe conservar stock histórico del servidor');
+assert(excel.includes('const stock = stockUbicaciones > 0 ? stockUbicaciones : stockServidor;'), 'debe usar fallback de stock total');
+assert(app.includes('const maestros = buscarProductosMaestrosPorTexto(consulta, 8);'), 'inventario debe buscar catálogo maestro');
+assert(app.includes('const inventario = buscarProductosPorTexto(consulta, 8, false);'), 'inventario debe buscar también inventario local');
+assert(app.includes('resultado.encontrado && resultado.producto?.filaGoogle'), 'producto maestro nuevo no debe forzar GET /producto antes de guardarse');
+assert(config.includes(`APP_ASSET_BUILD = "${version.assetBuild}"`), 'build de assets no actualizado');
+console.log('Inventario fix3 regression tests: OK');

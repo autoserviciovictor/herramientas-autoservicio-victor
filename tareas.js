@@ -1,12 +1,12 @@
-import { API_BASE_URL } from "./config.js?v=1240";
+import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
 import {
   escapeHTML as esc,
   formatDuration as duracionTexto,
-} from "./shared/dom-utils.js?v=1240";
+} from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
 import {
   shiftSectionTemplate,
   emptyTaskListTemplate,
-} from "./modules/tareas/task-view.js?v=1240";
+} from "./modules/tareas/task-view.js?v=1960-d21-auditoria-correcciones-260826-d";
 
 const $ = (id) => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -15,15 +15,15 @@ const BANO_KEY = "autoservicio_bano_config_v1";
 const BANO_HISTORY_KEY = "autoservicio_bano_historial_v1";
 const PENDING_KEY = "autoservicio_tareas_pendientes_v1";
 const DIAS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
-const TURNOS = { manana: "Mañana", tarde: "Tarde" };
 let fechaSeleccionada = inicioDia(new Date());
 let semanaBase = inicioSemana(fechaSeleccionada);
 let tareaEditando = null;
+let tareaEstadoSeleccionado = true;
+let tareaModalEstadoInicial = null;
 let activo = false;
 let vistaActual = "tareas";
 let sectorSeleccionado = "";
 let usuariosTareas = [];
-let configSubvista = "tareas";
 let asignarDisponibles = [];
 let solicitudResponsables = 0;
 let tareasMemoria = [];
@@ -34,6 +34,8 @@ let contextoTareas = {
 };
 let guardadoRemotoEnCurso = Promise.resolve();
 let banoMemoria = null;
+let banoActivo = false;
+let banoVistaActual = "resumen";
 let asignacionEditando = null;
 let asignarUsuarioSeleccionado = "";
 let asignarTareasSeleccionadas = new Set();
@@ -46,6 +48,144 @@ const ROLES_GESTION_TAREAS = ["administrador", "administracion", "supervisor"];
 function puedeGestionarTareasPorRol() {
   return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
 }
+
+/* Selector visual propio del módulo Tareas.
+   Mantiene el <select> real como fuente de valor y evita el menú nativo
+   del navegador en escritorio y móvil. Reutiliza el componente visual
+   global .app-select-custom para no crear una segunda identidad gráfica. */
+function sincronizarSelectVisualTareas(select) {
+  if (!select) return;
+  const wrapper = select.closest('.app-select-custom');
+  if (!wrapper || wrapper.dataset.owner !== 'tareas') return;
+  const trigger = wrapper.querySelector('.app-select-custom__trigger');
+  const valor = trigger?.querySelector('.app-select-custom__value');
+  const menu = wrapper.querySelector('.app-select-custom__menu');
+  if (!trigger || !valor || !menu) return;
+
+  const firma = [...select.options]
+    .map((o) => `${o.value}\u0001${o.textContent}\u0001${o.disabled ? 1 : 0}`)
+    .join('\u0002');
+  if (wrapper.dataset.optionsSignature !== firma) {
+    wrapper.dataset.optionsSignature = firma;
+    menu.innerHTML = '';
+    [...select.options].forEach((opcion) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'app-select-custom__option';
+      btn.dataset.value = opcion.value;
+      btn.setAttribute('role', 'option');
+      btn.textContent = opcion.textContent.trim();
+      btn.disabled = Boolean(opcion.disabled);
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        select.value = btn.dataset.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        sincronizarSelectVisualTareas(select);
+        wrapper.classList.remove('is-open', 'opens-up');
+        trigger.setAttribute('aria-expanded', 'false');
+      });
+      menu.appendChild(btn);
+    });
+  }
+
+  const opcion = select.options[select.selectedIndex];
+  valor.textContent = opcion?.textContent?.trim() || 'Seleccionar';
+  trigger.classList.toggle('is-placeholder', !select.value);
+  menu.querySelectorAll('.app-select-custom__option').forEach((btn) => {
+    const activo = btn.dataset.value === select.value;
+    btn.classList.toggle('is-selected', activo);
+    btn.setAttribute('aria-selected', activo ? 'true' : 'false');
+  });
+}
+
+function cerrarSelectsVisualesTareas(excepto = null) {
+  document
+    .querySelectorAll('.app-select-custom[data-owner="tareas"].is-open')
+    .forEach((wrapper) => {
+      if (wrapper === excepto) return;
+      wrapper.classList.remove('is-open', 'opens-up');
+      wrapper
+        .querySelector('.app-select-custom__trigger')
+        ?.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function posicionarSelectVisualTareas(wrapper) {
+  const trigger = wrapper?.querySelector('.app-select-custom__trigger');
+  const menu = wrapper?.querySelector('.app-select-custom__menu');
+  if (!wrapper?.classList.contains('is-open') || !trigger || !menu) return;
+  wrapper.classList.remove('opens-up');
+  const r = trigger.getBoundingClientRect();
+  const espacioAbajo = window.innerHeight - r.bottom - 14;
+  const espacioArriba = r.top - 14;
+  const alto = Math.min(menu.scrollHeight || 0, 260);
+  if (alto > espacioAbajo && espacioArriba > espacioAbajo)
+    wrapper.classList.add('opens-up');
+}
+
+function configurarSelectVisualTareas(id) {
+  const select = $(id);
+  if (!select || select.dataset.tareasCustomReady === '1') return;
+  select.dataset.tareasCustomReady = '1';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'app-select-custom tareas-select-custom';
+  wrapper.dataset.owner = 'tareas';
+  select.parentNode.insertBefore(wrapper, select);
+  wrapper.appendChild(select);
+  select.classList.add('app-select-custom__native');
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'app-select-custom__trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.setAttribute(
+    'aria-label',
+    select.getAttribute('aria-label') || 'Seleccionar opción',
+  );
+  trigger.innerHTML = `<span class="app-select-custom__value"></span><span class="app-select-custom__chevron" aria-hidden="true"><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></span>`;
+
+  const menu = document.createElement('div');
+  menu.className = 'app-select-custom__menu';
+  menu.setAttribute('role', 'listbox');
+  wrapper.append(trigger, menu);
+
+  trigger.addEventListener('click', () => {
+    const abrir = !wrapper.classList.contains('is-open');
+    cerrarSelectsVisualesTareas(wrapper);
+    wrapper.classList.toggle('is-open', abrir);
+    trigger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+    if (abrir) {
+      sincronizarSelectVisualTareas(select);
+      requestAnimationFrame(() => posicionarSelectVisualTareas(wrapper));
+    } else wrapper.classList.remove('opens-up');
+  });
+  trigger.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    wrapper.classList.remove('is-open', 'opens-up');
+    trigger.setAttribute('aria-expanded', 'false');
+  });
+  select.addEventListener('change', () => sincronizarSelectVisualTareas(select));
+
+  const observer = new MutationObserver(() => sincronizarSelectVisualTareas(select));
+  observer.observe(select, { childList: true, subtree: true });
+  sincronizarSelectVisualTareas(select);
+}
+
+function prepararSelectoresVisualesTareas() {
+  [
+    'configEstadoFiltro',
+    'configDiaFiltro',
+    'tareaDuracionHoras',
+    'tareaDuracionMinutos',
+  ].forEach(configurarSelectVisualTareas);
+}
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.app-select-custom[data-owner="tareas"]'))
+    cerrarSelectsVisualesTareas();
+});
 
 function inicioDia(d) {
   const x = new Date(d);
@@ -81,18 +221,33 @@ function leerJSON(key, fallback) {
 function guardarJSON(key, v) {
   localStorage.setItem(key, JSON.stringify(v));
 }
+function claveUsuarioLocal(base) {
+  const clave = String(usuario()?.usuario || "anon")
+    .trim()
+    .toLowerCase();
+  return `${base}:${clave}`;
+}
+function leerJSONUsuario(base, fallback) {
+  return leerJSON(claveUsuarioLocal(base), fallback);
+}
+function guardarJSONUsuario(base, valor) {
+  guardarJSON(claveUsuarioLocal(base), valor);
+}
+function eliminarJSONUsuario(base) {
+  localStorage.removeItem(claveUsuarioLocal(base));
+}
 function leer() {
-  return tareasMemoria.length || localStorage.getItem(KEY)
+  return tareasMemoria.length || localStorage.getItem(claveUsuarioLocal(KEY))
     ? tareasMemoria
-    : leerJSON(KEY, []);
+    : leerJSONUsuario(KEY, []);
 }
 function guardarLocal(v) {
   tareasMemoria = Array.isArray(v) ? v : [];
-  guardarJSON(KEY, tareasMemoria);
+  guardarJSONUsuario(KEY, tareasMemoria);
 }
 async function sincronizarTareas(v, deletedIds = []) {
   if (!puedeGestionarTareasPorRol()) return false;
-  const anterior = leerJSON(PENDING_KEY, { tareas: [], deletedIds: [] });
+  const anterior = leerJSONUsuario(PENDING_KEY, { tareas: [], deletedIds: [] });
   const pendientes = {
     tareas: Array.isArray(v) ? v : [],
     deletedIds: [
@@ -101,7 +256,7 @@ async function sincronizarTareas(v, deletedIds = []) {
       ),
     ],
   };
-  guardarJSON(PENDING_KEY, pendientes);
+  guardarJSONUsuario(PENDING_KEY, pendientes);
   let exito = false;
   guardadoRemotoEnCurso = guardadoRemotoEnCurso
     .then(async () => {
@@ -116,7 +271,7 @@ async function sincronizarTareas(v, deletedIds = []) {
           data.mensaje || "No se pudieron sincronizar las tareas",
         );
       if (Array.isArray(data.tareas)) guardarLocal(data.tareas);
-      localStorage.removeItem(PENDING_KEY);
+      eliminarJSONUsuario(PENDING_KEY);
       exito = true;
     })
     .catch((error) =>
@@ -165,8 +320,8 @@ async function cargarContextoTareas() {
   };
 }
 async function cargarTareasRemotas() {
-  const locales = leerJSON(KEY, []),
-    pendientes = leerJSON(PENDING_KEY, null);
+  const locales = leerJSONUsuario(KEY, []),
+    pendientes = leerJSONUsuario(PENDING_KEY, null);
   try {
     if (pendientes?.tareas && puedeGestionarTareasPorRol())
       await sincronizarTareas(pendientes.tareas, pendientes.deletedIds || []);
@@ -231,6 +386,23 @@ function todosLosSectores() {
 function sectoresPermitidos() {
   return sectoresUsuario().length ? sectoresUsuario() : todosLosSectores();
 }
+function opcionSectorTareas(nombre, actual = "") {
+  const info = (contextoTareas.sectores || []).find((sector) =>
+    [sector?.id, sector?.nombre].some(
+      (valor) => normalClave(valor) === normalClave(nombre),
+    ),
+  );
+  return {
+    value: nombre,
+    label: info?.nombre || nombre,
+    color: info?.color || "#718096",
+    description:
+      normalClave(nombre) === normalClave(actual)
+        ? "Sector actual"
+        : "Cambiar a este sector",
+  };
+}
+
 function sectorInicialUsuario() {
   const u = usuario() || {};
   return String(
@@ -292,9 +464,11 @@ function prepararSelectorDuracion() {
   const sync = () => {
     $("tareaDuracion").value =
       `${String(horas.value).padStart(2, "0")}:${String(mins.value).padStart(2, "0")}`;
+    actualizarEstadoGuardarTarea();
   };
   horas.onchange = sync;
   mins.onchange = sync;
+  prepararSelectoresVisualesTareas();
 }
 function establecerDuracionSelector(total) {
   const n = Math.max(1, Number(total) || 10),
@@ -303,13 +477,15 @@ function establecerDuracionSelector(total) {
   $("tareaDuracionHoras").value = String(h);
   $("tareaDuracionMinutos").value = String(m);
   $("tareaDuracion").value = duracionAInput(n);
+  sincronizarSelectVisualTareas($("tareaDuracionHoras"));
+  sincronizarSelectVisualTareas($("tareaDuracionMinutos"));
 }
 
 function migrar() {
-  if (localStorage.getItem(KEY)) return;
+  if (localStorage.getItem(claveUsuarioLocal(KEY))) return;
   let prev = [];
   for (const k of OLD_KEYS) {
-    prev = leerJSON(k, []);
+    prev = leerJSON(claveUsuarioLocal(k), []);
     if (prev.length) break;
   }
   const hoy = iso(new Date());
@@ -353,11 +529,11 @@ function migrar() {
 function seed() {
   migrar();
   if (!leer().length) guardar([]);
-  if (!localStorage.getItem(BANO_KEY))
-    guardarJSON(BANO_KEY, { participantes: [], fechaAncla: iso(new Date()) });
+  if (!localStorage.getItem(claveUsuarioLocal(BANO_KEY)))
+    guardarJSONUsuario(BANO_KEY, { participantes: [], fechaAncla: iso(new Date()) });
   else {
-    const cfg = leerJSON(BANO_KEY, {});
-    guardarJSON(BANO_KEY, {
+    const cfg = leerJSONUsuario(BANO_KEY, {});
+    guardarJSONUsuario(BANO_KEY, {
       participantes: Array.isArray(cfg.participantes) ? cfg.participantes : [],
       fechaAncla: cfg.fechaAncla || cfg.fechaInicio || iso(new Date()),
     });
@@ -431,18 +607,6 @@ function asignacionesDelDia() {
     });
   return out;
 }
-function tareasDisponibles() {
-  const fecha = iso(fechaSeleccionada);
-  return leer().filter(
-    (t) =>
-      (t.sector || "General") === sectorSeleccionado &&
-      correspondeDia(t, fecha) &&
-      ["manana", "tarde"].some((turno) => !asignacion(t, fecha, turno)),
-  );
-}
-function colorTurno(t) {
-  return t === "manana" ? "turno-manana" : "turno-tarde";
-}
 function renderDias() {
   const box = $("tareasDias");
   if (!box) return;
@@ -466,12 +630,42 @@ function renderDias() {
     box.appendChild(b);
   }
 }
-function renderResumen() {
+function renderResumen(items = []) {
   const box = $("tareasResumen");
-  if (box) {
-    box.innerHTML = "";
-    box.classList.add("oculto");
-  }
+  if (!box) return;
+
+  // Cada tarea asignada a una persona cuenta como una asignación individual.
+  // Ej.: una misma tarea con 3 responsables suma 3 al total, porque en la vista
+  // diaria aparece una vez dentro de la tarjeta de cada responsable.
+  const cantidadResponsables = (item) =>
+    (item?._asignacion?.responsables || [])
+      .map((nombre) => String(nombre || "").trim())
+      .filter(Boolean).length;
+
+  const total = items.reduce(
+    (acum, item) => acum + cantidadResponsables(item),
+    0,
+  );
+  const completadas = items.reduce(
+    (acum, item) =>
+      acum + (item.estado === "completada" ? cantidadResponsables(item) : 0),
+    0,
+  );
+  const pendientes = Math.max(0, total - completadas);
+  const personas = new Set(
+    items.flatMap((t) =>
+      (t._asignacion?.responsables || [])
+        .map((nombre) => String(nombre || "").trim())
+        .filter(Boolean),
+    ),
+  ).size;
+  const porcentaje = total ? Math.round((completadas / total) * 100) : 0;
+  box.classList.remove("oculto");
+  box.innerHTML = `
+    <article class="tareas-kpi is-total app-kpi-card app-kpi-blue"><span class="tareas-kpi-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><div><small>Tareas del día</small><strong>${total}</strong><span>asignadas</span></div></article>
+    <article class="tareas-kpi is-complete app-kpi-card app-kpi-red"><span class="tareas-kpi-icon"><svg class="app-icon"><use href="#icon-check"></use></svg></span><div><small>Completadas</small><strong>${completadas}</strong><span>${porcentaje}% del total</span></div></article>
+    <article class="tareas-kpi is-pending app-kpi-card app-kpi-amber"><span class="tareas-kpi-icon"><svg class="app-icon"><use href="#icon-clock"></use></svg></span><div><small>Pendientes</small><strong>${pendientes}</strong><span>${Math.max(0, 100 - porcentaje)}% del total</span></div></article>
+    <article class="tareas-kpi is-people app-kpi-card app-kpi-green"><span class="tareas-kpi-icon"><svg class="app-icon"><use href="#icon-user"></use></svg></span><div><small>Personas asignadas</small><strong>${personas}</strong><span>en la jornada</span></div></article>`;
 }
 function renderLista(items) {
   const box = $("tareasLista");
@@ -506,8 +700,8 @@ function renderTareas() {
     day: "numeric",
     month: "long",
   }).toUpperCase();
-  $("btnNuevaTarea").textContent = "Planificación semanal";
-  $("btnNuevaTarea").classList.toggle("oculto", !puedeAsignar());
+  $("btnTareasPlanificacion")?.classList.toggle("oculto", !puedeAsignar());
+  $("btnTareasConfiguracion")?.classList.toggle("oculto", !puedeConfigurar());
   renderDias();
   renderResumen(items);
   renderLista(items);
@@ -533,28 +727,50 @@ function asignacionesCeldaPlan(t, fecha) {
     .map((turno) => ({ turno, a: data[turno] }))
     .filter((x) => x.a && (x.a.responsables || []).length);
 }
-function planNombreResponsables(a) {
+function planResponsables(a) {
   return (a?.responsables || [])
     .map((x) => String(x || "").trim())
-    .filter(Boolean)
-    .join(" · ");
+    .filter(Boolean);
+}
+function planResponsablesHTML(a, turno) {
+  const nombres = planResponsables(a);
+  const lista = nombres.length ? nombres : ["Sin responsable"];
+  const completada = a?.estado === "completada";
+  return lista
+    .map(
+      (nombre) =>
+        `<span class="tareas-plan-assignee turno-${turno} ${completada ? "is-complete" : ""}"><small>${turno === "manana" ? "M" : "T"}</small><strong class="tareas-plan-person">${esc(nombre)}</strong>${completada ? '<b class="tareas-plan-done">✓</b>' : ""}</span>`,
+    )
+    .join("");
 }
 function renderPlanificacion() {
   const grid = $("tareasPlanGrid"),
     resumen = $("tareasPlanResumen");
   if (!grid) return;
   normalizarSector();
-  if (!planSemanaBase) planSemanaBase = semanaPlanificacionPorDefecto();
+  if (!planSemanaBase) planSemanaBase = inicioSemana(fechaSeleccionada);
   $("tareasPlanSectorNombre").textContent = sectorSeleccionado || "Mi sector";
   const fin = fechaPlanDia(6);
+  const rangoCorto = `${fmt(planSemanaBase, { day: "2-digit", month: "short" })} - ${fmt(fin, { day: "2-digit", month: "short" })}`;
   $("tareasPlanSemanaTexto").textContent =
     `Semana del ${fmt(planSemanaBase, { day: "numeric", month: "long" })} al ${fmt(fin, { day: "numeric", month: "long" })}`;
+  if ($("btnPlanSemanaActual")) $("btnPlanSemanaActual").textContent = rangoCorto;
+
   const tareas = leer().filter(
     (t) => (t.sector || "General") === sectorSeleccionado && t.activo !== false,
   );
   const dias = Array.from({ length: 7 }, (_, i) => fechaPlanDia(i));
   let asignadas = 0;
-  const head = `<div class="tareas-plan-row tareas-plan-row-head"><div class="tareas-plan-task-head">Tarea</div>${dias.map((d) => `<div class="tareas-plan-day-head ${iso(d) === iso(new Date()) ? "is-today" : ""}"><strong>${DIAS[d.getDay()]}</strong><span>${d.getDate()}</span></div>`).join("")}</div>`;
+  let asignadasManana = 0;
+  let asignadasTarde = 0;
+  const personas = new Set();
+  const head = `<div class="tareas-plan-row tareas-plan-row-head"><div class="tareas-plan-task-head"><strong>Tarea</strong><span>Duración</span></div>${dias
+    .map(
+      (d) =>
+        `<div class="tareas-plan-day-head ${iso(d) === iso(new Date()) ? "is-today" : ""}"><strong>${DIAS[d.getDay()]}</strong><span>${d.getDate()}</span><small>${fmt(d, { month: "short" }).replace(".", "")}</small></div>`,
+    )
+    .join("")}</div>`;
+
   const rows = tareas
     .map((t) => {
       const celdas = dias
@@ -563,43 +779,51 @@ function renderPlanificacion() {
             aplica = correspondeDia(t, fecha),
             asigs = asignacionesCeldaPlan(t, fecha);
           asignadas += asigs.length;
+          asigs.forEach(({ turno, a }) => {
+            if (turno === "manana") asignadasManana += 1;
+            if (turno === "tarde") asignadasTarde += 1;
+            (a?.responsables || []).forEach((nombre) => {
+              const limpio = String(nombre || "").trim();
+              if (limpio) personas.add(limpio);
+            });
+          });
           if (!aplica)
             return `<div class="tareas-plan-cell is-disabled" aria-label="${esc(t.nombre)} no corresponde este día"><span>—</span></div>`;
           const contenido = asigs.length
             ? asigs
                 .map(
-                  ({ turno, a }) =>
-                    `<span class="tareas-plan-assignee turno-${turno} ${a.estado === "completada" ? "is-complete" : ""}"><small>${turno === "manana" ? "M" : "T"}</small><strong>${esc(planNombreResponsables(a) || "Sin responsable")}</strong>${a.estado === "completada" ? "<b>✓</b>" : ""}</span>`,
+                  ({ turno, a }) => planResponsablesHTML(a, turno),
                 )
                 .join("")
             : `<span class="tareas-plan-empty">+ Asignar</span>`;
           return `<button type="button" class="tareas-plan-cell is-editable ${iso(d) === iso(new Date()) ? "is-today" : ""}" data-plan-task="${esc(t.id)}" data-plan-fecha="${fecha}" aria-label="Asignar ${esc(t.nombre)} para ${esc(fmt(d, { weekday: "long", day: "numeric" }))}">${contenido}</button>`;
         })
         .join("");
-      return `<div class="tareas-plan-row"><div class="tareas-plan-task"><strong>${esc(t.nombre)}</strong><span>${esc(duracionTexto(t.duracionMin))}</span></div>${celdas}</div>`;
+      return `<div class="tareas-plan-row"><div class="tareas-plan-task"><strong>${esc(t.nombre)}</strong><span><svg class="app-icon"><use href="#icon-clock"></use></svg>${esc(duracionTexto(t.duracionMin))}</span></div>${celdas}</div>`;
     })
     .join("");
+
   grid.innerHTML =
     head +
     (rows ||
       '<div class="tareas-plan-empty-state"><strong>Sin tareas configuradas</strong><span>Creá tareas desde Configuración para empezar a planificar.</span></div>');
+
   if (resumen) {
     const totalCeldas = tareas.reduce(
       (acc, t) => acc + dias.filter((d) => correspondeDia(t, iso(d))).length,
       0,
     );
-    resumen.innerHTML = `<div><small>Tareas</small><strong>${tareas.length}</strong></div><div><small>Asignaciones</small><strong>${asignadas}</strong></div><div><small>Casilleros pendientes</small><strong>${Math.max(0, totalCeldas - asignadas)}</strong></div>`;
+    const pendientes = Math.max(0, totalCeldas - asignadas);
+    const cobertura = totalCeldas ? Math.round((asignadas / totalCeldas) * 100) : 0;
+    resumen.innerHTML = `
+      <article class="tareas-plan-kpi is-total"><span><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><div><small>Tareas activas</small><strong>${tareas.length}</strong><em>en esta semana</em></div></article>
+      <article class="tareas-plan-kpi is-morning"><span>M</span><div><small>Asignaciones mañana</small><strong>${asignadasManana}</strong><em>${personas.size} personas</em></div></article>
+      <article class="tareas-plan-kpi is-evening"><span>T</span><div><small>Asignaciones tarde</small><strong>${asignadasTarde}</strong><em>${cobertura}% cubierto</em></div></article>
+      <article class="tareas-plan-kpi is-pending"><span><svg class="app-icon"><use href="#icon-clock"></use></svg></span><div><small>Casilleros pendientes</small><strong>${pendientes}</strong><em>${asignadas} asignados</em></div></article>`;
   }
   $("btnPlanCambiarSector").disabled = sectoresPermitidos().length < 2;
 }
-async function elegirOpcionPlan({ title, kicker, value = "", options = [] }) {
-  if (window.AppChoicePicker?.open)
-    return await window.AppChoicePicker.open({ title, kicker, value, options });
-  const lista = options.map((o, i) => `${i + 1}. ${o.label}`).join("\n"),
-    r = prompt(`${title}\n${lista}`, "");
-  const n = Number(r);
-  return Number.isInteger(n) && options[n - 1] ? options[n - 1].value : "";
-}
+
 async function guardarCeldaPlan(tarea, fecha, turno, responsables) {
   if (planGuardando) return false;
   const lista = [
@@ -691,7 +915,8 @@ function asegurarModalPlanificacion() {
       <header class="tareas-plan-modal-head">
         <div class="tareas-plan-modal-titlebox">
           <span id="tareasPlanModalKicker" class="tareas-plan-modal-kicker">PLANIFICACIÓN SEMANAL</span>
-          <h3 id="tareasPlanModalTitulo">Asignar tarea</h3>
+          <h3 id="tareasPlanModalTitulo">Asignar usuarios a la tarea</h3>
+          <strong id="tareasPlanModalTarea" class="tareas-plan-modal-taskname"></strong>
           <p id="tareasPlanModalFecha"></p>
         </div>
         <button type="button" class="tareas-plan-modal-close" data-plan-close aria-label="Cerrar">×</button>
@@ -727,7 +952,6 @@ function asegurarModalPlanificacion() {
 
       <footer class="tareas-plan-modal-actions">
         <div class="tareas-plan-modal-actions-main">
-          <button type="button" class="tareas-plan-modal-cancel" data-plan-close>Cancelar</button>
           <button type="button" id="btnPlanGuardar" class="tareas-plan-modal-save">Guardar asignación</button>
         </div>
       </footer>
@@ -939,7 +1163,8 @@ async function editarCeldaPlan(taskId, fecha) {
   };
 
   const modal = asegurarModalPlanificacion();
-  $("tareasPlanModalTitulo").textContent = tarea.nombre;
+  $("tareasPlanModalTitulo").textContent = "Asignar usuarios a la tarea";
+  $("tareasPlanModalTarea").textContent = tarea.nombre;
   $("tareasPlanModalFecha").textContent = fmt(parseFecha(fecha), {
     weekday: "long",
     day: "numeric",
@@ -967,7 +1192,7 @@ function abrirPlanificacion() {
     });
     return;
   }
-  planSemanaBase = semanaPlanificacionPorDefecto();
+  planSemanaBase = inicioSemana(fechaSeleccionada);
   cambiarVista("planificacion");
 }
 
@@ -1011,26 +1236,78 @@ async function cambiarEstado(id, turno) {
   }
 }
 
+function renderEstadoTareaModal() {
+  document
+    .querySelectorAll("#tareaEstadoSelector [data-tarea-estado]")
+    .forEach((btn) => {
+      const activo = btn.dataset.tareaEstado === "activa";
+      const seleccionado = activo === tareaEstadoSeleccionado;
+      btn.classList.toggle("is-selected", seleccionado);
+      btn.setAttribute("aria-pressed", String(seleccionado));
+    });
+}
+
+function leerEstadoTareaModal() {
+  return {
+    nombre: $("tareaNombre")?.value.trim() || "",
+    duracionMin: duracionDesdeInput($("tareaDuracion")?.value || "00:00"),
+    diasSemana: diasSeleccionadosModal().map(Number).sort((a, b) => a - b),
+    activo: Boolean(tareaEstadoSeleccionado),
+  };
+}
+
+function actualizarEstadoGuardarTarea() {
+  const guardar = $("btnGuardarTarea");
+  if (!guardar) return;
+  if (!tareaEditando) {
+    guardar.disabled = false;
+    guardar.setAttribute("aria-disabled", "false");
+    return;
+  }
+  const cambio = JSON.stringify(leerEstadoTareaModal()) !== JSON.stringify(tareaModalEstadoInicial);
+  guardar.disabled = !cambio;
+  guardar.setAttribute("aria-disabled", String(!cambio));
+}
+
+function prepararAccionesModalTarea() {
+  const modal = $("tareaModal");
+  const acciones = modal?.querySelector(".modal-actions");
+  const eliminar = $("btnEliminarTarea");
+  const guardar = $("btnGuardarTarea");
+  if (!modal || !acciones || !eliminar || !guardar) return;
+  if (eliminar.parentElement !== acciones) acciones.insertBefore(eliminar, guardar);
+}
+
 function abrir(t = null) {
   tareaEditando = t;
+  tareaEstadoSeleccionado = t?.activo !== false;
   normalizarSector();
   $("tareaModalTitulo").textContent = t ? "Editar tarea" : "Nueva tarea";
   $("tareaNombre").value = t?.nombre || "";
   establecerDuracionSelector(t?.duracionMin || 10);
   establecerDiasModal(t?.diasSemana);
   $("tareaModalAdminActions").classList.toggle("oculto", !t);
-  if (t)
-    $("btnAlternarTarea").textContent =
-      t.activo === false ? "Activar tarea" : "Desactivar tarea";
+  $("tareaModal").classList.toggle("is-editing", Boolean(t));
+  $("btnEliminarTarea").classList.toggle("oculto", !t);
+  $("btnGuardarTarea").querySelector("span").textContent = t
+    ? "Guardar cambios"
+    : "Guardar tarea";
+  renderEstadoTareaModal();
+  tareaModalEstadoInicial = leerEstadoTareaModal();
+  actualizarEstadoGuardarTarea();
   $("tareaModal").classList.remove("oculto");
   $("tareaModal").setAttribute("aria-hidden", "false");
+  document.body.classList.add("tareas-modal-open");
 }
 function cerrar() {
   $("tareaModal").classList.add("oculto");
   $("tareaModal").setAttribute("aria-hidden", "true");
+  document.body.classList.remove("tareas-modal-open");
+  $("tareaModal")?.classList.remove("is-editing");
   tareaEditando = null;
+  tareaModalEstadoInicial = null;
 }
-function guardarForm() {
+async function guardarForm() {
   const nombre = $("tareaNombre").value.trim(),
     duracionMin = duracionDesdeInput($("tareaDuracion").value),
     diasSemana = diasSeleccionadosModal();
@@ -1055,6 +1332,15 @@ function guardarForm() {
     });
     return;
   }
+  if (tareaEditando && tareaEditando.activo !== false && !tareaEstadoSeleccionado) {
+    const ok = await window.AutoservicioDialog?.confirm?.({
+      title: "Desactivar tarea",
+      message: `¿Desactivar “${tareaEditando.nombre}”? Ya no aparecerá entre las tareas disponibles para asignar.`,
+      confirmText: "Desactivar",
+      danger: true,
+    });
+    if (ok === false) return;
+  }
   const all = leer();
   if (tareaEditando) {
     const actual = all.find((x) => x.id === tareaEditando.id);
@@ -1063,6 +1349,7 @@ function guardarForm() {
       duracionMin,
       sector: sectorSeleccionado,
       diasSemana,
+      activo: tareaEstadoSeleccionado,
     });
   } else
     all.push({
@@ -1073,7 +1360,7 @@ function guardarForm() {
       duracionMin,
       diasSemana,
       turnoPermitido: "ambos",
-      activo: true,
+      activo: tareaEstadoSeleccionado,
       asignaciones: {},
     });
   guardar(all);
@@ -1098,21 +1385,6 @@ async function eliminarTareaActual() {
   cerrar();
   renderTareas();
   renderConfig();
-}
-async function confirmarEliminar(t) {
-  const ok = await window.AutoservicioDialog?.confirm?.({
-    title: "Eliminar tarea",
-    message: `¿Eliminar “${t.nombre}”?`,
-    confirmText: "Eliminar",
-    danger: true,
-  });
-  if (ok === false) return;
-  guardar(
-    leer().filter((x) => x.id !== t.id),
-    { deletedIds: [t.id] },
-  );
-  renderConfig();
-  renderTareas();
 }
 
 async function cargarUsuariosTareas() {
@@ -1140,16 +1412,6 @@ function normalClave(v) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-}
-function usuariosDelSector() {
-  return usuariosTareas.filter(
-    (u) =>
-      !u.sector ||
-      normalClave(u.sector) === normalClave(sectorSeleccionado) ||
-      (u.sectores || []).some(
-        (s) => normalClave(s) === normalClave(sectorSeleccionado),
-      ),
-  );
 }
 function mesCalendario(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -1231,6 +1493,7 @@ function sincronizarEstadoSeleccionAsignacion() {
   document.querySelectorAll("#asignarUsuarios input").forEach((input) => {
     input.checked =
       normalClave(input.value) === normalClave(asignarUsuarioSeleccionado);
+    input.closest(".assign-user-card")?.classList.toggle("is-selected", input.checked);
   });
   document.querySelectorAll("#asignarTareasLista input").forEach((input) => {
     input.checked = asignarTareasSeleccionadas.has(input.value);
@@ -1241,45 +1504,133 @@ function actualizarEstadoGuardarAsignacion() {
   if (!boton) return;
   const valido = Boolean(
     asignarUsuarioSeleccionado &&
-    $("asignarTurno")?.value &&
-    (asignarTareasSeleccionadas.size || asignacionEditando?.porUsuario),
+      $("asignarTurno")?.value &&
+      (asignarTareasSeleccionadas.size || asignacionEditando?.porUsuario),
   );
   boton.disabled = !valido;
   boton.setAttribute("aria-disabled", String(!valido));
 }
 function actualizarCantidadResponsables() {
-  $("asignarResponsablesCantidad").textContent = asignarUsuarioSeleccionado
-    ? "1 seleccionado"
-    : "0 seleccionados";
+  const nodo = $("asignarResponsablesCantidad");
+  if (nodo)
+    nodo.textContent = asignarUsuarioSeleccionado
+      ? "1 seleccionado"
+      : "0 seleccionados";
   actualizarEstadoGuardarAsignacion();
+}
+function actualizarTituloAsignacionUsuario() {
+  const titulo = $("asignarModalTitulo");
+  if (!titulo) return;
+  titulo.textContent = asignarUsuarioSeleccionado
+    ? `Editar tareas de ${asignarUsuarioSeleccionado}`
+    : "Editar tareas del equipo";
+}
+function usuariosAsignadosEnTurno(turno) {
+  const fecha = iso(fechaSeleccionada);
+  const mapa = new Map();
+  leer()
+    .filter((t) => (t.sector || "General") === sectorSeleccionado)
+    .forEach((t) => {
+      (asignacion(t, fecha, turno)?.responsables || []).forEach((nombre) => {
+        const limpio = String(nombre || "").trim();
+        const clave = normalClave(limpio);
+        if (clave && !mapa.has(clave))
+          mapa.set(clave, {
+            usuario: limpio,
+            nombre: limpio,
+            horario: "Asignado actualmente",
+          });
+      });
+    });
+  return [...mapa.values()];
+}
+function cargarTareasUsuarioAsignacion() {
+  const turno = $("asignarTurno")?.value || "",
+    responsable = String(asignarUsuarioSeleccionado || "").trim(),
+    fecha = iso(fechaSeleccionada),
+    todasSector = leer().filter(
+      (t) => (t.sector || "General") === sectorSeleccionado && t.activo !== false,
+    );
+
+  if (!turno || !responsable) {
+    asignarDisponibles = [];
+    asignarTareasSeleccionadas = new Set();
+    $("asignarTareasCantidad").textContent = "Seleccioná un usuario";
+    $("asignarTareasLista").innerHTML =
+      '<div class="tareas-empty assign-empty"><strong>Elegí una persona</strong><span>Seleccioná un usuario de Mañana o Tarde para ver y modificar sus tareas.</span></div>';
+    actualizarTituloAsignacionUsuario();
+    actualizarEstadoGuardarAsignacion();
+    return;
+  }
+
+  const yaAsignadas = todasSector.filter((t) =>
+    (asignacion(t, fecha, turno)?.responsables || []).some(
+      (r) => normalClave(r) === normalClave(responsable),
+    ),
+  );
+  asignarDisponibles = [
+    ...new Map(
+      [
+        ...todasSector.filter((t) => correspondeDia(t, fecha)),
+        ...yaAsignadas,
+      ].map((t) => [t.id, t]),
+    ).values(),
+  ];
+  asignarTareasSeleccionadas = new Set(yaAsignadas.map((t) => t.id));
+  actualizarTituloAsignacionUsuario();
+  renderTareasAsignables();
 }
 async function renderResponsablesAsignacion() {
   const pedido = ++solicitudResponsables,
     box = $("asignarUsuarios"),
-    turno = $("asignarTurno").value;
+    turno = $("asignarTurno").value,
+    seleccionadoAntes = String(asignarUsuarioSeleccionado || "").trim();
+
   box.innerHTML =
-    '<div class="tareas-empty assign-loading">Consultando el calendario…</div>';
+    '<div class="assign-loading-inline"><span></span><strong>Consultando personas del turno…</strong></div>';
   $("asignarResponsablesCantidad").textContent = "0 seleccionados";
+
   let lista = await usuariosDisponiblesCalendario(turno);
   if (pedido !== solicitudResponsables) return;
+
   const unicos = new Map();
-  for (const item of lista) {
-    const clave = normalClave(item.usuario || item.nombre);
-    if (clave && !unicos.has(clave)) unicos.set(clave, item);
-  }
-  lista = [...unicos.values()];
-  if (!lista.length)
+  [...usuariosAsignadosEnTurno(turno), ...lista].forEach((item) => {
+    const nombre = String(item.nombre || item.usuario || "").trim();
+    const clave = normalClave(nombre);
+    if (!clave) return;
+    if (!unicos.has(clave)) unicos.set(clave, { ...item, nombre });
+    else if (item.horario && item.horario !== "Asignado actualmente")
+      unicos.set(clave, { ...unicos.get(clave), ...item, nombre });
+  });
+  lista = [...unicos.values()].sort((a, b) =>
+    String(a.nombre || a.usuario).localeCompare(String(b.nombre || b.usuario), "es", {
+      sensitivity: "base",
+    }),
+  );
+
+  const sigueDisponible = lista.some(
+    (u) => normalClave(u.nombre || u.usuario) === normalClave(seleccionadoAntes),
+  );
+  asignarUsuarioSeleccionado = sigueDisponible ? seleccionadoAntes : "";
+
+  if (!lista.length) {
     box.innerHTML =
-      '<div class="tareas-empty assign-empty"><strong>Sin usuarios disponibles</strong><span>No hay personas de este sector trabajando en este día y turno.</span></div>';
-  else
+      '<div class="tareas-empty assign-empty"><strong>Sin usuarios en este turno</strong><span>No hay personas de este sector trabajando en este día y turno.</span></div>';
+  } else {
     box.innerHTML = lista
-      .map(
-        (u) =>
-          `<label class="assign-user-card"><input type="radio" name="asignarUsuarioRadio" value="${esc(u.nombre)}" ${normalClave(u.nombre) === normalClave(asignarUsuarioSeleccionado) ? "checked" : ""}><span class="assign-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="assign-user-copy"><strong>${esc(u.nombre)}</strong><small>${esc(u.horario)}</small></span></label>`,
-      )
+      .map((u) => {
+        const nombre = String(u.nombre || u.usuario || "").trim();
+        const inicial = nombre.charAt(0).toUpperCase() || "?";
+        const elegido =
+          normalClave(nombre) === normalClave(asignarUsuarioSeleccionado);
+        return `<label class="assign-user-card ${elegido ? "is-selected" : ""}"><input type="radio" name="asignarUsuarioRadio" value="${esc(nombre)}" ${elegido ? "checked" : ""}><span class="assign-user-avatar">${esc(inicial)}</span><span class="assign-user-copy"><strong>${esc(nombre)}</strong><small>${esc(u.horario || "Disponible en el turno")}</small></span><span class="assign-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`;
+      })
       .join("");
+  }
+
   sincronizarEstadoSeleccionAsignacion();
   actualizarCantidadResponsables();
+  cargarTareasUsuarioAsignacion();
 }
 function renderTareasAsignables() {
   const q = normalClave($("asignarBuscarTarea").value),
@@ -1287,15 +1638,26 @@ function renderTareasAsignables() {
       (t) => !q || normalClave(t.nombre).includes(q),
     );
   const dia = fmt(fechaSeleccionada, { weekday: "long" });
-  $("asignarTareasCantidad").textContent = `${lista.length} para ${dia}`;
+  $("asignarTareasCantidad").textContent = asignarUsuarioSeleccionado
+    ? `${lista.length} para ${dia}`
+    : "Seleccioná un usuario";
   $("asignarTareasLista").innerHTML = lista.length
     ? lista
         .map(
-          (t) =>
-            `<label class="assign-task-option"><input type="checkbox" value="${t.id}" ${asignarTareasSeleccionadas.has(t.id) ? "checked" : ""}><span class="assign-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span class="assign-task-copy"><strong>${esc(t.nombre)}</strong><small>${duracionTexto(t.duracionMin)}</small></span><span class="assign-task-mark"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`,
+          (t) => {
+            const a = asignacion(t, iso(fechaSeleccionada), $("asignarTurno").value);
+            const responsables = (a?.responsables || []).filter(Boolean);
+            const otros = responsables.filter(
+              (r) => normalClave(r) !== normalClave(asignarUsuarioSeleccionado),
+            );
+            const detalle = otros.length
+              ? `${duracionTexto(t.duracionMin)} · También: ${otros.join(", ")}`
+              : duracionTexto(t.duracionMin);
+            return `<label class="assign-task-option"><input type="checkbox" value="${t.id}" ${asignarTareasSeleccionadas.has(t.id) ? "checked" : ""}><span class="assign-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span class="assign-task-copy"><strong>${esc(t.nombre)}</strong><small>${esc(detalle)}</small></span><span class="assign-task-mark"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span></label>`;
+          },
         )
         .join("")
-    : `<div class="tareas-empty assign-empty"><strong>${q ? "Sin coincidencias" : "Sin tareas para este día"}</strong><span>${q ? "Probá con otro nombre." : `No hay tareas configuradas para ${dia}.`}</span></div>`;
+    : `<div class="tareas-empty assign-empty"><strong>${q ? "Sin coincidencias" : asignarUsuarioSeleccionado ? "Sin tareas para este día" : "Elegí una persona"}</strong><span>${q ? "Probá con otro nombre." : asignarUsuarioSeleccionado ? `No hay tareas configuradas para ${dia}.` : "Seleccioná un usuario del turno para administrar sus tareas."}</span></div>`;
   sincronizarEstadoSeleccionAsignacion();
   actualizarEstadoGuardarAsignacion();
 }
@@ -1322,7 +1684,7 @@ function renderTurnosAsignacion(
   });
   actualizarEstadoGuardarAsignacion();
 }
-function elegirTurnoAsignacion(turno) {
+async function elegirTurnoAsignacion(turno) {
   const btn = document.querySelector(
     `#asignarTurnoOpciones [data-turno="${turno}"]`,
   );
@@ -1334,48 +1696,17 @@ function elegirTurnoAsignacion(turno) {
       x.classList.toggle("is-active", x.dataset.turno === turno);
       x.setAttribute("aria-checked", String(x.dataset.turno === turno));
     });
-  renderResponsablesAsignacion();
-}
-async function abrirAsignar() {
-  asignacionEditando = null;
-  asignarUsuarioSeleccionado = "";
-  asignarTareasSeleccionadas.clear();
-  asignarDisponibles = leer().filter(
-    (t) =>
-      (t.sector || "General") === sectorSeleccionado &&
-      correspondeDia(t, iso(fechaSeleccionada)),
-  );
-  if (!asignarDisponibles.length) {
-    window.AutoservicioDialog?.alert?.({
-      title: "Sin tareas disponibles",
-      message: "No hay tareas activas configuradas para este sector.",
-    });
-    return;
-  }
-  $("asignarFechaTexto").textContent = fmt(fechaSeleccionada, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-  $("asignarBuscarTarea").value = "";
-  $("asignarModalTitulo").textContent = "Asignar tareas por usuario";
-  $("btnGuardarAsignar").textContent = "Asignar tareas";
-  $("asignarModal").classList.remove("oculto");
-  $("asignarModal").setAttribute("aria-hidden", "false");
-  renderTareasAsignables();
-  renderTurnosAsignacion(["manana", "tarde"], "manana");
-  $("asignarUsuarios").innerHTML =
-    '<div class="tareas-empty assign-empty"><strong>Cargando usuarios…</strong><span>El selector se actualizará enseguida.</span></div>';
-  await cargarUsuariosTareas();
   await renderResponsablesAsignacion();
 }
 function cerrarAsignar() {
   asignacionEditando = null;
   asignarUsuarioSeleccionado = "";
   asignarTareasSeleccionadas.clear();
+  asignarDisponibles = [];
   solicitudResponsables++;
   $("asignarModal").classList.add("oculto");
   $("asignarModal").setAttribute("aria-hidden", "true");
+  document.body.classList.remove("tareas-modal-open");
   $("btnGuardarAsignar").disabled = true;
 }
 async function guardarAsignacion() {
@@ -1394,11 +1725,11 @@ async function guardarAsignacion() {
     });
     return;
   }
-  const boton = $("btnGuardarAsignar");
+  const boton = $("btnGuardarAsignar"),
+    etiqueta = boton?.querySelector("span");
   boton.disabled = true;
-  boton.textContent = "Guardando…";
+  if (etiqueta) etiqueta.textContent = "Guardando…";
   try {
-    const editando = Boolean(asignacionEditando?.porUsuario);
     const r = await fetch(`${API_BASE_URL}/tareas/asignaciones-lote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1407,7 +1738,7 @@ async function guardarAsignacion() {
           fecha,
           turno,
           responsable,
-          reemplazar: editando,
+          reemplazar: true,
         }),
       }),
       data = await r.json();
@@ -1423,44 +1754,28 @@ async function guardarAsignacion() {
       message: error.message || "Intentá nuevamente.",
     });
     boton.disabled = false;
-    boton.textContent = asignacionEditando?.porUsuario
-      ? "Guardar cambios"
-      : "Asignar tareas";
+    if (etiqueta) etiqueta.textContent = "Guardar cambios";
   }
 }
 async function abrirEditarUsuario(responsable, turno) {
   const fecha = iso(fechaSeleccionada);
   asignacionEditando = { porUsuario: true, fecha, turno, responsable };
   asignarUsuarioSeleccionado = responsable;
-  const todasSector = leer().filter(
-    (t) => (t.sector || "General") === sectorSeleccionado && t.activo !== false,
-  );
-  const yaAsignadas = todasSector.filter((t) =>
-    (asignacion(t, fecha, turno)?.responsables || []).some(
-      (r) => normalClave(r) === normalClave(responsable),
-    ),
-  );
-  asignarDisponibles = [
-    ...new Map(
-      [
-        ...todasSector.filter((t) => correspondeDia(t, fecha)),
-        ...yaAsignadas,
-      ].map((t) => [t.id, t]),
-    ).values(),
-  ];
-  asignarTareasSeleccionadas = new Set(yaAsignadas.map((t) => t.id));
+  asignarTareasSeleccionadas = new Set();
+  asignarDisponibles = [];
   $("asignarFechaTexto").textContent = fmt(fechaSeleccionada, {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
   $("asignarBuscarTarea").value = "";
-  $("asignarModalTitulo").textContent = `Editar tareas de ${responsable}`;
-  $("btnGuardarAsignar").textContent = "Guardar cambios";
+  actualizarTituloAsignacionUsuario();
+  const etiquetaGuardar = $("btnGuardarAsignar")?.querySelector("span");
+  if (etiquetaGuardar) etiquetaGuardar.textContent = "Guardar cambios";
   $("asignarModal").classList.remove("oculto");
   $("asignarModal").setAttribute("aria-hidden", "false");
-  renderTareasAsignables();
-  renderTurnosAsignacion([turno], turno);
+  document.body.classList.add("tareas-modal-open");
+  renderTurnosAsignacion(["manana", "tarde"], turno);
   await cargarUsuariosTareas();
   await renderResponsablesAsignacion();
   sincronizarEstadoSeleccionAsignacion();
@@ -1468,43 +1783,11 @@ async function abrirEditarUsuario(responsable, turno) {
   actualizarEstadoGuardarAsignacion();
 }
 
-async function eliminarAsignacion(id, turno) {
-  const t = leer().find((x) => x.id === id),
-    fecha = iso(fechaSeleccionada);
-  if (!t?.asignaciones?.[fecha]?.[turno]) return;
-  const ok = await window.AutoservicioDialog?.confirm?.({
-    title: "Eliminar asignación",
-    message: `¿Eliminar la asignación de “${t.nombre}” para ${TURNOS[turno].toLowerCase()}?`,
-    confirmText: "Eliminar",
-    danger: true,
-  });
-  if (ok === false) return;
-  try {
-    const r = await fetch(`${API_BASE_URL}/tareas/asignacion`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, fecha, turno }),
-      }),
-      data = await r.json();
-    if (!r.ok || !data.ok)
-      throw new Error(data.mensaje || "No se pudo eliminar");
-    delete t.asignaciones[fecha][turno];
-    if (!Object.keys(t.asignaciones[fecha]).length)
-      delete t.asignaciones[fecha];
-    guardarLocal(leer());
-    renderTareas();
-  } catch (error) {
-    window.AutoservicioDialog?.alert?.({
-      title: "No se pudo eliminar",
-      message: error.message || "Intentá nuevamente.",
-    });
-  }
-}
 
 function configBano() {
   const cfg =
     banoMemoria ||
-    leerJSON(BANO_KEY, {
+    leerJSONUsuario(BANO_KEY, {
       participantes: [],
       fechaAncla: iso(new Date()),
       historial: [],
@@ -1522,13 +1805,14 @@ async function cargarBanoRemoto() {
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo cargar la rotación");
     banoMemoria = data.config || {};
-    guardarJSON(BANO_KEY, banoMemoria);
-    guardarJSON(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    guardarJSONUsuario(BANO_KEY, banoMemoria);
+    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
   } catch {
-    banoMemoria = leerJSON(BANO_KEY, {
+    banoMemoria = leerJSONUsuario(BANO_KEY, {
       participantes: [],
       fechaAncla: iso(new Date()),
-      historial: leerJSON(BANO_HISTORY_KEY, []),
+      historial: leerJSONUsuario(BANO_HISTORY_KEY, []),
     });
   }
 }
@@ -1571,65 +1855,108 @@ function responsableBano(fecha, cfg) {
     ? ""
     : nombreParticipante(claveParticipante(cfg.participantes[i]));
 }
+function siguienteDiaLimpieza(desde, cfg, incluirHoy = false) {
+  const base = inicioDia(new Date(desde));
+  for (let offset = incluirHoy ? 0 : 1; offset < 90; offset++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + offset);
+    if (esDiaLimpieza(d, cfg)) return d;
+  }
+  return null;
+}
+function confirmacionesPendientesBano(cfg, hoy) {
+  if (!cfg.participantes.length) return [];
+  const historial = new Set((cfg.historial || []).map((h) => h.fecha));
+  const inicio = inicioDia(parseFecha(cfg.fechaAncla));
+  const limite = new Date(hoy);
+  limite.setDate(limite.getDate() - 45);
+  const desde = inicio > limite ? inicio : limite;
+  const pendientes = [];
+  for (let d = new Date(hoy), pasos = 0; pasos < 90 && pendientes.length < 5; pasos++) {
+    d.setDate(d.getDate() - 1);
+    if (d < desde) break;
+    if (!esDiaLimpieza(d, cfg)) continue;
+    const fecha = iso(d);
+    if (historial.has(fecha)) continue;
+    pendientes.push({
+      fecha: new Date(d),
+      nombre: responsableBano(d, cfg),
+    });
+  }
+  return pendientes;
+}
 function renderBano() {
   const cfg = configBano(),
     hoy = inicioDia(new Date()),
     corresponde = esDiaLimpieza(hoy, cfg),
     responsable = responsableBano(hoy, cfg),
     hist = cfg.historial || [];
-  const confirmado = corresponde
-    ? hist.find((h) => h.fecha === iso(hoy))
-    : null;
+  const confirmado = corresponde ? hist.find((h) => h.fecha === iso(hoy)) : null;
   const sinParticipantes = !cfg.participantes.length;
-  const inicial = responsable ? responsable.charAt(0).toUpperCase() : "—";
-  const estadoTexto = !corresponde
-    ? "Descanso"
-    : confirmado
-      ? "Completada"
-      : "Pendiente";
-  const estadoClase = !corresponde
-    ? "is-rest"
-    : confirmado
-      ? "is-done"
-      : "is-pending";
-  $("banoTurnoActual").innerHTML = `
-    <div class="bano-hero-head">
-      <div><span class="bano-eyebrow">${corresponde ? "RESPONSABLE DE HOY" : "HOY NO CORRESPONDE"}</span><strong>${fmt(hoy, { weekday: "long", day: "numeric", month: "long" })}</strong></div>
-      <span class="bano-status-pill ${estadoClase}">${estadoTexto}</span>
-    </div>
-    <div class="bano-hero-person ${!corresponde ? "is-rest-day" : ""}">
-      <div class="bano-avatar">${esc(inicial)}</div>
-      <div class="bano-person-copy">${corresponde ? `<small>Le corresponde a</small><h3>${esc(responsable || "Sin participantes")}</h3><p>Limpieza día por medio</p>` : `<small>Próxima limpieza</small><h3>Día de descanso</h3><p>La limpieza se realiza un día sí y otro no.</p>`}</div>
-    </div>
-    ${!corresponde ? `<div class="bano-rest-note"><strong>No hay limpieza asignada para hoy</strong><span>La rotación continuará automáticamente en el próximo día correspondiente.</span></div>` : confirmado ? `<div class="bano-confirmed"><svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><div><strong>Limpieza confirmada</strong><span>${esc(confirmado.hora)} · ${esc(confirmado.usuario)}</span></div></div>` : `<button id="btnConfirmarBano" class="bano-confirm-btn" type="button" ${sinParticipantes ? "disabled" : ""}><svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Confirmar limpieza</button>`}`;
+  const fechaLarga = fmt(hoy, { weekday: "long", day: "numeric", month: "long" });
+  const card = $("banoTurnoActual");
+  card?.classList.toggle("is-completed", !!confirmado);
+  card?.classList.toggle("is-rest", !corresponde);
+  card?.classList.toggle("is-pending", corresponde && !confirmado);
+
+  if (!corresponde) {
+    card.innerHTML = `
+      <div class="bano-modern-hero-copy">
+        <span class="bano-modern-kicker">HOY NO CORRESPONDE</span>
+        <strong>Día de descanso</strong>
+        <small>${esc(fechaLarga)}</small>
+      </div>
+      <span class="bano-modern-status">Descanso</span>`;
+  } else {
+    card.innerHTML = `
+      <div class="bano-modern-hero-copy">
+        <span class="bano-modern-kicker">${confirmado ? "LIMPIEZA COMPLETADA" : "HOY LE TOCA A"}</span>
+        <strong>${esc(responsable || "Sin participantes")}</strong>
+        <small>${esc(fechaLarga)}</small>
+      </div>
+      ${confirmado
+        ? `<div class="bano-modern-confirmed"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Completado</span></div>`
+        : `<button id="btnConfirmarBano" class="bano-confirm-btn bano-confirm-modern" type="button" ${sinParticipantes ? "disabled" : ""}><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Marcar como completado</span></button>`}`;
+  }
+
   const proximos = [];
-  for (let i = 1, offset = 1; proximos.length < 5 && offset < 20; offset++) {
+  for (let offset = 1; proximos.length < 5 && offset < 30; offset++) {
     const d = new Date(hoy);
     d.setDate(d.getDate() + offset);
-    if (esDiaLimpieza(d, cfg))
-      proximos.push({ fecha: d, nombre: responsableBano(d, cfg), orden: i++ });
+    if (esDiaLimpieza(d, cfg)) {
+      proximos.push({ fecha: d, nombre: responsableBano(d, cfg), orden: proximos.length + 1 });
+    }
   }
   $("banoProximos").innerHTML = cfg.participantes.length
-    ? proximos
-        .map(
-          (x) =>
-            `<article class="bano-turn-card"><div class="bano-turn-date"><strong>${x.fecha.getDate()}</strong><span>${fmt(x.fecha, { month: "short" }).replace(".", "")}</span></div><div class="bano-turn-copy"><small>Próximo turno ${x.orden}</small><strong>${esc(x.nombre)}</strong><span>${fmt(x.fecha, { weekday: "long" })}</span></div><svg class="app-icon bano-turn-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></article>`,
-        )
-        .join("")
+    ? proximos.map((x) => `
+        <article class="bano-turn-card bano-turn-modern">
+          <div class="bano-turn-date"><strong>${x.fecha.getDate()}</strong><span>${fmt(x.fecha, { month: "short" }).replace(".", "")}</span></div>
+          <span class="bano-turn-order">${x.orden}</span>
+          <div class="bano-turn-copy"><strong>${esc(x.nombre)}</strong><span>Limpieza del baño</span></div>
+          <span class="bano-turn-day">${esc(fmt(x.fecha, { weekday: "long" }))}</span>
+          <svg class="app-icon bano-turn-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </article>`).join("")
     : '<div class="tareas-empty"><strong>Sin participantes</strong><span>Seleccioná usuarios desde Configuración.</span></div>';
-  $("banoHistorial").innerHTML = hist.length
-    ? hist
-        .slice()
-        .reverse()
-        .slice(0, 5)
-        .map(
-          (h) =>
-            `<article class="bano-history-card"><span class="bano-history-check"><svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span><div><strong>${esc(h.usuario)}</strong><span>${fmt(parseFecha(h.fecha), { weekday: "long", day: "numeric", month: "long" })}</span></div><time>${esc(h.hora)}</time></article>`,
-        )
-        .join("")
-    : '<div class="tareas-empty bano-empty-history"><span class="tareas-empty-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span><strong>Sin confirmaciones</strong><span>Las limpiezas confirmadas aparecerán acá.</span></div>';
+
+  const pendientes = confirmacionesPendientesBano(cfg, hoy);
+  $("banoPendientesCantidad").textContent = String(pendientes.length);
+  $("banoPendientes").innerHTML = pendientes.length
+    ? pendientes.map((x) => `
+        <article class="bano-pending-row">
+          <span class="bano-pending-avatar">${esc((x.nombre || "?").charAt(0).toUpperCase())}</span>
+          <div class="bano-pending-copy"><strong>${esc(x.nombre || "Sin participante")}</strong><span>Le tocaba el <svg class="app-icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M4 9h16M5 5h14v16H5z"/></svg>${esc(fmt(x.fecha, { weekday: "long", day: "numeric", month: "long" }))}</span></div>
+          <span class="bano-pending-badge">Sin confirmar</span>
+        </article>`).join("")
+    : `<div class="bano-all-confirmed"><span><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div><strong>Sin confirmaciones pendientes</strong><small>Las limpiezas anteriores están al día.</small></div></div>`;
+
+  $("banoKpiParticipantes").textContent = String(cfg.participantes.length);
+  const proxima = siguienteDiaLimpieza(hoy, cfg, !corresponde);
+  $("banoKpiProxima").textContent = proxima ? (proxima.getTime() === hoy.getTime() ? "Hoy" : fmt(proxima, { weekday: "long" })) : "—";
+  $("banoKpiProximaFecha").textContent = proxima ? fmt(proxima, { day: "numeric", month: "long" }) : "Sin fecha";
+
   $("btnConfirmarBano")?.addEventListener("click", confirmarBano);
 }
+
 async function confirmarBano() {
   const hoyFecha = new Date(),
     hoy = iso(hoyFecha),
@@ -1654,31 +1981,69 @@ async function confirmarBano() {
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo confirmar");
     banoMemoria = data.config;
-    guardarJSON(BANO_KEY, banoMemoria);
-    guardarJSON(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    guardarJSONUsuario(BANO_KEY, banoMemoria);
+    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
     renderBano();
   } catch (error) {
     window.AutoservicioDialog?.alert?.({
       title: "No se pudo confirmar",
       message: error.message || "Intentá nuevamente.",
     });
-    if (boton) boton.disabled = false;
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = '<svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Marcar como completado</span>';
+    }
   }
 }
 function participantesConfigActuales() {
-  return [
-    ...document.querySelectorAll("#banoUsuariosDisponibles input:checked"),
-  ]
+  const contenedor = selectorParticipantesBanoActivo();
+  if (!contenedor) return [];
+  return [...contenedor.querySelectorAll("input:checked")]
     .map((x) => x.value)
     .filter(Boolean);
+}
+function colorSectorBano(nombreSector) {
+  const clave = normalClave(nombreSector);
+  const sector = (contextoTareas.sectores || []).find((s) =>
+    normalClave(s?.nombre || s?.id) === clave || normalClave(s?.id) === clave
+  );
+  return sector?.color || "#7b61d1";
+}
+function estiloSectorBano(nombreSector) {
+  const color = colorSectorBano(nombreSector);
+  return `--bano-sector-color:${esc(color)}`;
+}
+function esMobileBano() {
+  return window.matchMedia?.("(max-width: 620px)")?.matches === true;
+}
+function selectorParticipantesBanoActivo() {
+  if (esMobileBano() && !$('banoMobileParticipantSheet')?.classList.contains('oculto'))
+    return $('banoUsuariosDisponiblesMobile');
+  return $('banoUsuariosDisponibles');
 }
 function renderParticipantesConfig(seleccionados) {
   const marcados = new Set((seleccionados || []).map(claveParticipante));
   $("banoParticipantesCantidad").textContent = String(marcados.size);
-  // La configuración resumida muestra únicamente la cantidad. Los nombres
-  // permanecen disponibles dentro del selector, evitando una cabecera saturada.
-  $("banoParticipantesSeleccionados").innerHTML = "";
-  const q = normalClave($("banoBuscarUsuario")?.value || "");
+  const seleccionadosInfo = usuariosTareas.filter((u) => marcados.has(claveParticipante(u)));
+  $("banoParticipantesSeleccionados").innerHTML = seleccionadosInfo.length
+    ? seleccionadosInfo.map((u) => {
+        const nombre = u.nombre || u.usuario || "Sin nombre";
+        const sector = u.sector || "Sin sector";
+        const clave = claveParticipante(u);
+        return `<article class="bano-participant-row" data-participante="${esc(clave)}">
+          <span class="bano-participant-name"><i>${esc(nombre.charAt(0).toUpperCase())}</i><strong>${esc(nombre)}</strong></span>
+          <span class="bano-participant-sector" style="${estiloSectorBano(sector)}">${esc(sector)}</span>
+          <span class="bano-participant-status"><i></i>Activo</span>
+          <span class="bano-participant-row-actions"><button type="button" class="bano-remove-participant" data-remove-participant="${esc(clave)}" aria-label="Quitar a ${esc(nombre)} de la rotación" title="Quitar participante"><svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h4v2H4V6h4l1-2Zm-2 6h10l-.7 10H7.7L7 10Zm3 2v6m4-6v6"/></svg></button></span>
+        </article>`;
+      }).join("")
+    : '<div class="bano-no-selected"><strong>Sin participantes seleccionados</strong><span>Agregá al menos una persona para iniciar la rotación.</span></div>';
+  const q = normalClave(
+    esMobileBano() && !$('banoMobileParticipantSheet')?.classList.contains('oculto')
+      ? $("banoBuscarUsuarioMobile")?.value || ""
+      : $("banoBuscarUsuario")?.value || "",
+  );
   const lista = usuariosTareas.filter(
     (u) =>
       !q ||
@@ -1686,20 +2051,51 @@ function renderParticipantesConfig(seleccionados) {
         `${u.nombre || ""} ${u.usuario || ""} ${u.sector || ""}`,
       ).includes(q),
   );
-  $("banoUsuariosDisponibles").innerHTML = lista.length
+  const opcionesHtml = lista.length
     ? lista
         .map((u) => {
           const clave = claveParticipante(u),
-            marcado = marcados.has(clave);
-          return `<label class="config-user-option"><input type="checkbox" value="${esc(clave)}" ${marcado ? "checked" : ""}><span class="config-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="config-user-copy"><strong>${esc(u.nombre || u.usuario)}</strong><small>${esc(u.sector || "Sin sector")}</small></span></label>`;
+            marcado = marcados.has(clave),
+            sector = u.sector || "Sin sector";
+          return `<label class="config-user-option bano-user-option"><input type="checkbox" value="${esc(clave)}" ${marcado ? "checked" : ""}><span class="config-user-check"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="bano-user-sector-dot" style="${estiloSectorBano(sector)}"></span><span class="config-user-copy"><strong>${esc(u.nombre || u.usuario)}</strong><small>${esc(sector)}</small></span></label>`;
         })
         .join("")
     : '<div class="config-participants-empty"><strong>Sin coincidencias</strong><span>Probá con otra búsqueda.</span></div>';
+  if ($("banoUsuariosDisponibles")) $("banoUsuariosDisponibles").innerHTML = opcionesHtml;
+  if ($("banoUsuariosDisponiblesMobile")) $("banoUsuariosDisponiblesMobile").innerHTML = opcionesHtml;
 }
-async function guardarConfigBano() {
+
+function abrirSelectorParticipantesBano() {
+  const cfg = configBano();
+  if (esMobileBano()) {
+    const sheet = $("banoMobileParticipantSheet");
+    if (!sheet) return;
+    if ($("banoBuscarUsuarioMobile")) $("banoBuscarUsuarioMobile").value = "";
+    sheet.classList.remove("oculto");
+    sheet.setAttribute("aria-hidden", "false");
+    document.body.classList.add("bano-participant-sheet-open");
+    renderParticipantesConfig(cfg.participantes);
+    requestAnimationFrame(() => $("banoBuscarUsuarioMobile")?.focus());
+    return;
+  }
+  const selector = $("banoSelectorParticipantes");
+  selector?.classList.toggle("oculto");
+  $("banoConfigFooter")?.classList.toggle("oculto", selector?.classList.contains("oculto") !== false);
+}
+
+function cerrarSelectorParticipantesBano({ restaurar = true } = {}) {
+  const sheet = $("banoMobileParticipantSheet");
+  sheet?.classList.add("oculto");
+  sheet?.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("bano-participant-sheet-open");
+  if (restaurar) renderParticipantesConfig(configBano().participantes);
+}
+
+async function guardarConfigBano(participantesForzados = null, opciones = {}) {
   const anterior = configBano(),
-    participantes = participantesConfigActuales(),
-    boton = $("btnGuardarConfigBano");
+    participantes = Array.isArray(participantesForzados) ? participantesForzados : participantesConfigActuales(),
+    boton = $("btnGuardarConfigBano"),
+    silencioso = opciones.silencioso === true;
   if (boton) {
     boton.disabled = true;
     boton.dataset.textoOriginal = boton.textContent;
@@ -1718,16 +2114,21 @@ async function guardarConfigBano() {
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo guardar");
     banoMemoria = data.config;
-    guardarJSON(BANO_KEY, banoMemoria);
-    guardarJSON(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    guardarJSONUsuario(BANO_KEY, banoMemoria);
+    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
     renderParticipantesConfig(banoMemoria.participantes);
     $("banoSelectorParticipantes")?.classList.add("oculto");
+    $("banoConfigFooter")?.classList.add("oculto");
+    cerrarSelectorParticipantesBano({ restaurar: false });
     renderBano();
-    window.AutoservicioDialog?.alert?.({
-      title: "Configuración guardada",
-      message:
-        "La rotación quedó disponible para todos los usuarios y dispositivos.",
-    });
+    if (!silencioso) {
+      window.AutoservicioDialog?.alert?.({
+        title: "Configuración guardada",
+        message:
+          "La rotación quedó disponible para todos los usuarios y dispositivos.",
+      });
+    }
   } catch (error) {
     window.AutoservicioDialog?.alert?.({
       title: "No se pudo guardar",
@@ -1736,10 +2137,27 @@ async function guardarConfigBano() {
   } finally {
     if (boton) {
       boton.disabled = false;
-      boton.textContent =
-        boton.dataset.textoOriginal || "Guardar configuración";
+      boton.innerHTML = '<svg class="app-icon" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4M8 17h8" /></svg><span>Guardar</span>';
     }
   }
+}
+
+
+async function eliminarParticipanteBano(clave) {
+  const cfg = configBano();
+  const usuario = usuariosTareas.find((u) => claveParticipante(u) === clave);
+  const nombre = usuario?.nombre || usuario?.usuario || clave || "este usuario";
+  const ok = await window.AutoservicioDialog?.confirm?.({
+    title: "Eliminar participante",
+    message: `¿Estás seguro de que querés eliminar a “${nombre}” de la rotación del baño?`,
+    confirmText: "Eliminar",
+    cancelText: "Cancelar",
+    danger: true,
+  });
+  if (ok !== true) return;
+
+  const participantes = (cfg.participantes || []).filter((p) => claveParticipante(p) !== clave);
+  await guardarConfigBano(participantes, { silencioso: true });
 }
 
 async function cambiarSectorConfig() {
@@ -1755,7 +2173,7 @@ async function cambiarSectorConfig() {
       title: "Seleccionar sector",
       kicker: "Configuración de tareas",
       value: actual,
-      options: sectores.map((s) => ({ value: s, label: s })),
+      options: sectores.map((s) => opcionSectorTareas(s, actual)),
     });
   else elegido = prompt("Sector", actual) || "";
   if (elegido && sectores.includes(elegido)) {
@@ -1766,55 +2184,64 @@ async function cambiarSectorConfig() {
 }
 function renderConfig() {
   const permiso = puedeConfigurar();
-  $("tareasConfigSinPermiso").classList.toggle("oculto", permiso);
-  $("tareasConfigContenido").classList.toggle("oculto", !permiso);
+  $("tareasConfigSinPermiso")?.classList.toggle("oculto", permiso);
+  $("tareasConfigContenido")?.classList.toggle("oculto", !permiso);
   if (!permiso) return;
-  const sectores = sectoresPermitidos(),
-    sel = $("configSectorFiltro"),
-    actual = sel.value || sectorSeleccionado || sectores[0] || "General";
+
+  const sectores = sectoresPermitidos();
+  const sel = $("configSectorFiltro");
+  const actual = sel.value || sectorSeleccionado || sectores[0] || "General";
   sel.innerHTML = sectores
-    .map((s) => `<option value="${esc(s)}">${esc(s)}</option>`)
+    .map((sector) => `<option value="${esc(sector)}">${esc(sector)}</option>`)
     .join("");
   sel.value = sectores.includes(actual) ? actual : sectores[0] || "";
   sectorSeleccionado = sel.value || sectorSeleccionado;
   $("configSectorNombre").textContent = sel.value || "General";
-  const todas = leer().filter((t) => (t.sector || "General") === sel.value),
-    q = normalClave($("configBuscarTarea")?.value || ""),
-    lista = todas.filter((t) => !q || normalClave(t.nombre).includes(q)),
-    activas = todas.filter((t) => t.activo !== false).length;
-  $("btnLimpiarBusquedaTarea").classList.toggle("oculto", !q);
-  $("configTareasResumen").innerHTML =
-    `<div><small>Total</small><strong>${todas.length}</strong></div><div><small>Activas</small><strong>${activas}</strong></div><div><small>Desactivadas</small><strong>${todas.length - activas}</strong></div>`;
+
+  const todasPermitidas = leer().filter((t) =>
+    sectores.includes(t.sector || "General"),
+  );
+  const activasGlobal = todasPermitidas.filter((t) => t.activo !== false).length;
+  $("configTareasResumen").innerHTML = `
+    <article class="config-kpi is-total"><span><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><div><small>Total</small><strong>${todasPermitidas.length}</strong><em>tareas registradas</em></div></article>
+    <article class="config-kpi is-active"><span><svg class="app-icon"><use href="#icon-check"></use></svg></span><div><small>Activas</small><strong>${activasGlobal}</strong><em>en uso actualmente</em></div></article>
+    <article class="config-kpi is-disabled"><span><svg class="app-icon"><use href="#icon-clock"></use></svg></span><div><small>Desactivadas</small><strong>${todasPermitidas.length - activasGlobal}</strong><em>no visibles al asignar</em></div></article>
+    <article class="config-kpi is-sectors"><span><svg class="app-icon"><use href="#icon-store"></use></svg></span><div><small>Sectores</small><strong>${sectores.length}</strong><em>disponibles</em></div></article>`;
+
+  const todasSector = leer().filter(
+    (t) => (t.sector || "General") === sel.value,
+  );
+  const q = normalClave($("configBuscarTarea")?.value || "");
+  const estado = $("configEstadoFiltro")?.value || "todos";
+  const dia = $("configDiaFiltro")?.value || "todos";
+  const diaNumero = dia === "todos" ? null : Number(dia);
+  const lista = todasSector.filter((t) => {
+    if (q && !normalClave(t.nombre).includes(q)) return false;
+    if (estado === "activas" && t.activo === false) return false;
+    if (estado === "desactivadas" && t.activo !== false) return false;
+    if (diaNumero !== null && !diasTarea(t).includes(diaNumero)) return false;
+    return true;
+  });
+
+  $("btnLimpiarBusquedaTarea")?.classList.toggle("oculto", !q);
   $("configTareasLista").innerHTML = lista.length
     ? lista
-        .map(
-          (t) =>
-            `<article class="config-task-row ${t.activo === false ? "is-disabled" : ""}" data-id="${t.id}" tabindex="0"><span class="config-task-icon"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div class="config-task-copy"><strong>${esc(t.nombre)}</strong><div class="config-task-meta"><span class="config-task-duration">${duracionTexto(t.duracionMin)}</span>${etiquetaDiasTarea(t)}${t.activo === false ? '<span class="config-task-disabled">Desactivada</span>' : ""}</div></div><button type="button" class="config-task-open" data-config-action="edit" aria-label="Editar ${esc(t.nombre)}"><svg class="app-icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></article>`,
-        )
+        .map((t) => {
+          const activa = t.activo !== false;
+          return `<article class="config-task-row ${activa ? "" : "is-disabled"}" data-id="${esc(t.id)}" tabindex="0">
+            <div class="config-task-name"><span class="config-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><strong>${esc(t.nombre)}</strong></div>
+            <span class="config-task-duration"><svg class="app-icon"><use href="#icon-clock"></use></svg>${esc(duracionTexto(t.duracionMin))}</span>
+            <div class="config-task-days-wrap">${etiquetaDiasTarea(t)}</div>
+            <span class="config-task-status ${activa ? "is-active" : "is-disabled"}"><i></i>${activa ? "Activa" : "Desactivada"}</span>
+            <button type="button" class="config-task-open" data-config-action="edit" aria-label="Editar ${esc(t.nombre)}"><svg class="app-icon"><use href="#icon-edit"></use></svg></button>
+          </article>`;
+        })
         .join("")
-    : `<div class="tareas-empty config-tasks-empty"><strong>${q ? "Sin coincidencias" : "Sin tareas configuradas"}</strong><span>${q ? "Probá con otro nombre." : `Agregá la primera tarea de ${esc(sel.value || "este sector")}.`}</span></div>`;
-  const cfg = configBano();
-  renderParticipantesConfig(cfg.participantes);
-  actualizarConfigSubvista();
-}
-function actualizarConfigSubvista() {
-  const tareas = configSubvista === "tareas";
-  $("configPanelTareas").classList.toggle("oculto", !tareas);
-  $("configPanelBano").classList.toggle("oculto", tareas);
-  $("btnConfigTabTareas").classList.toggle("activo", tareas);
-  $("btnConfigTabBano").classList.toggle("activo", !tareas);
-  $("btnConfigTabTareas").setAttribute(
-    "aria-selected",
-    tareas ? "true" : "false",
-  );
-  $("btnConfigTabBano").setAttribute(
-    "aria-selected",
-    tareas ? "false" : "true",
-  );
+    : `<div class="tareas-empty config-tasks-empty"><strong>Sin tareas para mostrar</strong><span>${q || estado !== "todos" || dia !== "todos" ? "Modificá la búsqueda o los filtros." : `Agregá la primera tarea de ${esc(sel.value || "este sector")}.`}</span></div>`;
 }
 
 async function cambiarSector() {
-  const opts = sectoresPermitidos().map((s) => ({ value: s, label: s }));
+  const opts = sectoresPermitidos().map((s) => opcionSectorTareas(s, sectorSeleccionado));
   if (window.AppChoicePicker?.open) {
     const v = await window.AppChoicePicker.open({
       title: "Seleccionar sector",
@@ -1835,9 +2262,36 @@ async function cambiarSector() {
   }
 }
 function actualizarNavegacionTareas() {
-  const planTab = document.querySelector('[data-tareas-tab="planificacion"]');
-  if (planTab) planTab.classList.toggle("oculto", !puedeAsignar());
+  $("btnTareasPlanificacion")?.classList.toggle("oculto", !puedeAsignar());
+  $("btnTareasConfiguracion")?.classList.toggle("oculto", !puedeConfigurar());
 }
+
+function crearBotonVolverTareas() {
+  const topbar = document.querySelector(".pro-topbar");
+  if (!topbar) return null;
+
+  let boton = $("btnTareasVolverTopbar");
+  if (boton) return boton;
+
+  boton = document.createElement("button");
+  boton.id = "btnTareasVolverTopbar";
+  boton.type = "button";
+  boton.className = "tareas-back-topbar admin-header-back-btn oculto";
+  boton.setAttribute("aria-label", "Volver Atrás a Tareas Diarias");
+  boton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+  boton.addEventListener("click", () => {
+    cambiarVista("tareas");
+    window.scrollTo({ top: 0, behavior: "auto" });
+  });
+  topbar.appendChild(boton);
+  return boton;
+}
+
+function actualizarBotonVolverTareas() {
+  const mostrar = activo && (vistaActual === "planificacion" || vistaActual === "config");
+  crearBotonVolverTareas()?.classList.toggle("oculto", !mostrar);
+}
+
 function cambiarVista(v) {
   if (v === "planificacion" && !puedeAsignar()) {
     window.AutoservicioDialog?.alert?.({
@@ -1846,23 +2300,25 @@ function cambiarVista(v) {
     });
     v = "tareas";
   }
-  vistaActual = v;
-  document.body.dataset.tareasVista = v;
+  if (v === "config" && !puedeConfigurar()) {
+    window.AutoservicioDialog?.alert?.({
+      title: "Sin permiso",
+      message: "Tu rol no puede modificar la configuración de tareas.",
+    });
+    v = "tareas";
+  }
+  vistaActual = ["tareas", "planificacion", "config"].includes(v) ? v : "tareas";
+  document.body.dataset.tareasVista = vistaActual;
   actualizarNavegacionTareas();
+  actualizarBotonVolverTareas();
   document.querySelectorAll("[data-tareas-view]").forEach((x) => {
-    const visible = x.dataset.tareasView === v;
+    const visible = x.dataset.tareasView === vistaActual;
     x.classList.toggle("oculto", !visible);
     x.setAttribute("aria-hidden", visible ? "false" : "true");
   });
-  document.querySelectorAll("[data-tareas-tab]").forEach((x) => {
-    const activo = x.dataset.tareasTab === v;
-    x.classList.toggle("activo", activo);
-    x.setAttribute("aria-current", activo ? "page" : "false");
-  });
-  if (v === "tareas") renderTareas();
-  if (v === "planificacion") renderPlanificacion();
-  if (v === "bano") renderBano();
-  if (v === "config") renderConfig();
+  if (vistaActual === "tareas") renderTareas();
+  if (vistaActual === "planificacion") renderPlanificacion();
+  if (vistaActual === "config") renderConfig();
   requestAnimationFrame(() =>
     window.scrollTo({
       top: 0,
@@ -1873,8 +2329,36 @@ function cambiarVista(v) {
   );
 }
 
+function renderConfigBano() {
+  const permiso = puedeConfigurar();
+  if (!permiso) return;
+  const cfg = configBano();
+  renderParticipantesConfig(cfg.participantes);
+}
+
+function cambiarVistaBano(v = "resumen") {
+  if (v === "config" && !puedeConfigurar()) {
+    window.AutoservicioDialog?.alert?.({
+      title: "Sin permiso",
+      message: "La configuración del baño está disponible para administradores y supervisores autorizados.",
+    });
+    v = "resumen";
+  }
+  banoVistaActual = v === "config" ? "config" : "resumen";
+  document.body.dataset.banoVista = banoVistaActual;
+  document.querySelectorAll("[data-bano-view]").forEach((x) => {
+    const visible = x.dataset.banoView === banoVistaActual;
+    x.classList.toggle("oculto", !visible);
+    x.setAttribute("aria-hidden", visible ? "false" : "true");
+  });
+  if (banoVistaActual === "resumen") renderBano();
+  else renderConfigBano();
+  requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+}
+
 function bind() {
   prepararSelectorDuracion();
+  prepararSelectoresVisualesTareas();
   $("btnTareasSemanaAnterior").onclick = () => {
     semanaBase.setDate(semanaBase.getDate() - 7);
     fechaSeleccionada = new Date(semanaBase);
@@ -1891,7 +2375,22 @@ function bind() {
     renderTareas();
   };
   $("btnTareasCambiarSector").onclick = cambiarSector;
-  $("btnNuevaTarea").onclick = abrirPlanificacion;
+  $("btnTareasPlanificacion").onclick = abrirPlanificacion;
+  $("btnTareasConfiguracion").onclick = () => cambiarVista("config");
+  $("btnPlanSemanaAnterior").onclick = () => {
+    planSemanaBase = new Date(planSemanaBase || inicioSemana(fechaSeleccionada));
+    planSemanaBase.setDate(planSemanaBase.getDate() - 7);
+    renderPlanificacion();
+  };
+  $("btnPlanSemanaSiguiente").onclick = () => {
+    planSemanaBase = new Date(planSemanaBase || inicioSemana(fechaSeleccionada));
+    planSemanaBase.setDate(planSemanaBase.getDate() + 7);
+    renderPlanificacion();
+  };
+  $("btnPlanSemanaActual").onclick = () => {
+    planSemanaBase = semanaPlanificacionPorDefecto();
+    renderPlanificacion();
+  };
   $("btnConfigNuevaTarea").onclick = () => {
     sectorSeleccionado = $("configSectorFiltro").value || sectorSeleccionado;
     abrir();
@@ -1904,35 +2403,25 @@ function bind() {
     const cell = e.target.closest("[data-plan-task][data-plan-fecha]");
     if (cell) editarCeldaPlan(cell.dataset.planTask, cell.dataset.planFecha);
   };
-  $("btnCerrarTareaModal").onclick = $("btnCancelarTarea").onclick = cerrar;
+  prepararAccionesModalTarea();
+  $("btnCerrarTareaModal").onclick = cerrar;
   $("btnGuardarTarea").onclick = guardarForm;
   $("btnEliminarTarea").onclick = eliminarTareaActual;
-  $("btnAlternarTarea").onclick = async () => {
-    if (!tareaEditando) return;
-    const all = leer(),
-      t = all.find((x) => x.id === tareaEditando.id);
-    if (!t) return;
-    const vaAActivar = t.activo === false;
-    if (!vaAActivar) {
-      const ok = await window.AutoservicioDialog?.confirm?.({
-        title: "Desactivar tarea",
-        message: `¿Desactivar “${t.nombre}”? Ya no aparecerá entre las tareas disponibles para asignar.`,
-        confirmText: "Desactivar",
-        danger: true,
-      });
-      if (ok === false) return;
-    }
-    t.activo = vaAActivar;
-    guardar(all);
-    cerrar();
-    renderConfig();
-    renderTareas();
-  };
+  $("tareaModal").addEventListener("input", actualizarEstadoGuardarTarea);
+  $("tareaModal").addEventListener("change", actualizarEstadoGuardarTarea);
+  document
+    .querySelectorAll("#tareaEstadoSelector [data-tarea-estado]")
+    .forEach((btn) => {
+      btn.onclick = () => {
+        tareaEstadoSeleccionado = btn.dataset.tareaEstado === "activa";
+        renderEstadoTareaModal();
+        actualizarEstadoGuardarTarea();
+      };
+    });
   $("tareaModal").onclick = (e) => {
     if (e.target.id === "tareaModal") cerrar();
   };
-  $("btnCerrarAsignarModal").onclick = $("btnCancelarAsignar").onclick =
-    cerrarAsignar;
+  $("btnCerrarAsignarModal").onclick = cerrarAsignar;
   $("btnGuardarAsignar").onclick = guardarAsignacion;
   document
     .querySelectorAll("#asignarTurnoOpciones [data-turno]")
@@ -1951,9 +2440,11 @@ function bind() {
   };
   $("asignarUsuarios").onchange = (e) => {
     const input = e.target.closest('input[type="radio"]');
-    if (input) asignarUsuarioSeleccionado = input.value || "";
+    if (!input) return;
+    asignarUsuarioSeleccionado = input.value || "";
     sincronizarEstadoSeleccionAsignacion();
     actualizarCantidadResponsables();
+    cargarTareasUsuarioAsignacion();
   };
   $("asignarModal").onclick = (e) => {
     if (e.target.id === "asignarModal") cerrarAsignar();
@@ -1986,32 +2477,33 @@ function bind() {
       row.classList.remove("is-saving");
     }
   };
-  document
-    .querySelectorAll("[data-tareas-tab]")
-    .forEach((b) => (b.onclick = () => cambiarVista(b.dataset.tareasTab)));
   $("configSectorFiltro").onchange = renderConfig;
   $("btnConfigCambiarSector").onclick = cambiarSectorConfig;
   $("btnGuardarConfigBano").onclick = guardarConfigBano;
   $("configBuscarTarea").oninput = renderConfig;
+  $("configEstadoFiltro").onchange = renderConfig;
+  $("configDiaFiltro").onchange = renderConfig;
   $("btnLimpiarBusquedaTarea").onclick = () => {
     $("configBuscarTarea").value = "";
     renderConfig();
   };
-  $("btnConfigTabTareas").onclick = () => {
-    configSubvista = "tareas";
-    actualizarConfigSubvista();
-  };
-  $("btnConfigTabBano").onclick = () => {
-    configSubvista = "bano";
-    actualizarConfigSubvista();
-  };
-  $("btnElegirParticipantesBano").onclick = () => {
-    $("banoSelectorParticipantes").classList.toggle("oculto");
-  };
+  $("btnElegirParticipantesBano").onclick = abrirSelectorParticipantesBano;
   $("banoBuscarUsuario").oninput = () =>
     renderParticipantesConfig(participantesConfigActuales());
   $("banoUsuariosDisponibles").onchange = () =>
     renderParticipantesConfig(participantesConfigActuales());
+  $("banoBuscarUsuarioMobile")?.addEventListener("input", () => {
+    const valor = $("banoBuscarUsuarioMobile").value;
+    if ($("banoBuscarUsuario")) $("banoBuscarUsuario").value = valor;
+    renderParticipantesConfig(participantesConfigActuales());
+  });
+  $("banoUsuariosDisponiblesMobile")?.addEventListener("change", () =>
+    renderParticipantesConfig(participantesConfigActuales()),
+  );
+  $("btnCerrarBanoParticipantSheet")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
+  $("btnCancelarBanoParticipantSheet")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
+  $("banoMobileParticipantBackdrop")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
+  $("btnGuardarBanoParticipantSheet")?.addEventListener("click", () => guardarConfigBano());
   $("configTareasLista").onclick = (e) => {
     const row = e.target.closest("[data-id]");
     if (!row) return;
@@ -2024,6 +2516,19 @@ function bind() {
       e.target.closest("[data-id]").click();
     }
   };
+  $("btnBanoAbrirConfig").onclick = () => cambiarVistaBano("config");
+  $("banoParticipantesSeleccionados").onclick = (e) => {
+    const quitar = e.target.closest("[data-remove-participant]");
+    if (!quitar) return;
+    void eliminarParticipanteBano(quitar.dataset.removeParticipant);
+  };
+  $("adminHeaderBackBtn")?.addEventListener("click", (event) => {
+    if (!document.body.classList.contains("en-bano")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (banoVistaActual === "config") cambiarVistaBano("resumen");
+    else window.AutoservicioNavigate?.("inicio");
+  }, true);
 }
 async function activar() {
   if (activacionTareasEnCurso) return activacionTareasEnCurso;
@@ -2035,45 +2540,102 @@ async function activar() {
     const tareasRemotas = cargarTareasRemotas().then(() => {
       if (activo) {
         normalizarSector();
-        renderTareas();
+        if (vistaActual === "config") renderConfig();
+        else if (vistaActual === "planificacion") renderPlanificacion();
+        else renderTareas();
       }
     });
-    await Promise.all([
-      cargarContextoTareas(),
-      cargarUsuariosTareas(),
-      cargarBanoRemoto(),
-    ]);
+    await Promise.all([cargarContextoTareas(), cargarUsuariosTareas()]);
     normalizarSector();
-    if (activo) renderTareas();
+    actualizarNavegacionTareas();
+    if (activo) cambiarVista(vistaActual);
     await tareasRemotas;
-    const tieneConfig = puedeConfigurar();
-    document
-      .querySelector('[data-tareas-tab="config"]')
-      ?.classList.remove("oculto");
-    cambiarVista(vistaActual);
   })().finally(() => {
     activacionTareasEnCurso = null;
   });
   return activacionTareasEnCurso;
 }
+
+async function activarBano() {
+  banoActivo = true;
+  await Promise.all([
+    cargarContextoTareas(),
+    cargarUsuariosTareas(),
+    cargarBanoRemoto(),
+  ]);
+  if (banoActivo) cambiarVistaBano(banoVistaActual);
+}
+
 function reiniciarModuloTareas() {
   cerrar();
   cerrarAsignar?.();
   vistaActual = "tareas";
-  configSubvista = "tareas";
+  planSemanaBase = null;
   const buscador = $("configBuscarTarea");
   if (buscador) buscador.value = "";
+  if ($("configEstadoFiltro")) {
+    $("configEstadoFiltro").value = "todos";
+    sincronizarSelectVisualTareas($("configEstadoFiltro"));
+  }
+  if ($("configDiaFiltro")) {
+    $("configDiaFiltro").value = "todos";
+    sincronizarSelectVisualTareas($("configDiaFiltro"));
+  }
   cambiarVista("tareas");
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 function desactivar() {
   activo = false;
   reiniciarModuloTareas();
+  actualizarBotonVolverTareas();
 }
+function reiniciarBano() {
+  banoVistaActual = "resumen";
+  $("banoSelectorParticipantes")?.classList.add("oculto");
+  if ($("banoBuscarUsuario")) $("banoBuscarUsuario").value = "";
+  cambiarVistaBano("resumen");
+}
+function desactivarBano() {
+  banoActivo = false;
+  reiniciarBano();
+}
+function limpiarMemoriaPorCambioSesion() {
+  tareasMemoria = [];
+  banoMemoria = null;
+  usuariosTareas = [];
+  asignarDisponibles = [];
+  sectorSeleccionado = "";
+  contextoTareas = {
+    sectores: [],
+    puedeAsignar: false,
+    puedeConfigurar: false,
+  };
+  guardadoRemotoEnCurso = Promise.resolve();
+  tareasCompletando.clear();
+}
+window.addEventListener("autoservicio:sesion", (event) => {
+  limpiarMemoriaPorCambioSesion();
+  if (activo && event.detail?.usuario) void activar();
+  if (banoActivo && event.detail?.usuario) void activarBano();
+});
 bind();
 window.TareasModule = {
   activar,
   desactivar,
   reiniciar: reiniciarModuloTareas,
-  mostrarBano: () => cambiarVista("bano"),
+  seleccionarFecha: (valor) => {
+    fechaSeleccionada = parseFecha(valor);
+    semanaBase = inicioSemana(fechaSeleccionada);
+    planSemanaBase = inicioSemana(fechaSeleccionada);
+    if (activo) cambiarVista("tareas");
+  },
+  mostrarPlanificacion: abrirPlanificacion,
+  mostrarConfiguracion: () => cambiarVista("config"),
+};
+window.BanoModule = {
+  activar: activarBano,
+  desactivar: desactivarBano,
+  reiniciar: reiniciarBano,
+  mostrarConfiguracion: () => cambiarVistaBano("config"),
+  mostrarResumen: () => cambiarVistaBano("resumen"),
 };

@@ -11,512 +11,22 @@
  */
 
 :root {
-  --desktop-page-max-width: 980px;
+  --desktop-page-max-width: var(--ds-page-max, var(--app-shell-desktop-max, 1380px));
   --desktop-page-wide-max-width: none;
-  --desktop-page-inline-gap: 28px;
+  --desktop-page-inline-gap: 0px;
   --desktop-page-block-gap: 14px;
   --desktop-page-section-gap: 14px;
 }
 
-@media (min-width: 901px) {
-  .desktop-page-shell {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100% - var(--desktop-page-inline-gap))
-    );
-    max-width: var(--desktop-page-max-width);
-    margin-inline: auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--desktop-page-block-gap);
-    min-width: 0;
-  }
-
-  .desktop-page-shell--wide {
-    width: calc(100% - var(--desktop-page-inline-gap));
-    max-width: var(--desktop-page-wide-max-width);
-  }
-
-  .desktop-page-shell__header,
-  .desktop-page-shell__content,
-  .desktop-page-section {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  .desktop-page-shell__content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--desktop-page-section-gap);
-  }
-
-  .desktop-page-stack {
-    display: flex;
-    flex-direction: column;
-    gap: var(--desktop-page-section-gap);
-    width: 100%;
-    min-width: 0;
-  }
-
-  .desktop-page-grid {
-    display: grid;
-    gap: var(--desktop-page-section-gap);
-    width: 100%;
-    min-width: 0;
-  }
-
-  .desktop-page-full-width {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-}
-
-/* =========================================================
-   v12.4.2 — INVENTARIO / ESCRITORIO
-   Cargar, Productos, Cargados y Editar producto comparten el mismo eje visual
-   que Tareas > Baño / Configuración.
-
-   El App Shell reserva --app-shell-sidebar-width a la izquierda.
-   Por eso encabezado y contenido se centran DENTRO del área útil,
-   no respecto del viewport completo.
-   ========================================================= */
-@media (min-width: 901px) {
-  /* Encabezado: centrado dentro del área disponible a la derecha del sidebar. */
-  body[data-screen="inventario"] #modulePageHeader,
-  body[data-screen="productos"] #modulePageHeader,
-  body[data-screen="cargados"] #modulePageHeader,
-  body[data-screen="editarProducto"] #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  /*
-   * IMPORTANTE: no ensanchar estos <main> a 100%.
-   * app-shell.css ya les reserva correctamente el sidebar:
-   * margin-left: var(--app-shell-sidebar-width)
-   * width: calc(100% - var(--app-shell-sidebar-width))
-   */
-  body[data-screen="inventario"] #pantallaInventario,
-  body[data-screen="productos"] #pantallaProductos,
-  body[data-screen="cargados"] #pantallaProductos,
-  body[data-screen="editarProducto"] #pantallaEditarProducto {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-    max-width: none !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ---------------------------------------------------------
-     Inventario > Cargar
-     --------------------------------------------------------- */
-  body[data-screen="inventario"] #pantallaInventario > .inventory-location-card,
-  body[data-screen="inventario"] #pantallaInventario > .scan-panel,
-  body[data-screen="inventario"] #pantallaInventario > .camera-card,
-  body[data-screen="inventario"] #pantallaInventario > .product-card,
-  body[data-screen="inventario"] #pantallaInventario > .quantity-card,
-  body[data-screen="inventario"] #pantallaInventario > .bottom-info,
-  body[data-screen="inventario"] #pantallaInventario > .inventory-recent-card {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="inventario"] #pantallaInventario > .inventory-location-card,
-  body[data-screen="inventario"] #pantallaInventario > .scan-panel,
-  body[data-screen="inventario"] #pantallaInventario > .camera-card,
-  body[data-screen="inventario"] #pantallaInventario > .product-card,
-  body[data-screen="inventario"] #pantallaInventario > .quantity-card,
-  body[data-screen="inventario"] #pantallaInventario > .bottom-info {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
-
-  body[data-screen="inventario"] #pantallaInventario > .inventory-recent-card {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-
-  /* ---------------------------------------------------------
-     Inventario > Productos / Cargados
-     Ambas vistas usan #pantallaProductos.
-     --------------------------------------------------------- */
-  body[data-screen="productos"] #pantallaProductos > .header-simple,
-  body[data-screen="cargados"] #pantallaProductos > .header-simple {
-    display: none !important;
-  }
-
-  body[data-screen="productos"] #pantallaProductos > .search-card,
-  body[data-screen="productos"] #pantallaProductos > .list-summary,
-  body[data-screen="productos"] #pantallaProductos > .result-list,
-  body[data-screen="cargados"] #pantallaProductos > .search-card,
-  body[data-screen="cargados"] #pantallaProductos > .list-summary,
-  body[data-screen="cargados"] #pantallaProductos > .result-list {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="productos"] #pantallaProductos > .search-card,
-  body[data-screen="cargados"] #pantallaProductos > .search-card,
-  body[data-screen="productos"] #pantallaProductos > .list-summary,
-  body[data-screen="cargados"] #pantallaProductos > .list-summary {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
-
-  body[data-screen="productos"] #pantallaProductos > .result-list,
-  body[data-screen="cargados"] #pantallaProductos > .result-list {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-  /* ---------------------------------------------------------
-     Inventario > Editar producto
-     Mantiene el mismo eje que Cargar / Productos / Cargados.
-     El encabezado interno histórico permanece oculto porque
-     #modulePageHeader ya muestra el título de la pantalla.
-     --------------------------------------------------------- */
-  body[data-screen="editarProducto"] #pantallaEditarProducto > .header-edit {
-    display: none !important;
-  }
-
-  body[data-screen="editarProducto"] #pantallaEditarProducto > .edit-card {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* =========================================================
-   v12.4.2 — VENCIMIENTOS / ESCRITORIO
-   Cargar, Próximos y Vencidos comparten el mismo eje visual
-   aprobado en Inventario y Tareas > Baño / Configuración.
-
-   No modifica pestañas, navegación interna ni vista móvil.
-   ========================================================= */
-@media (min-width: 901px) {
-  /* Encabezado centrado dentro del área útil a la derecha del sidebar. */
-  body[data-screen="vencimientos"] #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  /* El main conserva el área reservada por el App Shell. */
-  body[data-screen="vencimientos"] #pantallaVencimientos {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-    max-width: none !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Todas las secciones principales usan el mismo eje y ancho. */
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-actions-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .camera-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .product-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-form-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-summary-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-list-card {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Ritmo vertical uniforme entre las tarjetas del módulo. */
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-actions-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .camera-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .product-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-form-card,
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-summary-card {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
-
-  body[data-screen="vencimientos"] #pantallaVencimientos > .venc-list-card {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-
-  /* Los listados internos siempre aprovechan el ancho completo de su tarjeta. */
-  body[data-screen="vencimientos"] #pantallaVencimientos .venc-list,
-  body[data-screen="vencimientos"] #pantallaVencimientos .venc-list-proximos,
-  body[data-screen="vencimientos"] #pantallaVencimientos .venc-list-vencidos,
-  body[data-screen="vencimientos"] #pantallaVencimientos .venc-list-grouped,
-  body[data-screen="vencimientos"] #pantallaVencimientos .venc-range-group,
-  body[data-screen="vencimientos"]
-    #pantallaVencimientos
-    .venc-range-group__grid,
-  body[data-screen="vencimientos"] #pantallaVencimientos .venc-resumen {
-    width: 100% !important;
-    max-width: none !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* =========================================================
-   v12.4.2 — LISTA / ESCRITORIO
-   Cargar, Mi lista y Lista escrita comparten el mismo eje
-   visual aprobado en Inventario / Vencimientos y Tareas > Baño.
-
-   No modifica navegación interna, lógica ni vista móvil.
-   ========================================================= */
-@media (min-width: 901px) {
-  /* Encabezado centrado dentro del área útil a la derecha del sidebar. */
-  body[data-screen="anotar"] #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  /* El main conserva el área reservada por el App Shell. */
-  body[data-screen="anotar"] #pantallaAnotar {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-    max-width: none !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Cada vista interna usa una única columna central de 980 px. */
-  body[data-screen="anotar"] #repoCargaVista,
-  body[data-screen="anotar"] #repoRegistroVista,
-  body[data-screen="anotar"] #repoEscritaVista {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Las tarjetas y selectores internos ocupan todo el eje aprobado. */
-  body[data-screen="anotar"] #repoCargaVista > .repo-list-selector,
-  body[data-screen="anotar"] #repoCargaVista > .venc-actions-card,
-  body[data-screen="anotar"] #repoCargaVista > .camera-card,
-  body[data-screen="anotar"] #repoCargaVista > .repo-product-card,
-  body[data-screen="anotar"] #repoCargaVista > .repo-form-card,
-  body[data-screen="anotar"] #repoCargaVista > .venc-list-card,
-  body[data-screen="anotar"] #repoRegistroVista > .repo-list-selector,
-  body[data-screen="anotar"] #repoRegistroVista > .venc-list-card,
-  body[data-screen="anotar"] #repoEscritaVista > .repo-list-selector,
-  body[data-screen="anotar"] #repoEscritaVista > .venc-list-card {
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Ritmo vertical uniforme entre bloques, sin modificar su diseño interno. */
-  body[data-screen="anotar"] #repoCargaVista > .repo-list-selector,
-  body[data-screen="anotar"] #repoCargaVista > .venc-actions-card,
-  body[data-screen="anotar"] #repoCargaVista > .camera-card,
-  body[data-screen="anotar"] #repoCargaVista > .repo-product-card,
-  body[data-screen="anotar"] #repoCargaVista > .repo-form-card,
-  body[data-screen="anotar"] #repoRegistroVista > .repo-list-selector,
-  body[data-screen="anotar"] #repoEscritaVista > .repo-list-selector {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
-
-  body[data-screen="anotar"] #repoCargaVista > .venc-list-card,
-  body[data-screen="anotar"] #repoRegistroVista > .venc-list-card,
-  body[data-screen="anotar"] #repoEscritaVista > .venc-list-card {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-
-  /* Los contenidos internos aprovechan el ancho completo de sus tarjetas. */
-  body[data-screen="anotar"] #pantallaAnotar .repo-search-row,
-  body[data-screen="anotar"] #pantallaAnotar .repo-list-toolbar,
-  body[data-screen="anotar"] #pantallaAnotar .repo-simple-list,
-  body[data-screen="anotar"] #pantallaAnotar .repo-written-textarea,
-  body[data-screen="anotar"] #pantallaAnotar .repo-written-actions,
-  body[data-screen="anotar"] #pantallaAnotar .repo-totales {
-    width: 100% !important;
-    max-width: none !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* =========================================================
-   v12.4.2 — PRECIOS / ESCRITORIO
-   Consultar y Productos comparten el mismo eje visual
-   aprobado en Inventario / Vencimientos / Lista y
-   Tareas > Baño / Configuración.
-
-   No modifica navegación interna, lógica ni vista móvil.
-   ========================================================= */
-@media (min-width: 901px) {
-  /* Encabezado centrado dentro del área útil a la derecha del sidebar. */
-  body[data-screen="precios"] #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  /* El main conserva el área reservada por el App Shell. */
-  body[data-screen="precios"] #pantallaPrecios {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-    max-width: none !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Consultar y Productos usan una única columna central de 980 px. */
-  body[data-screen="precios"] #preciosConsultarVista,
-  body[data-screen="precios"] #preciosProductosVista {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Vista Consultar: todas las tarjetas siguen el mismo borde. */
-  body[data-screen="precios"] #preciosConsultarVista > .precios-actions-card,
-  body[data-screen="precios"] #preciosConsultarVista > .camera-card,
-  body[data-screen="precios"] #preciosConsultarVista > .precio-ultimo-card {
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="precios"] #preciosConsultarVista > .precios-actions-card,
-  body[data-screen="precios"] #preciosConsultarVista > .camera-card {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
-
-  body[data-screen="precios"] #preciosConsultarVista > .precio-ultimo-card {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-
-  /* Vista Productos: buscador, resumen y grilla comparten el ancho aprobado. */
-  body[data-screen="precios"] #preciosProductosVista > .precio-search-card,
-  body[data-screen="precios"] #preciosProductosVista > .list-summary,
-  body[data-screen="precios"] #preciosProductosVista > .precio-product-list {
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="precios"] #preciosProductosVista > .precio-search-card,
-  body[data-screen="precios"] #preciosProductosVista > .list-summary {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
-
-  body[data-screen="precios"] #preciosProductosVista > .precio-product-list {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-}
 
 /* =========================================================
    v12.4.2 — HORARIOS / ESCRITORIO
 
    Calendario:
-   - excepción de ancho completo para aprovechar el espacio útil.
+   - mismo eje canónico de 1380 px de los módulos principales.
 
-   Mi horario / Configuración:
-   - mismo eje central de 980 px aprobado en el resto de módulos.
+   Mis horarios / Configuración:
+   - usan el mismo ancho exterior canónico de 1380 px que Calendario.
 
    Además se elimina el fondo propio gris/rosado de Horarios para
    que las tres vistas usen el fondo general de la aplicación.
@@ -525,72 +35,41 @@
    ========================================================= */
 @media (min-width: 901px) {
   /* ---------------------------------------------------------
-     Base del módulo: conservar el espacio reservado al sidebar
-     del App Shell y eliminar el fondo histórico #f5f6fa.
+     HORARIOS — eje canónico de escritorio.
+     La .app ya reserva el sidebar: este <main> no vuelve a desplazarlo.
+     Calendario usa la misma caja exterior de 1380 px que los módulos
+     principales, sin un segundo padding horizontal interno.
      --------------------------------------------------------- */
-  body.en-horarios #pantallaHorarios {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-    max-width: none !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    box-sizing: border-box !important;
-    background: transparent !important;
-  }
-
-  body.en-horarios #pantallaHorarios > .horarios-shell,
-  body.en-horarios #pantallaHorarios .horarios-content {
+  body.en-horarios #pantallaHorarios,
+body.en-horarios #pantallaHorarios > .horarios-shell,
+body.en-horarios #pantallaHorarios .horarios-content {
     background: transparent !important;
     box-sizing: border-box !important;
   }
 
-  /* La estructura histórica no debe reservar una columna interna vacía. */
+  /* La grilla histórica de Horarios ya no crea columnas laterales internas. */
   body.en-horarios #pantallaHorarios > .horarios-shell {
     display: block !important;
     grid-template-columns: none !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
   }
 
   body.en-horarios #pantallaHorarios .horarios-content {
     width: 100% !important;
     max-width: none !important;
+    min-width: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
     padding-top: 0 !important;
     padding-bottom: 36px !important;
   }
 
-  /* ---------------------------------------------------------
-     CALENDARIO — ancho completo.
-     Usa todo el espacio disponible a la derecha del sidebar,
-     dejando solamente 16 px de aire a cada lado.
-     --------------------------------------------------------- */
-  body.en-horarios.horarios-vista-calendario #modulePageHeader {
-    width: calc(100vw - var(--app-shell-sidebar-width) - 32px) !important;
-    max-width: none !important;
-    margin-left: calc(var(--app-shell-sidebar-width) + 16px) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  body.en-horarios.horarios-vista-calendario
-    #pantallaHorarios
-    .horarios-content {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-  }
-
   body.en-horarios.horarios-vista-calendario #horariosEquipoView,
-  body.en-horarios.horarios-vista-calendario #horariosControlDeck,
-  body.en-horarios.horarios-vista-calendario .horarios-board-card,
-  body.en-horarios.horarios-vista-calendario .horarios-estadisticas,
-  body.en-horarios.horarios-vista-calendario .horarios-bottom-grid {
+body.en-horarios.horarios-vista-calendario #horariosControlDeck,
+body.en-horarios.horarios-vista-calendario .horarios-board-card,
+body.en-horarios.horarios-vista-calendario .horarios-mi-horario-card,
+body.en-horarios.horarios-vista-calendario .horarios-bottom-grid {
     width: 100% !important;
     max-width: none !important;
     margin-left: 0 !important;
@@ -604,94 +83,8 @@
     box-sizing: border-box !important;
   }
 
-  /* ---------------------------------------------------------
-     MI HORARIO / CONFIGURACIÓN — columna estándar de 980 px.
-     Encabezado, controles y contenido comparten exactamente eje.
-     --------------------------------------------------------- */
-  body.en-horarios.horarios-vista-mio #modulePageHeader,
-  body.en-horarios.horarios-vista-config #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  body.en-horarios.horarios-vista-mio #pantallaHorarios .horarios-content,
-  body.en-horarios.horarios-vista-config #pantallaHorarios .horarios-content {
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-  }
-
-  body.en-horarios.horarios-vista-mio #horariosControlDeck,
-  body.en-horarios.horarios-vista-mio #horariosMioView,
-  body.en-horarios.horarios-vista-config #horariosControlDeck,
-  body.en-horarios.horarios-vista-config #horariosConfigView {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Mi horario: mes, sector, hero y lista respetan el mismo borde. */
-  body.en-horarios.horarios-vista-mio #horariosControlDeck {
-    grid-template-columns: 1fr !important;
-    grid-template-areas: "month" "sector" !important;
-  }
-
-  body.en-horarios.horarios-vista-mio #horariosControlDeck .horarios-toolbar,
-  body.en-horarios.horarios-vista-mio #horariosControlDeck .horarios-month-nav,
-  body.en-horarios.horarios-vista-mio #horariosControlDeck .horarios-sector-bar,
-  body.en-horarios.horarios-vista-mio #horariosMioView > .mi-horario-hero,
-  body.en-horarios.horarios-vista-mio #horariosMioView > .mi-horario-list {
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Configuración: selector/controles y ambas tarjetas usan el mismo eje. */
-  body.en-horarios.horarios-vista-config #horariosControlDeck .horarios-toolbar,
-  body.en-horarios.horarios-vista-config
-    #horariosControlDeck
-    .horarios-month-nav,
-  body.en-horarios.horarios-vista-config
-    #horariosControlDeck
-    .horarios-sector-bar,
-  body.en-horarios.horarios-vista-config
-    #horariosConfigView
-    > .horarios-config-card {
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  body.en-horarios.horarios-vista-config
-    #horariosConfigView
-    > .horarios-config-card {
-    margin-top: 0 !important;
-    margin-bottom: var(--desktop-page-section-gap) !important;
-  }
+  /* Mis horarios y Configuración no agregan un segundo max-width; su
+     composición interna se define únicamente en horarios-redesign.css. */
 }
 
 /* =========================================================
@@ -702,109 +95,11 @@
    la referencia visual ya aprobada.
 
    Objetivo:
-   - alinear el encabezado de módulo con la columna de 980 px
+   - alinear el encabezado de módulo con la columna canónica
      ya usada por Sector / Semana / Días / Listado.
    - no modificar lógica, navegación ni vista móvil.
    ========================================================= */
-@media (min-width: 901px) {
-  body.en-tareas[data-tareas-vista="tareas"] #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
 
-  body.en-tareas[data-tareas-vista="tareas"]
-    #tareasVistaTareas
-    > .tareas-shell {
-    width: min(var(--desktop-page-max-width), calc(100% - 40px)) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* =========================================================
-   v12.4.2 — ADMINISTRADOR / ESCRITORIO
-
-   Usuarios, Sectores, Historial y Sistema comparten #pantallaAdmin.
-   Se alinean sobre el mismo eje visual de 980 px ya aprobado para
-   el resto de módulos, centrado dentro del área útil a la derecha
-   del sidebar de navegación.
-
-   No modifica navegación, modales, lógica ni vista móvil.
-   ========================================================= */
-@media (min-width: 901px) {
-  body[data-screen="admin"] #modulePageHeader {
-    width: min(
-      var(--desktop-page-max-width),
-      calc(100vw - var(--app-shell-sidebar-width) - 40px)
-    ) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: calc(
-      var(--app-shell-sidebar-width) +
-        (
-          100vw - var(--app-shell-sidebar-width) -
-            min(
-              var(--desktop-page-max-width),
-              calc(100vw - var(--app-shell-sidebar-width) - 40px)
-            )
-        ) /
-        2
-    ) !important;
-    margin-right: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="admin"] #pantallaAdmin {
-    margin-left: var(--app-shell-sidebar-width) !important;
-    width: calc(100% - var(--app-shell-sidebar-width)) !important;
-    max-width: none !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-    padding-bottom: 36px !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="admin"] #pantallaAdmin > #adminMensaje,
-  body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  body[data-screen="admin"] #pantallaAdmin > #adminMensaje:empty {
-    display: none !important;
-  }
-
-  body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel {
-    margin-top: 0 !important;
-    margin-bottom: 36px !important;
-  }
-}
 
 /* =========================================================
    AJUSTE FINO DE EJE — ESCRITORIO
@@ -821,28 +116,562 @@
    anterior restaba 40 px a una columna que ya estaba limitada a
    980 px, por eso el encabezado sobresalía por ambos lados.
    ========================================================= */
+
+
+/* =========================================================
+   LISTA DE REPOSICIÓN · D15 · AJUSTE FINAL PC
+   ---------------------------------------------------------
+   Correcciones visuales exclusivas de escritorio:
+   - elimina el doble desplazamiento del módulo respecto del sidebar;
+   - centra encabezado, selector, listado y columna lateral sobre un eje único;
+   - equilibra la grilla principal y ensancha la columna de resumen;
+   - compacta/alinea el menú "Cargar";
+   - unifica las métricas del modal Escribir lista;
+   - mejora la legibilidad de textos secundarios pequeños.
+
+   No modifica la vista móvil ni la lógica del módulo.
+   ========================================================= */
 @media (min-width: 901px) {
-  body[data-screen="inventario"] #modulePageHeader,
-  body[data-screen="productos"] #modulePageHeader,
-  body[data-screen="cargados"] #modulePageHeader,
-  body[data-screen="editarProducto"] #modulePageHeader,
-  body[data-screen="vencimientos"] #modulePageHeader,
-  body[data-screen="anotar"] #modulePageHeader,
-  body[data-screen="precios"] #modulePageHeader,
-  body[data-screen="admin"] #modulePageHeader,
-  body.en-horarios.horarios-vista-mio #modulePageHeader,
-  body.en-horarios.horarios-vista-config #modulePageHeader,
-  body.en-tareas[data-tareas-vista="tareas"] #modulePageHeader {
-    transform: translateX(-7px) !important;
+  /*
+   * La .app ya reserva el ancho del sidebar. La regla histórica de Lista
+   * volvía a sumar ese desplazamiento y por eso el módulo quedaba corrido
+   * hacia la derecha. Desde D15, Lista ocupa el área útil ya reservada.
+   */
+  /* El ancho exterior del módulo y de su shell se define una sola vez en
+     "EJE CANÓNICO" al final de este archivo. */
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-pro-header,
+body[data-screen="anotar"] #pantallaAnotar .repo-list-selector,
+body[data-screen="anotar"] #pantallaAnotar .repo-workspace {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
   }
 
-  body.en-tareas[data-tareas-vista="tareas"]
-    #tareasVistaTareas
-    > .tareas-shell {
-    width: min(var(--desktop-page-max-width), 100%) !important;
-    max-width: var(--desktop-page-max-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+  body[data-screen="anotar"] #pantallaAnotar .repo-pro-header {
+    align-items: flex-end !important;
+    gap: 28px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-workspace {
+    grid-template-columns: minmax(0, 1fr) 310px !important;
+    gap: 16px !important;
+    align-items: start !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-main-card,
+body[data-screen="anotar"] #pantallaAnotar .repo-side-column,
+body[data-screen="anotar"] #pantallaAnotar .repo-summary-card,
+body[data-screen="anotar"] #pantallaAnotar .repo-recent-card {
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-side-column {
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  /* Menú Cargar: más compacto, legible y alineado al botón. */
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-menu {
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    width: 314px !important;
+    padding: 6px !important;
+    border-radius: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-menu > button {
+    min-height: 64px !important;
+    grid-template-columns: 38px minmax(0, 1fr) 18px !important;
+    gap: 10px !important;
+    padding: 9px 10px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-option-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-option-icon .app-icon {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-menu strong {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-menu small {
+    margin-top: 3px !important;
+    font-size: 10.5px !important;
+    line-height: 1.35 !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-load-menu b {
+    display: grid !important;
+    place-items: center !important;
+    align-self: stretch !important;
+    min-width: 18px !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+  }
+
+  /* Legibilidad de los textos más chicos del panel de PC. */
+  
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-summary-card,
+body[data-screen="anotar"] #pantallaAnotar .repo-recent-card {
+    padding: 15px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-summary-card h2,
+body[data-screen="anotar"] #pantallaAnotar .repo-recent-card h2 {
+    margin-bottom: 9px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-summary-row {
+    min-height: 46px !important;
+    grid-template-columns: 30px minmax(0, 1fr) auto !important;
+    gap: 9px !important;
+  }
+
+  
+
+  
+
+  body[data-screen="anotar"] #pantallaAnotar #repoSummaryUpdated {
+    max-width: 138px !important;
+  }
+
+  body[data-screen="anotar"] #pantallaAnotar .repo-recent-item {
+    min-height: 52px !important;
+    padding: 8px 10px !important;
+  }
+
+  
+
+  
+
+  /* ---------------------------------------------------------
+     Escribir lista · mismas métricas generales del modal de carga.
+     --------------------------------------------------------- */
+  .repo-write-modal {
+    padding: 24px !important;
+  }
+
+  .repo-write-dialog {
+    width: min(640px, calc(100vw - 48px)) !important;
+    max-width: 640px !important;
+    max-height: calc(100dvh - 48px) !important;
+    overflow-x: hidden !important;
+    border-radius: 20px !important;
+    box-sizing: border-box !important;
+  }
+
+  .repo-write-head {
+    padding: 20px 22px 15px !important;
+  }
+
+  .repo-write-head h2 {
+    font-size: 20px !important;
+  }
+
+  .repo-write-head p {
+    font-size: 11.5px !important;
+  }
+
+  .repo-write-body {
+    padding: 16px 22px !important;
+  }
+
+  .repo-write-example {
+    font-size: 10.5px !important;
+  }
+
+  .repo-write-dialog textarea {
+    min-height: 190px !important;
+    font-size: 12.5px !important;
+  }
+
+  .repo-write-guidance {
+    font-size: 9.5px !important;
+  }
+
+  .repo-write-guidance > strong {
+    font-size: 10.5px !important;
+  }
+
+  .repo-write-actions {
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr) !important;
+    gap: 10px !important;
+    padding: 0 22px 22px !important;
+  }
+
+  .repo-write-actions > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    margin: 0 !important;
     box-sizing: border-box !important;
   }
 }
+
+
+/* ==========================================================================
+   D16 · Inventario · consistencia con Vencimientos/Lista en escritorio
+   ========================================================================== */
+@media (min-width: 901px) {
+  /* Acción principal fija en la cabecera del módulo. */
+  body.en-modulo-inventario .inventory-page-header{
+    align-items: center !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn{
+    min-width: 168px !important;
+    min-height: 46px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    flex: 0 0 auto !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--pro-red) !important;
+    border-radius: 11px !important;
+    background: var(--pro-red) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(244, 63, 94, 0.18) !important;
+    font: inherit !important;
+    font-size: 14px !important;
+    font-weight: 750 !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn > span{
+    font-size: 17px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn:focus-visible{
+    outline: 3px solid color-mix(in srgb, var(--pro-red) 22%, transparent) !important;
+    outline-offset: 2px !important;
+  }
+
+
+}
+
+/* =========================================================
+   D21 · EJE CANÓNICO DE MÓDULOS PRINCIPALES / ESCRITORIO
+   ---------------------------------------------------------
+   ÚNICA fuente de verdad para el ancho de:
+   Inicio, Inventario, Vencimientos, Lista de reposición, Precios y Horarios.
+
+   Todos usan la misma caja visible de 1380 px, sin un segundo inset
+   horizontal interno. Los estilos internos de cada módulo no vuelven
+   a definir max-width, padding lateral ni centrado para estas pantallas.
+   ========================================================= */
+@media (min-width: 901px) {
+  :root {
+    --primary-module-max-width: var(--ds-page-max, var(--app-shell-desktop-max, 1380px));
+    --primary-module-inline-padding: var(--app-shell-desktop-inline, 0px);
+  }
+
+  /* La .app ya reserva el sidebar de escritorio. Los <main> de módulos no
+     agregan un segundo desplazamiento ni otro límite de ancho. */
+  body.en-modulo-inventario main#pantallaProductos.pantalla.activa,
+body.en-vencimientos main#pantallaVencimientos.pantalla.activa,
+body.en-anotar main#pantallaAnotar.pantalla.activa,
+body.en-precios main#pantallaPrecios.pantalla.activa,
+body.en-horarios main#pantallaHorarios.pantalla.activa,
+body.en-tareas main#pantallaTareas.pantalla.activa {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  /* Una única caja visual compartida por los seis módulos principales. */
+  body.en-inicio #pantallaInicio.pantalla-inicio.pro-dashboard,
+body.en-modulo-inventario #pantallaProductos > .inventory-page-shell,
+body.en-vencimientos #pantallaVencimientos > .venc-pro-shell,
+body.en-anotar #pantallaAnotar > .repo-pro-shell,
+body.en-precios #pantallaPrecios > .precios-pro-shell,
+body.en-horarios #pantallaHorarios > .horarios-shell,
+body.en-tareas #pantallaTareas > .tareas-view > .tareas-shell {
+    width: min(
+      var(--primary-module-max-width),
+      calc(100% - (var(--ds-page-edge, var(--app-shell-desktop-edge, 36px)) * 2))
+    ) !important;
+    max-width: var(--primary-module-max-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: var(--primary-module-inline-padding) !important;
+    padding-right: var(--primary-module-inline-padding) !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  /* Baño usa la misma caja exterior, sin alterar el selector canónico
+     histórico compartido por Horarios y Tareas. */
+  body.en-bano #pantallaBano > .bano-view > .tareas-shell {
+    width: min(
+      var(--primary-module-max-width),
+      calc(100% - (var(--ds-page-edge, var(--app-shell-desktop-edge, 36px)) * 2))
+    ) !important;
+    max-width: var(--primary-module-max-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: var(--primary-module-inline-padding) !important;
+    padding-right: var(--primary-module-inline-padding) !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  /* Conserva únicamente el padding vertical propio de cada pantalla. */
+  body.en-inicio #pantallaInicio.pantalla-inicio.pro-dashboard {
+    padding-top: 26px !important;
+    padding-bottom: 50px !important;
+  }
+  body.en-modulo-inventario #pantallaProductos > .inventory-page-shell {
+    padding-top: 26px !important;
+    padding-bottom: 110px !important;
+  }
+  body.en-vencimientos #pantallaVencimientos > .venc-pro-shell {
+    padding-top: 26px !important;
+    padding-bottom: 42px !important;
+  }
+  body.en-anotar #pantallaAnotar > .repo-pro-shell {
+    padding-top: 26px !important;
+    padding-bottom: 64px !important;
+  }
+  body.en-precios #pantallaPrecios > .precios-pro-shell {
+    padding-top: 26px !important;
+    padding-bottom: 42px !important;
+  }
+  body.en-horarios #pantallaHorarios > .horarios-shell,
+body.en-tareas #pantallaTareas > .tareas-view > .tareas-shell {
+    padding-top: 26px !important;
+    padding-bottom: 42px !important;
+  }
+
+  body.en-bano #pantallaBano > .bano-view > .tareas-shell {
+    padding-top: 26px !important;
+    padding-bottom: 42px !important;
+  }
+
+  /* Los bloques de primer nivel usan siempre el 100% de la caja compartida. */
+  body.en-inicio #pantallaInicio .pro-desktop-heading,
+body.en-inicio #pantallaInicio .pro-metrics-grid,
+body.en-inicio #pantallaInicio .pro-quick-section,
+body.en-modulo-inventario #pantallaProductos .inventory-page-header,
+body.en-modulo-inventario #pantallaProductos .inventory-loaded-metrics,
+body.en-modulo-inventario #pantallaProductos .inventory-toolbar,
+body.en-modulo-inventario #pantallaProductos .inventory-result-grid,
+body.en-vencimientos #pantallaVencimientos .venc-pro-header,
+body.en-vencimientos #pantallaVencimientos .venc-pro-summary,
+body.en-vencimientos #pantallaVencimientos .venc-pro-list-card,
+body.en-anotar #pantallaAnotar .repo-pro-header,
+body.en-anotar #pantallaAnotar .repo-list-selector,
+body.en-anotar #pantallaAnotar .repo-workspace,
+body.en-precios #pantallaPrecios .precios-pro-header,
+body.en-precios #pantallaPrecios .precios-pro-grid,
+body.en-horarios #pantallaHorarios .horarios-page-header,
+body.en-horarios #pantallaHorarios .horarios-content {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+}
+
+/* ==========================================================================
+   D21 · BOTÓN DE ACCIÓN PRINCIPAL · EJE CANÓNICO DE ESCRITORIO
+   Única fuente de verdad para Inventario, Vencimientos, Lista y Precios.
+   Referencia aprobada: Inventario (168 × 46 px).
+   ========================================================================== */
+@media (min-width: 901px) {
+  body.en-modulo-inventario .inventory-page-header,
+body.en-vencimientos #pantallaVencimientos .venc-pro-header,
+body.en-anotar #pantallaAnotar .repo-pro-header,
+body.en-precios #pantallaPrecios .precios-pro-header {
+    align-items: center !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn,
+body.en-vencimientos #pantallaVencimientos .venc-header-load-btn,
+body.en-anotar #pantallaAnotar .repo-header-load-btn,
+body.en-precios #pantallaPrecios .precio-desktop-load-btn {
+    width: 168px !important;
+    min-width: 168px !important;
+    max-width: 168px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    flex: 0 0 168px !important;
+    margin: 0 !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--pro-red, #f02246) !important;
+    border-radius: 11px !important;
+    background: var(--pro-red, #f02246) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(244, 63, 94, 0.18) !important;
+    font: inherit !important;
+    font-size: 14px !important;
+    font-weight: 750 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn > span:first-child,
+body.en-vencimientos #pantallaVencimientos .venc-header-load-btn > span:first-child,
+body.en-anotar #pantallaAnotar .repo-header-load-btn > span:first-child,
+body.en-precios #pantallaPrecios .precio-desktop-load-btn > span:first-child {
+    display: inline-block !important;
+    width: 17px !important;
+    min-width: 17px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    font-size: 17px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn:hover,
+body.en-vencimientos #pantallaVencimientos .venc-header-load-btn:hover,
+body.en-anotar #pantallaAnotar .repo-header-load-btn:hover,
+body.en-anotar #pantallaAnotar .repo-header-load-btn.activo,
+body.en-precios #pantallaPrecios .precio-desktop-load-btn:hover {
+    filter: brightness(0.98) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  body.en-modulo-inventario .inventory-header-load-btn:focus-visible,
+body.en-vencimientos #pantallaVencimientos .venc-header-load-btn:focus-visible,
+body.en-anotar #pantallaAnotar .repo-header-load-btn:focus-visible,
+body.en-precios #pantallaPrecios .precio-desktop-load-btn:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--pro-red, #f02246) 22%, transparent) !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/* ==========================================================================
+   AUTOSERVICIOAPP · D21 · REGLAS CONSOLIDADAS DE REPOSICIÓN
+   Reglas nuevas y deliberadas de estabilidad, legibilidad y accesibilidad.
+   ========================================================================== */
+
+/* Evita corrimientos al aparecer el scrollbar en Inventario/Vencimientos. */
+@media (min-width: 901px) {
+  html {
+    overflow-y: scroll !important;
+    scrollbar-gutter: stable !important;
+  }
+
+  /* Escala tipográfica final de Mi lista, alineada con Consulta Precios. */
+  #pantallaAnotar .repo-list-selector button { font-size: 14px !important; font-weight: 800 !important; }
+  #pantallaAnotar .repo-search-box input { font-size: 14.5px !important; }
+  #pantallaAnotar .repo-filter-btn { font-size: 13px !important; font-weight: 750 !important; }
+  #pantallaAnotar .repo-list-headline strong { font-size: 15px !important; line-height: 1.25 !important; }
+  
+  #pantallaAnotar .repo-row-copy strong { font-size: 15px !important; line-height: 1.3 !important; }
+  #pantallaAnotar .repo-row-copy small { font-size: 11.5px !important; line-height: 1.3 !important; }
+  #pantallaAnotar .repo-row-qty { font-size: 12px !important; font-weight: 850 !important; }
+  #pantallaAnotar .repo-confirm-help { font-size: 12.5px !important; line-height: 1.4 !important; }
+
+  /* Panel lateral: suficiente ancho para que Última actualización no corte palabras. */
+  body[data-screen="anotar"] #pantallaAnotar .repo-workspace {
+    grid-template-columns: minmax(0, 1fr) 310px !important;
+  }
+  #pantallaAnotar .repo-summary-card h2,
+#pantallaAnotar .repo-recent-card h2,
+#pantallaAnotar .repo-recent-card .repo-side-head h2 {
+    font-size: 16.5px !important;
+    line-height: 1.2 !important;
+    font-weight: 850 !important;
+  }
+  #pantallaAnotar .repo-summary-row > span:nth-child(2) {
+    font-size: 13.5px !important;
+    line-height: 1.3 !important;
+    font-weight: 650 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    hyphens: none !important;
+  }
+  #pantallaAnotar .repo-summary-row strong {
+    font-size: 14px !important;
+    line-height: 1.25 !important;
+    font-weight: 850 !important;
+  }
+  #pantallaAnotar .repo-summary-row:last-of-type {
+    grid-template-columns: 30px 112px minmax(0, 1fr) !important;
+  }
+  #pantallaAnotar #repoSummaryUpdated {
+    max-width: none !important;
+    min-width: 126px !important;
+    font-size: 12.5px !important;
+    line-height: 1.3 !important;
+    font-weight: 700 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    hyphens: none !important;
+  }
+  #pantallaAnotar .repo-recent-item strong { font-size: 14px !important; line-height: 1.25 !important; }
+  #pantallaAnotar .repo-recent-item small { font-size: 11.5px !important; line-height: 1.3 !important; }
+  #pantallaAnotar .repo-recent-item b { font-size: 11.5px !important; line-height: 1.3 !important; font-weight: 800 !important; }
+  #pantallaAnotar .repo-recent-empty { font-size: 12.5px !important; }
+}
+
+/* Área táctil mínima sin cambiar el tamaño visual de los controles. */
+#pantallaAnotar .repo-confirm-check,
+#pantallaAnotar .repo-row-more {
+  position: relative;
+}
+#pantallaAnotar .repo-confirm-check::after,
+#pantallaAnotar .repo-row-more::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+#pantallaAnotar .repo-confirm-check:focus-visible,
+#pantallaAnotar .repo-row-more:focus-visible {
+  outline: 3px solid rgba(240, 34, 70, .24);
+  outline-offset: 3px;
+}
+
+/* Teléfonos angostos: mantiene título y nueva lista en la misma fila. */
+@media (max-width: 360px) {
+  #pantallaAnotar .repo-list-headline { gap: 6px !important; }
+  #pantallaAnotar .repo-list-headline > div { min-width: 0 !important; }
+  #pantallaAnotar .repo-list-headline strong {
+    font-size: 11.5px !important;
+    line-height: 1.2 !important;
+  }
+  #pantallaAnotar .repo-inline-new-list-btn {
+    min-height: 32px !important;
+    padding: 0 7px !important;
+    font-size: 9px !important;
+    letter-spacing: 0 !important;
+  }
+  #pantallaAnotar .repo-search-toolbar { gap: 6px !important; }
+  #pantallaAnotar .repo-filter-btn { min-width: 76px !important; padding: 0 9px !important; }
+}
+

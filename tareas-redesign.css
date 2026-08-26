@@ -1,0 +1,3864 @@
+/* =========================================================
+   TAREAS · REDISEÑO CANÓNICO
+   Pantalla diaria, planificación semanal, configuración y
+   acceso independiente a Baño.
+   ========================================================= */
+
+:root {
+  --task-surface: var(--ds-surface);
+  --task-surface-muted: var(--ds-surface-muted);
+  --task-border: var(--ds-border);
+  --task-border-strong: var(--ds-border-strong);
+  --task-text: var(--ds-text);
+  --task-muted: var(--ds-text-muted);
+  --task-brand: var(--ds-brand-500);
+  --task-brand-soft: var(--ds-brand-50);
+  --task-shadow: var(--ds-shadow-sm);
+  --task-card-radius: 16px;
+}
+
+body.en-tareas #pantallaTareas,
+body.en-bano #pantallaBano {
+  overflow-x: hidden;
+  background: transparent;
+}
+
+body.en-tareas #pantallaTareas *,
+body.en-bano #pantallaBano * {
+  box-sizing: border-box;
+}
+
+body.en-tareas #pantallaTareas {
+  padding-bottom: 92px !important;
+}
+
+body.en-tareas #pantallaTareas .tareas-shell,
+body.en-bano #pantallaBano .tareas-shell {
+  min-width: 0 !important;
+  margin: 0 auto 32px !important;
+}
+
+
+
+/* ---------- Bases compartidas del módulo ---------- */
+body.en-tareas #pantallaTareas .tareas-list {
+  display: grid;
+  gap: 14px;
+}
+
+.tareas-empty {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 30px 20px;
+  border: 1px dashed var(--task-border-strong);
+  border-radius: 16px;
+  background: var(--task-surface);
+  color: var(--task-muted);
+  text-align: center;
+}
+.tareas-empty strong { color: var(--task-text); }
+.tareas-empty-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--task-brand-soft);
+  color: var(--task-brand);
+}
+.tareas-empty-icon .app-icon { width: 21px; height: 21px; }
+
+.tareas-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 2px 10px;
+}
+.tareas-section-head h2 {
+  margin: 0;
+  color: var(--task-text);
+  font-size: 16px;
+}
+
+
+/* ---------- Encabezado, KPI y controles de Tareas ---------- */
+/* El ancho exterior de Tareas usa los mismos tokens canónicos del shell
+   que Inventario, Vencimientos, Lista, Precios y Horarios. */
+.tareas-dashboard-head {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+.tareas-dashboard-title {
+  display: block;
+  min-width: 0;
+}
+.tareas-dashboard-title h1 {
+  margin: 0;
+  color: var(--task-text);
+  font-size: 28px;
+  line-height: 1.08;
+  font-weight: 750;
+  letter-spacing: -.035em;
+}
+.tareas-dashboard-title p {
+  margin: 6px 0 0;
+  color: var(--task-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.tareas-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--task-muted);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.tareas-kpi-grid,
+.config-kpi-grid,
+.tareas-plan-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 18px;
+}
+.tareas-kpi,
+.config-kpi,
+.tareas-plan-kpi {
+  min-height: 96px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  border: 1px solid var(--task-border);
+  border-radius: 16px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  box-shadow: 0 5px 18px rgba(16, 24, 40, .045);
+}
+.tareas-kpi-icon,
+.config-kpi > span,
+.tareas-plan-kpi > span {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 900;
+}
+.tareas-kpi-icon .app-icon,
+.config-kpi > span .app-icon,
+.tareas-plan-kpi > span .app-icon { width: 23px; height: 23px; }
+.tareas-kpi div,
+.config-kpi div,
+.tareas-plan-kpi div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.tareas-kpi small,
+.config-kpi small,
+.tareas-plan-kpi small {
+  color: #536178;
+  font-size: 12px;
+  font-weight: 750;
+}
+.tareas-kpi strong,
+.config-kpi strong,
+.tareas-plan-kpi strong {
+  color: var(--task-text);
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: -.02em;
+}
+.tareas-kpi div > span,
+.config-kpi em,
+.tareas-plan-kpi em {
+  color: var(--task-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+/* Colores de contadores: fuente única en ui-unification.css (azul, rojo, amarillo, verde). */
+
+.tareas-command-bar {
+  display: grid;
+  grid-template-columns: minmax(230px, 290px) minmax(330px, 1fr) auto;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.tareas-control,
+.tareas-week-control,
+.tareas-plan-week-control,
+.tareas-primary-action,
+.tareas-secondary-action {
+  min-height: 56px;
+  border: 1px solid var(--task-border);
+  border-radius: 14px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  font: inherit;
+  box-shadow: 0 2px 7px rgba(16, 24, 40, .025);
+}
+.tareas-control {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 13px;
+  text-align: left;
+}
+.tareas-control:disabled { cursor: default; opacity: .78; }
+.tareas-control-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--task-brand);
+  background: var(--task-brand-soft);
+}
+.tareas-control-icon .app-icon,
+.tareas-control-chevron { width: 18px; height: 18px; }
+.tareas-sector-copy,
+.tareas-plan-sector > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.tareas-sector-copy small,
+.tareas-plan-sector small {
+  color: var(--task-muted);
+  font-size: 10.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+.tareas-sector-copy strong,
+.tareas-plan-sector strong {
+  color: var(--task-text);
+  font-size: 14px;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tareas-control-chevron { color: #8290a3; }
+.tareas-week-control,
+.tareas-plan-week-control {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  overflow: hidden;
+}
+.tareas-week-control button,
+.tareas-plan-week-control button {
+  border: 0;
+  background: transparent;
+  color: var(--task-text);
+  font: inherit;
+  font-weight: 850;
+}
+.tareas-week-control > button:first-child,
+.tareas-plan-week-control > button:first-child { border-right: 1px solid var(--task-border); }
+.tareas-week-control > button:last-child,
+.tareas-plan-week-control > button:last-child { border-left: 1px solid var(--task-border); }
+.tareas-week-label,
+.tareas-plan-week-label { font-size: 14px !important; letter-spacing: .01em; }
+.tareas-command-actions {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 10px;
+  min-width: max-content;
+}
+.tareas-primary-action,
+.tareas-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 850;
+}
+.tareas-primary-action {
+  border-color: var(--task-brand);
+  background: var(--task-brand);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(240, 34, 70, .17);
+}
+.tareas-secondary-action { color: var(--task-text); }
+.tareas-primary-action .app-icon,
+.tareas-secondary-action .app-icon { width: 18px; height: 18px; }
+
+/* ---------- Selector de días ---------- */
+body.en-tareas #tareasVistaTareas .tareas-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 0 0 18px !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+body.en-tareas #tareasVistaTareas .tareas-days button {
+  min-height: 70px !important;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 14px !important;
+  background: var(--task-surface) !important;
+  color: var(--task-text) !important;
+  box-shadow: none !important;
+}
+body.en-tareas #tareasVistaTareas .tareas-days button strong {
+  color: #69778a !important;
+  font-size: 12px !important;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+body.en-tareas #tareasVistaTareas .tareas-days button span {
+  color: var(--task-text) !important;
+  font-size: 22px !important;
+  line-height: 1;
+}
+body.en-tareas #tareasVistaTareas .tareas-days button.hoy:not(.activo) {
+  border-color: color-mix(in srgb, var(--task-brand) 32%, var(--task-border)) !important;
+}
+body.en-tareas #tareasVistaTareas .tareas-days button.activo {
+  border-color: var(--task-brand) !important;
+  background: #fff7f8 !important;
+  box-shadow: inset 0 -3px 0 var(--task-brand) !important;
+}
+body.en-tareas #tareasVistaTareas .tareas-days button.activo strong,
+body.en-tareas #tareasVistaTareas .tareas-days button.activo span { color: var(--task-brand) !important; }
+
+.tareas-day-heading {
+  display: grid;
+  grid-template-columns: 36px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+.tareas-day-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--task-brand);
+  background: var(--task-brand-soft);
+}
+.tareas-day-icon .app-icon { width: 18px; height: 18px; }
+.tareas-day-heading h2,
+.tareas-subpage-title h2 {
+  margin: 0;
+  color: var(--task-text);
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -.015em;
+}
+.tareas-day-line { height: 1px; background: var(--task-border); }
+
+/* ---------- Turnos y tarjetas de personas ---------- */
+body.en-tareas #tareasVistaTareas .tareas-list {
+  display: grid !important;
+  gap: 18px !important;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-group {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 !important;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-head h3 {
+  margin: 0;
+  color: var(--task-text);
+  font-size: 15px;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-head small {
+  color: var(--task-muted);
+  font-size: 12.5px;
+  font-weight: 750;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-icon .app-icon { width: 17px; height: 17px; }
+body.en-tareas #tareasVistaTareas .tareas-turno-manana .tareas-turno-icon {
+  color: #b46c00;
+  background: var(--ds-warning-soft);
+}
+body.en-tareas #tareasVistaTareas .tareas-turno-tarde .tareas-turno-icon {
+  color: var(--ds-info);
+  background: var(--ds-info-soft);
+}
+.tareas-turno-line { flex: 1; height: 1px; background: var(--task-border); }
+body.en-tareas #tareasVistaTareas .tareas-turno-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px !important;
+  align-items: stretch;
+}
+/* En escritorio todas las tarjetas conservan exactamente el ancho de
+   una de tres columnas, aunque un turno tenga una o dos personas. */
+body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-1,
+body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-2,
+body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-3,
+body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-many {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 15px !important;
+  background: var(--task-surface) !important;
+  box-shadow: 0 5px 16px rgba(16, 24, 40, .045) !important;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-head {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px !important;
+  background: var(--task-surface) !important;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-identity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-identity > div { min-width: 0; }
+body.en-tareas #tareasVistaTareas .tarea-user-avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffe7eb;
+  color: var(--task-brand);
+  font-size: 13px;
+  font-weight: 900;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-head h4 {
+  margin: 0;
+  color: var(--task-text);
+  font-size: 14.5px;
+  line-height: 1.2;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-head small {
+  display: block;
+  margin-top: 3px;
+  color: #65728a;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.tarea-user-progress-box {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-progress {
+  min-width: 42px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--task-surface-muted);
+  color: var(--task-text);
+  font-size: 11.5px;
+  font-weight: 900;
+  text-align: center;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-progress.is-complete {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+.tarea-user-progress-box > small {
+  color: var(--task-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+.tarea-user-progress-line {
+  height: 3px;
+  background: #f1f4f8;
+}
+.tarea-user-progress-line > i {
+  display: block;
+  height: 100%;
+  background: var(--task-brand);
+  transition: width .2s ease;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-items { display: grid; }
+body.en-tareas #tareasVistaTareas .tarea-check-row {
+  position: relative;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 15px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--task-border) !important;
+  background: var(--task-surface) !important;
+  cursor: pointer;
+}
+body.en-tareas #tareasVistaTareas .tarea-check-row:last-child { border-bottom: 0 !important; }
+body.en-tareas #tareasVistaTareas .tarea-complete-check {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+body.en-tareas #tareasVistaTareas .tarea-check-visual {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: transparent;
+  transition: .16s ease;
+}
+body.en-tareas #tareasVistaTareas .tarea-check-visual .app-icon { width: 13px; height: 13px; stroke-width: 2.5; }
+body.en-tareas #tareasVistaTareas .tarea-complete-check:checked + .tarea-check-visual {
+  border-color: var(--ds-success);
+  background: var(--ds-success);
+  color: #fff;
+}
+body.en-tareas #tareasVistaTareas .tarea-check-row.is-completed {
+  cursor: default;
+  background: #fbfefc !important;
+}
+body.en-tareas #tareasVistaTareas .tarea-check-row.is-completed .tarea-item-copy strong {
+  color: #5e6b7f !important;
+  text-decoration: none !important;
+}
+body.en-tareas #tareasVistaTareas .tarea-item-copy {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+body.en-tareas #tareasVistaTareas .tarea-item-copy > strong {
+  min-width: 0;
+  color: var(--task-text) !important;
+  font-size: 14px !important;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body.en-tareas #tareasVistaTareas .tarea-duration-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f5f7fa;
+  color: #5f6e82;
+  font-size: 11.5px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+body.en-tareas #tareasVistaTareas .tarea-duration-pill .app-icon { width: 12px; height: 12px; }
+body.en-tareas #tareasVistaTareas .tarea-user-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px 12px !important;
+  border-top: 1px solid var(--task-border) !important;
+  background: var(--task-surface) !important;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-edit {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--task-brand) 52%, var(--task-border)) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: var(--task-brand) !important;
+  font-size: 12.5px !important;
+  font-weight: 850;
+}
+body.en-tareas #tareasVistaTareas .tarea-user-edit .app-icon { width: 14px; height: 14px; }
+
+/* El acceso independiente a Baño conserva su propio regreso interno.
+   Planificación y Configuración de Tareas usan exclusivamente la topbar. */
+body.en-bano #pantallaBano .tareas-back-action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--task-border);
+  border-radius: 12px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+/* ---------- Encabezados de subpágina ---------- */
+.tareas-subpage-head {
+  display: block;
+  margin-bottom: 16px;
+}
+.tareas-subpage-title p {
+  margin: 4px 0 0;
+  color: var(--task-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* ---------- Planificación semanal ---------- */
+body.en-tareas #tareasVistaPlanificacion .tareas-plan-shell {
+  margin-bottom: 96px !important;
+}
+.tareas-plan-kpis { margin-bottom: 16px; }
+.tareas-plan-toolbar {
+  display: grid;
+  grid-template-columns: minmax(230px, 300px) minmax(340px, 1fr) auto;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.tareas-plan-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tareas-plan-legend span {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--task-border);
+  border-radius: 999px;
+  background: var(--task-surface);
+  color: #5f6d80;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.tareas-plan-legend i { width: 8px; height: 8px; border-radius: 50%; }
+.tareas-plan-legend .is-manana i { background: #f0a51b; }
+.tareas-plan-legend .is-tarde i { background: #4f8cf4; }
+.tareas-plan-table-wrap {
+  width: 100% !important;
+  overflow: hidden !important;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 16px !important;
+  background: var(--task-surface) !important;
+  box-shadow: 0 5px 18px rgba(16, 24, 40, .045) !important;
+}
+.tareas-plan-grid {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+}
+.tareas-plan-row {
+  width: 100% !important;
+  min-height: 78px !important;
+  display: grid !important;
+  grid-template-columns: minmax(245px, 1.6fr) repeat(7, minmax(0, 1fr)) !important;
+  border-bottom: 1px solid var(--task-border) !important;
+  background: var(--task-surface);
+}
+.tareas-plan-row:last-child { border-bottom: 0 !important; }
+.tareas-plan-row-head {
+  min-height: 62px !important;
+  background: #fbfcfe !important;
+}
+.tareas-plan-task-head,
+.tareas-plan-day-head {
+  border-right: 1px solid var(--task-border) !important;
+  background: #fbfcfe !important;
+}
+.tareas-plan-task-head {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline !important;
+  justify-content: center !important;
+  gap: 6px;
+  padding: 0 16px !important;
+}
+.tareas-plan-task-head strong {
+  color: var(--task-text);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.tareas-plan-task-head span,
+.tareas-plan-day-head small { color: var(--task-muted); font-size: 12px; line-height: 1.35; }
+.tareas-plan-day-head {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+}
+.tareas-plan-day-head strong {
+  color: #68768a !important;
+  font-size: 12.5px !important;
+  letter-spacing: .045em;
+}
+.tareas-plan-day-head span {
+  color: var(--task-text) !important;
+  font-size: 18px !important;
+  font-weight: 850;
+  line-height: 1;
+}
+.tareas-plan-day-head.is-today {
+  background: #fff6f7 !important;
+  box-shadow: inset 0 -2px 0 var(--task-brand) !important;
+}
+.tareas-plan-day-head.is-today strong,
+.tareas-plan-day-head.is-today span { color: var(--task-brand) !important; }
+.tareas-plan-task {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 9px 15px !important;
+  border-right: 1px solid var(--task-border) !important;
+  background: var(--task-surface) !important;
+}
+.tareas-plan-task strong {
+  color: var(--task-text) !important;
+  font-size: 14.5px !important;
+  line-height: 1.32;
+}
+.tareas-plan-task span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--task-muted) !important;
+  font-size: 12.5px !important;
+  line-height: 1.35;
+}
+.tareas-plan-task span .app-icon { width: 12px; height: 12px; }
+.tareas-plan-cell {
+  min-width: 0 !important;
+  min-height: 78px;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--task-border) !important;
+  border-radius: 0 !important;
+  background: var(--task-surface) !important;
+  color: var(--task-text);
+  box-shadow: none !important;
+}
+.tareas-plan-cell.is-today { background: #fffafb !important; }
+.tareas-plan-cell.is-disabled {
+  background: #fcfdff !important;
+  color: #c2cad6 !important;
+}
+.tareas-plan-cell.is-editable:hover { background: #fff7f8 !important; }
+.tareas-plan-empty {
+  width: 100%;
+  min-height: 34px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #cfd8e4 !important;
+  border-radius: 9px;
+  background: #fff !important;
+  color: #68768a !important;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.tareas-plan-assignee {
+  width: 100%;
+  min-width: 0 !important;
+  min-height: 28px !important;
+  display: grid !important;
+  grid-template-columns: 19px minmax(0, 1fr) 15px !important;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px !important;
+  border: 1px solid transparent;
+  border-radius: 8px !important;
+  text-align: left;
+}
+.tareas-plan-assignee > small {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 900;
+}
+.tareas-plan-person {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 11.5px !important;
+  line-height: 1.28;
+  font-weight: 800;
+}
+.tareas-plan-done { color: var(--ds-success); font-size: 11px; }
+.tareas-plan-assignee.turno-manana {
+  background: #fff7e8 !important;
+  border-color: #f3ca79 !important;
+  color: #8b5700 !important;
+}
+.tareas-plan-assignee.turno-tarde {
+  background: #eef5ff !important;
+  border-color: #aac8fb !important;
+  color: #1d5ebc !important;
+}
+.tareas-plan-assignee.turno-manana > small { background: #f5b93c; color: #fff; }
+.tareas-plan-assignee.turno-tarde > small { background: #4f8cf4; color: #fff; }
+.tareas-plan-assignee.is-complete { box-shadow: inset 0 0 0 1px rgba(63, 135, 88, .22); }
+
+/* ---------- Configuración de tareas ---------- */
+.tareas-config-content { display: grid !important; gap: 16px !important; }
+.config-kpi-grid { margin-bottom: 0; }
+.tareas-config-card {
+  border: 1px solid var(--task-border) !important;
+  border-radius: 16px !important;
+  background: var(--task-surface) !important;
+  box-shadow: 0 5px 18px rgba(16, 24, 40, .045) !important;
+  padding: 18px !important;
+  overflow: visible !important;
+}
+.tareas-config-head {
+  min-height: 52px;
+  display: flex;
+  align-items: center !important;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px !important;
+}
+.tareas-config-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.config-card-icon {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--task-brand-soft) !important;
+  color: var(--task-brand) !important;
+}
+.config-card-icon .app-icon { width: 20px; height: 20px; }
+.tareas-config-title h3 {
+  margin: 0;
+  color: var(--task-text) !important;
+  font-size: 17px !important;
+}
+.tareas-config-title p {
+  margin: 3px 0 0;
+  color: var(--task-muted) !important;
+  font-size: 13.5px !important;
+  line-height: 1.4;
+}
+.config-primary-btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px !important;
+  border: 1px solid var(--task-brand) !important;
+  border-radius: 11px !important;
+  background: var(--task-brand) !important;
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 850;
+  box-shadow: 0 8px 18px rgba(240, 34, 70, .14);
+}
+.config-primary-btn .app-icon { width: 15px; height: 15px; }
+.config-toolbar-modern {
+  display: grid;
+  grid-template-columns: minmax(190px, 230px) minmax(300px, 1fr) 150px 150px;
+  align-items: end;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.config-sector-picker,
+.config-filter-control,
+.config-search-wrap { margin: 0 !important; }
+.config-sector-picker {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px !important;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 11px !important;
+  background: var(--task-surface) !important;
+}
+.config-sector-picker > span { display: grid; gap: 1px; text-align: left; }
+.config-sector-picker small,
+.config-filter-control > span {
+  color: var(--task-muted) !important;
+  font-size: 11px !important;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.config-sector-picker strong { color: var(--task-text) !important; font-size: 14px !important; }
+.config-search-wrap {
+  position: relative;
+  min-height: 50px !important;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 11px !important;
+  background: var(--task-surface) !important;
+}
+.config-search-wrap > .app-icon {
+  position: absolute;
+  left: 13px;
+  width: 17px;
+  height: 17px;
+  color: #7a8798;
+  pointer-events: none;
+}
+.config-search-wrap input {
+  width: 100%;
+  min-height: 48px !important;
+  border: 0 !important;
+  padding: 0 42px 0 40px !important;
+  background: transparent !important;
+  color: var(--task-text) !important;
+  font-size: 14px;
+  font-weight: 650;
+  outline: none;
+}
+.config-search-wrap button {
+  position: absolute;
+  right: 7px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: #f3f5f8;
+  color: var(--task-muted);
+}
+.config-filter-control { display: grid; gap: 4px; }
+.config-filter-control select,
+.config-filter-control .app-select-custom__trigger {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid var(--task-border);
+  border-radius: 11px;
+  padding: 0 34px 0 11px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 750;
+}
+.config-filter-control .app-select-custom__trigger { padding-right: 11px; }
+.config-task-table-head,
+.config-task-row {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 1.45fr) 110px minmax(280px, 1.25fr) 105px 60px !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+.config-task-table-head {
+  min-height: 42px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--task-border);
+  color: #66758a;
+  font-size: 11.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.config-task-table-head > :last-child {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  font-size: 11px !important;
+  letter-spacing: .035em !important;
+}
+body.en-tareas #pantallaTareas .config-task-list { display: grid !important; gap: 0 !important; }
+body.en-tareas #pantallaTareas .config-task-row {
+  min-height: 74px;
+  padding: 10px 14px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--task-border) !important;
+  border-radius: 0 !important;
+  background: var(--task-surface) !important;
+  box-shadow: none !important;
+}
+body.en-tareas #pantallaTareas .config-task-row:last-child { border-bottom: 0 !important; }
+body.en-tareas #pantallaTareas .config-task-row.is-disabled { opacity: .58; }
+.config-task-name {
+  min-width: 0;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+}
+.config-task-name strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--task-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+.config-task-icon {
+  width: 34px !important;
+  height: 34px !important;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--ds-success-soft) !important;
+  color: var(--ds-success) !important;
+}
+.config-task-icon .app-icon { width: 16px; height: 16px; }
+body.en-tareas #pantallaTareas .config-task-row.is-disabled .config-task-icon {
+  background: var(--task-surface-muted) !important;
+  color: var(--task-muted) !important;
+}
+.config-task-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f6f7f9;
+  color: #5d6b7e;
+  font-size: 12px;
+  font-weight: 800;
+}
+.config-task-duration .app-icon { width: 12px; height: 12px; }
+.config-task-days-wrap { min-width: 0; }
+.config-task-days {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff1f3;
+  color: #c92845 !important;
+  font-size: 11.5px !important;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.config-task-days .app-icon { width: 12px; height: 12px; flex: none; }
+.config-task-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 850;
+}
+.config-task-status i { width: 7px; height: 7px; border-radius: 50%; }
+.config-task-status.is-active { color: var(--ds-success); }
+.config-task-status.is-active i { background: var(--ds-success); }
+.config-task-status.is-disabled { color: var(--task-muted); }
+.config-task-status.is-disabled i { background: var(--task-muted); }
+.config-task-open {
+  width: 36px !important;
+  height: 36px !important;
+  display: grid !important;
+  place-items: center;
+  justify-self: end;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: #617085 !important;
+}
+.config-task-open .app-icon { width: 15px !important; height: 15px !important; }
+
+/* ---------- Baño separado ---------- */
+.bano-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+body.en-bano #pantallaBano .bano-current-card,
+body.en-bano #pantallaBano .bano-turn-card,
+body.en-bano #pantallaBano .bano-history-card,
+body.en-bano #pantallaBano .tareas-config-card {
+  background: var(--task-surface) !important;
+  border-color: var(--task-border) !important;
+  color: var(--task-text);
+}
+body.en-bano #pantallaBano .bano-turn-copy strong,
+body.en-bano #pantallaBano .bano-person-copy h3,
+body.en-bano #pantallaBano .bano-history-card strong {
+  color: var(--task-text) !important;
+}
+body.en-bano #pantallaBano .bano-turn-copy span,
+body.en-bano #pantallaBano .bano-person-copy p,
+body.en-bano #pantallaBano .bano-history-card span {
+  color: var(--task-muted) !important;
+}
+body.en-bano #pantallaBano .config-participant-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+body.en-bano #pantallaBano .config-selected-users {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+body.en-bano #pantallaBano .config-secondary-btn {
+  min-height: 42px;
+  flex: none;
+  padding: 0 14px;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 11px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+body.en-bano #pantallaBano .config-participant-picker {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--task-border);
+  border-radius: 13px;
+  background: var(--task-surface-muted);
+}
+body.en-bano #pantallaBano .config-user-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ---------- Modales canónicos de Tareas ---------- */
+#tareaModal,
+#asignarModal {
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 26px !important;
+  background: var(--ds-overlay) !important;
+  backdrop-filter: blur(6px);
+}
+
+#tareaModal .tarea-modal-card,
+#asignarModal .assign-modal-card,
+.tareas-plan-modal-card {
+  box-sizing: border-box;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 20px !important;
+  background: var(--task-surface) !important;
+  color: var(--task-text) !important;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, .22) !important;
+}
+
+#tareaModal .app-dialog-close,
+#asignarModal .app-dialog-close,
+.tareas-plan-modal-close {
+  width: 38px !important;
+  height: 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 12px !important;
+  background: var(--task-surface-muted) !important;
+  color: #526175 !important;
+  font-size: 21px !important;
+  line-height: 1 !important;
+}
+
+#tareaModal .modal-kicker,
+#asignarModal .modal-kicker,
+.tareas-plan-modal-kicker {
+  margin: 0 46px 7px 0 !important;
+  color: #23804a !important;
+  font-size: 11.5px !important;
+  font-weight: 900 !important;
+  letter-spacing: .11em !important;
+  line-height: 1.2 !important;
+  text-transform: uppercase !important;
+}
+
+#tareaModal #tareaModalTitulo,
+#asignarModal #asignarModalTitulo,
+.tareas-plan-modal-head h3 {
+  margin: 0 !important;
+  color: var(--task-text) !important;
+  font-size: 23px !important;
+  line-height: 1.15 !important;
+  letter-spacing: -.025em !important;
+}
+
+/* Editar / crear tarea */
+#tareaModal .tarea-modal-card {
+  position: relative !important;
+  width: min(630px, calc(100vw - 40px)) !important;
+  max-width: 630px !important;
+  max-height: min(820px, calc(100dvh - 40px)) !important;
+  display: block !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 28px !important;
+}
+
+#tareaModal .tarea-modal-card > label {
+  display: grid !important;
+  gap: 7px !important;
+  margin: 20px 0 0 !important;
+  color: #344054 !important;
+  font-size: 13.5px !important;
+  font-weight: 850 !important;
+}
+
+#tareaModal .tarea-input-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  min-height: 52px;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 13px;
+  background: var(--task-surface);
+  overflow: hidden;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+#tareaModal .tarea-input-shell:focus-within {
+  border-color: var(--task-brand);
+  box-shadow: var(--ds-focus-ring);
+}
+#tareaModal .tarea-field-icon,
+#tareaModal .tarea-section-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--task-brand-soft);
+  color: var(--task-brand);
+}
+#tareaModal .tarea-field-icon {
+  margin-left: 8px;
+}
+#tareaModal .tarea-field-icon .app-icon,
+#tareaModal .tarea-section-icon .app-icon {
+  width: 17px;
+  height: 17px;
+}
+#tareaModal .tarea-input-shell input[type="text"] {
+  width: 100% !important;
+  height: 50px !important;
+  border: 0 !important;
+  padding: 0 14px 0 9px !important;
+  background: transparent !important;
+  color: var(--task-text) !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  outline: none !important;
+}
+
+#tareaModal .duration-picker {
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) 18px minmax(0, 1fr) !important;
+  align-items: end !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+#tareaModal .tarea-duration-icon {
+  align-self: end;
+  margin: 0 !important;
+  background: color-mix(in srgb, #8b5cf6 12%, var(--task-surface)) !important;
+  color: #7c3aed !important;
+}
+#tareaModal .duration-column {
+  display: grid !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+#tareaModal .duration-column > span {
+  color: #667085 !important;
+  font-size: 11.5px !important;
+  font-weight: 900 !important;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+#tareaModal .duration-column select,
+#tareaModal .duration-column .app-select-custom__trigger {
+  width: 100% !important;
+  min-height: 52px !important;
+  border: 1px solid var(--task-border-strong) !important;
+  border-radius: 13px !important;
+  padding: 0 14px !important;
+  background: var(--task-surface) !important;
+  color: var(--task-text) !important;
+  font: inherit !important;
+  font-size: 17px !important;
+  font-weight: 850 !important;
+  text-align: center;
+}
+#tareaModal .duration-column .app-select-custom__value { text-align: center; }
+#tareaModal .duration-column .app-select-custom__chevron { flex: 0 0 16px; }
+#tareaModal .duration-separator {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  color: var(--task-muted);
+  font-size: 18px;
+  font-weight: 900;
+}
+.field-help {
+  color: var(--task-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+#tareaModal .tarea-dias-fieldset,
+#tareaModal .tarea-estado-fieldset {
+  margin: 22px 0 0 !important;
+  padding: 18px 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--task-border) !important;
+}
+#tareaModal .tarea-dias-fieldset legend,
+#tareaModal .tarea-estado-fieldset legend {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 6px !important;
+  padding: 0 !important;
+  color: var(--task-text) !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  text-align: left;
+}
+#tareaModal .tarea-section-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+}
+#tareaModal .tarea-section-icon.is-status {
+  background: color-mix(in srgb, #16a34a 11%, var(--task-surface));
+  color: #24874b;
+}
+#tareaModal .tarea-dias-fieldset > .field-help {
+  margin: 0 0 13px 43px !important;
+}
+#tareaModal .tarea-dias-selector {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+#tareaModal .tarea-dias-selector label {
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+#tareaModal .tarea-dias-selector label:nth-child(n/**/+5) {
+  grid-column: span 1;
+}
+#tareaModal .tarea-dias-selector input {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+#tareaModal .tarea-dias-selector span {
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--task-border-strong) !important;
+  border-radius: 11px !important;
+  background: var(--task-surface) !important;
+  color: #4f5d70 !important;
+  font-size: 12.5px !important;
+  font-weight: 850 !important;
+  box-shadow: none !important;
+}
+#tareaModal .tarea-dias-selector input:checked + span {
+  border-color: var(--task-brand) !important;
+  background: var(--task-brand) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 16px rgba(240, 34, 70, .14) !important;
+}
+#tareaModal .tarea-dias-selector label:nth-child(5) { grid-column: 2; }
+#tareaModal .tarea-dias-selector label:nth-child(6) { grid-column: 3; }
+#tareaModal .tarea-dias-selector label:nth-child(7) { grid-column: 4; }
+
+#tareaModal .tarea-estado-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+#tareaModal .tarea-estado-selector button {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 14px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  text-align: left;
+}
+#tareaModal .tarea-estado-selector button > span:last-child {
+  display: grid;
+  gap: 5px;
+}
+#tareaModal .tarea-estado-selector strong {
+  font-size: 13px;
+  font-weight: 850;
+}
+#tareaModal .tarea-estado-selector small {
+  color: var(--task-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+#tareaModal .tarea-status-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #98a2b3;
+}
+#tareaModal .tarea-status-dot.is-active { background: #35a25d; }
+#tareaModal .tarea-status-dot.is-inactive { background: #98a2b3; }
+#tareaModal .tarea-estado-selector button.is-selected[data-tarea-estado="activa"] {
+  border-color: #7bc797;
+  background: color-mix(in srgb, #22c55e 6%, var(--task-surface));
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, .055);
+}
+#tareaModal .tarea-estado-selector button.is-selected[data-tarea-estado="inactiva"] {
+  border-color: #aab2bd;
+  background: var(--task-surface-muted);
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, .05);
+}
+
+#tareaModal .tarea-modal-admin-actions {
+  display: none !important;
+}
+#tareaModal .tarea-modal-admin-actions.oculto { display: none !important; }
+#tareaModal .tarea-delete-btn {
+  min-height: 50px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 0 14px !important;
+  border: 1px solid color-mix(in srgb, var(--task-brand) 48%, var(--task-border)) !important;
+  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--task-brand) 4%, var(--task-surface)) !important;
+  color: #c72742 !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+  box-shadow: none !important;
+}
+#tareaModal .tarea-delete-btn:hover {
+  background: color-mix(in srgb, var(--task-brand) 8%, var(--task-surface)) !important;
+}
+#tareaModal .tarea-delete-btn.oculto { display: none !important; }
+#tareaModal .tarea-delete-btn .app-icon { width: 16px; height: 16px; }
+
+#tareaModal .modal-actions,
+#asignarModal .assign-modal-footer,
+.tareas-plan-modal-actions-main {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+#tareaModal .modal-actions {
+  margin: 16px 0 0 !important;
+  padding: 0 !important;
+}
+#tareaModal.is-editing .modal-actions {
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.35fr) !important;
+  gap: 10px !important;
+}
+#tareaModal:not(.is-editing) .modal-actions {
+  grid-template-columns: 1fr !important;
+}
+#tareaModal .save-btn,
+#asignarModal .save-btn,
+.tareas-plan-modal-save {
+  min-height: 50px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  border: 1px solid var(--task-brand) !important;
+  border-radius: 12px !important;
+  background: var(--task-brand) !important;
+  color: #fff !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  box-shadow: 0 10px 22px rgba(240, 34, 70, .18) !important;
+}
+#tareaModal .save-btn .app-icon,
+#asignarModal .save-btn .app-icon { width: 16px; height: 16px; }
+#tareaModal .save-btn:disabled,
+#asignarModal .save-btn:disabled,
+.tareas-plan-modal-save:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  filter: saturate(.55);
+}
+
+/* Asignación diaria por persona */
+#asignarModal .assign-modal-card {
+  width: min(670px, calc(100vw - 40px)) !important;
+  max-width: 670px !important;
+  max-height: min(860px, calc(100dvh - 40px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+#asignarModal .assign-modal-header {
+  position: relative;
+  padding: 27px 28px 18px !important;
+  border-bottom: 1px solid var(--task-border) !important;
+  background: var(--task-surface) !important;
+}
+#asignarModal .assign-modal-header .app-dialog-close { top: 18px !important; right: 18px !important; }
+#asignarModal .asignar-fecha {
+  margin: 6px 0 0 !important;
+  color: var(--task-muted) !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  text-transform: capitalize;
+}
+#asignarModal .assign-modal-body {
+  min-height: 0;
+  display: grid !important;
+  gap: 18px !important;
+  padding: 20px 28px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+#asignarModal .assign-field {
+  min-width: 0;
+  display: grid !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+#asignarModal .assign-label-row {
+  min-width: 0;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+#asignarModal .assign-label-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+#asignarModal .assign-label-row strong {
+  color: var(--task-text) !important;
+  font-size: 13.5px !important;
+  font-weight: 850 !important;
+}
+#asignarModal .assign-label-row small {
+  color: var(--task-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+#asignarModal .assign-label-row > span {
+  flex: none;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--task-surface-muted);
+  color: #647286 !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  white-space: nowrap;
+}
+
+#asignarModal .shift-segmented {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+#asignarModal .shift-segmented button {
+  min-height: 72px !important;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 11px 13px !important;
+  border: 1px solid var(--task-border-strong) !important;
+  border-radius: 14px !important;
+  background: var(--task-surface) !important;
+  color: var(--task-text) !important;
+  text-align: left !important;
+}
+#asignarModal .assign-shift-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+}
+#asignarModal .assign-shift-icon .app-icon { width: 18px; height: 18px; }
+#asignarModal .assign-shift-icon.is-manana {
+  background: color-mix(in srgb, #f59e0b 12%, var(--task-surface));
+  color: #e59400;
+}
+#asignarModal .assign-shift-icon.is-tarde {
+  background: color-mix(in srgb, #3b82f6 11%, var(--task-surface));
+  color: #3b82f6;
+}
+#asignarModal .assign-shift-copy { min-width: 0; display: grid; gap: 1px; }
+#asignarModal .assign-shift-copy small {
+  color: #98a2b3;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+#asignarModal .assign-shift-copy strong { font-size: 14px; font-weight: 850; }
+#asignarModal .assign-shift-copy em {
+  color: var(--task-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+}
+#asignarModal .shift-segmented button.is-active[data-turno="manana"] {
+  border-color: #efb84b !important;
+  background: color-mix(in srgb, #f59e0b 7%, var(--task-surface)) !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, .06) !important;
+}
+#asignarModal .shift-segmented button.is-active[data-turno="tarde"] {
+  border-color: #71a5f8 !important;
+  background: color-mix(in srgb, #3b82f6 6%, var(--task-surface)) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .055) !important;
+}
+#asignarModal .shift-segmented button:disabled { opacity: .42; cursor: not-allowed; }
+
+#asignarModal .asignar-usuarios {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  max-height: 238px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 2px !important;
+}
+.assign-loading-inline {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed var(--task-border-strong);
+  border-radius: 13px;
+  color: var(--task-muted);
+  font-size: 11px;
+}
+.assign-loading-inline > span {
+  width: 17px;
+  height: 17px;
+  border: 2px solid var(--task-border);
+  border-top-color: var(--task-brand);
+  border-radius: 50%;
+  animation: tareasPlanSpin .8s linear infinite;
+}
+#asignarModal .assign-user-card {
+  position: relative;
+  min-height: 64px;
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) 27px !important;
+  align-items: center !important;
+  gap: 11px !important;
+  margin: 0 !important;
+  padding: 9px 11px !important;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 13px !important;
+  background: var(--task-surface) !important;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+#asignarModal .assign-user-card input {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.assign-user-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--task-surface-muted);
+  color: #475467;
+  font-size: 12px;
+  font-weight: 900;
+}
+#asignarModal .assign-user-card.is-selected,
+#asignarModal .assign-user-card:has(input:checked) {
+  border-color: #ef9bab !important;
+  background: color-mix(in srgb, var(--task-brand) 4%, var(--task-surface)) !important;
+  box-shadow: 0 0 0 3px rgba(240, 34, 70, .045) !important;
+}
+#asignarModal .assign-user-card.is-selected .assign-user-avatar,
+#asignarModal .assign-user-card:has(input:checked) .assign-user-avatar {
+  background: color-mix(in srgb, var(--task-brand) 10%, var(--task-surface));
+  color: var(--task-brand);
+}
+.assign-user-copy { min-width: 0; display: grid !important; gap: 3px !important; }
+.assign-user-copy strong { color: var(--task-text) !important; font-size: 14px !important; font-weight: 800 !important; }
+.assign-user-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--task-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+#asignarModal .assign-user-check {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 50%;
+  background: var(--task-surface);
+  color: transparent;
+}
+#asignarModal .assign-user-check .app-icon { width: 14px; height: 14px; }
+#asignarModal .assign-user-card.is-selected .assign-user-check,
+#asignarModal .assign-user-card:has(input:checked) .assign-user-check {
+  border-color: var(--task-brand);
+  background: var(--task-brand);
+  color: #fff;
+}
+
+#asignarModal .assign-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 !important;
+}
+#asignarModal .assign-search > .app-icon {
+  position: absolute;
+  left: 13px;
+  width: 17px;
+  height: 17px;
+  color: #7b8798;
+  pointer-events: none;
+}
+#asignarModal .assign-search input {
+  width: 100% !important;
+  min-height: 46px !important;
+  border: 1px solid var(--task-border-strong) !important;
+  border-radius: 12px !important;
+  padding: 0 13px 0 40px !important;
+  background: var(--task-surface) !important;
+  color: var(--task-text) !important;
+  font-size: 12px !important;
+  outline: none;
+}
+#asignarModal .assign-task-list {
+  display: grid !important;
+  gap: 7px !important;
+  max-height: 245px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 1px !important;
+}
+#asignarModal .assign-task-option {
+  position: relative;
+  min-height: 58px;
+  display: grid !important;
+  grid-template-columns: 36px minmax(0, 1fr) 26px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 8px 10px !important;
+  border: 1px solid var(--task-border) !important;
+  border-radius: 12px !important;
+  background: var(--task-surface) !important;
+  cursor: pointer;
+}
+#asignarModal .assign-task-option input {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+#asignarModal .assign-task-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--task-brand-soft);
+  color: var(--task-brand);
+}
+#asignarModal .assign-task-icon .app-icon { width: 16px; height: 16px; }
+#asignarModal .assign-task-copy { min-width: 0; display: grid; gap: 3px; }
+#asignarModal .assign-task-copy strong { color: var(--task-text); font-size: 13.5px; font-weight: 800; }
+#asignarModal .assign-task-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--task-muted);
+  font-size: 11.5px;
+}
+#asignarModal .assign-task-mark {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 50%;
+  color: transparent;
+}
+#asignarModal .assign-task-mark .app-icon { width: 13px; height: 13px; }
+#asignarModal .assign-task-option:has(input:checked) {
+  border-color: #ef9bab !important;
+  background: color-mix(in srgb, var(--task-brand) 4%, var(--task-surface)) !important;
+}
+#asignarModal .assign-task-option:has(input:checked) .assign-task-mark {
+  border-color: var(--task-brand);
+  background: var(--task-brand);
+  color: #fff;
+}
+#asignarModal .assign-modal-footer {
+  margin: 0 !important;
+  padding: 14px 28px 20px !important;
+  border-top: 1px solid var(--task-border) !important;
+  background: var(--task-surface) !important;
+}
+
+/* Modal de asignación desde la planilla semanal */
+body.tareas-plan-modal-open,
+body.tareas-modal-open { overflow: hidden !important; }
+.tareas-plan-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 22080;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.tareas-plan-modal.oculto { display: none !important; }
+.tareas-plan-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--ds-overlay);
+  backdrop-filter: blur(6px);
+}
+.tareas-plan-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(650px, calc(100vw - 40px));
+  max-height: min(850px, calc(100dvh - 40px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 26px;
+}
+.tareas-plan-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 48px 16px 0;
+  border-bottom: 1px solid var(--task-border);
+}
+.tareas-plan-modal-close {
+  position: absolute !important;
+  top: 18px !important;
+  right: 18px !important;
+  z-index: 40 !important;
+}
+.tareas-plan-modal-titlebox { min-width: 0; }
+.tareas-plan-modal-taskname {
+  display: block;
+  margin-top: 8px;
+  color: var(--task-text);
+  font-size: 14px;
+  font-weight: 850;
+}
+.tareas-plan-modal-head p {
+  margin: 4px 0 0;
+  color: var(--task-muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+.tareas-plan-modal-block { padding-top: 18px; }
+.tareas-plan-modal-label { display: grid; gap: 3px; margin-bottom: 10px; }
+.tareas-plan-modal-label-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.tareas-plan-modal-label strong { color: var(--task-text); font-size: 13.5px; }
+.tareas-plan-modal-label span { color: var(--task-muted); font-size: 12px; }
+.tareas-plan-selected-count {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--task-surface-muted);
+  color: var(--task-muted);
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.tareas-plan-modal-turnos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tareas-plan-modal-turnos button {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 14px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  text-align: left;
+}
+.tareas-plan-modal-turnos button.is-active[data-plan-turno="manana"] {
+  border-color: #efb84b;
+  background: color-mix(in srgb, #f59e0b 7%, var(--task-surface));
+  box-shadow: 0 0 0 3px rgba(239, 184, 75, .06);
+}
+.tareas-plan-modal-turnos button.is-active[data-plan-turno="tarde"] {
+  border-color: #5795f5;
+  background: color-mix(in srgb, #3b82f6 6%, var(--task-surface));
+  box-shadow: 0 0 0 3px rgba(87, 149, 245, .055);
+}
+.tareas-plan-turno-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.tareas-plan-turno-dot.is-manana { background: #eda923; }
+.tareas-plan-turno-dot.is-tarde { background: #3b82f6; }
+.tareas-plan-modal-turnos button span:not(.tareas-plan-turno-dot) { display: grid; gap: 1px; }
+.tareas-plan-modal-turnos small {
+  color: #98a2b3;
+  font-size: 10.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.tareas-plan-modal-turnos strong { color: var(--task-text); font-size: 14px; }
+.tareas-plan-modal-users {
+  display: grid;
+  gap: 8px;
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px;
+}
+.tareas-plan-user-option {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border: 1px solid var(--task-border);
+  border-radius: 13px;
+  background: var(--task-surface);
+  color: var(--task-text);
+  text-align: left;
+}
+.tareas-plan-user-option.is-selected {
+  border-color: #ef9bab;
+  background: color-mix(in srgb, var(--task-brand) 4%, var(--task-surface));
+  box-shadow: 0 0 0 3px rgba(240, 34, 70, .045);
+}
+.tareas-plan-user-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--task-surface-muted);
+  color: #475467;
+  font-weight: 900;
+}
+.tareas-plan-user-option.is-selected .tareas-plan-user-avatar {
+  background: color-mix(in srgb, var(--task-brand) 10%, var(--task-surface));
+  color: var(--task-brand);
+}
+.tareas-plan-user-copy { min-width: 0; display: grid; gap: 3px; }
+ .tareas-plan-user-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--task-text);
+  font-size: 13px;
+}
+.tareas-plan-user-copy small { color: var(--task-muted); font-size: 12px; }
+.tareas-plan-user-check {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--task-border-strong);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+.tareas-plan-user-option.is-selected .tareas-plan-user-check {
+  border-color: var(--task-brand);
+  background: var(--task-brand);
+}
+.tareas-plan-modal-empty {
+  min-height: 125px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 1px dashed var(--task-border-strong);
+  border-radius: 13px;
+  color: var(--task-muted);
+  text-align: center;
+}
+.tareas-plan-modal-empty > span { font-size: 28px; color: #c4cad2; }
+.tareas-plan-modal-empty strong { color: var(--task-text); font-size: 14px; }
+.tareas-plan-modal-empty small { font-size: 12px; }
+.tareas-plan-modal-loading {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--task-muted);
+}
+.tareas-plan-modal-loading span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--task-border);
+  border-top-color: var(--task-brand);
+  border-radius: 50%;
+  animation: tareasPlanSpin .8s linear infinite;
+}
+@keyframes tareasPlanSpin { to { transform: rotate(360deg); } }
+.tareas-plan-modal-actions {
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid var(--task-border);
+}
+
+
+/* ---------- Dark mode ----------
+   Ajuste consolidado del módulo Tareas. Se preserva intacto el diseño
+   claro y sólo se reemplazan superficies/contrastes que quedaban claros
+   al activar el tema oscuro. ---------- */
+html[data-theme="dark"] .tareas-kpi small,
+html[data-theme="dark"] .config-kpi small,
+html[data-theme="dark"] .tareas-plan-kpi small,
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-user-head small,
+html[data-theme="dark"] .config-task-table-head,
+html[data-theme="dark"] .tareas-plan-legend span {
+  color: var(--task-muted) !important;
+}
+
+/* En dark mode los contadores también toman exclusivamente los tokens canónicos. */
+
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tareas-days button strong,
+html[data-theme="dark"] .tareas-plan-day-head strong {
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tareas-days button.activo {
+  background: color-mix(in srgb, var(--task-brand) 8%, var(--task-surface)) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-user-avatar {
+  background: color-mix(in srgb, var(--task-brand) 14%, var(--task-surface)) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tareas-turno-manana .tareas-turno-icon {
+  color: var(--ds-warning) !important;
+}
+html[data-theme="dark"] .tarea-user-progress-line {
+  background: var(--task-surface-muted) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-check-visual {
+  border-color: var(--task-border-strong) !important;
+  background: var(--task-surface) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-check-row.is-completed {
+  background: color-mix(in srgb, var(--ds-success) 5%, var(--task-surface)) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-check-row.is-completed .tarea-item-copy strong {
+  color: color-mix(in srgb, var(--task-muted) 88%, var(--task-text)) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-duration-pill {
+  background: var(--task-surface-muted) !important;
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] body.en-tareas #tareasVistaTareas .tarea-user-edit {
+  background: var(--task-surface) !important;
+}
+
+html[data-theme="dark"] .tareas-plan-row-head,
+html[data-theme="dark"] .tareas-plan-task-head,
+html[data-theme="dark"] .tareas-plan-day-head {
+  background: var(--task-surface-muted) !important;
+}
+html[data-theme="dark"] .tareas-plan-day-head.is-today {
+  background: color-mix(in srgb, var(--task-brand) 8%, var(--task-surface)) !important;
+}
+html[data-theme="dark"] .tareas-plan-cell.is-today {
+  background: color-mix(in srgb, var(--task-brand) 5%, var(--task-surface)) !important;
+}
+html[data-theme="dark"] .tareas-plan-cell.is-disabled {
+  background: color-mix(in srgb, var(--task-surface-muted) 72%, var(--task-surface)) !important;
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] .tareas-plan-cell.is-editable:hover {
+  background: color-mix(in srgb, var(--task-brand) 7%, var(--task-surface)) !important;
+}
+html[data-theme="dark"] .tareas-plan-empty {
+  border-color: var(--task-border-strong) !important;
+  background: var(--task-surface) !important;
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] .tareas-plan-assignee.turno-manana {
+  background: color-mix(in srgb, #f59e0b 12%, var(--task-surface)) !important;
+  border-color: color-mix(in srgb, #f59e0b 58%, var(--task-border)) !important;
+  color: #ffd480 !important;
+}
+html[data-theme="dark"] .tareas-plan-assignee.turno-tarde {
+  background: color-mix(in srgb, #3b82f6 12%, var(--task-surface)) !important;
+  border-color: color-mix(in srgb, #3b82f6 58%, var(--task-border)) !important;
+  color: #a9c8ff !important;
+}
+
+html[data-theme="dark"] .config-search-wrap {
+  border-color: color-mix(in srgb, var(--task-border-strong) 78%, transparent) !important;
+  background: var(--task-surface) !important;
+}
+html[data-theme="dark"] .config-search-wrap > .app-icon {
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] .config-search-wrap input {
+  background: transparent !important;
+  color: var(--task-text) !important;
+}
+html[data-theme="dark"] .config-search-wrap button,
+html[data-theme="dark"] .config-task-duration {
+  background: var(--task-surface-muted) !important;
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] .config-task-days {
+  background: color-mix(in srgb, var(--task-brand) 9%, var(--task-surface)) !important;
+  color: var(--task-brand) !important;
+}
+html[data-theme="dark"] .config-task-open {
+  background: var(--task-surface) !important;
+  color: var(--task-muted) !important;
+}
+
+html[data-theme="dark"] .config-filter-control select,
+html[data-theme="dark"] #tareaModal select,
+html[data-theme="dark"] #tareaModal input,
+html[data-theme="dark"] #asignarModal input {
+  color-scheme: dark;
+}
+html[data-theme="dark"] #tareaModal .tarea-modal-card > label,
+html[data-theme="dark"] #tareaModal .tarea-dias-selector span,
+html[data-theme="dark"] #tareaModal .tarea-estado-selector button,
+html[data-theme="dark"] #asignarModal .assign-label-row strong,
+html[data-theme="dark"] #asignarModal .assign-shift-copy strong,
+html[data-theme="dark"] .tareas-plan-user-avatar,
+html[data-theme="dark"] .assign-user-avatar {
+  color: var(--task-text) !important;
+}
+html[data-theme="dark"] #tareaModal .duration-column > span,
+html[data-theme="dark"] #tareaModal .duration-separator,
+html[data-theme="dark"] #asignarModal .assign-shift-copy small,
+html[data-theme="dark"] #asignarModal .assign-label-row small,
+html[data-theme="dark"] #asignarModal .assign-label-row > span {
+  color: var(--task-muted) !important;
+}
+html[data-theme="dark"] #tareaModal .app-dialog-close,
+html[data-theme="dark"] #asignarModal .app-dialog-close,
+html[data-theme="dark"] .tareas-plan-modal-close {
+  color: var(--task-text) !important;
+}
+
+/* Scroll interno de modales/listas: evita carriles blancos en oscuro. */
+#tareaModal .tarea-modal-card,
+#asignarModal .assign-modal-body,
+#asignarModal .asignar-usuarios,
+#asignarModal .assign-task-list,
+.tareas-plan-modal-users,
+body.en-bano #pantallaBano .config-user-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--task-border-strong) transparent;
+}
+#tareaModal .tarea-modal-card::-webkit-scrollbar,
+#asignarModal .assign-modal-body::-webkit-scrollbar,
+#asignarModal .asignar-usuarios::-webkit-scrollbar,
+#asignarModal .assign-task-list::-webkit-scrollbar,
+.tareas-plan-modal-users::-webkit-scrollbar,
+body.en-bano #pantallaBano .config-user-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+#tareaModal .tarea-modal-card::-webkit-scrollbar-track,
+#asignarModal .assign-modal-body::-webkit-scrollbar-track,
+#asignarModal .asignar-usuarios::-webkit-scrollbar-track,
+#asignarModal .assign-task-list::-webkit-scrollbar-track,
+.tareas-plan-modal-users::-webkit-scrollbar-track,
+body.en-bano #pantallaBano .config-user-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+#tareaModal .tarea-modal-card::-webkit-scrollbar-thumb,
+#asignarModal .assign-modal-body::-webkit-scrollbar-thumb,
+#asignarModal .asignar-usuarios::-webkit-scrollbar-thumb,
+#asignarModal .assign-task-list::-webkit-scrollbar-thumb,
+.tareas-plan-modal-users::-webkit-scrollbar-thumb,
+body.en-bano #pantallaBano .config-user-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--task-border-strong);
+  background-clip: padding-box;
+}
+
+/* ---------- Navegación secundaria de Tareas ---------- */
+body.en-tareas .tareas-back-topbar {
+  display: none !important;
+}
+body.en-tareas[data-tareas-vista="planificacion"] .tareas-back-topbar:not(.oculto),
+body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
+  position: absolute !important;
+  left: 14px !important;
+  top: 50% !important;
+  z-index: 3 !important;
+  transform: translateY(-50%) !important;
+  min-width: 42px !important;
+  width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  border: 1px solid var(--pro-border, #e3e8ef) !important;
+  border-radius: 11px !important;
+  background: var(--pro-panel, #fff) !important;
+  color: var(--pro-text, #182230) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .045) !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease !important;
+}
+body.en-tareas[data-tareas-vista="planificacion"] .tareas-back-topbar:not(.oculto):hover,
+body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto):hover {
+  border-color: var(--task-border-strong) !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .09) !important;
+  transform: translateY(-50%) translateX(-2px) !important;
+}
+body.en-tareas .tareas-back-arrow {
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: transparent !important;
+  color: var(--task-text) !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+}
+body.en-tareas .tareas-back-label {
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.01em !important;
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  body.en-tareas[data-tareas-vista="planificacion"] #brandMenuBtn,
+  body.en-tareas[data-tareas-vista="config"] #brandMenuBtn {
+    display: none !important;
+  }
+  body.en-tareas[data-tareas-vista="planificacion"] .tareas-back-topbar:not(.oculto),
+  body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
+    left: max(10px, env(safe-area-inset-left)) !important;
+    min-width: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  body.en-tareas .tareas-back-label { display: none !important; }
+  body.en-tareas .tareas-back-arrow {
+    width: auto !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    font-size: 22px !important;
+  }
+}
+
+/* ---------- Escritorio ---------- */
+@media (min-width: 901px) {
+  /* El ancho de Tareas en escritorio se define exclusivamente en desktop-layout.css,
+     dentro del mismo eje canónico que Horarios y los módulos principales. */
+
+  body.en-bano #pantallaBano {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+}
+
+/* ---------- Tablet ---------- */
+@media (max-width: 1100px) {
+  .tareas-command-bar,
+  .tareas-plan-toolbar {
+    grid-template-columns: 1fr 1.25fr;
+  }
+  .tareas-command-actions,
+  .tareas-plan-legend {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-turno-list,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-2,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-3,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-many {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-1 {
+    grid-template-columns: 1fr !important;
+  }
+  .config-toolbar-modern {
+    grid-template-columns: minmax(180px, .8fr) minmax(260px, 1.5fr);
+  }
+  .config-filter-control {
+    grid-row: 2;
+  }
+  .config-task-table-head,
+  .config-task-row {
+    grid-template-columns: minmax(220px, 1.2fr) 95px minmax(190px, 1fr) 95px 54px !important;
+  }
+  .tareas-plan-table-wrap {
+    overflow-x: auto !important;
+  }
+  .tareas-plan-grid {
+    min-width: 1020px !important;
+  }
+}
+
+@keyframes tareasSheetUp {
+  from { transform: translateY(28px); opacity: .96; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- Móvil ---------- */
+@media (max-width: 700px) {
+  body.en-tareas #pantallaTareas,
+  body.en-bano #pantallaBano {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  body.en-tareas #pantallaTareas .tareas-shell,
+  body.en-bano #pantallaBano .tareas-shell {
+    width: calc(100% - (var(--app-shell-mobile-inline, 12px) * 2)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 88px !important;
+  }
+  body.en-tareas #pantallaTareas .tareas-shell {
+    padding-top: var(--app-shell-mobile-top-gap, 12px);
+  }
+  /* En móvil la topbar ya identifica el módulo. Evitamos repetir títulos
+     y ganamos espacio vertical en las tres vistas de Tareas. */
+  body.en-tareas #tareasVistaTareas .tareas-dashboard-head,
+  body.en-tareas #tareasVistaPlanificacion .tareas-subpage-head,
+  body.en-tareas #tareasVistaConfig .tareas-subpage-head {
+    display: none !important;
+  }
+
+  .tareas-dashboard-head {
+    margin: 0 0 10px;
+  }
+  .tareas-dashboard-title h1 { font-size: 22px; }
+  .tareas-dashboard-title p { font-size: 12px; }
+  .tareas-kpi-grid,
+  .config-kpi-grid,
+  .tareas-plan-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .tareas-kpi,
+  .config-kpi,
+  .tareas-plan-kpi {
+    min-height: 82px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    padding: 11px;
+    gap: 9px;
+  }
+  .tareas-kpi-icon,
+  .config-kpi > span,
+  .tareas-plan-kpi > span {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+  .tareas-kpi strong,
+  .config-kpi strong,
+  .tareas-plan-kpi strong {
+    font-size: 20px;
+  }
+  .tareas-command-bar,
+  .tareas-plan-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .tareas-command-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-width: 0;
+  }
+  .tareas-primary-action,
+  .tareas-secondary-action {
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-days {
+    gap: 4px !important;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-days button {
+    min-height: 54px !important;
+    border-radius: 10px !important;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-days button strong {
+    font-size: 12px !important;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-days button span {
+    font-size: 16px !important;
+  }
+  .tareas-day-heading h2,
+  .tareas-subpage-title h2 {
+    font-size: 17px;
+  }
+  body.en-tareas #tareasVistaTareas .tareas-turno-list,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-1,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-2,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-3,
+  body.en-tareas #tareasVistaTareas .tareas-turno-list.tareas-user-count-many {
+    grid-template-columns: 1fr !important;
+  }
+  body.en-tareas #tareasVistaTareas .tarea-item-copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  body.en-tareas #tareasVistaTareas .tarea-user-edit { width: 100%; }
+  .tareas-plan-legend {
+    grid-column: auto;
+    justify-content: flex-start;
+  }
+  .tareas-plan-table-wrap {
+    position: relative !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--task-border-strong) transparent;
+  }
+  .tareas-plan-table-wrap::-webkit-scrollbar { height: 7px; }
+  .tareas-plan-table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .tareas-plan-table-wrap::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--task-border-strong);
+  }
+  .tareas-plan-grid {
+    min-width: 1050px !important;
+  }
+  .tareas-plan-row {
+    grid-template-columns: 180px repeat(7, 124px) !important;
+  }
+  .tareas-plan-task-head,
+  .tareas-plan-task {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 5 !important;
+    box-shadow: 1px 0 0 var(--task-border) !important;
+  }
+  .tareas-plan-task-head {
+    z-index: 8 !important;
+    background: var(--task-surface-muted) !important;
+  }
+  .tareas-plan-task {
+    background: var(--task-surface) !important;
+  }
+  .tareas-plan-row-head {
+    position: relative !important;
+    z-index: 4 !important;
+  }
+  .tareas-plan-person {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.25 !important;
+  }
+  .config-toolbar-modern {
+    grid-template-columns: 1fr 1fr;
+  }
+  .config-sector-picker,
+  .config-search-wrap {
+    grid-column: 1 / -1;
+  }
+  .config-filter-control {
+    grid-row: auto;
+  }
+  .config-task-table-head {
+    display: none !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 7px 10px !important;
+    padding: 11px !important;
+    border: 1px solid var(--task-border) !important;
+    border-radius: 13px !important;
+    margin-bottom: 8px;
+  }
+  .config-task-name {
+    grid-column: 1 / 2;
+    align-items: flex-start !important;
+  }
+  .config-task-name strong {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+  }
+  .config-task-duration,
+  .config-task-days-wrap,
+  .config-task-status {
+    grid-column: 1 / 2;
+  }
+  .config-task-open {
+    grid-column: 2;
+    grid-row: 1 / 5;
+    align-self: center;
+  }
+  .bano-top-actions {
+    margin-bottom: 8px;
+  }
+  #tareaModal,
+  #asignarModal,
+  .tareas-plan-modal {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  #tareaModal .tarea-modal-card,
+  #asignarModal .assign-modal-card,
+  .tareas-plan-modal-card {
+    position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: min(92dvh, 820px) !important;
+    margin: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-radius: 22px 22px 0 0 !important;
+    box-shadow: 0 -18px 48px rgba(15, 23, 42, .22) !important;
+    animation: tareasSheetUp .22s cubic-bezier(.2,.8,.2,1);
+  }
+  #tareaModal .tarea-modal-card::before,
+  #asignarModal .assign-modal-card::before,
+  .tareas-plan-modal-card::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    z-index: 30;
+    display: block;
+    width: 42px;
+    height: 4px;
+    margin: 0;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--task-muted) 42%, transparent);
+    pointer-events: none;
+  }
+  #tareaModal .tarea-modal-card {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 18px 18px calc(84px + env(safe-area-inset-bottom)) !important;
+    overscroll-behavior: contain;
+  }
+  #tareaModal .modal-actions {
+    position: sticky !important;
+    left: 0;
+    right: 0;
+    bottom: calc(-84px - env(safe-area-inset-bottom));
+    z-index: 25;
+    margin: 18px -18px calc(-84px - env(safe-area-inset-bottom)) !important;
+    padding: 12px 18px max(14px, env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid var(--task-border) !important;
+    background: color-mix(in srgb, var(--task-surface) 96%, transparent) !important;
+    backdrop-filter: blur(12px);
+  }
+  #tareaModal.is-editing .modal-actions {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr) !important;
+    gap: 8px !important;
+  }
+  #tareaModal .tarea-delete-btn,
+  #tareaModal .save-btn {
+    min-width: 0 !important;
+    padding-inline: 10px !important;
+  }
+  #tareaModal .tarea-estado-selector { grid-template-columns: 1fr !important; }
+  #tareaModal .duration-picker {
+    grid-template-columns: 38px minmax(0, 1fr) 14px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+  #tareaModal .tarea-dias-selector { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  #tareaModal .tarea-dias-selector label {
+    flex: 1 1 calc(25% - 8px) !important;
+    min-width: 64px !important;
+  }
+
+  #asignarModal .assign-modal-card {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+  }
+  #asignarModal .assign-modal-header {
+    position: relative;
+    min-height: 102px;
+    padding: 25px 52px 14px 18px !important;
+    background: var(--task-surface) !important;
+  }
+  #asignarModal .assign-modal-header .app-dialog-close {
+    top: 22px !important;
+    right: 14px !important;
+  }
+  #asignarModal .assign-modal-body {
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 16px 18px !important;
+    gap: 16px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+  }
+  #asignarModal .asignar-usuarios,
+  #asignarModal .assign-task-list {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  #asignarModal .assign-modal-footer {
+    position: relative !important;
+    z-index: 20;
+    padding: 12px 18px max(14px, env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid var(--task-border) !important;
+    background: var(--task-surface) !important;
+    box-shadow: 0 -10px 24px color-mix(in srgb, #0f172a 9%, transparent) !important;
+  }
+
+  .tareas-plan-modal-card {
+    display: grid !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+    padding: 14px 18px 0 !important;
+  }
+  .tareas-plan-modal-head {
+    padding: 14px 46px 14px 0 !important;
+  }
+  .tareas-plan-modal-close {
+    top: 16px !important;
+    right: 14px !important;
+  }
+  .tareas-plan-modal-block {
+    min-height: 0;
+  }
+  .tareas-plan-modal-block:nth-of-type(2) {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    padding-bottom: 10px;
+  }
+  .tareas-plan-modal-users {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .tareas-plan-modal-actions {
+    margin: 0 -18px !important;
+    padding: 12px 18px max(14px, env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid var(--task-border) !important;
+    background: var(--task-surface) !important;
+    box-shadow: 0 -10px 24px color-mix(in srgb, #0f172a 9%, transparent) !important;
+  }
+
+  .config-filter-control .app-select-custom__menu,
+  #tareaModal .duration-column .app-select-custom__menu {
+    max-height: min(240px, 38dvh) !important;
+  }
+
+  body.en-tareas #pantallaTareas .tareas-shell {
+    padding-bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+  }
+  body.en-bano #pantallaBano .config-user-list { grid-template-columns: 1fr; }
+}
+
+/* Acceso rápido independiente a Baño desde Inicio. */
+@media (min-width: 901px) {
+  body.en-inicio .pro-operation-links {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  body.en-inicio .pro-operation-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================
+   BAÑO 24/08 — REDISEÑO FINAL
+   ========================================================= */
+body.en-bano #pantallaBano .bano-dashboard-shell,
+body.en-bano #pantallaBano .bano-config-modern {
+  width: 100%;
+  max-width: 1180px !important;
+  margin: 0 auto;
+  padding: 22px 0 34px;
+}
+body.en-bano #pantallaBano .bano-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 18px;
+}
+body.en-bano #pantallaBano .bano-page-title {
+  min-width: 0;
+}
+body.en-bano #pantallaBano .bano-page-title .tareas-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--task-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+body.en-bano #pantallaBano .bano-page-title h2 {
+  margin: 0;
+  color: var(--task-text) !important;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -.03em;
+}
+body.en-bano #pantallaBano .bano-page-title p {
+  margin: 7px 0 0;
+  color: var(--task-muted) !important;
+  font-size: 12px;
+}
+body.en-bano #pantallaBano .bano-config-action,
+body.en-bano #pantallaBano .bano-back-action {
+  min-height: 44px;
+  padding: 0 17px;
+  border-radius: 12px;
+  background: var(--task-surface) !important;
+  border: 1px solid var(--task-border) !important;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, .04);
+  color: var(--task-text) !important;
+  font-weight: 800;
+}
+body.en-bano #pantallaBano .bano-config-action .app-icon {
+  width: 17px;
+  height: 17px;
+}
+
+body.en-bano #pantallaBano .bano-current-modern {
+  min-height: 104px;
+  margin: 0 0 14px !important;
+  padding: 22px 24px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 0 !important;
+  border-radius: 17px !important;
+  background: linear-gradient(105deg, #dc1f31 0%, #f43c58 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 30px rgba(220,31,49,.17) !important;
+  overflow: hidden;
+}
+body.en-bano #pantallaBano .bano-current-modern::before { display: none !important; }
+body.en-bano #pantallaBano .bano-current-modern.is-completed {
+  background: linear-gradient(105deg, #23845a 0%, #42a977 100%) !important;
+  box-shadow: 0 14px 30px rgba(35,132,90,.17) !important;
+}
+body.en-bano #pantallaBano .bano-current-modern.is-rest {
+  background: var(--task-surface) !important;
+  border: 1px solid var(--task-border) !important;
+  color: var(--task-text) !important;
+  box-shadow: 0 8px 20px rgba(15,23,42,.05) !important;
+}
+body.en-bano #pantallaBano .bano-modern-hero-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+body.en-bano #pantallaBano .bano-modern-kicker {
+  color: rgba(255,255,255,.92);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-kicker { color: var(--task-brand); }
+body.en-bano #pantallaBano .bano-modern-hero-copy strong {
+  color: #fff !important;
+  font-size: 25px;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+}
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-hero-copy strong { color: var(--task-text) !important; }
+body.en-bano #pantallaBano .bano-modern-hero-copy small {
+  color: rgba(255,255,255,.9) !important;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-hero-copy small { color: var(--task-muted) !important; }
+body.en-bano #pantallaBano .bano-confirm-modern {
+  width: auto !important;
+  min-width: 210px;
+  min-height: 47px;
+  margin: 0 !important;
+  padding: 0 18px;
+  border: 1px solid rgba(255,255,255,.62) !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.08) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+}
+body.en-bano #pantallaBano .bano-confirm-modern:hover { background: rgba(255,255,255,.15) !important; }
+body.en-bano #pantallaBano .bano-modern-confirmed {
+  min-height: 47px;
+  padding: 0 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+}
+body.en-bano #pantallaBano .bano-modern-confirmed .app-icon { width: 18px; height: 18px; }
+body.en-bano #pantallaBano .bano-modern-status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--task-surface-muted);
+  color: var(--task-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+body.en-bano #pantallaBano .bano-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+body.en-bano #pantallaBano .bano-kpi {
+  min-width: 0;
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--task-border);
+  border-radius: 14px;
+  background: var(--task-surface);
+}
+body.en-bano #pantallaBano .bano-kpi-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+body.en-bano #pantallaBano .bano-kpi-icon .app-icon { width: 19px; height: 19px; }
+body.en-bano #pantallaBano .bano-kpi.is-frequency .bano-kpi-icon { background: color-mix(in srgb, #e72a44 10%, var(--task-surface)); color: #e72a44; }
+body.en-bano #pantallaBano .bano-kpi.is-participants .bano-kpi-icon { background: color-mix(in srgb, #e58b13 11%, var(--task-surface)); color: #e58b13; }
+body.en-bano #pantallaBano .bano-kpi.is-status .bano-kpi-icon { background: color-mix(in srgb, #28a568 11%, var(--task-surface)); color: #28a568; }
+body.en-bano #pantallaBano .bano-kpi.is-next .bano-kpi-icon { background: color-mix(in srgb, #4f67e8 11%, var(--task-surface)); color: #4f67e8; }
+body.en-bano #pantallaBano .bano-kpi > div { min-width: 0; display: grid; gap: 1px; }
+body.en-bano #pantallaBano .bano-kpi small { color: var(--task-muted); font-size: 10px; }
+body.en-bano #pantallaBano .bano-kpi strong { color: var(--task-text); font-size: 18px; line-height: 1.12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.en-bano #pantallaBano .bano-kpi em { color: var(--task-muted); font-style: normal; font-size: 10px; }
+
+body.en-bano #pantallaBano .bano-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.35fr .9fr;
+  gap: 14px;
+  align-items: stretch;
+}
+body.en-bano #pantallaBano .bano-panel-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--task-border);
+  border-radius: 16px;
+  background: var(--task-surface);
+  box-shadow: 0 6px 18px rgba(15,23,42,.035);
+}
+body.en-bano #pantallaBano .bano-panel-head {
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 12px;
+}
+body.en-bano #pantallaBano .bano-panel-head h3 { margin: 0; color: var(--task-text); font-size: 15px; }
+body.en-bano #pantallaBano .bano-panel-head p { margin: 3px 0 0; color: var(--task-muted); font-size: 10.5px; }
+body.en-bano #pantallaBano .bano-panel-count {
+  min-width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, #df2941 10%, var(--task-surface));
+  color: #df2941;
+  font-size: 11px;
+  font-weight: 900;
+}
+body.en-bano #pantallaBano .bano-modern-list { margin: 0 !important; gap: 0 !important; border: 1px solid var(--task-border); border-radius: 13px; overflow: hidden; }
+body.en-bano #pantallaBano .bano-turn-modern {
+  min-height: 58px !important;
+  margin: 0 !important;
+  padding: 7px 10px !important;
+  gap: 10px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--task-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.en-bano #pantallaBano .bano-turn-modern:last-child { border-bottom: 0 !important; }
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-date {
+  width: 43px;
+  height: 43px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #e32943 10%, var(--task-surface));
+  color: #e32943;
+  border: 1px solid color-mix(in srgb, #e32943 18%, var(--task-border));
+}
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-date strong { font-size: 17px; }
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-date span { font-size: 8px; }
+html[data-theme="dark"] body.en-bano #pantallaBano .bano-turn-modern .bano-turn-date {
+  background: color-mix(in srgb, #e32943 16%, var(--task-surface));
+  color: #ff7184;
+  border-color: color-mix(in srgb, #e32943 34%, var(--task-border));
+}
+body.en-bano #pantallaBano .bano-turn-order {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, #e32943 10%, var(--task-surface));
+  color: #e32943;
+  font-size: 11px;
+  font-weight: 900;
+}
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy strong { font-size: 12px !important; }
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy span { font-size: 10px !important; }
+body.en-bano #pantallaBano .bano-turn-day {
+  margin-left: auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--task-surface-muted);
+  color: var(--task-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+body.en-bano #pantallaBano .bano-turn-arrow { width: 16px; height: 16px; }
+
+body.en-bano #pantallaBano .bano-pending-list {
+  border: 1px solid var(--task-border);
+  border-radius: 13px;
+  overflow: hidden;
+}
+body.en-bano #pantallaBano .bano-pending-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--task-border);
+}
+body.en-bano #pantallaBano .bano-pending-row:last-child { border-bottom: 0; }
+body.en-bano #pantallaBano .bano-pending-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, #df2941 10%, var(--task-surface));
+  color: #df2941;
+  font-size: 11px;
+  font-weight: 900;
+}
+body.en-bano #pantallaBano .bano-pending-copy { min-width: 0; flex: 1; display: grid; gap: 2px; }
+body.en-bano #pantallaBano .bano-pending-copy strong { color: var(--task-text); font-size: 11.5px; }
+body.en-bano #pantallaBano .bano-pending-copy span { display: flex; align-items: center; gap: 4px; color: var(--task-muted); font-size: 9.5px; text-transform: capitalize; }
+body.en-bano #pantallaBano .bano-pending-copy .app-icon { width: 12px; height: 12px; color: #e32943; }
+body.en-bano #pantallaBano .bano-pending-badge {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #e32943 10%, var(--task-surface));
+  color: #e32943;
+  font-size: 8.5px;
+  font-weight: 850;
+}
+body.en-bano #pantallaBano .bano-all-confirmed {
+  min-height: 145px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 18px;
+  text-align: left;
+}
+body.en-bano #pantallaBano .bano-all-confirmed > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, #289b63 11%, var(--task-surface));
+  color: #289b63;
+}
+body.en-bano #pantallaBano .bano-all-confirmed .app-icon { width: 19px; height: 19px; }
+body.en-bano #pantallaBano .bano-all-confirmed div { display: grid; gap: 3px; }
+body.en-bano #pantallaBano .bano-all-confirmed strong { color: var(--task-text); font-size: 12px; }
+body.en-bano #pantallaBano .bano-all-confirmed small { color: var(--task-muted); font-size: 10px; }
+body.en-bano #pantallaBano .bano-rule-note {
+  min-height: 58px;
+  margin-top: 14px;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid color-mix(in srgb, #f59e0b 38%, var(--task-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, #f59e0b 9%, var(--task-surface));
+}
+body.en-bano #pantallaBano .bano-rule-icon {
+  width: 37px;
+  height: 37px;
+  flex: 0 0 37px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: color-mix(in srgb, #e99113 13%, var(--task-surface));
+  color: #e99113;
+}
+body.en-bano #pantallaBano .bano-rule-icon .app-icon { width: 18px; height: 18px; }
+body.en-bano #pantallaBano .bano-rule-note > div { display: grid; gap: 2px; }
+body.en-bano #pantallaBano .bano-rule-note strong { color: var(--task-text); font-size: 11.5px; }
+body.en-bano #pantallaBano .bano-rule-note span { color: var(--task-muted); font-size: 9.5px; }
+
+/* Configuración: sólo selección de participantes. */
+body.en-bano #pantallaBano .bano-config-modern { max-width: 1050px !important; }
+body.en-bano #pantallaBano .bano-participants-card {
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: 18px !important;
+}
+body.en-bano #pantallaBano .bano-participants-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px;
+  border-bottom: 1px solid var(--task-border);
+}
+body.en-bano #pantallaBano .bano-participant-actions { display: flex; align-items: center; gap: 12px; }
+body.en-bano #pantallaBano .bano-selected-count {
+  min-width: 72px;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: var(--task-surface-muted);
+}
+body.en-bano #pantallaBano .bano-selected-count strong { color: var(--task-brand); font-size: 17px; line-height: 1; }
+body.en-bano #pantallaBano .bano-selected-count small { color: var(--task-muted); font-size: 8.5px; }
+body.en-bano #pantallaBano .bano-selected-users {
+  min-height: 74px;
+  padding: 14px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--task-border);
+}
+body.en-bano #pantallaBano .bano-selected-chip {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--task-border);
+  border-radius: 12px;
+  background: var(--task-surface);
+}
+body.en-bano #pantallaBano .bano-selected-chip > i {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, #e32943 10%, var(--task-surface));
+  color: #e32943;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 900;
+}
+body.en-bano #pantallaBano .bano-selected-chip > span { display: grid; gap: 1px; }
+body.en-bano #pantallaBano .bano-selected-chip strong { color: var(--task-text); font-size: 10px; }
+body.en-bano #pantallaBano .bano-selected-chip small { color: var(--task-muted); font-size: 8.5px; }
+body.en-bano #pantallaBano .bano-no-selected { display: grid; gap: 3px; }
+body.en-bano #pantallaBano .bano-no-selected strong { color: var(--task-text); font-size: 11.5px; }
+body.en-bano #pantallaBano .bano-no-selected span { color: var(--task-muted); font-size: 9.5px; }
+body.en-bano #pantallaBano .bano-participants-card .config-participant-picker {
+  margin: 14px 20px 0 !important;
+  padding: 12px !important;
+  border-radius: 14px !important;
+}
+body.en-bano #pantallaBano .bano-participants-card .config-user-list { max-height: 365px; }
+body.en-bano #pantallaBano .bano-config-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  border-top: 1px solid var(--task-border);
+}
+body.en-bano #pantallaBano .bano-config-footer p { margin: 0; color: var(--task-muted); font-size: 10.5px; }
+body.en-bano #pantallaBano .bano-config-footer .save-btn {
+  min-height: 42px;
+  min-width: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 11px;
+}
+body.en-bano #pantallaBano .bano-config-footer .save-btn .app-icon { width: 16px; height: 16px; }
+
+@media (max-width: 980px) {
+  body.en-bano #pantallaBano .bano-dashboard-shell,
+  body.en-bano #pantallaBano .bano-config-modern { max-width: 920px; }
+  body.en-bano #pantallaBano .bano-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.en-bano #pantallaBano .bano-dashboard-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  body.en-bano #pantallaBano .bano-dashboard-shell,
+  body.en-bano #pantallaBano .bano-config-modern { padding-top: var(--app-shell-mobile-top-gap, 12px); }
+  body.en-bano #pantallaBano .bano-page-head { align-items: flex-start; margin-bottom: 14px; }
+  body.en-bano #pantallaBano .bano-page-title h2 { font-size: 21px; }
+  body.en-bano #pantallaBano .bano-page-title p { display: none; }
+  body.en-bano #pantallaBano .bano-config-action span,
+  body.en-bano #pantallaBano .bano-back-action span:last-child { display: none; }
+  body.en-bano #pantallaBano .bano-config-action,
+  body.en-bano #pantallaBano .bano-back-action { width: 42px; min-width: 42px; height: 42px; min-height: 42px; padding: 0; display: grid; place-items: center; }
+  body.en-bano #pantallaBano .bano-current-modern { min-height: 98px; padding: 18px !important; gap: 12px; }
+  body.en-bano #pantallaBano .bano-modern-hero-copy strong { font-size: 21px; }
+  body.en-bano #pantallaBano .bano-confirm-modern { min-width: 0; width: 46px !important; height: 46px; min-height: 46px; padding: 0; }
+  body.en-bano #pantallaBano .bano-confirm-modern span { display: none; }
+  body.en-bano #pantallaBano .bano-kpi-grid { gap: 8px; }
+  body.en-bano #pantallaBano .bano-kpi { min-height: 76px; padding: 11px; gap: 8px; }
+  body.en-bano #pantallaBano .bano-kpi-icon { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
+  body.en-bano #pantallaBano .bano-kpi strong { font-size: 14px; }
+  body.en-bano #pantallaBano .bano-turn-day { display: none; }
+  body.en-bano #pantallaBano .bano-pending-badge { display: none; }
+  body.en-bano #pantallaBano .bano-participants-head { align-items: flex-start; padding: 16px; }
+  body.en-bano #pantallaBano .bano-participant-actions { flex-direction: column; align-items: flex-end; gap: 7px; }
+  body.en-bano #pantallaBano .bano-selected-users { padding: 12px 16px; }
+  body.en-bano #pantallaBano .bano-participants-card .config-participant-picker { margin: 12px 16px 0 !important; }
+  body.en-bano #pantallaBano .bano-participants-card .config-user-list { grid-template-columns: 1fr !important; max-height: 340px; }
+  body.en-bano #pantallaBano .bano-config-footer { padding: 14px 16px; }
+  body.en-bano #pantallaBano .bano-config-footer p { display: none; }
+  body.en-bano #pantallaBano .bano-config-footer .save-btn { width: 100%; }
+}
+
+/* =========================================================
+   BAÑO 24/08 · AJUSTE DE FIDELIDAD FINAL
+   - Hero siempre rojo cuando corresponde descanso/pendiente.
+   - Verde únicamente tras confirmar.
+   - Configuración basada en tabla de participantes seleccionados.
+   ========================================================= */
+body.en-bano #pantallaBano .bano-current-modern.is-rest {
+  background: linear-gradient(105deg, #dc1f31 0%, #f43c58 100%) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 14px 30px rgba(220,31,49,.17) !important;
+}
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-kicker,
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-hero-copy strong,
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-hero-copy small {
+  color: #fff !important;
+}
+body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-status {
+  background: rgba(255,255,255,.14) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.24);
+}
+
+body.en-bano #pantallaBano .bano-config-modern {
+  max-width: 1180px !important;
+}
+body.en-bano #pantallaBano .bano-config-page-head {
+  margin-bottom: 16px;
+}
+body.en-bano #pantallaBano .bano-participants-card {
+  border-radius: 16px !important;
+}
+body.en-bano #pantallaBano .bano-participants-head {
+  min-height: 92px;
+  padding: 18px 20px;
+}
+body.en-bano #pantallaBano .bano-add-participant-btn {
+  min-width: 154px;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(105deg, #dc1f31 0%, #f43c58 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 18px rgba(220,31,49,.17);
+  font-size: 11px;
+  font-weight: 850;
+}
+body.en-bano #pantallaBano .bano-selected-count {
+  display: none !important;
+}
+body.en-bano #pantallaBano .bano-participant-table-head {
+  display: grid;
+  grid-template-columns: 1.55fr 1.15fr .9fr 84px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 22px;
+  border-top: 1px solid var(--task-border);
+  border-bottom: 1px solid var(--task-border);
+  color: var(--task-muted);
+  font-size: 8.5px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+body.en-bano #pantallaBano .bano-participant-table {
+  min-height: 0;
+  padding: 0 !important;
+  display: block !important;
+  border: 0 !important;
+}
+body.en-bano #pantallaBano .bano-participant-row {
+  display: grid;
+  grid-template-columns: 1.55fr 1.15fr .9fr 84px;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--task-border);
+  background: var(--task-surface);
+}
+body.en-bano #pantallaBano .bano-participant-row:last-child {
+  border-bottom: 0;
+}
+body.en-bano #pantallaBano .bano-participant-name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+body.en-bano #pantallaBano .bano-participant-name i {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, #e32943 10%, var(--task-surface));
+  color: #e32943;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+}
+body.en-bano #pantallaBano .bano-participant-name strong {
+  overflow: hidden;
+  color: var(--task-text);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.en-bano #pantallaBano .bano-participant-sector {
+  justify-self: start;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #f2edff;
+  color: #7652d8;
+  font-size: 8.5px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+body.en-bano #pantallaBano .bano-participant-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--task-text);
+  font-size: 9.5px;
+}
+body.en-bano #pantallaBano .bano-participant-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #21ad67;
+}
+body.en-bano #pantallaBano .bano-participant-row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+body.en-bano #pantallaBano .bano-remove-participant {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #ffc7cf;
+  border-radius: 8px;
+  background: var(--task-surface);
+  color: #e32943;
+  cursor: pointer;
+}
+body.en-bano #pantallaBano .bano-remove-participant .app-icon {
+  width: 14px;
+  height: 14px;
+}
+body.en-bano #pantallaBano .bano-remove-participant:hover {
+  background: #fff0f2;
+}
+body.en-bano #pantallaBano .bano-no-selected {
+  min-height: 82px;
+  padding: 20px 22px;
+  justify-content: center;
+}
+body.en-bano #pantallaBano .bano-participants-card .config-participant-picker {
+  margin: 14px 20px !important;
+}
+body.en-bano #pantallaBano .bano-config-footer {
+  margin-top: 0;
+}
+
+html[data-theme="dark"] body.en-bano #pantallaBano .bano-participant-sector {
+  background: #251f3d;
+  color: #b7a4ff;
+}
+html[data-theme="dark"] body.en-bano #pantallaBano .bano-remove-participant {
+  border-color: #5b2a35;
+  background: var(--task-surface);
+}
+html[data-theme="dark"] body.en-bano #pantallaBano .bano-remove-participant:hover {
+  background: #321922;
+}
+
+@media (max-width: 620px) {
+  body.en-bano #pantallaBano .bano-participants-head {
+    min-height: auto;
+    gap: 12px;
+  }
+  body.en-bano #pantallaBano .bano-add-participant-btn {
+    min-width: 42px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+  }
+  body.en-bano #pantallaBano .bano-add-participant-btn span:last-child {
+    display: none;
+  }
+  body.en-bano #pantallaBano .bano-participant-table-head {
+    grid-template-columns: 1.5fr 1fr 50px;
+    padding: 0 14px;
+  }
+  body.en-bano #pantallaBano .bano-participant-table-head span:nth-child(3) {
+    display: none;
+  }
+  body.en-bano #pantallaBano .bano-participant-row {
+    grid-template-columns: 1.5fr 1fr 50px;
+    padding: 0 14px;
+  }
+  body.en-bano #pantallaBano .bano-participant-status {
+    display: none;
+  }
+  body.en-bano #pantallaBano .bano-participant-row-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* =========================================================
+   BAÑO 24/08 · AJUSTES DE LEGIBILIDAD Y ACCIONES
+   ========================================================= */
+body.en-bano #pantallaBano .bano-dashboard-shell,
+body.en-bano #pantallaBano .bano-config-modern {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+body.en-bano #pantallaBano .bano-kpi small,
+body.en-bano #pantallaBano .bano-kpi em { font-size: 12px !important; }
+body.en-bano #pantallaBano .bano-kpi strong { font-size: 20px !important; }
+body.en-bano #pantallaBano .bano-panel-head h3 { font-size: 17px !important; }
+body.en-bano #pantallaBano .bano-panel-head p { font-size: 12px !important; }
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy strong { font-size: 14px !important; }
+body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy span { font-size: 12px !important; }
+body.en-bano #pantallaBano .bano-turn-day { font-size: 11px !important; }
+body.en-bano #pantallaBano .bano-pending-copy strong { font-size: 14px !important; }
+body.en-bano #pantallaBano .bano-pending-copy span { font-size: 11.5px !important; }
+body.en-bano #pantallaBano .bano-pending-badge { font-size: 10.5px !important; }
+body.en-bano #pantallaBano .bano-rule-note strong { font-size: 13px !important; }
+body.en-bano #pantallaBano .bano-rule-note span { font-size: 11px !important; }
+
+body.en-bano #pantallaBano .bano-participants-head,
+body.en-bano #pantallaBano .bano-participant-table-head,
+body.en-bano #pantallaBano .bano-participant-row,
+body.en-bano #pantallaBano .bano-config-footer {
+  width: 100%;
+  box-sizing: border-box;
+}
+body.en-bano #pantallaBano .bano-participant-table-head {
+  font-size: 10.5px !important;
+}
+body.en-bano #pantallaBano .bano-participant-row {
+  min-height: 56px !important;
+}
+body.en-bano #pantallaBano .bano-participant-name strong { font-size: 13.5px !important; }
+body.en-bano #pantallaBano .bano-participant-sector { font-size: 10.5px !important; padding: 5px 10px !important; }
+body.en-bano #pantallaBano .bano-participant-status { font-size: 11.5px !important; }
+body.en-bano #pantallaBano .bano-participants-card .config-search-wrap input { font-size: 13px !important; }
+body.en-bano #pantallaBano .config-user-option { min-height: 54px !important; }
+body.en-bano #pantallaBano .config-user-copy strong { font-size: 13px !important; }
+body.en-bano #pantallaBano .config-user-copy small { font-size: 11px !important; }
+
+body.en-bano #pantallaBano .bano-config-footer {
+  justify-content: center !important;
+  padding: 14px 20px 18px !important;
+  gap: 20px;
+}
+body.en-bano #pantallaBano .bano-config-footer p {
+  flex: 0 1 auto;
+  font-size: 11.5px !important;
+}
+body.en-bano #pantallaBano .bano-config-footer .save-btn {
+  width: auto !important;
+  min-width: 132px !important;
+  max-width: 180px;
+  padding: 0 18px !important;
+  flex: 0 0 auto;
+}
+body.en-bano #pantallaBano .bano-config-footer.oculto { display: none !important; }
+
+@media (max-width: 620px) {
+  body.en-bano #pantallaBano .bano-kpi small,
+  body.en-bano #pantallaBano .bano-kpi em { font-size: 10.5px !important; }
+  body.en-bano #pantallaBano .bano-kpi strong { font-size: 16px !important; }
+  body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy strong,
+  body.en-bano #pantallaBano .bano-pending-copy strong { font-size: 12.5px !important; }
+  body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy span,
+  body.en-bano #pantallaBano .bano-pending-copy span { font-size: 10.5px !important; }
+  body.en-bano #pantallaBano .bano-config-footer .save-btn { min-width: 132px !important; width: auto !important; }
+}
+
+
+/* =========================================================
+   BAÑO 24/08 · SECTORES + ACCIONES + MOBILE SHEET
+   ========================================================= */
+body.en-bano #pantallaBano .bano-participant-sector {
+  background: color-mix(in srgb, var(--bano-sector-color, #7b61d1) 14%, white) !important;
+  color: color-mix(in srgb, var(--bano-sector-color, #7b61d1) 82%, #101828) !important;
+  border: 1px solid color-mix(in srgb, var(--bano-sector-color, #7b61d1) 24%, transparent) !important;
+}
+html[data-theme="dark"] body.en-bano #pantallaBano .bano-participant-sector {
+  background: color-mix(in srgb, var(--bano-sector-color, #7b61d1) 22%, #161a20) !important;
+  color: color-mix(in srgb, var(--bano-sector-color, #7b61d1) 42%, white) !important;
+  border-color: color-mix(in srgb, var(--bano-sector-color, #7b61d1) 38%, transparent) !important;
+}
+body.en-bano #pantallaBano .bano-participant-row-actions {
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100%;
+}
+body.en-bano #pantallaBano .bano-remove-participant {
+  display: inline-grid !important;
+  place-items: center !important;
+  line-height: 0 !important;
+}
+body.en-bano #pantallaBano .bano-remove-participant .app-icon {
+  width: 16px !important;
+  height: 16px !important;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body.en-bano #pantallaBano .bano-user-option {
+  position: relative;
+}
+body.en-bano #pantallaBano .bano-user-sector-dot {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 4px;
+  background: var(--bano-sector-color, #7b61d1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bano-sector-color, #7b61d1) 12%, transparent);
+}
+
+.bano-mobile-participant-sheet { display: none; }
+
+@media (max-width: 620px) {
+  body.en-bano #pantallaBano .bano-page-title { display: none !important; }
+  body.en-bano #pantallaBano .bano-config-page-head { display: none !important; }
+  body.en-bano #pantallaBano .bano-page-head:not(.bano-config-page-head) {
+    min-height: 44px;
+    justify-content: flex-end;
+    margin-bottom: 8px !important;
+  }
+  body.en-bano #pantallaBano .bano-add-participant-btn {
+    position: fixed !important;
+    right: 18px !important;
+    bottom: calc(22px + env(safe-area-inset-bottom)) !important;
+    width: 54px !important;
+    min-width: 54px !important;
+    height: 54px !important;
+    min-height: 54px !important;
+    border-radius: 17px !important;
+    z-index: var(--app-z-fab, 1900) !important;
+    box-shadow: 0 12px 30px rgba(220, 31, 49, .32) !important;
+    font-size: 25px !important;
+  }
+  body.en-bano #pantallaBano .bano-add-participant-btn span:last-child { display: none !important; }
+  body.en-bano #pantallaBano .bano-participant-row-actions { justify-content: center !important; }
+  body.bano-participant-sheet-open { overflow: hidden !important; }
+
+  .bano-mobile-participant-sheet {
+    position: fixed;
+    inset: 0;
+    display: block;
+    z-index: 2400;
+  }
+  .bano-mobile-participant-sheet.oculto { display: none !important; }
+  .bano-mobile-participant-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .48);
+    backdrop-filter: blur(3px);
+  }
+  .bano-mobile-participant-dialog {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: min(78dvh, 680px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+    border-radius: 20px 20px 0 0;
+    border: 1px solid var(--task-border);
+    background: var(--task-surface);
+    box-shadow: 0 -20px 50px rgba(15, 23, 42, .20);
+  }
+  .bano-mobile-participant-head {
+    min-height: 76px;
+    padding: 17px 16px 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid var(--task-border);
+  }
+  .bano-mobile-participant-head > div { display: grid; gap: 3px; }
+  .bano-mobile-participant-head span {
+    color: var(--task-brand);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .1em;
+  }
+  .bano-mobile-participant-head h2 {
+    margin: 0;
+    color: var(--task-text);
+    font-size: 20px;
+    line-height: 1.1;
+  }
+  .bano-mobile-participant-head > button {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: var(--task-surface-muted);
+    color: var(--task-text);
+    font-size: 25px;
+    line-height: 1;
+  }
+  .bano-mobile-participant-body {
+    min-height: 0;
+    padding: 12px 14px 8px;
+    overflow: hidden;
+  }
+  .bano-mobile-search { margin-bottom: 10px; }
+  .bano-mobile-search input { font-size: 14px !important; }
+  .bano-mobile-user-list {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    max-height: none !important;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px 2px 10px !important;
+  }
+  .bano-mobile-user-list .config-user-option {
+    min-height: 58px !important;
+    padding: 9px 12px !important;
+    border-radius: 13px !important;
+  }
+  .bano-mobile-user-list .config-user-copy strong { font-size: 14px !important; }
+  .bano-mobile-user-list .config-user-copy small { font-size: 11.5px !important; }
+  .bano-mobile-participant-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--task-border);
+    background: var(--task-surface);
+  }
+  .bano-mobile-participant-actions button {
+    min-height: 46px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 850;
+  }
+  .bano-sheet-cancel {
+    border: 1px solid var(--task-border-strong);
+    background: var(--task-surface-muted);
+    color: var(--task-text);
+  }
+  .bano-sheet-save {
+    border: 0;
+    background: linear-gradient(105deg, #dc1f31 0%, #f43c58 100%) !important;
+    color: #fff !important;
+  }
+  body.en-bano #pantallaBano .bano-participants-card .config-participant-picker,
+  body.en-bano #pantallaBano .bano-config-footer { display: none !important; }
+}
+
+
+/* =========================================================
+   BAÑO 24/08 · AJUSTE KPI CONFIGURACIÓN + ACCIÓN CENTRADA
+   ========================================================= */
+body.en-bano #pantallaBano .bano-page-head {
+  align-items: flex-start;
+}
+body.en-bano #pantallaBano .bano-kpi-config {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+body.en-bano #pantallaBano .bano-kpi-config .bano-kpi-icon {
+  background: color-mix(in srgb, #e32943 10%, var(--task-surface));
+  color: #e32943;
+}
+body.en-bano #pantallaBano .bano-kpi-config:hover {
+  border-color: color-mix(in srgb, var(--task-brand) 42%, var(--task-border));
+  box-shadow: 0 7px 18px rgba(220,31,49,.08);
+  transform: translateY(-1px);
+}
+body.en-bano #pantallaBano .bano-kpi-config:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--task-brand) 25%, transparent);
+  outline-offset: 2px;
+}
+body.en-bano #pantallaBano .bano-kpi-config-arrow {
+  width: 17px;
+  height: 17px;
+  margin-left: auto;
+  color: var(--task-muted);
+  flex: none;
+}
+body.en-bano #pantallaBano .bano-participant-table-head > span:last-child {
+  justify-self: center !important;
+  text-align: center !important;
+  width: 100%;
+}
+body.en-bano #pantallaBano .bano-participant-row-actions {
+  display: grid !important;
+  place-items: center !important;
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch !important;
+}
+body.en-bano #pantallaBano .bano-remove-participant {
+  margin: 0 auto !important;
+}
+@media (max-width: 620px) {
+  body.en-bano #pantallaBano .bano-kpi-config-arrow { width: 15px; height: 15px; }
+  body.en-bano #pantallaBano .bano-participant-row-actions { place-items: center !important; }
+}
+html[data-theme="dark"] body.en-bano #pantallaBano .bano-kpi-config .bano-kpi-icon {
+  background: color-mix(in srgb, #e32943 18%, var(--task-surface));
+  color: #ff7184;
+}
+
+/* =========================================================
+   BAÑO 24/08 · AJUSTE MÓVIL: CONTENIDO ARRIBA + KPI CONFIG
+   ========================================================= */
+@media (max-width: 620px) {
+  /* En móvil el encabezado textual ya está oculto: no reservar su altura. */
+  body.en-bano #pantallaBano .bano-dashboard-shell {
+    padding-top: 10px !important;
+  }
+  body.en-bano #pantallaBano .bano-page-head:not(.bano-config-page-head) {
+    display: none !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* La tarjeta Configuración debe mostrar “Participantes” completo. */
+  body.en-bano #pantallaBano .bano-kpi-config {
+    gap: 7px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  body.en-bano #pantallaBano .bano-kpi-config > div {
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+  body.en-bano #pantallaBano .bano-kpi-config strong {
+    font-size: 13.5px !important;
+    letter-spacing: -.02em !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+  body.en-bano #pantallaBano .bano-kpi-config em {
+    font-size: 9.8px !important;
+    white-space: nowrap !important;
+  }
+  body.en-bano #pantallaBano .bano-kpi-config-arrow {
+    display: none !important;
+  }
+}

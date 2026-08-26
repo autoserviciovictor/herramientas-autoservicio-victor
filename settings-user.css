@@ -1,0 +1,768 @@
+/* ==========================================================================
+   AutoservicioAPP · Configuración de usuario
+   Fuente visual única para #pantallaAjustes.
+   Cargado último para aislar la pantalla de reglas legacy de Configuración.
+   ========================================================================== */
+
+html[data-text-size="small"] { font-size: 15px; }
+html[data-text-size="medium"] { font-size: 16px; }
+html[data-text-size="large"] { font-size: 17px; }
+
+.pro-user-settings-trigger {
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--pro-panel);
+  color: var(--pro-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .12s ease;
+}
+
+.pro-user-settings-trigger:hover {
+  border-color: color-mix(in srgb, var(--pro-red) 34%, var(--pro-border));
+  background: color-mix(in srgb, var(--pro-red-soft) 35%, var(--pro-panel));
+}
+
+.pro-user-settings-trigger:active { transform: scale(.985); }
+.pro-user-settings-trigger:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--pro-red) 22%, transparent);
+  outline-offset: 2px;
+}
+
+.pro-user-settings-trigger .pro-user-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.pro-user-settings-trigger .pro-user-settings-chevron {
+  flex: 0 0 auto;
+  color: var(--pro-muted);
+  font-size: 20px;
+  line-height: 1;
+  margin-left: auto;
+}
+
+#pantallaAjustes.user-settings-screen {
+  --settings-panel-radius: 15px;
+  --settings-row-border: color-mix(in srgb, var(--pro-border) 92%, transparent);
+  --settings-shadow: 0 1px 2px rgba(16,24,40,.025), 0 8px 24px rgba(16,24,40,.035);
+  display: none;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  color: var(--pro-text);
+}
+
+#pantallaAjustes.user-settings-screen.activa { display: block; }
+
+.user-settings-shell {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.user-settings-heading {
+  margin: 0 0 22px;
+}
+
+.user-settings-heading h1 {
+  margin: 0;
+  color: var(--pro-text);
+  font-size: 25px;
+  line-height: 1.15;
+  font-weight: 760;
+  letter-spacing: -.035em;
+}
+
+.user-settings-heading p {
+  margin: 8px 0 0;
+  color: var(--pro-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.user-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.user-settings-panel,
+.user-settings-quick-panel {
+  min-width: 0;
+  background: var(--pro-panel);
+  border: 1px solid var(--pro-border);
+  border-radius: var(--settings-panel-radius);
+  box-shadow: var(--settings-shadow);
+}
+
+.user-settings-panel {
+  min-height: 216px;
+  padding: 17px 18px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.user-settings-panel-head {
+  min-height: 35px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 17px;
+}
+
+.user-settings-panel-head > div { min-width: 0; }
+
+.user-settings-panel-head h2 {
+  margin: 0;
+  color: var(--pro-text);
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 760;
+  letter-spacing: -.01em;
+}
+
+.user-settings-panel-head p {
+  margin: 4px 0 0;
+  color: var(--pro-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.user-settings-panel-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.user-settings-panel-icon .app-icon { width: 18px; height: 18px; }
+.user-settings-panel-icon.tone-red { color: var(--pro-red); background: color-mix(in srgb, var(--pro-red) 10%, var(--pro-panel)); }
+.user-settings-panel-icon.tone-blue { color: var(--pro-blue); background: color-mix(in srgb, var(--pro-blue) 11%, var(--pro-panel)); }
+.user-settings-panel-icon.tone-green { color: #12aa75; background: color-mix(in srgb, #12aa75 12%, var(--pro-panel)); }
+.user-settings-panel-icon.tone-amber { color: #f59e0b; background: color-mix(in srgb, #f59e0b 12%, var(--pro-panel)); }
+.user-settings-panel-icon.tone-purple { color: var(--pro-purple); background: color-mix(in srgb, var(--pro-purple) 11%, var(--pro-panel)); }
+
+.user-settings-profile-panel { position: relative; }
+.user-settings-profile {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 2px 12px;
+}
+
+.user-settings-profile-avatar {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--pro-red) 11%, var(--pro-panel));
+  color: var(--pro-red);
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 760;
+}
+
+.user-settings-profile-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.user-settings-profile-copy strong {
+  color: var(--pro-text);
+  font-size: 15px;
+  font-weight: 760;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-settings-profile-copy span,
+.user-settings-profile-copy small {
+  color: var(--pro-muted);
+  font-size: 11px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-settings-outline-button {
+  min-height: 36px !important;
+  border: 1px solid var(--pro-border-strong) !important;
+  border-radius: 9px !important;
+  background: var(--pro-panel) !important;
+  color: var(--pro-text) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px !important;
+  font: inherit;
+  font-size: 11px !important;
+  font-weight: 680 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.user-settings-outline-button:hover {
+  border-color: color-mix(in srgb, var(--pro-red) 38%, var(--pro-border-strong)) !important;
+  background: color-mix(in srgb, var(--pro-red-soft) 34%, var(--pro-panel)) !important;
+}
+
+.user-settings-outline-button .app-icon { width: 15px; height: 15px; }
+.user-settings-profile-edit { align-self: flex-end; margin-top: auto; }
+
+.user-settings-preferences {
+  display: grid;
+  gap: 11px;
+  margin-top: 1px;
+}
+
+.user-settings-preference-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, .68fr) minmax(138px, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: var(--pro-text);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.user-settings-row-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--pro-muted);
+  background: var(--pro-panel-2);
+}
+
+.user-settings-row-icon .app-icon { width: 15px; height: 15px; }
+.user-settings-aa { font-size: 12px; font-weight: 760; }
+
+.user-settings-list {
+  display: grid;
+  margin-top: -3px;
+}
+
+.user-settings-list-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--settings-row-border);
+  box-sizing: border-box;
+}
+
+.user-settings-list-row:last-child { border-bottom: 0; }
+.user-settings-list-row > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.user-settings-list-row strong,
+.user-settings-actions-list button strong {
+  color: var(--pro-text);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 690;
+}
+
+.user-settings-list-row small,
+.user-settings-actions-list button small {
+  color: var(--pro-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.user-settings-switch {
+  width: 40px;
+  height: 22px;
+  flex: 0 0 40px;
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.user-settings-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.user-settings-switch > span,
+.user-settings-toggle-status,
+.user-settings-switch-button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #cbd5e1 !important;
+  box-shadow: none !important;
+  padding: 2px !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  position: relative;
+  flex: 0 0 40px;
+  transition: background .18s ease, opacity .18s ease;
+}
+
+.user-settings-switch > span { display: block; }
+.user-settings-switch > span::after,
+.user-settings-switch-button::after,
+.user-settings-toggle-status i {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  box-shadow: 0 1px 4px rgba(15,23,42,.18);
+  transition: transform .18s ease;
+}
+
+.user-settings-switch input:checked + span,
+.user-settings-switch-button.is-on,
+.user-settings-toggle-status.is-on {
+  background: #18b77d !important;
+}
+
+.user-settings-switch input:checked + span::after,
+.user-settings-switch-button.is-on::after,
+.user-settings-toggle-status.is-on i {
+  transform: translateX(18px);
+}
+
+.user-settings-switch input:focus-visible + span {
+  outline: 3px solid color-mix(in srgb, #18b77d 22%, transparent);
+  outline-offset: 2px;
+}
+
+.user-settings-switch-button {
+  font-size: 0 !important;
+  color: transparent !important;
+  cursor: pointer;
+}
+
+.user-settings-switch-button:disabled { cursor: default; opacity: 1 !important; }
+.user-settings-switch-button.is-blocked { background: #d9a9b2 !important; }
+.user-settings-toggle-status { display: block; }
+.user-settings-toggle-status.is-disabled { opacity: .72; }
+
+.user-settings-notification-row #estadoNotificaciones {
+  max-width: 250px;
+  color: var(--pro-muted);
+}
+.user-settings-notification-row #estadoNotificaciones.ok { color: #0b9b69; }
+.user-settings-notification-row #estadoNotificaciones.error { color: var(--pro-red); }
+
+.user-settings-link-row {
+  width: 100%;
+  min-height: 38px !important;
+  margin-top: auto !important;
+  padding: 0 11px !important;
+  border: 1px solid var(--pro-border) !important;
+  border-radius: 9px !important;
+  background: var(--pro-panel-2) !important;
+  color: var(--pro-text) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font: inherit;
+  font-size: 10.5px !important;
+  font-weight: 650 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.user-settings-link-row:hover { border-color: var(--pro-border-strong) !important; }
+
+.user-settings-actions-list {
+  display: grid;
+  margin-top: -4px;
+}
+
+.user-settings-actions-list button {
+  width: 100%;
+  min-height: 59px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 0 !important;
+  border-bottom: 1px solid var(--settings-row-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--pro-text) !important;
+  padding: 9px 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.user-settings-actions-list button:last-child { border-bottom: 0 !important; }
+.user-settings-actions-list button > span { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.user-settings-actions-list button > b { color: var(--pro-muted); font-size: 18px; font-weight: 500; }
+.user-settings-actions-list button:hover strong { color: var(--pro-red); }
+
+.user-settings-sync-ok {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #0ab878;
+}
+.user-settings-sync-ok .app-icon { width: 17px; height: 17px; stroke-width: 2.4; }
+.user-settings-copy-button { flex: 0 0 auto; }
+
+.user-settings-quick-panel {
+  margin-top: 18px;
+  padding: 16px 18px 18px;
+}
+
+.user-settings-quick-panel > .user-settings-panel-head { margin-bottom: 14px; }
+
+.user-settings-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.user-settings-quick-grid button {
+  min-width: 0;
+  min-height: 48px !important;
+  border: 1px solid var(--pro-border) !important;
+  border-radius: 9px !important;
+  background: var(--pro-panel) !important;
+  color: var(--pro-text) !important;
+  padding: 0 13px !important;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 10.5px !important;
+  font-weight: 650 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.user-settings-quick-grid button .app-icon { width: 17px; height: 17px; color: var(--pro-muted); }
+.user-settings-quick-grid button b { color: var(--pro-muted); font-size: 17px; font-weight: 500; text-align: right; }
+.user-settings-quick-grid button:hover { border-color: var(--pro-border-strong) !important; background: var(--pro-panel-2) !important; }
+.user-settings-quick-grid button.is-danger { color: var(--pro-red) !important; border-color: color-mix(in srgb, var(--pro-red) 23%, var(--pro-border)) !important; }
+.user-settings-quick-grid button.is-danger .app-icon,
+.user-settings-quick-grid button.is-danger b { color: var(--pro-red); }
+
+html[data-theme="dark"] #pantallaAjustes.user-settings-screen {
+  --settings-shadow: 0 12px 28px rgba(0,0,0,.12);
+}
+
+html[data-theme="dark"] .user-settings-switch > span,
+html[data-theme="dark"] .user-settings-toggle-status,
+html[data-theme="dark"] .user-settings-switch-button { background: #526176 !important; }
+html[data-theme="dark"] .user-settings-switch input:checked + span,
+html[data-theme="dark"] .user-settings-switch-button.is-on,
+html[data-theme="dark"] .user-settings-toggle-status.is-on { background: #18b77d !important; }
+
+@media (min-width: 901px) {
+  /* La geometría de Configuración se resuelve al final de esta hoja y queda
+     aislada del eje de los módulos principales. */
+  .pro-desktop-user-card.pro-user-settings-trigger strong,
+  .pro-desktop-user-card.pro-user-settings-trigger small {
+    max-width: 118px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .user-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .user-settings-profile-panel { min-height: 230px; }
+}
+
+@media (max-width: 900px) {
+  
+  body.en-ajustes #pantallaAjustes.user-settings-screen.activa {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body.en-ajustes #pantallaAjustes > .user-settings-shell {
+    padding-top: var(--app-shell-mobile-top-gap, 12px) !important;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom)) !important;
+  }
+  .user-settings-heading { margin-bottom: 17px; }
+  .user-settings-heading h1 { font-size: 23px; }
+  .user-settings-grid { grid-template-columns: 1fr; gap: 13px; }
+  .user-settings-panel { min-height: 0; padding: 16px; }
+  .user-settings-quick-panel { margin-top: 13px; padding: 16px; }
+  .user-settings-quick-grid { grid-template-columns: 1fr; gap: 9px; }
+  .user-settings-profile-edit { margin-top: 8px; }
+  .user-settings-profile { padding-top: 4px; }
+}
+
+@media (max-width: 430px) {
+  .user-settings-preference-row { grid-template-columns: 26px minmax(0, .56fr) minmax(128px, 1fr); gap: 8px; }
+  .user-settings-profile-avatar { width: 62px; height: 62px; flex-basis: 62px; font-size: 26px; }
+  .user-settings-profile { gap: 14px; }
+  .user-settings-copy-button span { display: none; }
+  .user-settings-copy-button { width: 38px; padding: 0 !important; }
+}
+
+/* ========================================================================== 
+   D22 · CONFIGURACIÓN DE USUARIO · EJE AISLADO DE ESCRITORIO
+   --------------------------------------------------------------------------
+   Esta es la única corrección de geometría para Configuración de usuario.
+   No modifica .pantalla ni los shells de Inventario, Vencimientos, Lista,
+   Precios, Tareas, Horarios o Administración.
+
+   La .app ya reserva --app-shell-sidebar-width. Por eso #pantallaAjustes
+   ocupa el 100% del área útil y el shell interno se centra dentro de ella.
+   ========================================================================== */
+@media (min-width: 901px) {
+  body.en-ajustes main#pantallaAjustes.pantalla.user-settings-screen.activa {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  body.en-ajustes main#pantallaAjustes.user-settings-screen > .user-settings-shell {
+    width: min(
+      var(--app-shell-desktop-max, 1380px),
+      calc(100% - (var(--app-shell-desktop-edge, 36px) * 2))
+    ) !important;
+    max-width: var(--app-shell-desktop-max, 1380px) !important;
+    min-width: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 26px var(--app-shell-desktop-inline, 0px) 42px !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+}
+
+/* ========================================================================== 
+   Selectores modernos de Configuración
+   Reemplazan la apertura nativa del navegador por un popover consistente
+   con el resto de los controles de AutoservicioAPP.
+   ========================================================================== */
+.user-settings-modern-select {
+  position: relative;
+  min-width: 0;
+}
+
+.user-settings-native-select {
+  display: none !important;
+}
+
+.user-settings-select-trigger {
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 11px 0 12px;
+  border: 1px solid var(--pro-border-strong);
+  border-radius: 9px;
+  background: var(--pro-panel);
+  color: var(--pro-text);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .025);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 620;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.user-settings-select-trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-settings-select-trigger .app-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  color: var(--pro-muted);
+  transition: transform .16s ease, color .16s ease;
+}
+
+.user-settings-modern-select.is-open .user-settings-select-trigger,
+.user-settings-select-trigger:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--pro-blue) 65%, var(--pro-border-strong));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pro-blue) 13%, transparent);
+}
+
+.user-settings-modern-select.is-open .user-settings-select-trigger .app-icon {
+  transform: rotate(180deg);
+  color: var(--pro-blue);
+}
+
+.user-settings-select-menu {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  padding: 5px;
+  border: 1px solid var(--pro-border);
+  border-radius: 11px;
+  background: var(--pro-panel);
+  box-shadow: 0 14px 34px rgba(16, 24, 40, .14), 0 3px 8px rgba(16, 24, 40, .06);
+}
+
+.user-settings-select-menu[hidden] { display: none !important; }
+
+.user-settings-select-menu button {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pro-text);
+  display: flex;
+  align-items: center;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-settings-select-menu button:hover,
+.user-settings-select-menu button:focus-visible {
+  outline: none;
+  background: var(--pro-panel-2);
+}
+
+.user-settings-select-menu button[aria-selected="true"] {
+  position: relative;
+  padding-right: 30px;
+  background: color-mix(in srgb, var(--pro-blue) 10%, var(--pro-panel));
+  color: var(--pro-blue);
+  font-weight: 720;
+}
+
+.user-settings-select-menu button[aria-selected="true"]::after {
+  content: "✓";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+html[data-theme="dark"] .user-settings-select-trigger,
+html[data-theme="dark"] .user-settings-select-menu {
+  background: var(--pro-panel);
+  border-color: var(--pro-border);
+}
+
+html[data-theme="dark"] .user-settings-select-menu {
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .32), 0 3px 10px rgba(0, 0, 0, .18);
+}
+
+html[data-theme="dark"] .user-settings-select-menu button[aria-selected="true"] {
+  background: color-mix(in srgb, var(--pro-blue) 18%, var(--pro-panel));
+}
+
+/* D22 · Configuración de usuario · ajuste móvil 24/08/2026
+   En celular se oculta el encabezado de página y se aprovecha el espacio superior. */
+@media (max-width: 900px) {
+  body.en-ajustes #pantallaAjustes .user-settings-heading {
+    display: none !important;
+  }
+
+  body.en-ajustes #pantallaAjustes > .user-settings-shell {
+    padding-top: var(--app-shell-mobile-top-gap, 12px) !important;
+  }
+
+  body.en-ajustes #pantallaAjustes .user-settings-grid {
+    margin-top: 0 !important;
+  }
+}
+
+
+/* 2026-08-26 — Etapa 1: escala tipográfica canónica y legible. */
+.user-settings-list-row strong,.user-settings-actions-list button strong{font-size:14px !important;line-height:1.35 !important;}
+.user-settings-list-row small,.user-settings-actions-list button small{font-size:13px !important;line-height:1.45 !important;}
+.user-settings-panel-head h2{font-size:17px !important;line-height:1.3 !important;}
+.user-settings-link-row{font-size:13.5px !important;}
+.user-settings-heading .eyebrow{font-size:12px !important;}
+.user-settings-heading h1{font-size:28px !important;line-height:1.15 !important;}
+.user-settings-heading p{font-size:14px !important;line-height:1.45 !important;}
+.user-settings-profile-copy strong{font-size:16px !important;}
+.user-settings-profile-copy span,.user-settings-profile-copy small{font-size:13px !important;line-height:1.4 !important;}
+.user-settings-select-row>span,.user-settings-inline-label{font-size:13.5px !important;}
+.user-settings-select-row select{font-size:14px !important;}
+.user-settings-quick-grid button{font-size:14px !important;}
+@media (min-width:901px){
+  .user-settings-select-trigger{height:42px;min-height:42px;font-size:14px;}
+  .user-settings-select-menu button{min-height:40px;font-size:13.5px;}
+}
+
+/* ========================================================================== 
+   AUDITORÍA VISUAL · ETAPA 4 · CONFIGURACIÓN GENERAL · 2026-08-26
+   --------------------------------------------------------------------------
+   Escala definitiva de lectura para Configuración. Conserva la grilla y el
+   eje global de Etapa 1, pero elimina microtipografías residuales.
+   ========================================================================== */
+@media (min-width: 901px) {
+  #pantallaAjustes .user-settings-panel { padding: 19px 20px; }
+  #pantallaAjustes .user-settings-panel-head { min-height: 38px; margin-bottom: 16px; }
+  #pantallaAjustes .user-settings-panel-head h2 { font-size: 17px !important; line-height: 1.3 !important; }
+  #pantallaAjustes .user-settings-panel-head p { font-size: 13px !important; line-height: 1.4 !important; }
+  #pantallaAjustes .user-settings-preference-row { font-size: 14px !important; line-height: 1.35 !important; }
+  #pantallaAjustes .user-settings-row-icon,
+  #pantallaAjustes .user-settings-aa { font-size: 13px !important; }
+  #pantallaAjustes .user-settings-list-row { min-height: 62px; }
+  #pantallaAjustes .user-settings-list-row strong,
+  #pantallaAjustes .user-settings-actions-list button strong { font-size: 14px !important; line-height: 1.35 !important; }
+  #pantallaAjustes .user-settings-list-row small,
+  #pantallaAjustes .user-settings-actions-list button small { font-size: 12.5px !important; line-height: 1.45 !important; }
+  #pantallaAjustes .user-settings-outline-button,
+  #pantallaAjustes .user-settings-link-row,
+  #pantallaAjustes .user-settings-quick-grid button { font-size: 13.5px !important; }
+  #pantallaAjustes .user-settings-select-trigger { height: 42px; min-height: 42px; font-size: 14px !important; }
+  #pantallaAjustes .user-settings-select-menu button { min-height: 40px; font-size: 13.5px !important; }
+  #pantallaAjustes .user-settings-profile-copy strong { font-size: 16px !important; }
+  #pantallaAjustes .user-settings-profile-copy span,
+  #pantallaAjustes .user-settings-profile-copy small { font-size: 13px !important; }
+  #pantallaAjustes .user-settings-quick-panel .user-settings-panel-head p { font-size: 13px !important; }
+}

@@ -1,0 +1,14 @@
+const fs = require('fs');
+const assert = (v, m) => { if (!v) throw new Error(m); };
+const html = fs.readFileSync('index.html', 'utf8');
+const js = fs.readFileSync('tareas.js', 'utf8');
+const css = fs.readFileSync('tareas-redesign.css', 'utf8');
+assert(html.includes('Limpieza del baño') && html.includes('bano-kpi-grid'), 'Falta dashboard moderno del baño');
+assert(html.includes('Confirmaciones pendientes') && html.includes('id="banoPendientes"'), 'Falta módulo de confirmaciones pendientes');
+assert(!html.includes('id="banoHistorial"'), 'No debe quedar el historial antiguo en la pantalla principal');
+assert(html.includes('id="banoParticipantesSeleccionados"') && html.includes('id="banoUsuariosDisponibles"'), 'Configuración debe conservar selección de participantes');
+assert(!html.includes('config-fixed-rule') && !html.includes('Rotación comunitaria'), 'Configuración del baño debe limitarse a participantes');
+assert(js.includes('confirmacionesPendientesBano') && js.includes('bano-pending-row'), 'Falta cálculo/render de pendientes');
+assert(js.includes('is-completed') && css.includes('.bano-current-modern.is-completed'), 'La confirmación debe cambiar el hero a verde');
+assert(css.includes('linear-gradient(105deg, #23845a') && css.includes('linear-gradient(105deg, #dc1f31'), 'Faltan estados verde/rojo del hero');
+console.log('Rediseño final Baño 24/08: OK');

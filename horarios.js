@@ -1,28 +1,38 @@
-import "./ui.js?v=12301";
-import { API_BASE_URL } from "./config.js?v=12301";
+import "./ui.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
 import {
-  parseSimpleShift,
-  time24,
   shiftSegments,
-  isSplitShift,
   cellLabel,
   fullScheduleLabel,
-} from "./modules/horarios/schedule-format.js?v=12301";
+} from "./modules/horarios/schedule-format.js?v=1960-d21-auditoria-correcciones-260826-d";
+
+function escAttr(valor) {
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
 
 let empleados = [];
+let empleadosConfiguracion = [];
 let empleadosInfo = new Map();
 let sectoresHorarios = [];
 let sectorActual = "";
 let contextoHorariosCargado = false;
 let permisoEdicionServidor = false;
 const detalles = new Map();
-let metadatosModificados = false;
 let resumenHoyDatos = new Map();
 let resumenHoyClave = "";
 const HORARIOS_CACHE_TTL = 30000;
 const horariosPeticiones = new Map();
 function cacheHorariosKey(tipo, extra = "") {
-  return `autoservicio_horarios_cache_v1040:${tipo}:${extra}`;
+  const usuario = String(usuarioHorarios()?.usuario || "anon")
+    .trim()
+    .toLowerCase();
+  return `autoservicio_horarios_cache_v1040:${usuario}:${tipo}:${extra}`;
 }
 function leerCacheHorarios(tipo, extra = "") {
   try {
@@ -70,28 +80,64 @@ function rolHorarios() {
     .toLowerCase()
     .replace(/\s+/g, "");
 }
-function esAdministradorHorarios() {
-  return rolHorarios() === "administrador";
-}
-function esAdministracionHorarios() {
-  return rolHorarios() === "administracion";
-}
 function puedeGestionarHorarios() {
   return ["administrador", "administracion", "supervisor"].includes(
     rolHorarios(),
   );
 }
+function normalizarSectorHorarios(valor) {
+  return String(valor || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+function sectoresPermitidosParaUsuario(lista = []) {
+  const activos = (Array.isArray(lista) ? lista : []).filter(
+    (sector) => sector?.activo !== false,
+  );
+  if (puedeGestionarHorarios()) return activos;
+  const sectorPersonal = normalizarSectorHorarios(usuarioHorarios().sector);
+  const permitidos = new Set([sectorPersonal, "administracion"].filter(Boolean));
+  return activos.filter((sector) =>
+    permitidos.has(normalizarSectorHorarios(sector?.id)),
+  );
+}
 function sectorSeleccionado() {
   return sectoresHorarios.find((s) => s.id === sectorActual) || null;
+}
+function usuarioVisibleEnCalendario(nombre) {
+  return empleadosInfo.get(nombre)?.visibleCalendario !== false;
+}
+function listaPersonalVisible() {
+  return empleadosConfiguracion.filter(usuarioVisibleEnCalendario);
+}
+function sincronizarPersonalVisible() {
+  empleados = listaPersonalVisible();
+  const sector = sectorSeleccionado();
+  if (sector) {
+    sector.empleadosConfiguracion = [...empleadosConfiguracion];
+    sector.empleados = [...empleados];
+  }
+  return empleados;
 }
 function empleadosDelSector(id = sectorActual) {
   const sector = sectoresHorarios.find((s) => s.id === id);
   empleadosInfo = new Map(
-    (sector?.empleadosInfo || []).map((x) => [x.nombre, x]),
+    (sector?.empleadosInfo || []).map((x) => {
+      const visibleCalendario =
+        x?.visibleCalendario !== undefined
+          ? x.visibleCalendario !== false
+          : x?.habilitadoCalendario !== false;
+      const info = { ...x, visibleCalendario };
+      delete info.habilitadoCalendario;
+      return [info.nombre, info];
+    }),
   );
-  const lista = Array.isArray(sector?.empleados) ? [...sector.empleados] : [];
-
-  return lista;
+  empleadosConfiguracion = Array.isArray(sector?.empleadosConfiguracion)
+    ? [...sector.empleadosConfiguracion]
+    : (sector?.empleadosInfo || []).map((x) => x.nombre).filter(Boolean);
+  return listaPersonalVisible();
 }
 function empleadosVisiblesEnTabla() {
   return empleados;
@@ -111,7 +157,7 @@ async function cargarContextoHorarios() {
       contextoCacheKey,
       { forzar: true },
     );
-    sectoresHorarios = (data.sectores || []).filter((s) => s.activo !== false);
+    sectoresHorarios = sectoresPermitidosParaUsuario(data.sectores || []);
     permisoEdicionServidor = data.puedeEditar === true;
     const puedeElegirSector = sectoresHorarios.length > 1;
     const preferido = puedeElegirSector
@@ -131,8 +177,8 @@ async function cargarContextoHorarios() {
   } catch (error) {
     const respaldo = leerCacheHorarios("api", contextoCacheKey)?.data;
     if (respaldo?.sectores?.length) {
-      sectoresHorarios = (respaldo.sectores || []).filter(
-        (s) => s.activo !== false,
+      sectoresHorarios = sectoresPermitidosParaUsuario(
+        respaldo.sectores || [],
       );
       permisoEdicionServidor = respaldo.puedeEditar === true;
       const usuario = usuarioHorarios();
@@ -157,24 +203,35 @@ function crearSelectorSector() {
   bar.id = "horariosSectorBar";
   bar.className = "horarios-sector-bar";
   bar.innerHTML = `
-    <div class="horarios-sector-identidad"><i id="horariosSectorColor"></i><div><span>Sector</span><strong id="horariosSectorNombre">—</strong></div></div>
-    <div id="horariosSectorSelectorWrap" class="horarios-sector-selector oculto"><span>Cambiar sector</span><button id="horariosSectorSelectorButton" type="button" class="visual-select-button"><span>Seleccionar sector</span><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></button></div>`;
+    <span class="horarios-control-icon horarios-control-icon-sector" aria-hidden="true"><svg class="app-icon"><use href="#icon-store"></use></svg></span>
+    <div class="horarios-sector-identidad"><span>Sector</span></div>
+    <div id="horariosSectorSelectorWrap" class="horarios-sector-selector oculto"><button id="horariosSectorSelectorButton" type="button" class="visual-select-button" aria-label="Cambiar sector"><span id="horariosSectorNombre">—</span><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></button></div>`;
   document.querySelector(".horarios-toolbar")?.after(bar);
   organizarControlesCalendario();
   $("horariosSectorSelectorButton").onclick = async () => {
-    const elegido = await window.AppChoicePicker.open({
-      title: "Seleccionar sector",
-      kicker: "Calendario",
-      value: sectorActual,
-      options: sectoresHorarios.map((sec) => ({
-        value: sec.id,
-        label: sec.nombre,
-        color: sec.color,
-        description:
-          sec.id === sectorActual ? "Sector actual" : "Cambiar a este sector",
-      })),
-    });
+    document.body.classList.add("horarios-selector-sector-abierto");
+    let elegido = null;
+    try {
+      elegido = await window.AppChoicePicker.open({
+        title: "Seleccionar sector",
+        kicker: "Calendario",
+        value: sectorActual,
+        options: sectoresHorarios.map((sec) => ({
+          value: sec.id,
+          label: sec.nombre,
+          color: sec.color,
+          description:
+            sec.id === sectorActual ? "Sector actual" : "Cambiar a este sector",
+        })),
+      });
+    } finally {
+      document.body.classList.remove("horarios-selector-sector-abierto");
+    }
     if (!elegido || elegido === sectorActual) return;
+    if (vistaActual === "config") {
+      const puedeCambiar = await confirmarDescartarOrdenConfig();
+      if (!puedeCambiar) return;
+    }
     if (modoEdicion) {
       const salio = await salirModoEdicion();
       if (!salio) return;
@@ -197,8 +254,6 @@ function renderSelectorSector() {
   const sector = sectorSeleccionado();
   if ($("horariosSectorNombre"))
     $("horariosSectorNombre").textContent = sector?.nombre || "Sin sector";
-  if ($("horariosSectorColor"))
-    $("horariosSectorColor").style.background = sector?.color || "#b72e35";
   const wrap = $("horariosSectorSelectorWrap");
   const selectButton = $("horariosSectorSelectorButton");
   // El servidor ya entrega únicamente los sectores que cada rol puede consultar.
@@ -207,11 +262,11 @@ function renderSelectorSector() {
   if (wrap)
     wrap.classList.toggle(
       "oculto",
-      vistaActual !== "equipo" || sectoresHorarios.length < 2,
+      !["equipo", "config"].includes(vistaActual),
     );
   if (selectButton)
     selectButton.querySelector("span").textContent =
-      sector?.nombre || "Seleccionar sector";
+      sector?.nombre || "Sin sector";
   const subtitulo = $("horariosSubtituloVista");
   if (subtitulo)
     subtitulo.textContent =
@@ -272,15 +327,12 @@ function cargarTurnosConfigurados() {
 let fechaVista = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let vistaActual = "equipo";
 let diaSeleccionado = new Date().getDate();
-let edicionActual = null;
-let restaurarBottomNav = [];
 let turnoPincel = "8-16";
-let arrastrando = false;
 let seleccionInicio = null;
 let seleccionBaseArrastre = new Set();
 let punteroSeleccion = null;
-let historial = [];
 let estadoInicialEdicion = null;
+let estadoInicialDetalles = null;
 let seleccion = new Set();
 let modoEdicion = false;
 
@@ -322,56 +374,6 @@ function obtenerFeriadoDia(dia, fecha = fechaVista) {
   const f = new Date(fecha.getFullYear(), fecha.getMonth(), dia);
   return FERIADOS_ARGENTINA_2026.get(claveFechaHorarios(f)) || "";
 }
-function asegurarEstilosFeriadosHorarios() {
-  if (document.getElementById("horariosFeriadosStyles")) return;
-  const style = document.createElement("style");
-  style.id = "horariosFeriadosStyles";
-  style.textContent = `
-    #horariosTablaHead th.dia-hoy:not(.dia-feriado){
-      background:#dbeafe!important;
-      box-shadow:inset 2px 0 0 rgba(37,99,235,.38),inset -2px 0 0 rgba(37,99,235,.38)
-    }
-    #horariosTablaHead th.dia-hoy:not(.dia-feriado)>span,
-    #horariosTablaHead th.dia-hoy:not(.dia-feriado)>strong{color:#1d4ed8!important}
-    #horariosTablaBody td.dia-hoy:not(.dia-feriado){
-      background:rgba(59,130,246,.20)!important;
-      box-shadow:inset 1px 0 0 rgba(37,99,235,.30),inset -1px 0 0 rgba(37,99,235,.30)
-    }
-    #horariosTablaBody td.dia-hoy .horario-cell,
-    #horariosTablaBody td.dia-feriado .horario-cell{
-      filter:none!important;
-      opacity:1!important;
-    }
-    #horariosTablaBody .horario-cell{
-      border-width:1px!important;
-      border-style:solid!important;
-    }
-    #horariosTablaBody .horario-cell.turno-configurable{
-      border-color:var(--turno-color)!important;
-    }
-    /* Los turnos configurables usan fondos semitransparentes.
-       Sobre una columna coloreada se mezclaban con el azul/rojo del fondo.
-       Los reconstruimos contra blanco para conservar exactamente su aspecto. */
-    #horariosTablaBody td.dia-hoy .horario-cell.turno-configurable,
-    #horariosTablaBody td.dia-feriado .horario-cell.turno-configurable{
-      background:color-mix(in srgb, var(--turno-color) 13.33%, white)!important;
-    }
-    #horariosTablaHead th.dia-feriado{background:#ffd9dd!important;box-shadow:inset 2px 0 0 rgba(199,40,52,.38),inset -2px 0 0 rgba(199,40,52,.38)}
-    #horariosTablaHead th.dia-feriado>span,#horariosTablaHead th.dia-feriado>strong{color:#b4232d!important}
-    #horariosTablaBody td.dia-feriado{background:rgba(217,65,65,.14)!important;box-shadow:inset 1px 0 0 rgba(199,40,52,.28),inset -1px 0 0 rgba(199,40,52,.28)}
-    #horariosTablaHead th.dia-hoy.dia-feriado{
-      box-shadow:inset 0 0 0 2px rgba(37,99,235,.65),inset 3px 0 0 rgba(199,40,52,.18),inset -3px 0 0 rgba(199,40,52,.18)
-    }
-    #horariosTablaBody td.dia-hoy.dia-feriado{
-      box-shadow:inset 2px 0 0 rgba(37,99,235,.35),inset -2px 0 0 rgba(37,99,235,.35)
-    }
-    .feriado-mini{display:block;width:max-content;margin:2px auto 1px;padding:2px 4px;border-radius:5px;background:#c72834;color:#fff!important;font-size:7px!important;line-height:1;font-weight:900;letter-spacing:.03em;white-space:nowrap}
-    #horariosTablaBody td.dia-feriado .horario-cell{position:relative}
-    @media(max-width:700px){.feriado-mini{font-size:6px!important;padding:2px 3px}}
-  `;
-  document.head.appendChild(style);
-}
-
 function claveMes(fecha, empleado, dia) {
   return `${sectorActual || "general"}|${fecha.getFullYear()}-${fecha.getMonth()}-${dia}-${empleado}`;
 }
@@ -447,7 +449,6 @@ async function cargarCalendarioActual(forzar = false) {
         observacion: x.observacion || "",
       }),
     );
-    metadatosModificados = false;
     if (Array.isArray(data.turnos) && data.turnos.length) {
       window.AutoservicioHorariosConfig?.guardarLocal?.(
         data.turnos,
@@ -502,6 +503,10 @@ function nombreMes() {
     year: "numeric",
   });
 }
+function nombreMesControlCalendario() {
+  const mes = fechaVista.toLocaleDateString("es-AR", { month: "long" });
+  return mes ? mes.charAt(0).toUpperCase() + mes.slice(1) : "";
+}
 function nombreDia(d) {
   return new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d)
     .toLocaleDateString("es-AR", { weekday: "short" })
@@ -526,23 +531,8 @@ function puedeEditar() {
   return sector?.puedeEditar === true;
 }
 
-function parsearTurno(id) {
-  return parseSimpleShift(id);
-}
-function hora24(h, m = 0) {
-  return time24(h, m);
-}
-function definicionTurno(id) {
-  return TURNOS.find((t) => t.id === id) || null;
-}
 function segmentosDeTurno(id) {
   return shiftSegments(id, TURNOS);
-}
-function horasDeTurno(id) {
-  return segmentosDeTurno(id)[0] || null;
-}
-function esTurnoCortado(id) {
-  return isSplitShift(id, TURNOS);
 }
 function formatoCelda(id) {
   return cellLabel(id, TURNOS);
@@ -576,50 +566,61 @@ function coberturaDia(d) {
 function clonarDatos() {
   return new Map(datos);
 }
+function clonarDetalles(origen = detalles) {
+  return new Map(
+    [...origen].map(([k, v]) => [
+      k,
+      v && typeof v === "object" ? { ...v } : v,
+    ]),
+  );
+}
 function mapasIguales(a, b) {
   if (!a || !b || a.size !== b.size) return false;
   for (const [k, v] of a) if (b.get(k) !== v) return false;
+  return true;
+}
+function detalleComparable(valor) {
+  return [
+    String(valor?.tipo || ""),
+    String(valor?.motivo || ""),
+    String(valor?.observacion || ""),
+  ].join("\u0000");
+}
+function detallesIguales(a, b) {
+  if (!a || !b || a.size !== b.size) return false;
+  for (const [k, v] of a)
+    if (!b.has(k) || detalleComparable(v) !== detalleComparable(b.get(k)))
+      return false;
   return true;
 }
 function restaurarDatos(estado) {
   datos.clear();
   estado?.forEach((v, k) => datos.set(k, v));
 }
+function restaurarDetalles(estado) {
+  detalles.clear();
+  estado?.forEach((v, k) =>
+    detalles.set(k, v && typeof v === "object" ? { ...v } : v),
+  );
+}
 function hayCambiosPendientes() {
   return !!(
     modoEdicion &&
     ((estadoInicialEdicion && !mapasIguales(datos, estadoInicialEdicion)) ||
-      metadatosModificados)
+      (estadoInicialDetalles &&
+        !detallesIguales(detalles, estadoInicialDetalles)))
   );
 }
-function iniciarMovimiento() {
-  historial.push(clonarDatos());
-  if (historial.length > 80) historial.shift();
-}
-function descartarMovimientoSiNoCambio() {
-  const anterior = historial[historial.length - 1];
-  if (anterior && mapasIguales(datos, anterior)) historial.pop();
-}
-function deshacerUltimo() {
-  if (!modoEdicion || !historial.length) return;
-  restaurarDatos(historial.pop());
-  renderTodo();
-}
 async function cancelarTodoCambios() {
-  if (!modoEdicion || !hayCambiosPendientes()) return salirModoEdicion(true);
-  const ok = await dialogoHorarios({
-    titulo: "Cancelar todos los cambios",
-    mensaje: "El calendario volverá al estado que tenía al tocar Editar.",
-    confirmar: "Cancelar cambios",
-    peligro: true,
-  });
-  if (!ok) return;
+  if (!modoEdicion) return false;
+  const teniaCambios = hayCambiosPendientes();
   restaurarDatos(estadoInicialEdicion);
-  historial = [];
+  restaurarDetalles(estadoInicialDetalles);
   seleccion.clear();
-  salirModoEdicion(true);
+  await salirModoEdicion(true);
   renderTodo();
-  avisoHorarios("Cambios descartados");
+  if (teniaCambios) avisoHorarios("Cambios descartados");
+  return true;
 }
 function serializarCeldasDesdeMapa(mapa) {
   const salida = [];
@@ -667,9 +668,6 @@ async function confirmarGuardado() {
       }),
       turnos: window.AutoservicioHorariosConfig?.cargar?.(sectorActual) || [],
     });
-    estadoInicialEdicion = clonarDatos();
-    metadatosModificados = false;
-    historial = [];
     seleccion.clear();
     await salirModoEdicion(true);
     await cargarResumenHoy(true);
@@ -685,11 +683,11 @@ async function confirmarGuardado() {
 }
 function actualizarAcciones() {
   const pendientes = hayCambiosPendientes();
-  const acciones = $("horariosCambiosAcciones");
-  acciones?.classList.toggle("oculto", !pendientes);
-  if ($("horariosUndoOne")) $("horariosUndoOne").disabled = !historial.length;
+  const acciones = $("horariosEditActions");
+  acciones?.classList.toggle("oculto", !modoEdicion);
+  acciones?.setAttribute("aria-hidden", modoEdicion ? "false" : "true");
   if ($("horariosSaveChanges")) $("horariosSaveChanges").disabled = !pendientes;
-  if ($("horariosCancelAll")) $("horariosCancelAll").disabled = !pendientes;
+  if ($("horariosCancelAll")) $("horariosCancelAll").disabled = !modoEdicion;
   const c = $("horariosSeleccionCount");
   if (c)
     c.textContent = seleccion.size
@@ -699,21 +697,26 @@ function actualizarAcciones() {
   if (aplicar) aplicar.disabled = !seleccion.size || !modoEdicion;
   const limpiar = $("horariosClearSelection");
   if (limpiar) limpiar.classList.toggle("oculto", !seleccion.size);
+
+  const modo = $("horariosModoEstado");
+  if (modo) modo.textContent = modoEdicion ? "Modo edición" : "Modo lectura";
 }
 function aplicarTurnoASeleccion(turno) {
   if (!seleccion.size || !puedeEditar() || !modoEdicion) return;
-  iniciarMovimiento();
   seleccion.forEach((k) => {
     const [e, d] = k.split("::");
-    datos.set(clave(e, Number(d)), turno);
+    const dataKey = clave(e, Number(d));
+    const anterior = datos.get(dataKey) || "";
+    if (anterior === turno) return;
+    datos.set(dataKey, turno);
+    // Al reemplazar una asignación se descartan sus notas previas para evitar
+    // guardar metadatos que ya no corresponden al turno visible.
+    detalles.delete(k);
   });
-  descartarMovimientoSiNoCambio();
+  seleccion.clear();
   renderTodo();
 }
 
-function etiquetaMes(fecha) {
-  return fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
-}
 function avisoHorarios(texto, tipo = "ok") {
   const toast = $("toast");
   if (!toast) return;
@@ -732,8 +735,15 @@ function asegurarDialogoHorarios() {
   modal.setAttribute("aria-hidden", "true");
   modal.innerHTML = `
     <div class="horarios-dialogo-card" role="dialog" aria-modal="true" aria-labelledby="horariosDialogoTitulo">
-      <span class="horarios-dialogo-kicker">Horarios</span>
-      <h3 id="horariosDialogoTitulo">Confirmar acción</h3>
+      <div class="horarios-dialogo-cabecera">
+        <span class="horarios-dialogo-icono" aria-hidden="true">
+          <svg class="app-icon"><use href="#icon-shield"></use></svg>
+        </span>
+        <div class="horarios-dialogo-copy">
+          <span id="horariosDialogoKicker" class="horarios-dialogo-kicker">Horarios</span>
+          <h3 id="horariosDialogoTitulo">Confirmar acción</h3>
+        </div>
+      </div>
       <p id="horariosDialogoMensaje"></p>
       <div class="horarios-dialogo-actions">
         <button id="horariosDialogoConfirmar" type="button" class="primario">Confirmar</button>
@@ -747,15 +757,22 @@ function dialogoHorarios({
   mensaje,
   confirmar = "Confirmar",
   peligro = false,
+  soloAceptar = false,
+  variante = "default",
+  kicker = "Horarios",
 }) {
   asegurarDialogoHorarios();
   const modal = $("horariosDialogo");
   const btnConfirmar = $("horariosDialogoConfirmar");
   const btnCancelar = $("horariosDialogoCancelar");
+  const card = modal.querySelector(".horarios-dialogo-card");
+  card?.classList.toggle("horarios-dialogo-card--permiso", variante === "permiso");
+  $("horariosDialogoKicker").textContent = kicker;
   $("horariosDialogoTitulo").textContent = titulo;
   $("horariosDialogoMensaje").textContent = mensaje;
   btnConfirmar.textContent = confirmar;
   btnConfirmar.classList.toggle("peligro", peligro);
+  btnCancelar.classList.toggle("oculto", soloAceptar);
   modal.classList.remove("oculto");
   modal.setAttribute("aria-hidden", "false");
   return new Promise((resolve) => {
@@ -777,43 +794,65 @@ function dialogoHorarios({
 function actualizarSelectorTurnos() {
   const opcion =
     TURNOS.find((t) => t.id === turnoPincel) ||
-    TURNOS.filter((t) => t.id !== "personalizado")[0];
-  if (!opcion) return;
-  turnoPincel = opcion.id;
-  const label = $("horariosPaintLabel"),
-    swatch = $("horariosPaintSwatch");
-  if (label) label.textContent = opcion.label;
-  if (swatch) {
-    const coloresEspeciales = {
-      franco: "#9ca3af",
-      vacaciones: "#22c55e",
-      ausente: "#ef4444",
-      licencia: "#3b82f6",
-    };
-    const color = opcion.color || coloresEspeciales[opcion.id] || "#ffffff";
-    const iniciales = {
-      franco: "F",
-      vacaciones: "V",
-      ausente: "A",
-      licencia: "L",
-    };
-    swatch.style.background = color;
-    swatch.textContent =
-      iniciales[opcion.id] || (opcion.tipo === "cortado" ? "C" : "");
-    swatch.style.color = contrasteTurno(color);
-    swatch.className = `turno-${opcion.id}`;
+    TURNOS.find((t) => t.id !== "personalizado");
+  if (opcion) turnoPincel = opcion.id;
+}
+
+function decorarControlesCalendario() {
+  const nav = document.querySelector("#pantallaHorarios .horarios-month-nav");
+  if (nav && !nav.querySelector(".horarios-control-icon-month")) {
+    nav.insertAdjacentHTML(
+      "afterbegin",
+      '<span class="horarios-control-icon horarios-control-icon-month" aria-hidden="true"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span>',
+    );
   }
+}
+
+function renderEtiquetaCalendario() {
+  const board = document.querySelector("#horariosEquipoView .horarios-board-card");
+  if (!board) return;
+  let etiqueta = $("horariosCalendarioEtiqueta");
+  if (!etiqueta) {
+    etiqueta = document.createElement("section");
+    etiqueta.id = "horariosCalendarioEtiqueta";
+    etiqueta.className = "horarios-calendar-labelbar";
+    const wrap = board.querySelector(".horarios-table-wrap");
+    if (wrap) board.insertBefore(etiqueta, wrap);
+    else board.prepend(etiqueta);
+  }
+  etiqueta.innerHTML = `<span>CALENDARIO</span>`;
+}
+
+function crearControlConfiguracionCalendario() {
+  if ($("horariosConfigControl")) return;
+  const control = document.createElement("button");
+  control.id = "horariosConfigControl";
+  control.type = "button";
+  control.className = "horarios-config-control";
+  control.setAttribute("aria-label", "Abrir configuración de horarios");
+  control.innerHTML = `
+    <span class="horarios-control-icon horarios-control-icon-config" aria-hidden="true"><svg class="app-icon"><use href="#icon-settings"></use></svg></span>
+    <span class="horarios-config-copy">
+      <span>Configuración</span>
+    </span>
+    <span class="horarios-control-spacer" aria-hidden="true"></span>`;
+  control.addEventListener("click", async () => {
+    await cambiarVista("config");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.querySelector("#pantallaHorarios .horarios-content")?.appendChild(control);
 }
 
 function organizarControlesCalendario() {
   const content = document.querySelector("#pantallaHorarios .horarios-content");
   const toolbar = document.querySelector("#pantallaHorarios .horarios-toolbar");
   const sector = $("horariosSectorBar");
+  const config = $("horariosConfigControl");
   const editor = $("horariosEdicionMarco");
   const status = document.querySelector(
     "#pantallaHorarios .horarios-status-row",
   );
-  if (!content || !toolbar || !sector || !editor) return;
+  if (!content || !toolbar || !sector || !config || !editor) return;
   let deck = $("horariosControlDeck");
   if (!deck) {
     deck = document.createElement("section");
@@ -823,127 +862,164 @@ function organizarControlesCalendario() {
   }
   if (toolbar.parentElement !== deck) deck.appendChild(toolbar);
   if (sector.parentElement !== deck) deck.appendChild(sector);
+  if (config.parentElement !== deck) deck.appendChild(config);
   if (editor.parentElement !== deck) deck.appendChild(editor);
   if (status && status.parentElement !== deck) deck.appendChild(status);
+  decorarControlesCalendario();
 }
 
-function crearPanelEdicion() {
+function ubicarSelectorSectorSegunVista(vista = vistaActual) {
+  const sector = $("horariosSectorBar");
+  if (!sector) return;
+  const deck = $("horariosControlDeck");
+  const slotConfig = $("horariosConfigSectorSlot");
+
+  if (vista === "config" && slotConfig) {
+    if (sector.parentElement !== slotConfig) slotConfig.appendChild(sector);
+    return;
+  }
+
+  if (!deck) return;
+  const controlConfig = $("horariosConfigControl");
+  if (sector.parentElement !== deck) {
+    if (controlConfig?.parentElement === deck) deck.insertBefore(sector, controlConfig);
+    else deck.appendChild(sector);
+  }
+}
+
+function opcionesSelectorTurnos() {
+  const iniciales = {
+    franco: "F",
+    vacaciones: "V",
+    ausente: "A",
+    licencia: "L",
+  };
+  const descripciones = {
+    franco: "Día libre",
+    vacaciones: "Vacaciones",
+    ausente: "Ausencia",
+    licencia: "Licencia",
+  };
+  const coloresEspeciales = {
+    franco: "#9ca3af",
+    vacaciones: "#22c55e",
+    ausente: "#ef4444",
+    licencia: "#f59e0b",
+  };
+  return TURNOS.filter((t) => t.id !== "personalizado").map((t) => ({
+    value: t.id,
+    label: t.label,
+    color: t.color || coloresEspeciales[t.id] || "#ffffff",
+    badge: iniciales[t.id] || (t.tipo === "cortado" ? "C" : ""),
+    description:
+      descripciones[t.id] ||
+      (t.tipo === "cortado" ? "Horario cortado" : "Horario continuo"),
+  }));
+}
+async function abrirSelectorTurnos(evento) {
+  evento?.preventDefault?.();
+  evento?.stopPropagation?.();
+  const picker = window.AppChoicePicker;
+  if (!picker?.open) {
+    avisoHorarios(
+      "No se pudo abrir el selector de horarios. Recargá la aplicación e intentá nuevamente.",
+      "error",
+    );
+    return false;
+  }
+  document.body.classList.add("horarios-selector-turno-abierto");
+  try {
+    const elegido = await picker.open({
+      title: "Seleccionar horario",
+      kicker: "Pintar con",
+      options: opcionesSelectorTurnos(),
+      value: turnoPincel,
+    });
+    if (elegido === null || elegido === undefined || elegido === "") return false;
+    turnoPincel = elegido;
+    actualizarSelectorTurnos();
+    actualizarAcciones();
+    return true;
+  } finally {
+    document.body.classList.remove("horarios-selector-turno-abierto");
+  }
+}
+
+function crearControlesEdicionCalendario() {
   if ($("horariosEdicionMarco")) return;
   const marco = document.createElement("section");
   marco.id = "horariosEdicionMarco";
   marco.className = "horarios-edicion-marco";
   marco.innerHTML = `
     <div id="horariosConsultaAcciones" class="horarios-consulta-acciones">
-      <button id="btnHorariosEditar" type="button" class="horarios-editar-btn">Editar</button>
-    </div>
-    <div id="horariosPanelEdicion" class="horarios-panel-edicion oculto" aria-hidden="true">
-      <div class="horarios-panel-head">
-        <div><span>Modo edición</span><strong id="horariosPanelMes">Editar mes</strong></div>
-        <button id="btnHorariosCerrarEdicion" type="button" aria-label="Cerrar edición">✕</button>
+      <span class="horarios-control-icon horarios-control-icon-mode" aria-hidden="true"><svg class="app-icon"><use href="#icon-eye"></use></svg></span>
+      <div class="horarios-modo-copy">
+        <span id="horariosModoEstado">Modo lectura</span>
       </div>
-      <div class="horarios-pintar-control">
-        <div class="horarios-paint-picker"><span>Pintar con</span><button id="horariosPaintTurnoButton" type="button" class="visual-select-button"><i id="horariosPaintSwatch"></i><span id="horariosPaintLabel">Seleccionar horario</span><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></button></div>
-        <button id="horariosPaint" type="button" disabled>Aplicar</button>
-      </div>
-      <div class="horarios-seleccion-info">
-        <small id="horariosSeleccionCount" class="horarios-seleccion-count">Seleccioná una o más casillas</small>
-        <button id="horariosClearSelection" type="button" class="horarios-limpiar-seleccion oculto">Limpiar selección</button>
-      </div>
-      <div id="horariosCambiosAcciones" class="horarios-cambios-acciones oculto">
-        <button id="horariosSaveChanges" type="button" class="primario">Guardar</button>
-        <button id="horariosUndoOne" type="button">Deshacer</button>
-        <button id="horariosCancelAll" type="button" class="peligro">Cancelar todo</button>
-      </div>
+      <button id="btnHorariosEditar" type="button" class="horarios-editar-btn">
+        <svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>
+        <span>Editar</span>
+      </button>
     </div>`;
   document.querySelector(".horarios-status-row")?.after(marco);
+
+  let acciones = $("horariosEditActions");
+  if (!acciones) {
+    acciones = document.createElement("section");
+    acciones.id = "horariosEditActions";
+    acciones.className = "horarios-edit-actions oculto";
+    acciones.setAttribute("aria-hidden", "true");
+    acciones.innerHTML = `
+      <div class="horarios-edit-buttons">
+        <button id="horariosPaint" type="button" class="horarios-action-paint" disabled>
+          <span aria-hidden="true">✎</span><strong>Pintar</strong>
+        </button>
+        <button id="horariosSaveChanges" type="button" class="horarios-action-save" disabled>
+          <span aria-hidden="true">✓</span><strong>Guardar</strong>
+        </button>
+        <button id="horariosCancelAll" type="button" class="horarios-action-cancel">
+          <span aria-hidden="true">×</span><strong>Cancelar</strong>
+        </button>
+      </div>
+      <div class="horarios-seleccion-info">
+        <small id="horariosSeleccionCount" class="horarios-seleccion-count" aria-live="polite">Seleccioná una o más casillas</small>
+        <button id="horariosClearSelection" type="button" class="horarios-limpiar-seleccion oculto">Limpiar selección</button>
+      </div>`;
+    document.querySelector("#horariosEquipoView .horarios-board-card")?.before(acciones);
+  }
+
   organizarControlesCalendario();
   $("btnHorariosEditar").onclick = entrarModoEdicion;
-  $("btnHorariosCerrarEdicion").onclick = () => salirModoEdicion();
   $("horariosPaint").onclick = () => aplicarTurnoASeleccion(turnoPincel);
-  const abrirSelectorTurnos = async (evento) => {
-    evento?.preventDefault?.();
-    evento?.stopPropagation?.();
-    const picker = window.AppChoicePicker;
-    if (!picker?.open) {
-      avisoHorarios(
-        "No se pudo abrir el selector de horarios. Recargá la aplicación e intentá nuevamente.",
-        "error",
-      );
-      return;
-    }
-    const iniciales = {
-      franco: "F",
-      vacaciones: "V",
-      ausente: "A",
-      licencia: "L",
-    };
-    const descripciones = {
-      franco: "Día libre",
-      vacaciones: "Vacaciones",
-      ausente: "Ausencia",
-      licencia: "Licencia",
-    };
-    const opciones = TURNOS.filter((t) => t.id !== "personalizado").map(
-      (t) => ({
-        value: t.id,
-        label: t.label,
-        color:
-          t.color ||
-          {
-            franco: "#e5e7eb",
-            vacaciones: "#22c55e",
-            ausente: "#ef4444",
-            licencia: "#3b82f6",
-          }[t.id] ||
-          "#ffffff",
-        badge: iniciales[t.id] || (t.tipo === "cortado" ? "C" : ""),
-        description:
-          descripciones[t.id] ||
-          (t.tipo === "cortado" ? "Horario cortado" : "Horario continuo"),
-      }),
-    );
-    const elegido = await picker.open({
-      title: "Seleccionar horario",
-      kicker: "Pintar con",
-      options: opciones,
-      value: turnoPincel,
-    });
-    if (elegido !== null && elegido !== undefined && elegido !== "") {
-      turnoPincel = elegido;
-      actualizarSelectorTurnos();
-    }
-  };
-  const botonSelectorTurnos = $("horariosPaintTurnoButton");
-  botonSelectorTurnos.addEventListener("click", abrirSelectorTurnos);
-  botonSelectorTurnos.addEventListener("pointerdown", (evento) =>
-    evento.stopPropagation(),
-  );
   $("horariosClearSelection").onclick = () => {
     seleccion.clear();
     renderTabla();
     actualizarAcciones();
   };
   $("horariosSaveChanges").onclick = confirmarGuardado;
-  $("horariosUndoOne").onclick = deshacerUltimo;
   $("horariosCancelAll").onclick = cancelarTodoCambios;
   actualizarSelectorTurnos();
   actualizarPermisos();
   actualizarAcciones();
 }
-function entrarModoEdicion() {
-  if (!puedeEditar()) return;
+async function entrarModoEdicion(evento) {
+  if (!puedeEditar()) return false;
+  const elegido = await abrirSelectorTurnos(evento);
+  if (!elegido) return false;
+  if (modoEdicion) {
+    actualizarAcciones();
+    return true;
+  }
   modoEdicion = true;
   estadoInicialEdicion = clonarDatos();
-  historial = [];
-  arrastrando = false;
+  estadoInicialDetalles = clonarDetalles();
   punteroSeleccion = null;
+  seleccion.clear();
   seleccionBaseArrastre.clear();
   document.body.classList.add("horarios-modo-edicion");
-  $("horariosConsultaAcciones")?.classList.add("oculto");
-  $("horariosPanelEdicion")?.classList.remove("oculto");
-  $("horariosPanelEdicion")?.setAttribute("aria-hidden", "false");
-  actualizarPanelMes();
+  actualizarAcciones();
   renderTabla();
+  return true;
 }
 async function salirModoEdicion(forzar = false) {
   if (!forzar && hayCambiosPendientes()) {
@@ -955,40 +1031,39 @@ async function salirModoEdicion(forzar = false) {
     });
     if (!ok) return false;
     restaurarDatos(estadoInicialEdicion);
+    restaurarDetalles(estadoInicialDetalles);
   }
   modoEdicion = false;
-  arrastrando = false;
   punteroSeleccion = null;
   seleccionBaseArrastre.clear();
-  historial = [];
   estadoInicialEdicion = null;
+  estadoInicialDetalles = null;
   seleccion.clear();
-  cerrarEditor();
   document.body.classList.remove("horarios-modo-edicion");
-  $("horariosConsultaAcciones")?.classList.remove("oculto");
-  $("horariosPanelEdicion")?.classList.add("oculto");
-  $("horariosPanelEdicion")?.setAttribute("aria-hidden", "true");
   renderTabla();
   actualizarAcciones();
   return true;
 }
-function actualizarPanelMes() {
-  const el = $("horariosPanelMes");
-  if (el) el.textContent = `Editar ${nombreMes()}`;
-}
-
 function actualizarPermisos() {
   const editable = puedeEditar();
   document.body.classList.toggle("horarios-solo-lectura", !editable);
+
+  // La pantalla Calendario conserva siempre los cuatro módulos superiores.
+  // Los permisos cambian las acciones, no la estructura visual.
   $("horariosEdicionMarco")?.classList.toggle(
     "oculto",
-    !editable || vistaActual !== "equipo",
+    vistaActual !== "equipo",
   );
-  $("horariosEditor")?.classList.toggle("sin-permiso", !editable);
-  document
-    .querySelector(".horarios-personal-actions")
-    ?.classList.toggle("oculto", !editable || vistaActual !== "equipo");
-  if (!editable && modoEdicion) salirModoEdicion();
+  $("btnHorariosEditar")?.classList.toggle("oculto", !editable);
+  $("horariosConfigControl")?.classList.toggle(
+    "oculto",
+    vistaActual !== "equipo",
+  );
+  if (!editable && modoEdicion) {
+    restaurarDatos(estadoInicialEdicion);
+    restaurarDetalles(estadoInicialDetalles);
+    salirModoEdicion(true);
+  }
 }
 
 function desplazarAlDia(d, behavior = "smooth") {
@@ -1011,8 +1086,10 @@ function actualizarColumnaEmpleados() {
   const w = document.querySelector("#horariosEquipoView .horarios-table-wrap"),
     t = document.querySelector("#horariosEquipoView .horarios-table");
   if (!w || !t) return;
-  t.classList.toggle("empleados-compactos", w.scrollLeft > 32);
-  t.classList.toggle("empleados-minimos", w.scrollLeft > 240);
+  // En teléfono la columna PERSONAL se compacta a una única inicial apenas
+  // el usuario empieza a recorrer el mes. No existe una segunda etapa que
+  // vuelva a cambiar el ancho o esconda la referencia del personal.
+  t.classList.toggle("empleados-compactos", w.scrollLeft > 24);
 }
 function alternarCelda(e, d) {
   if (!puedeEditar() || !modoEdicion) return;
@@ -1047,7 +1124,20 @@ function renderTabla() {
   const head = $("horariosTablaHead"),
     body = $("horariosTablaBody");
   if (!head || !body) return;
-  head.innerHTML = `<tr><th class="empleado-col"><span class="empleado-titulo-completo">Empleado</span><span class="empleado-titulo-corto">Emp.</span></th>${Array.from(
+  const tabla = head.closest(".horarios-table");
+  if (tabla) {
+    let columnas = tabla.querySelector("#horariosTablaColumnas");
+    if (!columnas) {
+      columnas = document.createElement("colgroup");
+      columnas.id = "horariosTablaColumnas";
+      tabla.insertBefore(columnas, head);
+    }
+    columnas.innerHTML = `<col class="horarios-col-personal">${Array.from(
+      { length: diasDelMes() },
+      () => '<col class="horarios-col-dia">',
+    ).join("")}`;
+  }
+  head.innerHTML = `<tr><th class="empleado-col"><span class="empleado-titulo-completo">PERSONAL</span><span class="empleado-titulo-corto" aria-label="Personal">P</span></th>${Array.from(
     { length: diasDelMes() },
     (_, i) => {
       const d = i + 1,
@@ -1055,15 +1145,19 @@ function renderTabla() {
         finde = [0, 6].includes(f.getDay()),
         feriado = obtenerFeriadoDia(d),
         c = coberturaDia(d);
-      return `<th class="${finde ? "fin-semana" : ""} ${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${d}" ${feriado ? `title="${feriado}"` : ""}><span>${nombreDia(d)}</span><strong>${d}</strong>${feriado ? '<small class="feriado-mini">FERIADO</small>' : ""}<small class="cobertura-mini"><b>☀${c.manana}</b><b>☾${c.tarde}</b></small></th>`;
+      const detalleDia = `${c.manana} turno mañana · ${c.tarde} turno tarde${feriado ? ` · ${feriado}` : ""}`;
+      return `<th class="${finde ? "fin-semana" : ""} ${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""}" data-horarios-dia="${d}" title="${escAttr(detalleDia)}"><span>${esc(nombreDia(d))}</span><strong>${d}</strong>${feriado ? '<small class="feriado-mini" aria-label="Feriado" title="Feriado">F</small>' : ""}<small class="cobertura-mini"><b>☀${c.manana}</b><b>☾${c.tarde}</b></small></th>`;
     },
   ).join("")}</tr>`;
   const empleadosTabla = empleadosVisiblesEnTabla();
   body.innerHTML = empleadosTabla.length
     ? empleadosTabla
         .map(
-          (e) =>
-            `<tr><th class="empleado-col"><span class="empleado-avatar">${e[0]}</span><strong>${e}</strong></th>${Array.from(
+          (e) => {
+            const sectorNombre = sectorSeleccionado()?.nombre || "";
+            const inicialesEmpleado =
+              String(e || "?").trim().charAt(0).toUpperCase() || "?";
+            return `<tr><th class="empleado-col"><span class="empleado-cell-inner"><span class="empleado-avatar">${esc(inicialesEmpleado)}</span><span class="empleado-info"><strong>${esc(e)}</strong><small>${esc(sectorNombre)}</small></span></span></th>${Array.from(
               { length: diasDelMes() },
               (_, i) => {
                 const d = i + 1,
@@ -1073,12 +1167,13 @@ function renderTabla() {
                   sel = seleccion.has(keyCelda(e, d));
                 const detalle = detalles.get(keyCelda(e, d));
                 const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ""}`;
-                return `<td class="${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${e}" data-dia="${d}" ${feriado ? `title="${feriado}"` : ""}><button type="button" class="horario-cell ${t.clase}" style="${t.estilo || ""}" data-tooltip="${t.label}">${formatoCelda(id)}${marcas}</button></td>`;
+                return `<td class="${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${escAttr(e)}" data-dia="${d}" ${feriado ? `title="${escAttr(feriado)}"` : ""}><button type="button" class="horario-cell ${escAttr(t.clase)}" style="${escAttr(t.estilo || "")}" data-tooltip="${escAttr(t.label)}">${esc(formatoCelda(id))}${marcas}</button></td>`;
               },
-            ).join("")}</tr>`,
+            ).join("")}</tr>`;
+          },
         )
         .join("")
-    : `<tr><td colspan="${diasDelMes() + 1}" class="horarios-sin-empleados"><strong>No hay empleados asignados a este sector</strong><span>Asigná usuarios desde Administrador → Usuarios.</span></td></tr>`;
+    : `<tr><td colspan="${diasDelMes() + 1}" class="horarios-sin-empleados"><strong>No hay personal asignado a este sector</strong><span>Asigná usuarios desde Administrador → Usuarios.</span></td></tr>`;
   head.querySelectorAll("[data-horarios-dia]").forEach(
     (x) =>
       (x.onclick = () => {
@@ -1109,8 +1204,7 @@ function renderTabla() {
       seleccionInicio = { empleado: emp, dia };
       seleccionBaseArrastre =
         ev.ctrlKey || ev.metaKey ? new Set(seleccion) : new Set();
-      arrastrando = ev.pointerType !== "touch";
-      if (arrastrando) ev.preventDefault();
+      if (ev.pointerType !== "touch") ev.preventDefault();
     };
     td.ondblclick = (ev) => {
       ev.preventDefault();
@@ -1141,7 +1235,6 @@ document.addEventListener(
     if (distancia < umbral) return;
     punteroSeleccion.movio = true;
     if (punteroSeleccion.tipo === "touch") return;
-    arrastrando = true;
     ev.preventDefault();
     const td = celdaDesdePunto(ev.clientX, ev.clientY);
     if (td) seleccionarRango(td.dataset.empleado, Number(td.dataset.dia));
@@ -1152,18 +1245,28 @@ document.addEventListener("pointerup", (ev) => {
   if (!punteroSeleccion || ev.pointerId !== punteroSeleccion.id) return;
   const p = punteroSeleccion;
   if (!p.movio) alternarCelda(p.empleado, p.dia);
-  arrastrando = false;
   punteroSeleccion = null;
   seleccionInicio = null;
   seleccionBaseArrastre.clear();
 });
 document.addEventListener("pointercancel", () => {
-  arrastrando = false;
   punteroSeleccion = null;
   seleccionInicio = null;
   seleccionBaseArrastre.clear();
 });
 
+function turnoDeHoyParaResumen(empleado, hoy) {
+  const mesActualVisible =
+    fechaVista.getFullYear() === hoy.getFullYear() &&
+    fechaVista.getMonth() === hoy.getMonth();
+  return mesActualVisible
+    ? obtenerTurno(empleado, hoy.getDate())
+    : resumenHoyDatos.get(claveResumenHoy(empleado)) || "";
+}
+function tarjetaTrabajadorHoy(empleado, horario) {
+  const inicial = String(empleado || "?").trim().charAt(0).toUpperCase() || "?";
+  return `<div class="horarios-trabajador-card"><span class="horarios-trabajador-avatar">${esc(inicial)}</span><div><strong>${esc(empleado)}</strong><small>${esc(horario)}</small></div></div>`;
+}
 function renderResumen() {
   const t = $("horariosDiaSeleccionado"),
     c = $("horariosResumenDia");
@@ -1173,170 +1276,49 @@ function renderResumen() {
     weekday: "long",
     day: "numeric",
     month: "long",
-    year: "numeric",
   });
-  const filas = empleados.map((e) => {
-    const id = resumenHoyDatos.get(claveResumenHoy(e)) || "";
-    const x = obtenerDefinicion(id);
-    return `<div class="horarios-resumen-persona"><span><i class="${x.clase}" style="${x.estilo || ""}"></i><strong>${e}</strong></span><b>${formatoHorario24(id)}</b></div>`;
-  });
-  c.innerHTML = filas.length
-    ? filas.join("")
-    : '<div class="horarios-resumen-vacio">No hay personal asignado a este sector.</div>';
-  renderEstadisticasSector();
-}
-function renderEstadisticasSector() {
-  const box = $("horariosEstadisticas");
-  if (!box) return;
-  let horas = 0,
-    francos = 0,
-    vacaciones = 0,
-    licencias = 0,
-    ausencias = 0;
-  empleados.forEach((e) => {
-    for (let d = 1; d <= diasDelMes(); d++) {
-      const id = obtenerTurno(e, d),
-        segmentos = segmentosDeTurno(id);
-      if (segmentos.length)
-        segmentos.forEach((x) => {
-          const [ih, im] = x.inicio.split(":").map(Number),
-            [fh, fm] = x.fin.split(":").map(Number);
-          horas += fh + fm / 60 - (ih + im / 60);
-        });
-      else if (id === "franco") francos++;
-      else if (id === "vacaciones") vacaciones++;
-      else if (id === "licencia") licencias++;
-      else if (id === "ausente") ausencias++;
-    }
-  });
-  box.innerHTML = `<article><strong>${empleados.length}</strong><span>Empleados</span></article><article><strong>${Math.round(horas)}</strong><span>Horas</span></article><article><strong>${francos}</strong><span>Francos</span></article><article><strong>${vacaciones}</strong><span>Vacaciones</span></article><article><strong>${licencias}</strong><span>Licencias</span></article><article><strong>${ausencias}</strong><span>Ausencias</span></article>`;
-}
-function abrirEditor(e, d) {
-  if (!puedeEditar() || !modoEdicion) return;
-  edicionActual = { empleado: e, dia: d, turno: obtenerTurno(e, d) };
-  $("horariosEditorEmpleado").textContent =
-    seleccion.size > 1 ? `${seleccion.size} turnos` : e;
-  $("horariosEditorFecha").textContent =
-    seleccion.size > 1
-      ? "Aplicar a la selección"
-      : new Date(
-          fechaVista.getFullYear(),
-          fechaVista.getMonth(),
-          d,
-        ).toLocaleDateString("es-AR", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        });
-  const o = $("horariosTurnosOpciones");
-  o.innerHTML = TURNOS.map(
-    (t) =>
-      `<button type="button" class="horarios-turno-option ${t.clase} ${t.id === edicionActual.turno ? "seleccionado" : ""}" style="${t.estilo || ""}" data-turno="${t.id}"><span></span><strong>${t.label}</strong></button>`,
-  ).join("");
-  o.querySelectorAll("[data-turno]").forEach(
-    (btn) =>
-      (btn.onclick = () => {
-        edicionActual.turno = btn.dataset.turno;
-        o.querySelectorAll("[data-turno]").forEach((b) =>
-          b.classList.toggle("seleccionado", b === btn),
-        );
-        $("horariosCustomWrap").classList.toggle(
-          "oculto",
-          btn.dataset.turno !== "personalizado",
-        );
-        $("horariosLicenciaWrap").classList.toggle(
-          "oculto",
-          btn.dataset.turno !== "licencia",
-        );
-      }),
-  );
-  $("horariosCustomWrap").classList.toggle(
-    "oculto",
-    edicionActual.turno !== "personalizado" &&
-      TURNOS.some((t) => t.id === edicionActual.turno),
-  );
-  $("horariosTurnoPersonalizado").value = TURNOS.some(
-    (t) => t.id === edicionActual.turno,
-  )
-    ? ""
-    : edicionActual.turno;
-  const det = detalles.get(keyCelda(e, d)) || {};
-  $("horariosLicenciaMotivo").value = det.motivo || "";
-  $("horariosObservacion").value = det.observacion || "";
-  $("horariosLicenciaWrap").classList.toggle(
-    "oculto",
-    edicionActual.turno !== "licencia",
-  );
-  $("horariosEditor").classList.remove("oculto");
-  $("horariosEditor").setAttribute("aria-hidden", "false");
-}
-function cerrarEditor() {
-  $("horariosEditor")?.classList.add("oculto");
-  $("horariosEditor")?.setAttribute("aria-hidden", "true");
-  edicionActual = null;
-}
-function guardarEdicion() {
-  if (!edicionActual || !puedeEditar() || !modoEdicion) return;
-  let turno = edicionActual.turno;
-  if (turno === "personalizado") {
-    turno = $("horariosTurnoPersonalizado").value.trim();
-    if (!parsearTurno(turno)) return $("horariosTurnoPersonalizado").focus();
-  }
-  const detalleNuevo = {
-    tipo: turno,
-    motivo: turno === "licencia" ? $("horariosLicenciaMotivo").value : "",
-    observacion: $("horariosObservacion").value.trim(),
-  };
-  if (seleccion.size > 1) {
-    aplicarTurnoASeleccion(turno);
-    seleccion.forEach((k) => detalles.set(k, { ...detalleNuevo }));
-    metadatosModificados = true;
-  } else {
-    iniciarMovimiento();
-    datos.set(clave(edicionActual.empleado, edicionActual.dia), turno);
-    if (
-      detalleNuevo.motivo ||
-      detalleNuevo.observacion ||
-      ["licencia", "ausente", "vacaciones"].includes(turno)
-    )
-      detalles.set(
-        keyCelda(edicionActual.empleado, edicionActual.dia),
-        detalleNuevo,
-      );
-    else detalles.delete(keyCelda(edicionActual.empleado, edicionActual.dia));
-    metadatosModificados = true;
-    descartarMovimientoSiNoCambio();
-    renderTodo();
-  }
-  cerrarEditor();
-}
 
-function encontrarProximoTurno(empleado) {
-  const ahora = new Date();
-  for (let offset = 0; offset < 370; offset++) {
-    const fecha = new Date(
-      ahora.getFullYear(),
-      ahora.getMonth(),
-      ahora.getDate() + offset,
-    );
-    const mes = new Date(fecha.getFullYear(), fecha.getMonth(), 1),
-      dia = fecha.getDate();
-    const id = obtenerTurnoEn(mes, empleado, dia);
+  const manana = [];
+  const tarde = [];
+  empleados.forEach((empleado) => {
+    const id = turnoDeHoyParaResumen(empleado, hoy);
     const segmentos = segmentosDeTurno(id);
-    if (!segmentos.length) continue;
-    for (const tramo of segmentos) {
-      const [inicioH, inicioM] = tramo.inicio.split(":").map(Number);
-      const inicio = new Date(
-        fecha.getFullYear(),
-        fecha.getMonth(),
-        fecha.getDate(),
-        inicioH,
-        inicioM || 0,
+    if (!segmentos.length) return;
+
+    const segmentosManana = segmentos.filter(
+      (segmento) => Number(segmento.inicio.slice(0, 2)) < 14,
+    );
+    const segmentosTarde = segmentos.filter(
+      (segmento) => Number(segmento.inicio.slice(0, 2)) >= 14,
+    );
+    const etiquetaSegmentos = (lista) =>
+      lista
+        .map((segmento) => `${segmento.inicio} - ${segmento.fin}`)
+        .join(" / ");
+
+    if (segmentosManana.length) {
+      manana.push(
+        tarjetaTrabajadorHoy(empleado, etiquetaSegmentos(segmentosManana)),
       );
-      if (inicio > ahora) return { fecha, id, tramo };
     }
-  }
-  return null;
+    if (segmentosTarde.length) {
+      tarde.push(
+        tarjetaTrabajadorHoy(empleado, etiquetaSegmentos(segmentosTarde)),
+      );
+    }
+  });
+
+  const vacio = '<div class="horarios-turno-vacio">No hay personal asignado en este turno.</div>';
+  c.innerHTML = `
+    <section class="horarios-turno-hoy horarios-turno-manana">
+      <header><span class="horarios-turno-icon" aria-hidden="true">☀</span><div><strong>Turno mañana</strong><small>${manana.length} ${manana.length === 1 ? "persona" : "personas"}</small></div></header>
+      <div class="horarios-trabajadores-grid">${manana.length ? manana.join("") : vacio}</div>
+    </section>
+    <section class="horarios-turno-hoy horarios-turno-tarde">
+      <header><span class="horarios-turno-icon" aria-hidden="true">☾</span><div><strong>Turno tarde</strong><small>${tarde.length} ${tarde.length === 1 ? "persona" : "personas"}</small></div></header>
+      <div class="horarios-trabajadores-grid">${tarde.length ? tarde.join("") : vacio}</div>
+    </section>`;
+  renderTarjetaMiHorario();
 }
 function normalizarIdentidadHorario(valor) {
   return String(valor || "")
@@ -1349,7 +1331,7 @@ function resolverEmpleadoSesion(usuario) {
   const nombre = normalizarIdentidadHorario(usuario?.nombre);
   const usuarioId = normalizarIdentidadHorario(usuario?.usuario);
   return (
-    empleados.find((empleado) => {
+    [...new Set([...empleados, ...empleadosConfiguracion])].find((empleado) => {
       const info = empleadosInfo.get(empleado) || {};
       return (
         normalizarIdentidadHorario(empleado) === nombre ||
@@ -1359,136 +1341,346 @@ function resolverEmpleadoSesion(usuario) {
     }) || ""
   );
 }
-function renderMiHorario() {
+function datosHorarioPersonalHoy() {
   const usuario = window.AutoservicioAuth?.getUsuario?.() || {};
-  const e = resolverEmpleadoSesion(usuario);
-  const lista = $("miHorarioLista");
-  if (!lista) return;
-  $("miHorarioStats")?.remove();
-  const saludo = document.querySelector(".mi-horario-saludo");
-  if (saludo)
-    saludo.textContent = `Hola, ${usuario?.nombre || usuario?.usuario || "Usuario"}`;
-
+  const empleado = resolverEmpleadoSesion(usuario);
   const hoy = new Date();
-  const fechaHoyTexto = hoy.toLocaleDateString("es-AR", {
+  const fechaTexto = hoy.toLocaleDateString("es-AR", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
+  const mesHoy = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const turnoHoy = empleado
+    ? resumenHoyDatos.get(claveResumenHoy(empleado)) ||
+      obtenerTurnoEn(mesHoy, empleado, hoy.getDate()) ||
+      ""
+    : "";
+  return {
+    usuario,
+    empleado,
+    turnoHoy,
+    horarioTexto: turnoHoy ? formatoHorario24(turnoHoy) : "Sin asignar",
+    fechaTexto,
+  };
+}
+function renderTarjetaMiHorario() {
+  const card = $("horariosMiHorarioCard");
+  if (!card) return;
+  const { usuario, empleado, horarioTexto, fechaTexto } = datosHorarioPersonalHoy();
+  const nombreCompleto = String(usuario?.nombre || usuario?.usuario || "Usuario").trim();
+  const primerNombre = nombreCompleto.split(/\s+/)[0] || "Usuario";
+  if ($("horariosMiHorarioSaludo"))
+    $("horariosMiHorarioSaludo").textContent = `Hola, ${primerNombre}`;
+  if ($("horariosMiHorarioHoy"))
+    $("horariosMiHorarioHoy").textContent = empleado ? horarioTexto : "Sin horario asignado";
+  if ($("horariosMiHorarioFecha"))
+    $("horariosMiHorarioFecha").textContent = fechaTexto;
+}
+function capitalizarPrimeraHorario(texto) {
+  const s = String(texto || "");
+  return s ? s.charAt(0).toLocaleUpperCase("es-AR") + s.slice(1) : s;
+}
+function minutosHoraHorarioPersonal(valor) {
+  const [h, m] = String(valor || "00:00").split(":").map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+}
+function duracionTurnoHoras(id) {
+  return segmentosDeTurno(id).reduce((total, segmento) => {
+    const inicio = minutosHoraHorarioPersonal(segmento.inicio);
+    let fin = minutosHoraHorarioPersonal(segmento.fin);
+    if (fin <= inicio) fin += 24 * 60;
+    return total + Math.max(0, fin - inicio) / 60;
+  }, 0);
+}
+function resumenMesHorarioPersonal(empleado) {
+  const resumen = {
+    trabajados: 0,
+    franco: 0,
+    licencia: 0,
+    vacaciones: 0,
+    ausente: 0,
+    horas: 0,
+  };
+  if (!empleado) return resumen;
+  for (let dia = 1; dia <= diasDelMes(); dia++) {
+    const id = obtenerTurno(empleado, dia);
+    if (!id) continue;
+    if (id === "franco") resumen.franco++;
+    else if (id === "licencia") resumen.licencia++;
+    else if (id === "vacaciones") resumen.vacaciones++;
+    else if (id === "ausente") resumen.ausente++;
+    else {
+      resumen.trabajados++;
+      resumen.horas += duracionTurnoHoras(id);
+    }
+  }
+  return resumen;
+}
+function etiquetaTurnoHorarioPersonal(id) {
+  if (!id) return "Sin asignar";
+  const definicion = obtenerDefinicion(id);
+  if (["franco", "licencia", "vacaciones", "ausente"].includes(id))
+    return definicion.label;
+  return formatoHorario24(id);
+}
+function claseEstadoHorarioPersonal(id) {
+  if (!id) return "mio-turno-empty";
+  if (["franco", "licencia", "vacaciones", "ausente"].includes(id))
+    return `mio-turno-${id}`;
+  return "mio-turno-work";
+}
+function renderMiniCalendarioHorarioPersonal(empleado) {
+  const contenedor = $("miHorarioMiniCalendario");
+  if (!contenedor) return;
+  const anio = fechaVista.getFullYear();
+  const mes = fechaVista.getMonth();
+  const primerDia = new Date(anio, mes, 1);
+  const inicio = new Date(anio, mes, 1 - ((primerDia.getDay() + 6) % 7));
+  const hoy = new Date();
+  const celdas = [];
+  for (let i = 0; i < 42; i++) {
+    const fecha = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+    const esMes = fecha.getMonth() === mes && fecha.getFullYear() === anio;
+    const esHoyReal =
+      fecha.getFullYear() === hoy.getFullYear() &&
+      fecha.getMonth() === hoy.getMonth() &&
+      fecha.getDate() === hoy.getDate();
+    let id = "";
+    if (esMes && empleado) id = obtenerTurno(empleado, fecha.getDate());
+    const definicion = obtenerDefinicion(id);
+    const color = definicion?.color || "#d0d5dd";
+    celdas.push(
+      `<span class="mio-mini-day${esMes ? "" : " is-outside"}${esHoyReal ? " is-today" : ""}${id ? " has-shift" : ""}"${id ? ` style="--mio-day-color:${escAttr(color)}" title="${escAttr(etiquetaTurnoHorarioPersonal(id))}"` : ""}>${fecha.getDate()}${id ? '<i aria-hidden="true"></i>' : ""}</span>`,
+    );
+  }
+  contenedor.innerHTML = celdas.join("");
+}
+function renderMiHorario() {
+  const { usuario, empleado: e, horarioTexto, fechaTexto: fechaHoyTexto } =
+    datosHorarioPersonalHoy();
+  const lista = $("miHorarioLista");
+  if (!lista) return;
+
+  const nombreCompleto = String(usuario?.nombre || usuario?.usuario || "Usuario").trim();
+  const primerNombre = nombreCompleto.split(/\s+/)[0] || "Usuario";
+  const saludo = document.querySelector("#horariosMioView .horarios-hoy-card-saludo");
+  if (saludo) saludo.textContent = `Hola, ${primerNombre}`;
+  if ($("miHorarioProximo"))
+    $("miHorarioProximo").textContent = e ? horarioTexto : "Sin horario asignado";
+  if ($("miHorarioProximoFecha"))
+    $("miHorarioProximoFecha").textContent = fechaHoyTexto;
+  if ($("miHorarioMesTexto"))
+    $("miHorarioMesTexto").textContent = capitalizarPrimeraHorario(nombreMes());
+  if ($("miHorarioResumenMes"))
+    $("miHorarioResumenMes").textContent = capitalizarPrimeraHorario(nombreMes());
+
+  const resumen = resumenMesHorarioPersonal(e);
+  if ($("miHorarioDiasTrabajados")) $("miHorarioDiasTrabajados").textContent = resumen.trabajados;
+  if ($("miHorarioFrancos")) $("miHorarioFrancos").textContent = resumen.franco;
+  if ($("miHorarioLicencias")) $("miHorarioLicencias").textContent = resumen.licencia;
+  if ($("miHorarioVacaciones")) $("miHorarioVacaciones").textContent = resumen.vacaciones;
+  if ($("miHorarioAusencias")) $("miHorarioAusencias").textContent = resumen.ausente;
+  if ($("miHorarioHorasEstimadas")) {
+    const horas = Number.isInteger(resumen.horas)
+      ? String(resumen.horas)
+      : resumen.horas.toFixed(1).replace(".", ",");
+    $("miHorarioHorasEstimadas").textContent = `${horas} h`;
+  }
+  renderMiniCalendarioHorarioPersonal(e);
 
   if (!e) {
     lista.innerHTML =
-      '<div class="mi-horario-vacio"><strong>Sin horarios asignados</strong><span>Tu usuario no tiene turnos cargados en este sector.</span></div>';
-    $("miHorarioProximo").textContent = "Sin asignar";
-    $("miHorarioProximoFecha").textContent = fechaHoyTexto;
+      '<div class="mio-empty-state"><span class="mio-empty-icon"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span><div><strong>Sin horarios asignados</strong><span>Tu usuario no tiene turnos cargados para el mes seleccionado.</span></div></div>';
     return;
   }
 
-  const mesHoy = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const turnoHoy =
-    resumenHoyDatos.get(claveResumenHoy(e)) ||
-    obtenerTurnoEn(mesHoy, e, hoy.getDate()) ||
-    "";
-  $("miHorarioProximo").textContent = turnoHoy
-    ? formatoHorario24(turnoHoy)
-    : "Sin asignar";
-  $("miHorarioProximoFecha").textContent = fechaHoyTexto;
-
+  const hoy = new Date();
+  const esMesDeHoy =
+    fechaVista.getFullYear() === hoy.getFullYear() &&
+    fechaVista.getMonth() === hoy.getMonth();
+  const desde = esMesDeHoy ? hoy.getDate() + 1 : 1;
   const fechas = [];
-  for (let offset = 1; offset <= 14 && fechas.length < 10; offset++) {
-    const f = new Date(
-      hoy.getFullYear(),
-      hoy.getMonth(),
-      hoy.getDate() + offset,
-    );
-    // Los datos disponibles en pantalla corresponden al mes actualmente cargado.
-    if (
-      f.getFullYear() !== fechaVista.getFullYear() ||
-      f.getMonth() !== fechaVista.getMonth()
-    )
-      continue;
-    fechas.push(f);
+  for (let dia = desde; dia <= diasDelMes() && fechas.length < 7; dia++) {
+    fechas.push(new Date(fechaVista.getFullYear(), fechaVista.getMonth(), dia));
   }
 
   lista.innerHTML = fechas.length
     ? fechas
         .map((f) => {
-          const id = obtenerTurnoEn(
-            new Date(f.getFullYear(), f.getMonth(), 1),
-            e,
-            f.getDate(),
-          );
+          const id = obtenerTurno(e, f.getDate());
           const tr = obtenerDefinicion(id);
-          return `<article><div><span>${f.toLocaleDateString("es-AR", { weekday: "long" })}</span><strong>${f.getDate()} de ${f.toLocaleDateString("es-AR", { month: "long" })}</strong></div><span class="mi-turno-pill ${tr.clase}" style="${tr.estilo || ""}">${id ? formatoHorario24(id) : "Sin asignar"}</span></article>`;
+          const diaCorto = f
+            .toLocaleDateString("es-AR", { weekday: "short" })
+            .replace(".", "")
+            .slice(0, 3)
+            .toUpperCase();
+          const diaLargo = capitalizarPrimeraHorario(
+            f.toLocaleDateString("es-AR", { weekday: "long" }),
+          );
+          const mesLargo = f.toLocaleDateString("es-AR", { month: "long" });
+          const clase = claseEstadoHorarioPersonal(id);
+          return `<article class="mio-upcoming-item">
+            <span class="mio-date-badge"><strong>${f.getDate()}</strong><small>${esc(diaCorto)}</small></span>
+            <div class="mio-date-copy"><span>${esc(diaLargo)}</span><strong>${f.getDate()} de ${esc(mesLargo)}</strong></div>
+            <span class="mio-turno-pill ${escAttr(clase)} ${escAttr(tr.clase || "")}" style="${escAttr(tr.estilo || "")}">${esc(etiquetaTurnoHorarioPersonal(id))}</span>
+          </article>`;
         })
         .join("")
-    : '<div class="mi-horario-vacio"><strong>Sin próximos horarios</strong><span>No hay más días disponibles en el mes cargado.</span></div>';
+    : '<div class="mio-empty-state"><span class="mio-empty-icon"><svg class="app-icon"><use href="#icon-check"></use></svg></span><div><strong>Sin más horarios este mes</strong><span>No hay próximos días disponibles en el mes seleccionado.</span></div></div>';
 }
 
-function puedeVerConfiguracion() {
+function puedeAdministrarConfiguracion() {
   return puedeGestionarHorarios() && sectorSeleccionado()?.puedeEditar === true;
 }
-function cambiarVista(v) {
-  vistaActual = v;
+async function mostrarAvisoSinPermisoConfiguracion() {
+  await dialogoHorarios({
+    titulo: "Acceso a configuración no disponible",
+    mensaje:
+      "Tu usuario no tiene permisos para administrar la configuración de horarios. Podés consultar el calendario y tus turnos normalmente.",
+    confirmar: "Volver al calendario",
+    soloAceptar: true,
+    variante: "permiso",
+    kicker: "Horarios & Turnos",
+  });
+}
+function crearBotonVolverHorarios() {
+  const topbar = document.querySelector(".pro-topbar");
+  if (!topbar) return null;
+
+  let boton = $("btnHorariosVolver");
+  if (boton) return boton;
+
+  boton = document.createElement("button");
+  boton.id = "btnHorariosVolver";
+  boton.type = "button";
+  boton.className = "horarios-back-topbar admin-header-back-btn oculto";
+  boton.setAttribute("aria-label", "Volver Atrás al calendario de horarios");
+  boton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+  boton.addEventListener("click", async () => {
+    const cambio = await cambiarVista("equipo");
+    if (cambio !== false) window.scrollTo({ top: 0, behavior: "auto" });
+  });
+  topbar.appendChild(boton);
+  return boton;
+}
+
+function aplicarVistaHorarios(v) {
   const eq = v === "equipo",
     mio = v === "mio",
     cfg = v === "config";
   document.body.classList.toggle("horarios-vista-calendario", eq);
   document.body.classList.toggle("horarios-vista-mio", mio);
   document.body.classList.toggle("horarios-vista-config", cfg);
+  crearBotonVolverHorarios()?.classList.toggle("oculto", !(mio || cfg));
   $("horariosEquipoView")?.classList.toggle("oculto", !eq);
+  $("horariosMiHorarioCard")?.classList.toggle("oculto", !eq);
   $("horariosMioView")?.classList.toggle("oculto", !mio);
   $("horariosConfigView")?.classList.toggle("oculto", !cfg);
   const titulosVista = eq
     ? ["Calendario", "Turnos del equipo"]
     : mio
-      ? ["Mi horario", "Horario personal"]
+      ? ["Mis horarios", "Consultá tu agenda laboral y próximos turnos."]
       : ["Configuración", "Administrar horarios"];
-  if ($("modulePageTitle")) $("modulePageTitle").textContent = titulosVista[0];
-  if ($("modulePageSubtitle"))
-    $("modulePageSubtitle").textContent = titulosVista[1];
   if ($("horariosTituloVista"))
     $("horariosTituloVista").textContent = titulosVista[0];
   if ($("horariosSubtituloVista"))
     $("horariosSubtituloVista").textContent = titulosVista[1];
-  document
-    .querySelectorAll("[data-horarios-vista]")
-    .forEach((b) =>
-      b.classList.toggle("activo", b.dataset.horariosVista === v),
-    );
+  const pageTitle = document.querySelector("#pantallaHorarios .horarios-page-header h1");
+  const pageSubtitle = document.querySelector("#pantallaHorarios .horarios-page-header p");
+  if (pageTitle)
+    pageTitle.textContent = mio
+      ? "Mis horarios"
+      : cfg
+        ? "Configuración de horarios"
+        : "Horarios & Turnos";
+  if (pageSubtitle)
+    pageSubtitle.textContent = mio
+      ? "Consultá tu agenda laboral y próximos turnos."
+      : cfg
+        ? "Administrá los horarios y el orden del equipo."
+        : "Organizá los turnos del equipo y consultá el calendario mensual.";
+  ubicarSelectorSectorSegunVista(v);
   renderSelectorSector();
-  $("horariosEdicionMarco")?.classList.toggle("oculto", !eq || !puedeEditar());
-  $("horariosEditor")?.classList.toggle("oculto", !eq || !edicionActual);
-  if (!eq) cerrarEditor();
-  if (mio) renderMiHorario();
-  if (cfg) renderConfiguracionHorarios();
+  // El cuarto módulo (Modo lectura / Modo edición) forma parte de la estructura
+  // del calendario. Los permisos solo ocultan el botón Editar.
+  $("horariosEdicionMarco")?.classList.toggle("oculto", !eq);
+  // Mis horarios y Configuración tienen composiciones propias. El deck general
+  // del calendario no se reutiliza en esas vistas.
+  $("horariosControlDeck")?.classList.toggle("oculto", mio || cfg);
+}
+
+async function cambiarVista(v) {
+  if (v === "config" && !puedeAdministrarConfiguracion()) {
+    await mostrarAvisoSinPermisoConfiguracion();
+    return false;
+  }
+  if (vistaActual === "config" && v !== "config") {
+    const puedeSalir = await confirmarDescartarOrdenConfig();
+    if (!puedeSalir) return false;
+  }
+  if (v !== "equipo" && modoEdicion) {
+    const salio = await salirModoEdicion();
+    if (!salio) return false;
+  }
+  vistaActual = v;
+  aplicarVistaHorarios(v);
+  if (v === "mio") renderMiHorario();
+  if (v === "config") renderConfiguracionHorarios();
+  return true;
 }
 async function cambiarMes(n) {
+  if (modoEdicion) {
+    const salio = await salirModoEdicion();
+    if (!salio) return false;
+  }
   fechaVista = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + n, 1);
   diaSeleccionado = esMesActual() ? new Date().getDate() : 1;
   seleccion.clear();
   await cargarCalendarioActual();
   await cargarResumenHoy();
   renderTodo();
+  return true;
 }
 async function irAHoy() {
+  if (modoEdicion) {
+    const salio = await salirModoEdicion();
+    if (!salio) return false;
+  }
   const h = new Date();
   fechaVista = new Date(h.getFullYear(), h.getMonth(), 1);
   diaSeleccionado = h.getDate();
-  cambiarVista("equipo");
+  await cambiarVista("equipo");
   await cargarCalendarioActual();
   await cargarResumenHoy(true);
   renderTodo();
   desplazarAlDia(diaSeleccionado);
+  return true;
+}
+async function irAHoyMiHorario() {
+  if (modoEdicion) {
+    const salio = await salirModoEdicion();
+    if (!salio) return false;
+  }
+  const h = new Date();
+  fechaVista = new Date(h.getFullYear(), h.getMonth(), 1);
+  diaSeleccionado = h.getDate();
+  await cargarCalendarioActual();
+  await cargarResumenHoy(true);
+  renderTodo();
+  return true;
 }
 function renderTodo() {
-  if ($("horariosMesTexto")) $("horariosMesTexto").textContent = nombreMes();
+  if ($("horariosMesTexto"))
+    $("horariosMesTexto").textContent = nombreMesControlCalendario();
   renderSelectorSector();
-  actualizarPanelMes();
   actualizarSelectorTurnos();
+  renderEtiquetaCalendario();
   renderTabla();
   renderResumen();
+  renderTarjetaMiHorario();
   renderMiHorario();
+  if (vistaActual === "config") renderConfiguracionHorarios();
   actualizarPermisos();
   actualizarAcciones();
 }
@@ -1607,12 +1799,12 @@ function renderListaTurnosConfig() {
     ? items
         .map(
           (t) =>
-            `<article class="admin-shift-card" data-id="${t.id}"><span class="admin-shift-swatch" style="background:${t.color};color:${contrasteTurno(t.color)}">${t.tipo === "cortado" ? "C" : t.inicio.slice(0, 2)}</span><div class="admin-shift-info"><strong>${detalleTurnoConfig(t)}</strong><span>${t.tipo === "cortado" ? "Horario cortado · " : ""}${nombreColorTurno(t.color)}</span></div><button type="button">Editar</button></article>`,
+            `<article class="horarios-config-shift-row" data-id="${escAttr(t.id)}"><span class="horarios-config-shift-swatch" style="background:${escAttr(t.color)};color:${escAttr(contrasteTurno(t.color))}">${esc(t.tipo === "cortado" ? "C" : t.inicio.slice(0, 2))}</span><div class="horarios-config-shift-info"><strong>${esc(detalleTurnoConfig(t))}</strong><span>${esc(t.tipo === "cortado" ? "Horario cortado · " : "Turno continuo · ")}${esc(nombreColorTurno(t.color))}</span></div><button class="horarios-config-edit-shift" type="button"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button></article>`,
         )
         .join("")
     : '<div class="empty-state">Todavía no hay horarios configurados.</div>';
   cont
-    .querySelectorAll("[data-id] button")
+    .querySelectorAll("[data-id] .horarios-config-edit-shift")
     .forEach((b) =>
       b.addEventListener("click", () =>
         abrirTurnoConfig(
@@ -1743,43 +1935,239 @@ async function eliminarTurnoConfig() {
 function ordenPersonalModificado() {
   return (
     ordenSectorInicial === sectorActual &&
-    JSON.stringify(empleados) !== JSON.stringify(ordenPersonalInicial)
+    JSON.stringify(empleadosConfiguracion) !== JSON.stringify(ordenPersonalInicial)
   );
 }
 function actualizarBotonGuardarOrden() {
-  const b = $("btnHorariosGuardarOrden");
-  if (b) b.disabled = !ordenPersonalModificado();
+  const modificado = ordenPersonalModificado();
+  const boton = $("btnHorariosGuardarOrden");
+  const estado = $("horariosOrdenEstado");
+  if (boton) boton.disabled = !modificado;
+  if (estado) {
+    estado.textContent = modificado
+      ? "Hay cambios de orden sin guardar."
+      : "El orden está guardado.";
+    estado.classList.toggle("is-pending", modificado);
+  }
 }
 function prepararOrdenConfig() {
   if (ordenSectorInicial !== sectorActual) {
     ordenSectorInicial = sectorActual;
-    ordenPersonalInicial = [...empleados];
+    ordenPersonalInicial = [...empleadosConfiguracion];
   }
   actualizarBotonGuardarOrden();
 }
+function restaurarOrdenConfigInicial() {
+  if (ordenSectorInicial !== sectorActual) return;
+  empleadosConfiguracion = [...ordenPersonalInicial];
+  sincronizarPersonalVisible();
+  actualizarBotonGuardarOrden();
+}
+async function confirmarDescartarOrdenConfig() {
+  if (!ordenPersonalModificado()) return true;
+  const descartar = await dialogoHorarios({
+    titulo: "Orden sin guardar",
+    mensaje:
+      "Cambiaste el orden del personal. Si continuás, esos cambios se descartarán.",
+    confirmar: "Descartar cambios",
+    peligro: true,
+    kicker: "Configuración de horarios",
+  });
+  if (!descartar) return false;
+  restaurarOrdenConfigInicial();
+  return true;
+}
+function actualizarIndicesOrdenConfig(cont = $("horariosOrdenLista")) {
+  if (!cont) return;
+  cont.querySelectorAll(".horarios-order-item").forEach((item, i) => {
+    const indice = item.querySelector(".horarios-order-index");
+    if (indice) indice.textContent = String(i + 1);
+  });
+}
+
+function sincronizarOrdenPersonalDesdeDOM(cont = $("horariosOrdenLista")) {
+  if (!cont) return;
+  const nuevoOrden = [...cont.querySelectorAll(".horarios-order-item")]
+    .map((item) => item.dataset.empleado)
+    .filter(Boolean);
+  if (nuevoOrden.length !== empleadosConfiguracion.length) return;
+  empleadosConfiguracion = nuevoOrden;
+  actualizarIndicesOrdenConfig(cont);
+  actualizarBotonGuardarOrden();
+}
+
+function prepararArrastreOrdenConfig(cont) {
+  if (!cont || cont.dataset.arrastreOrdenListo === "true") return;
+  cont.dataset.arrastreOrdenListo = "true";
+  let activo = null;
+
+  const limpiarArrastre = (event = null) => {
+    if (!activo || (event && event.pointerId !== activo.pointerId)) return;
+    const { item, handle, pointerId } = activo;
+    try {
+      if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
+    } catch {}
+    item.classList.remove("is-dragging");
+    item.removeAttribute("aria-grabbed");
+    cont.classList.remove("is-reordering");
+    activo = null;
+    sincronizarOrdenPersonalDesdeDOM(cont);
+  };
+
+  cont.addEventListener("click", async (event) => {
+    const boton = event.target.closest?.(".horarios-order-visibility");
+    if (!boton || !cont.contains(boton) || boton.disabled) return;
+    const nombre = boton.dataset.empleado || "";
+    const info = empleadosInfo.get(nombre) || {};
+    await actualizarVisibilidadEmpleadoConfig(
+      nombre,
+      info.visibleCalendario === false,
+      boton,
+    );
+  });
+
+  cont.addEventListener("pointerdown", (event) => {
+    const handle = event.target.closest?.(".horarios-order-drag-handle");
+    if (!handle || !cont.contains(handle)) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const item = handle.closest(".horarios-order-item");
+    if (!item) return;
+    activo = {
+      item,
+      handle,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      movio: false,
+    };
+    try {
+      handle.setPointerCapture(event.pointerId);
+    } catch {}
+    event.preventDefault();
+  });
+
+  cont.addEventListener(
+    "pointermove",
+    (event) => {
+      if (!activo || event.pointerId !== activo.pointerId) return;
+      if (!activo.movio && Math.abs(event.clientY - activo.startY) < 5) return;
+      activo.movio = true;
+      const { item } = activo;
+      item.classList.add("is-dragging");
+      item.setAttribute("aria-grabbed", "true");
+      cont.classList.add("is-reordering");
+      const objetivo = document
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.closest?.(".horarios-order-item");
+      if (objetivo && objetivo !== item && cont.contains(objetivo)) {
+        const rect = objetivo.getBoundingClientRect();
+        const antes = event.clientY < rect.top + rect.height / 2;
+        cont.insertBefore(item, antes ? objetivo : objetivo.nextSibling);
+        actualizarIndicesOrdenConfig(cont);
+      }
+      const borde = 84;
+      if (event.clientY < borde) window.scrollBy(0, -12);
+      else if (event.clientY > window.innerHeight - borde) window.scrollBy(0, 12);
+      event.preventDefault();
+    },
+    { passive: false },
+  );
+
+  cont.addEventListener("pointerup", limpiarArrastre);
+  cont.addEventListener("pointercancel", limpiarArrastre);
+
+  // Teclado sin flechas visuales: el mismo handle permite reordenar con ↑/↓.
+  cont.addEventListener("keydown", (event) => {
+    const handle = event.target.closest?.(".horarios-order-drag-handle");
+    if (!handle || !cont.contains(handle)) return;
+    if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    const item = handle.closest(".horarios-order-item");
+    if (!item) return;
+    const vecino =
+      event.key === 'ArrowUp'
+        ? item.previousElementSibling
+        : item.nextElementSibling;
+    if (!vecino?.classList.contains("horarios-order-item")) return;
+    if (event.key === 'ArrowUp') cont.insertBefore(item, vecino);
+    else cont.insertBefore(vecino, item);
+    actualizarIndicesOrdenConfig(cont);
+    sincronizarOrdenPersonalDesdeDOM(cont);
+    handle.focus();
+    event.preventDefault();
+  });
+}
+
 function renderOrdenConfig() {
   const cont = $("horariosOrdenLista");
   if (!cont) return;
   prepararOrdenConfig();
-  cont.innerHTML = empleados
-    .map(
-      (e, i) =>
-        `<article class="horarios-order-item" data-empleado="${e.replace(/"/g, "&quot;")}"><span class="horarios-order-index">${i + 1}</span><div class="horarios-order-info"><strong>${e}</strong><span>${empleadosInfo.get(e)?.rol === "supervisor" ? "Supervisor" : "Empleado"}</span></div><div class="horarios-order-actions"><button type="button" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Subir">↑</button><button type="button" data-dir="1" ${i === empleados.length - 1 ? "disabled" : ""} aria-label="Bajar">↓</button></div></article>`,
-    )
+  cont.innerHTML = empleadosConfiguracion
+    .map((e, i) => {
+      const info = empleadosInfo.get(e) || {};
+      const visibleCalendario = usuarioVisibleEnCalendario(e);
+      return `<article class="horarios-order-item ${visibleCalendario ? "" : "is-disabled"}" data-empleado="${escAttr(e)}">
+        <span class="horarios-order-index">${i + 1}</span>
+        <div class="horarios-order-info"><strong>${esc(e)}</strong><span>${info.rol === "supervisor" ? "Supervisor" : "Empleado"}</span></div>
+        <button class="horarios-order-visibility ${visibleCalendario ? "is-enabled" : "is-disabled"}" type="button" data-empleado="${escAttr(e)}" aria-pressed="${visibleCalendario ? "true" : "false"}" aria-label="${visibleCalendario ? `Ocultar a ${escAttr(e)} del calendario` : `Mostrar a ${escAttr(e)} en el calendario`}" title="${visibleCalendario ? "Ocultar del calendario" : "Volver a mostrar en el calendario"}">
+          <span class="horarios-order-visibility-copy">
+            <span class="horarios-order-visibility-label">Estado</span>
+            <span class="horarios-order-visibility-value"><span class="horarios-order-visibility-long">${visibleCalendario ? "Visible en calendario" : "Oculto del calendario"}</span><span class="horarios-order-visibility-short">${visibleCalendario ? "Visible" : "Oculto"}</span></span>
+          </span>
+          <span class="horarios-order-visibility-switch" aria-hidden="true"><i></i></span>
+        </button>
+        <button class="horarios-order-drag-handle" type="button" aria-label="Arrastrar ${escAttr(e)} para cambiar su posición" title="Arrastrar para reordenar"><span aria-hidden="true"></span></button>
+      </article>`;
+    })
     .join("");
-  cont.querySelectorAll("[data-dir]").forEach((b) =>
-    b.addEventListener("click", () => {
-      const card = b.closest("[data-empleado]"),
-        i = empleados.indexOf(card.dataset.empleado),
-        j = i + Number(b.dataset.dir);
-      if (i < 0 || j < 0 || j >= empleados.length) return;
-      [empleados[i], empleados[j]] = [empleados[j], empleados[i]];
-      renderOrdenConfig();
-      actualizarBotonGuardarOrden();
-    }),
-  );
+  prepararArrastreOrdenConfig(cont);
   actualizarBotonGuardarOrden();
 }
+
+async function actualizarVisibilidadEmpleadoConfig(nombre, visibleCalendario, boton) {
+  if (!nombre || !puedeAdministrarConfiguracion()) return;
+  if (boton) boton.disabled = true;
+  try {
+    const r = await fetch(`${API_BASE_URL}/horarios/personal-visibilidad`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      // visibleCalendario es el único estado interno. `habilitado` se envía
+      // únicamente como alias del contrato API vigente.
+      body: JSON.stringify({
+        sector: sectorActual,
+        empleado: nombre,
+        visibleCalendario,
+        habilitado: visibleCalendario,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok)
+      throw new Error(d.mensaje || "No se pudo actualizar el usuario");
+
+    const info = empleadosInfo.get(nombre);
+    if (info) info.visibleCalendario = visibleCalendario;
+    const sector = sectorSeleccionado();
+    const infoSector = sector?.empleadosInfo?.find((x) => x.nombre === nombre);
+    if (infoSector) {
+      infoSector.visibleCalendario = visibleCalendario;
+      delete infoSector.habilitadoCalendario;
+    }
+    sincronizarPersonalVisible();
+    seleccion.clear();
+    renderOrdenConfig();
+    renderTabla();
+    renderResumen();
+    renderTarjetaMiHorario();
+    mensajeConfig(
+      "horariosOrdenMensaje",
+      visibleCalendario
+        ? `${nombre} vuelve a mostrarse en el calendario.`
+        : `${nombre} quedó oculto y ya no aparece en el calendario.`,
+    );
+  } catch (e) {
+    if (boton) boton.disabled = false;
+    mensajeConfig("horariosOrdenMensaje", e.message, "error");
+  }
+}
+
 async function guardarOrdenConfig() {
   if (!ordenPersonalModificado()) return;
   const boton = $("btnHorariosGuardarOrden");
@@ -1788,13 +2176,14 @@ async function guardarOrdenConfig() {
     const r = await fetch(`${API_BASE_URL}/horarios/orden`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sector: sectorActual, orden: empleados }),
+      body: JSON.stringify({ sector: sectorActual, orden: empleadosConfiguracion }),
     });
     const d = await r.json();
     if (!r.ok || !d.ok)
       throw new Error(d.mensaje || "No se pudo guardar el orden");
-    ordenPersonalInicial = [...empleados];
+    ordenPersonalInicial = [...empleadosConfiguracion];
     ordenSectorInicial = sectorActual;
+    sincronizarPersonalVisible();
     renderTabla();
     actualizarBotonGuardarOrden();
     mensajeConfig("horariosOrdenMensaje", "Orden guardado correctamente.");
@@ -1804,41 +2193,26 @@ async function guardarOrdenConfig() {
   }
 }
 function renderConfiguracionHorarios() {
-  const vista = $("horariosConfigView");
-  if (!vista) return;
-  let bloqueo = $("horariosConfigSinPermiso");
-  if (!bloqueo) {
-    bloqueo = document.createElement("div");
-    bloqueo.id = "horariosConfigSinPermiso";
-    bloqueo.className = "tareas-empty horarios-config-sin-permiso";
-    bloqueo.innerHTML =
-      "<strong>Sin acceso a configuración</strong><span>Esta pantalla está disponible únicamente para supervisores, administración y administradores.</span>";
-    vista.prepend(bloqueo);
-  }
-  const permitido = puedeVerConfiguracion();
-  bloqueo.classList.toggle("oculto", permitido);
-  vista
-    .querySelectorAll(":scope > .settings-card")
-    .forEach((card) => card.classList.toggle("oculto", !permitido));
-  if (!permitido) return;
+  if (!puedeAdministrarConfiguracion()) return;
+  ubicarSelectorSectorSegunVista("config");
+  renderSelectorSector();
   renderListaTurnosConfig();
   renderOrdenConfig();
 }
 
 function configurarEventos() {
-  crearPanelEdicion();
+  crearBotonVolverHorarios();
+  crearControlConfiguracionCalendario();
+  crearControlesEdicionCalendario();
   crearSelectorSector();
+  organizarControlesCalendario();
   $("btnHorariosMesAnterior")?.addEventListener("click", () => cambiarMes(-1));
   $("btnHorariosMesSiguiente")?.addEventListener("click", () => cambiarMes(1));
   $("btnHorariosHoyToolbar")?.addEventListener("click", irAHoy);
-  $("btnCerrarHorariosEditor")?.addEventListener("click", cerrarEditor);
-  $("btnCancelarHorario")?.addEventListener("click", cerrarEditor);
-  $("btnGuardarHorario")?.addEventListener("click", guardarEdicion);
-  document
-    .querySelectorAll("[data-horarios-vista]")
-    .forEach((b) =>
-      b.addEventListener("click", () => cambiarVista(b.dataset.horariosVista)),
-    );
+  $("btnMiHorarioMesAnterior")?.addEventListener("click", () => cambiarMes(-1));
+  $("btnMiHorarioMesSiguiente")?.addEventListener("click", () => cambiarMes(1));
+  $("btnMiHorarioHoy")?.addEventListener("click", irAHoyMiHorario);
+  $("horariosMiHorarioCard")?.addEventListener("click", () => cambiarVista("mio"));
   $("btnHorariosNuevoTurno")?.addEventListener("click", () =>
     abrirTurnoConfig(),
   );
@@ -1854,30 +2228,43 @@ function configurarEventos() {
     if (e.target.id === "horariosTurnoModal") cerrarTurnoConfig();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      if (edicionActual) cerrarEditor();
-      else if (modoEdicion) salirModoEdicion();
-    }
+    if (e.key === "Escape" && modoEdicion) salirModoEdicion();
   });
-  window.addEventListener("autoservicio:sesion", () => {
+  window.addEventListener("autoservicio:sesion", async () => {
     actualizarPermisos();
+    if (vistaActual === "config" && !puedeAdministrarConfiguracion()) {
+      restaurarOrdenConfigInicial();
+      await cambiarVista("equipo");
+    }
+    renderTarjetaMiHorario();
     renderMiHorario();
   });
 }
+let moduloHorariosActivo = false;
+
 function activar() {
-  restaurarBottomNav = [];
-  document
-    .querySelectorAll(".app-bottom-nav:not(.horarios-bottom-nav)")
-    .forEach((n) => {
-      restaurarBottomNav.push([n, n.style.display]);
-      n.style.display = "none";
-    });
+  if (!moduloHorariosActivo) moduloHorariosActivo = true;
+
+  // La vista y sus clases deben existir antes del primer render. El diseño
+  // moderno del calendario depende de horarios-vista-calendario y no debe
+  // esperar a un segundo ingreso para quedar sincronizado.
+  vistaActual = "equipo";
+  organizarControlesCalendario();
+  aplicarVistaHorarios("equipo");
   renderTodo();
-  cambiarVista(vistaActual);
-  if (esMesActual()) desplazarAlDia(new Date().getDate(), "auto");
+
+  requestAnimationFrame(() => {
+    organizarControlesCalendario();
+    actualizarColumnaEmpleados();
+    if (esMesActual()) desplazarAlDia(new Date().getDate(), "auto");
+  });
 }
 function reiniciarModuloHorarios() {
-  if (hayCambiosPendientes()) restaurarDatos(estadoInicialEdicion);
+  if (hayCambiosPendientes()) {
+    restaurarDatos(estadoInicialEdicion);
+    restaurarDetalles(estadoInicialDetalles);
+  }
+  if (ordenPersonalModificado()) restaurarOrdenConfigInicial();
   salirModoEdicion(true);
   vistaActual = "equipo";
   seleccion.clear();
@@ -1885,12 +2272,11 @@ function reiniciarModuloHorarios() {
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 function desactivar() {
+  if (!moduloHorariosActivo) return;
   reiniciarModuloHorarios();
-  restaurarBottomNav.forEach(([n, d]) => (n.style.display = d));
-  restaurarBottomNav = [];
+  moduloHorariosActivo = false;
 }
 
-asegurarEstilosFeriadosHorarios();
 configurarEventos();
 cargarContextoHorarios();
 window.HorariosModule = {
@@ -1898,6 +2284,12 @@ window.HorariosModule = {
   desactivar,
   reiniciar: reiniciarModuloHorarios,
 };
+
+// Si la navegación abrió Horarios mientras este módulo todavía estaba cargando,
+// la activación anterior no pudo encontrar window.HorariosModule. Al registrarse,
+// sincroniza inmediatamente la vista ya visible. Esto elimina el primer render
+// con estilos base y evita depender de entrar una segunda vez.
+if (document.body.classList.contains("en-horarios")) activar();
 
 let fechaResumenProgramada = new Date().toDateString();
 setInterval(async () => {
@@ -1940,7 +2332,22 @@ window.addEventListener("autoservicio:horarios-config", (event) => {
   renderTodo();
 });
 
-window.addEventListener("autoservicio:sesion", () => {
+window.addEventListener("autoservicio:sesion", (event) => {
+  if (modoEdicion) {
+    restaurarDatos(estadoInicialEdicion);
+    restaurarDetalles(estadoInicialDetalles);
+    salirModoEdicion(true);
+  }
   contextoHorariosCargado = false;
-  cargarContextoHorarios();
+  horariosPeticiones.clear();
+  empleados = [];
+  empleadosConfiguracion = [];
+  empleadosInfo = new Map();
+  sectoresHorarios = [];
+  sectorActual = "";
+  detalles.clear();
+  datos.clear();
+  resumenHoyDatos = new Map();
+  resumenHoyClave = "";
+  if (event.detail?.usuario) void cargarContextoHorarios();
 });

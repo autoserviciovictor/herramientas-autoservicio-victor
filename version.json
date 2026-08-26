@@ -1,6 +1,8 @@
 {
-  "version": "12.4.2",
-  "label": "12.4.2",
-  "date": "2026-08-05",
-  "name": "v12.4.2 - Inventario completo centrado y unificado"
+  "version": "19.6.0",
+  "label": "19.6.0 D21",
+  "build": "D21",
+  "date": "2026-08-26",
+  "name": "V19.6 D21 - Auditoría y correcciones consolidadas 26/08/2026 D",
+  "assetBuild": "1960-d21-auditoria-correcciones-260826-d"
 }

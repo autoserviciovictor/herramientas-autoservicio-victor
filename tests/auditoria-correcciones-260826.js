@@ -1,0 +1,25 @@
+const fs = require('fs');
+const assert = require('assert');
+const read = (f) => fs.readFileSync(f, 'utf8');
+const version = JSON.parse(read('version.json'));
+const html = read('index.html');
+const sw = read('service-worker.js');
+const desktop = read('desktop-layout.css');
+const ui = read('ui-unification.css');
+const adminCss = read('admin-official.css');
+const adminJs = read('admin.js');
+const horarios = read('horarios-redesign.css');
+
+const htmlBuilds = [...html.matchAll(/\?v=([^"']+)/g)].map(m => m[1]);
+assert(htmlBuilds.length > 10 && htmlBuilds.every(v => v === version.assetBuild), 'index debe usar un único assetBuild');
+const swBuilds = [...sw.matchAll(/\?v=([^"']+)/g)].map(m => m[1]);
+assert(swBuilds.length > 10 && swBuilds.every(v => v === version.assetBuild), 'service worker debe usar un único assetBuild');
+assert(!ui.includes('left: 7px !important'), 'Administración no debe compensar el eje con left:7px');
+assert(!desktop.includes('v12.4.2 — ADMINISTRADOR / ESCRITORIO'), 'desktop-layout no debe volver a gobernar el eje de Administración');
+assert(adminCss.includes('body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel'), 'admin-official debe conservar el contrato canónico de paneles');
+assert(html.includes('id="btnAdminMasFiltros"') && html.includes('id="adminUsuariosFiltrosAvanzados"'), 'Usuarios debe conservar filtros avanzados visibles/operativos');
+assert(adminJs.includes('btnAdminMasFiltros') && adminJs.includes('adminUsuariosFiltrosAvanzados'), 'Filtros avanzados deben tener lógica de apertura');
+assert(html.includes('id="adminHistorialPorPagina"') && adminJs.includes('adminHistorialPorPagina'), 'Historial debe permitir elegir movimientos por página');
+const sectorRule = horarios.match(/\.horarios-sector-identidad > span \{([\s\S]*?)\n\}/)?.[1] || '';
+assert(sectorRule.includes('font-size: 12px !important') && sectorRule.includes('font-weight: 850 !important'), 'Sector debe usar jerarquía tipográfica canónica');
+console.log('Auditoría correcciones 26/08: OK');

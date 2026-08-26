@@ -1,5 +1,5 @@
 /** Formateo puro de turnos y estados especiales del calendario. */
-export function parseSimpleShift(id) {
+function parseSimpleShift(id) {
   const match = String(id || '').match(/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?$/);
   if (!match) return null;
   return {
@@ -8,11 +8,11 @@ export function parseSimpleShift(id) {
   };
 }
 
-export function time24(hours, minutes = 0) {
+function time24(hours, minutes = 0) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-export function shiftDefinition(id, definitions) {
+function shiftDefinition(id, definitions) {
   return definitions.find(item => item.id === id) || null;
 }
 
@@ -39,7 +39,9 @@ export function cellLabel(id, definitions) {
   if (special[id]) return special[id];
   if (isSplitShift(id, definitions)) return 'C';
   const first = shiftSegments(id, definitions)[0];
-  return first ? `<span>${String(first.inicio).slice(0, 2)}</span><span>${String(first.fin).slice(0, 2)}</span>` : '—';
+  return first
+    ? `${String(first.inicio).slice(0, 2)}\n${String(first.fin).slice(0, 2)}`
+    : '—';
 }
 
 export function fullScheduleLabel(id, definitions) {

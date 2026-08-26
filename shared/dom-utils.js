@@ -1,8 +1,16 @@
 /** Utilidades DOM compartidas por los módulos de la aplicación. */
 export function escapeHTML(value) {
-  const node = document.createElement('div');
-  node.textContent = value ?? '';
-  return node.innerHTML;
+  return String(value ?? '').replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character],
+  );
 }
 
 export function formatDuration(totalMinutes) {
@@ -15,10 +23,3 @@ export function formatDuration(totalMinutes) {
   return `${minutes} min`;
 }
 
-export function normalizeKey(value) {
-  return String(value ?? '')
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('es');
-}

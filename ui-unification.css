@@ -1,0 +1,1858 @@
+/* ========================================================================== 
+   AutoservicioAPP · Capa visual canónica · pasada final
+   Encabezados, KPIs, navegación contextual y correcciones responsive.
+   Esta hoja se carga última: cualquier ajuste compartido debe vivir acá.
+   ========================================================================== */
+
+:root {
+  --app-kpi-height: 116px;
+  --app-kpi-gap: 12px;
+  --app-kpi-radius: 14px;
+  --app-kpi-blue: #2f7df6;
+  --app-kpi-blue-soft: #eaf3ff;
+  --app-kpi-blue-border: #8db9ff;
+  --app-kpi-red: #ef3340;
+  --app-kpi-red-soft: #ffe9ec;
+  --app-kpi-red-border: #ff9da8;
+  --app-kpi-amber: #f59e0b;
+  --app-kpi-amber-soft: #fff1d9;
+  --app-kpi-amber-border: #ffc15c;
+  --app-kpi-green: #10b981;
+  --app-kpi-green-soft: #e5f8f0;
+  --app-kpi-green-border: #73d3b1;
+  --app-kpi-value: #101828;
+}
+
+.app-kpi-blue { --app-kpi-accent: var(--app-kpi-blue); --app-kpi-soft: var(--app-kpi-blue-soft); --app-kpi-border: var(--app-kpi-blue-border); }
+.app-kpi-red { --app-kpi-accent: var(--app-kpi-red); --app-kpi-soft: var(--app-kpi-red-soft); --app-kpi-border: var(--app-kpi-red-border); }
+.app-kpi-amber { --app-kpi-accent: var(--app-kpi-amber); --app-kpi-soft: var(--app-kpi-amber-soft); --app-kpi-border: var(--app-kpi-amber-border); }
+.app-kpi-green { --app-kpi-accent: var(--app-kpi-green); --app-kpi-soft: var(--app-kpi-green-soft); --app-kpi-border: var(--app-kpi-green-border); }
+
+/* --------------------------------------------------------------------------
+   Encabezados: referencia visual de Vencimientos
+   -------------------------------------------------------------------------- */
+.app-page-eyebrow,
+.venc-pro-eyebrow {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--pro-muted, #667085);
+  font-size: 12px;
+  line-height: 1.15;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.app-reference-heading,
+#pantallaAdmin .admin-page-heading.app-reference-heading,
+#vencHistorialAdmin .admin-history-page-heading.app-reference-heading {
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+}
+
+.app-reference-heading h1,
+#pantallaAdmin .admin-page-heading.app-reference-heading h1,
+#vencHistorialAdmin .admin-history-page-heading.app-reference-heading h1 {
+  margin: 0 !important;
+  color: var(--pro-text, #101828) !important;
+  font-size: 28px !important;
+  line-height: 1.1 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.03em !important;
+}
+
+.app-reference-heading p,
+#pantallaAdmin .admin-page-heading.app-reference-heading p,
+#vencHistorialAdmin .admin-history-page-heading.app-reference-heading p {
+  margin: 6px 0 0 !important;
+  color: var(--pro-muted, #667085) !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+}
+
+/* --------------------------------------------------------------------------
+   KPIs / contadores: azul → rojo → amarillo → verde.
+   Ícono + textos = color del marco. Sólo el valor principal = negro.
+   -------------------------------------------------------------------------- */
+.app-kpi-card,
+.tareas-plan-kpi,
+.config-kpi {
+  box-sizing: border-box !important;
+  border: 1px solid var(--app-kpi-border) !important;
+  border-radius: var(--app-kpi-radius) !important;
+  background: var(--pro-panel, #fff) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  color: var(--app-kpi-accent) !important;
+}
+
+.app-kpi-card :is(small, p, em),
+.app-kpi-card > div > span:not(.admin-kpi-spark),
+.tareas-plan-kpi :is(small, em),
+.config-kpi :is(small, em),
+#pantallaInicio .pro-metric-card > div:first-child > span {
+  color: var(--app-kpi-accent) !important;
+}
+
+.app-kpi-card > div > strong,
+.tareas-plan-kpi > div > strong,
+.config-kpi > div > strong,
+#pantallaInicio .pro-metric-card > strong,
+#pantallaVencimientos .venc-resumen-datos > strong {
+  color: var(--app-kpi-value) !important;
+}
+
+/* El número pequeño de “en oferta” pertenece al texto secundario. */
+#pantallaVencimientos .venc-resumen-oferta,
+#pantallaVencimientos .venc-resumen-oferta strong {
+  color: var(--app-kpi-accent) !important;
+}
+
+#pantallaInicio .pro-metrics-grid,
+#pantallaProductos .inventory-loaded-metrics,
+#pantallaVencimientos .venc-resumen,
+#pantallaTareas .tareas-kpi-grid,
+#pantallaTareas .tareas-plan-kpis,
+#pantallaTareas .config-kpi-grid,
+#pantallaAdmin .admin-kpi-grid {
+  gap: var(--app-kpi-gap) !important;
+}
+
+@media (min-width: 901px) {
+  body[data-screen="admin"] #pantallaAdmin.admin-official-screen {
+    padding-top: 26px !important;
+  }
+
+  #pantallaInicio .pro-metrics-grid,
+  #pantallaProductos .inventory-loaded-metrics,
+  #pantallaVencimientos .venc-resumen,
+  #pantallaTareas .tareas-kpi-grid,
+  #pantallaTareas .tareas-plan-kpis,
+  #pantallaTareas .config-kpi-grid,
+  #pantallaAdmin .admin-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  #pantallaInicio .app-kpi-card,
+  #pantallaProductos .app-kpi-card,
+  #pantallaVencimientos .app-kpi-card,
+  #pantallaTareas .app-kpi-card,
+  #pantallaTareas .tareas-plan-kpi,
+  #pantallaTareas .config-kpi,
+  #pantallaAdmin .app-kpi-card {
+    height: var(--app-kpi-height) !important;
+    min-height: var(--app-kpi-height) !important;
+    max-height: var(--app-kpi-height) !important;
+  }
+}
+
+/* Inicio: el bloque textual queda centrado verticalmente con el ícono. */
+#pantallaInicio .pro-metric-card.app-kpi-card {
+  display: grid !important;
+  grid-template-columns: 46px auto minmax(0, 1fr) !important;
+  grid-template-rows: auto auto auto !important;
+  align-content: center !important;
+  align-items: center !important;
+  column-gap: 14px !important;
+  row-gap: 3px !important;
+  padding: 15px 17px !important;
+}
+
+#pantallaInicio .pro-metric-card.app-kpi-card > div:first-child { display: contents !important; }
+#pantallaInicio .pro-metric-card.app-kpi-card .pro-metric-icon {
+  grid-column: 1 !important;
+  grid-row: 1 / 4 !important;
+  width: 46px !important;
+  height: 46px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 13px !important;
+  background: var(--app-kpi-soft) !important;
+  color: var(--app-kpi-accent) !important;
+}
+#pantallaInicio .pro-metric-card.app-kpi-card .pro-metric-icon .app-icon { width: 22px !important; height: 22px !important; }
+#pantallaInicio .pro-metric-card.app-kpi-card > div:first-child > span {
+  grid-column: 2 / 4 !important;
+  grid-row: 1 !important;
+  font-size: 12.5px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+}
+#pantallaInicio .pro-metric-card.app-kpi-card > strong {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  margin: 0 !important;
+  font-size: 25px !important;
+  line-height: 1 !important;
+}
+#pantallaInicio .pro-metric-card.app-kpi-card > small {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  align-self: end !important;
+  padding: 0 0 2px !important;
+  color: var(--app-kpi-accent) !important;
+  font-size: 12.5px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+#pantallaInicio .pro-metric-card.app-kpi-card > p {
+  grid-column: 2 / 4 !important;
+  grid-row: 3 !important;
+  align-self: center !important;
+  margin: 2px 0 0 !important;
+  color: var(--app-kpi-accent) !important;
+  font-size: 12.5px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+}
+#pantallaInicio .pro-metric-card.app-kpi-card .pro-progress {
+  grid-column: 2 / 4 !important;
+  grid-row: 3 !important;
+  align-self: center !important;
+  width: 100% !important;
+  height: 6px !important;
+  margin: 7px 0 0 !important;
+  background: #edf0f3 !important;
+}
+#pantallaInicio .pro-metric-card.app-kpi-card .pro-progress > i { background: var(--app-kpi-accent) !important; }
+
+/* Anatomía compartida de Inventario, Vencimientos, Tareas y Administración. */
+#pantallaProductos .inventory-loaded-metrics .app-kpi-card,
+#pantallaVencimientos .venc-resumen-card.app-kpi-card,
+#pantallaTareas .tareas-kpi.app-kpi-card,
+#pantallaAdmin .admin-kpi-card.app-kpi-card,
+#pantallaTareas .tareas-plan-kpi,
+#pantallaTareas .config-kpi {
+  padding: 15px 17px !important;
+  gap: 14px !important;
+  align-items: center !important;
+}
+
+#pantallaProductos .inventory-loaded-metrics .app-kpi-card,
+#pantallaTareas .tareas-kpi.app-kpi-card,
+#pantallaAdmin .admin-kpi-card.app-kpi-card,
+#pantallaTareas .tareas-plan-kpi,
+#pantallaTareas .config-kpi,
+#pantallaVencimientos .venc-resumen-card.app-kpi-card {
+  display: grid !important;
+  grid-template-columns: 46px minmax(0, 1fr) !important;
+}
+
+#pantallaProductos .inventory-loaded-metrics .metric-icon,
+#pantallaVencimientos .venc-summary-icon,
+#pantallaTareas .tareas-kpi-icon,
+#pantallaAdmin .admin-kpi-icon,
+#pantallaTareas .tareas-plan-kpi > span:first-child,
+#pantallaTareas .config-kpi > span:first-child {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  border-radius: 13px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: var(--app-kpi-soft) !important;
+  color: var(--app-kpi-accent) !important;
+}
+
+#pantallaProductos .inventory-loaded-metrics .app-icon,
+#pantallaVencimientos .venc-summary-icon .app-icon,
+#pantallaTareas .tareas-kpi-icon .app-icon,
+#pantallaAdmin .admin-kpi-icon .app-icon,
+#pantallaTareas .tareas-plan-kpi > span:first-child .app-icon,
+#pantallaTareas .config-kpi > span:first-child .app-icon {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+#pantallaProductos .inventory-loaded-metrics small,
+#pantallaVencimientos .venc-resumen-rango,
+#pantallaTareas .tareas-kpi small,
+#pantallaAdmin .admin-kpi-card small,
+#pantallaTareas .tareas-plan-kpi small,
+#pantallaTareas .config-kpi small {
+  color: var(--app-kpi-accent) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+#pantallaProductos .inventory-loaded-metrics strong,
+#pantallaVencimientos .venc-resumen-datos strong,
+#pantallaTareas .tareas-kpi strong,
+#pantallaAdmin .admin-kpi-card > div > strong,
+#pantallaTareas .tareas-plan-kpi > div > strong,
+#pantallaTareas .config-kpi > div > strong {
+  color: var(--app-kpi-value) !important;
+  font-size: 25px !important;
+  line-height: 1.05 !important;
+}
+
+#pantallaTareas .tareas-kpi > div > span,
+#pantallaAdmin .admin-kpi-card > div > span,
+#pantallaTareas .tareas-plan-kpi em,
+#pantallaTareas .config-kpi em {
+  color: var(--app-kpi-accent) !important;
+  font-size: 12.5px !important;
+  font-style: normal !important;
+}
+
+#pantallaVencimientos .venc-resumen-oferta {
+  background: var(--app-kpi-soft) !important;
+  color: var(--app-kpi-accent) !important;
+}
+#pantallaAdmin .admin-kpi-spark { display: none !important; }
+
+/* Planificación y Configuración de Tareas usan siempre la secuencia canónica. */
+#pantallaTareas .tareas-plan-kpi:nth-child(1),
+#pantallaTareas .config-kpi:nth-child(1) { --app-kpi-accent: var(--app-kpi-blue); --app-kpi-soft: var(--app-kpi-blue-soft); --app-kpi-border: var(--app-kpi-blue-border); }
+#pantallaTareas .tareas-plan-kpi:nth-child(2),
+#pantallaTareas .config-kpi:nth-child(2) { --app-kpi-accent: var(--app-kpi-red); --app-kpi-soft: var(--app-kpi-red-soft); --app-kpi-border: var(--app-kpi-red-border); }
+#pantallaTareas .tareas-plan-kpi:nth-child(3),
+#pantallaTareas .config-kpi:nth-child(3) { --app-kpi-accent: var(--app-kpi-amber); --app-kpi-soft: var(--app-kpi-amber-soft); --app-kpi-border: var(--app-kpi-amber-border); }
+#pantallaTareas .tareas-plan-kpi:nth-child(4),
+#pantallaTareas .config-kpi:nth-child(4) { --app-kpi-accent: var(--app-kpi-green); --app-kpi-soft: var(--app-kpi-green-soft); --app-kpi-border: var(--app-kpi-green-border); }
+
+.app-kpi-action {
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-kpi-action:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15,23,42,.08) !important; }
+.app-kpi-action:active { transform: none; }
+.app-kpi-action:focus-visible { outline: 3px solid color-mix(in srgb, var(--app-kpi-accent, #2f7df6) 30%, transparent); outline-offset: 2px; }
+
+/* --------------------------------------------------------------------------
+   Inicio · acceso destacado a Limpieza del baño, debajo de los contadores.
+   -------------------------------------------------------------------------- */
+#pantallaInicio .pro-bathroom-banner {
+  width: 100%;
+  min-height: 102px;
+  margin: 14px 0 16px;
+  padding: 16px 20px;
+  border: 0;
+  border-radius: 15px;
+  box-sizing: border-box;
+  background: linear-gradient(105deg, #d91f35 0%, #ef354c 68%, #f25268 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(217,31,53,.16);
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
+  cursor: pointer;
+}
+#pantallaInicio .pro-bathroom-banner-copy { display: grid; gap: 2px; min-width: 0; }
+#pantallaInicio .pro-bathroom-banner-copy > small { color: #fff !important; font-size: 11px; font-weight: 700; opacity: .9; }
+#pantallaInicio .pro-bathroom-banner-copy > strong { color: #fff !important; font-size: 22px; line-height: 1.08; font-weight: 800; }
+#pantallaInicio .pro-bathroom-banner-copy > span { color: #fff !important; font-size: 12px; opacity: .88; }
+#pantallaInicio .pro-bathroom-banner-action { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 12px; font-weight: 750; white-space: nowrap; }
+#pantallaInicio .pro-bathroom-banner-icon {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  display: grid;
+  place-items: center;
+}
+#pantallaInicio .pro-bathroom-banner-icon .app-icon { width: 23px; height: 23px; }
+#pantallaInicio .pro-bathroom-banner-chevron { font-size: 20px; font-weight: 500; }
+#pantallaInicio .pro-bathroom-banner:hover { filter: brightness(1.015); transform: translateY(-1px); }
+#pantallaInicio .pro-bathroom-banner:focus-visible { outline: 3px solid rgba(239,51,64,.22); outline-offset: 3px; }
+
+/* --------------------------------------------------------------------------
+   Vencimientos · ofertas y acceso a Historial.
+   -------------------------------------------------------------------------- */
+#pantallaVencimientos .venc-product-card.is-offer-active,
+#pantallaVencimientos .venc-list-row.is-offer-active {
+  border-color: #72d6ac !important;
+  background: linear-gradient(0deg, rgba(16,185,129,.06), rgba(16,185,129,.06)), var(--venc-panel, #fff) !important;
+  box-shadow: 0 0 0 1px rgba(16,185,129,.035) !important;
+}
+
+/* Historial desktop: mismo eje y misma altura de título que Vencimientos. */
+@media (min-width: 901px) {
+  #vencHistorialAdmin.admin-history-venc-screen {
+    width: min(var(--app-shell-desktop-max, 1380px), calc(100% - (var(--app-shell-desktop-edge, 36px) * 2))) !important;
+    max-width: var(--app-shell-desktop-max, 1380px) !important;
+    margin: 0 auto !important;
+    padding: 26px 0 42px !important;
+    box-sizing: border-box !important;
+  }
+
+  #vencHistorialAdmin .admin-history-page-heading { margin-bottom: 14px !important; }
+
+  #vencHistorialAdmin .admin-history-search {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+  #vencHistorialAdmin .admin-history-search > .app-icon {
+    position: static !important;
+    inset: auto !important;
+    align-self: center !important;
+    width: 19px !important;
+    height: 19px !important;
+    flex: 0 0 19px !important;
+    margin: 0 !important;
+  }
+  #vencHistorialAdmin .admin-history-search input { align-self: center !important; }
+
+  /* Responsable: avatar y nombre centrados en su columna. */
+  #vencHistorialAdmin .admin-history-user {
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    text-align: center !important;
+  }
+  #vencHistorialAdmin .admin-history-user-avatar { margin: 0 auto !important; }
+  #vencHistorialAdmin .admin-history-user strong { width: 100% !important; text-align: center !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Volver: una sola flecha por contexto, usando la geometría de Admin > Usuarios.
+   -------------------------------------------------------------------------- */
+.horarios-back-topbar,
+.tareas-back-topbar {
+  display: none !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1px solid var(--pro-border, #e3e8ef) !important;
+  border-radius: 11px !important;
+  background: var(--pro-panel, #fff) !important;
+  color: var(--pro-text, #182230) !important;
+  box-shadow: 0 3px 10px rgba(15,23,42,.055) !important;
+  place-items: center !important;
+}
+.horarios-back-topbar svg,
+.tareas-back-topbar svg { width: 22px !important; height: 22px !important; display: block !important; margin: 0 !important; }
+
+body.en-horarios.horarios-vista-mio .horarios-back-topbar:not(.oculto),
+body.en-horarios.horarios-vista-config .horarios-back-topbar:not(.oculto),
+body.en-tareas[data-tareas-vista="planificacion"] .tareas-back-topbar:not(.oculto),
+body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
+  display: grid !important;
+}
+
+@media (min-width: 901px) {
+  body.en-horarios.horarios-vista-mio .horarios-back-topbar:not(.oculto),
+  body.en-horarios.horarios-vista-config .horarios-back-topbar:not(.oculto),
+  body.en-tareas[data-tareas-vista="planificacion"] .tareas-back-topbar:not(.oculto),
+  body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
+    position: absolute !important;
+    left: 24px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 4 !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Móvil / tablet
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  :root { --app-shell-header-height-mobile: 60px; --app-shell-header-height: calc(60px + env(safe-area-inset-top)); }
+
+  /* El header queda en flujo (sticky): nunca tapa el comienzo de una pantalla. */
+  .pro-topbar.brand-header {
+    position: sticky !important;
+    top: 0 !important;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: calc(60px + env(safe-area-inset-top)) !important;
+    min-height: calc(60px + env(safe-area-inset-top)) !important;
+    grid-template-columns: 40px minmax(0, 1fr) 40px !important;
+    grid-template-rows: 60px !important;
+    gap: 8px !important;
+    padding: env(safe-area-inset-top) max(11px, env(safe-area-inset-right)) 0 max(11px, env(safe-area-inset-left)) !important;
+    overflow: visible !important;
+    z-index: var(--app-z-header, 1200) !important;
+  }
+
+  /* Logo oficial, un poco más pequeño y centrado de forma independiente. */
+  .pro-topbar > .pro-brand { display: none !important; }
+  .pro-topbar::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: calc(env(safe-area-inset-top) + 30px) !important;
+    transform: translate(-50%, -50%) !important;
+    width: 104px !important;
+    height: 38px !important;
+    background-image: url("./icons/brand-logo-desktop-light.png") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: contain !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+  }
+
+  .pro-topbar > #brandMenuBtn,
+  .pro-topbar > #adminHeaderBackBtn,
+  .pro-topbar > .horarios-back-topbar,
+  .pro-topbar > .tareas-back-topbar,
+  .pro-topbar > .pro-top-actions {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    z-index: 2 !important;
+  }
+
+  #brandMenuBtn {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    justify-self: start !important;
+    align-self: center !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .pro-topbar > .pro-top-actions {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    justify-self: end !important;
+    align-self: center !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* En subpantallas de Horarios/Tareas la flecha reemplaza a la hamburguesa. */
+  body.en-horarios.horarios-vista-mio #brandMenuBtn,
+  body.en-horarios.horarios-vista-config #brandMenuBtn,
+  body.en-tareas[data-tareas-vista="planificacion"] #brandMenuBtn,
+  body.en-tareas[data-tareas-vista="config"] #brandMenuBtn {
+    display: none !important;
+  }
+  body.en-horarios.horarios-vista-mio .horarios-back-topbar:not(.oculto),
+  body.en-horarios.horarios-vista-config .horarios-back-topbar:not(.oculto),
+  body.en-tareas[data-tareas-vista="planificacion"] .tareas-back-topbar:not(.oculto),
+  body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    justify-self: start !important;
+    align-self: center !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    place-items: center !important;
+  }
+
+  /* Drawer: el oscurecimiento empieza debajo del header reducido. */
+  #userDropdown.pro-mobile-drawer::after {
+    inset: calc(60px + env(safe-area-inset-top)) 0 0 min(82vw, 320px) !important;
+  }
+
+  /* No existe navegación inferior móvil en la app. */
+  .app-bottom-nav,
+  .pro-mobile-bottom-nav { display: none !important; }
+  body:not(.login-bloqueado) .app { padding-bottom: 0 !important; }
+  .pantalla.activa,
+  #pantallaInicio.pro-dashboard,
+  #pantallaProductos,
+  #pantallaVencimientos,
+  #pantallaAnotar,
+  #pantallaPrecios,
+  #pantallaTareas,
+  #pantallaHorarios,
+  #pantallaAdmin,
+  #pantallaAjustes,
+  #pantallaBano { padding-bottom: 24px !important; }
+
+  /* Encabezados visibles que sí se muestran en móvil. */
+  .app-reference-heading h1,
+  #vencHistorialAdmin .admin-history-page-heading.app-reference-heading h1 { font-size: 24px !important; }
+  .app-reference-heading p,
+  #vencHistorialAdmin .admin-history-page-heading.app-reference-heading p { font-size: 13px !important; }
+  .app-page-eyebrow { font-size: 9.5px !important; }
+
+  /* KPIs móviles: 2 x 2, legibles y sin cortes. */
+  #pantallaInicio .pro-metrics-grid,
+  #pantallaProductos .inventory-loaded-metrics,
+  #pantallaVencimientos .venc-resumen,
+  #pantallaTareas .tareas-kpi-grid,
+  #pantallaTareas .tareas-plan-kpis,
+  #pantallaTareas .config-kpi-grid,
+  #pantallaAdmin .admin-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  #pantallaInicio .app-kpi-card,
+  #pantallaProductos .app-kpi-card,
+  #pantallaVencimientos .app-kpi-card,
+  #pantallaTareas .app-kpi-card,
+  #pantallaTareas .tareas-plan-kpi,
+  #pantallaTareas .config-kpi,
+  #pantallaAdmin .app-kpi-card {
+    min-height: 100px !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  #pantallaInicio .pro-metric-card.app-kpi-card,
+  #pantallaProductos .inventory-loaded-metrics .app-kpi-card,
+  #pantallaVencimientos .venc-resumen-card.app-kpi-card,
+  #pantallaTareas .tareas-kpi.app-kpi-card,
+  #pantallaAdmin .admin-kpi-card.app-kpi-card,
+  #pantallaTareas .tareas-plan-kpi,
+  #pantallaTareas .config-kpi {
+    padding: 11px 10px !important;
+    gap: 9px !important;
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+  }
+  #pantallaInicio .pro-metric-card.app-kpi-card {
+    grid-template-columns: 40px auto minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+    align-content: center !important;
+  }
+
+  #pantallaInicio .pro-metric-icon,
+  #pantallaProductos .inventory-loaded-metrics .metric-icon,
+  #pantallaVencimientos .venc-summary-icon,
+  #pantallaTareas .tareas-kpi-icon,
+  #pantallaAdmin .admin-kpi-icon,
+  #pantallaTareas .tareas-plan-kpi > span:first-child,
+  #pantallaTareas .config-kpi > span:first-child {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 11px !important;
+  }
+
+  #pantallaInicio .pro-metric-card.app-kpi-card > strong,
+  #pantallaProductos .inventory-loaded-metrics strong,
+  #pantallaVencimientos .venc-resumen-datos strong,
+  #pantallaTareas .tareas-kpi strong,
+  #pantallaAdmin .admin-kpi-card > div > strong,
+  #pantallaTareas .tareas-plan-kpi > div > strong,
+  #pantallaTareas .config-kpi > div > strong {
+    font-size: 22px !important;
+    line-height: 1 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    white-space: nowrap !important;
+  }
+
+  #pantallaAdmin .admin-kpi-card > div { min-width: 0 !important; overflow: visible !important; }
+  #pantallaAdmin #adminUsuariosSaludMetrica,
+  #pantallaAdmin #adminHomeEstado,
+  #pantallaAdmin #adminServidorEstado {
+    max-width: 100% !important;
+    font-size: clamp(16px, 4.9vw, 20px) !important;
+    letter-spacing: -.02em !important;
+    white-space: nowrap !important;
+  }
+
+  /* Banner de baño debajo de los cuatro contadores. */
+  #pantallaInicio .pro-bathroom-banner {
+    min-height: 86px !important;
+    margin: 10px 0 14px !important;
+    padding: 13px 14px !important;
+    border-radius: 14px !important;
+    gap: 10px !important;
+  }
+  #pantallaInicio .pro-bathroom-banner-copy > small { font-size: 10.5px !important; }
+  #pantallaInicio .pro-bathroom-banner-copy > strong { font-size: 18px !important; }
+  #pantallaInicio .pro-bathroom-banner-copy > span { font-size: 11.5px !important; }
+  #pantallaInicio .pro-bathroom-banner-action > span:not(.pro-bathroom-banner-icon):not(.pro-bathroom-banner-chevron) { display: none !important; }
+  #pantallaInicio .pro-bathroom-banner-icon { width: 40px !important; height: 40px !important; }
+
+  /* FAB: esquina inferior derecha real y signo + perfectamente centrado. */
+  .inventory-fab,
+  .vencimientos-fab,
+  .repo-fab,
+  .precios-fab,
+  #btnAdminNuevoUsuario,
+  #btnAdminNuevoSector {
+    right: max(16px, env(safe-area-inset-right)) !important;
+    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .inventory-fab > span,
+  .vencimientos-fab > span,
+  .repo-fab > span,
+  .precios-fab > span,
+  #btnAdminNuevoUsuario > span,
+  #btnAdminNuevoSector > span {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 31px !important;
+    font-weight: 300 !important;
+    line-height: 1 !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Vencimientos: Historial debajo de KPIs y tipografía legible. */
+  #pantallaVencimientos .venc-history-mobile-access {
+    width: 100% !important;
+    min-height: 46px !important;
+    margin: 10px 0 !important;
+    padding: 0 14px !important;
+    border: 1px solid var(--app-kpi-red-border) !important;
+    border-radius: 11px !important;
+    background: var(--venc-panel, #fff) !important;
+    color: var(--app-kpi-red) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    box-sizing: border-box !important;
+  }
+  #pantallaVencimientos .venc-history-mobile-access.oculto { display: none !important; }
+  #pantallaVencimientos .venc-history-mobile-access b { margin-left: auto !important; font-size: 18px !important; }
+
+  #pantallaVencimientos .venc-product-card__identity strong { font-size: 14px !important; line-height: 1.25 !important; }
+  #pantallaVencimientos .venc-product-card__identity span,
+  #pantallaVencimientos .venc-product-card__data small { font-size: 11px !important; }
+  #pantallaVencimientos .venc-product-card__data b { font-size: 12px !important; }
+  #pantallaVencimientos .venc-product-card__category,
+  #pantallaVencimientos .venc-product-card__deadline,
+  #pantallaVencimientos .venc-offer-state,
+  #pantallaVencimientos .venc-product-card__action { font-size: 11px !important; }
+  #pantallaVencimientos .venc-pro-search input { font-size: 13px !important; }
+  #pantallaVencimientos .venc-pro-rubros button { font-size: 11.5px !important; min-height: 34px !important; }
+  #pantallaVencimientos .venc-sort-control select { font-size: 12px !important; }
+
+  /* Historial móvil: sin scroll horizontal, compacto y ordenado. */
+  body.venc-historial-open #pantallaVencimientos { padding-top: 0 !important; }
+  #vencHistorialAdmin.admin-history-venc-screen {
+    width: calc(100% - 24px) !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    padding: 4px 0 24px !important;
+    box-sizing: border-box !important;
+  }
+  #vencHistorialAdmin .admin-history-page-heading {
+    display: none !important;
+  }
+
+  #vencHistorialAdmin .admin-history-filter-surface {
+    padding: 10px !important;
+    margin-bottom: 10px !important;
+    overflow: visible !important;
+  }
+  #vencHistorialAdmin .admin-period-filter {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    overflow: visible !important;
+    margin: 0 0 8px !important;
+  }
+  #vencHistorialAdmin .admin-period-btn {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 4px !important;
+    font-size: 11.5px !important;
+  }
+  #vencHistorialAdmin .admin-history-filter-grid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+  #vencHistorialAdmin .admin-history-filter-control {
+    min-width: 0 !important;
+    width: 100% !important;
+    min-height: 50px !important;
+    padding: 7px 9px !important;
+  }
+  #vencHistorialAdmin .admin-history-filter-control strong { font-size: 12px !important; }
+  #vencHistorialAdmin .admin-history-filter-control small { font-size: 10.5px !important; }
+
+  #vencHistorialAdmin .admin-history-search {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    border: 1px solid var(--admin-line, #dfe4eb) !important;
+    border-radius: 10px !important;
+    background: var(--admin-surface, #fff) !important;
+    padding: 0 11px !important;
+    box-sizing: border-box !important;
+  }
+  #vencHistorialAdmin .admin-history-search > .app-icon {
+    position: static !important;
+    inset: auto !important;
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px !important;
+    align-self: center !important;
+    margin: 0 !important;
+  }
+  #vencHistorialAdmin .admin-history-search input {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    line-height: 44px !important;
+  }
+
+  #vencHistorialAdmin .admin-history-summary {
+    width: 100% !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    margin: 0 0 10px !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+  }
+  #vencHistorialAdmin .admin-history-total-card {
+    min-height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 0 !important;
+  }
+  #vencHistorialAdmin .admin-history-total-icon { width: 38px !important; height: 38px !important; flex: 0 0 38px !important; }
+  #vencHistorialAdmin .admin-history-total-card small { font-size: 10.5px !important; }
+  #vencHistorialAdmin .admin-history-total-card strong { font-size: 21px !important; }
+  #vencHistorialAdmin .admin-history-total-card span { font-size: 10.5px !important; }
+
+  #vencHistorialAdmin .admin-history-summary-users {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: 6px !important;
+    justify-content: stretch !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    scrollbar-width: none !important;
+  }
+  #vencHistorialAdmin .admin-history-summary-users::-webkit-scrollbar { display: none !important; }
+  #vencHistorialAdmin .history-user-stat {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: none !important;
+    padding: 7px 8px !important;
+    border: 1px solid var(--admin-line, #e5e9ef) !important;
+    border-radius: 9px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    overflow: hidden !important;
+  }
+  #vencHistorialAdmin .history-user-stat > b { width: 30px !important; height: 30px !important; flex: 0 0 30px !important; }
+  #vencHistorialAdmin .history-user-stat em { min-width: 0 !important; }
+  #vencHistorialAdmin .history-user-stat em strong { font-size: 12.5px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  #vencHistorialAdmin .history-user-stat em small { font-size: 13px !important; }
+
+  #vencHistorialAdmin .admin-history-table-head { display: none !important; }
+  #vencHistorialAdmin .admin-history-table-surface {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  #vencHistorialAdmin .admin-history-official-list { display: grid !important; gap: 9px !important; overflow: visible !important; }
+  #vencHistorialAdmin .admin-history-card {
+    width: 100% !important;
+    margin: 0 !important;
+    border: 1px solid var(--admin-line, #e5e9ef) !important;
+    border-left: 4px solid #efb000 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background: var(--admin-surface, #fff) !important;
+  }
+  #vencHistorialAdmin .admin-history-card.accion-creo { border-left-color: var(--admin-green, #10b981) !important; }
+  #vencHistorialAdmin .admin-history-card.accion-elimino { border-left-color: var(--admin-red, #ef3340) !important; }
+
+  #vencHistorialAdmin .admin-history-toggle {
+    min-height: 0 !important;
+    width: 100% !important;
+    padding: 11px !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "action product open"
+      "detail detail detail"
+      "date user user" !important;
+    gap: 7px 9px !important;
+    align-items: center !important;
+    text-align: left !important;
+  }
+  #vencHistorialAdmin .admin-history-action {
+    grid-area: action !important;
+    min-width: 0 !important;
+    padding: 5px 7px !important;
+    font-size: 11px !important;
+  }
+  #vencHistorialAdmin .admin-history-product { grid-area: product !important; min-width: 0 !important; }
+  #vencHistorialAdmin .admin-history-product strong { font-size: 14px !important; line-height: 1.25 !important; white-space: normal !important; }
+  #vencHistorialAdmin .admin-history-product small { font-size: 11.5px !important; line-height: 1.25 !important; }
+  #vencHistorialAdmin .admin-history-detail-summary {
+    grid-area: detail !important;
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+  }
+  #vencHistorialAdmin .admin-history-detail-summary small,
+  #vencHistorialAdmin .admin-history-detail-summary strong { font-size: 12px !important; line-height: 1.3 !important; }
+  #vencHistorialAdmin .admin-history-date { grid-area: date !important; min-width: 0 !important; }
+  #vencHistorialAdmin .admin-history-date strong { font-size: 11.5px !important; line-height: 1.25 !important; }
+  #vencHistorialAdmin .admin-history-user {
+    grid-area: user !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    text-align: right !important;
+  }
+  #vencHistorialAdmin .admin-history-user-avatar { width: 28px !important; height: 28px !important; flex: 0 0 28px !important; }
+  #vencHistorialAdmin .admin-history-user strong { max-width: 110px !important; font-size: 11.5px !important; line-height: 1.2 !important; text-align: right !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  #vencHistorialAdmin .admin-history-open { grid-area: open !important; font-size: 11.5px !important; }
+  #vencHistorialAdmin .admin-history-detail { padding: 9px 11px 11px !important; gap: 8px !important; }
+  #vencHistorialAdmin .admin-history-detail p { font-size: 11.5px !important; line-height: 1.4 !important; }
+  #vencHistorialAdmin .admin-history-pagination { padding: 10px 0 0 !important; font-size: 11px !important; }
+
+  /* Configuración de usuario: caligrafía legible en 400 px. */
+  #pantallaAjustes .user-settings-heading h1 { font-size: 25px !important; }
+  #pantallaAjustes .user-settings-heading p { font-size: 13px !important; line-height: 1.45 !important; }
+  #pantallaAjustes .user-settings-panel-head h2 { font-size: 15px !important; }
+  #pantallaAjustes .user-settings-panel-head p { font-size: 12px !important; }
+  #pantallaAjustes .user-settings-profile-copy strong { font-size: 16px !important; }
+  #pantallaAjustes .user-settings-profile-copy span { font-size: 12.5px !important; }
+  #pantallaAjustes .user-settings-profile-copy small { font-size: 11.5px !important; }
+  #pantallaAjustes .user-settings-preference-row > span:not(.user-settings-row-icon),
+  #pantallaAjustes .user-settings-list-row strong,
+  #pantallaAjustes .user-settings-actions-list strong { font-size: 13px !important; line-height: 1.3 !important; }
+  #pantallaAjustes .user-settings-list-row small,
+  #pantallaAjustes .user-settings-actions-list small { font-size: 11.5px !important; line-height: 1.4 !important; }
+  #pantallaAjustes .user-settings-select-trigger { height: 42px !important; min-height: 42px !important; font-size: 14px !important; }
+  #pantallaAjustes .user-settings-select-menu button { min-height: 40px !important; font-size: 13.5px !important; }
+  #pantallaAjustes .user-settings-link-row,
+  #pantallaAjustes .user-settings-outline-button,
+  #pantallaAjustes .user-settings-quick-grid button { font-size: 14px !important; }
+
+  /* Administración: controles legibles y FAB coherentes al no existir bottom-nav. */
+  #pantallaAdmin .admin-search-control input,
+  #pantallaAdmin .admin-select-control select,
+  #pantallaAdmin .admin-list-topline select { font-size: 14px !important; }
+
+  #pantallaAdmin #btnAdminNuevoUsuario,
+  #pantallaAdmin #btnAdminNuevoSector {
+    position: fixed !important;
+    z-index: var(--app-z-fab, 1180) !important;
+    width: 58px !important;
+    min-width: 58px !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    padding: 0 !important;
+    border-radius: 19px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: hidden !important;
+  }
+  #pantallaAdmin #btnAdminNuevoUsuario { font-size: 0 !important; }
+  #pantallaAdmin #btnAdminNuevoSector { font-size: 0 !important; }
+}
+
+/* Botones de carga superiores con +: centrado geométrico. */
+.inventory-header-load-btn > span,
+.venc-header-load-btn > span,
+.reposicion-header-load-btn > span,
+.prices-header-scan-btn > span,
+.admin-primary-action > span,
+.admin-primary-btn > span {
+  display: inline-grid !important;
+  place-items: center !important;
+  line-height: 1 !important;
+  transform: translateY(-.5px);
+}
+
+/* --------------------------------------------------------------------------
+   Dark mode
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] { --app-kpi-value: #f8fafc; }
+html[data-theme="dark"] .app-kpi-blue { --app-kpi-soft: #193b61; --app-kpi-border: #315f8e; }
+html[data-theme="dark"] .app-kpi-red { --app-kpi-soft: #421f2d; --app-kpi-border: #6f2b3a; }
+html[data-theme="dark"] .app-kpi-amber { --app-kpi-soft: #49331c; --app-kpi-border: #6c4b22; }
+html[data-theme="dark"] .app-kpi-green { --app-kpi-soft: #12392f; --app-kpi-border: #245744; }
+
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card.is-offer-active,
+html[data-theme="dark"] #pantallaVencimientos .venc-list-row.is-offer-active {
+  border-color: #2e7e63 !important;
+  background: linear-gradient(0deg, rgba(16,185,129,.09), rgba(16,185,129,.09)), var(--venc-panel, #172033) !important;
+}
+
+html[data-theme="dark"] .pro-topbar::before { background-image: url("./icons/brand-logo-desktop-dark.png") !important; }
+html[data-theme="dark"] .horarios-back-topbar,
+html[data-theme="dark"] .tareas-back-topbar {
+  background: var(--pro-panel-2, #192d46) !important;
+  border-color: var(--pro-border, #30445e) !important;
+  color: #e7edf5 !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================================
+   Correcciones 2026-08-24 · alineación final solicitada
+   ========================================================================== */
+@media (min-width: 901px) {
+}
+
+/* El texto que acompaña al número apoya en la base, como en Vencimientos. */
+#pantallaInicio .pro-metric-card.app-kpi-card > small {
+  align-self: end !important;
+  padding: 0 0 2px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 900px) {
+  /* En Inicio móvil se eliminan el estado y el saludo para subir los KPIs. */
+  body.en-inicio #pantallaInicio .pro-mobile-welcome {
+    display: none !important;
+  }
+  body.en-inicio #pantallaInicio .pro-metrics-grid {
+    margin-top: 0 !important;
+  }
+}
+
+/* Baño: usa la misma flecha global de volver que las demás pantallas. */
+@media (min-width: 901px) {
+  body.en-bano #adminHeaderBackBtn {
+    display: grid !important;
+    place-items: center !important;
+    position: absolute !important;
+    left: 24px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1px solid var(--pro-border,#e4e8ee) !important;
+    border-radius: 12px !important;
+    background: var(--pro-panel,#fff) !important;
+    color: var(--pro-text,#171b25) !important;
+    box-shadow: 0 4px 12px rgba(29,39,55,.06) !important;
+    z-index: 4 !important;
+  }
+  body.en-bano #adminHeaderBackBtn svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+}
+@media (max-width: 900px) {
+  body.en-bano #brandMenuBtn {
+    display: none !important;
+  }
+  body.en-bano #adminHeaderBackBtn {
+    display: grid !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    place-items: center !important;
+    justify-self: start !important;
+    align-self: center !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: var(--pro-muted,#667085) !important;
+  }
+  body.en-bano #adminHeaderBackBtn svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+/* ========================================================================== 
+   Auditoría móvil · etapa 2 · fuente única para módulos operativos
+   Mantiene Administración fuera de alcance hasta la pasada final.
+   ========================================================================== */
+@media (max-width: 900px) {
+  :root {
+    --app-mobile-control-font: 14px;
+    --app-mobile-body-font: 13.5px;
+    --app-mobile-help-font: 12.5px;
+  }
+
+  /* El ancho móvil vive únicamente en app-shell.css; no se vuelve a definir aquí. */
+
+  /* Los títulos de pantalla no consumen altura en celular. */
+  #pantallaProductos .app-reference-heading,
+  #pantallaVencimientos > .app-reference-heading,
+  #pantallaAnotar .app-reference-heading,
+  #pantallaPrecios .app-reference-heading,
+  #pantallaHorarios .horarios-page-heading,
+  #pantallaTareas .tareas-page-head,
+  #pantallaTareas .tareas-subpage-head,
+  #pantallaAjustes .user-settings-heading,
+  #pantallaBano .bano-page-heading {
+    display: none !important;
+  }
+
+  /* Piso tipográfico legible y consistente. */
+  :is(#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAjustes,#pantallaBano)
+  :is(button,input,select,textarea) {
+    font-size: var(--app-mobile-control-font) !important;
+  }
+  :is(#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAjustes,#pantallaBano)
+  :is(label,p,li,td,th) {
+    font-size: var(--app-mobile-body-font) !important;
+  }
+  :is(#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAjustes,#pantallaBano)
+  small {
+    font-size: var(--app-mobile-help-font) !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Inventario: resultados y estado vacío con la misma escala que Vencimientos. */
+  #pantallaProductos .inventory-product-name,
+  #pantallaProductos .inventory-result-name,
+  #pantallaProductos .inventory-empty-state strong { font-size: 15px !important; line-height: 1.3 !important; }
+  #pantallaProductos .inventory-product-code,
+  #pantallaProductos .inventory-result-code,
+  #pantallaProductos .inventory-empty-state span { font-size: 12.5px !important; line-height: 1.4 !important; }
+
+  /* Reposición: textos de lista, resumen y recientes. */
+  #pantallaAnotar :is(.repo-product-row strong,.repo-recent-item strong,.repo-section-title) { font-size: 14.5px !important; line-height: 1.3 !important; }
+  #pantallaAnotar :is(.repo-product-row small,.repo-recent-item small,.repo-summary-card small) { font-size: 12.5px !important; line-height: 1.35 !important; }
+
+  /* Precios: resultado y últimas consultas. */
+  #pantallaPrecios :is(.prices-product-name,.price-result-name,.prices-section-title) { font-size: 15px !important; line-height: 1.3 !important; }
+  #pantallaPrecios :is(.prices-product-code,.price-result-code,.prices-recent-code) { font-size: 12.5px !important; line-height: 1.35 !important; }
+
+  /* Horarios: nombres y horarios nunca por debajo de la escala operativa. */
+  #pantallaHorarios :is(.horarios-person-name,.horarios-today-person strong,.horarios-config-person strong) { font-size: 14px !important; line-height: 1.3 !important; font-weight: 750 !important; }
+  #pantallaHorarios :is(.horarios-person-sector,.horarios-today-person small,.horarios-config-person small) { font-size: 12.5px !important; line-height: 1.35 !important; }
+  #pantallaHorarios .horarios-control-label,
+  #pantallaHorarios .horarios-sector-identidad span { font-size: 13px !important; font-weight: 700 !important; }
+
+  /* Tareas: nombres de personas/tareas y datos secundarios. */
+  #pantallaTareas :is(.tareas-user-name,.tareas-task-name,.config-task-name strong,.tareas-day-title) { font-size: 14.5px !important; line-height: 1.3 !important; }
+  #pantallaTareas :is(.tareas-task-duration,.config-task-duration,.tareas-user-meta,.tareas-progress-copy) { font-size: 12.5px !important; line-height: 1.35 !important; }
+  #pantallaTareas .config-task-row { min-height: 102px !important; }
+
+  /* Vencimientos e Historial: los datos operativos dejan de depender de microtipografía. */
+  #pantallaVencimientos :is(.venc-resumen-rango,.venc-resumen-oferta,.venc-range-group__copy > span,.venc-product-card__identity > span,.venc-product-card__data small,.venc-product-card__action,.venc-list-cell,.venc-list-cell--ean,.venc-offer-state) {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+  #pantallaVencimientos .venc-product-card__title { font-size: 15px !important; line-height: 1.3 !important; }
+  #vencHistorialAdmin :is(.admin-history-filter-control small,.admin-history-total-card small,.admin-history-total-card span,.admin-history-product small,.admin-history-date strong,.admin-history-user strong,.admin-history-open,.admin-history-detail p,.admin-history-pagination) {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Modales de carga de producto: misma escala legible en todos los módulos. */
+  .product-loader-head p,
+  .product-loader-hero > small,
+  .product-loader-search-row button,
+  .product-loader-suggestions .manual-suggestion-item span,
+  .product-loader-specific .location-btn small,
+  .product-loader-specific .inventory-quantity-block > small {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }
+  .product-loader-kicker { font-size: 11.5px !important; }
+  .product-loader-search-row input,
+  .product-loader-camera-btn,
+  .product-loader-manual-toggle { font-size: 14px !important; }
+
+  /* Settings conserva sólo el ajuste de flujo; la geometría vive en settings-user.css. */
+  #pantallaAjustes .user-settings-layout { margin-top: 0 !important; }
+}
+
+
+.app-choice-option > :is(.app-choice-swatch,.app-choice-icon) {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+}
+.app-choice-copy strong { font-size: 15px !important; line-height: 1.25 !important; }
+.app-choice-copy small { font-size: 12.5px !important; line-height: 1.35 !important; }
+@media (max-width: 900px) {
+  .app-choice-sheet { width: 100% !important; max-width: 100% !important; }
+  .app-choice-head h2 { font-size: 20px !important; }
+  .app-choice-kicker { font-size: 11.5px !important; }
+  .app-choice-cancel { min-height: 46px !important; font-size: 14px !important; }
+}
+
+/* 2026-08-25 — Inicio: número + unidad alineados como KPIs de Vencimientos. */
+#pantallaInicio .pro-metric-card.app-kpi-card > small{
+  align-self:end !important;
+  padding-bottom:1px !important;
+  font-weight:750 !important;
+  line-height:1 !important;
+}
+
+/* ========================================================================== 
+   Inicio · resumen operativo en vivo
+   Vencimientos de hoy + tareas de un único sector.
+   ========================================================================== */
+#pantallaInicio .pro-desktop-operations {
+  align-items: start !important;
+  font-family: var(--ds-font-family, "Segoe UI", Arial, sans-serif);
+}
+#pantallaInicio .pro-operation-live {
+  min-width: 0;
+}
+#pantallaInicio .pro-operation-head h2 {
+  font-family: var(--ds-font-display, var(--ds-font-family, "Segoe UI", Arial, sans-serif));
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+#pantallaInicio .pro-operation-head p {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+#pantallaInicio .pro-operation-head button {
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+#pantallaInicio .pro-home-live-list {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+#pantallaInicio .pro-home-live-row {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--pro-border, #e4e7ec);
+}
+#pantallaInicio .pro-home-live-row:first-child {
+  border-top: 0;
+}
+#pantallaInicio .pro-home-live-row > strong {
+  min-width: 0;
+  color: var(--pro-text, #101828);
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#pantallaInicio .pro-home-live-meta {
+  color: var(--pro-muted, #667085);
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 500;
+  white-space: nowrap;
+}
+#pantallaInicio .pro-home-live-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+}
+#pantallaInicio .pro-home-live-icon .app-icon {
+  width: 16px;
+  height: 16px;
+}
+#pantallaInicio .pro-home-live-icon-expiry {
+  background: var(--app-kpi-amber-soft);
+  color: var(--app-kpi-amber);
+}
+#pantallaInicio .pro-home-task-dot {
+  width: 9px;
+  height: 9px;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--app-kpi-amber);
+  box-shadow: 0 0 0 4px var(--app-kpi-amber-soft);
+}
+#pantallaInicio .pro-home-task-dot.is-complete {
+  background: var(--app-kpi-green);
+  box-shadow: 0 0 0 4px var(--app-kpi-green-soft);
+}
+#pantallaInicio .pro-home-live-badge {
+  min-width: 78px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  line-height: 1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#pantallaInicio .pro-home-live-badge.is-danger {
+  background: var(--app-kpi-red-soft);
+  color: var(--app-kpi-red);
+}
+#pantallaInicio .pro-home-live-badge.is-success {
+  background: var(--app-kpi-green-soft);
+  color: var(--app-kpi-green);
+}
+#pantallaInicio .pro-home-live-badge.is-pending {
+  background: var(--app-kpi-amber-soft);
+  color: var(--app-kpi-amber);
+}
+#pantallaInicio .pro-home-live-empty {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 2px;
+}
+#pantallaInicio .pro-home-live-empty > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+#pantallaInicio .pro-home-live-empty strong {
+  color: var(--pro-text, #101828);
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+#pantallaInicio .pro-home-live-empty small {
+  color: var(--pro-muted, #667085);
+  font-size: 12px;
+  line-height: 1.45;
+}
+#pantallaInicio .pro-home-task-sector-control {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+#pantallaInicio .pro-home-task-sector {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--pro-muted, #667085);
+  font-size: 12px;
+  font-weight: 600;
+}
+#pantallaInicio .pro-home-task-sector .app-select-custom {
+  width: 142px;
+  min-width: 142px;
+}
+#pantallaInicio .pro-home-task-sector .app-select-custom__trigger {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--pro-border, #d9dee7);
+  border-radius: 9px;
+  background: var(--pro-panel, #fff);
+  color: var(--pro-text, #101828);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+#pantallaInicio .pro-home-task-sector .app-select-custom__trigger:hover,
+#pantallaInicio .pro-home-task-sector .app-select-custom__trigger:focus,
+#pantallaInicio .pro-home-task-sector .app-select-custom__trigger:focus-visible {
+  border-color: var(--pro-border, #d9dee7);
+  box-shadow: none;
+  outline: none;
+}
+#pantallaInicio .pro-home-task-sector .app-select-custom__chevron {
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  color: var(--pro-muted, #667085);
+}
+#pantallaInicio .pro-home-task-sector .app-select-custom__chevron .app-icon {
+  width: 13px;
+  height: 13px;
+}
+#pantallaInicio .pro-home-task-sector-label {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--app-kpi-blue-soft);
+  color: var(--app-kpi-blue);
+  font-size: 10px;
+  font-weight: 800;
+}
+#pantallaInicio .pro-home-task-sector.oculto,
+#pantallaInicio .pro-home-task-sector-label.oculto {
+  display: none !important;
+}
+
+#pantallaInicio .pro-home-operation-footer {
+  min-height: 46px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--pro-border, #e4e7ec);
+  display: flex;
+  align-items: center;
+}
+#pantallaInicio .pro-home-operation-link {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--pro-red, #ef233c);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#pantallaInicio .pro-home-task-footer {
+  justify-content: space-between;
+  gap: 12px;
+  background: transparent;
+}
+#pantallaInicio .pro-home-task-footer > strong {
+  color: var(--pro-text, #101828);
+  font-size: 12.5px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+#pantallaInicio .pro-home-task-total {
+  min-width: 68px;
+  padding: 6px 11px;
+  border: 1px solid var(--pro-border, #e4e7ec);
+  border-radius: 999px;
+  background: var(--pro-panel-2, #f2f4f7);
+  color: var(--pro-text, #101828);
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] #pantallaInicio .pro-home-live-row {
+  border-top-color: var(--pro-border, #30445e);
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-footer {
+  background: transparent;
+  border-top-color: var(--pro-border, #30445e);
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-footer > strong {
+  color: var(--pro-text, #f7f9fc);
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-total {
+  background: var(--pro-panel-2, #192d46);
+  border-color: var(--pro-border-strong, #405772);
+  color: var(--pro-text, #f7f9fc);
+}
+html[data-theme="dark"] #pantallaInicio .pro-home-task-sector .app-select-custom__trigger {
+  background: var(--pro-panel-2, #192d46);
+  color: var(--pro-text, #f8fafc);
+  border-color: var(--pro-border, #30445e);
+}
+
+@media (max-width: 900px) {
+  #pantallaInicio .pro-home-live-row {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+  }
+  #pantallaInicio .pro-home-live-meta {
+    grid-column: 2 / 4;
+    white-space: normal;
+  }
+  #pantallaInicio .pro-home-task-sector {
+    gap: 5px;
+  }
+  #pantallaInicio .pro-home-task-sector > span {
+    display: none;
+  }
+  #pantallaInicio .pro-home-task-sector .app-select-custom {
+    width: 120px;
+    min-width: 120px;
+  }
+}
+
+
+/* ==========================================================================
+   AUDITORÍA VISUAL · ETAPA 1 · BASE GLOBAL CANÓNICA · 2026-08-26
+   --------------------------------------------------------------------------
+   Una sola base para dimensiones, jerarquía tipográfica y controles de PC.
+   Las etapas 2–4 pueden especializar contenido denso, pero no redefinir esta
+   geometría ni reducir la escala de lectura.
+   ========================================================================== */
+@media (min-width: 901px) {
+  :root {
+    --app-stage1-page-max: var(--ds-page-max, 1380px);
+    --app-stage1-edge: var(--ds-page-edge, 36px);
+    --app-stage1-title: 28px;
+    --app-stage1-subtitle: 14px;
+    --app-stage1-section-title: 17px;
+    --app-stage1-body: 14px;
+    --app-stage1-secondary: 13px;
+    --app-stage1-control: 14px;
+  }
+
+  /* Base tipográfica: misma familia, rendering y jerarquía en todos los módulos. */
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano) {
+    font-family: var(--ds-font-family) !important;
+    color: var(--ds-text);
+    font-size: var(--app-stage1-body);
+    line-height: 1.45;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Encabezados equivalentes = exactamente la misma escala. */
+  :is(.app-reference-heading,.horarios-page-heading,.tareas-page-head,.tareas-subpage-head,.admin-page-heading,.user-settings-heading) h1,
+  :is(.horarios-page-heading,.tareas-page-head,.tareas-subpage-head,.admin-page-heading,.user-settings-heading) > h1 {
+    font-family: var(--ds-font-display) !important;
+    font-size: var(--app-stage1-title) !important;
+    line-height: 1.15 !important;
+    font-weight: 700 !important;
+    letter-spacing: -.025em !important;
+  }
+  :is(.app-reference-heading,.horarios-page-heading,.tareas-page-head,.tareas-subpage-head,.admin-page-heading,.user-settings-heading) p {
+    font-size: var(--app-stage1-subtitle) !important;
+    line-height: 1.45 !important;
+  }
+
+  /* Controles: evita botones, filtros y campos con microtipografía. */
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano)
+  :is(input:not([type=checkbox]):not([type=radio]),select,textarea,button) {
+    font-family: var(--ds-font-family) !important;
+  }
+  :is(.app-select-custom__trigger,.app-select-custom__option) {
+    font-size: var(--app-stage1-control) !important;
+  }
+
+  /* Tarjetas y paneles equivalentes comparten borde/radio, sin sombras arbitrarias. */
+  :is(.app-kpi-card,.settings-card,.module-card,.admin-card,.tareas-panel,.horarios-card) {
+    border-radius: var(--ds-radius-md) !important;
+  }
+
+  /* Texto secundario operativo: piso de lectura de 13 px en PC. */
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaAdmin,#pantallaAjustes,#pantallaBano)
+  :is(small,.text-muted,.help-text,.field-help) {
+    font-size: var(--app-stage1-secondary);
+    line-height: 1.4;
+  }
+
+  /* Configuración usa el eje canónico; Administración se gobierna en admin-official.css. */
+  body.en-ajustes #pantallaAjustes > .user-settings-shell {
+    width: min(var(--app-stage1-page-max), calc(100% - (var(--app-stage1-edge) * 2))) !important;
+    max-width: var(--app-stage1-page-max) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ==========================================================================
+   AUDITORÍA VISUAL · ETAPA 5 · CIERRE INTEGRAL PC / MÓVIL / DARK · 2026-08-26
+   --------------------------------------------------------------------------
+   Capa final canónica. No altera lógica: unifica geometría, legibilidad y
+   superficies compartidas y evita que microtipografías históricas vuelvan a
+   dominar la interfaz.
+   ========================================================================== */
+
+/* Geometría compartida: todos los módulos principales usan el mismo eje. */
+@media (min-width: 901px) {
+  :root {
+    --app-audit-page-max: 1380px;
+    --app-audit-edge: 36px;
+    --app-audit-body: 14px;
+    --app-audit-secondary: 13px;
+    --app-audit-label: 13px;
+    --app-audit-control: 14px;
+  }
+
+  :is(
+    #pantallaInicio,
+    #pantallaProductos > .inventory-page-shell,
+    #pantallaVencimientos > .venc-pro-shell,
+    #pantallaAnotar > .repo-pro-shell,
+    #pantallaPrecios > .precios-pro-shell,
+    #pantallaHorarios > .horarios-shell,
+    #pantallaTareas > .tareas-shell,
+    #pantallaAjustes > .user-settings-shell,
+    #pantallaBano > .bano-shell
+  ) {
+    width: min(var(--app-audit-page-max), calc(100% - (var(--app-audit-edge) * 2))) !important;
+    max-width: var(--app-audit-page-max) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Piso real de lectura para contenido operativo de escritorio. */
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano)
+  :is(p,li,td,th,label,input,select,textarea,button) {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Etiquetas/badges operativos que históricamente quedaron entre 8 y 11 px. */
+  :is(
+    .app-badge,.status-badge,.estado-badge,.badge,.chip,
+    .admin-status-badge,.admin-role-badge,.admin-module-chip,
+    .tareas-badge,.tareas-status,.tareas-day-pill,.tareas-task-meta,
+    .horarios-sector,.horarios-status,.horarios-legend-item,
+    .pro-home-live-badge,.pro-home-task-sector-label
+  ) {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Tablas y listados: encabezados y datos deben poder leerse sin acercar zoom. */
+  :is(#pantallaVencimientos,#pantallaTareas,#pantallaAdmin)
+  :is(table th,.table-head,.list-head) {
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+    font-weight: 700 !important;
+  }
+  :is(#pantallaVencimientos,#pantallaTareas,#pantallaAdmin)
+  :is(table td,.table-row,.list-row) {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Formularios/modales: misma altura, tipografía y jerarquía. */
+  :is(.app-dialog,.modal,.admin-modal,.tareas-modal,.horarios-modal)
+  :is(input:not([type=checkbox]):not([type=radio]),select,textarea,.app-select-custom__trigger) {
+    min-height: 44px;
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+  }
+  :is(.app-dialog,.modal,.admin-modal,.tareas-modal,.horarios-modal)
+  :is(label,.field-label,.form-label) {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+    font-weight: 600;
+  }
+  :is(.app-dialog,.modal,.admin-modal,.tareas-modal,.horarios-modal)
+  :is(small,.help-text,.field-help,.hint) {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Inicio: cierre de legibilidad sin agrandar la grilla. */
+  #pantallaInicio .pro-home-live-row strong { font-size: 14px !important; line-height: 1.3 !important; }
+  #pantallaInicio .pro-home-live-meta { font-size: 13px !important; line-height: 1.35 !important; }
+  #pantallaInicio .pro-home-operation-link,
+  #pantallaInicio .pro-home-task-footer > strong,
+  #pantallaInicio .pro-home-task-total { font-size: 13px !important; }
+  #pantallaInicio .pro-home-task-sector,
+  #pantallaInicio .pro-home-task-sector .app-select-custom__trigger { font-size: 13px !important; }
+
+  /* Configuración: descripciones y controles no quedan por debajo del resto. */
+  #pantallaAjustes :is(.user-settings-card p,.user-settings-card small,.settings-card p,.settings-card small) {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+}
+
+/* Móvil: legibilidad consistente y controles táctiles sin provocar zoom de iOS. */
+@media (max-width: 900px) {
+  :root {
+    --app-mobile-body: 14px;
+    --app-mobile-secondary: 12.5px;
+    --app-mobile-title: 22px;
+    --app-mobile-control: 16px;
+  }
+
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano) {
+    font-family: var(--ds-font-family) !important;
+    font-size: var(--app-mobile-body);
+    line-height: 1.45;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :is(.app-reference-heading,.horarios-page-heading,.tareas-page-head,.tareas-subpage-head,.admin-page-heading,.user-settings-heading) h1 {
+    font-size: var(--app-mobile-title) !important;
+    line-height: 1.15 !important;
+    letter-spacing: -.02em !important;
+  }
+
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano)
+  :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
+    font-size: var(--app-mobile-control) !important;
+  }
+
+  :is(#pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,#pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano)
+  :is(small,.text-muted,.help-text,.field-help,.hint) {
+    font-size: var(--app-mobile-secondary);
+    line-height: 1.4;
+  }
+
+  :is(.app-dialog,.modal,.admin-modal,.tareas-modal,.horarios-modal) {
+    max-width: calc(100vw - 24px) !important;
+  }
+}
+
+/* Dark mode: superficies compartidas usan tokens semánticos; se eliminan restos claros. */
+html[data-theme="dark"] :is(
+  .app-dialog,.modal,.admin-modal,.tareas-modal,.horarios-modal,
+  .settings-card,.admin-card,.tareas-panel,.horarios-card,
+  .app-select-custom__menu,.app-select-custom__trigger
+) {
+  background-color: var(--ds-surface) !important;
+  color: var(--ds-text) !important;
+  border-color: var(--ds-border) !important;
+}
+html[data-theme="dark"] :is(
+  #pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,
+  #pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano
+) :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
+  background-color: var(--ds-control-bg) !important;
+  color: var(--ds-control-text) !important;
+  border-color: var(--ds-control-border) !important;
+}
+html[data-theme="dark"] :is(
+  #pantallaInicio,#pantallaProductos,#pantallaVencimientos,#pantallaAnotar,
+  #pantallaPrecios,#pantallaHorarios,#pantallaTareas,#pantallaAdmin,#pantallaAjustes,#pantallaBano
+) :is(input,textarea)::placeholder {
+  color: var(--ds-text-muted) !important;
+  opacity: .82;
+}
+html[data-theme="dark"] :is(.app-select-custom__option:hover,.app-select-custom__option.is-active,.app-select-custom__option[aria-selected="true"]) {
+  background: var(--ds-surface-muted) !important;
+  color: var(--ds-text) !important;
+}
+
+
+/* ==========================================================================
+   CORRECCIONES CONSOLIDADAS · 2026-08-26
+   Una sola regla maestra para encabezados/posición y legibilidad solicitada.
+   ========================================================================== */
+@media (min-width: 901px) {
+  :root {
+    --app-master-content-top: 26px;
+    --app-master-title-size: 28px;
+    --app-master-eyebrow-size: 11px;
+    --app-master-subtitle-size: 14px;
+  }
+
+  /* Todos los módulos empiezan a la misma distancia del marco superior. */
+  body.en-inicio #pantallaInicio.pantalla-inicio.pro-dashboard,
+  #pantallaProductos > .inventory-page-shell,
+  #pantallaVencimientos > .venc-pro-shell,
+  #pantallaAnotar > .repo-pro-shell,
+  #pantallaPrecios > .precios-pro-shell,
+  #pantallaHorarios > .horarios-shell,
+  #pantallaTareas > .tareas-shell,
+  body[data-screen="admin"] #pantallaAdmin.admin-official-screen,
+  #pantallaAjustes > .user-settings-shell {
+    padding-top: var(--app-master-content-top) !important;
+  }
+  body.en-inicio #pantallaInicio.pantalla-inicio.pro-dashboard,
+  #pantallaProductos > .inventory-page-shell,
+  #pantallaVencimientos > .venc-pro-shell,
+  #pantallaAnotar > .repo-pro-shell,
+  #pantallaPrecios > .precios-pro-shell {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Misma caja, tamaño, peso y separación de encabezados equivalentes. */
+  :is(
+    #pantallaInicio .pro-desktop-heading,
+    #pantallaProductos .inventory-page-header,
+    #pantallaVencimientos .venc-pro-header,
+    #pantallaAnotar .repo-pro-header,
+    #pantallaPrecios .precios-pro-header,
+    #pantallaHorarios .horarios-page-header,
+    #pantallaTareas .tareas-page-head,
+    #pantallaTareas .tareas-subpage-head,
+    #pantallaAdmin .admin-page-heading,
+    #pantallaAjustes .user-settings-heading
+  ) {
+    margin-top: 0 !important;
+  }
+  :is(
+    #pantallaInicio .pro-desktop-heading,
+    #pantallaProductos .inventory-page-header,
+    #pantallaVencimientos .venc-pro-header,
+    #pantallaAnotar .repo-pro-header,
+    #pantallaPrecios .precios-pro-header,
+    #pantallaHorarios .horarios-page-header,
+    #pantallaTareas .tareas-page-head,
+    #pantallaTareas .tareas-subpage-head,
+    #pantallaAdmin .admin-page-heading,
+    #pantallaAjustes .user-settings-heading
+  ) h1 {
+    margin: 0 !important;
+    font-family: var(--ds-font-display) !important;
+    font-size: var(--app-master-title-size) !important;
+    line-height: 1.12 !important;
+    font-weight: 750 !important;
+    letter-spacing: -.03em !important;
+  }
+  :is(
+    #pantallaInicio .pro-desktop-heading,
+    #pantallaProductos .inventory-page-header,
+    #pantallaVencimientos .venc-pro-header,
+    #pantallaAnotar .repo-pro-header,
+    #pantallaPrecios .precios-pro-header,
+    #pantallaHorarios .horarios-page-header,
+    #pantallaTareas .tareas-page-head,
+    #pantallaTareas .tareas-subpage-head,
+    #pantallaAdmin .admin-page-heading,
+    #pantallaAjustes .user-settings-heading
+  ) p {
+    margin-top: 6px !important;
+    font-size: var(--app-master-subtitle-size) !important;
+    line-height: 1.4 !important;
+  }
+  :is(.app-page-eyebrow,.inventory-page-kicker,.venc-pro-eyebrow,.repo-pro-eyebrow,.precios-pro-eyebrow,.horarios-page-eyebrow,.tareas-page-eyebrow,.tareas-subpage-eyebrow) {
+    margin-bottom: 5px !important;
+    font-size: var(--app-master-eyebrow-size) !important;
+    line-height: 1.15 !important;
+    font-weight: 800 !important;
+    letter-spacing: .11em !important;
+  }
+
+  /* Inventario: el resumen lateral también respeta el piso de lectura. */
+  #pantallaProductos .list-summary { font-size: 12.5px !important; line-height: 1.3 !important; }
+
+}
+
