@@ -113,9 +113,8 @@ const CACHE_TTL = {
   metadata: 300000,
   usuarios: 15000,
   sectores: 20000,
-  turnosHorarios: 300000,
-  calendarioHorarios: 60000,
-  tareas: 60000,
+  turnosHorarios: 20000,
+  calendarioHorarios: 15000,
   suscripcionesPush: 60000,
   clavesNotificaciones: 60000,
   centroNotificaciones: 30000,
@@ -1224,13 +1223,10 @@ async function contarPersonalEnTurnoActual() {
     async () => {
       await asegurarHojasHorarios();
       const [calendarioResp, usuarios] = await Promise.all([
-        sheets.spreadsheets.values.get(
-          {
-            spreadsheetId: SPREADSHEET_ID,
-            range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
-          },
-          { retry: false },
-        ),
+        sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
+        }),
         obtenerUsuarios(),
       ]);
       const usuariosActivos = new Set();
@@ -3372,38 +3368,33 @@ async function guardarBanoServidor(config, usuario) {
     return { ...limpio, historial };
   });
 }
-async function obtenerTareasServidor({ sinReintento = false } = {}) {
+async function obtenerTareasServidor() {
   await asegurarHojaTareas();
-  return leerConCache("tareas", CACHE_TTL.tareas, async () => {
-    const r = await sheets.spreadsheets.values.get(
-      {
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${TAREAS_SHEET_NAME}!A:I`,
-      },
-      sinReintento ? { retry: false } : undefined,
-    );
-    const filasTareas = (r.data.values || []).slice(1).filter((f) => f[0]);
-    cantidadFilasTareasConocida = filasTareas.length;
-    return filasTareas.map((f) => {
-      let asignaciones = {};
-      try {
-        asignaciones = JSON.parse(f[5] || "{}");
-      } catch {}
-      let diasSemana = [];
-      try {
-        diasSemana = JSON.parse(f[8] || "[]");
-      } catch {}
-      return normalizarTareaServidor({
-        id: f[0],
-        sector: f[1],
-        nombre: f[2],
-        duracionMin: Number(f[3]),
-        activo: !["no", "false", "0", "inactivo"].includes(
-          normalizarTexto(f[4]).toLowerCase(),
-        ),
-        asignaciones,
-        diasSemana,
-      });
+  const r = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TAREAS_SHEET_NAME}!A:I`,
+  });
+  const filasTareas = (r.data.values || []).slice(1).filter((f) => f[0]);
+  cantidadFilasTareasConocida = filasTareas.length;
+  return filasTareas.map((f) => {
+    let asignaciones = {};
+    try {
+      asignaciones = JSON.parse(f[5] || "{}");
+    } catch {}
+    let diasSemana = [];
+    try {
+      diasSemana = JSON.parse(f[8] || "[]");
+    } catch {}
+    return normalizarTareaServidor({
+      id: f[0],
+      sector: f[1],
+      nombre: f[2],
+      duracionMin: Number(f[3]),
+      activo: !["no", "false", "0", "inactivo"].includes(
+        normalizarTexto(f[4]).toLowerCase(),
+      ),
+      asignaciones,
+      diasSemana,
     });
   });
 }
@@ -4649,15 +4640,6 @@ app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
       async () => {
         let producto = await buscarProductoPorCodigo(codigoBuscado);
 
-        // Un miss puede provenir de una caché breve desactualizada si otro
-        // dispositivo creó o modificó el producto segundos antes. Releer una
-        // sola vez antes de intentar un alta evita falsos 404 sin aumentar
-        // las lecturas del camino normal.
-        if (!producto) {
-          invalidarCache("productos");
-          producto = await buscarProductoPorCodigo(codigoBuscado);
-        }
-
         if (!producto)
           producto = await crearProductoInventario(codigoBuscado, articulo);
 
@@ -4686,10 +4668,8 @@ app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
       producto: productoActualizado,
     });
   } catch (error) {
-    const status = Number(error.statusCode || 500);
-    if (status >= 500) console.error("Error en /guardar:", error);
-    else console.warn(`Solicitud /guardar rechazada (${status}): ${error.message}`);
-    res.status(status).json({
+    console.error("Error en /guardar:", error);
+    res.status(error.statusCode || 500).json({
       ok: false,
       mensaje: error.message || "Error al guardar producto",
     });
@@ -4881,19 +4861,11 @@ async function asegurarHojaVencimientos() {
           normalizarRubroVencimiento(fila[10]),
         ];
       });
-      await sheets.spreadsheets.values.clear({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${VENCIMIENTOS_SHEET_NAME}!A:K`,
-      });
-
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${VENCIMIENTOS_SHEET_NAME}!A1:I${filasMigradas.length + 1}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [ENCABEZADOS_VENCIMIENTOS, ...filasMigradas],
-        },
-      });
+      await reescribirHoja(
+        VENCIMIENTOS_SHEET_NAME,
+        ENCABEZADOS_VENCIMIENTOS,
+        filasMigradas,
+      );
       console.log(
         `Migración de Vencimientos completada: ${filasMigradas.length} registro(s) al esquema Cantidad.`,
       );
@@ -5469,17 +5441,7 @@ async function datosHorarioEntradaHoy() {
   );
 }
 
-function horaEnVentanaNotificacion(horaObjetivo, horaActual, minutosGracia = 2) {
-  const a = normalizarTexto(horaObjetivo).match(/^(\d{2}):(\d{2})$/);
-  const b = normalizarTexto(horaActual).match(/^(\d{2}):(\d{2})$/);
-  if (!a || !b) return false;
-  const objetivo = Number(a[1]) * 60 + Number(a[2]);
-  const actual = Number(b[1]) * 60 + Number(b[2]);
-  const diferencia = actual - objetivo;
-  return diferencia >= 0 && diferencia <= minutosGracia;
-}
-
-async function procesarNotificacionesInicioTareasInterno() {
+async function procesarNotificacionesInicioTareas() {
   const ahora = horaMinutoArgentina();
   const minutoActual = `${fechaArgentina()}|${String(ahora.hora).padStart(2, "0")}:${String(ahora.minuto).padStart(2, "0")}`;
   if (ultimoMinutoProcesadoTareas === minutoActual) return;
@@ -5487,10 +5449,7 @@ async function procesarNotificacionesInicioTareasInterno() {
 
   const horaActual = minutoActual.slice(-5);
   const [{ fecha, sectores, usuarios, porEmpleadoSector }, tareas] =
-    await Promise.all([
-      datosHorarioEntradaHoy(),
-      obtenerTareasServidor({ sinReintento: true }),
-    ]);
+    await Promise.all([datosHorarioEntradaHoy(), obtenerTareasServidor()]);
   const sectoresPorIdONombre = new Map();
   sectores.forEach((s) => {
     sectoresPorIdONombre.set(normalizarTexto(s.id), s);
@@ -5525,8 +5484,7 @@ async function procesarNotificacionesInicioTareasInterno() {
             valorTurno;
         }
         const horaEntrada = horaInicioDesdeTurnoValor(valorTurno, turnosSector);
-        if (!horaEntrada || !horaEnVentanaNotificacion(horaEntrada, horaActual))
-          continue;
+        if (!horaEntrada || horaEntrada !== horaActual) continue;
         const claveGrupo = `${usuario.usuario}|${sectorInfo.id}|${fecha}|${horaEntrada}`;
         const grupo = grupos.get(claveGrupo) || {
           usuario,
@@ -5587,32 +5545,6 @@ async function procesarNotificacionesInicioTareasInterno() {
     );
     enviadas.add(clave);
   }
-}
-
-let promesaNotificacionesInicioTareas = null;
-let pausaNotificacionesTareasHasta = 0;
-const PAUSA_CUOTA_NOTIFICACIONES_MS = 70 * 1000;
-
-async function procesarNotificacionesInicioTareas() {
-  if (Date.now() < pausaNotificacionesTareasHasta) return false;
-  if (promesaNotificacionesInicioTareas) return promesaNotificacionesInicioTareas;
-
-  promesaNotificacionesInicioTareas = procesarNotificacionesInicioTareasInterno()
-    .catch((error) => {
-      if (esErrorCuotaGoogle(error)) {
-        pausaNotificacionesTareasHasta = Date.now() + PAUSA_CUOTA_NOTIFICACIONES_MS;
-        console.warn(
-          "Notificaciones de tareas pausadas 70 segundos por cuota de Google Sheets (429).",
-        );
-        return false;
-      }
-      throw error;
-    })
-    .finally(() => {
-      promesaNotificacionesInicioTareas = null;
-    });
-
-  return promesaNotificacionesInicioTareas;
 }
 
 async function notificarSupervisorTareaCompletada({

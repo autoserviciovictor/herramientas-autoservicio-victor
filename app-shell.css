@@ -18,7 +18,7 @@
   --app-z-fab: 1180;
   --app-z-drawer: 1400;
   --app-z-overlay: 2000;
-  --app-z-dialog: 2100;
+  --app-z-dialog: 30000;
   --app-z-notification: 2200;
 }
 

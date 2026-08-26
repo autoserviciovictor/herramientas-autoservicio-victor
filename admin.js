@@ -201,7 +201,14 @@ function prepararSelectorPermisosUsuario() {
     else cerrarSelectorPermisosUsuario();
   });
   fieldset.querySelectorAll("[data-permiso-modulo]").forEach((input) => {
-    input.addEventListener("change", actualizarResumenPermisosUsuario);
+    input.addEventListener("change", () => {
+      // El panel de permisos se portaliza a <body>; por eso el change ya no
+      // burbujea hasta #adminUsuarioModal. Actualizamos explícitamente el
+      // resumen y el estado del botón Guardar al cambiar un módulo.
+      actualizarResumenPermisosUsuario();
+      limpiarMensajeUsuarioModal();
+      actualizarEstadoGuardarUsuario();
+    });
   });
   document.addEventListener("click", (event) => {
     if (!fieldset.contains(event.target) && !panel.contains(event.target))
