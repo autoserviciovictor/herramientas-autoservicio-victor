@@ -4881,11 +4881,19 @@ async function asegurarHojaVencimientos() {
           normalizarRubroVencimiento(fila[10]),
         ];
       });
-      await reescribirHoja(
-        VENCIMIENTOS_SHEET_NAME,
-        ENCABEZADOS_VENCIMIENTOS,
-        filasMigradas,
-      );
+      await sheets.spreadsheets.values.clear({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${VENCIMIENTOS_SHEET_NAME}!A:K`,
+      });
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${VENCIMIENTOS_SHEET_NAME}!A1:I${filasMigradas.length + 1}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [ENCABEZADOS_VENCIMIENTOS, ...filasMigradas],
+        },
+      });
       console.log(
         `Migración de Vencimientos completada: ${filasMigradas.length} registro(s) al esquema Cantidad.`,
       );
