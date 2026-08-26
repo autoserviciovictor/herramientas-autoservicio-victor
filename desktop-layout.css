@@ -675,3 +675,32 @@ body.en-precios #pantallaPrecios .precio-desktop-load-btn:focus-visible {
   #pantallaAnotar .repo-filter-btn { min-width: 76px !important; padding: 0 9px !important; }
 }
 
+
+/* ==========================================================================
+   D22 · SCROLL CANÓNICO DE ESCRITORIO
+   --------------------------------------------------------------------------
+   El documento es la única superficie de scroll vertical. La regla histórica
+   que forzaba `html { overflow-y: scroll }` podía convivir con un body/app
+   desplazable y producir doble barra o una rueda del mouse sin efecto sobre
+   el contenido visible. Los overlays siguen bloqueando el body mediante las
+   clases canónicas definidas en app-shell.css.
+   ========================================================================== */
+@media (min-width: 901px) {
+  html {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable !important;
+  }
+
+  body:not(.login-bloqueado):not(.app-dialog-open):not(.notification-center-open):not(.inventory-scan-open):not(.venc-scan-open):not(.repo-scan-open):not(.repo-write-open):not(.repo-mobile-load-open):not(.precio-scan-open) {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  body:not(.login-bloqueado) .app,
+  body:not(.login-bloqueado) .pantalla.activa {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+}
