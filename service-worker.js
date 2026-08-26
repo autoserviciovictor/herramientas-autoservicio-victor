@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1960-d21-scanner-mobile-260826-f";
+const CACHE_VERSION = "autoservicio-v1960-d21-auditoria-correcciones-260826-d-scanner-g";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
@@ -11,7 +11,7 @@ const APP_SHELL = [
   "./admin-official.css?v=1960-d21-auditoria-correcciones-260826-d",
   "./login-redesign.css?v=1960-d21-auditoria-correcciones-260826-d",
   "./settings-user.css?v=1960-d21-auditoria-correcciones-260826-d",
-  "./ui-unification.css?v=1960-d21-scanner-mobile-260826-f",
+  "./ui-unification.css?v=1960-d21-scanner-mobile-260826-g",
   "./design-components.css?v=1960-d21-auditoria-correcciones-260826-d",
   "./app-shell.css?v=1960-d21-auditoria-correcciones-260826-d",
   "./desktop-layout.css?v=1960-d21-auditoria-correcciones-260826-d",

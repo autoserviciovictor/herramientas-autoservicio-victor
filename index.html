@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-correcciones-acumuladas-260826-e" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-correcciones-acumuladas-260826-e" />
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="ui-unification.css?v=1960-d21-scanner-mobile-260826-f" />
+    <link rel="stylesheet" href="ui-unification.css?v=1960-d21-scanner-mobile-260826-g" />
 </head>
   <body class="login-bloqueado">
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
@@ -955,12 +955,6 @@
               class="camera-card inventory-camera-card product-loader-camera-card oculto"
               id="cameraCard"
             >
-              <div class="scanner-topbar inventory-scanner-topbar">
-                <span>Escáner activo</span>
-                <button id="btnManualDesdeScanner" type="button">
-                  Ingresar manual
-                </button>
-              </div>
               <video id="video" autoplay muted playsinline></video>
               <div class="camera-overlay">
                 <span id="estadoCamaraTexto">Escáner activo</span>
@@ -971,6 +965,10 @@
                 <div class="corner corner-br"></div>
               </div>
             </section>
+            <button id="btnManualDesdeScanner" class="product-loader-manual-from-scanner" type="button">
+              <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+              <span>Ingresar manual</span>
+            </button>
 
             <section
               id="productoCard"
@@ -1632,10 +1630,6 @@
           </section>
 
           <section class="camera-card venc-camera-card product-loader-camera-card oculto" id="vencCameraCard">
-            <div class="venc-scanner-toolbar scanner-topbar">
-              <span>Escáner activo</span>
-              <button id="btnVencManualDesdeScanner" type="button">Ingresar manual</button>
-            </div>
             <div class="venc-scanner-stage">
               <video id="videoVencimientos" autoplay muted playsinline></video>
               <div class="camera-overlay">
@@ -1644,6 +1638,10 @@
               </div>
             </div>
           </section>
+          <button id="btnVencManualDesdeScanner" class="product-loader-manual-from-scanner" type="button">
+            <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+            <span>Ingresar manual</span>
+          </button>
 
           <section id="vencProductoCard" class="venc-modal-product product-loader-result empty oculto">
             <div class="product-loader-result-heading">
@@ -1820,10 +1818,13 @@
             </section>
 
             <section id="precioCameraCard" class="camera-card precio-camera-card product-loader-camera-card oculto">
-              <div class="scanner-topbar precio-scanner-topbar"><span>Escáner activo</span><button id="btnPrecioManualDesdeScanner" type="button">Ingresar manual</button></div>
               <video id="videoPrecios" autoplay muted playsinline></video>
               <div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div>
             </section>
+            <button id="btnPrecioManualDesdeScanner" class="product-loader-manual-from-scanner" type="button">
+              <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+              <span>Ingresar manual</span>
+            </button>
           </section>
         </div>
 
@@ -2228,10 +2229,13 @@
           </section>
 
           <section id="repoCameraCard" class="camera-card repo-camera-card product-loader-camera-card oculto">
-            <div class="scanner-topbar repo-scanner-topbar"><span>Escáner activo</span><button id="btnRepoManualDesdeScanner" type="button">Ingresar manual</button></div>
             <video id="videoReposicion" autoplay muted playsinline></video>
             <div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div>
           </section>
+          <button id="btnRepoManualDesdeScanner" class="product-loader-manual-from-scanner" type="button">
+            <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+            <span>Ingresar manual</span>
+          </button>
 
           <section id="repoProductoCard" class="repo-product-card repo-modal-product product-loader-result oculto">
             <div class="product-loader-result-heading"><div><span class="product-status">✓ Producto encontrado</span><h2 id="repoNombreProducto">Producto</h2><p id="repoCodigoProducto">Código: -</p></div><span class="product-loader-result-check" aria-hidden="true">✓</span></div>
