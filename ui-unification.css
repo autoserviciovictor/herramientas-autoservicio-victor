@@ -2230,3 +2230,96 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-card.abierta .admin-h
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
   background:var(--app-dark-panel-2,#192d46) !important;
 }
+
+/* ========================================================================== 
+   2026-08-26 · CARGAR PRODUCTO — ESCÁNER MÓVIL UNIFICADO
+   Capa canónica final para Inventario, Vencimientos, Reposición y Precios.
+   El visor móvil queda limpio (sin barra de estado/manual) y gana superficie
+   útil sin ocupar una altura excesiva. Se mantiene el flujo manual disponible
+   desde la pantalla inicial del cargador.
+   ========================================================================== */
+@media (max-width: 700px) {
+  /* La barra legacy sobre la cámara no se dibuja en móvil. */
+  .product-loader-camera-card .scanner-topbar {
+    display: none !important;
+  }
+
+  /* Visor compartido: más grande que el anterior, pero contenido. */
+  .product-loader-camera-card {
+    position: relative !important;
+    width: auto !important;
+    max-width: calc(100% - 32px) !important;
+    height: clamp(320px, 46dvh, 410px) !important;
+    min-height: 320px !important;
+    max-height: 410px !important;
+    margin: 14px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+  }
+
+  .product-loader-camera-card video {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    object-fit: cover !important;
+  }
+
+  /* Vencimientos envuelve el video en una etapa propia: debe ocupar todo el visor. */
+  .product-loader-camera-card .venc-scanner-stage {
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .product-loader-camera-card .venc-scanner-stage video {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* El texto de estado legacy tampoco debe reaparecer dentro del visor. */
+  .product-loader-camera-card .camera-overlay > span,
+  .product-loader-camera-card #estadoCamaraTexto {
+    display: none !important;
+  }
+
+  /* Guías más abiertas para aprovechar el nuevo tamaño del visor. */
+  .product-loader-camera-card .corner {
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .product-loader-camera-card .corner-tl {
+    top: 34px !important;
+    left: 34px !important;
+  }
+  .product-loader-camera-card .corner-tr {
+    top: 34px !important;
+    right: 34px !important;
+  }
+  .product-loader-camera-card .corner-bl {
+    bottom: 46px !important;
+    left: 34px !important;
+  }
+  .product-loader-camera-card .corner-br {
+    bottom: 46px !important;
+    right: 34px !important;
+  }
+
+  .product-loader-camera-card .camera-overlay strong {
+    bottom: 18px !important;
+    padding: 0 18px !important;
+    font-size: 13.5px !important;
+    line-height: 1.25 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .product-loader-camera-card {
+    height: clamp(300px, 43dvh, 360px) !important;
+    min-height: 300px !important;
+    max-height: 360px !important;
+  }
+}
