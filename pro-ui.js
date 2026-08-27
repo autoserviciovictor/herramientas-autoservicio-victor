@@ -26,6 +26,12 @@ function applyTheme(theme) {
     .forEach((use) =>
       use.setAttribute("href", dark ? "#icon-sun" : "#icon-moon"),
     );
+  const headerTheme = $("proHeaderThemeToggle");
+  if (headerTheme) {
+    const nextLabel = dark ? "Activar modo claro" : "Activar modo oscuro";
+    headerTheme.setAttribute("aria-label", nextLabel);
+    headerTheme.setAttribute("title", dark ? "Modo claro" : "Modo oscuro");
+  }
   document
     .querySelectorAll(".pro-switch")
     .forEach((el) => el.classList.toggle("activo", dark));
@@ -86,9 +92,9 @@ function currentModule() {
     ["productos", "cargados", "editarProducto", "inventario"].includes(screen)
   )
     return "inventario";
-  // Configuración es una vista de cuenta/sistema. En escritorio conserva
-  // resaltado el acceso de Administración, tal como el diseño aprobado.
-  if (screen === "ajustes") return "admin";
+  // Configuración es una vista propia de cuenta/sistema y no pertenece
+  // visualmente a ningún módulo del menú lateral.
+  if (screen === "ajustes") return "ajustes";
   return screen;
 }
 
@@ -551,7 +557,7 @@ function init() {
     });
     syncDrawerState();
   }
-  $("proDesktopThemeToggle")?.addEventListener("click", toggleTheme);
+  $("proHeaderThemeToggle")?.addEventListener("click", toggleTheme);
   initUserSettings();
   document
     .querySelector(".pro-drawer-close")

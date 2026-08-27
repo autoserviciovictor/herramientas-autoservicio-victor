@@ -390,7 +390,8 @@ body.en-vencimientos main#pantallaVencimientos.pantalla.activa,
 body.en-anotar main#pantallaAnotar.pantalla.activa,
 body.en-precios main#pantallaPrecios.pantalla.activa,
 body.en-horarios main#pantallaHorarios.pantalla.activa,
-body.en-tareas main#pantallaTareas.pantalla.activa {
+body.en-tareas main#pantallaTareas.pantalla.activa,
+body.en-admin main#pantallaAdmin.pantalla.activa {
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
@@ -409,12 +410,17 @@ body.en-vencimientos #pantallaVencimientos > .venc-pro-shell,
 body.en-anotar #pantallaAnotar > .repo-pro-shell,
 body.en-precios #pantallaPrecios > .precios-pro-shell,
 body.en-horarios #pantallaHorarios > .horarios-shell,
-body.en-tareas #pantallaTareas > .tareas-view > .tareas-shell {
+body.en-tareas #pantallaTareas > .tareas-view > .tareas-shell,
+body.en-admin #adminTab-inicio,
+body.en-admin #adminTab-usuarios,
+body.en-admin #adminTab-sectores,
+body.en-admin #adminTab-sistema {
     width: min(
       var(--primary-module-max-width),
       calc(100% - (var(--ds-page-edge, var(--app-shell-desktop-edge, 36px)) * 2))
     ) !important;
     max-width: var(--primary-module-max-width) !important;
+    min-width: 0 !important;
     margin-left: auto !important;
     margin-right: auto !important;
     padding-left: var(--primary-module-inline-padding) !important;
@@ -442,6 +448,20 @@ body.en-tareas #pantallaTareas > .tareas-view > .tareas-shell {
   /* Conserva únicamente el padding vertical propio de cada pantalla. */
   body.en-inicio #pantallaInicio.pantalla-inicio.pro-dashboard {
     padding-top: 26px !important;
+    padding-bottom: 50px !important;
+  }
+  /* Administración: la pantalla principal es la referencia visual aprobada.
+     Las subpantallas conservaban un offset interno heredado de 11 px; por eso,
+     con el mismo padding nominal de 26 px, el título quedaba visualmente más abajo.
+     La geometría se resuelve aquí, en una sola fuente de verdad. */
+  body.en-admin #adminTab-inicio {
+    padding-top: 26px !important;
+    padding-bottom: 50px !important;
+  }
+  body.en-admin #adminTab-usuarios,
+  body.en-admin #adminTab-sectores,
+  body.en-admin #adminTab-sistema {
+    padding-top: 15px !important;
     padding-bottom: 50px !important;
   }
   body.en-modulo-inventario #pantallaProductos > .inventory-page-shell {
@@ -513,7 +533,8 @@ body.en-precios #pantallaPrecios .precios-pro-header {
   body.en-modulo-inventario .inventory-header-load-btn,
 body.en-vencimientos #pantallaVencimientos .venc-header-load-btn,
 body.en-anotar #pantallaAnotar .repo-header-load-btn,
-body.en-precios #pantallaPrecios .precio-desktop-load-btn {
+body.en-precios #pantallaPrecios .precio-desktop-load-btn,
+body.en-admin #pantallaAdmin .admin-page-heading > .admin-primary-btn {
     width: 168px !important;
     min-width: 168px !important;
     max-width: 168px !important;
@@ -544,7 +565,8 @@ body.en-precios #pantallaPrecios .precio-desktop-load-btn {
   body.en-modulo-inventario .inventory-header-load-btn > span:first-child,
 body.en-vencimientos #pantallaVencimientos .venc-header-load-btn > span:first-child,
 body.en-anotar #pantallaAnotar .repo-header-load-btn > span:first-child,
-body.en-precios #pantallaPrecios .precio-desktop-load-btn > span:first-child {
+body.en-precios #pantallaPrecios .precio-desktop-load-btn > span:first-child,
+body.en-admin #pantallaAdmin .admin-page-heading > .admin-primary-btn > span:first-child {
     display: inline-block !important;
     width: 17px !important;
     min-width: 17px !important;

@@ -274,10 +274,8 @@ export function inicializarReposicion() {
   $("btnRepoMenos")?.addEventListener("click", () => cambiarCantidad(-1));
   $("btnRepoMas")?.addEventListener("click", () => cambiarCantidad(1));
   $("btnRepoGuardar")?.addEventListener("click", guardar);
-  $("btnRepoCancelar")?.addEventListener("click", cerrarCargaModal);
 
   $("btnRepoCerrarEscribir")?.addEventListener("click", cerrarEscribirModal);
-  $("btnRepoCancelarEscribir")?.addEventListener("click", cerrarEscribirModal);
   $("repoEscribirModal")
     ?.querySelector("[data-repo-write-close]")
     ?.addEventListener("click", cerrarEscribirModal);
@@ -292,7 +290,6 @@ export function inicializarReposicion() {
   $("repoBuscador")?.addEventListener("input", render);
   $("repoListado")?.addEventListener("click", manejarAccion);
   $("btnRepoCerrarProductoEdicion")?.addEventListener("click", cerrarEditorProductoLista);
-  $("btnRepoCancelarProductoEdicion")?.addEventListener("click", cerrarEditorProductoLista);
   $("btnRepoMenosProductoEdicion")?.addEventListener("click", () => ajustarCantidadEditorLista(-1));
   $("btnRepoMasProductoEdicion")?.addEventListener("click", () => ajustarCantidadEditorLista(1));
   $("btnRepoGuardarProductoEdicion")?.addEventListener("click", guardarEditorProductoLista);

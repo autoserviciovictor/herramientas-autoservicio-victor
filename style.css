@@ -1780,6 +1780,11 @@ body.login-bloqueado{
   font-weight: 800;
   text-align: center;
 }
+.admin-message:empty{
+  display: none !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
 .admin-message.ok{
   color: #16733d;
 }
@@ -5400,9 +5405,7 @@ body{
 .admin-screen{
     max-width: none !important;
   }
-  .admin-tab-panel{
-    padding: 22px !important;
-  }
+  /* Administración usa exclusivamente la geometría canónica de desktop-layout.css. */
   .admin-users-list,
 .admin-sectors-list,
 .admin-history-list{
@@ -5623,21 +5626,6 @@ canvas{
 @media (max-width: 420px) {
   .horario-cell{
     width: 40px !important;
-  }
-}
-
-/* V9.1 · Administración: navegación inferior y editor continuo */
-body.en-admin #pantallaAdmin{
-  padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
-}
-
-
-
-
-@media (min-width: 760px) {
-  
-  body.en-admin #pantallaAdmin{
-    padding-bottom: 110px !important;
   }
 }
 
@@ -7153,9 +7141,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
   /* Elimina separaciones heredadas grandes en pantallas señaladas. */
   #pantallaAdmin{
     gap: 0 !important;
-  }
-  #pantallaAdmin .admin-message:empty{
-    display: none !important;
   }
   #pantallaAdmin .admin-tab-panel{
     margin-top: 0 !important;

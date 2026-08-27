@@ -1,3 +1,11 @@
+.metric-label-mobile, .metric-unit-mobile { display: none; }
+
+
+/* Los modales con cierre superior no reservan una segunda columna para Cancelar. */
+:is(.modal-actions,.inventory-edit-modal-actions,.repo-write-actions,.product-loader-actions,.inventory-load-actions,.venc-form-actions):has(> button:only-child) {
+  grid-template-columns: 1fr !important;
+}
+
 /* ========================================================================== 
    AutoservicioAPP · Capa visual canónica · pasada final
    Encabezados, KPIs, navegación contextual y correcciones responsive.
@@ -120,10 +128,6 @@
 }
 
 @media (min-width: 901px) {
-  body[data-screen="admin"] #pantallaAdmin.admin-official-screen {
-    padding-top: 26px !important;
-  }
-
   #pantallaInicio .pro-metrics-grid,
   #pantallaProductos .inventory-loaded-metrics,
   #pantallaVencimientos .venc-resumen,
@@ -527,6 +531,8 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
     height: 40px !important;
   }
 
+  #proHeaderThemeToggle { display: none !important; }
+
   /* En subpantallas de Horarios/Tareas la flecha reemplaza a la hamburguesa. */
   body.en-horarios.horarios-vista-mio #brandMenuBtn,
   body.en-horarios.horarios-vista-config #brandMenuBtn,
@@ -575,6 +581,13 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
   .app-reference-heading p,
   #vencHistorialAdmin .admin-history-page-heading.app-reference-heading p { font-size: 13px !important; }
   .app-page-eyebrow { font-size: 9.5px !important; }
+
+
+  #pantallaInicio .metric-label-desktop,
+  #pantallaInicio .metric-unit-desktop { display: none !important; }
+  #pantallaInicio .metric-label-mobile,
+  #pantallaInicio .metric-unit-mobile { display: inline !important; }
+  #pantallaInicio .pro-metric-card.app-kpi-card > p { display: none !important; }
 
   /* KPIs móviles: 2 x 2, legibles y sin cortes. */
   #pantallaInicio .pro-metrics-grid,
@@ -1780,7 +1793,6 @@ html[data-theme="dark"] :is(.app-select-custom__option:hover,.app-select-custom_
   #pantallaPrecios > .precios-pro-shell,
   #pantallaHorarios > .horarios-shell,
   #pantallaTareas > .tareas-shell,
-  body[data-screen="admin"] #pantallaAdmin.admin-official-screen,
   #pantallaAjustes > .user-settings-shell {
     padding-top: var(--app-master-content-top) !important;
   }
@@ -2324,6 +2336,12 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
   }
 }
 
+/* El acceso manual alternativo pertenece solo al visor móvil activo.
+   En escritorio ya existe el acceso manual dentro del panel principal. */
+.product-loader-manual-from-scanner {
+  display: none;
+}
+
 /* ========================================================================== 
    2026-08-26 · CARGAR PRODUCTO — FLUJO MÓVIL FINAL
    Escáner primero + alternativa manual debajo. Después de detectar el producto
@@ -2331,6 +2349,16 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
    Esta capa es intencionalmente la última para neutralizar reglas legacy.
    ========================================================================== */
 @media (max-width: 700px) {
+  html, body, .app, .pantalla, .pro-drawer-scroll, .product-loader-dialog {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar, .app::-webkit-scrollbar, .pantalla::-webkit-scrollbar, .pro-drawer-scroll::-webkit-scrollbar, .product-loader-dialog::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
   .product-loader-dialog {
     height: auto !important;
     min-height: 0 !important;
@@ -2362,7 +2390,7 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
     align-items: center !important;
     justify-content: center !important;
     gap: 9px !important;
-    width: auto !important;
+    width: calc(100% - 32px) !important;
     min-height: 48px !important;
     margin: -4px 16px calc(14px + env(safe-area-inset-bottom)) !important;
     padding: 0 16px !important;
@@ -2495,7 +2523,7 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
 
   .product-loader-specific .quantity-control,
   .product-loader-specific .repo-quantity {
-    width: min(240px, 100%) !important;
+    width: 100% !important;
     min-height: 46px !important;
     height: 46px !important;
     margin-top: 7px !important;
@@ -2548,4 +2576,9 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
     min-height: 280px !important;
     max-height: 330px !important;
   }
+}
+
+@media (min-width: 901px) {
+  .pro-topbar > .pro-top-actions { width: auto !important; height: auto !important; display: flex !important; align-items: center !important; gap: 8px !important; }
+  #proHeaderThemeToggle { display: inline-grid !important; place-items: center !important; }
 }

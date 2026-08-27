@@ -279,7 +279,7 @@ let usuarioModalInicial = "";
 let sectorModalInicial = "";
 let resumenSistema = {};
 let adminUsuariosPagina = 1;
-let adminUsuariosPorPagina = 8;
+const adminUsuariosPorPagina = 12;
 let adminUsuariosVista = "grid";
 let adminUsuariosSeleccionados = new Set();
 let adminUsuariosCargados = false;
@@ -722,12 +722,11 @@ function renderSectores() {
       <div class="admin-sector-users-count"><strong>${asignados}</strong><span>${asignados === 1 ? "usuario" : "usuarios"}</span></div>
       <div class="admin-sector-products-count"><strong>—</strong><span>sin relación</span></div>
       <div><span class="user-status ${sec.activo === false ? "inactivo" : "activo"}">${sec.activo === false ? "Inactivo" : "Activo"}</span></div>
-      <div class="admin-sector-row-actions"><button type="button" class="btn-editar-sector"><svg class="app-icon"><use href="#icon-edit"></use></svg><span>Editar</span></button><button type="button" class="admin-more-btn" aria-label="Más opciones"><svg class="app-icon"><use href="#icon-more"></use></svg></button></div>
+      <div class="admin-sector-row-actions"><button type="button" class="btn-editar-sector"><svg class="app-icon"><use href="#icon-edit"></use></svg><span>Editar</span></button></div>
     </article>`;
   }).join("");
 
   cont.querySelectorAll(".btn-editar-sector").forEach((b) => b.addEventListener("click", () => abrirSectorModal(sectorPorId(b.closest("[data-sector-id]").dataset.sectorId))));
-  cont.querySelectorAll(".admin-more-btn").forEach((b) => b.addEventListener("click", () => abrirSectorModal(sectorPorId(b.closest("[data-sector-id]").dataset.sectorId))));
 
   const desde = inicio + 1;
   const hasta = inicio + visibles.length;
@@ -933,7 +932,6 @@ function renderUsuarios() {
   const orden = $("adminUsuariosOrden")?.value || "nombre";
   const soloSinSector = Boolean($("adminUsuariosSoloSinSector")?.checked);
   const minModulos = Number($("adminUsuariosMinModulos")?.value || 0);
-  adminUsuariosPorPagina = Number($("adminUsuariosPorPagina")?.value || adminUsuariosPorPagina || 8);
   let filtrados = usuarios.filter((u) => {
     if (estado === "activo" && u.activo === false) return false;
     if (estado === "inactivo" && u.activo !== false) return false;
@@ -1659,6 +1657,7 @@ function cambiarTab(tab) {
   const destino = ["inicio", "usuarios", "sectores", "sistema"].includes(tab) ? tab : "inicio";
   document.querySelectorAll(".admin-tab-panel").forEach((p) => p.classList.toggle("oculto", p.id !== `adminTab-${destino}`));
   document.body.dataset.adminView = destino;
+  sessionStorage.setItem("autoservicio_admin_vista", destino);
   if (destino === "usuarios") renderUsuarios();
   if (destino === "sectores") renderSectores();
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -2206,14 +2205,7 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   document.querySelectorAll("[data-admin-open]").forEach((btn) => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminOpen)));
   $("adminUsuariosBuscar")?.addEventListener("input", () => { adminUsuariosPagina = 1; renderUsuarios(); });
-  $("btnAdminMasFiltros")?.addEventListener("click", () => {
-    const panel = $("adminUsuariosFiltrosAvanzados");
-    if (!panel) return;
-    const abrir = panel.classList.contains("oculto");
-    panel.classList.toggle("oculto", !abrir);
-    $("btnAdminMasFiltros")?.setAttribute("aria-expanded", abrir ? "true" : "false");
-  });
-  ["adminUsuariosFiltroEstado", "adminUsuariosFiltroSector", "adminUsuariosFiltroRol", "adminUsuariosOrden", "adminUsuariosPorPagina", "adminUsuariosSoloSinSector", "adminUsuariosMinModulos"].forEach((id) => $(id)?.addEventListener("change", () => { adminUsuariosPagina = 1; renderUsuarios(); }));
+  ["adminUsuariosFiltroEstado", "adminUsuariosFiltroSector", "adminUsuariosFiltroRol", "adminUsuariosOrden", "adminUsuariosSoloSinSector", "adminUsuariosMinModulos"].forEach((id) => $(id)?.addEventListener("change", () => { adminUsuariosPagina = 1; renderUsuarios(); }));
   $("btnAdminLimpiarFiltrosUsuarios")?.addEventListener("click", () => {
     if ($("adminUsuariosBuscar")) $("adminUsuariosBuscar").value = "";
     ["adminUsuariosFiltroEstado","adminUsuariosFiltroSector","adminUsuariosFiltroRol","adminUsuariosMinModulos"].forEach((id) => {
@@ -2378,13 +2370,6 @@ document.addEventListener("DOMContentLoaded", () => {
   dropzone?.addEventListener("drop", async (event) => {
     const archivo = event.dataTransfer?.files?.[0];
     if (archivo) await procesarArchivoImportacionDesdeUI(archivo);
-  });
-  $("btnAdminCancelarImportacion")?.addEventListener("click", () => {
-    cerrarVistaPreviaImportacion();
-    importacionPendiente = null;
-    importacionResumenPendiente = null;
-    $("adminImportarEstado").textContent =
-      "Importación cancelada. No se modificó ningún dato.";
   });
   $("btnAdminCerrarImportacion")?.addEventListener("click", () => {
     cerrarVistaPreviaImportacion();

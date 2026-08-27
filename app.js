@@ -115,7 +115,6 @@ const elementos = {
   btnGuardarCantidad: $("btnGuardarCantidad"),
   btnMenosCantidad: $("btnMenosCantidad"),
   btnMasCantidad: $("btnMasCantidad"),
-  btnCancelarCantidad: $("btnCancelarCantidad"),
   cantidadInput: $("cantidadInput"),
   checkSonidos: $("checkSonidos"),
   checkVibracion: $("checkVibracion"),
@@ -152,7 +151,6 @@ const elementos = {
   vencCantidadInput: $("vencCantidadInput"),
   vencTotalTexto: $("vencTotalTexto"),
   btnVencGuardar: $("btnVencGuardar"),
-  btnVencCancelarCarga: $("btnVencCancelarCarga"),
   vencListado: $("vencListado"),
   vencBuscador: $("vencBuscador"),
   vencResumen: $("vencResumen"),
@@ -1238,11 +1236,9 @@ function configurarFechasMinimasVencimientos() {
 
 async function inicializar() {
   ocultarSplash();
-  cambiarPantalla("inicio");
-  pantallaActualApp = "inicio";
-  actualizarFabInventario();
-  actualizarFabVencimientos();
-  registrarEstadoNavegacion("inicio", true);
+  const pantallaInicial = history.state?.pantalla || "inicio";
+  pantallaActualApp = pantallaInicial;
+  registrarEstadoNavegacion(pantallaInicial, true);
   intentarBloquearOrientacion();
   actualizarUbicacion(ubicacionActual);
   actualizarConteosUbicacion({ salon: 0, deposito: 0 });
@@ -1256,6 +1252,15 @@ async function inicializar() {
   prepararAccesosMetricasInicio();
   configurarFechasMinimasVencimientos();
   inicializarReposicion();
+
+  // Restaurar la pantalla real mediante el flujo normal del módulo. Así, al
+  // recargar no solo conservamos la vista: también volvemos a ejecutar la carga
+  // de datos que corresponde a Inventario, Vencimientos, Administración, etc.
+  await entrarPantalla(pantallaInicial, { forzar: true, desdeHistorial: true });
+  if (pantallaInicial === "admin" && window.AutoservicioAuth?.esAdmin?.()) {
+    const vistaAdmin = sessionStorage.getItem("autoservicio_admin_vista") || "inicio";
+    await window.AdminModule?.abrirTab?.(vistaAdmin);
+  }
 
   // Evitar una lectura protegida antes de validar la sesión. Inventario se
   // recarga al recibir `autoservicio:sesion` y también al entrar al módulo.
@@ -1462,10 +1467,6 @@ function configurarEventos() {
   );
 
   elementos.btnGuardarCantidad.addEventListener("click", guardarCantidadActual);
-  elementos.btnCancelarCantidad.addEventListener(
-    "click",
-    cancelarProductoActual,
-  );
   elementos.cantidadInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") guardarCantidadActual();
   });
@@ -1559,10 +1560,6 @@ function configurarEventos() {
     actualizarTotalVencimiento,
   );
   elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
-  elementos.btnVencCancelarCarga?.addEventListener(
-    "click",
-    cancelarCargaVencimiento,
-  );
   elementos.vencBuscador?.addEventListener("input", () => {
     busquedaVencimientos = elementos.vencBuscador.value || "";
     renderListadoVencimientos();
@@ -1921,10 +1918,6 @@ function cerrarScanner(mostrarBoton = true) {
   } else {
     ocultarControlesEscaneo();
   }
-}
-
-function cancelarProductoActual() {
-  resetearCargaInventario();
 }
 
 async function manejarCodigoEscaneado(codigo) {
@@ -2390,10 +2383,6 @@ function reiniciarFormularioVencimientos() {
     elementos.vencNombreProducto.textContent = "Escaneá o ingresá un código...";
   if (elementos.vencCodigoProducto)
     elementos.vencCodigoProducto.textContent = "-";
-}
-
-function cancelarCargaVencimiento() {
-  cerrarCargaVencimientosModal("Carga cancelada");
 }
 
 async function abrirScannerVencimientos() {
@@ -3337,6 +3326,21 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) sincronizarEnSegundoPlano();
 });
 
-window.addEventListener("autoservicio:sesion", () =>
-  abrirDestinoInicial().catch(() => {}),
-);
+window.addEventListener("autoservicio:sesion", async () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("modulo")) {
+      await abrirDestinoInicial();
+      return;
+    }
+
+    const destino = history.state?.pantalla || pantallaActualApp || "inicio";
+    await entrarPantalla(destino, { forzar: true, desdeHistorial: true });
+    if (destino === "admin" && window.AutoservicioAuth?.esAdmin?.()) {
+      const vistaAdmin = sessionStorage.getItem("autoservicio_admin_vista") || "inicio";
+      await window.AdminModule?.abrirTab?.(vistaAdmin);
+    }
+  } catch (error) {
+    console.warn("No se pudo restaurar la pantalla después de validar la sesión:", error);
+  }
+});

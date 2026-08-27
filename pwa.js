@@ -1,6 +1,7 @@
 let eventoInstalacion = null;
 
 const btnInstalar = document.getElementById("btnInstalarApp");
+const btnInstalarAjustes = document.getElementById("settingsInstallApp");
 const textoInstalacion = document.getElementById("estadoInstalacionApp");
 const iosModal = document.getElementById("iosInstallModal");
 const iosWarning = document.getElementById("iosInstallBrowserWarning");
@@ -51,8 +52,14 @@ iosModal?.addEventListener("click", (event) => {
 });
 
 function actualizarEstadoInstalacion() {
+  const instalada = estaInstalada();
+  installCard?.classList.toggle("oculto", instalada);
+  if (btnInstalarAjustes) {
+    btnInstalarAjustes.disabled = instalada;
+    const label = btnInstalarAjustes.querySelector("span");
+    if (label) label.textContent = instalada ? "Aplicación instalada" : "Instalar aplicación";
+  }
   if (!btnInstalar || !textoInstalacion) return;
-  installCard?.classList.toggle("oculto", estaInstalada());
   if (estaInstalada()) {
     btnInstalar.disabled = true;
     btnInstalar.textContent = "✓ Aplicación instalada";
@@ -92,15 +99,22 @@ window.addEventListener("appinstalled", () => {
   actualizarEstadoInstalacion();
 });
 
-btnInstalar?.addEventListener("click", async () => {
+async function solicitarInstalacion() {
   if (estaInstalada()) return;
   if (esIOS()) return abrirGuiaIOS();
-  if (!eventoInstalacion) return;
+  if (!eventoInstalacion) {
+    // Si el navegador no expuso el prompt, mantenemos el mismo comportamiento
+    // informativo que ya usa la tarjeta de instalación.
+    return;
+  }
   eventoInstalacion.prompt();
   await eventoInstalacion.userChoice;
   eventoInstalacion = null;
   actualizarEstadoInstalacion();
-});
+}
+
+btnInstalar?.addEventListener("click", solicitarInstalacion);
+btnInstalarAjustes?.addEventListener("click", solicitarInstalacion);
 
 if ("serviceWorker" in navigator) {
   const esDesarrolloLocal = ["127.0.0.1", "localhost"].includes(location.hostname);

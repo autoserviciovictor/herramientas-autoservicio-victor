@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-correcciones-acumuladas-260826-e" />
     <link rel="stylesheet" href="ui-unification.css?v=1960-d21-scanner-mobile-260826-g" />
 </head>
-  <body class="login-bloqueado">
+  <body>
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
       <symbol id="icon-user" viewBox="0 0 24 24">
         <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0" />
@@ -233,7 +233,7 @@
       </symbol>
     </svg>
 
-    <div id="loginOverlay" class="login-overlay" aria-hidden="false">
+    <div id="loginOverlay" class="login-overlay oculto" aria-hidden="true">
       <main class="login-v2-shell" aria-labelledby="loginTitulo">
         <section class="login-v2-intro" aria-label="Autoservicio Victor">
           <img class="login-v2-intro-logo" src="./icons/brand-logo-full.png" alt="Autoservicio Victor" />
@@ -350,6 +350,15 @@
         </div>
 
         <div class="pro-top-actions">
+          <button
+            id="proHeaderThemeToggle"
+            class="pro-icon-action pro-theme-action"
+            type="button"
+            aria-label="Activar modo oscuro"
+            title="Modo oscuro"
+          >
+            <svg class="app-icon pro-theme-icon"><use href="#icon-moon"></use></svg>
+          </button>
           <button
             id="proHeaderNotifications"
             class="pro-icon-action pro-notification-action"
@@ -613,16 +622,6 @@
             </span>
             <span class="pro-user-settings-chevron" aria-hidden="true">›</span>
           </button>
-          <button
-            id="proDesktopThemeToggle"
-            class="pro-theme-row"
-            type="button"
-          >
-            <svg class="app-icon pro-theme-icon">
-              <use href="#icon-moon"></use></svg
-            ><span class="pro-theme-label">Modo oscuro</span
-            ><i class="pro-switch"><b></b></i>
-          </button>
         </div>
       </aside>
 
@@ -654,7 +653,7 @@
         <section class="pro-metrics-grid">
           <article class="pro-metric-card pro-metric-blue app-kpi-card app-kpi-blue app-kpi-action" role="button" tabindex="0" data-dashboard-target="inventario" aria-label="Abrir Inventario">
             <div>
-              <span>Stock Contado Hoy</span
+              <span><span class="metric-label-desktop">Stock Contado Hoy</span><span class="metric-label-mobile">Stock contado</span></span
               ><b class="pro-metric-icon"
                 ><svg class="app-icon"><use href="#icon-box"></use></svg
               ></b>
@@ -664,7 +663,7 @@
           </article>
           <article class="pro-metric-card pro-metric-red app-kpi-card app-kpi-red app-kpi-action" role="button" tabindex="0" data-dashboard-target="vencimientos" aria-label="Abrir Vencimientos">
             <div>
-              <span>Vencimientos Críticos</span
+              <span><span class="metric-label-desktop">Vencimientos Críticos</span><span class="metric-label-mobile">Vencimientos</span></span
               ><b class="pro-metric-icon"
                 ><svg class="app-icon"><use href="#icon-refresh"></use></svg
               ></b>
@@ -674,17 +673,17 @@
           </article>
           <article class="pro-metric-card pro-metric-orange app-kpi-card app-kpi-amber app-kpi-action" role="button" tabindex="0" data-dashboard-target="horarios" aria-label="Abrir Horarios y Turnos">
             <div>
-              <span>Personal en Turno</span
+              <span><span class="metric-label-desktop">Personal en Turno</span><span class="metric-label-mobile">Turno actual</span></span
               ><b class="pro-metric-icon"
                 ><svg class="app-icon"><use href="#icon-users"></use></svg
               ></b>
             </div>
-            <strong id="proMetricPersonal">—</strong><small>empleados</small>
+            <strong id="proMetricPersonal">—</strong><small><span class="metric-unit-desktop">empleados</span><span class="metric-unit-mobile">personas</span></small>
             <p>Turno actual</p>
           </article>
           <article class="pro-metric-card pro-metric-green app-kpi-card app-kpi-green app-kpi-action" role="button" tabindex="0" data-dashboard-target="tareas" aria-label="Abrir Tareas Diarias">
             <div>
-              <span>Tareas Completadas</span
+              <span><span class="metric-label-desktop">Tareas Completadas</span><span class="metric-label-mobile">Tareas</span></span
               ><b class="pro-metric-icon"
                 ><svg class="app-icon"><use href="#icon-check"></use></svg
               ></b>
@@ -1065,13 +1064,6 @@
               </div>
 
               <div class="action-row inventory-load-actions">
-                <button
-                  id="btnCancelarCantidad"
-                  class="cancel-btn"
-                  type="button"
-                >
-                  Cancelar
-                </button>
                 <button
                   type="button"
                   id="btnGuardarCantidad"
@@ -1467,6 +1459,7 @@
           <div class="user-settings-quick-grid">
             <button id="settingsQuickPassword" type="button"><svg class="app-icon"><use href="#icon-key"></use></svg><span>Cambiar contraseña</span><b aria-hidden="true">›</b></button>
             <button id="settingsResetPreferences" type="button"><svg class="app-icon"><use href="#icon-refresh"></use></svg><span>Restablecer preferencias</span><b aria-hidden="true">›</b></button>
+            <button id="settingsInstallApp" type="button"><svg class="app-icon"><use href="#icon-upload"></use></svg><span>Instalar aplicación</span><b aria-hidden="true">›</b></button>
             <button id="settingsQuickLogout" class="is-danger" type="button"><svg class="app-icon"><use href="#icon-logout"></use></svg><span>Cerrar sesión</span><b aria-hidden="true">›</b></button>
           </div>
         </section>
@@ -1510,7 +1503,7 @@
                 <input
                   id="vencBuscador"
                   type="search"
-                  placeholder="Buscar por código o producto..."
+                  placeholder="Buscar"
                   autocomplete="off"
                 />
               </label>
@@ -1683,7 +1676,6 @@
             </div>
             <strong id="vencTotalTexto" class="oculto">1</strong>
             <div class="venc-form-actions">
-              <button id="btnVencCancelarCarga" class="cancel-btn" type="button">Cancelar</button>
               <button type="button" id="btnVencGuardar" class="save-btn">Guardar vencimiento</button>
             </div>
           </section>
@@ -2246,7 +2238,7 @@
             <label>Cantidad</label>
             <div class="quantity-control repo-quantity"><button id="btnRepoMenos" type="button">−</button><input id="repoCantidadInput" aria-label="Cantidad para la lista" type="number" min="1" step="1" value="1" inputmode="numeric" /><button id="btnRepoMas" type="button">+</button></div>
             <p class="repo-help">Indicá la cantidad que querés agregar a esta lista.</p>
-            <div class="product-loader-actions"><button id="btnRepoCancelar" class="cancel-btn repo-cancel" type="button">Cancelar</button><button id="btnRepoGuardar" class="save-btn" type="button">Agregar a mi lista</button></div>
+            <div class="product-loader-actions"><button id="btnRepoGuardar" class="save-btn" type="button">Agregar a mi lista</button></div>
           </section>
         </section>
       </div>
@@ -2263,7 +2255,6 @@
             <button id="btnRepoCerrarEscribir" type="button" aria-label="Cerrar">×</button>
           </header>
           <div class="repo-write-body">
-            <p class="repo-write-example">Ejemplo: <strong>2 coca 1L</strong></p>
             <textarea id="repoTextoLista" aria-label="Productos y cantidades de la lista" rows="8" placeholder="2 coca 1L
 3 paquetes de azúcar
 1 leche descremada
@@ -2276,7 +2267,6 @@
             </div>
           </div>
           <footer class="repo-write-actions">
-            <button id="btnRepoCancelarEscribir" type="button" class="cancel-btn">Cancelar</button>
             <button id="btnRepoAgregarTexto" type="button" class="save-btn"><span aria-hidden="true">+</span> Agregar a mi lista</button>
           </footer>
         </section>
@@ -2349,7 +2339,6 @@
           </button>
 
           <div class="inventory-edit-modal-actions">
-            <button id="btnRepoCancelarProductoEdicion" class="secondary-btn" type="button">Cancelar</button>
             <button type="button" id="btnRepoGuardarProductoEdicion" class="save-btn">
               <svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg>
               Guardar cambios
@@ -3030,8 +3019,9 @@
         </section>
 
         <section id="adminTab-usuarios" class="admin-tab-panel admin-official-panel oculto">
-          <header class="admin-page-heading app-reference-heading">
+          <header class="admin-page-heading admin-page-heading-actions app-reference-heading">
             <div><span class="app-page-eyebrow">GESTIÓN DEL SISTEMA</span><h1>Usuarios</h1><p>Gestioná los usuarios del sistema, roles y permisos de acceso.</p></div>
+            <button id="btnAdminNuevoUsuario" class="admin-primary-btn" type="button"><span>＋</span> Crear usuario</button>
           </header>
           <section class="admin-kpi-grid admin-users-kpis">
             <article class="admin-kpi-card tone-blue app-kpi-card app-kpi-blue"><span class="admin-kpi-icon"><svg class="app-icon"><use href="#icon-building"></use></svg></span><div><small>Sectores activos</small><strong id="adminUsuariosSectoresMetrica">—</strong><span>Configurados</span></div><span class="admin-kpi-spark">⌁⌁⌁</span></article>
@@ -3045,7 +3035,6 @@
             <label class="admin-select-control"><span>Sector</span><select id="adminUsuariosFiltroSector"><option value="todos">Todos</option></select></label>
             <label class="admin-select-control"><span>Rol</span><select id="adminUsuariosFiltroRol"><option value="todos">Todos</option><option value="administrador">Administrador</option><option value="administracion">Administración</option><option value="supervisor">Supervisor</option><option value="personal">Personal</option></select></label>
             <button id="btnAdminMasFiltros" class="admin-filter-more-btn" type="button" aria-expanded="false"><svg class="app-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><span>Más filtros</span></button>
-            <button id="btnAdminNuevoUsuario" class="admin-primary-btn" type="button"><span>＋</span> Crear usuario</button>
             <div id="adminUsuariosFiltrosAvanzados" class="admin-advanced-filters oculto">
               <label><input id="adminUsuariosSoloSinSector" type="checkbox"> <span>Solo usuarios sin sector</span></label>
               <label><span>Módulos mínimos</span><select id="adminUsuariosMinModulos"><option value="0">Cualquiera</option><option value="1">1 o más</option><option value="4">4 o más</option><option value="6">Todos</option></select></label>
@@ -3058,7 +3047,7 @@
               <div class="admin-users-view-tools"><div class="admin-view-toggle" role="group" aria-label="Vista de usuarios"><button id="adminUsuariosVistaGrid" type="button" class="activo" aria-label="Vista de tarjetas"><svg class="app-icon"><use href="#icon-tasks"></use></svg></button><button id="adminUsuariosVistaLista" type="button" aria-label="Vista de lista"><svg class="app-icon"><use href="#icon-list"></use></svg></button></div><label>Ordenar por:<select id="adminUsuariosOrden"><option value="nombre">Nombre A-Z</option><option value="rol">Rol</option><option value="estado">Estado</option></select></label></div>
             </div>
             <div id="adminUsuariosLista" class="admin-users-list admin-users-official-grid"></div>
-            <footer class="admin-pagination"><span id="adminUsuariosPaginacionResumen">—</span><div id="adminUsuariosPaginacion" class="admin-pagination-buttons"></div><label>Usuarios por página <select id="adminUsuariosPorPagina"><option value="8">8</option><option value="12">12</option><option value="20">20</option></select></label></footer>
+            <footer class="admin-pagination admin-users-pagination"><span id="adminUsuariosPaginacionResumen">—</span><div id="adminUsuariosPaginacion" class="admin-pagination-buttons"></div></footer>
           </section>
         </section>
 
@@ -3286,13 +3275,6 @@
             columna Sub Total será ignorada.
           </div>
           <div class="modal-actions">
-            <button
-              id="btnAdminCancelarImportacion"
-              type="button"
-              class="cancel-btn"
-            >
-              Cancelar
-            </button>
             <button
               id="btnAdminConfirmarImportacion"
               type="button"

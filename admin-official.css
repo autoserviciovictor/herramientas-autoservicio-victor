@@ -48,14 +48,20 @@
 
   
   
-  body[data-screen="admin"] #pantallaAdmin.admin-official-screen{
-    width:100% !important;max-width:none !important;margin:0 !important;padding:30px 0 42px !important;background:var(--admin-page) !important;min-height:calc(100dvh - var(--app-shell-header-height-desktop,76px)) !important;
+  body.en-admin #pantallaAdmin.admin-official-screen{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:var(--admin-page) !important;
+    min-height:calc(100dvh - var(--app-shell-header-height-desktop,76px)) !important;
   }
-  body[data-screen="admin"] #pantallaAdmin > #adminMensaje,
-body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel{
-    width:min(var(--app-shell-desktop-max,1380px),calc(100% - (var(--app-shell-desktop-edge,36px) * 2))) !important;max-width:var(--app-shell-desktop-max,1380px) !important;margin-left:auto !important;margin-right:auto !important;
+  body.en-admin #pantallaAdmin > .admin-tab-panel{
+    margin-bottom:0 !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
   }
-  body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel{margin-bottom:0 !important;padding:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important;}
   
 }
 
@@ -134,7 +140,7 @@ body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel{
 #adminUsuariosLista .admin-user-card-official{min-height:177px!important;padding:14px!important;border:1px solid #e3e7ed!important;border-radius:12px!important;background:#fff!important;box-shadow:none!important;display:grid!important;grid-template-columns:1fr!important;grid-template-areas:none!important;gap:9px!important;opacity:1!important;}
 #adminUsuariosLista .admin-user-card-official.inactivo{background:#fbfbfc!important;opacity:.72!important;}
 .admin-user-card-top{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:9px;align-items:start}.admin-user-card-official .admin-avatar{width:40px!important;height:40px!important;border-radius:10px!important;background:#ffe9ec!important;color:var(--admin-red)!important;font-size:16px!important;font-weight:800!important}.admin-user-title{display:grid;gap:2px;min-width:0}.admin-user-title strong{font-size:12px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-user-title span{font-size:9.5px!important;color:#808999!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-user-card-official .user-status{font-size:8px!important;padding:4px 7px!important;position:static!important}.admin-role-pill{justify-self:start;display:inline-flex;padding:3px 8px;border-radius:999px;font-size:8px;font-weight:800;line-height:1.2}.admin-role-pill.role-admin{background:#ffe7eb;color:#e22b3b}.admin-role-pill.role-adminops{background:#fff2dc;color:#d37e00}.admin-role-pill.role-supervisor{background:#f0eaff;color:#7453de}.admin-role-pill.role-personal{background:#e5faf5;color:#0b9e83}.admin-user-card-meta{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;min-height:39px}.admin-user-card-meta>div{display:grid;gap:2px}.admin-user-card-meta small{font-size:8.5px;color:#9098a6}.admin-user-card-meta strong{font-size:10px;color:#515b6a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-module-badge{min-width:25px;height:24px;border-radius:8px;background:var(--admin-violet-soft);color:var(--admin-violet)!important;display:grid;place-items:center;padding:0 6px}.admin-user-card-official .admin-user-card-buttons{display:grid!important;grid-template-columns:1fr 1fr!important;gap:0!important;padding-top:9px!important;border-top:1px solid #edf0f4!important}.admin-user-card-official .admin-user-card-buttons button{min-width:0!important;min-height:30px!important;border:0!important;background:transparent!important;font:inherit!important;font-size:9.5px!important;font-weight:700!important;color:#526070!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;border-radius:0!important}.admin-user-card-official .admin-user-card-buttons button+button{border-left:1px solid #edf0f4!important;color:var(--admin-red)!important}.admin-user-card-official .admin-user-card-buttons .app-icon{width:13px;height:13px}
-.admin-pagination{min-height:52px;margin-top:10px;border-top:1px solid #edf0f4;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;color:#778193;font-size:9.5px;padding:8px 3px 0}.admin-pagination>label{justify-self:end;display:flex;align-items:center;gap:7px}.admin-pagination select{height:31px;border:1px solid #dfe4ea;border-radius:8px;background:#fff;padding:0 8px;font:inherit;font-size:9.5px}.admin-pagination-buttons{display:flex;align-items:center;justify-content:center;gap:5px}.admin-pagination-buttons button{width:31px;height:31px;border:1px solid #e0e5ec;border-radius:8px;background:#fff;color:#667083;font:inherit;font-size:10px;cursor:pointer}.admin-pagination-buttons button.activo{background:var(--admin-red);border-color:var(--admin-red);color:#fff}.admin-pagination-buttons button:disabled{opacity:.35;cursor:default}.admin-pagination-buttons span{font-size:12px;color:#8992a1}
+.admin-pagination{min-height:52px;margin-top:10px;border-top:1px solid #edf0f4;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;color:#778193;font-size:9.5px;padding:8px 3px 0}.admin-users-pagination{grid-template-columns:1fr auto}.admin-users-pagination .admin-pagination-buttons{justify-self:end}.admin-pagination>label{justify-self:end;display:flex;align-items:center;gap:7px}.admin-pagination select{height:31px;border:1px solid #dfe4ea;border-radius:8px;background:#fff;padding:0 8px;font:inherit;font-size:9.5px}.admin-pagination-buttons{display:flex;align-items:center;justify-content:center;gap:5px}.admin-pagination-buttons button{width:31px;height:31px;border:1px solid #e0e5ec;border-radius:8px;background:#fff;color:#667083;font:inherit;font-size:10px;cursor:pointer}.admin-pagination-buttons button.activo{background:var(--admin-red);border-color:var(--admin-red);color:#fff}.admin-pagination-buttons button:disabled{opacity:.35;cursor:default}.admin-pagination-buttons span{font-size:12px;color:#8992a1}
 
 /* ---------- Sectores ---------- */
 .admin-sector-toolbar{display:flex;align-items:end;justify-content:space-between;gap:15px;padding:4px 3px 14px}.admin-sector-toolbar .admin-search-control{width:min(360px,45%)}
@@ -202,14 +208,6 @@ body[data-screen="admin"] #adminVersionSistema{display:block!important;}
    faltantes y composición de Usuarios / Sectores / Sistema / Historial.
    ========================================================= */
 @media (min-width: 901px){
-  body[data-screen="admin"] #pantallaAdmin.admin-official-screen{
-    padding:30px 0 48px !important;
-  }
-  body[data-screen="admin"] #pantallaAdmin > #adminMensaje,
-body[data-screen="admin"] #pantallaAdmin > .admin-tab-panel{
-    width:min(var(--app-shell-desktop-max,1380px),calc(100% - (var(--app-shell-desktop-edge,36px) * 2))) !important;
-    max-width:var(--app-shell-desktop-max,1380px) !important;
-  }
   .admin-page-heading{margin-bottom:22px !important;padding:0 !important;}
   .admin-page-heading h1{font-size:32px !important;letter-spacing:-.038em !important;line-height:1.12 !important;}
   .admin-page-heading p{font-size:14px !important;margin-top:6px !important;line-height:1.5 !important;color:#596579 !important;}

@@ -115,17 +115,9 @@ export function cambiarPantalla(nombre) {
   );
 }
 
-export function mostrarMensaje(texto, tipo = "ok") {
-  clearTimeout(temporizadorToast);
-  elementos.toast.textContent = texto;
-  elementos.toast.setAttribute("role", tipo === "error" ? "alert" : "status");
-  elementos.toast.setAttribute("aria-live", tipo === "error" ? "assertive" : "polite");
-  elementos.toast.className = `toast mostrar ${tipo}`;
-  temporizadorToast = setTimeout(() => {
-    elementos.toast.className = "toast";
-    elementos.toast.setAttribute("role", "status");
-    elementos.toast.setAttribute("aria-live", "polite");
-  }, 1700);
+export function mostrarMensaje() {
+  // Los avisos flotantes globales fueron retirados: no deben aparecer
+  // por detrás de los modales ni durante la carga de productos.
 }
 
 
