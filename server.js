@@ -7,6 +7,17 @@ const webpush = require("web-push");
 const path = require("path");
 require("dotenv").config();
 const { verificarConexionPostgres, cerrarPostgres } = require("./db");
+const {
+  asegurarEsquemaUsuariosSectores,
+  migracionDatosCompletada,
+  listarUsuariosDb,
+  listarSectoresDb,
+  guardarUsuarioDb,
+  guardarSectorDb,
+  eliminarUsuarioDb,
+  eliminarSectorDb,
+  importarUsuariosSectoresAtomico,
+} = require("./db-usuarios-sectores");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -533,6 +544,7 @@ function filaAUsuario(fila, index) {
     passwordHash: normalizarTexto(fila[2]),
     rol: normalizarRol(fila[3]),
     activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto),
+    creado: normalizarTexto(fila[5]),
     permisos: normalizarPermisos(fila[6], normalizarRol(fila[3])),
     sector: normalizarTexto(fila[7]),
     sectores: [
@@ -548,18 +560,52 @@ function filaAUsuario(fila, index) {
   };
 }
 
+const MIGRACION_USUARIOS_SECTORES = "2026-08-27-usuarios-sectores-v1";
+let promesaUsuariosSectoresPostgres = null;
+
+async function asegurarUsuariosSectoresPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  if (await migracionDatosCompletada(MIGRACION_USUARIOS_SECTORES)) return;
+  if (promesaUsuariosSectoresPostgres) return promesaUsuariosSectoresPostgres;
+  promesaUsuariosSectoresPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_USUARIOS_SECTORES)) return;
+
+    // Importación inicial: solo lectura desde Sheets. Las hojas quedan como respaldo sin cambios.
+    validarConfiguracion();
+    const [respuestaUsuarios, respuestaSectores] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:K` }),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SECTORES_SHEET_NAME}!A:E` }),
+    ]);
+    const usuarios = (respuestaUsuarios.data.values || []).slice(1).map(filaAUsuario).filter((u) => u.usuario);
+    const sectores = (respuestaSectores.data.values || []).slice(1).map((f) => ({
+      id: normalizarTexto(f[0]), nombre: normalizarTexto(f[1]),
+      color: /^#[0-9a-f]{6}$/i.test(f[2] || "") ? f[2] : "#b72e35",
+      supervisor: normalizarUsuario(f[3]),
+      activo: ["si", "sí", "true", "1", "activo"].includes(normalizarTexto(f[4]).toLowerCase()),
+    })).filter((sector) => sector.id);
+    await importarUsuariosSectoresAtomico(sectores, usuarios, MIGRACION_USUARIOS_SECTORES);
+    console.log(`PostgreSQL Etapa 2: importados ${usuarios.length} usuarios y ${sectores.length} sectores desde Sheets.`);
+  })();
+  try { await promesaUsuariosSectoresPostgres; }
+  finally { promesaUsuariosSectoresPostgres = null; }
+}
+
 async function obtenerUsuarios() {
-  await asegurarHojaUsuarios();
+  await asegurarUsuariosSectoresPostgres();
   return leerConCache("usuarios", CACHE_TTL.usuarios, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A:K`,
-    });
-    const filas = respuesta.data.values || [];
-    return filas
-      .slice(1)
-      .map(filaAUsuario)
-      .filter((u) => u.usuario);
+    const filas = await listarUsuariosDb();
+    return filas.map((fila) => ({
+      usuario: normalizarUsuario(fila.username),
+      nombre: normalizarTexto(fila.name) || normalizarUsuario(fila.username),
+      passwordHash: normalizarTexto(fila.password_hash),
+      rol: normalizarRol(fila.role), activo: Boolean(fila.active),
+      creado: normalizarTexto(fila.created_text),
+      permisos: normalizarPermisos(fila.permissions, normalizarRol(fila.role)),
+      sector: normalizarTexto(fila.sector_id),
+      sectores: Array.isArray(fila.managed_sectors) ? fila.managed_sectors.map(normalizarTexto).filter(Boolean) : [],
+      sessionVersion: Math.max(1, Number.parseInt(fila.session_version, 10) || 1),
+      googleEmail: normalizarEmail(fila.google_email),
+    })).filter((u) => u.usuario);
   });
 }
 
@@ -1013,12 +1059,7 @@ app.post("/auth/login", limitarLogin, async (req, res) => {
         });
 
       if (!emailActual) {
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USUARIOS_SHEET_NAME}!K${usuario.filaGoogle}`,
-          valueInputOption: "RAW",
-          requestBody: { values: [[cuentaGoogle.email]] },
-        });
+        await guardarUsuarioDb({ ...usuario, googleEmail: cuentaGoogle.email });
         invalidarCache("usuarios");
         usuario.googleEmail = cuentaGoogle.email;
         googleVinculado = true;
@@ -1595,29 +1636,16 @@ function idSector(nombre) {
     .slice(0, 40);
 }
 async function obtenerSectores() {
+  await asegurarUsuariosSectoresPostgres();
   return leerConCache("sectores", CACHE_TTL.sectores, async () => {
-    await asegurarHojaSectores();
-    const r = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SECTORES_SHEET_NAME}!A:E`,
-    });
-    const usuarios = await obtenerUsuarios();
-    return (r.data.values || [])
-      .slice(1)
-      .map((f, i) => ({
-        filaGoogle: i + 2,
-        id: normalizarTexto(f[0]),
-        nombre: normalizarTexto(f[1]),
-        color: /^#[0-9a-f]{6}$/i.test(f[2] || "") ? f[2] : "#b72e35",
-        supervisor: normalizarUsuario(f[3]),
-        supervisorNombre:
-          usuarios.find((u) => u.usuario === normalizarUsuario(f[3]))?.nombre ||
-          "",
-        activo: ["si", "sí", "true", "1", "activo"].includes(
-          normalizarTexto(f[4]).toLowerCase(),
-        ),
-      }))
-      .filter((s) => s.id);
+    const [filas, usuarios] = await Promise.all([listarSectoresDb(), obtenerUsuarios()]);
+    return filas.map((f) => ({
+      id: normalizarTexto(f.id), nombre: normalizarTexto(f.name),
+      color: /^#[0-9a-f]{6}$/i.test(f.color || "") ? f.color : "#b72e35",
+      supervisor: normalizarUsuario(f.supervisor_username),
+      supervisorNombre: usuarios.find((u) => u.usuario === normalizarUsuario(f.supervisor_username))?.nombre || "",
+      activo: Boolean(f.active),
+    })).filter((sector) => sector.id);
   });
 }
 function usuarioPuedeVerHorarios(usuario) {
@@ -2921,55 +2949,30 @@ app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
 });
 async function actualizarFilaUsuario(usuario, cambios = {}) {
   const rol = cambios.rol ?? usuario.rol;
-  const sector = cambios.sector ?? (usuario.sector || "");
-  const sectoresCargo = cambios.sectores ?? (usuario.sectores || []);
-  const activo = cambios.activo ?? usuario.activo;
-  const permisos = cambios.permisos ?? usuario.permisos;
-  const nombre = cambios.nombre ?? usuario.nombre;
-  const passwordHash = cambios.passwordHash ?? usuario.passwordHash;
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${USUARIOS_SHEET_NAME}!A${usuario.filaGoogle}:K${usuario.filaGoogle}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          usuario.usuario,
-          nombre,
-          passwordHash,
-          rol,
-          activo ? "Sí" : "No",
-          fechaHoraArgentinaIso(),
-          serializarPermisos(permisos, rol),
-          sector,
-          sectoresCargo.join(","),
-          Math.max(1, Number(usuario.sessionVersion) || 1),
-          normalizarEmail(cambios.googleEmail ?? usuario.googleEmail),
-        ],
-      ],
-    },
+  await guardarUsuarioDb({
+    ...usuario,
+    nombre: cambios.nombre ?? usuario.nombre,
+    passwordHash: cambios.passwordHash ?? usuario.passwordHash,
+    rol,
+    activo: cambios.activo ?? usuario.activo,
+    permisos: cambios.permisos ?? usuario.permisos,
+    sector: cambios.sector ?? (usuario.sector || ""),
+    sectores: cambios.sectores ?? (usuario.sectores || []),
+    googleEmail: normalizarEmail(cambios.googleEmail ?? usuario.googleEmail),
   });
+  invalidarCache("usuarios");
 }
 
 async function actualizarFilaSector(sector, cambios = {}) {
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SECTORES_SHEET_NAME}!A${sector.filaGoogle}:E${sector.filaGoogle}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          sector.id,
-          cambios.nombre ?? sector.nombre,
-          cambios.color ?? sector.color,
-          cambios.supervisor ?? sector.supervisor ?? "",
-          (cambios.activo ?? sector.activo) ? "Sí" : "No",
-        ],
-      ],
-    },
+  await guardarSectorDb({
+    ...sector,
+    nombre: cambios.nombre ?? sector.nombre,
+    color: cambios.color ?? sector.color,
+    supervisor: cambios.supervisor ?? sector.supervisor ?? "",
+    activo: cambios.activo ?? sector.activo,
   });
+  invalidarCache("sectores");
 }
-
 
 async function reconciliarSupervisorAnterior(
   usuarioClave,
@@ -3125,13 +3128,8 @@ app.post("/admin/sectores", requerirAdministrador, async (req, res) => {
       ? req.body.color
       : "#b72e35";
     const supervisor = normalizarUsuario(req.body?.supervisor);
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SECTORES_SHEET_NAME}!A:E`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[id, nombre, color, "", "Sí"]] },
-    });
+    await guardarSectorDb({ id, nombre, color, supervisor: "", activo: true });
+    invalidarCache("sectores");
     const creado = (await obtenerSectores()).find((s) => s.id === id);
     if (supervisor && creado)
       await sincronizarSectorSupervisor(creado, supervisor);
@@ -4022,28 +4020,10 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
       return res
         .status(409)
         .json({ ok: false, mensaje: "Ese usuario ya existe" });
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A:K`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [
-          [
-            usuario,
-            nombre,
-            hashPassword(password),
-            rol,
-            "Sí",
-            fechaHoraArgentinaIso(),
-            serializarPermisos(permisos, rol),
-            sector,
-            sectoresCargo.join(","),
-            1,
-            "",
-          ],
-        ],
-      },
+    await guardarUsuarioDb({
+      usuario, nombre, passwordHash: hashPassword(password), rol, activo: true,
+      creado: fechaHoraArgentinaIso(), permisos, sector, sectores: sectoresCargo,
+      sessionVersion: 1, googleEmail: "",
     });
     invalidarCache("usuarios");
     await sincronizarUsuarioSupervisor(
@@ -4160,27 +4140,10 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     const sessionVersion = password
       ? Math.max(1, Number(actual.sessionVersion) || 1) + 1
       : Math.max(1, Number(actual.sessionVersion) || 1);
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A${actual.filaGoogle}:K${actual.filaGoogle}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          [
-            clave,
-            nombre,
-            hash,
-            rol,
-            activo ? "Sí" : "No",
-            fechaHoraArgentinaIso(),
-            serializarPermisos(permisos, rol),
-            sector,
-            sectoresCargo.join(","),
-            sessionVersion,
-            actual.googleEmail || "",
-          ],
-        ],
-      },
+    await guardarUsuarioDb({
+      ...actual, usuario: clave, nombre, passwordHash: hash, rol, activo,
+      permisos, sector, sectores: sectoresCargo, sessionVersion,
+      googleEmail: actual.googleEmail || "",
     });
     invalidarCache("usuarios");
     await sincronizarUsuarioSupervisor(
@@ -4295,7 +4258,7 @@ app.delete(
       const sectores = await obtenerSectores();
       for (const sector of sectores.filter((s) => s.supervisor === clave))
         await actualizarFilaSector(sector, { supervisor: "" });
-      await eliminarFilaDeHoja(USUARIOS_SHEET_NAME, actual.filaGoogle);
+      await eliminarUsuarioDb(clave);
       invalidarCache("usuarios");
       await registrarHistorialAdministracion(req, "Eliminó usuario", "Usuario", actual.nombre || clave, `Cuenta @${clave} eliminada`);
       res.json({ ok: true, mensaje: "Usuario eliminado" });
@@ -4325,18 +4288,7 @@ app.delete("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
         ok: false,
         mensaje: `No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s). Reasignalos primero.`,
       });
-    await asegurarHojasHorarios();
-    await ejecutarEnCola("horarios-global", async () => {
-      // Comparte el lock con todas las escrituras de Horarios y evita
-      // reescrituras cruzadas mientras se elimina un sector.
-      await eliminarRegistrosSector(CALENDARIO_HORARIOS_SHEET_NAME, id, "H");
-      await eliminarRegistrosSector(TURNOS_HORARIOS_SHEET_NAME, id, "J");
-      await eliminarRegistrosSector(DETALLES_HORARIOS_SHEET_NAME, id, "I");
-      await eliminarRegistrosSector(REEMPLAZOS_HORARIOS_SHEET_NAME, id, "I");
-      await eliminarRegistrosSector(ORDEN_HORARIOS_SHEET_NAME, id, "E");
-    });
-    await eliminarFilaDeHoja(SECTORES_SHEET_NAME, sector.filaGoogle);
-    hojaSectoresAsegurada = false;
+    await eliminarSectorDb(id);
     invalidarCache("usuarios", "sectores");
     await registrarHistorialAdministracion(req, "Eliminó sector", "Sector", sector.nombre || id, `Sector ${sector.nombre || id} eliminado`);
     res.json({ ok: true, mensaje: "Sector eliminado" });
@@ -7166,8 +7118,8 @@ setTimeout(
 
 async function migrarEstructuraHorariosV812() {
   validarConfiguracion();
-  await asegurarHojaUsuarios();
-  await asegurarHojaSectores();
+  // Usuarios y Sectores ya pertenecen a PostgreSQL (Etapa 2).
+  // Esta migración legacy no vuelve a escribir esas hojas de respaldo.
   await asegurarHojasHorarios();
   await asegurarHojaAuditoriaHorarios();
   invalidarCache("usuarios");
@@ -7235,18 +7187,21 @@ app.listen(PORT, () => {
   }
 
   verificarConexionPostgres()
-    .then((resultado) => {
+    .then(async (resultado) => {
       if (resultado.configurada) {
         console.log("PostgreSQL conectado correctamente.");
+        await asegurarEsquemaUsuariosSectores();
+        await asegurarUsuariosSectoresPostgres();
+        console.log("PostgreSQL Etapa 2: Usuarios y Sectores listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). La aplicación continúa usando Google Sheets.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios y Sectores requieren PostgreSQL desde la Etapa 2.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. La aplicación continúa usando Google Sheets:",
+        "PostgreSQL configurado pero no disponible. Usuarios y Sectores no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
