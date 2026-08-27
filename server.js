@@ -6,6 +6,7 @@ const fs = require("fs");
 const webpush = require("web-push");
 const path = require("path");
 require("dotenv").config();
+const { verificarConexionPostgres, cerrarPostgres } = require("./db");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -7232,4 +7233,34 @@ app.listen(PORT, () => {
       "Migración automática desactivada (AUTO_MIGRATE_SHEETS=false). Las hojas se aseguran al utilizar cada módulo.",
     );
   }
+
+  verificarConexionPostgres()
+    .then((resultado) => {
+      if (resultado.configurada) {
+        console.log("PostgreSQL conectado correctamente.");
+      } else {
+        console.log(
+          "PostgreSQL no configurado (DATABASE_URL ausente). La aplicación continúa usando Google Sheets.",
+        );
+      }
+    })
+    .catch((error) =>
+      console.error(
+        "PostgreSQL configurado pero no disponible. La aplicación continúa usando Google Sheets:",
+        error.message,
+      ),
+    );
 });
+
+async function cerrarServidor(signal) {
+  try {
+    await cerrarPostgres();
+  } catch (error) {
+    console.error(`Error cerrando PostgreSQL durante ${signal}:`, error.message);
+  } finally {
+    process.exit(0);
+  }
+}
+
+process.once("SIGTERM", () => cerrarServidor("SIGTERM"));
+process.once("SIGINT", () => cerrarServidor("SIGINT"));
