@@ -1,4 +1,4 @@
-import { API_BASE_URL, APP_VERSION_LABEL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL, APP_VERSION_LABEL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
 import {
   cargarProductosDesdeServidor,
   sincronizarProductosDesdeServidor,
@@ -20,15 +20,15 @@ import {
   actualizarVencimiento,
   eliminarVencimiento,
   actualizarOfertaVencimiento,
-} from "./excel.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./excel.js?v=1960-d21-limpieza-controlada-270826-a";
 
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-limpieza-controlada-270826-a";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,
   limpiarErrorCargaProducto,
   mostrarErrorCargaProducto,
-} from "./product-loader.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./product-loader.js?v=1960-d21-limpieza-controlada-270826-a";
 
 import {
   ocultarSplash,
@@ -50,7 +50,7 @@ import {
   activarModoCantidad,
   desactivarModoCantidad,
   actualizarConteosUbicacion,
-} from "./ui.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./ui.js?v=1960-d21-limpieza-controlada-270826-a";
 
 import {
   inicializarReposicion,
@@ -58,9 +58,9 @@ import {
   prepararReposicion,
   resolverSalidaReposicion,
   reiniciarReposicion,
-} from "./reposicion.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { coincideBusqueda } from "./search.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { escapeHTML } from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./reposicion.js?v=1960-d21-limpieza-controlada-270826-a";
+import { coincideBusqueda } from "./search.js?v=1960-d21-limpieza-controlada-270826-a";
+import { escapeHTML } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
 
 let ubicacionActual = "salon";
 let productoActual = null;
@@ -453,10 +453,8 @@ function configurarSelectsAdministracion() {
     "adminUsuariosFiltroEstado",
     "adminUsuariosFiltroSector",
     "adminUsuariosFiltroRol",
-    "adminUsuariosMinModulos",
     "adminUsuariosAccionMasiva",
     "adminUsuariosOrden",
-    "adminUsuariosPorPagina",
     "adminSectoresFiltroEstado",
     "adminHistorialUsuario",
     "adminHistorialAccion",

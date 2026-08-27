@@ -30,17 +30,17 @@
     />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
-    <link rel="stylesheet" href="design-tokens.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="style.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="design-components.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="app-shell.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="desktop-layout.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="horarios-redesign.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="admin-official.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="login-redesign.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="settings-user.css?v=1960-d21-correcciones-acumuladas-260826-e" />
-    <link rel="stylesheet" href="ui-unification.css?v=1960-d21-scanner-mobile-260826-g" />
+    <link rel="stylesheet" href="design-tokens.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="style.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="design-components.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="app-shell.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="desktop-layout.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="horarios-redesign.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="admin-official.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="login-redesign.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="settings-user.css?v=1960-d21-limpieza-controlada-270826-a" />
+    <link rel="stylesheet" href="ui-unification.css?v=1960-d21-limpieza-controlada-270826-a" />
 </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
@@ -2731,7 +2731,6 @@
               <div id="banoUsuariosDisponiblesMobile" class="config-user-list bano-mobile-user-list"></div>
             </div>
             <footer class="bano-mobile-participant-actions">
-              <button id="btnCancelarBanoParticipantSheet" class="bano-sheet-cancel" type="button">Cancelar</button>
               <button id="btnGuardarBanoParticipantSheet" class="save-btn bano-sheet-save" type="button"><span>Guardar</span></button>
             </footer>
           </section>
@@ -3034,12 +3033,6 @@
             <label class="admin-select-control"><span>Estado</span><select id="adminUsuariosFiltroEstado"><option value="todos">Todos</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select></label>
             <label class="admin-select-control"><span>Sector</span><select id="adminUsuariosFiltroSector"><option value="todos">Todos</option></select></label>
             <label class="admin-select-control"><span>Rol</span><select id="adminUsuariosFiltroRol"><option value="todos">Todos</option><option value="administrador">Administrador</option><option value="administracion">Administración</option><option value="supervisor">Supervisor</option><option value="personal">Personal</option></select></label>
-            <button id="btnAdminMasFiltros" class="admin-filter-more-btn" type="button" aria-expanded="false"><svg class="app-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><span>Más filtros</span></button>
-            <div id="adminUsuariosFiltrosAvanzados" class="admin-advanced-filters oculto">
-              <label><input id="adminUsuariosSoloSinSector" type="checkbox"> <span>Solo usuarios sin sector</span></label>
-              <label><span>Módulos mínimos</span><select id="adminUsuariosMinModulos"><option value="0">Cualquiera</option><option value="1">1 o más</option><option value="4">4 o más</option><option value="6">Todos</option></select></label>
-              <button id="btnAdminLimpiarFiltrosUsuarios" type="button">Limpiar filtros</button>
-            </div>
           </section>
           <section class="admin-list-surface admin-users-surface">
             <div class="admin-list-topline admin-users-list-topline">
@@ -3449,18 +3442,18 @@
       </div>
     </div>
 
-    <script src="./dialog.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script src="./pwa.js?v=1960-d21-correcciones-acumuladas-260826-e" defer></script>
-    <script type="module" src="./auth.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script src="./horarios-config.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script type="module" src="./admin.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script type="module" src="./notifications.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script type="module" src="./notification-center.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script type="module" src="./prices.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script type="module" src="./app.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
-    <script type="module" src="./tareas.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
+    <script src="./dialog.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script src="./pwa.js?v=1960-d21-limpieza-controlada-270826-a" defer></script>
+    <script type="module" src="./auth.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script src="./horarios-config.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script type="module" src="./admin.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script type="module" src="./notifications.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script type="module" src="./notification-center.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script type="module" src="./prices.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script type="module" src="./app.js?v=1960-d21-limpieza-controlada-270826-a"></script>
+    <script type="module" src="./tareas.js?v=1960-d21-limpieza-controlada-270826-a"></script>
 
-    <script type="module" src="./horarios.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
+    <script type="module" src="./horarios.js?v=1960-d21-limpieza-controlada-270826-a"></script>
     <div id="offlineStatus" class="offline-status oculto" role="status"></div>
 
     <div
@@ -3567,6 +3560,6 @@
         </div>
       </div>
     </div>
-    <script type="module" src="./pro-ui.js?v=1960-d21-correcciones-acumuladas-260826-e"></script>
+    <script type="module" src="./pro-ui.js?v=1960-d21-limpieza-controlada-270826-a"></script>
   </body>
 </html>

@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
 
 const $ = (id) => document.getElementById(id);
 const CACHE_KEY = "autoservicio_centro_notificaciones_v1220";

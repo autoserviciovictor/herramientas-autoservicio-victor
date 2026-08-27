@@ -3746,11 +3746,6 @@ body.en-bano #pantallaBano .bano-user-sector-dot {
     font-size: 13px;
     font-weight: 850;
   }
-  .bano-sheet-cancel {
-    border: 1px solid var(--task-border-strong);
-    background: var(--task-surface-muted);
-    color: var(--task-text);
-  }
   .bano-sheet-save {
     border: 0;
     background: linear-gradient(105deg, #dc1f31 0%, #f43c58 100%) !important;

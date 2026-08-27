@@ -1,14 +1,14 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-limpieza-controlada-270826-a";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,
   limpiarErrorCargaProducto,
   mostrarErrorCargaProducto,
-} from "./product-loader.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { ordenarPorBusqueda } from "./search.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./product-loader.js?v=1960-d21-limpieza-controlada-270826-a";
+import { ordenarPorBusqueda } from "./search.js?v=1960-d21-limpieza-controlada-270826-a";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1960-d21-limpieza-controlada-270826-a";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
 
 const $ = (id) => document.getElementById(id);
 let productoActual = null;

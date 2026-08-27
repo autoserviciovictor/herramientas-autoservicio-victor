@@ -2,7 +2,7 @@
 // URL del servidor Render conectado a Google Sheets.
 export const APP_VERSION = "19.6.0";
 export const APP_BUILD = "D21";
-export const APP_ASSET_BUILD = "1960-d21-auditoria-correcciones-260826-d";
+export const APP_ASSET_BUILD = "1960-d21-limpieza-controlada-270826-a";
 export const APP_VERSION_LABEL = `${APP_VERSION} ${APP_BUILD}`;
 export const API_BASE_URL = "https://inventario-victor-api.onrender.com";
 

@@ -1,12 +1,12 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
 import {
   escapeHTML as esc,
   formatDuration as duracionTexto,
-} from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
 import {
   shiftSectionTemplate,
   emptyTaskListTemplate,
-} from "./modules/tareas/task-view.js?v=1960-d21-auditoria-correcciones-260826-d";
+} from "./modules/tareas/task-view.js?v=1960-d21-limpieza-controlada-270826-a";
 
 const $ = (id) => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -2501,7 +2501,6 @@ function bind() {
     renderParticipantesConfig(participantesConfigActuales()),
   );
   $("btnCerrarBanoParticipantSheet")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
-  $("btnCancelarBanoParticipantSheet")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
   $("banoMobileParticipantBackdrop")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
   $("btnGuardarBanoParticipantSheet")?.addEventListener("click", () => guardarConfigBano());
   $("configTareasLista").onclick = (e) => {

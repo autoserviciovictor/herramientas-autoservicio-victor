@@ -1,4 +1,4 @@
-import { API_BASE_URL, APP_ASSET_BUILD } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL, APP_ASSET_BUILD } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
 
 const XLSX_SCRIPT_URL = new URL(`./xlsx.full.min.js?v=${APP_ASSET_BUILD}`, import.meta.url).href;
 let promesaCargaXLSX = null;
@@ -930,8 +930,6 @@ function renderUsuarios() {
   const sector = $("adminUsuariosFiltroSector")?.value || "todos";
   const rol = $("adminUsuariosFiltroRol")?.value || "todos";
   const orden = $("adminUsuariosOrden")?.value || "nombre";
-  const soloSinSector = Boolean($("adminUsuariosSoloSinSector")?.checked);
-  const minModulos = Number($("adminUsuariosMinModulos")?.value || 0);
   let filtrados = usuarios.filter((u) => {
     if (estado === "activo" && u.activo === false) return false;
     if (estado === "inactivo" && u.activo !== false) return false;
@@ -939,8 +937,6 @@ function renderUsuarios() {
     const idsSectores = [u.sector, ...(Array.isArray(u.sectores) ? u.sectores : [])].filter(Boolean);
     if (sector === "sin-sector" && idsSectores.length) return false;
     if (sector !== "todos" && sector !== "sin-sector" && !idsSectores.includes(sector)) return false;
-    if (soloSinSector && idsSectores.length) return false;
-    if (minModulos && cantidadModulosUsuario(u) < minModulos) return false;
     if (q) {
       const nombresSectores = idsSectores.map((id) => sectorPorId(id)?.nombre || "").join(" ");
       const texto = normalizarTexto(`${u.nombre || ""} ${u.usuario || ""} ${etiquetaRol(u.rol)} ${nombresSectores}`);
@@ -2205,19 +2201,7 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   document.querySelectorAll("[data-admin-open]").forEach((btn) => btn.addEventListener("click", () => cambiarTab(btn.dataset.adminOpen)));
   $("adminUsuariosBuscar")?.addEventListener("input", () => { adminUsuariosPagina = 1; renderUsuarios(); });
-  ["adminUsuariosFiltroEstado", "adminUsuariosFiltroSector", "adminUsuariosFiltroRol", "adminUsuariosOrden", "adminUsuariosSoloSinSector", "adminUsuariosMinModulos"].forEach((id) => $(id)?.addEventListener("change", () => { adminUsuariosPagina = 1; renderUsuarios(); }));
-  $("btnAdminLimpiarFiltrosUsuarios")?.addEventListener("click", () => {
-    if ($("adminUsuariosBuscar")) $("adminUsuariosBuscar").value = "";
-    ["adminUsuariosFiltroEstado","adminUsuariosFiltroSector","adminUsuariosFiltroRol","adminUsuariosMinModulos"].forEach((id) => {
-      const select = $(id);
-      if (!select) return;
-      select.value = id === "adminUsuariosMinModulos" ? "0" : "todos";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    if ($("adminUsuariosSoloSinSector")) $("adminUsuariosSoloSinSector").checked = false;
-    adminUsuariosPagina = 1;
-    renderUsuarios();
-  });
+  ["adminUsuariosFiltroEstado", "adminUsuariosFiltroSector", "adminUsuariosFiltroRol", "adminUsuariosOrden"].forEach((id) => $(id)?.addEventListener("change", () => { adminUsuariosPagina = 1; renderUsuarios(); }));
   $("adminUsuariosVistaGrid")?.addEventListener("click", () => { adminUsuariosVista = "grid"; $("adminUsuariosVistaGrid")?.classList.add("activo"); $("adminUsuariosVistaLista")?.classList.remove("activo"); renderUsuarios(); });
   $("adminUsuariosVistaLista")?.addEventListener("click", () => { adminUsuariosVista = "list"; $("adminUsuariosVistaLista")?.classList.add("activo"); $("adminUsuariosVistaGrid")?.classList.remove("activo"); renderUsuarios(); });
   $("adminUsuariosSeleccionarTodos")?.addEventListener("change", (event) => { const inputs = [...document.querySelectorAll("#adminUsuariosLista .admin-user-select")]; inputs.forEach((input) => { input.checked = event.target.checked; const clave = input.closest("[data-usuario]")?.dataset.usuario; if (!clave) return; if (event.target.checked) adminUsuariosSeleccionados.add(clave); else adminUsuariosSeleccionados.delete(clave); }); const visibles = inputs.map((input) => ({ usuario: input.closest("[data-usuario]")?.dataset.usuario })).filter((u) => u.usuario); actualizarSeleccionUsuarios(visibles); });

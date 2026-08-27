@@ -1,4 +1,4 @@
-import { escapeHTML, formatDuration } from '../../shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d';
+import { escapeHTML, formatDuration } from '../../shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a';
 
 const CLOCK_ICON = '<svg class="app-icon"><use href="#icon-clock"></use></svg>';
 const EDIT_ICON = '<svg class="app-icon"><use href="#icon-edit"></use></svg>';

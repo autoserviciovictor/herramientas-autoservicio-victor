@@ -1,4 +1,4 @@
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
 
 const elementos = {
   splash: document.getElementById("splash"),

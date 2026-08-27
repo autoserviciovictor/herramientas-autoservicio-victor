@@ -5,7 +5,7 @@ const js = fs.readFileSync('admin.js','utf8');
 const css = fs.readFileSync('admin-official.css','utf8');
 
 for (const id of [
-  'btnAdminMasFiltros','adminUsuariosSeleccionarTodos','adminUsuariosAccionMasiva',
+  'adminUsuariosSeleccionarTodos','adminUsuariosAccionMasiva',
   'adminUsuariosVistaGrid','adminUsuariosVistaLista','adminHistorialPorPagina',
   'adminHistorialPaginacion','btnAdminVerHistorialSistema','btnAdminExportarConfig',
   'btnAdminSincronizar','btnAdminReportes'

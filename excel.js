@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { ordenarPorBusqueda } from "./search.js?v=1960-d21-auditoria-correcciones-260826-d";
-import { obtenerJsonCacheado } from "./api-cache.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { ordenarPorBusqueda } from "./search.js?v=1960-d21-limpieza-controlada-270826-a";
+import { obtenerJsonCacheado } from "./api-cache.js?v=1960-d21-limpieza-controlada-270826-a";
 
 let datos = [];
 let catalogoMaestro = [];

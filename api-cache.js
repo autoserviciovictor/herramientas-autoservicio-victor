@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-auditoria-correcciones-260826-d";
+import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
 
 const MEMORIA = new Map();
 const EN_CURSO = new Map();
