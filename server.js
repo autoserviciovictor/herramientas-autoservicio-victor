@@ -14,8 +14,8 @@ const {
   listarSectoresDb,
   guardarUsuarioDb,
   guardarSectorDb,
-  eliminarUsuarioDb,
-  eliminarSectorDb,
+  eliminarUsuarioConSupervisionDb,
+  eliminarSectorConHorariosDb,
   importarUsuariosSectoresAtomico,
 } = require("./db-usuarios-sectores");
 const {
@@ -597,8 +597,16 @@ async function asegurarUsuariosSectoresPostgres() {
       supervisor: normalizarUsuario(f[3]),
       activo: ["si", "sí", "true", "1", "activo"].includes(normalizarTexto(f[4]).toLowerCase()),
     })).filter((sector) => sector.id);
-    await importarUsuariosSectoresAtomico(sectores, usuarios, MIGRACION_USUARIOS_SECTORES);
-    console.log(`PostgreSQL Etapa 2: importados ${usuarios.length} usuarios y ${sectores.length} sectores desde Sheets.`);
+    const importado = await importarUsuariosSectoresAtomico(
+      sectores,
+      usuarios,
+      MIGRACION_USUARIOS_SECTORES,
+    );
+    if (importado) {
+      console.log(
+        `PostgreSQL Etapa 2: importados ${usuarios.length} usuarios y ${sectores.length} sectores desde Sheets.`,
+      );
+    }
   })();
   try { await promesaUsuariosSectoresPostgres; }
   finally { promesaUsuariosSectoresPostgres = null; }
@@ -4166,11 +4174,8 @@ app.delete(
           ok: false,
           mensaje: "No se puede eliminar el último administrador",
         });
-      const sectores = await obtenerSectores();
-      for (const sector of sectores.filter((s) => s.supervisor === clave))
-        await actualizarFilaSector(sector, { supervisor: "" });
-      await eliminarUsuarioDb(clave);
-      invalidarCache("usuarios");
+      await eliminarUsuarioConSupervisionDb(clave);
+      invalidarCache("usuarios", "sectores");
       await registrarHistorialAdministracion(req, "Eliminó usuario", "Usuario", actual.nombre || clave, `Cuenta @${clave} eliminada`);
       res.json({ ok: true, mensaje: "Usuario eliminado" });
     } catch (e) {
@@ -4193,18 +4198,22 @@ app.delete("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
       return res
         .status(404)
         .json({ ok: false, mensaje: "Sector no encontrado" });
-    const asignados = usuarios.filter((u) => u.sector === id);
+    const asignados = usuarios.filter(
+      (u) => u.sector === id || (u.sectores || []).includes(id),
+    );
     if (asignados.length)
       return res.status(409).json({
         ok: false,
-        mensaje: `No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s). Reasignalos primero.`,
+        mensaje: `No se puede eliminar: hay ${asignados.length} usuario(s) asignado(s) o con el sector a cargo. Reasignalos primero.`,
       });
-    await eliminarSectorDb(id);
+    await asegurarHorariosPostgres();
+    await eliminarSectorConHorariosDb(id);
     invalidarCache("usuarios", "sectores");
     await registrarHistorialAdministracion(req, "Eliminó sector", "Sector", sector.nombre || id, `Sector ${sector.nombre || id} eliminado`);
     res.json({ ok: true, mensaje: "Sector eliminado" });
   } catch (e) {
-    res.status(500).json({
+    const status = e?.code === "SECTOR_EN_USO" ? 409 : 500;
+    res.status(status).json({
       ok: false,
       mensaje: e.message || "No se pudo eliminar el sector",
     });
