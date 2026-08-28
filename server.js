@@ -55,6 +55,14 @@ const {
   buscarCatalogoPorCodigoDb,
   reemplazarCatalogoDb,
 } = require("./db-inventario-productos");
+const {
+  asegurarEsquemaVencimientos,
+  importarVencimientosAtomico,
+  listarVencimientosDb,
+  crearVencimientoDb,
+  actualizarVencimientoDb,
+  eliminarVencimientoDb,
+} = require("./db-vencimientos");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -4620,18 +4628,55 @@ function filaAVencimiento(fila, index) {
   };
 }
 
-async function obtenerVencimientos() {
+async function obtenerVencimientosLegacy() {
   await asegurarHojaVencimientos();
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
+  });
+  const filas = respuesta.data.values || [];
+  return filas
+    .slice(1)
+    .map(filaAVencimiento)
+    .filter((item) => item.codigo || item.articulo || item.id);
+}
+
+const MIGRACION_VENCIMIENTOS = "2026-08-28-vencimientos-v1";
+let promesaVencimientosPostgres = null;
+async function asegurarVencimientosPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  await asegurarEsquemaVencimientos();
+  if (await migracionDatosCompletada(MIGRACION_VENCIMIENTOS)) return;
+  if (promesaVencimientosPostgres) return promesaVencimientosPostgres;
+  promesaVencimientosPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_VENCIMIENTOS)) return;
+    // Importación inicial de solo lectura: la hoja Vencimientos queda como respaldo histórico.
+    const vencimientos = await obtenerVencimientosLegacy();
+    const importado = await importarVencimientosAtomico(
+      vencimientos,
+      MIGRACION_VENCIMIENTOS,
+    );
+    if (importado) {
+      console.log(
+        `PostgreSQL Etapa 6: Vencimientos importados desde Sheets (${vencimientos.length} registros).`,
+      );
+    }
+  })();
+  try {
+    await promesaVencimientosPostgres;
+  } finally {
+    promesaVencimientosPostgres = null;
+  }
+}
+
+async function obtenerVencimientos() {
+  await asegurarVencimientosPostgres();
   return leerConCache("vencimientos", CACHE_TTL.vencimientos, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
-    });
-    const filas = respuesta.data.values || [];
-    return filas
-      .slice(1)
-      .map(filaAVencimiento)
-      .filter((item) => item.codigo || item.articulo || item.id);
+    const filas = await listarVencimientosDb();
+    return filas.map((item) => ({
+      ...item,
+      estado: calcularEstadoVencimiento(item.vencimiento),
+    }));
   });
 }
 
@@ -5770,41 +5815,22 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
         mensaje: "Producto no encontrado en la hoja Productos",
       });
 
-    await asegurarHojaVencimientos();
-    const registro = {
+    await asegurarVencimientosPostgres();
+    const registroBase = {
       id: generarIdVencimiento(),
       fecha_carga: fechaIsoHoy(),
       codigo,
       articulo,
       vencimiento,
       cantidad,
-      estado: calcularEstadoVencimiento(vencimiento),
       oferta: normalizarOfertaVencimiento(req.body.oferta),
       rubro,
     };
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [
-          [
-            registro.id,
-            registro.fecha_carga,
-            registro.codigo,
-            registro.articulo,
-            registro.vencimiento,
-            registro.cantidad,
-            registro.estado,
-            registro.oferta,
-            registro.rubro,
-          ],
-        ],
-      },
-    });
-
+    const guardado = await crearVencimientoDb(registroBase);
+    const registro = {
+      ...guardado,
+      estado: calcularEstadoVencimiento(guardado.vencimiento),
+    };
     invalidarCache("vencimientos");
     await registrarHistorialVencimiento(
       req,
@@ -5892,37 +5918,23 @@ app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, re
             : "La cantidad debe ser un número entero mayor a 0",
       });
 
-    const actualizado = {
-      ...registro,
+    const actualizadoDb = await actualizarVencimientoDb(id, {
       vencimiento,
       cantidad,
       rubro,
-      estado: calcularEstadoVencimiento(vencimiento),
       oferta:
         req.body.oferta === undefined
           ? registro.oferta
           : normalizarOfertaVencimiento(req.body.oferta),
-    };
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:I${registro.filaGoogle}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          [
-            actualizado.id,
-            actualizado.fecha_carga,
-            actualizado.codigo,
-            actualizado.articulo,
-            actualizado.vencimiento,
-            actualizado.cantidad,
-            actualizado.estado,
-            actualizado.oferta,
-            actualizado.rubro,
-          ],
-        ],
-      },
     });
+    if (!actualizadoDb)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Registro no encontrado" });
+    const actualizado = {
+      ...actualizadoDb,
+      estado: calcularEstadoVencimiento(actualizadoDb.vencimiento),
+    };
     invalidarCache("vencimientos");
     await registrarHistorialVencimiento(
       req,
@@ -5955,27 +5967,15 @@ app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async
         .json({ ok: false, mensaje: "Registro no encontrado" });
 
     const oferta = normalizarOfertaVencimiento(req.body.oferta);
-    const actualizado = { ...registro, oferta };
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A${registro.filaGoogle}:I${registro.filaGoogle}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          [
-            actualizado.id,
-            actualizado.fecha_carga,
-            actualizado.codigo,
-            actualizado.articulo,
-            actualizado.vencimiento,
-            actualizado.cantidad,
-            actualizado.estado,
-            actualizado.oferta,
-            actualizado.rubro,
-          ],
-        ],
-      },
-    });
+    const actualizadoDb = await actualizarVencimientoDb(id, { oferta });
+    if (!actualizadoDb)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Registro no encontrado" });
+    const actualizado = {
+      ...actualizadoDb,
+      estado: calcularEstadoVencimiento(actualizadoDb.vencimiento),
+    };
     invalidarCache("vencimientos");
     res.json({
       ok: true,
@@ -6000,23 +6000,11 @@ app.delete("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req,
       return res
         .status(404)
         .json({ ok: false, mensaje: "Registro no encontrado" });
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [
-          {
-            deleteDimension: {
-              range: {
-                sheetId: await obtenerSheetId(VENCIMIENTOS_SHEET_NAME),
-                dimension: "ROWS",
-                startIndex: registro.filaGoogle - 1,
-                endIndex: registro.filaGoogle,
-              },
-            },
-          },
-        ],
-      },
-    });
+    const eliminado = await eliminarVencimientoDb(id);
+    if (!eliminado)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Registro no encontrado" });
     invalidarCache("vencimientos");
     await registrarHistorialVencimiento(
       req,
@@ -6952,15 +6940,17 @@ app.listen(PORT, () => {
         console.log("PostgreSQL Etapa 4: Usuarios, Sectores, Horarios, Tareas y Baño listos.");
         await asegurarInventarioProductosPostgres();
         console.log("PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.");
+        await asegurarVencimientosPostgres();
+        console.log("PostgreSQL Etapa 6: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos requieren PostgreSQL desde la Etapa 5.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos requieren PostgreSQL desde la Etapa 6.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos no estarán disponibles hasta recuperar la conexión:",
+        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
