@@ -1,0 +1,14 @@
+const fs = require('fs');
+const assert = (v,m)=>{if(!v) throw new Error(m)};
+const db = fs.readFileSync('db-auxiliares.js','utf8');
+const server = fs.readFileSync('server.js','utf8');
+assert(db.includes('admin_activity_log'), 'Falta tabla historial administración');
+assert(db.includes('offline_operations'), 'Falta tabla operaciones offline');
+assert(db.includes('push_subscriptions'), 'Falta tabla suscripciones push');
+assert(db.includes('notification_log'), 'Falta tabla log notificaciones');
+assert(db.includes('notification_center'), 'Falta tabla centro notificaciones');
+assert(db.includes('expiration_history'), 'Falta tabla historial vencimientos');
+assert(server.includes('MIGRACION_AUXILIARES = "2026-08-28-auxiliares-v1"'), 'Falta marcador Etapa 8');
+assert(server.includes('asegurarAuxiliaresPostgres()'), 'Falta inicialización Etapa 8');
+assert(server.includes('PostgreSQL Etapa 8:'), 'Falta log Etapa 8');
+console.log('PostgreSQL Etapa 8 Auxiliares regression tests: OK');

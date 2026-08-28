@@ -1,0 +1,15 @@
+const fs = require('fs');
+const assert = (v,m)=>{if(!v) throw new Error(m)};
+const db = fs.readFileSync('db-auxiliares.js','utf8');
+const server = fs.readFileSync('server.js','utf8');
+assert(db.includes('pg_advisory_xact_lock'), 'Falta advisory lock auxiliares');
+assert(db.includes('PRIMARY KEY(operation_id,user_key)'), 'Offline no es idempotente por usuario');
+assert(db.includes('endpoint TEXT PRIMARY KEY'), 'Suscripciones push sin clave estable');
+assert(db.includes('notification_id TEXT PRIMARY KEY'), 'Centro notificaciones sin deduplicación');
+assert(server.includes('registrarActividadAdminDb'), 'Historial admin no usa PostgreSQL');
+assert(server.includes('reservarOperacionOfflineDb'), 'Offline no usa PostgreSQL');
+assert(server.includes('guardarSuscripcionPushDb'), 'Push no usa PostgreSQL');
+assert(server.includes('registrarCentroNotificacionDb'), 'Centro notificaciones no usa PostgreSQL');
+assert(server.includes('registrarHistorialVencimientoDb'), 'Historial vencimientos no usa PostgreSQL');
+assert(server.includes('listarHistorialVencimientosDb'), 'Lectura historial vencimientos no usa PostgreSQL');
+console.log('PostgreSQL Etapa 8 Auxiliares hardening tests: OK');

@@ -70,6 +70,26 @@ const {
   listarListasReposicionDb,
   reemplazarListasReposicionDb,
 } = require("./db-listas-reposicion");
+const {
+  asegurarEsquemaAuxiliares,
+  importarAuxiliaresAtomico,
+  registrarActividadAdminDb,
+  listarActividadAdminDb,
+  buscarOperacionOfflineDb,
+  reservarOperacionOfflineDb,
+  finalizarOperacionOfflineDb,
+  listarSuscripcionesPushDb,
+  guardarSuscripcionPushDb,
+  desactivarSuscripcionPushDb,
+  clavesNotificacionesDb,
+  registrarNotificacionEnviadaDb,
+  existeCentroNotificacionDb,
+  registrarCentroNotificacionDb,
+  listarCentroNotificacionesDb,
+  marcarCentroNotificacionDb,
+  registrarHistorialVencimientoDb,
+  listarHistorialVencimientosDb,
+} = require("./db-auxiliares");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -1158,49 +1178,31 @@ async function asegurarHojaOperacionesOffline() {
 }
 
 async function buscarOperacionOffline(id, usuario) {
-  await asegurarHojaOperacionesOffline();
-  const datos = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A:G`,
-  });
-  const filas = datos.data.values || [];
-  for (let i = filas.length - 1; i >= 1; i -= 1) {
-    const f = filas[i];
-    if (normalizarTexto(f[0]) === id && normalizarUsuario(f[1]) === normalizarUsuario(usuario)) {
-      return { filaGoogle: i + 1, estado: normalizarTexto(f[5]), respuesta: normalizarTexto(f[6]) };
-    }
-  }
-  return null;
+  await asegurarAuxiliaresPostgres();
+  return buscarOperacionOfflineDb(id, usuario);
 }
 
 async function reservarOperacionOffline(id, req) {
-  return ejecutarEnCola(`offline-${id}`, async () => {
-    const existente = await buscarOperacionOffline(id, req.usuario?.usuario);
-    if (existente) return existente;
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A:G`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[
-        id, req.usuario?.usuario || "", fechaHoraArgentinaIso(), req.method, req.originalUrl, "En proceso", ""
-      ]] },
-    });
-    return null;
+  await asegurarAuxiliaresPostgres();
+  return reservarOperacionOfflineDb({
+    id,
+    usuario: req.usuario?.usuario || "",
+    fecha: fechaHoraArgentinaIso(),
+    metodo: req.method,
+    ruta: req.originalUrl,
   });
 }
 
 async function finalizarOperacionOffline(id, usuario, statusCode, payload) {
+  await asegurarAuxiliaresPostgres();
   try {
-    const op = await buscarOperacionOffline(id, usuario);
-    if (!op) return;
     const respuesta = JSON.stringify(payload ?? {}).slice(0, 45000);
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${OFFLINE_OPERATIONS_SHEET_NAME}!F${op.filaGoogle}:G${op.filaGoogle}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[statusCode >= 200 && statusCode < 300 ? "Completada" : "Error", respuesta]] },
-    });
+    await finalizarOperacionOfflineDb(
+      id,
+      usuario,
+      statusCode >= 200 && statusCode < 300 ? "Completada" : "Error",
+      respuesta,
+    );
   } catch (error) {
     console.error("No se pudo finalizar la operación offline idempotente:", error);
   }
@@ -1558,25 +1560,23 @@ async function asegurarHojaHistorialAdministracion() {
 }
 
 async function registrarHistorialAdministracion(req, accion, entidad, identificador = "", detalle = "") {
+  await asegurarAuxiliaresPostgres();
   try {
-    await asegurarHojaHistorialAdministracion();
     const ahora = new Date();
     const partes = new Intl.DateTimeFormat("es-AR", {
       timeZone: TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric",
       hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
     }).formatToParts(ahora);
     const get = (tipo) => partes.find((p) => p.type === tipo)?.value || "";
-    const fecha = `${get("day")}/${get("month")}/${get("year")}`;
-    const hora = `${get("hour")}:${get("minute")}:${get("second")}`;
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${HISTORIAL_ADMIN_SHEET_NAME}!A:H`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[
-        fecha, hora, req.usuario?.usuario || "desconocido", req.usuario?.nombre || "",
-        normalizarTexto(accion), normalizarTexto(entidad), normalizarTexto(identificador), String(detalle || "").slice(0, 500),
-      ]] },
+    await registrarActividadAdminDb({
+      fecha: `${get("day")}/${get("month")}/${get("year")}`,
+      hora: `${get("hour")}:${get("minute")}:${get("second")}`,
+      usuario: req.usuario?.usuario || "desconocido",
+      nombre: req.usuario?.nombre || "",
+      accion: normalizarTexto(accion),
+      entidad: normalizarTexto(entidad),
+      identificador: normalizarTexto(identificador),
+      detalle: String(detalle || "").slice(0, 500),
     });
   } catch (error) {
     console.error("No se pudo registrar el historial de Administración:", error);
@@ -1585,16 +1585,8 @@ async function registrarHistorialAdministracion(req, accion, entidad, identifica
 
 app.get("/admin/historial-administracion", requerirAdministrador, async (req, res) => {
   try {
-    await asegurarHojaHistorialAdministracion();
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${HISTORIAL_ADMIN_SHEET_NAME}!A:H`,
-    });
-    const historial = (respuesta.data.values || []).slice(1).reverse().slice(0, 100).map((fila) => ({
-      fecha: fila[0] || "", hora: fila[1] || "", usuario: fila[2] || "", nombre: fila[3] || "",
-      accion: fila[4] || "", entidad: fila[5] || "", identificador: fila[6] || "", detalle: fila[7] || "",
-    }));
-    res.json({ ok: true, historial });
+    await asegurarAuxiliaresPostgres();
+    res.json({ ok: true, historial: await listarActividadAdminDb(100) });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo obtener la actividad administrativa" });
   }
@@ -4915,69 +4907,24 @@ async function asegurarHojasNotificaciones() {
 }
 
 async function obtenerSuscripcionesPush() {
-  await asegurarHojasNotificaciones();
-  return leerConCache(
-    "suscripcionesPush",
-    CACHE_TTL.suscripcionesPush,
-    async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`,
-      });
-      return (r.data.values || [])
-        .slice(1)
-        .map((f, i) => ({
-          filaGoogle: i + 2,
-          endpoint: normalizarTexto(f[0]),
-          p256dh: normalizarTexto(f[1]),
-          auth: normalizarTexto(f[2]),
-          usuario: normalizarTexto(f[3]),
-          nombre: normalizarTexto(f[4]),
-          activo: normalizarTexto(f[5]).toLowerCase() !== "no",
-        }))
-        .filter((s) => s.endpoint && s.p256dh && s.auth && s.activo);
-    },
-  );
+  await asegurarAuxiliaresPostgres();
+  return leerConCache("suscripcionesPush", CACHE_TTL.suscripcionesPush, async () => listarSuscripcionesPushDb());
 }
 
 async function guardarSuscripcionPush(req) {
-  await asegurarHojasNotificaciones();
+  await asegurarAuxiliaresPostgres();
   const endpoint = normalizarTexto(req.body?.subscription?.endpoint);
   const p256dh = normalizarTexto(req.body?.subscription?.keys?.p256dh);
   const authKey = normalizarTexto(req.body?.subscription?.keys?.auth);
-  if (!endpoint || !p256dh || !authKey)
-    throw new Error("Suscripción push incompleta");
-  const existentes = await obtenerSuscripcionesPush();
-  const actual = existentes.find((s) => s.endpoint === endpoint);
-  const fila = [
-    endpoint,
-    p256dh,
-    authKey,
-    req.usuario.usuario,
-    req.usuario.nombre,
-    "Sí",
-    fechaHoraArgentinaIso(),
-  ];
-  if (actual) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A${actual.filaGoogle}:G${actual.filaGoogle}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [fila] },
-    });
-  } else {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A:G`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [fila] },
-    });
-  }
+  if (!endpoint || !p256dh || !authKey) throw new Error("Suscripción push incompleta");
+  await guardarSuscripcionPushDb({
+    endpoint, p256dh, auth: authKey, usuario: req.usuario.usuario,
+    nombre: req.usuario.nombre, actualizado: fechaHoraArgentinaIso(),
+  });
   invalidarCache("suscripcionesPush");
 }
 
-// v12.3.1.5 — Cola global para escrituras de notificaciones en Google Sheets.
+// v12.3.1.5// v12.3.1.5 — Cola global para escrituras de notificaciones en Google Sheets.
 let colaEscriturasNotificaciones = Promise.resolve();
 let ultimaEscrituraNotificaciones = 0;
 const idsCentroNotificacionPendientes = new Set();
@@ -5028,205 +4975,64 @@ function encolarEscrituraNotificaciones(operacion) {
 }
 
 async function clavesNotificacionesEnviadas() {
-  await asegurarHojasNotificaciones();
+  await asegurarAuxiliaresPostgres();
   const claves = await leerConCache(
     "clavesNotificaciones",
     CACHE_TTL.clavesNotificaciones,
-    async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`,
-      });
-      const resultado = new Set();
-      for (const fila of (r.data.values || []).slice(1)) {
-        const guardada = normalizarTexto(fila[0]);
-        if (guardada) resultado.add(guardada);
-        const fechaEnvio = normalizarTexto(fila[1]).slice(0, 10);
-        const tipo = normalizarTexto(fila[2]);
-        const codigo = normalizarCodigo(fila[4]);
-        const vencimiento = normalizarTexto(fila[5]);
-        if (codigo && vencimiento && tipo && fechaEnvio)
-          resultado.add([codigo, vencimiento, tipo, fechaEnvio].join("|"));
-      }
-      return resultado;
-    },
+    async () => clavesNotificacionesDb(),
   );
   return new Set(claves);
 }
 
 async function registrarNotificacionEnviada(clave, tipo, registro, detalle) {
-  await encolarEscrituraNotificaciones(() =>
-    sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${NOTIFICATION_LOG_SHEET_NAME}!A:G`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [
-          [
-            clave,
-            fechaHoraArgentinaIso(),
-            tipo,
-            registro.id,
-            registro.codigo,
-            registro.vencimiento,
-            detalle,
-          ],
-        ],
-      },
-    }),
-  );
+  await asegurarAuxiliaresPostgres();
+  await registrarNotificacionEnviadaDb({
+    clave, fecha: fechaHoraArgentinaIso(), tipo,
+    id: registro.id, codigo: registro.codigo, vencimiento: registro.vencimiento, detalle,
+  });
   const guardado = cacheLecturas.get("clavesNotificaciones");
   if (guardado?.valor instanceof Set) {
-    const actualizado = new Set(guardado.valor);
-    actualizado.add(clave);
-    cacheLecturas.set("clavesNotificaciones", {
-      fecha: Date.now(),
-      valor: actualizado,
-    });
+    const actualizado = new Set(guardado.valor); actualizado.add(clave);
+    cacheLecturas.set("clavesNotificaciones", { fecha: Date.now(), valor: actualizado });
   } else invalidarCache("clavesNotificaciones");
 }
 
-async function leerFilasCentroNotificaciones() {
-  await asegurarHojasNotificaciones();
-  return leerConCache(
-    "centroNotificaciones",
-    CACHE_TTL.centroNotificaciones,
-    async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`,
-      });
-      return r.data.values || [];
-    },
-  );
-}
-
 async function registrarCentroNotificacion({
-  usuario,
-  tipo,
-  titulo,
-  mensaje,
-  url = "./",
-  clave = "",
+  usuario, tipo, titulo, mensaje, url = "./", clave = "",
 }) {
-  await asegurarHojasNotificaciones();
+  await asegurarAuxiliaresPostgres();
   const usuarioNorm = normalizarUsuario(usuario);
   if (!usuarioNorm) return;
   const claveNorm = normalizarTexto(clave || `${tipo}|${titulo}|${mensaje}`);
-  const id = crypto
-    .createHash("sha1")
-    .update(`${usuarioNorm}|${claveNorm}`)
-    .digest("hex")
-    .slice(0, 20);
-  const filas = await leerFilasCentroNotificaciones();
-  if (
-    filas.slice(1).some((f) => normalizarTexto(f[0]) === id) ||
-    idsCentroNotificacionPendientes.has(id)
-  )
-    return;
-  const nuevaFila = [
-    id,
-    usuarioNorm,
-    normalizarTexto(tipo),
-    normalizarTexto(titulo),
-    normalizarTexto(mensaje),
-    normalizarTexto(url || "./"),
-    fechaHoraArgentinaIso(),
-    "No",
-    claveNorm,
-  ];
+  const id = crypto.createHash("sha1").update(`${usuarioNorm}|${claveNorm}`).digest("hex").slice(0, 20);
+  if (idsCentroNotificacionPendientes.has(id) || await existeCentroNotificacionDb(id)) return;
   idsCentroNotificacionPendientes.add(id);
   try {
-    await encolarEscrituraNotificaciones(() =>
-      sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${NOTIFICATION_CENTER_SHEET_NAME}!A:I`,
-        valueInputOption: "RAW",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: { values: [nuevaFila] },
-      }),
-    );
-  } finally {
-    idsCentroNotificacionPendientes.delete(id);
-  }
-  const cache = cacheLecturas.get("centroNotificaciones");
-  if (cache?.valor)
-    cacheLecturas.set("centroNotificaciones", {
-      fecha: Date.now(),
-      valor: [...cache.valor, nuevaFila],
+    await registrarCentroNotificacionDb({
+      id, usuario: usuarioNorm, tipo: normalizarTexto(tipo), titulo: normalizarTexto(titulo),
+      mensaje: normalizarTexto(mensaje), url: normalizarTexto(url || "./"),
+      fecha: fechaHoraArgentinaIso(), clave: claveNorm,
     });
-  else invalidarCache("centroNotificaciones");
+  } finally { idsCentroNotificacionPendientes.delete(id); }
+  invalidarCache("centroNotificaciones");
 }
 
 async function obtenerCentroNotificaciones(usuario) {
-  const clave = normalizarUsuario(usuario);
-  const filas = await leerFilasCentroNotificaciones();
-  return filas
-    .slice(1)
-    .map((f, i) => ({
-      filaGoogle: i + 2,
-      id: normalizarTexto(f[0]),
-      usuario: normalizarUsuario(f[1]),
-      tipo: normalizarTexto(f[2]),
-      titulo: normalizarTexto(f[3]),
-      mensaje: normalizarTexto(f[4]),
-      url: normalizarTexto(f[5]) || "./",
-      fecha: normalizarTexto(f[6]),
-      leida:
-        normalizarTexto(f[7]).toLowerCase() === "sí" ||
-        normalizarTexto(f[7]).toLowerCase() === "si",
-    }))
-    .filter((n) => n.usuario === clave)
-    .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
-    .slice(0, 10);
+  await asegurarAuxiliaresPostgres();
+  return listarCentroNotificacionesDb(normalizarUsuario(usuario), 10);
 }
 
 async function marcarCentroNotificacion(usuario, id = "", todas = false) {
-  const clave = normalizarUsuario(usuario);
-  const filas = await leerFilasCentroNotificaciones();
-  const updates = [];
-  filas.slice(1).forEach((f, i) => {
-    if (normalizarUsuario(f[1]) !== clave) return;
-    if (!todas && normalizarTexto(f[0]) !== normalizarTexto(id)) return;
-    if (
-      normalizarTexto(f[7]).toLowerCase() === "sí" ||
-      normalizarTexto(f[7]).toLowerCase() === "si"
-    )
-      return;
-    updates.push({
-      range: `${NOTIFICATION_CENTER_SHEET_NAME}!H${i + 2}`,
-      values: [["Sí"]],
-    });
-  });
-  if (updates.length) {
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { valueInputOption: "RAW", data: updates },
-    });
-    const actualizado = filas.map((f) => [...f]);
-    updates.forEach((u) => {
-      const match = /!H(\d+)$/.exec(u.range);
-      if (match) actualizado[Number(match[1]) - 1][7] = "Sí";
-    });
-    cacheLecturas.set("centroNotificaciones", {
-      fecha: Date.now(),
-      valor: actualizado,
-    });
-  }
-  return updates.length;
+  await asegurarAuxiliaresPostgres();
+  const cantidad = await marcarCentroNotificacionDb(normalizarUsuario(usuario), id, todas);
+  invalidarCache("centroNotificaciones");
+  return cantidad;
 }
 
-async function desactivarSuscripcionPush(filaGoogle) {
-  if (!filaGoogle) return;
-  await sheets.spreadsheets.values
-    .update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!F${filaGoogle}:F${filaGoogle}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [["No"]] },
-    })
-    .catch(() => {});
+async function desactivarSuscripcionPush(endpoint) {
+  await asegurarAuxiliaresPostgres();
+  if (!endpoint) return;
+  await desactivarSuscripcionPushDb(endpoint).catch(() => {});
   invalidarCache("suscripcionesPush");
 }
 
@@ -5274,7 +5080,7 @@ async function enviarPushASuscripciones(suscripciones, payload) {
         enviados += 1;
       } catch (error) {
         if ([404, 410].includes(error?.statusCode))
-          await desactivarSuscripcionPush(s.filaGoogle);
+          await desactivarSuscripcionPush(s.endpoint);
         else
           console.error(
             "Error enviando notificación push:",
@@ -5640,7 +5446,7 @@ async function enviarPushVencimientos(payload) {
         enviados += 1;
       } catch (error) {
         if ([404, 410].includes(error?.statusCode))
-          await desactivarSuscripcionPush(s.filaGoogle);
+          await desactivarSuscripcionPush(s.endpoint);
         else
           console.error(
             "Error enviando notificación push:",
@@ -6223,43 +6029,25 @@ async function registrarHistorialVencimiento(
   registro,
   detalle = "",
 ) {
-  await asegurarHojaHistorialVencimientos();
+  await asegurarAuxiliaresPostgres();
   const ahora = new Date();
   const partes = new Intl.DateTimeFormat("es-AR", {
-    timeZone: TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
+    timeZone: TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   }).formatToParts(ahora);
   const get = (t) => partes.find((x) => x.type === t)?.value || "";
-  const fecha = `${get("day")}/${get("month")}/${get("year")}`;
-  const hora = `${get("hour")}:${get("minute")}:${get("second")}`;
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:K`,
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: {
-      values: [
-        [
-          fecha,
-          hora,
-          req.usuario?.usuario || "desconocido",
-          req.usuario?.nombre || "",
-          accion,
-          registro?.id || "",
-          registro?.codigo || "",
-          registro?.articulo || "",
-          registro?.vencimiento || "",
-          detalle,
-          registro?.cantidad ?? "",
-        ],
-      ],
-    },
+  await registrarHistorialVencimientoDb({
+    fecha: `${get("day")}/${get("month")}/${get("year")}`,
+    hora: `${get("hour")}:${get("minute")}:${get("second")}`,
+    usuario: req.usuario?.usuario || "desconocido",
+    nombre: req.usuario?.nombre || "",
+    accion,
+    id: registro?.id || "",
+    codigo: registro?.codigo || "",
+    articulo: registro?.articulo || "",
+    vencimiento: registro?.vencimiento || "",
+    detalle,
+    cantidad: registro?.cantidad ?? "",
   });
 }
 
@@ -6268,164 +6056,8 @@ app.get(
   requerirAdministrador,
   async (req, res) => {
     try {
-      await asegurarHojaHistorialVencimientos();
-      const respuesta = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A:K`,
-      });
-      const filas = respuesta.data.values || [];
-      const registros = filas.slice(1);
-      const cantidadDesdeDetalle = (detalle = "", preferirAntes = false) => {
-        const texto = String(detalle || "").trim();
-        let match = texto.match(/Cantidad\s*:\s*(-?\d+(?:[.,]\d+)?)/i);
-        if (match) return String(match[1]).replace(",", ".");
-        match = texto.match(/Antes:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)\s*·\s*Después:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)/i);
-        if (match) return String(preferirAntes ? match[1] : match[2]).replace(",", ".");
-        return "";
-      };
-      const cantidadCambio = (detalle = "") => {
-        const texto = String(detalle || "").trim();
-        const match = texto.match(/Antes:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)\s*·\s*Después:\s*[^·]*?\/\s*(-?\d+(?:[.,]\d+)?)/i);
-        if (!match) return null;
-        return { antes: String(match[1]).replace(",", "."), despues: String(match[2]).replace(",", ".") };
-      };
-      const claveTexto = (valor) => normalizarTexto(valor).toLowerCase();
-      const clavesRegistro = (f) => {
-        const id = claveTexto(f[5]);
-        const codigo = claveTexto(f[6]);
-        const articulo = claveTexto(f[7]);
-        const vencimiento = claveTexto(f[8]);
-        return [...new Set([
-          id ? `id:${id}` : "",
-          codigo ? `codigo:${codigo}` : "",
-          articulo && vencimiento ? `av:${articulo}|${vencimiento}` : "",
-        ].filter(Boolean))];
-      };
-      const clavePrincipal = (f) => clavesRegistro(f)[0] || "";
-      const mismaEntidad = (a, b) => {
-        const ka = new Set(clavesRegistro(a));
-        return clavesRegistro(b).some((k) => ka.has(k));
-      };
-
-      let vencimientosActuales = [];
-      try { vencimientosActuales = await obtenerVencimientos(); } catch (_) { vencimientosActuales = []; }
-      const cantidadActualPorClave = new Map();
-      vencimientosActuales.forEach((v) => {
-        const cantidad = v?.cantidad;
-        const falsas = [v?.id, v?.codigo, v?.articulo && v?.vencimiento ? `${v.articulo}|${v.vencimiento}` : ""];
-        const prefijos = ["id:", "codigo:", "av:"];
-        falsas.forEach((valor, i) => {
-          const k = claveTexto(valor);
-          if (k) cantidadActualPorClave.set(`${prefijos[i]}${k}`, cantidad);
-        });
-      });
-
-      const cantidadesResueltas = new Array(registros.length).fill("");
-      const estadoCantidad = new Map();
-
-      // Primera pasada cronológica: conserva el estado conocido de cada registro.
-      registros.forEach((f, indice) => {
-        const claves = clavesRegistro(f);
-        const accion = claveTexto(f[4]);
-        const detalle = f[9] || "";
-        const directaColumna = String(f[10] ?? "").trim();
-        const directaDetalle = cantidadDesdeDetalle(detalle);
-        const cambio = cantidadCambio(detalle);
-        const estadoPrevio = claves.map((k) => String(estadoCantidad.get(k) ?? "")).find((v) => v !== "") || "";
-
-        let resuelta = directaColumna || directaDetalle;
-        if (accion.includes("edit") && cambio) resuelta = directaColumna || cambio.despues || estadoPrevio;
-        else if (accion.includes("elimin")) resuelta = directaColumna || directaDetalle || estadoPrevio;
-        else if (!resuelta) resuelta = estadoPrevio;
-
-        cantidadesResueltas[indice] = resuelta;
-
-        if (accion.includes("elimin")) {
-          claves.forEach((k) => estadoCantidad.delete(k));
-        } else {
-          const siguiente = accion.includes("edit") && cambio ? (cambio.despues || resuelta) : resuelta;
-          if (siguiente !== "") claves.forEach((k) => estadoCantidad.set(k, siguiente));
-        }
-      });
-
-      // Segunda pasada: reconstruye filas antiguas sin K usando eventos vecinos del mismo vencimiento.
-      registros.forEach((f, indice) => {
-        if (cantidadesResueltas[indice] !== "") return;
-        const accion = claveTexto(f[4]);
-        if (accion.includes("cre")) {
-          for (let j = indice + 1; j < registros.length; j += 1) {
-            if (!mismaEntidad(f, registros[j])) continue;
-            const cambio = cantidadCambio(registros[j][9] || "");
-            const directa = String(registros[j][10] ?? "").trim() || cantidadDesdeDetalle(registros[j][9] || "", true);
-            if (cambio?.antes) { cantidadesResueltas[indice] = cambio.antes; break; }
-            if (directa !== "") { cantidadesResueltas[indice] = directa; break; }
-          }
-        } else if (accion.includes("elimin")) {
-          for (let j = indice - 1; j >= 0; j -= 1) {
-            if (!mismaEntidad(f, registros[j])) continue;
-            const cambio = cantidadCambio(registros[j][9] || "");
-            const directa = cantidadesResueltas[j] || String(registros[j][10] ?? "").trim() || cantidadDesdeDetalle(registros[j][9] || "");
-            if (cambio?.despues) { cantidadesResueltas[indice] = cambio.despues; break; }
-            if (directa !== "") { cantidadesResueltas[indice] = directa; break; }
-          }
-        }
-      });
-
-      // Tercera pasada: para CREÓ aún activo, usa la cantidad actual por ID/código/artículo+fecha.
-      registros.forEach((f, indice) => {
-        if (cantidadesResueltas[indice] !== "") return;
-        const accion = claveTexto(f[4]);
-        if (!accion.includes("cre")) return;
-        const clave = clavesRegistro(f).find((k) => cantidadActualPorClave.has(k));
-        if (clave) cantidadesResueltas[indice] = String(cantidadActualPorClave.get(clave) ?? "");
-      });
-
-      // Migra de forma segura filas históricas anteriores a la columna Cantidad.
-      // Sólo completa K cuando está vacía y la cantidad pudo reconstruirse con datos
-      // existentes; nunca sobrescribe un valor histórico ya guardado.
-      const backfillCantidad = registros
-        .map((f, indice) => ({
-          fila: indice + 2,
-          original: String(f[10] ?? "").trim(),
-          cantidad: String(cantidadesResueltas[indice] ?? "").trim(),
-        }))
-        .filter((item) => !item.original && item.cantidad !== "");
-      if (backfillCantidad.length) {
-        try {
-          await sheets.spreadsheets.values.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            requestBody: {
-              valueInputOption: "USER_ENTERED",
-              data: backfillCantidad.map((item) => ({
-                range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!K${item.fila}`,
-                values: [[item.cantidad]],
-              })),
-            },
-          });
-        } catch (errorBackfill) {
-          console.warn(
-            "No se pudo completar Cantidad en historial legacy:",
-            errorBackfill?.message || errorBackfill,
-          );
-        }
-      }
-
-      const historial = registros
-        .map((f, indice) => ({
-          fecha: f[0] || "",
-          hora: f[1] || "",
-          usuario: f[2] || "",
-          nombre: f[3] || "",
-          accion: f[4] || "",
-          id: f[5] || "",
-          codigo: f[6] || "",
-          articulo: f[7] || "",
-          vencimiento: f[8] || "",
-          detalle: f[9] || "",
-          cantidad: cantidadesResueltas[indice] || "",
-        }))
-        .reverse();
-      res.json({ ok: true, historial });
+      await asegurarAuxiliaresPostgres();
+      res.json({ ok: true, historial: await listarHistorialVencimientosDb() });
     } catch (error) {
       res.status(500).json({
         ok: false,
@@ -6434,30 +6066,6 @@ app.get(
     }
   },
 );
-
-async function obtenerSheetId(nombreHoja) {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const hoja = (meta.data.sheets || []).find(
-    (item) => item.properties?.title === nombreHoja,
-  );
-  if (!hoja) throw new Error(`No existe la hoja ${nombreHoja}`);
-  return hoja.properties.sheetId;
-}
-
-// V6.1.7 - Reposición persistente en Google Sheets, individual y con dos listas por usuario.
-const LISTAS_SHEET_NAME = "Listas";
-const LISTAS_HEADERS = [
-  "ID",
-  "Usuario",
-  "Lista",
-  "Código",
-  "Artículo",
-  "Cantidad",
-  "Estado",
-  "Orden",
-  "Actualizado",
-];
-let promesaHojaListasLista = null;
 
 function normalizarNumeroLista(valor) {
   return String(valor) === "2" ? "2" : "1";
@@ -6577,6 +6185,86 @@ async function asegurarListasReposicionPostgres() {
   } finally {
     promesaListasReposicionPostgres = null;
   }
+}
+
+
+const MIGRACION_AUXILIARES = "2026-08-28-auxiliares-v1";
+let promesaAuxiliaresPostgres = null;
+
+async function leerRangoAuxiliarLegacy(nombreHoja, rango) {
+  try {
+    validarConfiguracion();
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${nombreHoja}!${rango}`,
+    });
+    return r.data.values || [];
+  } catch (error) {
+    const mensaje = String(error?.message || "").toLowerCase();
+    if (mensaje.includes("unable to parse range") || mensaje.includes("not found")) return [];
+    throw error;
+  }
+}
+
+async function obtenerAuxiliaresLegacy() {
+  const [adminF, offlineF, pushF, logF, centroF, vencHistF] = await Promise.all([
+    leerRangoAuxiliarLegacy(HISTORIAL_ADMIN_SHEET_NAME, "A2:H"),
+    leerRangoAuxiliarLegacy(OFFLINE_OPERATIONS_SHEET_NAME, "A2:G"),
+    leerRangoAuxiliarLegacy(PUSH_SUBSCRIPTIONS_SHEET_NAME, "A2:G"),
+    leerRangoAuxiliarLegacy(NOTIFICATION_LOG_SHEET_NAME, "A2:G"),
+    leerRangoAuxiliarLegacy(NOTIFICATION_CENTER_SHEET_NAME, "A2:I"),
+    leerRangoAuxiliarLegacy(HISTORIAL_VENCIMIENTOS_SHEET_NAME, "A2:K"),
+  ]);
+  return {
+    admin: adminF.map((f) => ({
+      fecha:f[0]||"", hora:f[1]||"", usuario:f[2]||"", nombre:f[3]||"",
+      accion:f[4]||"", entidad:f[5]||"", identificador:f[6]||"", detalle:f[7]||"",
+    })),
+    offline: offlineF.map((f) => ({
+      id:f[0]||"", usuario:f[1]||"", fecha:f[2]||"", metodo:f[3]||"",
+      ruta:f[4]||"", estado:f[5]||"", respuesta:f[6]||"",
+    })).filter((x)=>x.id && x.usuario),
+    push: pushF.map((f) => ({
+      endpoint:f[0]||"", p256dh:f[1]||"", auth:f[2]||"", usuario:f[3]||"",
+      nombre:f[4]||"", activo:normalizarTexto(f[5]).toLowerCase()!=="no", actualizado:f[6]||"",
+    })).filter((x)=>x.endpoint && x.p256dh && x.auth),
+    notificationLog: logF.map((f)=>({
+      clave:f[0]||"", fecha:f[1]||"", tipo:f[2]||"", id:f[3]||"",
+      codigo:f[4]||"", vencimiento:f[5]||"", detalle:f[6]||"",
+    })),
+    notificationCenter: centroF.map((f)=>({
+      id:f[0]||"", usuario:f[1]||"", tipo:f[2]||"", titulo:f[3]||"",
+      mensaje:f[4]||"", url:f[5]||"./", fecha:f[6]||"",
+      leida:["si","sí"].includes(normalizarTexto(f[7]).toLowerCase()), clave:f[8]||"",
+    })).filter((x)=>x.id && x.usuario),
+    expirationHistory: vencHistF.map((f)=>({
+      fecha:f[0]||"", hora:f[1]||"", usuario:f[2]||"", nombre:f[3]||"",
+      accion:f[4]||"", id:f[5]||"", codigo:f[6]||"", articulo:f[7]||"",
+      vencimiento:f[8]||"", detalle:f[9]||"", cantidad:f[10]??"",
+    })),
+  };
+}
+
+async function asegurarAuxiliaresPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  await asegurarEsquemaAuxiliares();
+  if (await migracionDatosCompletada(MIGRACION_AUXILIARES)) return;
+  if (promesaAuxiliaresPostgres) return promesaAuxiliaresPostgres;
+  promesaAuxiliaresPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_AUXILIARES)) return;
+    const datos = await obtenerAuxiliaresLegacy();
+    const importado = await importarAuxiliaresAtomico(datos, MIGRACION_AUXILIARES);
+    if (importado) {
+      console.log(
+        `PostgreSQL Etapa 8: datos auxiliares importados desde Sheets (` +
+        `${datos.admin.length} historial admin, ${datos.offline.length} offline, ` +
+        `${datos.push.length} suscripciones, ${datos.notificationLog.length} registros de notificación, ` +
+        `${datos.notificationCenter.length} centro de notificaciones, ${datos.expirationHistory.length} historial vencimientos).`,
+      );
+    }
+  })();
+  try { await promesaAuxiliaresPostgres; }
+  finally { promesaAuxiliaresPostgres = null; }
 }
 
 async function leerTodasLasListas(cliente = null) {
@@ -7103,15 +6791,17 @@ app.listen(PORT, () => {
         console.log("PostgreSQL Etapa 6: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos listos.");
         await asegurarListasReposicionPostgres();
         console.log("PostgreSQL Etapa 7: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista listos.");
+        await asegurarAuxiliaresPostgres();
+        console.log("PostgreSQL Etapa 8: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos, Listas/Mi Lista y datos auxiliares listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista requieren PostgreSQL desde la Etapa 7.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Los módulos migrados y los datos auxiliares requieren PostgreSQL desde la Etapa 8.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista no estarán disponibles hasta recuperar la conexión:",
+        "PostgreSQL configurado pero no disponible. Los módulos migrados y los datos auxiliares no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
