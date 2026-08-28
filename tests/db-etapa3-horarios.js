@@ -1,0 +1,13 @@
+const fs=require('fs'), assert=require('assert');
+const server=fs.readFileSync('server.js','utf8');
+const db=fs.readFileSync('db-horarios.js','utf8');
+for(const t of ['schedule_shifts','schedule_calendar','schedule_details','schedule_personnel_order','schedule_audit']) assert(db.includes(t),`Falta tabla ${t}`);
+assert(server.includes('MIGRACION_HORARIOS = "2026-08-27-horarios-v1"'),'Falta migración versionada de Horarios');
+assert(server.includes('listarCalendarioFilas()') && server.includes('reemplazarCalendarioDetalles'),'Calendario no quedó conectado a PostgreSQL');
+assert(server.includes('listarTurnosFilas()') && server.includes('reemplazarTurnosSector'),'Turnos no quedaron conectados a PostgreSQL');
+assert(server.includes('listarOrdenFilas()') && server.includes('guardarVisibilidadOrden'),'Orden/visibilidad no quedaron conectados a PostgreSQL');
+const inicio=server.indexOf('app.get("/horarios/turnos"');
+const fin=server.indexOf('let hojaAuditoriaHorariosAsegurada',inicio);
+const runtime=server.slice(inicio,fin);
+assert(!runtime.includes('sheets.spreadsheets.values.'),'Los endpoints activos de Horarios todavía escriben/leen Sheets');
+console.log('PostgreSQL Etapa 3 Horarios regression tests: OK');

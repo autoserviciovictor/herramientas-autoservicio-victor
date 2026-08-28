@@ -2582,3 +2582,41 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
   .pro-topbar > .pro-top-actions { width: auto !important; height: auto !important; display: flex !important; align-items: center !important; gap: 8px !important; }
   #proHeaderThemeToggle { display: inline-grid !important; place-items: center !important; }
 }
+
+
+/* ==========================================================================
+   MOBILE · SCROLL DE PANTALLA CANÓNICO
+   --------------------------------------------------------------------------
+   En celular el documento vuelve a ser el propietario del desplazamiento
+   vertical. Los bloqueos quedan reservados exclusivamente a overlays/modales
+   abiertos. Evita que una altura de viewport o una regla heredada deje la
+   pantalla sin gesto vertical.
+   ========================================================================== */
+@media (max-width: 900px) {
+  html {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body:not(.login-bloqueado):not(.modal-abierto):not(.pro-drawer-open):not(.app-dialog-open):not(.notification-center-open):not(.inventory-scan-open):not(.venc-scan-open):not(.repo-scan-open):not(.repo-write-open):not(.repo-mobile-load-open):not(.precio-scan-open):not(.tareas-plan-modal-open):not(.tareas-modal-open):not(.bano-participant-sheet-open):not(.venc-filter-open) {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    position: static !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-x pan-y !important;
+  }
+
+  body:not(.login-bloqueado) .app,
+  body:not(.login-bloqueado) .pantalla.activa {
+    height: auto !important;
+    max-height: none !important;
+  }
+}

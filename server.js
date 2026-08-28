@@ -18,6 +18,20 @@ const {
   eliminarSectorDb,
   importarUsuariosSectoresAtomico,
 } = require("./db-usuarios-sectores");
+const {
+  asegurarEsquemaHorarios,
+  conTransaccionHorarios,
+  importarHorariosAtomico,
+  listarTurnosFilas,
+  reemplazarTurnosSector,
+  listarCalendarioFilas,
+  listarDetallesFilas,
+  reemplazarCalendarioDetallesPorAlcances,
+  listarOrdenFilas,
+  reemplazarOrdenSector,
+  guardarVisibilidadOrden,
+  registrarAuditoriaFilas,
+} = require("./db-horarios");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -1264,13 +1278,9 @@ async function contarPersonalEnTurnoActual() {
     `dashboardPersonal:${fecha}:${bloqueCincoMinutos}`,
     30_000,
     async () => {
-      await asegurarHojasHorarios();
-      const [calendarioResp, usuarios] = await Promise.all([
-        sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
-        }),
-        obtenerUsuarios(),
+      await asegurarHorariosPostgres();
+      const [filasCalendario, usuarios] = await Promise.all([
+        listarCalendarioFilas(), obtenerUsuarios(),
       ]);
       const usuariosActivos = new Set();
       usuarios
@@ -1282,9 +1292,7 @@ async function contarPersonalEnTurnoActual() {
             .forEach((clave) => usuariosActivos.add(clave));
         });
 
-      const filasHoy = (calendarioResp.data.values || [])
-        .slice(1)
-        .filter(
+      const filasHoy = filasCalendario.filter(
           (fila) =>
             normalizarTexto(fila[1]) === mes &&
             Number(fila[3]) === dia &&
@@ -1765,7 +1773,7 @@ function requerirAccesoHorarios(req, res, next) {
 }
 
 let hojasHorariosAseguradas = false;
-async function asegurarHojasHorarios() {
+async function asegurarHojasHorariosLegacy() {
   if (hojasHorariosAseguradas) return;
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
@@ -1888,15 +1896,66 @@ async function asegurarHojasHorarios() {
   });
   hojasHorariosAseguradas = true;
 }
+
+const MIGRACION_HORARIOS = "2026-08-27-horarios-v1";
+let promesaHorariosPostgres = null;
+async function asegurarHorariosPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  await asegurarEsquemaHorarios();
+  if (await migracionDatosCompletada(MIGRACION_HORARIOS)) return;
+  if (promesaHorariosPostgres) return promesaHorariosPostgres;
+  promesaHorariosPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_HORARIOS)) return;
+    await asegurarHojasHorariosLegacy();
+    await asegurarHojaAuditoriaHorariosLegacy();
+    const [turnos, calendario, detalles, reemplazos, orden, auditoria] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J` }),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H` }),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${DETALLES_HORARIOS_SHEET_NAME}!A:I` }),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${REEMPLAZOS_HORARIOS_SHEET_NAME}!A:I` }),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E` }),
+      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G` }),
+    ]);
+    const si = (v) => !["no","false","0","inactivo","deshabilitado","oculto"].includes(normalizarTexto(v).toLowerCase());
+    const datos = {
+      turnos: (turnos.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&normalizarTexto(f[1])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),normalizarTexto(f[3]),normalizarTexto(f[4])||"#64748b",si(f[5]),normalizarTexto(f[6]),normalizarTexto(f[7])||"continuo",normalizarTexto(f[8]),normalizarTexto(f[9])]),
+      calendario: (calendario.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&mesHorariosValido(f[1])&&normalizarTexto(f[2])&&Number(f[3])>=1&&Number(f[3])<=31&&normalizarTexto(f[4])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),Number(f[3]),normalizarTexto(f[4]),normalizarTexto(f[5]),normalizarUsuario(f[6]),normalizarTexto(f[7])]),
+      detalles: (detalles.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&mesHorariosValido(f[1])&&normalizarTexto(f[2])&&Number(f[3])>=1&&Number(f[3])<=31).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),Number(f[3]),normalizarTexto(f[4]),normalizarTexto(f[5]),normalizarTexto(f[6]),normalizarTexto(f[7]),normalizarUsuario(f[8])]),
+      reemplazos: (reemplazos.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&mesHorariosValido(f[1])&&normalizarTexto(f[2])&&normalizarTexto(f[3])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),normalizarTexto(f[3]),normalizarTexto(f[4]),normalizarTexto(f[5]),normalizarTexto(f[6]),normalizarTexto(f[7]),normalizarUsuario(f[8])]),
+      orden: (orden.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&normalizarTexto(f[1])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),Number(f[2])||0,normalizarTexto(f[3]),si(f[4])]),
+      auditoria: (auditoria.data.values || []).slice(1).filter(f=>f.some(Boolean)).map(f=>f.slice(0,7).map(normalizarTexto)),
+    };
+    const importado = await importarHorariosAtomico(datos, MIGRACION_HORARIOS);
+    if (importado) console.log(`PostgreSQL Etapa 3: Horarios importados desde Sheets (${datos.calendario.length} celdas, ${datos.turnos.length} turnos).`);
+  })();
+  try { await promesaHorariosPostgres; } finally { promesaHorariosPostgres = null; }
+}
+
 function mesHorariosValido(valor) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(normalizarTexto(valor));
 }
+function diasEnMesHorarios(mes) {
+  if (!mesHorariosValido(mes)) return 0;
+  const [anio, numeroMes] = mes.split("-").map(Number);
+  return new Date(Date.UTC(anio, numeroMes, 0)).getUTCDate();
+}
+function horaHorarioFlexibleValida(valor) {
+  const texto = normalizarTexto(valor);
+  const match = texto.match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return false;
+  const hora = Number(match[1]);
+  const minuto = Number(match[2] || 0);
+  return hora >= 0 && hora <= 23 && minuto >= 0 && minuto <= 59;
+}
 function turnoHorarioValido(valor) {
-  return (
-    ["franco", "vacaciones", "ausente", "licencia"].includes(valor) ||
-    /^\d{1,2}(?::\d{2})?\s*-\s*\d{1,2}(?::\d{2})?$/.test(valor) ||
-    /^[a-z0-9_-]{3,80}$/i.test(valor)
-  );
+  const texto = normalizarTexto(valor);
+  const clave = texto.toLowerCase();
+  if (["franco", "vacaciones", "ausente", "licencia"].includes(clave))
+    return true;
+  const rango = texto.match(/^(\d{1,2}(?::\d{2})?)\s*-\s*(\d{1,2}(?::\d{2})?)$/);
+  if (rango)
+    return horaHorarioFlexibleValida(rango[1]) && horaHorarioFlexibleValida(rango[2]);
+  return /^[a-z0-9_-]{1,80}$/i.test(texto);
 }
 function normalizarHoraHorario(valor) {
   const texto = normalizarTexto(valor).toUpperCase();
@@ -1910,17 +1969,13 @@ function normalizarHoraHorario(valor) {
   return `${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
 }
 async function obtenerTurnosSector(sector) {
-  await asegurarHojasHorarios();
+  await asegurarHorariosPostgres();
   return leerConCache(
     `turnosHorarios:${sector}`,
     CACHE_TTL.turnosHorarios,
     async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J`,
-      });
-      return (r.data.values || [])
-        .slice(1)
+      const filasTurnos = await listarTurnosFilas();
+      return filasTurnos
         .filter(
           (f) =>
             normalizarTexto(f[0]) === sector &&
@@ -1951,26 +2006,8 @@ async function obtenerTurnosSector(sector) {
   );
 }
 async function registrarAuditoriaHorario(usuario, sectorNombre, mes, accion) {
-  await asegurarHojaAuditoriaHorarios();
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: {
-      values: [
-        [
-          fechaHoraArgentinaIso(),
-          usuario.usuario,
-          usuario.nombre,
-          usuario.rol,
-          sectorNombre,
-          mes,
-          accion,
-        ],
-      ],
-    },
-  });
+  await asegurarHorariosPostgres();
+  await registrarAuditoriaFilas([[fechaHoraArgentinaIso(), usuario.usuario, usuario.nombre, usuario.rol, sectorNombre, mes, accion]]);
 }
 
 app.get("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
@@ -2013,57 +2050,29 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
           color: /^#[0-9a-f]{6}$/i.test(t.color || "") ? t.color : "#64748b",
         }))
       : [];
+    const idsTurnos = turnos.map((t) => t.id.toLowerCase());
     if (
       !turnos.length ||
+      new Set(idsTurnos).size !== idsTurnos.length ||
       turnos.some(
         (t) =>
-          !t.id ||
-          !/^\d{2}:\d{2}$/.test(t.inicio) ||
-          !/^\d{2}:\d{2}$/.test(t.fin) ||
+          !/^[a-z0-9_-]{1,80}$/i.test(t.id) ||
+          !normalizarHoraHorario(t.inicio) ||
+          !normalizarHoraHorario(t.fin) ||
           (t.tipo === "cortado" &&
-            (!/^\d{2}:\d{2}$/.test(t.inicio2) ||
-              !/^\d{2}:\d{2}$/.test(t.fin2))),
+            (!normalizarHoraHorario(t.inicio2) ||
+              !normalizarHoraHorario(t.fin2))),
       )
     )
-      return res
-        .status(400)
-        .json({ ok: false, mensaje: "Configuración de horarios inválida" });
-    await asegurarHojasHorarios();
-    await ejecutarEnCola("horarios-global", async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J`,
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Configuración de horarios inválida o con identificadores repetidos",
       });
-      const otras = (r.data.values || [])
-        .slice(1)
-        .filter((f) => normalizarTexto(f[0]) !== sector);
+    await asegurarHorariosPostgres();
+    await ejecutarEnCola("horarios-global", async () => {
       const ahora = fechaHoraArgentinaIso();
-      const nuevas = turnos.map((t) => [
-        sector,
-        t.id,
-        t.inicio,
-        t.fin,
-        t.color,
-        "Sí",
-        ahora,
-        t.tipo,
-        t.inicio2 || "",
-        t.fin2 || "",
-      ]);
-      const todas = [...otras, ...nuevas],
-        filasPrevias = Math.max(0, (r.data.values || []).length - 1);
-      if (todas.length)
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${TURNOS_HORARIOS_SHEET_NAME}!A2:J${todas.length + 1}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: todas },
-        });
-      if (filasPrevias > todas.length)
-        await sheets.spreadsheets.values.clear({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${TURNOS_HORARIOS_SHEET_NAME}!A${todas.length + 2}:J${filasPrevias + 1}`,
-        });
+      const nuevas = turnos.map((t) => [sector,t.id,t.inicio,t.fin,t.color,"Sí",ahora,t.tipo,t.inicio2 || "",t.fin2 || ""]);
+      await reemplazarTurnosSector(sector, nuevas);
     });
     invalidarCache(`turnosHorarios:${sector}`);
     res.json({ ok: true, turnos });
@@ -2084,25 +2093,14 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         .json({ ok: false, mensaje: "No tenés acceso a ese sector" });
     if (!mesHorariosValido(mes))
       return res.status(400).json({ ok: false, mensaje: "Mes inválido" });
-    await asegurarHojasHorarios();
+    await asegurarHorariosPostgres();
     res.set(
       "Cache-Control",
       "no-store, no-cache, must-revalidate, proxy-revalidate",
     );
-    const [r, dr, usuarios, sectores] = await Promise.all([
-      sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
-      }),
-      sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${DETALLES_HORARIOS_SHEET_NAME}!A:I`,
-      }),
-      obtenerUsuarios(),
-      obtenerSectores(),
+    const [filasCalendario, filasDetalles, usuarios, sectores] = await Promise.all([
+      listarCalendarioFilas(), listarDetallesFilas(), obtenerUsuarios(), obtenerSectores(),
     ]);
-    const filasCalendario = (r.data.values || []).slice(1);
-    const filasDetalles = (dr.data.values || []).slice(1);
     const propias = filasCalendario.filter(
       (f) => normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === mes,
     );
@@ -2304,10 +2302,32 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
       .filter(
         (x) =>
           x.empleado &&
+          Number.isInteger(x.dia) &&
           x.dia >= 1 &&
           x.dia <= 31 &&
           (x.tipo || x.motivo || x.observacion),
       );
+
+    const ultimoDiaMes = diasEnMesHorarios(mes);
+    const claveCelda = (x) => `${x.empleado}::${x.dia}`;
+    if (
+      celdas.some((x) => x.dia > ultimoDiaMes) ||
+      baseCeldas.some((x) => x.dia > ultimoDiaMes) ||
+      detalles.some((x) => x.dia > ultimoDiaMes)
+    )
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El calendario contiene un día que no existe en el mes seleccionado",
+      });
+    if (
+      new Set(celdas.map(claveCelda)).size !== celdas.length ||
+      new Set(baseCeldas.map(claveCelda)).size !== baseCeldas.length ||
+      new Set(detalles.map(claveCelda)).size !== detalles.length
+    )
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El calendario contiene registros duplicados para un mismo empleado y día",
+      });
 
     if (
       celdas.some((x) => !empleadosPermitidos.has(x.empleado)) ||
@@ -2324,20 +2344,16 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         mensaje: "El calendario contiene un turno inválido",
       });
 
-    await asegurarHojasHorarios();
+    await asegurarHorariosPostgres();
     await ejecutarEnCola("horarios-global", async () => {
-      const [r, dr] = await Promise.all([
-        sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
-        }),
-        sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${DETALLES_HORARIOS_SHEET_NAME}!A:I`,
-        }),
+      await conTransaccionHorarios(async (clienteHorarios) => {
+      const [todasCalendarioPrevias, todosDetallesPrevios] = await Promise.all([
+        listarCalendarioFilas(clienteHorarios),
+        listarDetallesFilas(clienteHorarios),
       ]);
-      const todasCalendarioPrevias = (r.data.values || []).slice(1);
-      const todosDetallesPrevios = (dr.data.values || []).slice(1);
+      const alcancesEscritura = new Map([
+        [`${sector}||${mes}`, { sector, mes }],
+      ]);
       const filasAnteriores = todasCalendarioPrevias.filter(
         (f) =>
           normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === mes,
@@ -2423,6 +2439,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         if (!supervisor) continue;
         const valor = nuevoCompleto.get(k) || "";
         for (const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+          alcancesEscritura.set(`${destino}||${mes}`, { sector: destino, mes });
           const claveDestino = `${destino}||${mes}||${empleado}||${dia}`;
           if (valor)
             mapaFilas.set(claveDestino, [
@@ -2471,6 +2488,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         const empleado = supervisor.nombre || supervisor.usuario;
         const detalleEmpleado = detalles.filter((x) => x.empleado === empleado);
         for (const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+          alcancesEscritura.set(`${destino}||${mes}`, { sector: destino, mes });
           for (const key of [...mapaDetalles.keys()]) {
             if (key.startsWith(`${destino}||${mes}||${empleado}||`))
               mapaDetalles.delete(key);
@@ -2492,42 +2510,18 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
 
       const todas = [...mapaFilas.values()];
       const todosDetalles = [...mapaDetalles.values()];
-      const filasCalendarioPrevias = Math.max(
-          0,
-          (r.data.values || []).length - 1,
-        ),
-        filasDetallesPrevias = Math.max(0, (dr.data.values || []).length - 1);
-      if (todas.length)
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A2:H${todas.length + 1}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: todas },
-        });
-      if (todosDetalles.length)
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${DETALLES_HORARIOS_SHEET_NAME}!A2:I${todosDetalles.length + 1}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: todosDetalles },
-        });
-      if (filasCalendarioPrevias > todas.length)
-        await sheets.spreadsheets.values.clear({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A${todas.length + 2}:H${filasCalendarioPrevias + 1}`,
-        });
-      if (filasDetallesPrevias > todosDetalles.length)
-        await sheets.spreadsheets.values.clear({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${DETALLES_HORARIOS_SHEET_NAME}!A${todosDetalles.length + 2}:I${filasDetallesPrevias + 1}`,
-        });
+      await reemplazarCalendarioDetallesPorAlcances(
+        todas,
+        todosDetalles,
+        [...alcancesEscritura.values()],
+        clienteHorarios,
+      );
 
       const claves = new Set([...anterior.keys(), ...nuevoCompleto.keys()]);
       const cambios = [...claves].filter(
         (k) => (anterior.get(k) || "") !== (nuevoCompleto.get(k) || ""),
       );
       if (cambios.length) {
-        await asegurarHojaAuditoriaHorarios();
         const filas = cambios.map((k) => {
           const [empleado, dia] = k.split("::");
           return [
@@ -2540,14 +2534,9 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
             `Cambió ${empleado} día ${dia}: ${anterior.get(k) || "Sin asignar"} → ${nuevoCompleto.get(k) || "Sin asignar"}`,
           ];
         });
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,
-          valueInputOption: "USER_ENTERED",
-          insertDataOption: "INSERT_ROWS",
-          requestBody: { values: filas },
-        });
+        await registrarAuditoriaFilas(filas, clienteHorarios);
       }
+      });
     });
 
     await registrarAuditoriaHorario(
@@ -2567,7 +2556,7 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
 });
 
 let hojaAuditoriaHorariosAsegurada = false;
-async function asegurarHojaAuditoriaHorarios() {
+async function asegurarHojaAuditoriaHorariosLegacy() {
   if (hojaAuditoriaHorariosAsegurada) return;
   validarConfiguracion();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
@@ -2637,14 +2626,11 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
         .status(403)
         .json({ ok: false, mensaje: "No tenés acceso a un sector activo" });
 
-    await asegurarHojasHorarios();
-    const ordenResp = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
-    });
+    await asegurarHorariosPostgres();
+    const filasOrden = await listarOrdenFilas();
     const ordenPorSector = new Map();
     const habilitadosPorSector = new Map();
-    (ordenResp.data.values || []).slice(1).forEach((f) => {
+    filasOrden.forEach((f) => {
       const sec = normalizarTexto(f[0]),
         emp = normalizarTexto(f[1]),
         ord = Number(f[2]);
@@ -2725,13 +2711,9 @@ app.get("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
       return res
         .status(403)
         .json({ ok: false, mensaje: "No tenés acceso a ese sector" });
-    await asegurarHojasHorarios();
-    const r = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
-    });
-    const orden = (r.data.values || [])
-      .slice(1)
+    await asegurarHorariosPostgres();
+    const filasOrden = await listarOrdenFilas();
+    const orden = filasOrden
       .filter((f) => normalizarTexto(f[0]) === sector)
       .sort((a, b) => Number(a[2]) - Number(b[2]))
       .map((f) => normalizarTexto(f[1]))
@@ -2776,41 +2758,25 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
         ok: false,
         mensaje: "El orden debe incluir una vez a todo el personal del sector",
       });
-    await asegurarHojasHorarios();
+    await asegurarHorariosPostgres();
     await ejecutarEnCola("horarios-global", async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
+      await conTransaccionHorarios(async (clienteHorarios) => {
+        const filasPrevias = await listarOrdenFilas(clienteHorarios);
+        const habilitadoPrevio = new Map(
+          filasPrevias
+            .filter((f) => normalizarTexto(f[0]) === sector)
+            .map((f) => [normalizarTexto(f[1]), f[4] || "Sí"]),
+        );
+        const ahora = fechaHoraArgentinaIso();
+        const nuevas = orden.map((e, i) => [
+          sector,
+          e,
+          i + 1,
+          ahora,
+          habilitadoPrevio.get(e) || "Sí",
+        ]);
+        await reemplazarOrdenSector(sector, nuevas, clienteHorarios);
       });
-      const filasPrevias = (r.data.values || []).slice(1);
-      const otras = filasPrevias.filter((f) => normalizarTexto(f[0]) !== sector);
-      const habilitadoPrevio = new Map(
-        filasPrevias
-          .filter((f) => normalizarTexto(f[0]) === sector)
-          .map((f) => [normalizarTexto(f[1]), f[4] || "Sí"]),
-      );
-      const ahora = fechaHoraArgentinaIso();
-      const nuevas = orden.map((e, i) => [
-        sector,
-        e,
-        i + 1,
-        ahora,
-        habilitadoPrevio.get(e) || "Sí",
-      ]);
-      const todas = [...otras, ...nuevas],
-        prev = Math.max(0, filasPrevias.length);
-      if (todas.length)
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${ORDEN_HORARIOS_SHEET_NAME}!A2:E${todas.length + 1}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: todas },
-        });
-      if (prev > todas.length)
-        await sheets.spreadsheets.values.clear({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${ORDEN_HORARIOS_SHEET_NAME}!A${todas.length + 2}:E${prev + 1}`,
-        });
     });
     res.json({ ok: true, sector, orden });
   } catch (e) {
@@ -2843,46 +2809,9 @@ app.put("/horarios/personal-visibilidad", requerirAccesoHorarios, async (req, re
         mensaje: "El usuario no pertenece al sector seleccionado",
       });
 
-    await asegurarHojasHorarios();
+    await asegurarHorariosPostgres();
     await ejecutarEnCola("horarios-global", async () => {
-      const r = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
-      });
-      const filas = (r.data.values || []).slice(1);
-      const indice = filas.findIndex(
-        (f) => normalizarTexto(f[0]) === sector && normalizarTexto(f[1]) === empleado,
-      );
-      const ahora = fechaHoraArgentinaIso();
-      if (indice >= 0) {
-        const fila = filas[indice];
-        const numeroFila = indice + 2;
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${ORDEN_HORARIOS_SHEET_NAME}!A${numeroFila}:E${numeroFila}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [[
-              sector,
-              empleado,
-              Number(fila[2]) || indice + 1,
-              ahora,
-              habilitado ? "Sí" : "No",
-            ]],
-          },
-        });
-      } else {
-        const ordenSector = filas.filter((f) => normalizarTexto(f[0]) === sector).length + 1;
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E`,
-          valueInputOption: "USER_ENTERED",
-          insertDataOption: "INSERT_ROWS",
-          requestBody: {
-            values: [[sector, empleado, ordenSector, ahora, habilitado ? "Sí" : "No"]],
-          },
-        });
-      }
+      await guardarVisibilidadOrden(sector, empleado, habilitado, fechaHoraArgentinaIso());
     });
 
     res.json({ ok: true, sector, empleado, habilitado });
@@ -2914,31 +2843,13 @@ app.post("/horarios/auditoria", requerirAccesoHorarios, async (req, res) => {
       return res
         .status(404)
         .json({ ok: false, mensaje: "Sector inexistente o inactivo" });
-    await asegurarHojaAuditoriaHorarios();
+    await asegurarHorariosPostgres();
     const mes = normalizarTexto(req.body?.mes).slice(0, 80);
     const accion = normalizarTexto(req.body?.accion || "Guardó cambios").slice(
       0,
       120,
     );
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [
-          [
-            fechaHoraArgentinaIso(),
-            req.usuario.usuario,
-            req.usuario.nombre,
-            req.usuario.rol,
-            sectorEncontrado.nombre,
-            mes,
-            accion,
-          ],
-        ],
-      },
-    });
+    await registrarAuditoriaFilas([[fechaHoraArgentinaIso(), req.usuario.usuario, req.usuario.nombre, req.usuario.rol, sectorEncontrado.nombre, mes, accion]]);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({
@@ -5371,18 +5282,11 @@ async function datosHorarioEntradaHoy() {
     `notificacionesTareasHorario:${fecha}`,
     45000,
     async () => {
-      await asegurarHojasHorarios();
-      const [calendarioResp, sectores, usuarios] = await Promise.all([
-        sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H`,
-        }),
-        obtenerSectores(),
-        obtenerUsuarios(),
+      await asegurarHorariosPostgres();
+      const [calendario, sectores, usuarios] = await Promise.all([
+        listarCalendarioFilas(), obtenerSectores(), obtenerUsuarios(),
       ]);
-      const filas = (calendarioResp.data.values || [])
-        .slice(1)
-        .filter((f) => normalizarTexto(f[1]) === mes && Number(f[3]) === dia);
+      const filas = calendario.filter((f) => normalizarTexto(f[1]) === mes && Number(f[3]) === dia);
       const porEmpleadoSector = new Map();
       for (const f of filas) {
         porEmpleadoSector.set(
@@ -7120,8 +7024,7 @@ async function migrarEstructuraHorariosV812() {
   validarConfiguracion();
   // Usuarios y Sectores ya pertenecen a PostgreSQL (Etapa 2).
   // Esta migración legacy no vuelve a escribir esas hojas de respaldo.
-  await asegurarHojasHorarios();
-  await asegurarHojaAuditoriaHorarios();
+  await asegurarHorariosPostgres();
   invalidarCache("usuarios");
   return {
     hojas: [
@@ -7153,7 +7056,7 @@ app.post("/admin/migrar-horarios", requerirAdministrador, async (req, res) => {
     const resultado = await migrarEstructuraHorariosV812();
     res.json({
       ok: true,
-      mensaje: "Migración de Google Sheets completada",
+      mensaje: "Migración de Horarios a PostgreSQL completada",
       ...resultado,
     });
   } catch (error) {
@@ -7192,16 +7095,17 @@ app.listen(PORT, () => {
         console.log("PostgreSQL conectado correctamente.");
         await asegurarEsquemaUsuariosSectores();
         await asegurarUsuariosSectoresPostgres();
-        console.log("PostgreSQL Etapa 2: Usuarios y Sectores listos.");
+        await asegurarHorariosPostgres();
+        console.log("PostgreSQL Etapa 3: Usuarios, Sectores y Horarios listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios y Sectores requieren PostgreSQL desde la Etapa 2.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores y Horarios requieren PostgreSQL desde la Etapa 3.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. Usuarios y Sectores no estarán disponibles hasta recuperar la conexión:",
+        "PostgreSQL configurado pero no disponible. Usuarios, Sectores y Horarios no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
