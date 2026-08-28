@@ -32,6 +32,15 @@ const {
   guardarVisibilidadOrden,
   registrarAuditoriaFilas,
 } = require("./db-horarios");
+const {
+  asegurarEsquemaTareasBano,
+  conTransaccionTareasBano,
+  importarTareasBanoAtomico,
+  listarTareasDb,
+  reemplazarTareasDb,
+  leerBanoDb,
+  guardarBanoDb,
+} = require("./db-tareas-bano");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -3222,7 +3231,7 @@ async function asegurarHojaBano() {
     },
   });
 }
-async function leerBanoServidor() {
+async function leerBanoLegacy() {
   await asegurarHojaBano();
   const r = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
@@ -3247,142 +3256,86 @@ async function leerBanoServidor() {
     ? config.participantes
     : [];
   config.historial = Array.isArray(config.historial) ? config.historial : [];
+  config.actualizadoTexto = normalizarTexto(mapa.get("config")?.[2]);
+  config.actualizadoPor = normalizarUsuario(mapa.get("config")?.[3]);
   return config;
 }
-async function guardarBanoServidor(config, usuario) {
-  return ejecutarEnCola("tareas-bano", async () => {
-    await asegurarHojaBano();
-    const limpio = {
-      participantes: [
-        ...new Set(
-          (config.participantes || []).map(normalizarTexto).filter(Boolean),
-        ),
-      ],
-      fechaAncla:
-        normalizarTexto(config.fechaAncla) ||
-        new Date().toISOString().slice(0, 10),
-    };
-    const historial = Array.isArray(config.historial) ? config.historial : [];
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${TAREAS_BANO_SHEET_NAME}!A2:D3`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          [
-            "config",
-            JSON.stringify(limpio),
-            fechaHoraArgentinaIso(),
-            usuario?.usuario || "",
-          ],
-          [
-            "historial",
-            JSON.stringify(historial),
-            fechaHoraArgentinaIso(),
-            usuario?.usuario || "",
-          ],
-        ],
-      },
-    });
-    return { ...limpio, historial };
-  });
-}
-async function obtenerTareasServidor() {
+
+async function obtenerTareasLegacy() {
   await asegurarHojaTareas();
   const r = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${TAREAS_SHEET_NAME}!A:I`,
   });
-  const filasTareas = (r.data.values || []).slice(1).filter((f) => f[0]);
-  cantidadFilasTareasConocida = filasTareas.length;
-  return filasTareas.map((f) => {
+  return (r.data.values || []).slice(1).filter((f) => f[0]).map((f) => {
     let asignaciones = {};
-    try {
-      asignaciones = JSON.parse(f[5] || "{}");
-    } catch {}
+    try { asignaciones = JSON.parse(f[5] || "{}"); } catch {}
     let diasSemana = [];
-    try {
-      diasSemana = JSON.parse(f[8] || "[]");
-    } catch {}
-    return normalizarTareaServidor({
-      id: f[0],
-      sector: f[1],
-      nombre: f[2],
-      duracionMin: Number(f[3]),
-      activo: !["no", "false", "0", "inactivo"].includes(
-        normalizarTexto(f[4]).toLowerCase(),
-      ),
-      asignaciones,
-      diasSemana,
-    });
+    try { diasSemana = JSON.parse(f[8] || "[]"); } catch {}
+    return {
+      ...normalizarTareaServidor({
+        id: f[0],
+        sector: f[1],
+        nombre: f[2],
+        duracionMin: Number(f[3]),
+        activo: !["no", "false", "0", "inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),
+        asignaciones,
+        diasSemana,
+      }),
+      actualizadoTexto: normalizarTexto(f[6]),
+      actualizadoPor: normalizarUsuario(f[7]),
+    };
   });
 }
-let cantidadFilasTareasConocida = null;
-function esErrorCuotaGoogle(error) {
-  const status = Number(
-    error?.response?.status || error?.code || error?.status || 0,
-  );
-  const reason = error?.response?.data?.error?.errors?.[0]?.reason || "";
-  return (
-    status === 429 ||
-    reason === "rateLimitExceeded" ||
-    reason === "userRateLimitExceeded"
-  );
-}
-async function ejecutarGoogleConReintento(operacion, intentos = 4) {
-  let ultimoError;
-  for (let intento = 0; intento < intentos; intento++) {
-    try {
-      return await operacion();
-    } catch (error) {
-      ultimoError = error;
-      if (!esErrorCuotaGoogle(error) || intento === intentos - 1) throw error;
-      const espera =
-        700 * Math.pow(2, intento) + Math.floor(Math.random() * 250);
-      await new Promise((resolve) => setTimeout(resolve, espera));
+
+const MIGRACION_TAREAS_BANO = "2026-08-28-tareas-bano-v1";
+let promesaTareasBanoPostgres = null;
+async function asegurarTareasBanoPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  await asegurarEsquemaTareasBano();
+  if (await migracionDatosCompletada(MIGRACION_TAREAS_BANO)) return;
+  if (promesaTareasBanoPostgres) return promesaTareasBanoPostgres;
+  promesaTareasBanoPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_TAREAS_BANO)) return;
+    // Importación inicial de solo lectura: Sheets queda como respaldo histórico.
+    const [tareas, bano] = await Promise.all([obtenerTareasLegacy(), leerBanoLegacy()]);
+    const importado = await importarTareasBanoAtomico({ tareas, bano }, MIGRACION_TAREAS_BANO);
+    if (importado) {
+      console.log(`PostgreSQL Etapa 4: Tareas y Baño importados desde Sheets (${tareas.length} tareas, ${(bano.historial || []).length} confirmaciones).`);
     }
-  }
-  throw ultimoError;
+  })();
+  try { await promesaTareasBanoPostgres; }
+  finally { promesaTareasBanoPostgres = null; }
 }
-async function guardarTareasServidor(tareas, usuario) {
-  return ejecutarEnCola("tareas", async () => {
-    await asegurarHojaTareas();
-    const filas = (tareas || [])
-      .map(normalizarTareaServidor)
-      .map((t) => [
-        t.id,
-        t.sector,
-        t.nombre,
-        t.duracionMin,
-        t.activo ? "Sí" : "No",
-        JSON.stringify(t.asignaciones || {}),
-        fechaHoraArgentinaIso(),
-        usuario?.usuario || "",
-        JSON.stringify(t.diasSemana || [0, 1, 2, 3, 4, 5, 6]),
-      ]);
-    const prevCount = Number.isInteger(cantidadFilasTareasConocida)
-      ? cantidadFilasTareasConocida
-      : filas.length;
-    if (filas.length)
-      await ejecutarGoogleConReintento(() =>
-        sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${TAREAS_SHEET_NAME}!A2:I${filas.length + 1}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: filas },
-        }),
-      );
-    if (prevCount > filas.length)
-      await ejecutarGoogleConReintento(() =>
-        sheets.spreadsheets.values.clear({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${TAREAS_SHEET_NAME}!A${filas.length + 2}:I${prevCount + 1}`,
-        }),
-      );
-    cantidadFilasTareasConocida = filas.length;
-    invalidarCache("tareas");
-  });
+
+async function obtenerTareasServidor(cliente = null) {
+  await asegurarTareasBanoPostgres();
+  return listarTareasDb(cliente);
 }
+
+async function guardarTareasServidor(tareas, usuario, cliente = null) {
+  await asegurarTareasBanoPostgres();
+  const actualizadoTexto = fechaHoraArgentinaIso();
+  const actualizadoPor = usuario?.usuario || "";
+  await reemplazarTareasDb((tareas || []).map(normalizarTareaServidor), actualizadoTexto, actualizadoPor, cliente);
+  invalidarCache("tareas");
+}
+
+async function leerBanoServidor(cliente = null) {
+  await asegurarTareasBanoPostgres();
+  return leerBanoDb(cliente);
+}
+
+async function guardarBanoServidor(config, usuario, cliente = null) {
+  await asegurarTareasBanoPostgres();
+  const limpio = {
+    participantes: [...new Set((config?.participantes || []).map(normalizarTexto).filter(Boolean))],
+    fechaAncla: normalizarTexto(config?.fechaAncla) || new Date().toISOString().slice(0, 10),
+    historial: Array.isArray(config?.historial) ? config.historial : [],
+  };
+  return guardarBanoDb(limpio, fechaHoraArgentinaIso(), usuario?.usuario || "", cliente);
+}
+
 async function sectoresTareasPermitidos(usuario) {
   const sectores = (await obtenerSectores()).filter((s) => s.activo);
   if (rolGestionGlobal(usuario)) return sectores;
@@ -7105,16 +7058,17 @@ app.listen(PORT, () => {
         await asegurarEsquemaUsuariosSectores();
         await asegurarUsuariosSectoresPostgres();
         await asegurarHorariosPostgres();
-        console.log("PostgreSQL Etapa 3: Usuarios, Sectores y Horarios listos.");
+        await asegurarTareasBanoPostgres();
+        console.log("PostgreSQL Etapa 4: Usuarios, Sectores, Horarios, Tareas y Baño listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores y Horarios requieren PostgreSQL desde la Etapa 3.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas y Baño requieren PostgreSQL desde la Etapa 4.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. Usuarios, Sectores y Horarios no estarán disponibles hasta recuperar la conexión:",
+        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas y Baño no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
