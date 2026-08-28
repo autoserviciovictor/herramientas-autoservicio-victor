@@ -36,6 +36,7 @@ let guardadoRemotoEnCurso = Promise.resolve();
 let banoMemoria = null;
 let banoActivo = false;
 let banoVistaActual = "resumen";
+let banoParticipantesBorrador = null;
 let asignacionEditando = null;
 let asignarUsuarioSeleccionado = "";
 let asignarTareasSeleccionadas = new Set();
@@ -1864,34 +1865,41 @@ function siguienteDiaLimpieza(desde, cfg, incluirHoy = false) {
   }
   return null;
 }
-function confirmacionesPendientesBano(cfg, hoy) {
-  if (!cfg.participantes.length) return [];
-  const historial = new Set((cfg.historial || []).map((h) => h.fecha));
+function historialCompletoBano(cfg, hoy = inicioDia(new Date())) {
+  const existentes = new Map(
+    (cfg.historial || [])
+      .filter((x) => x?.fecha)
+      .map((x) => [String(x.fecha), { ...x }]),
+  );
+  if (!cfg.participantes.length)
+    return [...existentes.values()].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
   const inicio = inicioDia(parseFecha(cfg.fechaAncla));
-  const limite = new Date(hoy);
-  limite.setDate(limite.getDate() - 45);
-  const desde = inicio > limite ? inicio : limite;
-  const pendientes = [];
-  for (let d = new Date(hoy), pasos = 0; pasos < 90 && pendientes.length < 5; pasos++) {
-    d.setDate(d.getDate() - 1);
-    if (d < desde) break;
+  if (Number.isNaN(inicio.getTime()) || inicio > hoy)
+    return [...existentes.values()].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  for (let d = new Date(inicio); d <= hoy; d.setDate(d.getDate() + 1)) {
     if (!esDiaLimpieza(d, cfg)) continue;
     const fecha = iso(d);
-    if (historial.has(fecha)) continue;
-    pendientes.push({
-      fecha: new Date(d),
-      nombre: responsableBano(d, cfg),
-    });
+    const registro = existentes.get(fecha) || { fecha };
+    if (!registro.responsable) {
+      const indice = indiceBano(d, cfg);
+      registro.responsable = indice >= 0 ? claveParticipante(cfg.participantes[indice]) : "";
+    }
+    existentes.set(fecha, registro);
   }
-  return pendientes;
+  return [...existentes.values()].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
 }
+
+function puedeVerificarBano() {
+  return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
+}
+
 function renderBano() {
   const cfg = configBano(),
     hoy = inicioDia(new Date()),
     corresponde = esDiaLimpieza(hoy, cfg),
     responsable = responsableBano(hoy, cfg),
-    hist = cfg.historial || [];
-  const confirmado = corresponde ? hist.find((h) => h.fecha === iso(hoy)) : null;
+    hist = historialCompletoBano(cfg, hoy);
+  const confirmado = corresponde ? hist.find((h) => h.fecha === iso(hoy) && h.usuario) : null;
   const sinParticipantes = !cfg.participantes.length;
   const fechaLarga = fmt(hoy, { weekday: "long", day: "numeric", month: "long" });
   const card = $("banoTurnoActual");
@@ -1938,16 +1946,48 @@ function renderBano() {
         </article>`).join("")
     : '<div class="tareas-empty"><strong>Sin participantes</strong><span>Seleccioná usuarios desde Configuración.</span></div>';
 
-  const pendientes = confirmacionesPendientesBano(cfg, hoy);
-  $("banoPendientesCantidad").textContent = String(pendientes.length);
-  $("banoPendientes").innerHTML = pendientes.length
-    ? pendientes.map((x) => `
-        <article class="bano-pending-row">
-          <span class="bano-pending-avatar">${esc((x.nombre || "?").charAt(0).toUpperCase())}</span>
-          <div class="bano-pending-copy"><strong>${esc(x.nombre || "Sin participante")}</strong><span>Le tocaba el <svg class="app-icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M4 9h16M5 5h14v16H5z"/></svg>${esc(fmt(x.fecha, { weekday: "long", day: "numeric", month: "long" }))}</span></div>
-          <span class="bano-pending-badge">Sin confirmar</span>
-        </article>`).join("")
-    : `<div class="bano-all-confirmed"><span><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div><strong>Sin confirmaciones pendientes</strong><small>Las limpiezas anteriores están al día.</small></div></div>`;
+  // Mostrar como máximo la limpieza de hoy (si corresponde) + las 10 limpiezas anteriores.
+  // En día de descanso se muestran las últimas 10 limpiezas.
+  const limiteHistorial = corresponde ? 11 : 10;
+  const historial = hist.slice(0, limiteHistorial);
+  $("banoPendientesCantidad").textContent = String(historial.length);
+  $("banoPendientes").innerHTML = historial.length
+    ? `<div class="bano-history-table" role="table" aria-label="Historial de confirmaciones de limpieza del baño">
+        <div class="bano-history-head" role="row">
+          <span role="columnheader">Fecha</span>
+          <span role="columnheader">Responsable de limpieza</span>
+          <span role="columnheader">Confirmación responsable</span>
+          <span role="columnheader">Supervisado por</span>
+          <span role="columnheader">Confirmación de limpieza</span>
+        </div>
+        ${historial.map((x) => {
+          const fecha = parseFecha(x.fecha);
+          const responsableClave = x.responsable || (esDiaLimpieza(fecha, cfg) ? claveParticipante(cfg.participantes[indiceBano(fecha, cfg)]) : "");
+          const responsableNombre = nombreParticipante(responsableClave);
+          const confirmo = Boolean(String(x.usuario || "").trim());
+          const verificado = Boolean(String(x.supervisadoPor || "").trim());
+          const puedeVerificar = puedeVerificarBano();
+          const accion = verificado
+            ? '<span class="bano-history-status is-confirmed">Confirmado</span>'
+            : puedeVerificar
+              ? `<button type="button" class="bano-history-verify" data-bano-verificar="${esc(x.fecha)}" ${confirmo ? "" : 'disabled aria-disabled="true" title="El responsable todavía no confirmó la limpieza"'}>Confirmar</button>`
+              : confirmo
+                ? '<span class="bano-history-waiting">Pendiente</span>'
+                : '<span class="bano-history-empty">—</span>';
+          return `<div class="bano-history-row" role="row">
+            <span class="bano-history-date" role="cell" data-label="Fecha">${esc(fmt(fecha, { day: "2-digit", month: "2-digit", year: "numeric" }))}</span>
+            <strong role="cell" data-label="Responsable de limpieza">${esc(responsableNombre || "Sin participante")}</strong>
+            <span role="cell" data-label="Confirmación responsable"><span class="bano-history-status ${confirmo ? "is-confirmed" : "is-unconfirmed"}">${confirmo ? "Confirmado" : "Sin confirmar"}</span></span>
+            <span role="cell" data-label="Supervisado por">${verificado ? esc(x.supervisadoPor) : '<span class="bano-history-empty">—</span>'}</span>
+            <span role="cell" data-label="Confirmación de limpieza">${accion}</span>
+          </div>`;
+        }).join("")}
+      </div>`
+    : `<div class="bano-all-confirmed"><span><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M4 9h16M5 5h14v16H5z"/></svg></span><div><strong>Sin historial todavía</strong><small>Las limpiezas realizadas aparecerán acá.</small></div></div>`;
+
+  $("banoPendientes").querySelectorAll("[data-bano-verificar]").forEach((boton) => {
+    boton.addEventListener("click", () => verificarBano(boton.dataset.banoVerificar, boton));
+  });
 
   $("banoKpiParticipantes").textContent = String(cfg.participantes.length);
   const proxima = siguienteDiaLimpieza(hoy, cfg, !corresponde);
@@ -1955,6 +1995,18 @@ function renderBano() {
   $("banoKpiProximaFecha").textContent = proxima ? fmt(proxima, { day: "numeric", month: "long" }) : "Sin fecha";
 
   $("btnConfirmarBano")?.addEventListener("click", confirmarBano);
+  if ($("btnBanoActualizarHistorial")) {
+    $("btnBanoActualizarHistorial").onclick = async () => {
+      const boton = $("btnBanoActualizarHistorial");
+      boton.disabled = true;
+      try {
+        await cargarBanoRemoto();
+        renderBano();
+      } finally {
+        boton.disabled = false;
+      }
+    };
+  }
 }
 
 async function confirmarBano() {
@@ -1996,12 +2048,58 @@ async function confirmarBano() {
     }
   }
 }
+async function verificarBano(fecha, boton) {
+  if (!puedeVerificarBano() || !fecha) return;
+  if (boton) {
+    boton.disabled = true;
+    boton.textContent = "Confirmando...";
+  }
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/bano/verificar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fecha }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok)
+      throw new Error(data.mensaje || "No se pudo confirmar la limpieza");
+    banoMemoria = data.config;
+    guardarJSONUsuario(BANO_KEY, banoMemoria);
+    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
+    renderBano();
+  } catch (error) {
+    window.AutoservicioDialog?.alert?.({
+      title: "No se pudo confirmar la limpieza",
+      message: error.message || "Intentá nuevamente.",
+    });
+    if (boton) {
+      boton.disabled = false;
+      boton.textContent = "Confirmar";
+    }
+  }
+}
+
 function participantesConfigActuales() {
   const contenedor = selectorParticipantesBanoActivo();
-  if (!contenedor) return [];
-  return [...contenedor.querySelectorAll("input:checked")]
-    .map((x) => x.value)
-    .filter(Boolean);
+  const base = Array.isArray(banoParticipantesBorrador)
+    ? banoParticipantesBorrador.slice()
+    : configBano().participantes.map(claveParticipante).filter(Boolean);
+  if (!contenedor) return base;
+  const inputs = [...contenedor.querySelectorAll("input[type=checkbox]")];
+  const representados = new Set(inputs.map((x) => x.value).filter(Boolean));
+  const marcados = new Set(inputs.filter((x) => x.checked).map((x) => x.value).filter(Boolean));
+  const resultado = base.filter((clave) => !representados.has(clave) || marcados.has(clave));
+  const existentes = new Set(resultado);
+  inputs.filter((x) => x.checked).forEach((input) => {
+    const clave = input.value;
+    if (clave && !existentes.has(clave)) {
+      resultado.push(clave);
+      existentes.add(clave);
+    }
+  });
+  banoParticipantesBorrador = resultado.slice();
+  return resultado;
 }
 function colorSectorBano(nombreSector) {
   const clave = normalClave(nombreSector);
@@ -2023,9 +2121,13 @@ function selectorParticipantesBanoActivo() {
   return $('banoUsuariosDisponibles');
 }
 function renderParticipantesConfig(seleccionados) {
-  const marcados = new Set((seleccionados || []).map(claveParticipante));
+  const ordenSeleccionado = (seleccionados || []).map(claveParticipante).filter(Boolean);
+  banoParticipantesBorrador = ordenSeleccionado.slice();
+  const marcados = new Set(ordenSeleccionado);
   $("banoParticipantesCantidad").textContent = String(marcados.size);
-  const seleccionadosInfo = usuariosTareas.filter((u) => marcados.has(claveParticipante(u)));
+  const seleccionadosInfo = ordenSeleccionado
+    .map((clave) => usuarioParticipante(clave))
+    .filter(Boolean);
   $("banoParticipantesSeleccionados").innerHTML = seleccionadosInfo.length
     ? seleccionadosInfo.map((u) => {
         const nombre = u.nombre || u.usuario || "Sin nombre";
@@ -2067,6 +2169,7 @@ function renderParticipantesConfig(seleccionados) {
 
 function abrirSelectorParticipantesBano() {
   const cfg = configBano();
+  banoParticipantesBorrador = cfg.participantes.map(claveParticipante).filter(Boolean);
   if (esMobileBano()) {
     const sheet = $("banoMobileParticipantSheet");
     if (!sheet) return;
@@ -2089,6 +2192,7 @@ function cerrarSelectorParticipantesBano({ restaurar = true } = {}) {
   sheet?.setAttribute("aria-hidden", "true");
   document.body.classList.remove("bano-participant-sheet-open");
   if (restaurar) renderParticipantesConfig(configBano().participantes);
+  banoParticipantesBorrador = restaurar ? null : banoParticipantesBorrador;
 }
 
 async function guardarConfigBano(participantesForzados = null, opciones = {}) {
@@ -2118,6 +2222,7 @@ async function guardarConfigBano(participantesForzados = null, opciones = {}) {
     guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
     renderParticipantesConfig(banoMemoria.participantes);
+    banoParticipantesBorrador = null;
     $("banoSelectorParticipantes")?.classList.add("oculto");
     $("banoConfigFooter")?.classList.add("oculto");
     cerrarSelectorParticipantesBano({ restaurar: false });

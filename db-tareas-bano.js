@@ -45,11 +45,17 @@ async function asegurarEsquemaTareasBano() {
 
     await query(`CREATE TABLE IF NOT EXISTS bathroom_rotation_history (
       work_date TEXT PRIMARY KEY,
+      responsible_key TEXT NOT NULL DEFAULT '',
       confirmed_by TEXT NOT NULL DEFAULT '',
       confirmed_time TEXT NOT NULL DEFAULT '',
+      verified_by TEXT NOT NULL DEFAULT '',
+      verified_time TEXT NOT NULL DEFAULT '',
       updated_by TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await query(`ALTER TABLE bathroom_rotation_history ADD COLUMN IF NOT EXISTS responsible_key TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE bathroom_rotation_history ADD COLUMN IF NOT EXISTS verified_by TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE bathroom_rotation_history ADD COLUMN IF NOT EXISTS verified_time TEXT NOT NULL DEFAULT ''`);
 
     await query(`CREATE INDEX IF NOT EXISTS tasks_sector_idx ON tasks(sector_key, active)`);
     await query(`CREATE INDEX IF NOT EXISTS task_assignments_date_idx ON task_assignments(work_date, shift_type)`);
@@ -164,9 +170,17 @@ async function importarTareasBanoAtomico(datos, claveMigracion) {
       const fecha = String(item?.fecha || "").trim();
       if (!fecha) continue;
       await cliente.query(
-        `INSERT INTO bathroom_rotation_history(work_date,confirmed_by,confirmed_time,updated_by)
-         VALUES($1,$2,$3,$4) ON CONFLICT (work_date) DO NOTHING`,
-        [fecha, String(item?.usuario || "").trim(), String(item?.hora || "").trim(), String(bano.actualizadoPor || "")],
+        `INSERT INTO bathroom_rotation_history(work_date,responsible_key,confirmed_by,confirmed_time,verified_by,verified_time,updated_by)
+         VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (work_date) DO NOTHING`,
+        [
+          fecha,
+          String(item?.responsable || item?.responsableClave || "").trim(),
+          String(item?.usuario || "").trim(),
+          String(item?.hora || "").trim(),
+          String(item?.supervisadoPor || item?.verificadoPor || "").trim(),
+          String(item?.horaVerificacion || "").trim(),
+          String(bano.actualizadoPor || ""),
+        ],
       );
     }
 
@@ -220,13 +234,20 @@ async function reemplazarTareasDb(tareas, actualizadoTexto = "", actualizadoPor 
 async function leerBanoDb(cliente = null) {
   const [rc, rh] = await Promise.all([
     ejecutarConsulta(cliente, `SELECT participants,anchor_date FROM bathroom_rotation_config WHERE config_id=1`),
-    ejecutarConsulta(cliente, `SELECT work_date,confirmed_by,confirmed_time FROM bathroom_rotation_history ORDER BY work_date DESC, updated_at DESC`),
+    ejecutarConsulta(cliente, `SELECT work_date,responsible_key,confirmed_by,confirmed_time,verified_by,verified_time FROM bathroom_rotation_history ORDER BY work_date DESC, updated_at DESC`),
   ]);
   const config = rc.rows[0] || {};
   return {
     participantes: Array.isArray(config.participants) ? config.participants : [],
     fechaAncla: config.anchor_date || new Date().toISOString().slice(0,10),
-    historial: rh.rows.map((x) => ({ fecha: x.work_date, usuario: x.confirmed_by || "", hora: x.confirmed_time || "" })),
+    historial: rh.rows.map((x) => ({
+      fecha: x.work_date,
+      responsable: x.responsible_key || "",
+      usuario: x.confirmed_by || "",
+      hora: x.confirmed_time || "",
+      supervisadoPor: x.verified_by || "",
+      horaVerificacion: x.verified_time || "",
+    })),
   };
 }
 
@@ -245,9 +266,25 @@ async function guardarBanoDb(config, actualizadoTexto = "", actualizadoPor = "",
       const fecha = String(item?.fecha || "").trim();
       if (!fecha) continue;
       await c.query(
-        `INSERT INTO bathroom_rotation_history(work_date,confirmed_by,confirmed_time,updated_by)
-         VALUES($1,$2,$3,$4) ON CONFLICT(work_date) DO UPDATE SET confirmed_by=EXCLUDED.confirmed_by,confirmed_time=EXCLUDED.confirmed_time,updated_by=EXCLUDED.updated_by,updated_at=NOW()`,
-        [fecha, String(item?.usuario || "").trim(), String(item?.hora || "").trim(), actualizadoPor],
+        `INSERT INTO bathroom_rotation_history(work_date,responsible_key,confirmed_by,confirmed_time,verified_by,verified_time,updated_by)
+         VALUES($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT(work_date) DO UPDATE SET
+           responsible_key=EXCLUDED.responsible_key,
+           confirmed_by=EXCLUDED.confirmed_by,
+           confirmed_time=EXCLUDED.confirmed_time,
+           verified_by=EXCLUDED.verified_by,
+           verified_time=EXCLUDED.verified_time,
+           updated_by=EXCLUDED.updated_by,
+           updated_at=NOW()`,
+        [
+          fecha,
+          String(item?.responsable || item?.responsableClave || "").trim(),
+          String(item?.usuario || "").trim(),
+          String(item?.hora || "").trim(),
+          String(item?.supervisadoPor || item?.verificadoPor || "").trim(),
+          String(item?.horaVerificacion || "").trim(),
+          actualizadoPor,
+        ],
       );
     }
     return { participantes, fechaAncla, historial: Array.isArray(config?.historial) ? config.historial : [] };

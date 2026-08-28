@@ -2662,12 +2662,17 @@
                 <div id="banoProximos" class="bano-next-list bano-modern-list"></div>
               </section>
 
-              <section class="bano-panel-card bano-pending-panel">
+              <section class="bano-panel-card bano-pending-panel bano-history-panel">
                 <div class="bano-panel-head">
-                  <div><h3>Confirmaciones pendientes</h3><p>Personas que no confirmaron su limpieza.</p></div>
-                  <span id="banoPendientesCantidad" class="bano-panel-count">0</span>
+                  <div><h3>Historial de confirmaciones</h3><p>Registro completo de limpiezas, confirmaciones y verificaciones.</p></div>
+                  <div class="bano-history-head-actions">
+                    <span id="banoPendientesCantidad" class="bano-panel-count" aria-label="Registros del historial">0</span>
+                    <button id="btnBanoActualizarHistorial" class="bano-history-refresh" type="button" aria-label="Actualizar historial">
+                      <svg class="app-icon" viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5M6.5 8a7 7 0 0 1 11-2l2.5 5M17.5 16a7 7 0 0 1-11 2L4 13"/></svg><span>Actualizar</span>
+                    </button>
+                  </div>
                 </div>
-                <div id="banoPendientes" class="bano-pending-list"></div>
+                <div id="banoPendientes" class="bano-pending-list bano-history-wrap"></div>
               </section>
             </div>
 

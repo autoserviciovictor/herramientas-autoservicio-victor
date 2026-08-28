@@ -3326,12 +3326,106 @@ async function leerBanoServidor(cliente = null) {
   return leerBanoDb(cliente);
 }
 
+function fechaIsoUtcMasDias(fechaIso, dias) {
+  const m = normalizarTexto(fechaIso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return "";
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  d.setUTCDate(d.getUTCDate() + Number(dias || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+function diasEntreIso(fechaA, fechaB) {
+  const a = Date.parse(`${normalizarTexto(fechaA)}T00:00:00Z`);
+  const b = Date.parse(`${normalizarTexto(fechaB)}T00:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.floor((b - a) / 86400000);
+}
+
+function completarHistorialBano(config, hastaFecha = fechaArgentina()) {
+  const participantes = Array.isArray(config?.participantes)
+    ? config.participantes.map(normalizarTexto).filter(Boolean)
+    : [];
+  const fechaAncla = normalizarTexto(config?.fechaAncla);
+  const historialExistente = Array.isArray(config?.historial) ? config.historial : [];
+  const mapa = new Map(historialExistente.map((x) => [normalizarTexto(x?.fecha), { ...x }]));
+  const distancia = diasEntreIso(fechaAncla, hastaFecha);
+  if (!participantes.length || distancia === null || distancia < 0)
+    return historialExistente.slice().sort((a, b) => normalizarTexto(b?.fecha).localeCompare(normalizarTexto(a?.fecha)));
+
+  for (let offset = 0; offset <= distancia; offset += 2) {
+    const fecha = fechaIsoUtcMasDias(fechaAncla, offset);
+    if (!fecha) continue;
+    const turno = Math.floor(offset / 2);
+    const responsable = participantes[turno % participantes.length] || "";
+    const existente = mapa.get(fecha) || { fecha };
+    if (!normalizarTexto(existente.responsable)) existente.responsable = responsable;
+    mapa.set(fecha, existente);
+  }
+  return [...mapa.values()]
+    .filter((x) => normalizarTexto(x?.fecha))
+    .sort((a, b) => normalizarTexto(b?.fecha).localeCompare(normalizarTexto(a?.fecha)));
+}
+
+function participantesOrdenFijo(actuales, solicitados) {
+  const actualesLimpios = [...new Set((actuales || []).map(normalizarTexto).filter(Boolean))];
+  const solicitadosLimpios = [...new Set((solicitados || []).map(normalizarTexto).filter(Boolean))];
+  const deseados = new Set(solicitadosLimpios);
+  const resultado = actualesLimpios.filter((x) => deseados.has(x));
+  const ya = new Set(resultado);
+  for (const participante of solicitadosLimpios) {
+    if (!ya.has(participante)) {
+      resultado.push(participante);
+      ya.add(participante);
+    }
+  }
+  return resultado;
+}
+
+function fechaAnclaParaConservarTurno(actual, participantesNuevos, hoy = fechaArgentina()) {
+  const anteriores = Array.isArray(actual?.participantes)
+    ? actual.participantes.map(normalizarTexto).filter(Boolean)
+    : [];
+  const nuevos = Array.isArray(participantesNuevos)
+    ? participantesNuevos.map(normalizarTexto).filter(Boolean)
+    : [];
+  const anclaActual = normalizarTexto(actual?.fechaAncla);
+  if (!anteriores.length || !nuevos.length || !anclaActual) return anclaActual || hoy;
+  if (anteriores.length === nuevos.length && anteriores.every((x, i) => x === nuevos[i]))
+    return anclaActual;
+
+  const dias = diasEntreIso(anclaActual, hoy);
+  if (dias === null) return anclaActual;
+  let fechaTurno = hoy;
+  let offsetTurno;
+  if (dias < 0) {
+    fechaTurno = anclaActual;
+    offsetTurno = 0;
+  } else {
+    const resto = ((dias % 2) + 2) % 2;
+    fechaTurno = resto === 0 ? hoy : fechaIsoUtcMasDias(hoy, 1);
+    offsetTurno = Math.floor((dias + (resto === 0 ? 0 : 1)) / 2);
+  }
+  const indiceViejo = ((offsetTurno % anteriores.length) + anteriores.length) % anteriores.length;
+  const permitidos = new Set(nuevos);
+  let objetivo = "";
+  for (let salto = 0; salto < anteriores.length; salto++) {
+    const candidato = anteriores[(indiceViejo + salto) % anteriores.length];
+    if (permitidos.has(candidato)) {
+      objetivo = candidato;
+      break;
+    }
+  }
+  if (!objetivo) objetivo = nuevos[0];
+  const indiceNuevo = Math.max(0, nuevos.indexOf(objetivo));
+  return fechaIsoUtcMasDias(fechaTurno, -(indiceNuevo * 2)) || anclaActual;
+}
+
 async function guardarBanoServidor(config, usuario, cliente = null) {
   await asegurarTareasBanoPostgres();
   const limpio = {
     participantes: [...new Set((config?.participantes || []).map(normalizarTexto).filter(Boolean))],
     fechaAncla: normalizarTexto(config?.fechaAncla) || new Date().toISOString().slice(0, 10),
-    historial: Array.isArray(config?.historial) ? config.historial : [],
+    historial: completarHistorialBano(config),
   };
   return guardarBanoDb(limpio, fechaHoraArgentinaIso(), usuario?.usuario || "", cliente);
 }
@@ -3656,7 +3750,9 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
 });
 app.get("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
-    res.json({ ok: true, config: await leerBanoServidor() });
+    const config = await leerBanoServidor();
+    config.historial = completarHistorialBano(config);
+    res.json({ ok: true, config });
   } catch (e) {
     res.status(500).json({
       ok: false,
@@ -3672,11 +3768,17 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
         mensaje: "No tenés permiso para configurar la rotación",
       });
     const actual = await leerBanoServidor();
+    actual.historial = completarHistorialBano(actual);
+    const participantes = participantesOrdenFijo(
+      actual.participantes,
+      req.body?.participantes || [],
+    );
+    const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
     const config = await guardarBanoServidor(
       {
         ...actual,
-        participantes: req.body?.participantes || [],
-        fechaAncla: req.body?.fechaAncla || actual.fechaAncla,
+        participantes,
+        fechaAncla,
       },
       req.usuario,
     );
@@ -3694,16 +3796,54 @@ app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, re
         normalizarTexto(req.body?.fecha) ||
         new Date().toISOString().slice(0, 10),
       actual = await leerBanoServidor();
-    if (!actual.historial.some((x) => x.fecha === fecha))
-      actual.historial.unshift({
-        fecha,
-        usuario: req.usuario.nombre || req.usuario.usuario,
-        hora: new Date().toLocaleTimeString("es-AR", {
-          timeZone: TIME_ZONE,
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+    actual.historial = completarHistorialBano(actual, fecha);
+    const registro = actual.historial.find((x) => x.fecha === fecha);
+    if (registro && !normalizarTexto(registro.usuario)) {
+      registro.usuario = req.usuario.nombre || req.usuario.usuario;
+      registro.hora = new Date().toLocaleTimeString("es-AR", {
+        timeZone: TIME_ZONE,
+        hour: "2-digit",
+        minute: "2-digit",
       });
+    }
+    const config = await guardarBanoServidor(actual, req.usuario);
+    res.json({ ok: true, config });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo confirmar la limpieza",
+    });
+  }
+});
+
+app.post("/tareas/bano/verificar", requerirAlgunModulo("tareas"), async (req, res) => {
+  try {
+    if (!rolGestionSector(req.usuario))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "Solo supervisores o administración pueden confirmar la limpieza",
+      });
+    const fecha = normalizarTexto(req.body?.fecha);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha))
+      return res.status(400).json({ ok: false, mensaje: "Fecha inválida" });
+    const actual = await leerBanoServidor();
+    actual.historial = completarHistorialBano(actual, fechaArgentina());
+    const registro = actual.historial.find((x) => x.fecha === fecha);
+    if (!registro)
+      return res.status(404).json({ ok: false, mensaje: "Registro de limpieza no encontrado" });
+    if (!normalizarTexto(registro.usuario))
+      return res.status(409).json({
+        ok: false,
+        mensaje: "El responsable todavía no confirmó la limpieza",
+      });
+    if (!normalizarTexto(registro.supervisadoPor)) {
+      registro.supervisadoPor = req.usuario.nombre || req.usuario.usuario;
+      registro.horaVerificacion = new Date().toLocaleTimeString("es-AR", {
+        timeZone: TIME_ZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
     const config = await guardarBanoServidor(actual, req.usuario);
     res.json({ ok: true, config });
   } catch (e) {
