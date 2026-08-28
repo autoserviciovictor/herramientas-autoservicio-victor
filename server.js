@@ -63,6 +63,13 @@ const {
   actualizarVencimientoDb,
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
+const {
+  asegurarEsquemaListasReposicion,
+  conTransaccionListasReposicion,
+  importarListasReposicionAtomico,
+  listarListasReposicionDb,
+  reemplazarListasReposicionDb,
+} = require("./db-listas-reposicion");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -6393,41 +6400,53 @@ function registroAFilaReposicion(r) {
     r.actualizado || fechaHoraArgentinaIso(),
   ];
 }
-async function leerTodasLasListas() {
+async function obtenerListasReposicionLegacy() {
   await asegurarHojaListas();
-  const registros = await leerConCache(
-    "listas-reposicion",
-    120000,
-    async () => {
-      const respuesta = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${LISTAS_SHEET_NAME}!A2:I`,
-      });
-      return (respuesta.data.values || [])
-        .map((fila, indice) => filaARegistroReposicion(fila, indice))
-        .filter((r) => r.id && r.usuario && r.codigo);
-    },
-  );
-  return registros.map((r) => ({ ...r }));
-}
-async function escribirTodasLasListas(registros) {
-  await asegurarHojaListas();
-  await sheets.spreadsheets.values.clear({
+  const respuesta = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${LISTAS_SHEET_NAME}!A2:I`,
   });
-  if (registros.length) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${LISTAS_SHEET_NAME}!A2:I${registros.length + 1}`,
-      valueInputOption: "RAW",
-      requestBody: { values: registros.map(registroAFilaReposicion) },
-    });
+  return (respuesta.data.values || [])
+    .map((fila, indice) => ({ ...filaARegistroReposicion(fila, indice), filaGoogle: indice + 2 }))
+    .filter((r) => r.id && r.usuario && r.codigo);
+}
+
+const MIGRACION_LISTAS_REPOSICION = "2026-08-28-listas-reposicion-v1";
+let promesaListasReposicionPostgres = null;
+async function asegurarListasReposicionPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  await asegurarEsquemaListasReposicion();
+  if (await migracionDatosCompletada(MIGRACION_LISTAS_REPOSICION)) return;
+  if (promesaListasReposicionPostgres) return promesaListasReposicionPostgres;
+  promesaListasReposicionPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_LISTAS_REPOSICION)) return;
+    // Importación inicial de solo lectura: la hoja Listas queda como respaldo histórico.
+    const registros = await obtenerListasReposicionLegacy();
+    const importado = await importarListasReposicionAtomico(
+      registros,
+      MIGRACION_LISTAS_REPOSICION,
+    );
+    if (importado) {
+      console.log(
+        `PostgreSQL Etapa 7: Listas/Mi Lista importadas desde Sheets (${registros.length} registros).`,
+      );
+    }
+  })();
+  try {
+    await promesaListasReposicionPostgres;
+  } finally {
+    promesaListasReposicionPostgres = null;
   }
-  cacheLecturas.set("listas-reposicion", {
-    fecha: Date.now(),
-    valor: registros.map((r) => ({ ...r })),
-  });
+}
+
+async function leerTodasLasListas(cliente = null) {
+  await asegurarListasReposicionPostgres();
+  const registros = await listarListasReposicionDb(cliente);
+  return registros.map((r) => ({ ...r }));
+}
+async function escribirTodasLasListas(registros, cliente = null) {
+  await asegurarListasReposicionPostgres();
+  await reemplazarListasReposicionDb(registros, cliente);
 }
 async function obtenerListaReposicionPersistente(usuario, numeroLista) {
   const claveUsuario = normalizarUsuario(usuario);
@@ -6501,8 +6520,8 @@ app.post("/reposicion/lote", requerirAlgunModulo("anotar"), async (req, res) => 
 
     const resultados = await ejecutarEnCola(
       "listas-global",
-      async () => {
-        const todos = await leerTodasLasListas();
+      async () => conTransaccionListasReposicion(async (cliente) => {
+        const todos = await leerTodasLasListas(cliente);
         const ahora = fechaHoraArgentinaIso();
         let orden = Math.max(
           0,
@@ -6541,9 +6560,9 @@ app.post("/reposicion/lote", requerirAlgunModulo("anotar"), async (req, res) => 
           }
           guardados.push(r);
         }
-        await escribirTodasLasListas(todos);
+        await escribirTodasLasListas(todos, cliente);
         return guardados;
-      },
+      }),
     );
 
     res.json({
@@ -6579,8 +6598,8 @@ app.post("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
         .json({ ok: false, mensaje: "Ingresá una cantidad entera mayor a 0" });
     const resultado = await ejecutarEnCola(
       "listas-global",
-      async () => {
-        const todos = await leerTodasLasListas();
+      async () => conTransaccionListasReposicion(async (cliente) => {
+        const todos = await leerTodasLasListas(cliente);
         let r = todos.find(
           (x) =>
             x.usuario === usuario &&
@@ -6613,9 +6632,9 @@ app.post("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
           };
           todos.push(r);
         }
-        await escribirTodasLasListas(todos);
+        await escribirTodasLasListas(todos, cliente);
         return r;
-      },
+      }),
     );
     res.json({
       ok: true,
@@ -6645,8 +6664,8 @@ app.put("/reposicion/:id", requerirAlgunModulo("anotar"), async (req, res) => {
         .json({ ok: false, mensaje: "Datos de reposición inválidos" });
     const r = await ejecutarEnCola(
       "listas-global",
-      async () => {
-        const todos = await leerTodasLasListas();
+      async () => conTransaccionListasReposicion(async (cliente) => {
+        const todos = await leerTodasLasListas(cliente);
         const i = todos.findIndex(
           (x) =>
             x.usuario === usuario &&
@@ -6661,9 +6680,9 @@ app.put("/reposicion/:id", requerirAlgunModulo("anotar"), async (req, res) => {
         todos[i].cantidad = cantidad;
         todos[i].estado = estado;
         todos[i].actualizado = fechaHoraArgentinaIso();
-        await escribirTodasLasListas(todos);
+        await escribirTodasLasListas(todos, cliente);
         return todos[i];
-      },
+      }),
     );
     res.json({
       ok: true,
@@ -6691,8 +6710,8 @@ app.patch("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
         .json({ ok: false, mensaje: "No hay cambios para guardar" });
     const resultado = await ejecutarEnCola(
       "listas-global",
-      async () => {
-        let todos = await leerTodasLasListas();
+      async () => conTransaccionListasReposicion(async (cliente) => {
+        let todos = await leerTodasLasListas(cliente);
         for (const c of cambios) {
           const i = todos.findIndex(
             (x) =>
@@ -6721,11 +6740,11 @@ app.patch("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
           todos[i].cantidad = q;
           todos[i].actualizado = fechaHoraArgentinaIso();
         }
-        await escribirTodasLasListas(todos);
+        await escribirTodasLasListas(todos, cliente);
         return todos
           .filter((x) => x.usuario === usuario && x.lista === numeroLista)
           .map((x) => limpiarRegistroReposicion(x, numeroLista));
-      },
+      }),
     );
     res.json({
       ok: true,
@@ -6747,8 +6766,8 @@ app.delete("/reposicion/:id", requerirAlgunModulo("anotar"), async (req, res) =>
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.query.lista),
       id = normalizarTexto(req.params.id);
-    await ejecutarEnCola("listas-global", async () => {
-      const todos = await leerTodasLasListas();
+    await ejecutarEnCola("listas-global", async () => conTransaccionListasReposicion(async (cliente) => {
+      const todos = await leerTodasLasListas(cliente);
       const i = todos.findIndex(
         (x) =>
           x.usuario === usuario &&
@@ -6761,8 +6780,8 @@ app.delete("/reposicion/:id", requerirAlgunModulo("anotar"), async (req, res) =>
         throw e;
       }
       todos.splice(i, 1);
-      await escribirTodasLasListas(todos);
-    });
+      await escribirTodasLasListas(todos, cliente);
+    }));
     res.json({
       ok: true,
       lista: numeroLista,
@@ -6780,12 +6799,12 @@ app.delete("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   try {
     const usuario = normalizarUsuario(req.usuario.usuario),
       numeroLista = normalizarNumeroLista(req.query.lista || req.body?.lista);
-    await ejecutarEnCola("listas-global", async () => {
-      const todos = (await leerTodasLasListas()).filter(
+    await ejecutarEnCola("listas-global", async () => conTransaccionListasReposicion(async (cliente) => {
+      const todos = (await leerTodasLasListas(cliente)).filter(
         (x) => !(x.usuario === usuario && x.lista === numeroLista),
       );
-      await escribirTodasLasListas(todos);
-    });
+      await escribirTodasLasListas(todos, cliente);
+    }));
     res.json({
       ok: true,
       lista: numeroLista,
@@ -6942,15 +6961,17 @@ app.listen(PORT, () => {
         console.log("PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.");
         await asegurarVencimientosPostgres();
         console.log("PostgreSQL Etapa 6: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos listos.");
+        await asegurarListasReposicionPostgres();
+        console.log("PostgreSQL Etapa 7: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos requieren PostgreSQL desde la Etapa 6.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista requieren PostgreSQL desde la Etapa 7.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos no estarán disponibles hasta recuperar la conexión:",
+        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
