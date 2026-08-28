@@ -1,13 +1,15 @@
 const fs = require("fs");
 const assert = require("assert");
 const server = fs.readFileSync("server.js", "utf8");
+const db = fs.readFileSync("db-inventario-productos.js", "utf8");
 const excel = fs.readFileSync("excel.js", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 const version = JSON.parse(fs.readFileSync("version.json", "utf8"));
 assert(server.includes("async function crearProductoInventario(codigoBuscado, articuloSugerido"));
 assert(!server.includes("crearProductoInventarioDesdeMaestro"));
-assert(server.includes("respuesta?.data?.updates?.updatedRange"));
-assert(server.includes("crearProductoInventario(codigoBuscado, articulo)"));
+assert(server.includes("sumarInventarioDb"), "El alta/carga de inventario debe usar la escritura atómica PostgreSQL de Etapa 5");
+assert(db.includes("crearInventarioDb"), "Debe mantenerse el alta directa de un producto nuevo en inventario");
+assert(db.includes("MAX(legacy_row)"), "El alta nueva debe asignar una fila lógica compatible con filaGoogle");
 assert(excel.includes("articulo: productoBase.articulo"));
 assert(app.includes(`?v=${version.assetBuild}`));
 console.log("Inventario fix6 alta directa: OK");

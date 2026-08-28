@@ -41,6 +41,20 @@ const {
   leerBanoDb,
   guardarBanoDb,
 } = require("./db-tareas-bano");
+const {
+  asegurarEsquemaInventarioProductos,
+  conTransaccionInventarioProductos,
+  importarInventarioProductosAtomico,
+  listarInventarioDb,
+  buscarInventarioPorCodigoDb,
+  crearInventarioDb,
+  actualizarInventarioDb,
+  sumarInventarioDb,
+  corregirInventarioDb,
+  listarCatalogoDb,
+  buscarCatalogoPorCodigoDb,
+  reemplazarCatalogoDb,
+} = require("./db-inventario-productos");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -728,109 +742,50 @@ function filaAProducto(fila, index) {
   };
 }
 
-async function obtenerProductos() {
+async function obtenerProductosLegacy() {
   validarConfiguracion();
-  return leerConCache("productos", CACHE_TTL.productos, async () => {
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:E`,
-    });
-    const filas = respuesta.data.values || [];
-    if (filas.length <= 1) return [];
-    return filas
-      .slice(1)
-      .map(filaAProducto)
-      .filter((producto) => producto.codigo || producto.articulo);
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A:E`,
   });
+  const filas = respuesta.data.values || [];
+  if (filas.length <= 1) return [];
+  return filas
+    .slice(1)
+    .map(filaAProducto)
+    .filter((producto) => producto.codigo || producto.articulo);
+}
+
+async function obtenerProductos() {
+  await asegurarInventarioProductosPostgres();
+  return leerConCache("productos", CACHE_TTL.productos, () => listarInventarioDb());
 }
 
 async function buscarProductoPorCodigo(codigoBuscado) {
-  const productos = await obtenerProductos();
-  const codigo = normalizarCodigo(codigoBuscado);
-  return productos.find((producto) => producto.codigo === codigo) || null;
+  await asegurarInventarioProductosPostgres();
+  return buscarInventarioPorCodigoDb(normalizarCodigo(codigoBuscado));
 }
 
 async function crearProductoInventario(codigoBuscado, articuloSugerido = "") {
+  await asegurarInventarioProductosPostgres();
   const codigo = normalizarCodigo(codigoBuscado);
   if (!codigo) return null;
-
-  // Para altas nuevas no dependemos de una segunda lectura de Inventario.
-  // Google Sheets devuelve el rango de la fila recién agregada y lo usamos
-  // inmediatamente como filaGoogle. Esto evita que caché/latencia hagan que
-  // un producto recién creado parezca inexistente.
   let articulo = normalizarTexto(articuloSugerido);
   if (!articulo) {
     const maestro = await buscarProductoMaestroPorCodigo(codigo);
     articulo = normalizarTexto(maestro?.articulo);
   }
   if (!articulo) return null;
-
-  const respuesta = await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:E`,
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: {
-      values: [[codigo, articulo, 0, 0, 0]],
-    },
-  });
-
-  const rangoActualizado = normalizarTexto(respuesta?.data?.updates?.updatedRange);
-  const coincidenciaFila = rangoActualizado.match(/![A-Z]+(\d+)(?::[A-Z]+\d+)?$/i);
-  const filaGoogle = coincidenciaFila ? Number(coincidenciaFila[1]) : 0;
+  const creado = await crearInventarioDb(codigo, articulo);
   invalidarCache("productos");
-
-  if (!filaGoogle) {
-    // Fallback excepcional por si la API no devuelve updatedRange.
-    const productoCreado = await buscarProductoPorCodigo(codigo);
-    if (productoCreado) return productoCreado;
-    throw new Error("Google Sheets no informó la fila del producto creado");
-  }
-
-  return {
-    filaGoogle,
-    codigo,
-    articulo,
-    stock: 0,
-    salon: 0,
-    deposito: 0,
-  };
+  return creado;
 }
 
 async function actualizarProducto(producto, { recalcularTotal = false } = {}) {
-  const salon = numero(producto.salon);
-  const deposito = numero(producto.deposito);
-  const stockUbicaciones = salon + deposito;
-  const stockActual = numero(producto.stock);
-  const stock = recalcularTotal
-    ? stockUbicaciones
-    : Math.max(stockActual, stockUbicaciones);
-
-  const productoActualizado = {
-    ...producto,
-    stock,
-    salon,
-    deposito,
-  };
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A${producto.filaGoogle}:E${producto.filaGoogle}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          productoActualizado.codigo,
-          productoActualizado.articulo,
-          productoActualizado.stock,
-          productoActualizado.salon,
-          productoActualizado.deposito,
-        ],
-      ],
-    },
-  });
-
-  return productoActualizado;
+  await asegurarInventarioProductosPostgres();
+  const actualizado = await actualizarInventarioDb(producto, { recalcularTotal });
+  invalidarCache("productos");
+  return actualizado;
 }
 
 function filaAProductoMaestro(fila, index) {
@@ -842,30 +797,60 @@ function filaAProductoMaestro(fila, index) {
   };
 }
 
-async function obtenerProductosMaestros() {
+async function obtenerProductosMaestrosLegacy() {
   validarConfiguracion();
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${PRODUCTOS_SHEET_NAME}!A:C`,
+  });
+  const filas = respuesta.data.values || [];
+  if (filas.length <= 1) return [];
+  return filas
+    .slice(1)
+    .map(filaAProductoMaestro)
+    .filter((producto) => producto.codigo || producto.articulo);
+}
+
+const MIGRACION_INVENTARIO_PRODUCTOS = "2026-08-28-inventario-productos-v1";
+let promesaInventarioProductosPostgres = null;
+async function asegurarInventarioProductosPostgres() {
+  await asegurarEsquemaUsuariosSectores();
+  await asegurarEsquemaInventarioProductos();
+  if (await migracionDatosCompletada(MIGRACION_INVENTARIO_PRODUCTOS)) return;
+  if (promesaInventarioProductosPostgres) return promesaInventarioProductosPostgres;
+  promesaInventarioProductosPostgres = (async () => {
+    if (await migracionDatosCompletada(MIGRACION_INVENTARIO_PRODUCTOS)) return;
+    // Importación inicial de solo lectura: Stock y Productos quedan como respaldo histórico.
+    const [inventario, catalogo] = await Promise.all([
+      obtenerProductosLegacy(),
+      obtenerProductosMaestrosLegacy(),
+    ]);
+    const importado = await importarInventarioProductosAtomico(
+      { inventario, catalogo },
+      MIGRACION_INVENTARIO_PRODUCTOS,
+    );
+    if (importado) {
+      console.log(
+        `PostgreSQL Etapa 5: Inventario y Productos importados desde Sheets (${inventario.length} filas de inventario, ${catalogo.length} productos de catálogo).`,
+      );
+    }
+  })();
+  try { await promesaInventarioProductosPostgres; }
+  finally { promesaInventarioProductosPostgres = null; }
+}
+
+async function obtenerProductosMaestros() {
+  await asegurarInventarioProductosPostgres();
   return leerConCache(
     "productosMaestros",
     CACHE_TTL.productosMaestros,
-    async () => {
-      const respuesta = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-      });
-      const filas = respuesta.data.values || [];
-      if (filas.length <= 1) return [];
-      return filas
-        .slice(1)
-        .map(filaAProductoMaestro)
-        .filter((producto) => producto.codigo || producto.articulo);
-    },
+    () => listarCatalogoDb(),
   );
 }
 
 async function buscarProductoMaestroPorCodigo(codigoBuscado) {
-  const productos = await obtenerProductosMaestros();
-  const codigo = normalizarCodigo(codigoBuscado);
-  return productos.find((producto) => producto.codigo === codigo) || null;
+  await asegurarInventarioProductosPostgres();
+  return buscarCatalogoPorCodigoDb(normalizarCodigo(codigoBuscado));
 }
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -4190,45 +4175,6 @@ function normalizarProductoImportado(item) {
   return { codigo, articulo, precio };
 }
 
-async function asegurarColumnasCatalogo() {
-  // La importación del catálogo nunca modifica la hoja Stock.
-  // La columna A de Productos se fuerza a TEXTO para preservar códigos y ceros iniciales.
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${PRODUCTOS_SHEET_NAME}!A1:C1`,
-    valueInputOption: "RAW",
-    requestBody: { values: [["codigo", "articulo", "precio"]] },
-  });
-
-  const metadata = await sheets.spreadsheets.get({
-    spreadsheetId: SPREADSHEET_ID,
-    fields: "sheets(properties(sheetId,title))",
-  });
-  const hoja = (metadata.data.sheets || []).find(
-    (item) => item.properties?.title === PRODUCTOS_SHEET_NAME,
-  );
-  if (!hoja) throw new Error(`No existe la hoja ${PRODUCTOS_SHEET_NAME}`);
-
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    requestBody: {
-      requests: [
-        {
-          repeatCell: {
-            range: {
-              sheetId: hoja.properties.sheetId,
-              startColumnIndex: 0,
-              endColumnIndex: 1,
-            },
-            cell: { userEnteredFormat: { numberFormat: { type: "TEXT" } } },
-            fields: "userEnteredFormat.numberFormat",
-          },
-        },
-      ],
-    },
-  });
-}
-
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
   // El archivo importado pasa a ser la fuente completa del catálogo.
   // No se comparan altas ni modificaciones: Productos se reemplaza entero.
@@ -4260,52 +4206,8 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     );
 
   if (aplicarCambios) {
-    await asegurarColumnasCatalogo();
-
-    const actualResp = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-      valueRenderOption: "FORMATTED_VALUE",
-    });
-    const filasActuales = (actualResp.data.values || []).length;
-
-    const filasFinales = [
-      ["codigo", "articulo", "precio"],
-      ...catalogo.map((producto) => [
-        String(producto.codigo),
-        producto.articulo || "",
-        producto.precio ?? "",
-      ]),
-    ];
-
-    // Primero se escribe el catálogo completo en una única operación lógica.
-    // Solo después se limpian posibles filas sobrantes del catálogo anterior.
-    const data = [];
-    for (let i = 0; i < filasFinales.length; i += 5000) {
-      const bloque = filasFinales.slice(i, i + 5000);
-      const filaInicio = i + 1;
-      data.push({
-        range: `${PRODUCTOS_SHEET_NAME}!A${filaInicio}:C${filaInicio + bloque.length - 1}`,
-        values: bloque,
-      });
-    }
-
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        valueInputOption: "RAW",
-        data,
-      },
-    });
-
-    if (filasActuales > filasFinales.length) {
-      await sheets.spreadsheets.values.clear({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${PRODUCTOS_SHEET_NAME}!A${filasFinales.length + 1}:C${filasActuales}`,
-        requestBody: {},
-      });
-    }
-
+    await asegurarInventarioProductosPostgres();
+    await reemplazarCatalogoDb(catalogo);
     invalidarCache("productosMaestros");
   }
 
@@ -4462,31 +4364,28 @@ app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
       });
     }
 
+    let articuloNuevo = normalizarTexto(articulo);
+    if (!articuloNuevo) {
+      const maestro = await buscarProductoMaestroPorCodigo(codigoBuscado);
+      articuloNuevo = normalizarTexto(maestro?.articulo);
+    }
+
     const productoActualizado = await ejecutarEnCola(
       codigoBuscado,
-      async () => {
-        let producto = await buscarProductoPorCodigo(codigoBuscado);
-
-        if (!producto)
-          producto = await crearProductoInventario(codigoBuscado, articulo);
-
-        if (!producto) {
-          const error = new Error("Producto no encontrado en el catálogo");
-          error.statusCode = 404;
-          throw error;
-        }
-
-        // Preservar stock histórico de C y sumar la nueva entrada.
-        producto.stock = numero(producto.stock) + cantidadNumerica;
-        if (ubicacion === "deposito") {
-          producto.deposito = numero(producto.deposito) + cantidadNumerica;
-        } else {
-          producto.salon = numero(producto.salon) + cantidadNumerica;
-        }
-
-        return await actualizarProducto(producto);
-      },
+      () => sumarInventarioDb(
+        codigoBuscado,
+        ubicacion,
+        cantidadNumerica,
+        articuloNuevo,
+      ),
     );
+
+    if (!productoActualizado) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Producto no encontrado en el catálogo",
+      });
+    }
 
     invalidarCache("productos");
     res.json({
@@ -4524,21 +4423,12 @@ app.post("/corregir", requerirAlgunModulo("inventario"), async (req, res) => {
 
     const productoActualizado = await ejecutarEnCola(
       codigoBuscado,
-      async () => {
-        const producto = await buscarProductoPorCodigo(codigoBuscado);
-
-        if (!producto) {
-          const error = new Error("Producto no encontrado");
-          error.statusCode = 404;
-          throw error;
-        }
-
-        producto.salon = salonValidado;
-        producto.deposito = depositoValidado;
-
-        return await actualizarProducto(producto, { recalcularTotal: true });
-      },
+      () => corregirInventarioDb(codigoBuscado, salonValidado, depositoValidado),
     );
+
+    if (!productoActualizado) {
+      return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
+    }
 
     invalidarCache("productos");
     res.json({
@@ -7060,15 +6950,17 @@ app.listen(PORT, () => {
         await asegurarHorariosPostgres();
         await asegurarTareasBanoPostgres();
         console.log("PostgreSQL Etapa 4: Usuarios, Sectores, Horarios, Tareas y Baño listos.");
+        await asegurarInventarioProductosPostgres();
+        console.log("PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.");
       } else {
         console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas y Baño requieren PostgreSQL desde la Etapa 4.",
+          "PostgreSQL no configurado (DATABASE_URL ausente). Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos requieren PostgreSQL desde la Etapa 5.",
         );
       }
     })
     .catch((error) =>
       console.error(
-        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas y Baño no estarán disponibles hasta recuperar la conexión:",
+        "PostgreSQL configurado pero no disponible. Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos no estarán disponibles hasta recuperar la conexión:",
         error.message,
       ),
     );
