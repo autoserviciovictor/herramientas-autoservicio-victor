@@ -31,6 +31,12 @@ async function asegurarEsquemaAuxiliares() {
       notification_pk BIGSERIAL PRIMARY KEY, notification_key TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT '',
       record_id TEXT NOT NULL DEFAULT '', code TEXT NOT NULL DEFAULT '', expiry_date TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '')`);
     await query(`CREATE INDEX IF NOT EXISTS notification_log_key_idx ON notification_log(notification_key)`);
+    await query(`DELETE FROM notification_log a USING notification_log b
+      WHERE a.notification_pk > b.notification_pk
+        AND a.notification_key <> ''
+        AND a.notification_key = b.notification_key`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS notification_log_key_unique_idx
+      ON notification_log(notification_key) WHERE notification_key <> ''`);
 
     await query(`CREATE TABLE IF NOT EXISTS notification_center (
       notification_id TEXT PRIMARY KEY, user_key TEXT NOT NULL, type TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',
@@ -77,7 +83,7 @@ async function importarAuxiliaresAtomico(datos, claveMigracion) {
     for (const x of admin) await c.query(`INSERT INTO admin_activity_log(event_date,event_time,user_key,user_name,action,entity,identifier,detail) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, [x.fecha||'',x.hora||'',x.usuario||'',x.nombre||'',x.accion||'',x.entidad||'',x.identificador||'',x.detalle||'']);
     for (const x of offline) await c.query(`INSERT INTO offline_operations(operation_id,user_key,event_time,method,route,state,response_text) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`, [x.id||'',texto(x.usuario).toLowerCase(),x.fecha||'',x.metodo||'',x.ruta||'',x.estado||'En proceso',x.respuesta||'']);
     for (const x of push) if (x.endpoint) await c.query(`INSERT INTO push_subscriptions(endpoint,p256dh,auth_key,user_key,user_name,active,updated_text) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(endpoint) DO NOTHING`, [x.endpoint,x.p256dh||'',x.auth||'',x.usuario||'',x.nombre||'',x.activo!==false,x.actualizado||'']);
-    for (const x of log) await c.query(`INSERT INTO notification_log(notification_key,sent_at,type,record_id,code,expiry_date,detail) VALUES($1,$2,$3,$4,$5,$6,$7)`, [x.clave||'',x.fecha||'',x.tipo||'',x.id||'',x.codigo||'',x.vencimiento||'',x.detalle||'']);
+    for (const x of log) await c.query(`INSERT INTO notification_log(notification_key,sent_at,type,record_id,code,expiry_date,detail) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`, [x.clave||'',x.fecha||'',x.tipo||'',x.id||'',x.codigo||'',x.vencimiento||'',x.detalle||'']);
     for (const x of centro) if (x.id) await c.query(`INSERT INTO notification_center(notification_id,user_key,type,title,message,url,event_time,read_flag,dedupe_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(notification_id) DO NOTHING`, [x.id,texto(x.usuario).toLowerCase(),x.tipo||'',x.titulo||'',x.mensaje||'',x.url||'./',x.fecha||'',Boolean(x.leida),x.clave||'']);
     for (const x of vencHist) await c.query(`INSERT INTO expiration_history(event_date,event_time,user_key,user_name,action,record_id,code,article,expiry_date,detail,quantity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [x.fecha||'',x.hora||'',x.usuario||'',x.nombre||'',x.accion||'',x.id||'',x.codigo||'',x.articulo||'',x.vencimiento||'',x.detalle||'',String(x.cantidad??'')]);
     await c.query(`INSERT INTO app_data_migrations(migration_key,details) VALUES($1,$2::jsonb) ON CONFLICT(migration_key) DO NOTHING`, [claveMigracion, JSON.stringify({admin:admin.length,offline:offline.length,push:push.length,notificationLog:log.length,notificationCenter:centro.length,expirationHistory:vencHist.length})]);
@@ -97,7 +103,7 @@ async function guardarSuscripcionPushDb(x){ await query(`INSERT INTO push_subscr
 async function desactivarSuscripcionPushDb(endpoint){ await query(`UPDATE push_subscriptions SET active=FALSE,updated_at=NOW() WHERE endpoint=$1`,[endpoint]); }
 
 async function clavesNotificacionesDb(){ const r=await query(`SELECT notification_key,sent_at,type,code,expiry_date FROM notification_log`); const s=new Set(); for(const x of r.rows){if(x.notification_key)s.add(x.notification_key); const f=texto(x.sent_at).slice(0,10); if(x.code&&x.expiry_date&&x.type&&f)s.add([x.code,x.expiry_date,x.type,f].join('|'));} return s; }
-async function registrarNotificacionEnviadaDb(x){ await query(`INSERT INTO notification_log(notification_key,sent_at,type,record_id,code,expiry_date,detail) VALUES($1,$2,$3,$4,$5,$6,$7)`,[x.clave||'',x.fecha||'',x.tipo||'',x.id||'',x.codigo||'',x.vencimiento||'',x.detalle||'']); }
+async function registrarNotificacionEnviadaDb(x){ await query(`INSERT INTO notification_log(notification_key,sent_at,type,record_id,code,expiry_date,detail) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`,[x.clave||'',x.fecha||'',x.tipo||'',x.id||'',x.codigo||'',x.vencimiento||'',x.detalle||'']); }
 async function existeCentroNotificacionDb(id){ const r=await query(`SELECT 1 FROM notification_center WHERE notification_id=$1`,[id]); return Boolean(r.rowCount); }
 async function registrarCentroNotificacionDb(x){ await query(`INSERT INTO notification_center(notification_id,user_key,type,title,message,url,event_time,read_flag,dedupe_key) VALUES($1,$2,$3,$4,$5,$6,$7,FALSE,$8) ON CONFLICT(notification_id) DO NOTHING`,[x.id,texto(x.usuario).toLowerCase(),x.tipo||'',x.titulo||'',x.mensaje||'',x.url||'./',x.fecha||'',x.clave||'']); }
 async function listarCentroNotificacionesDb(usuario,limite=10){ const r=await query(`SELECT notification_id,user_key,type,title,message,url,event_time,read_flag FROM notification_center WHERE user_key=$1 ORDER BY event_time DESC,created_at DESC LIMIT $2`,[texto(usuario).toLowerCase(),limite]); return r.rows.map(x=>({id:x.notification_id,usuario:x.user_key,tipo:x.type,titulo:x.title,mensaje:x.message,url:x.url||'./',fecha:x.event_time,leida:x.read_flag})); }

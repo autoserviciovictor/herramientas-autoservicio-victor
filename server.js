@@ -3422,6 +3422,24 @@ async function guardarBanoServidor(config, usuario, cliente = null) {
   return guardarBanoDb(limpio, fechaHoraArgentinaIso(), usuario?.usuario || "", cliente);
 }
 
+function usuarioCoincideResponsableBano(registro, usuario) {
+  const responsable = normalizarUsuario(registro?.responsable);
+  if (!responsable) return false;
+  return [usuario?.usuario, usuario?.nombre]
+    .map(normalizarUsuario)
+    .filter(Boolean)
+    .includes(responsable);
+}
+
+function usuarioCoincideConfirmacionBano(registro, usuario) {
+  const confirmador = normalizarUsuario(registro?.usuario);
+  if (!confirmador) return false;
+  return [usuario?.usuario, usuario?.nombre]
+    .map(normalizarUsuario)
+    .filter(Boolean)
+    .includes(confirmador);
+}
+
 async function sectoresTareasPermitidos(usuario) {
   const sectores = (await obtenerSectores()).filter((s) => s.activo);
   if (rolGestionGlobal(usuario)) return sectores;
@@ -3503,7 +3521,6 @@ app.put("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
         .map(normalizarTexto)
         .filter(Boolean),
     );
-    const actuales = await obtenerTareasServidor();
     const sectores = await sectoresTareasPermitidos(req.usuario);
     const permitidos = new Set(
       sectores.flatMap((s) => [
@@ -3514,25 +3531,28 @@ app.put("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
     const puedeSector = (t) =>
       rolGestionGlobal(req.usuario) ||
       permitidos.has(normalizarTexto(t.sector));
-    const mapa = new Map(
-      actuales
-        .filter((t) => !(eliminadas.has(t.id) && puedeSector(t)))
-        .map((t) => [t.id, t]),
-    );
-    for (const tarea of entrantes) {
-      if (!puedeSector(tarea)) continue;
-      mapa.set(
-        tarea.id,
-        mapa.has(tarea.id)
-          ? fusionarTareaServidor(mapa.get(tarea.id), tarea)
-          : tarea,
+    const visibles = await conTransaccionTareasBano(async (cliente) => {
+      const actuales = await obtenerTareasServidor(cliente);
+      const mapa = new Map(
+        actuales
+          .filter((t) => !(eliminadas.has(t.id) && puedeSector(t)))
+          .map((t) => [t.id, t]),
       );
-    }
-    const fusion = [...mapa.values()];
-    await guardarTareasServidor(fusion, req.usuario);
-    const visibles = rolGestionGlobal(req.usuario)
-      ? fusion
-      : fusion.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+      for (const tarea of entrantes) {
+        if (!puedeSector(tarea)) continue;
+        mapa.set(
+          tarea.id,
+          mapa.has(tarea.id)
+            ? fusionarTareaServidor(mapa.get(tarea.id), tarea)
+            : tarea,
+        );
+      }
+      const fusion = [...mapa.values()];
+      await guardarTareasServidor(fusion, req.usuario, cliente);
+      return rolGestionGlobal(req.usuario)
+        ? fusion
+        : fusion.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+    });
     res.json({ ok: true, tareas: visibles });
   } catch (e) {
     res.status(500).json({
@@ -3551,9 +3571,7 @@ app.post("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) =
     const id = normalizarTexto(req.body?.id),
       fecha = normalizarTexto(req.body?.fecha),
       turno = normalizarTexto(req.body?.turno);
-    const tareas = await obtenerTareasServidor(),
-      tarea = tareas.find((t) => t.id === id);
-    if (!tarea || !fecha || !["manana", "tarde"].includes(turno))
+    if (!fecha || !["manana", "tarde"].includes(turno))
       return res
         .status(400)
         .json({ ok: false, mensaje: "Asignación inválida" });
@@ -3564,32 +3582,43 @@ app.post("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) =
           normalizarTexto(s.nombre),
         ]),
       );
-    if (
-      !rolGestionGlobal(req.usuario) &&
-      !permitidos.has(normalizarTexto(tarea.sector))
-    )
-      return res
-        .status(403)
-        .json({ ok: false, mensaje: "No tenés permiso para este sector" });
-    tarea.asignaciones = tarea.asignaciones || {};
-    tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
-    const asignacionAnterior = tarea.asignaciones[fecha][turno] || {};
-    const responsables = [
-      ...new Set(
-        (req.body?.responsables || []).map(normalizarTexto).filter(Boolean),
-      ),
-    ];
-    tarea.asignaciones[fecha][turno] = {
-      ...asignacionAnterior,
-      responsables,
-      estado: normalizarTexto(req.body?.estado) || "pendiente",
-      completadaPor: "",
-      completadaHora: "",
-    };
-    await guardarTareasServidor(tareas, req.usuario);
-    res.json({ ok: true, asignacion: tarea.asignaciones[fecha][turno] });
+    const asignacion = await conTransaccionTareasBano(async (cliente) => {
+      const tareas = await obtenerTareasServidor(cliente),
+        tarea = tareas.find((t) => t.id === id);
+      if (!tarea) {
+        const error = new Error("Asignación inválida");
+        error.statusCode = 400;
+        throw error;
+      }
+      if (
+        !rolGestionGlobal(req.usuario) &&
+        !permitidos.has(normalizarTexto(tarea.sector))
+      ) {
+        const error = new Error("No tenés permiso para este sector");
+        error.statusCode = 403;
+        throw error;
+      }
+      tarea.asignaciones = tarea.asignaciones || {};
+      tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
+      const asignacionAnterior = tarea.asignaciones[fecha][turno] || {};
+      const responsables = [
+        ...new Set(
+          (req.body?.responsables || []).map(normalizarTexto).filter(Boolean),
+        ),
+      ];
+      tarea.asignaciones[fecha][turno] = {
+        ...asignacionAnterior,
+        responsables,
+        estado: normalizarTexto(req.body?.estado) || "pendiente",
+        completadaPor: "",
+        completadaHora: "",
+      };
+      await guardarTareasServidor(tareas, req.usuario, cliente);
+      return tarea.asignaciones[fecha][turno];
+    });
+    res.json({ ok: true, asignacion });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudo guardar la asignación",
     });
@@ -3622,77 +3651,81 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
       return res
         .status(400)
         .json({ ok: false, mensaje: "Asignación incompleta" });
-    const tareas = await obtenerTareasServidor(),
-      sectores = await sectoresTareasPermitidos(req.usuario),
+    const sectores = await sectoresTareasPermitidos(req.usuario),
       permitidos = new Set(
         sectores.flatMap((s) => [
           normalizarTexto(s.id),
           normalizarTexto(s.nombre),
         ]),
       );
-    const seleccionadas = tareas.filter((t) => ids.includes(t.id));
-    if (seleccionadas.length !== ids.length)
-      return res
-        .status(404)
-        .json({ ok: false, mensaje: "Una o más tareas no existen" });
-    if (
-      seleccionadas.some(
-        (t) =>
-          !rolGestionGlobal(req.usuario) &&
-          !permitidos.has(normalizarTexto(t.sector)),
-      )
-    )
-      return res.status(403).json({
-        ok: false,
-        mensaje: "No tenés permiso para una de las tareas",
-      });
-    if (reemplazar) {
-      for (const tarea of tareas) {
-        const asig = tarea.asignaciones?.[fecha]?.[turno];
-        if (!asig) continue;
-        const restantes = (asig.responsables || [])
-          .map(normalizarTexto)
-          .filter(
-            (r) => r && normalizarUsuario(r) !== normalizarUsuario(responsable),
-          );
-        if (restantes.length) asig.responsables = [...new Set(restantes)];
-        else {
-          delete tarea.asignaciones[fecha][turno];
-          if (!Object.keys(tarea.asignaciones[fecha]).length)
-            delete tarea.asignaciones[fecha];
+    const resultado = await conTransaccionTareasBano(async (cliente) => {
+      const tareas = await obtenerTareasServidor(cliente);
+      const seleccionadas = tareas.filter((t) => ids.includes(t.id));
+      if (seleccionadas.length !== ids.length) {
+        const error = new Error("Una o más tareas no existen");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (
+        seleccionadas.some(
+          (t) =>
+            !rolGestionGlobal(req.usuario) &&
+            !permitidos.has(normalizarTexto(t.sector)),
+        )
+      ) {
+        const error = new Error("No tenés permiso para una de las tareas");
+        error.statusCode = 403;
+        throw error;
+      }
+      if (reemplazar) {
+        for (const tarea of tareas) {
+          const asig = tarea.asignaciones?.[fecha]?.[turno];
+          if (!asig) continue;
+          const restantes = (asig.responsables || [])
+            .map(normalizarTexto)
+            .filter(
+              (r) => r && normalizarUsuario(r) !== normalizarUsuario(responsable),
+            );
+          if (restantes.length) asig.responsables = [...new Set(restantes)];
+          else {
+            delete tarea.asignaciones[fecha][turno];
+            if (!Object.keys(tarea.asignaciones[fecha]).length)
+              delete tarea.asignaciones[fecha];
+          }
         }
       }
-    }
-    for (const tarea of seleccionadas) {
-      tarea.asignaciones = tarea.asignaciones || {};
-      tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
-      const anterior = tarea.asignaciones[fecha][turno] || {};
-      const responsables = [
-        ...new Set([
-          ...(anterior.responsables || []).map(normalizarTexto).filter(Boolean),
-          responsable,
-        ]),
-      ];
-      tarea.asignaciones[fecha][turno] = {
-        ...anterior,
-        responsables,
-        estado: anterior.estado || "pendiente",
-        completadaPor: anterior.completadaPor || "",
-        completadaHora: anterior.completadaHora || "",
-      };
-    }
-    await guardarTareasServidor(tareas, req.usuario);
-    const visibles = rolGestionGlobal(req.usuario)
-      ? tareas
-      : tareas.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+      for (const tarea of seleccionadas) {
+        tarea.asignaciones = tarea.asignaciones || {};
+        tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
+        const anterior = tarea.asignaciones[fecha][turno] || {};
+        const responsables = [
+          ...new Set([
+            ...(anterior.responsables || []).map(normalizarTexto).filter(Boolean),
+            responsable,
+          ]),
+        ];
+        tarea.asignaciones[fecha][turno] = {
+          ...anterior,
+          responsables,
+          estado: anterior.estado || "pendiente",
+          completadaPor: anterior.completadaPor || "",
+          completadaHora: anterior.completadaHora || "",
+        };
+      }
+      await guardarTareasServidor(tareas, req.usuario, cliente);
+      const visibles = rolGestionGlobal(req.usuario)
+        ? tareas
+        : tareas.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+      return { asignadas: seleccionadas.length, tareas: visibles };
+    });
     res.json({
       ok: true,
-      asignadas: seleccionadas.length,
+      asignadas: resultado.asignadas,
       responsable,
-      tareas: visibles,
+      tareas: resultado.tareas,
     });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudieron asignar las tareas",
     });
@@ -3708,12 +3741,6 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
     const id = normalizarTexto(req.body?.id),
       fecha = normalizarTexto(req.body?.fecha),
       turno = normalizarTexto(req.body?.turno);
-    const tareas = await obtenerTareasServidor(),
-      tarea = tareas.find((t) => t.id === id);
-    if (!tarea?.asignaciones?.[fecha]?.[turno])
-      return res
-        .status(404)
-        .json({ ok: false, mensaje: "Asignación no encontrada" });
     const sectores = await sectoresTareasPermitidos(req.usuario),
       permitidos = new Set(
         sectores.flatMap((s) => [
@@ -3721,20 +3748,30 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
           normalizarTexto(s.nombre),
         ]),
       );
-    if (
-      !rolGestionGlobal(req.usuario) &&
-      !permitidos.has(normalizarTexto(tarea.sector))
-    )
-      return res
-        .status(403)
-        .json({ ok: false, mensaje: "No tenés permiso para este sector" });
-    delete tarea.asignaciones[fecha][turno];
-    if (!Object.keys(tarea.asignaciones[fecha]).length)
-      delete tarea.asignaciones[fecha];
-    await guardarTareasServidor(tareas, req.usuario);
+    await conTransaccionTareasBano(async (cliente) => {
+      const tareas = await obtenerTareasServidor(cliente),
+        tarea = tareas.find((t) => t.id === id);
+      if (!tarea?.asignaciones?.[fecha]?.[turno]) {
+        const error = new Error("Asignación no encontrada");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (
+        !rolGestionGlobal(req.usuario) &&
+        !permitidos.has(normalizarTexto(tarea.sector))
+      ) {
+        const error = new Error("No tenés permiso para este sector");
+        error.statusCode = 403;
+        throw error;
+      }
+      delete tarea.asignaciones[fecha][turno];
+      if (!Object.keys(tarea.asignaciones[fecha]).length)
+        delete tarea.asignaciones[fecha];
+      await guardarTareasServidor(tareas, req.usuario, cliente);
+    });
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudo eliminar la asignación",
     });
@@ -3759,21 +3796,24 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
         ok: false,
         mensaje: "No tenés permiso para configurar la rotación",
       });
-    const actual = await leerBanoServidor();
-    actual.historial = completarHistorialBano(actual);
-    const participantes = participantesOrdenFijo(
-      actual.participantes,
-      req.body?.participantes || [],
-    );
-    const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
-    const config = await guardarBanoServidor(
-      {
-        ...actual,
-        participantes,
-        fechaAncla,
-      },
-      req.usuario,
-    );
+    const config = await conTransaccionTareasBano(async (cliente) => {
+      const actual = await leerBanoServidor(cliente);
+      actual.historial = completarHistorialBano(actual);
+      const participantes = participantesOrdenFijo(
+        actual.participantes,
+        req.body?.participantes || [],
+      );
+      const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
+      return guardarBanoServidor(
+        {
+          ...actual,
+          participantes,
+          fechaAncla,
+        },
+        req.usuario,
+        cliente,
+      );
+    });
     res.json({ ok: true, config });
   } catch (e) {
     res.status(500).json({
@@ -3784,24 +3824,36 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
 });
 app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
-    const fecha =
-        normalizarTexto(req.body?.fecha) ||
-        new Date().toISOString().slice(0, 10),
-      actual = await leerBanoServidor();
-    actual.historial = completarHistorialBano(actual, fecha);
-    const registro = actual.historial.find((x) => x.fecha === fecha);
-    if (registro && !normalizarTexto(registro.usuario)) {
-      registro.usuario = req.usuario.nombre || req.usuario.usuario;
-      registro.hora = new Date().toLocaleTimeString("es-AR", {
-        timeZone: TIME_ZONE,
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-    const config = await guardarBanoServidor(actual, req.usuario);
+    const fecha = normalizarTexto(req.body?.fecha) || fechaArgentina();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > fechaArgentina())
+      return res.status(400).json({ ok: false, mensaje: "Fecha inválida" });
+    const config = await conTransaccionTareasBano(async (cliente) => {
+      const actual = await leerBanoServidor(cliente);
+      actual.historial = completarHistorialBano(actual, fecha);
+      const registro = actual.historial.find((x) => x.fecha === fecha);
+      if (!registro) {
+        const error = new Error("Registro de limpieza no encontrado");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!usuarioCoincideResponsableBano(registro, req.usuario)) {
+        const error = new Error("Solo el responsable asignado puede confirmar esta limpieza");
+        error.statusCode = 403;
+        throw error;
+      }
+      if (!normalizarTexto(registro.usuario)) {
+        registro.usuario = req.usuario.nombre || req.usuario.usuario;
+        registro.hora = new Date().toLocaleTimeString("es-AR", {
+          timeZone: TIME_ZONE,
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+      return guardarBanoServidor(actual, req.usuario, cliente);
+    });
     res.json({ ok: true, config });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudo confirmar la limpieza",
     });
@@ -3818,28 +3870,41 @@ app.post("/tareas/bano/verificar", requerirAlgunModulo("tareas"), async (req, re
     const fecha = normalizarTexto(req.body?.fecha);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha))
       return res.status(400).json({ ok: false, mensaje: "Fecha inválida" });
-    const actual = await leerBanoServidor();
-    actual.historial = completarHistorialBano(actual, fechaArgentina());
-    const registro = actual.historial.find((x) => x.fecha === fecha);
-    if (!registro)
-      return res.status(404).json({ ok: false, mensaje: "Registro de limpieza no encontrado" });
-    if (!normalizarTexto(registro.usuario))
-      return res.status(409).json({
-        ok: false,
-        mensaje: "El responsable todavía no confirmó la limpieza",
-      });
-    if (!normalizarTexto(registro.supervisadoPor)) {
-      registro.supervisadoPor = req.usuario.nombre || req.usuario.usuario;
-      registro.horaVerificacion = new Date().toLocaleTimeString("es-AR", {
-        timeZone: TIME_ZONE,
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-    const config = await guardarBanoServidor(actual, req.usuario);
+    const config = await conTransaccionTareasBano(async (cliente) => {
+      const actual = await leerBanoServidor(cliente);
+      actual.historial = completarHistorialBano(actual, fechaArgentina());
+      const registro = actual.historial.find((x) => x.fecha === fecha);
+      if (!registro) {
+        const error = new Error("Registro de limpieza no encontrado");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!normalizarTexto(registro.usuario)) {
+        const error = new Error("El responsable todavía no confirmó la limpieza");
+        error.statusCode = 409;
+        throw error;
+      }
+      if (
+        usuarioCoincideResponsableBano(registro, req.usuario) ||
+        usuarioCoincideConfirmacionBano(registro, req.usuario)
+      ) {
+        const error = new Error("La limpieza debe ser verificada por otra persona autorizada");
+        error.statusCode = 403;
+        throw error;
+      }
+      if (!normalizarTexto(registro.supervisadoPor)) {
+        registro.supervisadoPor = req.usuario.nombre || req.usuario.usuario;
+        registro.horaVerificacion = new Date().toLocaleTimeString("es-AR", {
+          timeZone: TIME_ZONE,
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+      return guardarBanoServidor(actual, req.usuario, cliente);
+    });
     res.json({ ok: true, config });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudo confirmar la limpieza",
     });
@@ -3851,44 +3916,48 @@ app.post("/tareas/completar", requerirAlgunModulo("tareas"), async (req, res) =>
     const id = normalizarTexto(req.body?.id),
       fecha = normalizarTexto(req.body?.fecha),
       turno = normalizarTexto(req.body?.turno);
-    const tareas = await obtenerTareasServidor(),
-      t = tareas.find((x) => x.id === id);
-    if (!t || !t.asignaciones?.[fecha]?.[turno])
-      return res
-        .status(404)
-        .json({ ok: false, mensaje: "Asignación no encontrada" });
-    const asig = t.asignaciones[fecha][turno];
-    if (!rolGestionGlobal(req.usuario)) {
-      const sectores = await sectoresTareasPermitidos(req.usuario);
-      const permitidos = new Set(
-        sectores.flatMap((s) => [
-          normalizarTexto(s.id),
-          normalizarTexto(s.nombre),
-        ]),
-      );
-      if (!permitidos.has(normalizarTexto(t.sector)))
-        return res.status(403).json({
-          ok: false,
-          mensaje: "No tenés permiso para completar tareas de este sector",
-        });
-    }
-    const yaEstabaCompletada =
-      normalizarTexto(asig.estado).toLowerCase() === "completada";
-    asig.estado = "completada";
-    asig.completadaPor = req.usuario.nombre || req.usuario.usuario;
-    asig.completadaHora = new Date().toLocaleTimeString("es-AR", {
-      timeZone: TIME_ZONE,
-      hour: "2-digit",
-      minute: "2-digit",
+    const sectores = !rolGestionGlobal(req.usuario)
+      ? await sectoresTareasPermitidos(req.usuario)
+      : [];
+    const permitidos = new Set(
+      sectores.flatMap((s) => [normalizarTexto(s.id), normalizarTexto(s.nombre)]),
+    );
+    const resultado = await conTransaccionTareasBano(async (cliente) => {
+      const tareas = await obtenerTareasServidor(cliente),
+        t = tareas.find((x) => x.id === id);
+      if (!t || !t.asignaciones?.[fecha]?.[turno]) {
+        const error = new Error("Asignación no encontrada");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (
+        !rolGestionGlobal(req.usuario) &&
+        !permitidos.has(normalizarTexto(t.sector))
+      ) {
+        const error = new Error("No tenés permiso para completar tareas de este sector");
+        error.statusCode = 403;
+        throw error;
+      }
+      const asig = t.asignaciones[fecha][turno];
+      const yaEstabaCompletada =
+        normalizarTexto(asig.estado).toLowerCase() === "completada";
+      asig.estado = "completada";
+      asig.completadaPor = req.usuario.nombre || req.usuario.usuario;
+      asig.completadaHora = new Date().toLocaleTimeString("es-AR", {
+        timeZone: TIME_ZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      await guardarTareasServidor(tareas, req.usuario, cliente);
+      return { tarea: t, asignacion: { ...asig }, yaEstabaCompletada };
     });
-    await guardarTareasServidor(tareas, req.usuario);
-    if (!yaEstabaCompletada) {
+    if (!resultado.yaEstabaCompletada) {
       setImmediate(() =>
         notificarSupervisorTareaCompletada({
-          tarea: t,
+          tarea: resultado.tarea,
           fecha,
           turno,
-          asignacion: asig,
+          asignacion: resultado.asignacion,
           completadaPor: req.usuario,
         }).catch((error) =>
           console.error(
@@ -3898,9 +3967,9 @@ app.post("/tareas/completar", requerirAlgunModulo("tareas"), async (req, res) =>
         ),
       );
     }
-    res.json({ ok: true, asignacion: asig });
+    res.json({ ok: true, asignacion: resultado.asignacion });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudo completar la tarea",
     });
