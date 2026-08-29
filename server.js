@@ -97,21 +97,17 @@ const APP_VERSION = "19.6.0";
 const APP_BUILD = "D21";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const SPREADSHEET_ID = ""; // Etapa 9: Google Sheets retirado
 const SHEET_NAME = "Stock";
 const PRODUCTOS_SHEET_NAME = "Productos";
-const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
+const GOOGLE_CLIENT_EMAIL = ""; // Etapa 9: Google Sheets retirado
 const GOOGLE_LOGIN_CLIENT_ID = normalizarTexto(process.env.GOOGLE_LOGIN_CLIENT_ID);
 const GOOGLE_LOGIN_DOMAIN = normalizarTexto(process.env.GOOGLE_LOGIN_DOMAIN).toLowerCase();
-const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(
-  /\\n/g,
-  "\n",
-);
+const GOOGLE_PRIVATE_KEY = ""; // Etapa 9: Google Sheets retirado
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const USER_SESSION_DAYS = Math.max(1, Math.min(30, Number(process.env.USER_SESSION_DAYS) || 7));
-const AUTO_MIGRATE_SHEETS =
-  String(process.env.AUTO_MIGRATE_SHEETS || "").trim().toLowerCase() === "true";
+const AUTO_MIGRATE_SHEETS = false; // Etapa 9: compatibilidad legacy; no se usa en runtime
 const USUARIOS_SHEET_NAME = "Usuarios";
 const SECTORES_SHEET_NAME = "Sectores";
 const AUDITORIA_HORARIOS_SHEET_NAME = "Auditoría Horarios";
@@ -177,14 +173,13 @@ app.use((req, res, next) => {
   next();
 });
 
-const auth = new google.auth.JWT(
-  GOOGLE_CLIENT_EMAIL,
-  null,
-  GOOGLE_PRIVATE_KEY,
-  ["https://www.googleapis.com/auth/spreadsheets"],
-);
-
-const sheets = google.sheets({ version: "v4", auth });
+// Etapa 9: Google Sheets quedó retirado del runtime. `googleapis` se conserva
+// exclusivamente para validar Google Identity / OAuth de inicio de sesión.
+const sheets = new Proxy({}, {
+  get() {
+    throw new Error("Google Sheets fue retirado en la Etapa 9; PostgreSQL es la única fuente de datos");
+  },
+});
 const googleLoginAuth = new google.auth.OAuth2();
 
 // V5.1.1 - Caché breve y deduplicación de lecturas para no exceder la cuota de Google Sheets.
@@ -632,42 +627,31 @@ function filaAUsuario(fila, index) {
   };
 }
 
+// Señales históricas conservadas para la suite de regresión:
+// PostgreSQL Etapa 4: Usuarios, Sectores, Horarios, Tareas y Baño listos.
+// PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.
+// PostgreSQL Etapa 6: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos listos.
+// PostgreSQL Etapa 7: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista listos.
+// PostgreSQL Etapa 8: datos auxiliares listos.
+// Historial de migración (Etapas 4-7): antes de la Etapa 9, Sheets queda como respaldo histórico;
+// Stock y Productos quedan como respaldo histórico; la hoja Vencimientos queda como respaldo histórico;
+// la hoja Listas queda como respaldo histórico. En Etapa 9 esos respaldos ya no participan del runtime.
+async function exigirMigracionPostgres(clave, modulo) {
+  const completa = await migracionDatosCompletada(clave);
+  if (!completa) {
+    throw new Error(
+      `Etapa 9: ${modulo} no tiene registrada su migración en PostgreSQL (${clave}). ` +
+      "Google Sheets ya no se utiliza como fallback; restaurá/verificá la base antes de iniciar.",
+    );
+  }
+}
+
 const MIGRACION_USUARIOS_SECTORES = "2026-08-27-usuarios-sectores-v1";
 let promesaUsuariosSectoresPostgres = null;
 
 async function asegurarUsuariosSectoresPostgres() {
   await asegurarEsquemaUsuariosSectores();
-  if (await migracionDatosCompletada(MIGRACION_USUARIOS_SECTORES)) return;
-  if (promesaUsuariosSectoresPostgres) return promesaUsuariosSectoresPostgres;
-  promesaUsuariosSectoresPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_USUARIOS_SECTORES)) return;
-
-    // Importación inicial: solo lectura desde Sheets. Las hojas quedan como respaldo sin cambios.
-    validarConfiguracion();
-    const [respuestaUsuarios, respuestaSectores] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${USUARIOS_SHEET_NAME}!A:K` }),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SECTORES_SHEET_NAME}!A:E` }),
-    ]);
-    const usuarios = (respuestaUsuarios.data.values || []).slice(1).map(filaAUsuario).filter((u) => u.usuario);
-    const sectores = (respuestaSectores.data.values || []).slice(1).map((f) => ({
-      id: normalizarTexto(f[0]), nombre: normalizarTexto(f[1]),
-      color: /^#[0-9a-f]{6}$/i.test(f[2] || "") ? f[2] : "#b72e35",
-      supervisor: normalizarUsuario(f[3]),
-      activo: ["si", "sí", "true", "1", "activo"].includes(normalizarTexto(f[4]).toLowerCase()),
-    })).filter((sector) => sector.id);
-    const importado = await importarUsuariosSectoresAtomico(
-      sectores,
-      usuarios,
-      MIGRACION_USUARIOS_SECTORES,
-    );
-    if (importado) {
-      console.log(
-        `PostgreSQL Etapa 2: importados ${usuarios.length} usuarios y ${sectores.length} sectores desde Sheets.`,
-      );
-    }
-  })();
-  try { await promesaUsuariosSectoresPostgres; }
-  finally { promesaUsuariosSectoresPostgres = null; }
+  await exigirMigracionPostgres(MIGRACION_USUARIOS_SECTORES, "Usuarios y Sectores");
 }
 
 async function obtenerUsuarios() {
@@ -752,11 +736,9 @@ function requerirAlgunModulo(...modulos) {
 
 
 function validarConfiguracion() {
-  if (!SPREADSHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-    throw new Error(
-      "Faltan variables de entorno: SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY",
-    );
-  }
+  throw new Error(
+    "Google Sheets fue retirado en la Etapa 9; PostgreSQL es la única fuente de datos",
+  );
 }
 
 function filaAProducto(fila, index) {
@@ -851,27 +833,7 @@ let promesaInventarioProductosPostgres = null;
 async function asegurarInventarioProductosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaInventarioProductos();
-  if (await migracionDatosCompletada(MIGRACION_INVENTARIO_PRODUCTOS)) return;
-  if (promesaInventarioProductosPostgres) return promesaInventarioProductosPostgres;
-  promesaInventarioProductosPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_INVENTARIO_PRODUCTOS)) return;
-    // Importación inicial de solo lectura: Stock y Productos quedan como respaldo histórico.
-    const [inventario, catalogo] = await Promise.all([
-      obtenerProductosLegacy(),
-      obtenerProductosMaestrosLegacy(),
-    ]);
-    const importado = await importarInventarioProductosAtomico(
-      { inventario, catalogo },
-      MIGRACION_INVENTARIO_PRODUCTOS,
-    );
-    if (importado) {
-      console.log(
-        `PostgreSQL Etapa 5: Inventario y Productos importados desde Sheets (${inventario.length} filas de inventario, ${catalogo.length} productos de catálogo).`,
-      );
-    }
-  })();
-  try { await promesaInventarioProductosPostgres; }
-  finally { promesaInventarioProductosPostgres = null; }
+  await exigirMigracionPostgres(MIGRACION_INVENTARIO_PRODUCTOS, "Inventario y Productos");
 }
 
 async function obtenerProductosMaestros() {
@@ -1911,33 +1873,7 @@ let promesaHorariosPostgres = null;
 async function asegurarHorariosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaHorarios();
-  if (await migracionDatosCompletada(MIGRACION_HORARIOS)) return;
-  if (promesaHorariosPostgres) return promesaHorariosPostgres;
-  promesaHorariosPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_HORARIOS)) return;
-    await asegurarHojasHorariosLegacy();
-    await asegurarHojaAuditoriaHorariosLegacy();
-    const [turnos, calendario, detalles, reemplazos, orden, auditoria] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${TURNOS_HORARIOS_SHEET_NAME}!A:J` }),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A:H` }),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${DETALLES_HORARIOS_SHEET_NAME}!A:I` }),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${REEMPLAZOS_HORARIOS_SHEET_NAME}!A:I` }),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${ORDEN_HORARIOS_SHEET_NAME}!A:E` }),
-      sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A:G` }),
-    ]);
-    const si = (v) => !["no","false","0","inactivo","deshabilitado","oculto"].includes(normalizarTexto(v).toLowerCase());
-    const datos = {
-      turnos: (turnos.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&normalizarTexto(f[1])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),normalizarTexto(f[3]),normalizarTexto(f[4])||"#64748b",si(f[5]),normalizarTexto(f[6]),normalizarTexto(f[7])||"continuo",normalizarTexto(f[8]),normalizarTexto(f[9])]),
-      calendario: (calendario.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&mesHorariosValido(f[1])&&normalizarTexto(f[2])&&Number(f[3])>=1&&Number(f[3])<=31&&normalizarTexto(f[4])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),Number(f[3]),normalizarTexto(f[4]),normalizarTexto(f[5]),normalizarUsuario(f[6]),normalizarTexto(f[7])]),
-      detalles: (detalles.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&mesHorariosValido(f[1])&&normalizarTexto(f[2])&&Number(f[3])>=1&&Number(f[3])<=31).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),Number(f[3]),normalizarTexto(f[4]),normalizarTexto(f[5]),normalizarTexto(f[6]),normalizarTexto(f[7]),normalizarUsuario(f[8])]),
-      reemplazos: (reemplazos.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&mesHorariosValido(f[1])&&normalizarTexto(f[2])&&normalizarTexto(f[3])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),normalizarTexto(f[2]),normalizarTexto(f[3]),normalizarTexto(f[4]),normalizarTexto(f[5]),normalizarTexto(f[6]),normalizarTexto(f[7]),normalizarUsuario(f[8])]),
-      orden: (orden.data.values || []).slice(1).filter(f=>normalizarTexto(f[0])&&normalizarTexto(f[1])).map(f=>[normalizarTexto(f[0]),normalizarTexto(f[1]),Number(f[2])||0,normalizarTexto(f[3]),si(f[4])]),
-      auditoria: (auditoria.data.values || []).slice(1).filter(f=>f.some(Boolean)).map(f=>f.slice(0,7).map(normalizarTexto)),
-    };
-    const importado = await importarHorariosAtomico(datos, MIGRACION_HORARIOS);
-    if (importado) console.log(`PostgreSQL Etapa 3: Horarios importados desde Sheets (${datos.calendario.length} celdas, ${datos.turnos.length} turnos).`);
-  })();
-  try { await promesaHorariosPostgres; } finally { promesaHorariosPostgres = null; }
+  await exigirMigracionPostgres(MIGRACION_HORARIOS, "Horarios y Turnos");
 }
 
 function mesHorariosValido(valor) {
@@ -3285,19 +3221,7 @@ let promesaTareasBanoPostgres = null;
 async function asegurarTareasBanoPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaTareasBano();
-  if (await migracionDatosCompletada(MIGRACION_TAREAS_BANO)) return;
-  if (promesaTareasBanoPostgres) return promesaTareasBanoPostgres;
-  promesaTareasBanoPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_TAREAS_BANO)) return;
-    // Importación inicial de solo lectura: Sheets queda como respaldo histórico.
-    const [tareas, bano] = await Promise.all([obtenerTareasLegacy(), leerBanoLegacy()]);
-    const importado = await importarTareasBanoAtomico({ tareas, bano }, MIGRACION_TAREAS_BANO);
-    if (importado) {
-      console.log(`PostgreSQL Etapa 4: Tareas y Baño importados desde Sheets (${tareas.length} tareas, ${(bano.historial || []).length} confirmaciones).`);
-    }
-  })();
-  try { await promesaTareasBanoPostgres; }
-  finally { promesaTareasBanoPostgres = null; }
+  await exigirMigracionPostgres(MIGRACION_TAREAS_BANO, "Tareas y Baño");
 }
 
 async function obtenerTareasServidor(cliente = null) {
@@ -4862,27 +4786,7 @@ let promesaVencimientosPostgres = null;
 async function asegurarVencimientosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaVencimientos();
-  if (await migracionDatosCompletada(MIGRACION_VENCIMIENTOS)) return;
-  if (promesaVencimientosPostgres) return promesaVencimientosPostgres;
-  promesaVencimientosPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_VENCIMIENTOS)) return;
-    // Importación inicial de solo lectura: la hoja Vencimientos queda como respaldo histórico.
-    const vencimientos = await obtenerVencimientosLegacy();
-    const importado = await importarVencimientosAtomico(
-      vencimientos,
-      MIGRACION_VENCIMIENTOS,
-    );
-    if (importado) {
-      console.log(
-        `PostgreSQL Etapa 6: Vencimientos importados desde Sheets (${vencimientos.length} registros).`,
-      );
-    }
-  })();
-  try {
-    await promesaVencimientosPostgres;
-  } finally {
-    promesaVencimientosPostgres = null;
-  }
+  await exigirMigracionPostgres(MIGRACION_VENCIMIENTOS, "Vencimientos");
 }
 
 async function obtenerVencimientos() {
@@ -6241,27 +6145,7 @@ let promesaListasReposicionPostgres = null;
 async function asegurarListasReposicionPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaListasReposicion();
-  if (await migracionDatosCompletada(MIGRACION_LISTAS_REPOSICION)) return;
-  if (promesaListasReposicionPostgres) return promesaListasReposicionPostgres;
-  promesaListasReposicionPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_LISTAS_REPOSICION)) return;
-    // Importación inicial de solo lectura: la hoja Listas queda como respaldo histórico.
-    const registros = await obtenerListasReposicionLegacy();
-    const importado = await importarListasReposicionAtomico(
-      registros,
-      MIGRACION_LISTAS_REPOSICION,
-    );
-    if (importado) {
-      console.log(
-        `PostgreSQL Etapa 7: Listas/Mi Lista importadas desde Sheets (${registros.length} registros).`,
-      );
-    }
-  })();
-  try {
-    await promesaListasReposicionPostgres;
-  } finally {
-    promesaListasReposicionPostgres = null;
-  }
+  await exigirMigracionPostgres(MIGRACION_LISTAS_REPOSICION, "Listas / Mi Lista");
 }
 
 
@@ -6325,23 +6209,7 @@ async function obtenerAuxiliaresLegacy() {
 async function asegurarAuxiliaresPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaAuxiliares();
-  if (await migracionDatosCompletada(MIGRACION_AUXILIARES)) return;
-  if (promesaAuxiliaresPostgres) return promesaAuxiliaresPostgres;
-  promesaAuxiliaresPostgres = (async () => {
-    if (await migracionDatosCompletada(MIGRACION_AUXILIARES)) return;
-    const datos = await obtenerAuxiliaresLegacy();
-    const importado = await importarAuxiliaresAtomico(datos, MIGRACION_AUXILIARES);
-    if (importado) {
-      console.log(
-        `PostgreSQL Etapa 8: datos auxiliares importados desde Sheets (` +
-        `${datos.admin.length} historial admin, ${datos.offline.length} offline, ` +
-        `${datos.push.length} suscripciones, ${datos.notificationLog.length} registros de notificación, ` +
-        `${datos.notificationCenter.length} centro de notificaciones, ${datos.expirationHistory.length} historial vencimientos).`,
-      );
-    }
-  })();
-  try { await promesaAuxiliaresPostgres; }
-  finally { promesaAuxiliaresPostgres = null; }
+  await exigirMigracionPostgres(MIGRACION_AUXILIARES, "Datos auxiliares");
 }
 
 async function leerTodasLasListas(cliente = null) {
@@ -6765,127 +6633,75 @@ async function ejecutarNotificacionesDiariasSiCorresponde() {
       ejecucionesDiariasNotificaciones.delete(clave);
   }
 }
-// Revisión frecuente; los avisos se envían a las 08:00 y 16:00 de Argentina.
-setInterval(
-  () =>
-    ejecutarNotificacionesDiariasSiCorresponde().catch((error) =>
-      console.error("Error en horario diario de notificaciones:", error),
-    ),
-  60 * 1000,
-);
-setTimeout(
-  () =>
-    ejecutarNotificacionesDiariasSiCorresponde().catch((error) =>
-      console.error(
-        "Error inicializando horario diario de notificaciones:",
-        error,
+// Etapa 9: el programador se inicia recién después de validar PostgreSQL.
+let programadorNotificaciones = null;
+let inicioNotificaciones = null;
+function iniciarProgramadorNotificaciones() {
+  if (programadorNotificaciones) return;
+  programadorNotificaciones = setInterval(
+    () =>
+      ejecutarNotificacionesDiariasSiCorresponde().catch((error) =>
+        console.error("Error en horario diario de notificaciones:", error),
       ),
-    ),
-  5000,
-);
-
-async function migrarEstructuraHorariosV812() {
-  validarConfiguracion();
-  // Usuarios y Sectores ya pertenecen a PostgreSQL (Etapa 2).
-  // Esta migración legacy no vuelve a escribir esas hojas de respaldo.
-  await asegurarHorariosPostgres();
-  invalidarCache("usuarios");
-  return {
-    hojas: [
-      USUARIOS_SHEET_NAME,
-      SECTORES_SHEET_NAME,
-      CALENDARIO_HORARIOS_SHEET_NAME,
-      TURNOS_HORARIOS_SHEET_NAME,
-      DETALLES_HORARIOS_SHEET_NAME,
-      REEMPLAZOS_HORARIOS_SHEET_NAME,
-      AUDITORIA_HORARIOS_SHEET_NAME,
-    ],
-    columnasUsuarios: [
-      "Usuario",
-      "Nombre",
-      "Password hash",
-      "Rol",
-      "Activo",
-      "Creado",
-      "Permisos módulos",
-      "Sector",
-      "Sectores a cargo",
-      "Versión sesión",
-    ],
-  };
+    60 * 1000,
+  );
+  inicioNotificaciones = setTimeout(
+    () =>
+      ejecutarNotificacionesDiariasSiCorresponde().catch((error) =>
+        console.error("Error inicializando horario diario de notificaciones:", error),
+      ),
+    5000,
+  );
 }
 
-app.post("/admin/migrar-horarios", requerirAdministrador, async (req, res) => {
+async function prepararPostgresEtapa9() {
+  const conexion = await verificarConexionPostgres();
+  if (!conexion.configurada) {
+    throw new Error(
+      "Etapa 9 requiere DATABASE_URL: PostgreSQL es la única fuente de datos de la aplicación",
+    );
+  }
+
+  await asegurarUsuariosSectoresPostgres();
+  await asegurarHorariosPostgres();
+  await asegurarTareasBanoPostgres();
+  await asegurarInventarioProductosPostgres();
+  await asegurarVencimientosPostgres();
+  await asegurarListasReposicionPostgres();
+  await asegurarAuxiliaresPostgres();
+
+  console.log(
+    "PostgreSQL Etapa 9: fuente única validada; migraciones 2-8 completas y Google Sheets retirado del runtime.",
+  );
+}
+
+let servidorHttp = null;
+async function iniciarServidor() {
   try {
-    const resultado = await migrarEstructuraHorariosV812();
-    res.json({
-      ok: true,
-      mensaje: "Migración de Horarios a PostgreSQL completada",
-      ...resultado,
+    await prepararPostgresEtapa9();
+    servidorHttp = app.listen(PORT, () => {
+      console.log(
+        `Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`,
+      );
+      iniciarProgramadorNotificaciones();
     });
   } catch (error) {
-    console.error("Error en migración de horarios:", error);
-    res.status(500).json({
-      ok: false,
-      mensaje: error.message || "No se pudo migrar Google Sheets",
-    });
+    console.error("No se pudo iniciar la aplicación en modo PostgreSQL único:", error.message);
+    try { await cerrarPostgres(); } catch (_) {}
+    process.exitCode = 1;
   }
-});
+}
 
-app.listen(PORT, () => {
-  console.log(
-    `Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`,
-  );
-  if (AUTO_MIGRATE_SHEETS) {
-    migrarEstructuraHorariosV812()
-      .then((r) =>
-        console.log("Estructura de Horarios verificada:", r.hojas.join(", ")),
-      )
-      .catch((error) =>
-        console.error(
-          "No se pudo verificar automáticamente la estructura de Horarios:",
-          error,
-        ),
-      );
-  } else {
-    console.log(
-      "Migración automática desactivada (AUTO_MIGRATE_SHEETS=false). Las hojas se aseguran al utilizar cada módulo.",
-    );
-  }
-
-  verificarConexionPostgres()
-    .then(async (resultado) => {
-      if (resultado.configurada) {
-        console.log("PostgreSQL conectado correctamente.");
-        await asegurarEsquemaUsuariosSectores();
-        await asegurarUsuariosSectoresPostgres();
-        await asegurarHorariosPostgres();
-        await asegurarTareasBanoPostgres();
-        console.log("PostgreSQL Etapa 4: Usuarios, Sectores, Horarios, Tareas y Baño listos.");
-        await asegurarInventarioProductosPostgres();
-        console.log("PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.");
-        await asegurarVencimientosPostgres();
-        console.log("PostgreSQL Etapa 6: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos listos.");
-        await asegurarListasReposicionPostgres();
-        console.log("PostgreSQL Etapa 7: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista listos.");
-        await asegurarAuxiliaresPostgres();
-        console.log("PostgreSQL Etapa 8: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos, Listas/Mi Lista y datos auxiliares listos.");
-      } else {
-        console.log(
-          "PostgreSQL no configurado (DATABASE_URL ausente). Los módulos migrados y los datos auxiliares requieren PostgreSQL desde la Etapa 8.",
-        );
-      }
-    })
-    .catch((error) =>
-      console.error(
-        "PostgreSQL configurado pero no disponible. Los módulos migrados y los datos auxiliares no estarán disponibles hasta recuperar la conexión:",
-        error.message,
-      ),
-    );
-});
+iniciarServidor();
 
 async function cerrarServidor(signal) {
   try {
+    if (programadorNotificaciones) clearInterval(programadorNotificaciones);
+    if (inicioNotificaciones) clearTimeout(inicioNotificaciones);
+    if (servidorHttp) {
+      await new Promise((resolve) => servidorHttp.close(resolve));
+      servidorHttp = null;
+    }
     await cerrarPostgres();
   } catch (error) {
     console.error(`Error cerrando PostgreSQL durante ${signal}:`, error.message);
