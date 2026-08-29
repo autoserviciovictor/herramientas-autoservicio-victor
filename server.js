@@ -3422,20 +3422,28 @@ async function guardarBanoServidor(config, usuario, cliente = null) {
   return guardarBanoDb(limpio, fechaHoraArgentinaIso(), usuario?.usuario || "", cliente);
 }
 
+function normalizarIdentidadBano(valor) {
+  return normalizarTexto(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+}
+
 function usuarioCoincideResponsableBano(registro, usuario) {
-  const responsable = normalizarUsuario(registro?.responsable);
+  const responsable = normalizarIdentidadBano(registro?.responsable);
   if (!responsable) return false;
   return [usuario?.usuario, usuario?.nombre]
-    .map(normalizarUsuario)
+    .map(normalizarIdentidadBano)
     .filter(Boolean)
     .includes(responsable);
 }
 
 function usuarioCoincideConfirmacionBano(registro, usuario) {
-  const confirmador = normalizarUsuario(registro?.usuario);
+  const confirmador = normalizarIdentidadBano(registro?.usuario);
   if (!confirmador) return false;
   return [usuario?.usuario, usuario?.nombre]
-    .map(normalizarUsuario)
+    .map(normalizarIdentidadBano)
     .filter(Boolean)
     .includes(confirmador);
 }
