@@ -51,6 +51,10 @@ const {
   actualizarInventarioDb,
   sumarInventarioDb,
   corregirInventarioDb,
+  listarInventarioPendienteSheetsDb,
+  confirmarInventarioSheetsDb,
+  registrarErrorInventarioSheetsDb,
+  actualizarFilaGoogleInventarioDb,
   listarCatalogoDb,
   buscarCatalogoPorCodigoDb,
   reemplazarCatalogoDb,
@@ -97,13 +101,13 @@ const APP_VERSION = "19.6.0";
 const APP_BUILD = "D21";
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
-const SPREADSHEET_ID = ""; // Etapa 9: Google Sheets retirado
+const SPREADSHEET_ID = normalizarTexto(process.env.SPREADSHEET_ID);
 const SHEET_NAME = "Stock";
 const PRODUCTOS_SHEET_NAME = "Productos";
-const GOOGLE_CLIENT_EMAIL = ""; // Etapa 9: Google Sheets retirado
+const GOOGLE_CLIENT_EMAIL = normalizarTexto(process.env.GOOGLE_CLIENT_EMAIL);
 const GOOGLE_LOGIN_CLIENT_ID = normalizarTexto(process.env.GOOGLE_LOGIN_CLIENT_ID);
 const GOOGLE_LOGIN_DOMAIN = normalizarTexto(process.env.GOOGLE_LOGIN_DOMAIN).toLowerCase();
-const GOOGLE_PRIVATE_KEY = ""; // Etapa 9: Google Sheets retirado
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n") || ""
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const USER_SESSION_DAYS = Math.max(1, Math.min(30, Number(process.env.USER_SESSION_DAYS) || 7));
@@ -173,13 +177,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Etapa 9: Google Sheets quedó retirado del runtime. `googleapis` se conserva
-// exclusivamente para validar Google Identity / OAuth de inicio de sesión.
-const sheets = new Proxy({}, {
-  get() {
-    throw new Error("Google Sheets fue retirado en la Etapa 9; PostgreSQL es la única fuente de datos");
-  },
-});
+// PostgreSQL sigue siendo la fuente de datos de la app. Google Sheets se usa
+// únicamente como salida operativa de Inventario para el posterior traspaso a Toro.
+const INVENTORY_SHEETS_CONFIGURED = Boolean(
+  SPREADSHEET_ID && GOOGLE_CLIENT_EMAIL && GOOGLE_PRIVATE_KEY,
+);
+const inventorySheetsAuth = INVENTORY_SHEETS_CONFIGURED
+  ? new google.auth.JWT(
+      GOOGLE_CLIENT_EMAIL,
+      null,
+      GOOGLE_PRIVATE_KEY,
+      ["https://www.googleapis.com/auth/spreadsheets"],
+    )
+  : null;
+const sheets = INVENTORY_SHEETS_CONFIGURED
+  ? google.sheets({ version: "v4", auth: inventorySheetsAuth })
+  : null;
 const googleLoginAuth = new google.auth.OAuth2();
 
 // V5.1.1 - Caché breve y deduplicación de lecturas para no exceder la cuota de Google Sheets.
@@ -834,6 +847,126 @@ async function asegurarInventarioProductosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaInventarioProductos();
   await exigirMigracionPostgres(MIGRACION_INVENTARIO_PRODUCTOS, "Inventario y Productos");
+}
+
+function validarConfiguracionInventarioSheets() {
+  if (!INVENTORY_SHEETS_CONFIGURED) {
+    throw new Error(
+      "La integración de Inventario con Google Sheets requiere SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL y GOOGLE_PRIVATE_KEY",
+    );
+  }
+}
+
+let promesaSincronizacionInventarioSheets = null;
+async function asegurarHojaStockInventario() {
+  validarConfiguracionInventarioSheets();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existe = (meta.data.sheets || []).some(
+    (hoja) => hoja.properties?.title === SHEET_NAME,
+  );
+  if (!existe) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: SHEET_NAME } } }] },
+    });
+  }
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A1:E1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [["codigo", "articulo", "stock", "salon", "deposito"]] },
+  });
+}
+
+async function buscarFilaProductoInventarioSheets(codigo, filaSugerida = 0) {
+  validarConfiguracionInventarioSheets();
+  const codigoNormalizado = normalizarCodigo(codigo);
+  const fila = Number(filaSugerida);
+  if (Number.isInteger(fila) && fila >= 2) {
+    const puntual = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A${fila}:A${fila}`,
+    });
+    const valor = normalizarCodigo(puntual.data.values?.[0]?.[0]);
+    if (!valor || valor === codigoNormalizado) return fila;
+  }
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A2:A`,
+  });
+  const valores = respuesta.data.values || [];
+  const indice = valores.findIndex(
+    (r) => normalizarCodigo(r?.[0]) === codigoNormalizado,
+  );
+  return indice >= 0 ? indice + 2 : 0;
+}
+
+async function escribirProductoInventarioSheets(producto) {
+  await asegurarHojaStockInventario();
+  let fila = await buscarFilaProductoInventarioSheets(
+    producto.codigo,
+    producto.filaGoogle,
+  );
+  const valores = [[
+    producto.codigo || "",
+    producto.articulo || "",
+    numero(producto.stock),
+    numero(producto.salon),
+    numero(producto.deposito),
+  ]];
+
+  if (fila >= 2) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A${fila}:E${fila}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: valores },
+    });
+  } else {
+    const respuesta = await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A:E`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: valores },
+    });
+    const rango = normalizarTexto(respuesta?.data?.updates?.updatedRange);
+    const match = rango.match(/![A-Z]+(\d+)(?::[A-Z]+\d+)?$/i);
+    fila = match ? Number(match[1]) : 0;
+  }
+
+  if (fila >= 2 && fila !== Number(producto.filaGoogle)) {
+    await actualizarFilaGoogleInventarioDb(producto.inventoryId, fila);
+  }
+  return fila;
+}
+
+async function sincronizarInventarioPendienteSheets({ limite = 100 } = {}) {
+  if (!INVENTORY_SHEETS_CONFIGURED) return { procesados: 0, pendientes: true };
+  if (promesaSincronizacionInventarioSheets) return promesaSincronizacionInventarioSheets;
+  promesaSincronizacionInventarioSheets = (async () => {
+    const pendientes = await listarInventarioPendienteSheetsDb(limite);
+    let procesados = 0;
+    for (const producto of pendientes) {
+      try {
+        await escribirProductoInventarioSheets(producto);
+        await confirmarInventarioSheetsDb(producto.inventoryId);
+        procesados++;
+      } catch (error) {
+        await registrarErrorInventarioSheetsDb(producto.inventoryId, error.message || error);
+        console.error(
+          `Error sincronizando Inventario ${producto.codigo} con Google Sheets:`,
+          error.message || error,
+        );
+      }
+    }
+    return { procesados, pendientes: pendientes.length > procesados };
+  })();
+  try {
+    return await promesaSincronizacionInventarioSheets;
+  } finally {
+    promesaSincronizacionInventarioSheets = null;
+  }
 }
 
 async function obtenerProductosMaestros() {
@@ -4536,10 +4669,14 @@ app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
     }
 
     invalidarCache("productos");
+    const syncSheets = await sincronizarInventarioPendienteSheets({ limite: 25 });
     res.json({
       ok: true,
-      mensaje: "Producto guardado",
+      mensaje: syncSheets.pendientes
+        ? "Producto guardado; sincronización con Google Sheets pendiente"
+        : "Producto guardado",
       producto: productoActualizado,
+      inventarioSheets: { configurado: INVENTORY_SHEETS_CONFIGURED, ...syncSheets },
     });
   } catch (error) {
     console.error("Error en /guardar:", error);
@@ -4579,10 +4716,14 @@ app.post("/corregir", requerirAlgunModulo("inventario"), async (req, res) => {
     }
 
     invalidarCache("productos");
+    const syncSheets = await sincronizarInventarioPendienteSheets({ limite: 25 });
     res.json({
       ok: true,
-      mensaje: "Producto corregido",
+      mensaje: syncSheets.pendientes
+        ? "Producto corregido; sincronización con Google Sheets pendiente"
+        : "Producto corregido",
       producto: productoActualizado,
+      inventarioSheets: { configurado: INVENTORY_SHEETS_CONFIGURED, ...syncSheets },
     });
   } catch (error) {
     console.error("Error en /corregir:", error);
@@ -6654,6 +6795,24 @@ function iniciarProgramadorNotificaciones() {
   );
 }
 
+let programadorInventarioSheets = null;
+let inicioInventarioSheets = null;
+function iniciarProgramadorInventarioSheets() {
+  if (!INVENTORY_SHEETS_CONFIGURED || programadorInventarioSheets) return;
+  programadorInventarioSheets = setInterval(
+    () => sincronizarInventarioPendienteSheets({ limite: 100 }).catch((error) =>
+      console.error("Error reintentando sincronización de Inventario con Sheets:", error),
+    ),
+    60 * 1000,
+  );
+  inicioInventarioSheets = setTimeout(
+    () => sincronizarInventarioPendienteSheets({ limite: 100 }).catch((error) =>
+      console.error("Error inicializando sincronización de Inventario con Sheets:", error),
+    ),
+    3000,
+  );
+}
+
 async function prepararPostgresEtapa9() {
   const conexion = await verificarConexionPostgres();
   if (!conexion.configurada) {
@@ -6671,8 +6830,17 @@ async function prepararPostgresEtapa9() {
   await asegurarAuxiliaresPostgres();
 
   console.log(
-    "PostgreSQL Etapa 9: fuente única validada; migraciones 2-8 completas y Google Sheets retirado del runtime.",
+    "PostgreSQL Etapa 9: fuente principal validada; migraciones 2-8 completas.",
   );
+  if (INVENTORY_SHEETS_CONFIGURED) {
+    console.log(
+      `Google Sheets: integración de Inventario activa en la hoja ${SHEET_NAME}; catálogo/precios permanecen en PostgreSQL.`,
+    );
+  } else if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Inventario requiere la integración Google Sheets para Toro: faltan SPREADSHEET_ID, GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY",
+    );
+  }
 }
 
 let servidorHttp = null;
@@ -6684,6 +6852,7 @@ async function iniciarServidor() {
         `Servidor Herramientas Autoservicio Victor V${APP_VERSION} funcionando en puerto ${PORT}`,
       );
       iniciarProgramadorNotificaciones();
+      iniciarProgramadorInventarioSheets();
     });
   } catch (error) {
     console.error("No se pudo iniciar la aplicación en modo PostgreSQL único:", error.message);
@@ -6698,6 +6867,8 @@ async function cerrarServidor(signal) {
   try {
     if (programadorNotificaciones) clearInterval(programadorNotificaciones);
     if (inicioNotificaciones) clearTimeout(inicioNotificaciones);
+    if (programadorInventarioSheets) clearInterval(programadorInventarioSheets);
+    if (inicioInventarioSheets) clearTimeout(inicioInventarioSheets);
     if (servidorHttp) {
       await new Promise((resolve) => servidorHttp.close(resolve));
       servidorHttp = null;

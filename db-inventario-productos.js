@@ -26,6 +26,16 @@ async function asegurarEsquemaInventarioProductos() {
     )`);
     await query(`CREATE INDEX IF NOT EXISTS inventory_stock_code_idx ON inventory_stock(code)`);
 
+    await query(`CREATE TABLE IF NOT EXISTS inventory_sheet_sync (
+      inventory_id BIGINT PRIMARY KEY REFERENCES inventory_stock(inventory_id) ON DELETE CASCADE,
+      pending BOOLEAN NOT NULL DEFAULT TRUE,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await query(`CREATE INDEX IF NOT EXISTS inventory_sheet_sync_pending_idx
+      ON inventory_sheet_sync(pending, updated_at)`);
+
     await query(`CREATE TABLE IF NOT EXISTS product_catalog (
       catalog_id BIGSERIAL PRIMARY KEY,
       legacy_row INTEGER UNIQUE,
@@ -258,7 +268,9 @@ async function sumarInventarioDb(codigo, ubicacion, cantidad, articuloFallback =
     producto.stock = numeroNoNegativo(producto.stock) + delta;
     if (ubicacion === "deposito") producto.deposito = numeroNoNegativo(producto.deposito) + delta;
     else producto.salon = numeroNoNegativo(producto.salon) + delta;
-    return actualizarInventarioDb(producto, { recalcularTotal: false }, c);
+    const actualizado = await actualizarInventarioDb(producto, { recalcularTotal: false }, c);
+    if (actualizado) await marcarInventarioPendienteSheetsDb(actualizado.inventoryId, c);
+    return actualizado;
   };
   if (cliente) return ejecutar(cliente);
   return conTransaccionInventarioProductos(ejecutar);
@@ -270,10 +282,70 @@ async function corregirInventarioDb(codigo, salon, deposito, cliente = null) {
     if (!producto) return null;
     producto.salon = numeroNoNegativo(salon);
     producto.deposito = numeroNoNegativo(deposito);
-    return actualizarInventarioDb(producto, { recalcularTotal: true }, c);
+    const actualizado = await actualizarInventarioDb(producto, { recalcularTotal: true }, c);
+    if (actualizado) await marcarInventarioPendienteSheetsDb(actualizado.inventoryId, c);
+    return actualizado;
   };
   if (cliente) return ejecutar(cliente);
   return conTransaccionInventarioProductos(ejecutar);
+}
+
+async function marcarInventarioPendienteSheetsDb(inventoryId, cliente = null) {
+  const id = Number(inventoryId);
+  if (!Number.isInteger(id) || id <= 0) return;
+  await ejecutarConsulta(
+    cliente,
+    `INSERT INTO inventory_sheet_sync(inventory_id,pending,attempts,last_error,updated_at)
+     VALUES($1,TRUE,0,'',NOW())
+     ON CONFLICT(inventory_id) DO UPDATE
+     SET pending=TRUE, attempts=0, last_error='', updated_at=NOW()`,
+    [id],
+  );
+}
+
+async function listarInventarioPendienteSheetsDb(limite = 100, cliente = null) {
+  const max = Math.max(1, Math.min(500, Number(limite) || 100));
+  const r = await ejecutarConsulta(
+    cliente,
+    `SELECT i.inventory_id,i.legacy_row,i.code,i.article,i.stock_total,i.salon,i.deposito
+     FROM inventory_sheet_sync s
+     JOIN inventory_stock i ON i.inventory_id=s.inventory_id
+     WHERE s.pending=TRUE
+     ORDER BY s.updated_at ASC
+     LIMIT $1`,
+    [max],
+  );
+  return r.rows.map(filaInventario);
+}
+
+async function confirmarInventarioSheetsDb(inventoryId, cliente = null) {
+  await ejecutarConsulta(
+    cliente,
+    `UPDATE inventory_sheet_sync
+     SET pending=FALSE, attempts=0, last_error='', updated_at=NOW()
+     WHERE inventory_id=$1`,
+    [Number(inventoryId)],
+  );
+}
+
+async function registrarErrorInventarioSheetsDb(inventoryId, error, cliente = null) {
+  await ejecutarConsulta(
+    cliente,
+    `UPDATE inventory_sheet_sync
+     SET pending=TRUE, attempts=attempts+1, last_error=$2, updated_at=NOW()
+     WHERE inventory_id=$1`,
+    [Number(inventoryId), String(error || '').slice(0, 2000)],
+  );
+}
+
+async function actualizarFilaGoogleInventarioDb(inventoryId, filaGoogle, cliente = null) {
+  const fila = Number(filaGoogle);
+  if (!Number.isInteger(fila) || fila < 2) return;
+  await ejecutarConsulta(
+    cliente,
+    `UPDATE inventory_stock SET legacy_row=$2, updated_at=NOW() WHERE inventory_id=$1`,
+    [Number(inventoryId), fila],
+  );
 }
 
 async function listarCatalogoDb(cliente = null) {
@@ -333,6 +405,11 @@ module.exports = {
   actualizarInventarioDb,
   sumarInventarioDb,
   corregirInventarioDb,
+  marcarInventarioPendienteSheetsDb,
+  listarInventarioPendienteSheetsDb,
+  confirmarInventarioSheetsDb,
+  registrarErrorInventarioSheetsDb,
+  actualizarFilaGoogleInventarioDb,
   listarCatalogoDb,
   buscarCatalogoPorCodigoDb,
   reemplazarCatalogoDb,

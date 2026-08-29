@@ -1,0 +1,21 @@
+const fs = require("fs");
+const assert = (v, m) => { if (!v) throw new Error(m); };
+const server = fs.readFileSync("server.js", "utf8");
+const db = fs.readFileSync("db-inventario-productos.js", "utf8");
+const admin = fs.readFileSync("admin.js", "utf8");
+const env = fs.readFileSync(".env.example", "utf8");
+
+assert(server.includes("INVENTORY_SHEETS_CONFIGURED"), "Falta configuración aislada de Sheets para Inventario");
+assert(server.includes("sincronizarInventarioPendienteSheets"), "Falta sincronización de Inventario a Sheets");
+assert(server.includes("escribirProductoInventarioSheets"), "Falta escritura de Inventario a la hoja Stock");
+assert(server.includes('const SHEET_NAME = "Stock"'), "La integración debe usar únicamente la hoja Stock");
+assert(server.includes("Google Sheets: integración de Inventario activa"), "Falta señal de integración de Inventario en arranque");
+assert(db.includes("inventory_sheet_sync"), "Falta outbox persistente para no perder sincronizaciones con Sheets");
+assert(db.includes("marcarInventarioPendienteSheetsDb"), "Las escrituras de Inventario deben quedar pendientes en la misma transacción");
+assert(/sumarInventarioDb[\s\S]*marcarInventarioPendienteSheetsDb/.test(db), "Las altas de stock deben marcar sincronización a Sheets");
+assert(/corregirInventarioDb[\s\S]*marcarInventarioPendienteSheetsDb/.test(db), "Las correcciones de stock deben marcar sincronización a Sheets");
+assert(server.includes("reemplazarCatalogoDb(catalogo)"), "La importación de catálogo debe seguir apuntando solo al catálogo PostgreSQL");
+assert(server.includes("return { codigo, articulo, precio };"), "El importador del servidor debe ignorar cualquier columna stock");
+assert(!/mapa\.set\(clave, \{ codigo, articulo, precio, stock/.test(admin), "El Excel de catálogo no debe importar stock");
+assert(env.includes("SOLO integración operativa de Inventario"), "Debe documentarse el alcance exclusivo de Sheets");
+console.log("Inventario Google Sheets para Toro + catálogo sin stock: OK");
