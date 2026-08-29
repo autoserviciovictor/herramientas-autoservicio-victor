@@ -2015,7 +2015,9 @@ async function confirmarBano() {
     cfg = configBano();
   if (
     !esDiaLimpieza(hoyFecha, cfg) ||
-    (cfg.historial || []).some((h) => h.fecha === hoy)
+    (cfg.historial || []).some(
+      (h) => h.fecha === hoy && String(h.usuario || "").trim(),
+    )
   )
     return;
   const boton = $("btnConfirmarBano");
