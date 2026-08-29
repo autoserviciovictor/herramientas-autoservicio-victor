@@ -7,6 +7,60 @@ function resolverElemento(valor) {
   return valor;
 }
 
+function configurarCantidadVencimientoEditable() {
+  const input = document.getElementById("vencCantidadInput");
+  const form = document.getElementById("vencFormCard");
+  const guardar = document.getElementById("btnVencGuardar");
+  if (!input || !form || input.dataset.cantidadEditableReady === "1") return;
+
+  input.dataset.cantidadEditableReady = "1";
+  input.value = "0";
+
+  let estabaOculto = form.classList.contains("oculto");
+  const observer = new MutationObserver(() => {
+    const oculto = form.classList.contains("oculto");
+    if (estabaOculto && !oculto) input.value = "0";
+    estabaOculto = oculto;
+  });
+  observer.observe(form, { attributes: true, attributeFilter: ["class"] });
+
+  input.addEventListener(
+    "input",
+    (event) => {
+      if (input.value === "" || input.value === "0") {
+        input.setCustomValidity("");
+        event.stopImmediatePropagation();
+      }
+    },
+    true,
+  );
+
+  guardar?.addEventListener(
+    "click",
+    (event) => {
+      const cantidad = Number(input.value);
+      if (input.value !== "" && Number.isFinite(cantidad) && cantidad > 0) {
+        input.setCustomValidity("");
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      input.setCustomValidity("Ingresá una cantidad mayor a 0.");
+      input.reportValidity();
+      input.focus();
+    },
+    true,
+  );
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", configurarCantidadVencimientoEditable, { once: true });
+  } else {
+    configurarCantidadVencimientoEditable();
+  }
+}
+
 export function limpiarErrorCargaProducto(errorRef) {
   const error = resolverElemento(errorRef);
   if (!error) return;
@@ -59,4 +113,3 @@ export function establecerModoCargaProducto({
 
   return manual;
 }
-
