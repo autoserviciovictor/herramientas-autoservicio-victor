@@ -969,6 +969,21 @@ async function sincronizarInventarioPendienteSheets({ limite = 100 } = {}) {
   }
 }
 
+function dispararSincronizacionInventarioSheets(limite = 25) {
+  if (!INVENTORY_SHEETS_CONFIGURED) return;
+  // La escritura principal ya quedó confirmada en PostgreSQL. Sheets se
+  // sincroniza fuera del tiempo de respuesta para que el operario pueda
+  // volver a escanear inmediatamente. La cola persistente reintenta fallos.
+  setImmediate(() => {
+    sincronizarInventarioPendienteSheets({ limite }).catch((error) =>
+      console.error(
+        "Error sincronizando Inventario con Google Sheets en segundo plano:",
+        error.message || error,
+      ),
+    );
+  });
+}
+
 async function obtenerProductosMaestros() {
   await asegurarInventarioProductosPostgres();
   return leerConCache(
@@ -4669,14 +4684,15 @@ app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
     }
 
     invalidarCache("productos");
-    const syncSheets = await sincronizarInventarioPendienteSheets({ limite: 25 });
+    dispararSincronizacionInventarioSheets(25);
     res.json({
       ok: true,
-      mensaje: syncSheets.pendientes
-        ? "Producto guardado; sincronización con Google Sheets pendiente"
-        : "Producto guardado",
+      mensaje: "Producto guardado",
       producto: productoActualizado,
-      inventarioSheets: { configurado: INVENTORY_SHEETS_CONFIGURED, ...syncSheets },
+      inventarioSheets: {
+        configurado: INVENTORY_SHEETS_CONFIGURED,
+        sincronizacion: INVENTORY_SHEETS_CONFIGURED ? "en_segundo_plano" : "no_configurada",
+      },
     });
   } catch (error) {
     console.error("Error en /guardar:", error);
@@ -4716,14 +4732,15 @@ app.post("/corregir", requerirAlgunModulo("inventario"), async (req, res) => {
     }
 
     invalidarCache("productos");
-    const syncSheets = await sincronizarInventarioPendienteSheets({ limite: 25 });
+    dispararSincronizacionInventarioSheets(25);
     res.json({
       ok: true,
-      mensaje: syncSheets.pendientes
-        ? "Producto corregido; sincronización con Google Sheets pendiente"
-        : "Producto corregido",
+      mensaje: "Producto corregido",
       producto: productoActualizado,
-      inventarioSheets: { configurado: INVENTORY_SHEETS_CONFIGURED, ...syncSheets },
+      inventarioSheets: {
+        configurado: INVENTORY_SHEETS_CONFIGURED,
+        sincronizacion: INVENTORY_SHEETS_CONFIGURED ? "en_segundo_plano" : "no_configurada",
+      },
     });
   } catch (error) {
     console.error("Error en /corregir:", error);

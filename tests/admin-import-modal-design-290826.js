@@ -1,0 +1,12 @@
+const fs = require('fs');
+const assert = require('assert');
+const html = fs.readFileSync('index.html', 'utf8');
+const css = fs.readFileSync('style.css', 'utf8');
+assert(html.includes('admin-import-preview-notices'));
+assert(html.includes('admin-import-replace'));
+assert(html.includes('Inventario protegido'));
+assert(css.includes('max-width: 620px'));
+assert(css.includes('.admin-import-validations{\n  grid-template-columns: repeat(2'));
+assert(css.includes('html[data-theme="dark"] .admin-import-preview-modal'));
+assert(css.includes('@media (max-width: 640px)'));
+console.log('Diseño modal confirmar importación: OK');

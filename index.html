@@ -3260,17 +3260,19 @@
             id="adminImportarPreviewValidaciones"
             class="admin-import-validations"
           ></div>
-          <div class="admin-import-warning">
-            <strong>Atención:</strong> al confirmar, la hoja Productos será
-            reemplazada completamente por este archivo.
-          </div>
-          <div
-            id="adminImportarPreviewAdvertencias"
-            class="admin-import-warning"
-          ></div>
-          <div class="admin-import-warning admin-import-safe">
-            <strong>No se modificarán:</strong> Stock, Salón ni Depósito. La
-            columna Sub Total será ignorada.
+          <div class="admin-import-preview-notices">
+            <div class="admin-import-warning admin-import-replace">
+              <span class="admin-import-notice-icon" aria-hidden="true">!</span>
+              <div><strong>Reemplazo de catálogo</strong><span>Al confirmar, el catálogo de Productos será reemplazado completamente por este archivo.</span></div>
+            </div>
+            <div
+              id="adminImportarPreviewAdvertencias"
+              class="admin-import-warning admin-import-review"
+            ></div>
+            <div class="admin-import-warning admin-import-safe">
+              <span class="admin-import-notice-icon" aria-hidden="true">✓</span>
+              <div><strong>Inventario protegido</strong><span>Stock, Salón y Depósito no se modificarán. La columna Sub Total será ignorada.</span></div>
+            </div>
           </div>
           <div class="modal-actions">
             <button
