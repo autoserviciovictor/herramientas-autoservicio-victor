@@ -339,13 +339,26 @@ async function registrarErrorInventarioSheetsDb(inventoryId, error, cliente = nu
 }
 
 async function actualizarFilaGoogleInventarioDb(inventoryId, filaGoogle, cliente = null) {
+  const id = Number(inventoryId);
   const fila = Number(filaGoogle);
-  if (!Number.isInteger(fila) || fila < 2) return;
-  await ejecutarConsulta(
-    cliente,
-    `UPDATE inventory_stock SET legacy_row=$2, updated_at=NOW() WHERE inventory_id=$1`,
-    [Number(inventoryId), fila],
-  );
+  if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(fila) || fila < 2) return;
+  const ejecutar = async (c) => {
+    // `legacy_row` representa la fila actual de Google Sheets. Si una fila fue
+    // reutilizada o cambió durante una alta, liberamos primero el vínculo viejo
+    // para evitar inventory_stock_legacy_row_key y luego asignamos el dueño real.
+    await c.query(
+      `UPDATE inventory_stock
+       SET legacy_row=NULL, updated_at=NOW()
+       WHERE legacy_row=$2 AND inventory_id<>$1`,
+      [id, fila],
+    );
+    await c.query(
+      `UPDATE inventory_stock SET legacy_row=$2, updated_at=NOW() WHERE inventory_id=$1`,
+      [id, fila],
+    );
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionInventarioProductos(ejecutar);
 }
 
 async function listarCatalogoDb(cliente = null) {

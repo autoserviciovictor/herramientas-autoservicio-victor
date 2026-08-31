@@ -7,7 +7,7 @@ const env = fs.readFileSync(".env.example", "utf8");
 
 assert(server.includes("INVENTORY_SHEETS_CONFIGURED"), "Falta configuración aislada de Sheets para Inventario");
 assert(server.includes("sincronizarInventarioPendienteSheets"), "Falta sincronización de Inventario a Sheets");
-assert(server.includes("escribirProductoInventarioSheets"), "Falta escritura de Inventario a la hoja Stock");
+assert(server.includes("escribirLoteInventarioSheets"), "Falta escritura por lotes de Inventario a la hoja Stock");
 assert(server.includes('const SHEET_NAME = "Stock"'), "La integración debe usar únicamente la hoja Stock");
 assert(server.includes("Google Sheets: integración de Inventario activa"), "Falta señal de integración de Inventario en arranque");
 assert(db.includes("inventory_sheet_sync"), "Falta outbox persistente para no perder sincronizaciones con Sheets");

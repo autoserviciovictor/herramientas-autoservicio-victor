@@ -858,9 +858,18 @@ function validarConfiguracionInventarioSheets() {
 }
 
 let promesaSincronizacionInventarioSheets = null;
+let inventarioStockSheetsAsegurado = false;
+let inventarioSheetsBloqueadoHasta = 0;
+let inventarioSheetsErroresCuotaConsecutivos = 0;
+let temporizadorInventarioSheets = null;
+
 async function asegurarHojaStockInventario() {
   validarConfiguracionInventarioSheets();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  if (inventarioStockSheetsAsegurado) return;
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: "sheets(properties(title))",
+  });
   const existe = (meta.data.sheets || []).some(
     (hoja) => hoja.properties?.title === SHEET_NAME,
   );
@@ -876,91 +885,152 @@ async function asegurarHojaStockInventario() {
     valueInputOption: "RAW",
     requestBody: { values: [["codigo", "articulo", "stock", "salon", "deposito"]] },
   });
+  inventarioStockSheetsAsegurado = true;
 }
 
-async function buscarFilaProductoInventarioSheets(codigo, filaSugerida = 0) {
-  validarConfiguracionInventarioSheets();
-  const codigoNormalizado = normalizarCodigo(codigo);
-  const fila = Number(filaSugerida);
-  if (Number.isInteger(fila) && fila >= 2) {
-    const puntual = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${fila}:A${fila}`,
-    });
-    const valor = normalizarCodigo(puntual.data.values?.[0]?.[0]);
-    if (!valor || valor === codigoNormalizado) return fila;
-  }
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A2:A`,
-  });
-  const valores = respuesta.data.values || [];
-  const indice = valores.findIndex(
-    (r) => normalizarCodigo(r?.[0]) === codigoNormalizado,
-  );
-  return indice >= 0 ? indice + 2 : 0;
-}
-
-async function escribirProductoInventarioSheets(producto) {
-  await asegurarHojaStockInventario();
-  let fila = await buscarFilaProductoInventarioSheets(
-    producto.codigo,
-    producto.filaGoogle,
-  );
-  const valores = [[
+function valoresInventarioParaSheets(producto) {
+  return [
     producto.codigo || "",
     producto.articulo || "",
     numero(producto.stock),
     numero(producto.salon),
     numero(producto.deposito),
-  ]];
+  ];
+}
 
-  if (fila >= 2) {
-    await sheets.spreadsheets.values.update({
+async function mapaFilasInventarioSheets() {
+  // Una sola lectura por lote. Antes se hacía una lectura puntual y, a menudo,
+  // otra lectura completa por cada producto, agotando rápidamente la cuota.
+  const respuesta = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A2:A`,
+  });
+  const mapa = new Map();
+  (respuesta.data.values || []).forEach((fila, indice) => {
+    const codigo = normalizarCodigo(fila?.[0]);
+    if (codigo && !mapa.has(codigo)) mapa.set(codigo, indice + 2);
+  });
+  return mapa;
+}
+
+function primeraFilaRangoSheets(rango) {
+  const texto = normalizarTexto(rango);
+  const match = texto.match(/![A-Z]+(\d+)(?::[A-Z]+\d+)?$/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function activarEsperaCuotaInventarioSheets(error) {
+  if (!esErrorCuotaSheets(error)) return false;
+  inventarioSheetsErroresCuotaConsecutivos += 1;
+  const demora = Math.min(
+    10 * 60 * 1000,
+    60 * 1000 * 2 ** Math.min(3, inventarioSheetsErroresCuotaConsecutivos - 1),
+  );
+  inventarioSheetsBloqueadoHasta = Date.now() + demora;
+  console.warn(
+    `Google Sheets Inventario: cuota alcanzada; próximo intento en ${Math.ceil(demora / 1000)} s`,
+  );
+  return true;
+}
+
+async function registrarErrorLoteInventarioSheets(productos, error) {
+  const mensaje = error?.message || error || "Error de sincronización con Google Sheets";
+  await Promise.allSettled(
+    (productos || []).map((producto) =>
+      registrarErrorInventarioSheetsDb(producto.inventoryId, mensaje),
+    ),
+  );
+}
+
+async function escribirLoteInventarioSheets(productos) {
+  await asegurarHojaStockInventario();
+  const mapaFilas = await mapaFilasInventarioSheets();
+  const existentes = [];
+  const nuevos = [];
+
+  for (const producto of productos) {
+    const fila = mapaFilas.get(normalizarCodigo(producto.codigo)) || 0;
+    if (fila >= 2) existentes.push({ producto, fila });
+    else nuevos.push(producto);
+  }
+
+  if (existentes.length) {
+    await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${fila}:E${fila}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: valores },
+      requestBody: {
+        valueInputOption: "USER_ENTERED",
+        data: existentes.map(({ producto, fila }) => ({
+          range: `${SHEET_NAME}!A${fila}:E${fila}`,
+          values: [valoresInventarioParaSheets(producto)],
+        })),
+      },
     });
-  } else {
+  }
+
+  let filaInicialNuevos = 0;
+  if (nuevos.length) {
     const respuesta = await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!A:E`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: valores },
+      requestBody: { values: nuevos.map(valoresInventarioParaSheets) },
     });
-    const rango = normalizarTexto(respuesta?.data?.updates?.updatedRange);
-    const match = rango.match(/![A-Z]+(\d+)(?::[A-Z]+\d+)?$/i);
-    fila = match ? Number(match[1]) : 0;
+    filaInicialNuevos = primeraFilaRangoSheets(
+      respuesta?.data?.updates?.updatedRange,
+    );
+    if (!filaInicialNuevos) {
+      throw new Error("Google Sheets no informó la fila de las nuevas altas de Inventario");
+    }
   }
 
-  if (fila >= 2 && fila !== Number(producto.filaGoogle)) {
-    await actualizarFilaGoogleInventarioDb(producto.inventoryId, fila);
+  const asignaciones = [
+    ...existentes.map(({ producto, fila }) => ({ producto, fila })),
+    ...nuevos.map((producto, indice) => ({
+      producto,
+      fila: filaInicialNuevos + indice,
+    })),
+  ];
+
+  for (const { producto, fila } of asignaciones) {
+    if (fila >= 2 && fila !== Number(producto.filaGoogle)) {
+      await actualizarFilaGoogleInventarioDb(producto.inventoryId, fila);
+    }
+    await confirmarInventarioSheetsDb(producto.inventoryId);
   }
-  return fila;
+  return asignaciones.length;
 }
 
 async function sincronizarInventarioPendienteSheets({ limite = 100 } = {}) {
   if (!INVENTORY_SHEETS_CONFIGURED) return { procesados: 0, pendientes: true };
+  if (Date.now() < inventarioSheetsBloqueadoHasta) {
+    return { procesados: 0, pendientes: true, esperaCuota: true };
+  }
   if (promesaSincronizacionInventarioSheets) return promesaSincronizacionInventarioSheets;
   promesaSincronizacionInventarioSheets = (async () => {
     const pendientes = await listarInventarioPendienteSheetsDb(limite);
-    let procesados = 0;
-    for (const producto of pendientes) {
-      try {
-        await escribirProductoInventarioSheets(producto);
-        await confirmarInventarioSheetsDb(producto.inventoryId);
-        procesados++;
-      } catch (error) {
-        await registrarErrorInventarioSheetsDb(producto.inventoryId, error.message || error);
+    if (!pendientes.length) return { procesados: 0, pendientes: false };
+    try {
+      const procesados = await escribirLoteInventarioSheets(pendientes);
+      inventarioSheetsErroresCuotaConsecutivos = 0;
+      inventarioSheetsBloqueadoHasta = 0;
+      return { procesados, pendientes: pendientes.length >= limite };
+    } catch (error) {
+      await registrarErrorLoteInventarioSheets(pendientes, error);
+      const cuota = activarEsperaCuotaInventarioSheets(error);
+      if (!cuota) {
         console.error(
-          `Error sincronizando Inventario ${producto.codigo} con Google Sheets:`,
+          "Error sincronizando lote de Inventario con Google Sheets:",
           error.message || error,
         );
       }
+      return {
+        procesados: 0,
+        pendientes: true,
+        esperaCuota: cuota,
+        error: error.message || String(error),
+      };
     }
-    return { procesados, pendientes: pendientes.length > procesados };
   })();
   try {
     return await promesaSincronizacionInventarioSheets;
@@ -969,19 +1039,21 @@ async function sincronizarInventarioPendienteSheets({ limite = 100 } = {}) {
   }
 }
 
-function dispararSincronizacionInventarioSheets(limite = 25) {
+function dispararSincronizacionInventarioSheets(limite = 100) {
   if (!INVENTORY_SHEETS_CONFIGURED) return;
-  // La escritura principal ya quedó confirmada en PostgreSQL. Sheets se
-  // sincroniza fuera del tiempo de respuesta para que el operario pueda
-  // volver a escanear inmediatamente. La cola persistente reintenta fallos.
-  setImmediate(() => {
+  // Agrupa las cargas rápidas en una sola sincronización para no consumir una
+  // petición de Google Sheets por cada escaneo. PostgreSQL responde de inmediato.
+  if (temporizadorInventarioSheets) clearTimeout(temporizadorInventarioSheets);
+  temporizadorInventarioSheets = setTimeout(() => {
+    temporizadorInventarioSheets = null;
     sincronizarInventarioPendienteSheets({ limite }).catch((error) =>
       console.error(
         "Error sincronizando Inventario con Google Sheets en segundo plano:",
         error.message || error,
       ),
     );
-  });
+  }, 1800);
+  temporizadorInventarioSheets.unref?.();
 }
 
 async function obtenerProductosMaestros() {
@@ -4684,7 +4756,7 @@ app.post("/guardar", requerirAlgunModulo("inventario"), async (req, res) => {
     }
 
     invalidarCache("productos");
-    dispararSincronizacionInventarioSheets(25);
+    dispararSincronizacionInventarioSheets(100);
     res.json({
       ok: true,
       mensaje: "Producto guardado",
@@ -4732,7 +4804,7 @@ app.post("/corregir", requerirAlgunModulo("inventario"), async (req, res) => {
     }
 
     invalidarCache("productos");
-    dispararSincronizacionInventarioSheets(25);
+    dispararSincronizacionInventarioSheets(100);
     res.json({
       ok: true,
       mensaje: "Producto corregido",

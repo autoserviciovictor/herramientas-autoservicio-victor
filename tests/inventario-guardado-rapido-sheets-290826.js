@@ -9,11 +9,11 @@ function asegurar(condicion, mensaje) {
 }
 
 asegurar(
-  server.includes("function dispararSincronizacionInventarioSheets(limite = 25)"),
+  server.includes("function dispararSincronizacionInventarioSheets(limite = 100)"),
   "Debe existir un disparador no bloqueante para sincronizar Inventario con Sheets",
 );
 asegurar(
-  server.includes("setImmediate(() =>") &&
+  server.includes("setTimeout(() =>") &&
     server.includes("sincronizarInventarioPendienteSheets({ limite }).catch"),
   "La sincronización con Sheets debe ejecutarse fuera del tiempo de respuesta",
 );
@@ -24,12 +24,12 @@ const guardar = server.slice(guardarInicio, corregirInicio);
 const corregir = server.slice(corregirInicio, server.indexOf('const VENCIMIENTOS_SHEET_NAME', corregirInicio));
 
 asegurar(
-  guardar.includes("dispararSincronizacionInventarioSheets(25);") &&
+  guardar.includes("dispararSincronizacionInventarioSheets(100);") &&
     !guardar.includes("await sincronizarInventarioPendienteSheets"),
   "/guardar debe responder después de PostgreSQL sin esperar Google Sheets",
 );
 asegurar(
-  corregir.includes("dispararSincronizacionInventarioSheets(25);") &&
+  corregir.includes("dispararSincronizacionInventarioSheets(100);") &&
     !corregir.includes("await sincronizarInventarioPendienteSheets"),
   "/corregir debe responder después de PostgreSQL sin esperar Google Sheets",
 );
