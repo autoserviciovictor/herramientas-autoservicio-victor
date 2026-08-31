@@ -38,6 +38,7 @@ const {
   importarTareasBanoAtomico,
   listarTareasDb,
   reemplazarTareasDb,
+  actualizarOrdenTareasDb,
   leerBanoDb,
   guardarBanoDb,
 } = require("./db-tareas-bano");
@@ -3325,6 +3326,7 @@ function normalizarTareaServidor(t) {
       return dias.length ? [...new Set(dias)] : [0, 1, 2, 3, 4, 5, 6];
     })(),
     activo: t?.activo !== false,
+    orden: Math.max(0, Number(t?.orden) || 0),
     asignaciones,
   };
 }
@@ -3692,10 +3694,14 @@ app.put("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
       );
       for (const tarea of entrantes) {
         if (!puedeSector(tarea)) continue;
+        const actual = mapa.get(tarea.id);
+        // El orden se modifica únicamente mediante PUT /tareas/orden.
+        // Un guardado normal de contenido/asignaciones no debe poder restaurar
+        // una posición vieja enviada por un cliente que todavía no se actualizó.
         mapa.set(
           tarea.id,
-          mapa.has(tarea.id)
-            ? fusionarTareaServidor(mapa.get(tarea.id), tarea)
+          actual
+            ? { ...fusionarTareaServidor(actual, tarea), orden: Number(actual.orden) || 0 }
             : tarea,
         );
       }
@@ -3711,6 +3717,48 @@ app.put("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
       ok: false,
       mensaje: e.message || "No se pudieron guardar las tareas",
     });
+  }
+});
+
+app.put("/tareas/orden", requerirAlgunModulo("tareas"), async (req, res) => {
+  try {
+    if (!rolGestionSector(req.usuario))
+      return res.status(403).json({ ok: false, mensaje: "No tenés permiso para ordenar tareas" });
+    const sector = normalizarTexto(req.body?.sector) || "General";
+    const ids = [...new Set(
+      (Array.isArray(req.body?.ids) ? req.body.ids : [])
+        .map(normalizarTexto)
+        .filter(Boolean),
+    )];
+    if (!ids.length)
+      return res.status(400).json({ ok: false, mensaje: "No se recibió un orden de tareas válido" });
+
+    const sectores = await sectoresTareasPermitidos(req.usuario);
+    const permitidos = new Set(
+      sectores.flatMap((x) => [normalizarTexto(x.id), normalizarTexto(x.nombre)]).filter(Boolean),
+    );
+    const actuales = await obtenerTareasServidor();
+    const mapaActual = new Map(actuales.map((t) => [normalizarTexto(t.id), t]));
+    const tareasOrdenadas = ids.map((id) => mapaActual.get(id));
+    if (tareasOrdenadas.some((t) => !t))
+      return res.status(409).json({ ok: false, mensaje: "Una o más tareas cambiaron. Actualizá la pantalla e intentá nuevamente" });
+    const sectoresReales = [...new Set(tareasOrdenadas.map((t) => normalizarTexto(t.sector) || "General"))];
+    if (sectoresReales.length !== 1)
+      return res.status(400).json({ ok: false, mensaje: "Las tareas del orden pertenecen a sectores diferentes" });
+    if (!rolGestionGlobal(req.usuario) && !sectoresReales.every((s) => permitidos.has(s)))
+      return res.status(403).json({ ok: false, mensaje: "No tenés permiso para este sector" });
+
+    await conTransaccionTareasBano(async (cliente) => actualizarOrdenTareasDb(sector, ids, cliente));
+    invalidarCache("tareas");
+    const tareas = await obtenerTareasServidor();
+    res.json({
+      ok: true,
+      tareas: rolGestionGlobal(req.usuario)
+        ? tareas
+        : tareas.filter((t) => permitidos.has(normalizarTexto(t.sector))),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, mensaje: e.message || "No se pudo guardar el orden de tareas" });
   }
 });
 

@@ -614,12 +614,33 @@ function hayCambiosPendientes() {
 async function cancelarTodoCambios() {
   if (!modoEdicion) return false;
   const teniaCambios = hayCambiosPendientes();
-  restaurarDatos(estadoInicialEdicion);
-  restaurarDetalles(estadoInicialDetalles);
+  if (teniaCambios) {
+    const accion = await dialogoHorarios({
+      titulo: "Hay cambios sin guardar",
+      mensaje: "Podés guardar los cambios y salir, eliminar lo modificado o volver al calendario para seguir editando.",
+      confirmar: "Guardar cambios",
+      alternativo: "Eliminar cambios",
+      alternativoPeligro: true,
+      kicker: "Edición de horarios",
+      variante: "sin-guardar",
+      cerrarConX: true,
+      ocultarCancelar: true,
+    });
+    if (accion === false) return false;
+    if (accion === "alternativo") {
+      restaurarDatos(estadoInicialEdicion);
+      restaurarDetalles(estadoInicialDetalles);
+      seleccion.clear();
+      await salirModoEdicion(true);
+      renderTodo();
+      return true;
+    }
+    await confirmarGuardado();
+    return true;
+  }
   seleccion.clear();
   await salirModoEdicion(true);
   renderTodo();
-  if (teniaCambios) avisoHorarios("Cambios descartados");
   return true;
 }
 function serializarCeldasDesdeMapa(mapa) {
@@ -743,9 +764,11 @@ function asegurarDialogoHorarios() {
           <span id="horariosDialogoKicker" class="horarios-dialogo-kicker">Horarios</span>
           <h3 id="horariosDialogoTitulo">Confirmar acción</h3>
         </div>
+        <button id="horariosDialogoCerrar" type="button" class="horarios-dialogo-cerrar oculto" aria-label="Cerrar">×</button>
       </div>
       <p id="horariosDialogoMensaje"></p>
       <div class="horarios-dialogo-actions">
+        <button id="horariosDialogoAlternativo" type="button" class="alternativo oculto">Eliminar cambios</button>
         <button id="horariosDialogoConfirmar" type="button" class="primario">Confirmar</button>
         <button id="horariosDialogoCancelar" type="button">Volver</button>
       </div>
@@ -757,22 +780,33 @@ function dialogoHorarios({
   mensaje,
   confirmar = "Confirmar",
   peligro = false,
+  alternativo = "",
+  alternativoPeligro = false,
   soloAceptar = false,
   variante = "default",
   kicker = "Horarios",
+  cerrarConX = false,
+  ocultarCancelar = false,
 }) {
   asegurarDialogoHorarios();
   const modal = $("horariosDialogo");
   const btnConfirmar = $("horariosDialogoConfirmar");
+  const btnAlternativo = $("horariosDialogoAlternativo");
   const btnCancelar = $("horariosDialogoCancelar");
+  const btnCerrar = $("horariosDialogoCerrar");
   const card = modal.querySelector(".horarios-dialogo-card");
   card?.classList.toggle("horarios-dialogo-card--permiso", variante === "permiso");
+  card?.classList.toggle("horarios-dialogo-card--sin-guardar", variante === "sin-guardar");
   $("horariosDialogoKicker").textContent = kicker;
   $("horariosDialogoTitulo").textContent = titulo;
   $("horariosDialogoMensaje").textContent = mensaje;
   btnConfirmar.textContent = confirmar;
   btnConfirmar.classList.toggle("peligro", peligro);
-  btnCancelar.classList.toggle("oculto", soloAceptar);
+  btnAlternativo.textContent = alternativo || "";
+  btnAlternativo.classList.toggle("oculto", !alternativo);
+  btnAlternativo.classList.toggle("peligro", alternativoPeligro);
+  btnCancelar.classList.toggle("oculto", soloAceptar || ocultarCancelar);
+  btnCerrar.classList.toggle("oculto", !cerrarConX);
   modal.classList.remove("oculto");
   modal.setAttribute("aria-hidden", "false");
   return new Promise((resolve) => {
@@ -780,14 +814,18 @@ function dialogoHorarios({
       modal.classList.add("oculto");
       modal.setAttribute("aria-hidden", "true");
       btnConfirmar.onclick = null;
+      btnAlternativo.onclick = null;
       btnCancelar.onclick = null;
+      btnCerrar.onclick = null;
       modal.onclick = null;
       resolve(valor);
     };
     btnConfirmar.onclick = () => cerrar(true);
+    btnAlternativo.onclick = () => cerrar("alternativo");
     btnCancelar.onclick = () => cerrar(false);
+    btnCerrar.onclick = () => cerrar(false);
     modal.onclick = (e) => {
-      if (e.target === modal) cerrar(false);
+      if (e.target === modal && !cerrarConX) cerrar(false);
     };
   });
 }
@@ -1202,8 +1240,9 @@ function renderTabla() {
         movio: false,
       };
       seleccionInicio = { empleado: emp, dia };
-      seleccionBaseArrastre =
-        ev.ctrlKey || ev.metaKey ? new Set(seleccion) : new Set();
+      // Cada nuevo arrastre se suma a la selección existente. La selección solo
+      // se reinicia mediante “Limpiar selección” o al salir del modo de edición.
+      seleccionBaseArrastre = new Set(seleccion);
       if (ev.pointerType !== "touch") ev.preventDefault();
     };
     td.ondblclick = (ev) => {

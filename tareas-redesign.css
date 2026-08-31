@@ -1017,7 +1017,7 @@ body.en-tareas #tareasVistaPlanificacion .tareas-plan-shell {
 .config-task-table-head,
 .config-task-row {
   display: grid !important;
-  grid-template-columns: minmax(280px, 1.45fr) 110px minmax(280px, 1.25fr) 105px 60px !important;
+  grid-template-columns:32px minmax(240px,1.45fr) 110px minmax(240px,1.25fr) 105px 60px !important;
   align-items: center !important;
   gap: 12px !important;
 }
@@ -3901,8 +3901,7 @@ body.en-bano #pantallaBano .bano-history-refresh .app-icon {
 body.en-bano #pantallaBano .bano-history-wrap {
   border: 1px solid var(--task-border);
   border-radius: 13px;
-  overflow: auto;
-  max-height: 430px;
+  overflow: visible;
   background: var(--task-surface);
 }
 body.en-bano #pantallaBano .bano-history-table {
@@ -4126,5 +4125,189 @@ body.en-bano #pantallaBano .bano-history-empty {
   body.en-bano #pantallaBano .bano-history-row > span::before,
   body.en-bano #pantallaBano .bano-history-row > strong::before {
     font-size: 9px !important;
+  }
+}
+
+/* 31/08/2026 — orden manual de tareas y estado vacío de planificación. */
+body.en-tareas #pantallaTareas .config-task-drag { width:32px; height:40px; display:grid; place-items:center; border:0; background:transparent; cursor:grab; }
+body.en-tareas #pantallaTareas .config-task-drag span,
+body.en-tareas #pantallaTareas .config-task-drag span::before,
+body.en-tareas #pantallaTareas .config-task-drag span::after { width:4px; height:4px; border-radius:50%; background:var(--task-muted); box-shadow:0 7px 0 var(--task-muted); content:""; }
+body.en-tareas #pantallaTareas .config-task-drag span { position:relative; transform:translateY(-3px); }
+body.en-tareas #pantallaTareas .config-task-drag span::before { position:absolute; left:7px; top:0; }
+body.en-tareas #pantallaTareas .config-task-row.is-dragging { opacity:.45; }
+body.en-tareas #pantallaTareas .tareas-plan-empty-state { grid-column:1 / -1; min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:24px; border-top:1px solid var(--task-border); text-align:center; color:var(--task-muted); }
+body.en-tareas #pantallaTareas .tareas-plan-empty-state strong { color:var(--task-text); font-size:15px; }
+body.en-tareas #pantallaTareas .tareas-plan-empty-state span { font-size:12.5px; }
+@media/* 31/08/2026 — Orden de tareas y planilla mensual de baño (reglas vigentes). */
+body.en-tareas #pantallaTareas .config-task-order-footer {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  min-height:58px;
+  padding:14px 0 2px;
+  border-top:1px solid var(--task-border);
+}
+body.en-tareas #pantallaTareas .config-task-order-footer > span { display:none !important; }
+body.en-tareas #pantallaTareas .config-task-order-footer .save-btn { width:auto; min-width:108px; }
+body.en-tareas #pantallaTareas .config-task-order-footer .save-btn:disabled { opacity:.45; cursor:not-allowed; }
+body.en-tareas #pantallaTareas .config-task-drag { cursor:grab !important; -webkit-user-drag:element; }
+body.en-tareas #pantallaTareas .config-task-row.is-dragging .config-task-drag,
+body.en-tareas #pantallaTareas .config-task-drag:active { cursor:grabbing !important; }
+
+body.en-bano #pantallaBano .bano-panel-head { gap:12px; }
+body.en-bano #pantallaBano #btnBanoPlanilla span { font-size:14px; font-weight:850; }
+
+/* Planilla mensual: se monta en body para cubrir toda la interfaz. */
+body.bano-planilla-abierta { overflow:hidden; }
+.bano-planilla-modal {
+  position:fixed;
+  inset:0;
+  z-index:20000;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  overflow:hidden;
+  background:rgba(17,24,39,.56);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.bano-planilla-modal.oculto { display:none !important; }
+.bano-planilla-dialog {
+  width:min(540px,100%);
+  max-height:min(720px,calc(100dvh - 48px));
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--task-border);
+  border-radius:16px;
+  background:var(--task-surface);
+  color:var(--task-text);
+  box-shadow:0 18px 50px rgba(15,23,42,.2);
+}
+.bano-planilla-dialog header {
+  flex:0 0 auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  padding:16px 18px;
+  border-bottom:1px solid var(--task-border);
+}
+.bano-planilla-dialog header small { color:var(--task-muted); font-size:10px; font-weight:900; letter-spacing:.08em; }
+.bano-planilla-titleline { display:flex; align-items:baseline; gap:10px; min-width:0; margin-top:3px; }
+.bano-planilla-dialog header h3 { margin:0; }
+.bano-planilla-title-month { color:var(--task-muted); font-size:13px; font-weight:800; text-transform:capitalize; white-space:nowrap; }
+#btnCerrarBanoPlanilla { flex:0 0 38px; width:38px; height:38px; border:1px solid var(--task-border); border-radius:10px; background:var(--task-surface); color:var(--task-text); font-size:24px; }
+.bano-planilla-content {
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  padding:10px 18px 18px;
+}
+.bano-planilla-row { display:grid; grid-template-columns:150px minmax(0,1fr); gap:16px; align-items:center; min-height:42px; border-top:1px solid var(--task-border); }
+.bano-planilla-row:first-child { border-top:0; }
+.bano-planilla-row time { color:var(--task-muted); text-transform:capitalize; }
+
+@media (max-width:700px) {
+  body.en-tareas #pantallaTareas .config-task-order-footer { align-items:stretch; }
+  body.en-tareas #pantallaTareas .config-task-order-footer .save-btn { width:100%; }
+}
+@media (max-width:600px) {
+  .bano-planilla-modal {
+    place-items:start stretch;
+    padding:74px 0 8px;
+  }
+  .bano-planilla-dialog {
+    width:100%;
+    max-width:none;
+    max-height:calc(100dvh - 82px);
+    border-left:0;
+    border-right:0;
+    border-radius:14px;
+  }
+  .bano-planilla-dialog header {
+    padding:16px 16px 14px;
+  }
+  .bano-planilla-dialog header small { font-size:9px; }
+  .bano-planilla-titleline { gap:7px; flex-wrap:wrap; }
+  .bano-planilla-dialog header h3 { font-size:17px; }
+  .bano-planilla-title-month { font-size:12px; }
+  #btnCerrarBanoPlanilla { flex-basis:36px; width:36px; height:36px; }
+  .bano-planilla-content {
+    padding:14px 16px 18px;
+  }
+  .bano-planilla-row {
+    grid-template-columns:96px minmax(0,1fr);
+    gap:12px;
+    min-height:42px;
+  }
+}
+
+/* 31/08/2026 — Configuración de tareas móvil: tarjeta compacta sin columnas de escritorio. */
+@media (max-width:700px) {
+  body.en-tareas #pantallaTareas .config-task-list {
+    display:grid !important;
+    gap:8px !important;
+    min-width:0 !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-row {
+    grid-template-columns:28px minmax(0,1fr) 44px !important;
+    grid-template-rows:auto auto auto auto !important;
+    gap:7px 10px !important;
+    min-width:0 !important;
+    width:100% !important;
+    padding:11px !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-drag {
+    grid-column:1 !important;
+    grid-row:1 / 5 !important;
+    align-self:center !important;
+    width:28px !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-name {
+    grid-column:2 !important;
+    grid-row:1 !important;
+    min-width:0 !important;
+    width:100% !important;
+    align-items:flex-start !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-name strong {
+    min-width:0 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    overflow-wrap:break-word !important;
+    word-break:normal !important;
+    hyphens:none !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-duration {
+    grid-column:2 !important;
+    grid-row:2 !important;
+    max-width:100% !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-days-wrap {
+    grid-column:2 !important;
+    grid-row:3 !important;
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-days {
+    max-width:100% !important;
+    white-space:normal !important;
+    overflow-wrap:break-word !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-status {
+    grid-column:2 !important;
+    grid-row:4 !important;
+    width:max-content !important;
+    max-width:100% !important;
+  }
+  body.en-tareas #pantallaTareas .config-task-open {
+    grid-column:3 !important;
+    grid-row:1 / 5 !important;
+    align-self:center !important;
+    justify-self:end !important;
   }
 }

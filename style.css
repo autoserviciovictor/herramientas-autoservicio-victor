@@ -3802,6 +3802,18 @@ body.horarios-modo-edicion .horario-cell{
   color: #fff;
 }
 
+.horarios-dialogo-actions .alternativo {
+  background: var(--pro-panel-2, #fff);
+  border-color: #ef4444;
+  color: #c81e2b;
+}
+.horarios-dialogo-actions .alternativo.peligro:hover,
+.horarios-dialogo-actions .alternativo.peligro:focus-visible {
+  background: #fff1f2;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
 /* Horarios · Entrega 6.2 */
 
 
@@ -15603,4 +15615,115 @@ html[data-theme="dark"] .admin-import-preview-modal .modal-actions{ border-color
   }
   .admin-import-validations{ grid-template-columns: 1fr; }
   .admin-import-review ul{ grid-template-columns: 1fr; }
+}
+
+/* 31/08/2026 — Vencimientos: selección múltiple y cierre responsive canónico. */
+#pantallaVencimientos .venc-select-control { display:inline-grid; place-items:center; flex:0 0 auto; width:28px; height:28px; margin-right:6px; cursor:pointer; }
+#pantallaVencimientos .venc-select-control input { position:absolute; opacity:0; pointer-events:none; }
+#pantallaVencimientos .venc-select-control span { width:18px; height:18px; border:1.5px solid var(--venc-border); border-radius:5px; background:var(--venc-panel); }
+#pantallaVencimientos .venc-select-control input:checked + span { border-color:var(--venc-red); background:var(--venc-red); box-shadow:inset 0 0 0 4px var(--venc-panel); }
+#pantallaVencimientos .venc-bulk-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:8px 12px; border-top:1px solid var(--venc-border); }
+#pantallaVencimientos .venc-bulk-toolbar span { color:var(--venc-muted); font-size:12px; }
+#pantallaVencimientos .venc-bulk-toolbar button { min-height:34px; padding:0 12px; border:1px solid var(--venc-red); border-radius:8px; background:var(--venc-red); color:#fff; font:inherit; font-size:12px; font-weight:800; }
+#pantallaVencimientos .venc-bulk-toolbar button:disabled { opacity:.45; cursor:not-allowed; }
+@media (max-width: 767px) {
+  body.en-vencimientos, #pantallaVencimientos, #pantallaVencimientos .venc-pro-shell { max-width:100%; min-width:0 !important; overflow-x:clip; }
+  #pantallaVencimientos * { min-width:0; box-sizing:border-box; }
+  #pantallaVencimientos .venc-resumen { width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #pantallaVencimientos .venc-resumen-card { width:100%; min-width:0 !important; }
+  #pantallaVencimientos .venc-pro-filters { width:100%; min-width:0 !important; grid-template-columns:minmax(0,1fr) auto; }
+  #pantallaVencimientos .venc-pro-rubros { width:100%; max-width:100%; min-width:0 !important; overflow-x:auto; }
+  #pantallaVencimientos .venc-range-group, #pantallaVencimientos .venc-range-group__grid, #pantallaVencimientos .venc-product-card { width:100%; max-width:100%; min-width:0 !important; }
+  #pantallaVencimientos .venc-product-card__identity strong { overflow-wrap:anywhere; }
+  #pantallaVencimientos .venc-product-card__data { grid-template-columns:minmax(0,1.15fr) minmax(0,.8fr) minmax(0,1fr); }
+  #pantallaVencimientos .venc-product-card__data b { white-space:normal; overflow-wrap:anywhere; }
+}
+@media (max-width: 359px) {
+  #pantallaVencimientos .venc-resumen { grid-template-columns:1fr; }
+  #pantallaVencimientos .venc-product-card__data { grid-template-columns:1fr 1fr; }
+  #pantallaVencimientos .venc-product-card__data > span:last-child { grid-column:1 / -1; }
+}
+
+/* Correcciones 31-08 ronda 2: selección de vencidos y confirmación compacta */
+#pantallaVencimientos .venc-product-card.is-selected { outline:2px solid var(--venc-red); outline-offset:-2px; }
+.venc-modal-card:has(#vencModalEliminar:not(.oculto)) { width:min(500px,calc(100vw - 48px)) !important; }
+.venc-modal-card:has(#vencModalEliminar:not(.oculto)) #vencModalEliminar .modal-actions { justify-content:flex-end; }
+.venc-modal-card:has(#vencModalEliminar:not(.oculto)) #vencModalEliminar .modal-actions button { flex:0 0 auto !important; min-width:110px; width:auto !important; }
+@media (max-width:700px) {
+  #pantallaVencimientos .venc-select-control { display:none !important; }
+  #pantallaVencimientos .venc-product-card.is-expired { -webkit-touch-callout:none; user-select:none; }
+  #pantallaVencimientos .venc-product-card.is-selected { outline-width:3px; }
+  .venc-modal-card:has(#vencModalEliminar:not(.oculto)) { width:calc(100vw - 28px) !important; }
+}
+
+
+/* 31/08/2026 ronda 3 — diálogo de cambios de horarios */
+.horarios-dialogo-actions .primario:hover:not(:disabled),
+.horarios-dialogo-actions .primario:focus-visible {
+  background:#16191f;
+  border-color:#16191f;
+  color:#fff;
+}
+.horarios-dialogo-actions .primario:disabled {
+  background:#16191f;
+  border-color:#16191f;
+  color:#fff;
+  opacity:.55;
+}
+
+/* 31/08/2026 ronda 5 — modal de cambios de horarios, definición vigente */
+.horarios-dialogo-card--sin-guardar { position:relative; }
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-cabecera { padding-right:42px; }
+.horarios-dialogo-cerrar {
+  position:absolute;
+  top:16px;
+  right:16px;
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--pro-border,#dfe3ea);
+  border-radius:10px;
+  background:var(--pro-panel-2,#fff);
+  color:var(--pro-text,#344054);
+  padding:0;
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+}
+.horarios-dialogo-cerrar:hover,
+.horarios-dialogo-cerrar:focus-visible {
+  background:color-mix(in srgb,var(--pro-panel-2,#fff) 88%,var(--pro-border,#dfe3ea) 12%);
+}
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions button {
+  width:100%;
+  min-width:0;
+}
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions .alternativo.peligro {
+  background:var(--pro-red,#e11d3f);
+  border-color:var(--pro-red,#e11d3f);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(225,29,63,.18);
+}
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions .alternativo.peligro:hover,
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions .alternativo.peligro:focus-visible {
+  background:#c91838;
+  border-color:#c91838;
+  color:#fff;
+}
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions .primario,
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions .primario:hover:not(:disabled),
+.horarios-dialogo-card--sin-guardar .horarios-dialogo-actions .primario:focus-visible {
+  background:var(--pro-panel,#fff);
+  border-color:var(--pro-red,#e11d3f);
+  color:var(--pro-red,#e11d3f);
+  box-shadow:none;
+}
+@media (max-width:520px) {
+  .horarios-dialogo-card--sin-guardar .horarios-dialogo-actions { grid-template-columns:1fr; }
 }

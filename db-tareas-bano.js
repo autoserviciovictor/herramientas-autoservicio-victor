@@ -18,7 +18,8 @@ async function asegurarEsquemaTareasBano() {
       weekdays JSONB NOT NULL DEFAULT '[0,1,2,3,4,5,6]'::jsonb,
       updated_text TEXT NOT NULL DEFAULT '',
       updated_by TEXT NOT NULL DEFAULT '',
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      sort_order INTEGER NOT NULL DEFAULT 0
     )`);
 
     await query(`CREATE TABLE IF NOT EXISTS task_assignments (
@@ -53,6 +54,7 @@ async function asegurarEsquemaTareasBano() {
       updated_by TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`);
     await query(`ALTER TABLE bathroom_rotation_history ADD COLUMN IF NOT EXISTS responsible_key TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE bathroom_rotation_history ADD COLUMN IF NOT EXISTS verified_by TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE bathroom_rotation_history ADD COLUMN IF NOT EXISTS verified_time TEXT NOT NULL DEFAULT ''`);
@@ -121,8 +123,8 @@ async function insertarTarea(cliente, tarea, actualizadoTexto = "", actualizadoP
   const id = String(tarea?.id || "").trim();
   if (!id) return;
   await cliente.query(
-    `INSERT INTO tasks(task_id,sector_key,name,duration_min,active,weekdays,updated_text,updated_by)
-     VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8)`,
+    `INSERT INTO tasks(task_id,sector_key,name,duration_min,active,weekdays,updated_text,updated_by,sort_order)
+     VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9)`,
     [
       id,
       String(tarea?.sector || "General").trim() || "General",
@@ -132,6 +134,7 @@ async function insertarTarea(cliente, tarea, actualizadoTexto = "", actualizadoP
       JSON.stringify(limpiarDias(tarea?.diasSemana)),
       actualizadoTexto,
       actualizadoPor,
+      Math.max(0, Number(tarea?.orden) || 0),
     ],
   );
 
@@ -195,7 +198,7 @@ async function importarTareasBanoAtomico(datos, claveMigracion) {
 
 async function listarTareasDb(cliente = null) {
   const [rt, ra] = await Promise.all([
-    ejecutarConsulta(cliente, `SELECT task_id,sector_key,name,duration_min,active,weekdays FROM tasks ORDER BY task_id`),
+    ejecutarConsulta(cliente, `SELECT task_id,sector_key,name,duration_min,active,weekdays,sort_order FROM tasks ORDER BY sector_key,sort_order,task_id`),
     ejecutarConsulta(cliente, `SELECT task_id,work_date,shift_type,responsibles,state,completed_by,completed_time,extra FROM task_assignments ORDER BY task_id,work_date,shift_type`),
   ]);
   const mapa = new Map(rt.rows.map((x) => [x.task_id, {
@@ -205,6 +208,7 @@ async function listarTareasDb(cliente = null) {
     duracionMin: Number(x.duration_min),
     activo: Boolean(x.active),
     diasSemana: limpiarDias(x.weekdays),
+    orden: Number(x.sort_order) || 0,
     asignaciones: {},
   }]));
   for (const x of ra.rows) {
@@ -226,6 +230,46 @@ async function reemplazarTareasDb(tareas, actualizadoTexto = "", actualizadoPor 
   const ejecutar = async (c) => {
     await c.query("DELETE FROM tasks");
     for (const tarea of tareas || []) await insertarTarea(c, tarea, actualizadoTexto, actualizadoPor);
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionTareasBano(ejecutar);
+}
+
+async function actualizarOrdenTareasDb(sector, idsOrdenados, cliente = null) {
+  const sectorSolicitado = String(sector || "General").trim() || "General";
+  const ids = [...new Set((idsOrdenados || []).map((x) => String(x || "").trim()).filter(Boolean))];
+  if (!ids.length) throw new Error("No se recibió un orden de tareas válido");
+
+  const ejecutar = async (c) => {
+    const recibidas = await c.query(
+      `SELECT task_id,sector_key FROM tasks WHERE task_id = ANY($1::text[])`,
+      [ids],
+    );
+    if (recibidas.rows.length !== ids.length) {
+      throw new Error("Una o más tareas ya no existen. Actualizá la pantalla e intentá nuevamente");
+    }
+
+    const sectoresReales = [...new Set(recibidas.rows.map((x) => String(x.sector_key || "").trim()))];
+    if (sectoresReales.length !== 1) {
+      throw new Error("Las tareas seleccionadas pertenecen a sectores diferentes");
+    }
+    const sectorReal = sectoresReales[0] || sectorSolicitado;
+
+    const actuales = await c.query(
+      `SELECT task_id FROM tasks WHERE sector_key=$1 ORDER BY sort_order,task_id`,
+      [sectorReal],
+    );
+    const recibidos = new Set(ids);
+    const restantes = actuales.rows.map((x) => String(x.task_id)).filter((id) => !recibidos.has(id));
+    const ordenCompleto = [...ids, ...restantes];
+
+    for (let orden = 0; orden < ordenCompleto.length; orden += 1) {
+      await c.query(
+        `UPDATE tasks SET sort_order=$1, updated_at=NOW() WHERE task_id=$2 AND sector_key=$3`,
+        [orden, ordenCompleto[orden], sectorReal],
+      );
+    }
+    return ordenCompleto;
   };
   if (cliente) return ejecutar(cliente);
   return conTransaccionTareasBano(ejecutar);
@@ -300,6 +344,7 @@ module.exports = {
   importarTareasBanoAtomico,
   listarTareasDb,
   reemplazarTareasDb,
+  actualizarOrdenTareasDb,
   leerBanoDb,
   guardarBanoDb,
 };

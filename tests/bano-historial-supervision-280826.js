@@ -19,7 +19,8 @@ assert(server.includes('participantesOrdenFijo') && server.includes('fechaAnclaP
 assert(js.includes('banoParticipantesBorrador'), 'La selección debe conservar orden incluso al buscar/agregar');
 assert(css.includes('.bano-history-table') && css.includes('.bano-history-verify'), 'Falta diseño del historial/verificación');
 
-assert(js.includes('const limiteHistorial = corresponde ? 11 : 10'), 'El historial debe mostrar hoy + 10 limpiezas anteriores');
+assert(js.includes('const historial = hist.slice(0, 6)'), 'El historial principal debe mostrar como máximo 6 registros');
+assert(html.includes('btnBanoPlanilla'), 'Debe existir el acceso a la planilla mensual');
 assert(js.includes('disabled aria-disabled=\"true\" title=\"El responsable todavía no confirmó la limpieza\"'), 'El botón Confirmar debe verse deshabilitado hasta que confirme el responsable');
 assert(css.includes('font-size: 12.5px !important'), 'La tipografía del historial debe ser más grande');
 console.log('Baño historial completo, supervisión, orden fijo y legibilidad: OK');

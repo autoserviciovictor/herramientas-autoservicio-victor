@@ -47,9 +47,9 @@ assert(css.includes('.tareas-turno-list.tareas-user-count-1') &&
        css.includes('.tareas-turno-list.tareas-user-count-many'),
   'El CSS debe resolver 1, 2 y 3+ personas sin columnas fantasma');
 
-// Configuración: cinco columnas reales y nombre horizontal.
-assert(/grid-template-columns:\s*minmax\(280px,[^;]+110px[^;]+minmax\(280px,[^;]+105px 60px/.test(css),
-  'Configuración debe conservar cinco columnas en escritorio');
+// Configuración: asa de orden + cinco columnas de contenido y nombre horizontal.
+assert(/grid-template-columns:\s*32px\s+minmax\(240px,[^;]+110px[^;]+minmax\(240px,[^;]+105px 60px/.test(css),
+  'Configuración debe conservar el asa de orden y cinco columnas de contenido en escritorio');
 assert(/\.config-task-name\s*\{[^}]*flex-direction:\s*row\s*!important/s.test(css),
   'El nombre de tarea debe permanecer horizontal');
 assert(/@media \(max-width: 700px\)[\s\S]*\.config-task-table-head\s*\{\s*display:\s*none\s*!important/.test(css),

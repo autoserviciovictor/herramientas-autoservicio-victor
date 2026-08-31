@@ -78,6 +78,10 @@ let filtroVencimientos = "todos";
 let filtroRubroVencimientos = "todos";
 let busquedaVencimientos = "";
 let ordenVencimientos = "proximo";
+const vencimientosSeleccionados = new Set();
+let modoSeleccionVencimientosMovil = false;
+let pulsacionLargaVencimientos = null;
+let ignorarSiguienteClickVencimiento = false;
 let vistaVencimientos = "grid";
 const gruposVencimientosAbiertos = new Set(["7"]);
 let vencimientoSeleccionado = null;
@@ -1581,6 +1585,10 @@ function configurarEventos() {
     "click",
     manejarClickListadoVencimientos,
   );
+  elementos.vencListado?.addEventListener("pointerdown", iniciarPulsacionLargaVencimiento);
+  elementos.vencListado?.addEventListener("pointermove", moverPulsacionLargaVencimiento);
+  elementos.vencListado?.addEventListener("pointerup", cancelarPulsacionLargaVencimiento);
+  elementos.vencListado?.addEventListener("pointercancel", cancelarPulsacionLargaVencimiento);
   elementos.vencResumen?.addEventListener(
     "click",
     manejarClickResumenVencimientos,
@@ -2777,8 +2785,9 @@ function crearTarjetaVencimiento(item) {
   const d = datosVisualesVencimiento(item);
   const vencido = d.bucket === "vencidos";
   return `
-    <article class="venc-item venc-product-card ${d.clase} ${vencido ? "is-expired" : ""} ${d.ofertaActiva ? "is-offer-active" : ""}" data-id="${d.id}" tabindex="0">
+    <article class="venc-item venc-product-card ${d.clase} ${vencido ? "is-expired" : ""} ${d.ofertaActiva ? "is-offer-active" : ""} ${vencimientosSeleccionados.has(String(item.id)) ? "is-selected" : ""}" data-id="${d.id}" tabindex="0">
       <div class="venc-product-card__topline">
+        ${vencido ? `<label class="venc-select-control" title="Seleccionar para eliminar"><input type="checkbox" data-venc-select="${d.id}" ${vencimientosSeleccionados.has(String(item.id)) ? "checked" : ""}><span aria-hidden="true"></span></label>` : ""}
         <span class="venc-product-card__category rubro-${d.rubroClase}">${d.rubro}</span>
         <span class="venc-product-card__deadline ${d.clase}">${d.estado}</span>
       </div>
@@ -2885,9 +2894,15 @@ function renderListadoVencimientos() {
 
   elementos.vencListado.innerHTML = grupos
     .map((grupo) => {
-      const items = lista.filter(
+      let items = lista.filter(
         (item) => bucketVencimiento(item) === grupo.bucket,
       );
+      // En vencidos siempre priorizamos lo que venció más recientemente.
+      if (grupo.bucket === "vencidos") {
+        items = [...items].sort((a, b) =>
+          diasHastaVencimiento(b.vencimiento) - diasHastaVencimiento(a.vencimiento),
+        );
+      }
       if (!items.length) return "";
       const abierto =
         filtroVencimientos !== "todos" ||
@@ -2904,10 +2919,35 @@ function renderListadoVencimientos() {
             <strong>${items.length} ${items.length === 1 ? "producto" : "productos"}</strong>
             <span class="venc-range-group__chevron" aria-hidden="true"><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></span>
           </button>
+          ${abierto && grupo.bucket === "vencidos" && (!window.matchMedia("(max-width: 700px)").matches || modoSeleccionVencimientosMovil) ? `<div class="venc-bulk-toolbar"><span><strong>${vencimientosSeleccionados.size}</strong> seleccionados</span><button type="button" data-venc-bulk-delete ${vencimientosSeleccionados.size ? "" : "disabled"}>Eliminar seleccionados</button></div>` : ""}
           ${abierto ? renderCuerpoGrupoVencimientos(items) : ""}
         </section>`;
     })
     .join("");
+}
+
+
+function iniciarPulsacionLargaVencimiento(event) {
+  if (!window.matchMedia("(max-width: 700px)").matches || modoSeleccionVencimientosMovil) return;
+  const card = event.target.closest(".venc-item.is-expired");
+  if (!card || event.target.closest("button, input, label")) return;
+  cancelarPulsacionLargaVencimiento();
+  pulsacionLargaVencimientos = { pointerId:event.pointerId, x:event.clientX, y:event.clientY, timer:setTimeout(() => {
+    modoSeleccionVencimientosMovil = true;
+    ignorarSiguienteClickVencimiento = true;
+    vencimientosSeleccionados.add(String(card.dataset.id || ""));
+    pulsacionLargaVencimientos = null;
+    if (navigator.vibrate) navigator.vibrate(25);
+    renderListadoVencimientos();
+  }, 550) };
+}
+function moverPulsacionLargaVencimiento(event) {
+  const p = pulsacionLargaVencimientos;
+  if (p && p.pointerId === event.pointerId && Math.hypot(event.clientX-p.x,event.clientY-p.y)>10) cancelarPulsacionLargaVencimiento();
+}
+function cancelarPulsacionLargaVencimiento() {
+  if (pulsacionLargaVencimientos?.timer) clearTimeout(pulsacionLargaVencimientos.timer);
+  pulsacionLargaVencimientos = null;
 }
 
 async function manejarClickListadoVencimientos(event) {
@@ -2920,8 +2960,43 @@ async function manejarClickListadoVencimientos(event) {
     renderListadoVencimientos();
     return;
   }
+  const selectorControl = event.target.closest(".venc-select-control");
+  const selector = selectorControl?.querySelector("[data-venc-select]");
+  if (selector) {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = String(selector.dataset.vencSelect || "");
+    if (vencimientosSeleccionados.has(id)) vencimientosSeleccionados.delete(id);
+    else vencimientosSeleccionados.add(id);
+    renderListadoVencimientos();
+    return;
+  }
+  if (event.target.closest("[data-venc-bulk-delete]")) {
+    const ids = [...vencimientosSeleccionados];
+    if (!ids.length) return;
+    const ok = await window.AutoservicioDialog?.confirm?.({ title: "Eliminar vencidos", message: `¿Eliminar los ${ids.length} productos vencidos seleccionados?`, confirmText: "Eliminar", danger: true });
+    if (ok === false) return;
+    try {
+      await Promise.all(ids.map((id) => eliminarVencimiento(id)));
+      vencimientosSeleccionados.clear();
+      modoSeleccionVencimientosMovil = false;
+      await cargarListadoVencimientos();
+      mostrarMensaje(`${ids.length} registros eliminados`, "ok");
+    } catch (error) { mostrarMensaje(error.message || "No se pudieron eliminar los registros", "error"); }
+    return;
+  }
   const card = event.target.closest(".venc-item");
   if (!card) return;
+  if (modoSeleccionVencimientosMovil && window.matchMedia("(max-width: 700px)").matches) {
+    event.preventDefault();
+    if (ignorarSiguienteClickVencimiento) { ignorarSiguienteClickVencimiento = false; return; }
+    const id = String(card.dataset.id || "");
+    if (vencimientosSeleccionados.has(id)) vencimientosSeleccionados.delete(id);
+    else vencimientosSeleccionados.add(id);
+    if (!vencimientosSeleccionados.size) modoSeleccionVencimientosMovil = false;
+    renderListadoVencimientos();
+    return;
+  }
   const accion = event.target.closest("[data-venc-accion]")?.dataset.vencAccion;
   const item = vencimientosCache.find(
     (registro) => String(registro.id) === String(card.dataset.id),

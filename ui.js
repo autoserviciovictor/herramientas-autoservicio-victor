@@ -80,7 +80,10 @@ export function cambiarPantalla(nombre) {
     : nombre;
   Object.entries(elementos.pantallas).forEach(([clave, pantalla]) => {
     if (!pantalla) return;
-    pantalla.classList.toggle("activa", clave === pantallaReal);
+    const activa = clave === pantallaReal;
+    pantalla.classList.toggle("activa", activa);
+    pantalla.setAttribute("aria-hidden", activa ? "false" : "true");
+    if (activa) pantalla.hidden = false;
   });
 
   const pantallaNav = nombre === "editarProducto" ? "productos" : nombre;

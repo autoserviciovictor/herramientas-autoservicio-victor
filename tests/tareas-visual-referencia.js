@@ -21,7 +21,7 @@ ok(html.indexOf('id="tareasResumen"') < html.indexOf('class="tareas-command-bar"
 
 ok(/\.tarea-check-row\.is-completed[\s\S]*?text-decoration:\s*none\s*!important/.test(css), 'las tareas completadas no deben usar tachado pesado');
 ok(/\.config-toolbar-modern\s*\{[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/.test(css), 'la barra de filtros de configuración debe ser limpia, sin marco pesado');
-ok(/\.config-task-table-head,\s*\.config-task-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(280px,\s*1\.45fr\)\s*110px\s*minmax\(280px,\s*1\.25fr\)\s*105px\s*60px/.test(css), 'configuración debe conservar cinco columnas canónicas');
+ok(/\.config-task-table-head,\s*\.config-task-row\s*\{[\s\S]*?grid-template-columns:\s*32px\s*minmax\(240px,\s*1\.45fr\)\s*110px\s*minmax\(240px,\s*1\.25fr\)\s*105px\s*60px/.test(css), 'configuración debe conservar asa de orden y cinco columnas de contenido');
 ok(/#tareaModal \.tarea-modal-card > label\s*\{[\s\S]*?display:\s*grid\s*!important/.test(css), 'Nombre y Duración deben apilarse correctamente en Editar tarea');
 ok(/#asignarModal \.assign-modal-card\s*\{[\s\S]*?max-width:\s*670px\s*!important/.test(css), 'el modal de asignación diaria debe usar el ancho profesional de referencia');
 ok(/\.tareas-plan-modal-card\s*\{[\s\S]*?width:\s*min\(650px,\s*calc\(100vw - 40px\)\)/.test(css), 'el modal de planificación debe usar el ancho de referencia');

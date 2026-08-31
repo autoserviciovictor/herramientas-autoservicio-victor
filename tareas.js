@@ -14,6 +14,7 @@ const OLD_KEYS = ["autoservicio_tareas_v2", "autoservicio_tareas_v1"];
 const BANO_KEY = "autoservicio_bano_config_v1";
 const BANO_HISTORY_KEY = "autoservicio_bano_historial_v1";
 const PENDING_KEY = "autoservicio_tareas_pendientes_v1";
+const TASK_ORDER_KEY = "autoservicio_tareas_orden_v2";
 const DIAS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
 let fechaSeleccionada = inicioDia(new Date());
 let semanaBase = inicioSemana(fechaSeleccionada);
@@ -22,6 +23,7 @@ let tareaEstadoSeleccionado = true;
 let tareaModalEstadoInicial = null;
 let activo = false;
 let vistaActual = "tareas";
+let ordenTareasPendiente = null;
 let sectorSeleccionado = "";
 let usuariosTareas = [];
 let asignarDisponibles = [];
@@ -237,10 +239,50 @@ function guardarJSONUsuario(base, valor) {
 function eliminarJSONUsuario(base) {
   localStorage.removeItem(claveUsuarioLocal(base));
 }
+function leerOrdenTareasLocal() {
+  const valor = leerJSONUsuario(TASK_ORDER_KEY, {});
+  return valor && typeof valor === "object" && !Array.isArray(valor) ? valor : {};
+}
+function guardarOrdenTareasLocal(ids) {
+  const posiciones = leerOrdenTareasLocal();
+  (ids || []).forEach((id, posicion) => {
+    const clave = String(id || "").trim();
+    if (clave) posiciones[clave] = posicion;
+  });
+  guardarJSONUsuario(TASK_ORDER_KEY, posiciones);
+}
+function aplicarOrdenTareasLocal(lista) {
+  const posiciones = leerOrdenTareasLocal();
+  return [...(Array.isArray(lista) ? lista : [])]
+    .map((tarea, indiceOriginal) => ({ tarea, indiceOriginal }))
+    .sort((a, b) => {
+      const sectorA = normalClave(a.tarea?.sector || "General");
+      const sectorB = normalClave(b.tarea?.sector || "General");
+      if (sectorA !== sectorB) return a.indiceOriginal - b.indiceOriginal;
+
+      const idA = String(a.tarea?.id || "");
+      const idB = String(b.tarea?.id || "");
+      const localA = Number.isInteger(posiciones[idA]) ? posiciones[idA] : null;
+      const localB = Number.isInteger(posiciones[idB]) ? posiciones[idB] : null;
+      if (localA !== null || localB !== null) {
+        if (localA === null) return 1;
+        if (localB === null) return -1;
+        if (localA !== localB) return localA - localB;
+      }
+
+      const remotoA = Number(a.tarea?.orden);
+      const remotoB = Number(b.tarea?.orden);
+      if (Number.isFinite(remotoA) && Number.isFinite(remotoB) && remotoA !== remotoB)
+        return remotoA - remotoB;
+      return a.indiceOriginal - b.indiceOriginal;
+    })
+    .map(({ tarea }) => tarea);
+}
 function leer() {
-  return tareasMemoria.length || localStorage.getItem(claveUsuarioLocal(KEY))
+  const lista = tareasMemoria.length || localStorage.getItem(claveUsuarioLocal(KEY))
     ? tareasMemoria
     : leerJSONUsuario(KEY, []);
+  return aplicarOrdenTareasLocal(lista);
 }
 function guardarLocal(v) {
   tareasMemoria = Array.isArray(v) ? v : [];
@@ -1361,6 +1403,7 @@ async function guardarForm() {
       duracionMin,
       diasSemana,
       turnoPermitido: "ambos",
+      orden: Math.max(-1, ...all.filter((t) => (t.sector || "General") === sectorSeleccionado).map((t) => Number(t.orden) || 0)) + 1,
       activo: tareaEstadoSeleccionado,
       asignaciones: {},
     });
@@ -1893,6 +1936,38 @@ function puedeVerificarBano() {
   return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
 }
 
+function abrirPlanillaBano() {
+  const modal = $("banoPlanillaModal"), contenido = $("banoPlanillaContenido");
+  if (!modal || !contenido) return;
+  // El modal se monta directamente en body para que el overlay cubra también
+  // sidebar y encabezado, sin quedar limitado por el stacking context de Tareas.
+  if (modal.parentElement !== document.body) document.body.appendChild(modal);
+  const cfg = configBano(), hoy = inicioDia(new Date());
+  const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+  const mesTitulo = $("banoPlanillaMes");
+  if (mesTitulo) mesTitulo.textContent = fmt(inicio, { month: "long", year: "numeric" });
+  const filas = [];
+  for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+    const fecha = new Date(d);
+    if (!esDiaLimpieza(fecha, cfg)) continue;
+    filas.push(`<div class="bano-planilla-row"><time>${esc(fmt(fecha, { weekday: "short", day: "2-digit", month: "2-digit" }))}</time><strong>${esc(responsableBano(fecha, cfg) || "Sin participante")}</strong></div>`);
+  }
+  contenido.innerHTML = filas.join("") || '<div class="tareas-empty"><strong>Sin turnos</strong><span>No hay limpiezas programadas este mes.</span></div>';
+  contenido.scrollTop = 0;
+  modal.classList.remove("oculto");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("bano-planilla-abierta");
+  $("btnCerrarBanoPlanilla")?.focus({ preventScroll: true });
+}
+function cerrarPlanillaBano() {
+  const modal = $("banoPlanillaModal");
+  modal?.classList.add("oculto");
+  modal?.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("bano-planilla-abierta");
+  $("btnBanoPlanilla")?.focus({ preventScroll: true });
+}
+
 function renderBano() {
   const cfg = configBano(),
     hoy = inicioDia(new Date()),
@@ -1928,7 +2003,7 @@ function renderBano() {
   }
 
   const proximos = [];
-  for (let offset = 1; proximos.length < 5 && offset < 30; offset++) {
+  for (let offset = 1; proximos.length < 6 && offset < 40; offset++) {
     const d = new Date(hoy);
     d.setDate(d.getDate() + offset);
     if (esDiaLimpieza(d, cfg)) {
@@ -1939,18 +2014,14 @@ function renderBano() {
     ? proximos.map((x) => `
         <article class="bano-turn-card bano-turn-modern">
           <div class="bano-turn-date"><strong>${x.fecha.getDate()}</strong><span>${fmt(x.fecha, { month: "short" }).replace(".", "")}</span></div>
-          <span class="bano-turn-order">${x.orden}</span>
           <div class="bano-turn-copy"><strong>${esc(x.nombre)}</strong><span>Limpieza del baño</span></div>
           <span class="bano-turn-day">${esc(fmt(x.fecha, { weekday: "long" }))}</span>
           <svg class="app-icon bano-turn-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
         </article>`).join("")
     : '<div class="tareas-empty"><strong>Sin participantes</strong><span>Seleccioná usuarios desde Configuración.</span></div>';
 
-  // Mostrar como máximo la limpieza de hoy (si corresponde) + las 10 limpiezas anteriores.
-  // En día de descanso se muestran las últimas 10 limpiezas.
-  const limiteHistorial = corresponde ? 11 : 10;
-  const historial = hist.slice(0, limiteHistorial);
-  $("banoPendientesCantidad").textContent = String(historial.length);
+  // El panel principal mantiene una lectura breve: como máximo 6 registros, sin scroll interno.
+  const historial = hist.slice(0, 6);
   $("banoPendientes").innerHTML = historial.length
     ? `<div class="bano-history-table" role="table" aria-label="Historial de confirmaciones de limpieza del baño">
         <div class="bano-history-head" role="row">
@@ -2331,11 +2402,13 @@ function renderConfig() {
   });
 
   $("btnLimpiarBusquedaTarea")?.classList.toggle("oculto", !q);
+  if ($("btnGuardarOrdenTareas")) $("btnGuardarOrdenTareas").disabled = !ordenTareasPendiente?.length;
   $("configTareasLista").innerHTML = lista.length
     ? lista
         .map((t) => {
           const activa = t.activo !== false;
           return `<article class="config-task-row ${activa ? "" : "is-disabled"}" data-id="${esc(t.id)}" tabindex="0">
+            <button type="button" class="config-task-drag" data-task-drag draggable="true" aria-label="Arrastrar ${esc(t.nombre)} para cambiar su orden" title="Arrastrar para reordenar"><span aria-hidden="true"></span></button>
             <div class="config-task-name"><span class="config-task-icon"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><strong>${esc(t.nombre)}</strong></div>
             <span class="config-task-duration"><svg class="app-icon"><use href="#icon-clock"></use></svg>${esc(duracionTexto(t.duracionMin))}</span>
             <div class="config-task-days-wrap">${etiquetaDiasTarea(t)}</div>
@@ -2611,6 +2684,7 @@ function bind() {
   $("banoMobileParticipantBackdrop")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
   $("btnGuardarBanoParticipantSheet")?.addEventListener("click", () => guardarConfigBano());
   $("configTareasLista").onclick = (e) => {
+    if (e.target.closest("[data-task-drag]")) return;
     const row = e.target.closest("[data-id]");
     if (!row) return;
     const t = leer().find((x) => x.id === row.dataset.id);
@@ -2622,7 +2696,93 @@ function bind() {
       e.target.closest("[data-id]").click();
     }
   };
+  const configLista = $("configTareasLista");
+  let tareaArrastradaId = "";
+  configLista?.addEventListener("dragstart", (e) => {
+    const handle = e.target.closest("[data-task-drag]");
+    const row = handle?.closest(".config-task-row[data-id]");
+    if (!row) { e.preventDefault(); return; }
+    tareaArrastradaId = row.dataset.id;
+    row.classList.add("is-dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", tareaArrastradaId);
+  });
+  configLista?.addEventListener("dragover", (e) => {
+    if (!tareaArrastradaId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const target = e.target.closest(".config-task-row[data-id]");
+    if (!target || target.dataset.id === tareaArrastradaId) return;
+    const rect = target.getBoundingClientRect();
+    target.parentNode.insertBefore(configLista.querySelector(`[data-id="${CSS.escape(tareaArrastradaId)}"]`), e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+  });
+  configLista?.addEventListener("drop", (e) => { if (tareaArrastradaId) e.preventDefault(); });
+  configLista?.addEventListener("dragend", () => {
+    configLista.querySelectorAll(".config-task-row").forEach((r) => r.classList.remove("is-dragging"));
+    if (!tareaArrastradaId) return;
+    const visiblesOrdenados = [...configLista.querySelectorAll(".config-task-row[data-id]")].map((r) => r.dataset.id);
+    const visibles = new Set(visiblesOrdenados);
+    let indiceVisible = 0;
+    ordenTareasPendiente = leer()
+      .filter((t) => (t.sector || "General") === sectorSeleccionado)
+      .map((t) => visibles.has(t.id) ? visiblesOrdenados[indiceVisible++] : t.id);
+    tareaArrastradaId = "";
+    const boton = $("btnGuardarOrdenTareas");
+    if (boton) boton.disabled = false;
+  });
+  $("btnGuardarOrdenTareas")?.addEventListener("click", async () => {
+    if (!ordenTareasPendiente?.length) return;
+    const boton = $("btnGuardarOrdenTareas");
+    const idsOrdenados = [...ordenTareasPendiente];
+    const indice = new Map(idsOrdenados.map((id, posicion) => [String(id), posicion]));
+    const sectorActual = normalClave(sectorSeleccionado || "General");
+
+    boton.disabled = true;
+
+    // Una sola fuente local de orden por ID. La respuesta de GET /tareas no puede
+    // deshacer este orden mientras el servidor termina de sincronizarlo.
+    guardarOrdenTareasLocal(idsOrdenados);
+    guardarLocal(
+      tareasMemoria.map((tarea) =>
+        normalClave(tarea?.sector || "General") === sectorActual && indice.has(String(tarea?.id))
+          ? { ...tarea, orden: indice.get(String(tarea.id)) }
+          : tarea,
+      ),
+    );
+
+    try {
+      const r = await fetch(`${API_BASE_URL}/tareas/orden`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sector: sectorSeleccionado, ids: idsOrdenados }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok)
+        throw new Error(data.mensaje || "No se pudo sincronizar el orden con el servidor");
+
+      if (Array.isArray(data.tareas)) guardarLocal(data.tareas);
+      // Reaplicar después de la respuesta evita que una respuesta con orden anterior
+      // pueda ganar una carrera visual contra la decisión recién guardada.
+      guardarOrdenTareasLocal(idsOrdenados);
+      ordenTareasPendiente = null;
+      renderConfig();
+      if (vistaActual === "planificacion") renderPlanificacion();
+    } catch (error) {
+      // El orden queda guardado en el dispositivo y visible en Configuración y
+      // Planificación. El botón vuelve a habilitarse para permitir reintentar
+      // la sincronización remota sin perder la selección realizada.
+      ordenTareasPendiente = idsOrdenados;
+      renderConfig();
+      const reintentar = $("btnGuardarOrdenTareas");
+      if (reintentar) reintentar.disabled = false;
+      console.warn("No se pudo sincronizar el orden de tareas:", error);
+    }
+  });
+
   $("btnBanoAbrirConfig").onclick = () => cambiarVistaBano("config");
+  $("btnBanoPlanilla")?.addEventListener("click", abrirPlanillaBano);
+  $("btnCerrarBanoPlanilla")?.addEventListener("click", cerrarPlanillaBano);
+  $("banoPlanillaModal")?.addEventListener("click", (e) => { if (e.target.id === "banoPlanillaModal") cerrarPlanillaBano(); });
   $("banoParticipantesSeleccionados").onclick = (e) => {
     const quitar = e.target.closest("[data-remove-participant]");
     if (!quitar) return;
