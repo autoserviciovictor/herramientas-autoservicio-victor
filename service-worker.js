@@ -1,3 +1,4 @@
+// NOTIFICACIONES_VISUALIZACION_SW_V7_010926: confirma recepción real del Push y usa fallback mínimo de showNotification.
 // NOTIFICACIONES_REINTENTOS_RUNTIME_V4_010926: corrige recursión del registro Push y fuerza refresco del módulo.
 // NOTIFICACIONES_PROMPT_NATIVO_V3_010926: fuerza actualización para el flujo nativo de permisos.
 // NOTIFICACIONES_PERMISO_V2_010926: refresco explícito del módulo notifications.js.
@@ -172,23 +173,63 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    data = { title: "Vencimientos", body: event.data?.text() || "" };
-  }
-  const title = data.title || "Vencimientos";
-  const options = {
-    body: data.body || "Tenés una alerta de vencimiento.",
-    icon: "./icons/icon-192.png",
-    badge: "./icons/notification-badge-96.png",
-    tag: data.tag || `vencimiento-${Date.now()}`,
-    renotify: false,
-    data: data.data || { url: "./" },
-    vibrate: [150, 80, 150],
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    (async () => {
+      let data = {};
+      try {
+        data = event.data ? event.data.json() : {};
+      } catch {
+        data = { title: "Vencimientos", body: event.data?.text() || "" };
+      }
+
+      const receipt = data?.pushReceipt || {};
+      const reportar = async (fase, error = null) => {
+        if (!receipt?.url || !receipt?.token) return;
+        try {
+          await fetch(receipt.url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: receipt.token,
+              fase,
+              errorNombre: error?.name || "",
+              errorMensaje: String(error?.message || "").slice(0, 180),
+            }),
+          });
+        } catch {}
+      };
+
+      await reportar("push-recibido");
+
+      const title = data.title || "Autoservicio Victor";
+      const options = {
+        body: data.body || "Tenés una nueva notificación.",
+        icon: "./icons/icon-192.png",
+        badge: "./icons/notification-badge-96.png",
+        tag: data.tag || `autoservicio-${Date.now()}`,
+        data: data.data || { url: "./" },
+      };
+
+      try {
+        await self.registration.showNotification(title, options);
+        await reportar("notificacion-mostrada");
+      } catch (error) {
+        await reportar("showNotification-error", error);
+        try {
+          // Fallback mínimo para navegadores/Android que rechazan alguna opción visual.
+          await self.registration.showNotification(title, {
+            body: options.body,
+            tag: options.tag,
+            data: options.data,
+          });
+          await reportar("notificacion-mostrada-fallback");
+        } catch (fallbackError) {
+          await reportar("showNotification-fallback-error", fallbackError);
+          throw fallbackError;
+        }
+      }
+    })(),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

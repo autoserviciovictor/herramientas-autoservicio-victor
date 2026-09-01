@@ -4489,18 +4489,74 @@ function hostEndpointPush(endpoint) {
   try { return new URL(endpoint).host; } catch { return "endpoint-invalido"; }
 }
 
+const PUSH_RECEIPT_SECRET = crypto
+  .createHash("sha256")
+  .update(`${VAPID_PRIVATE_KEY || "sin-vapid"}|autoservicio-push-receipt-v1`)
+  .digest();
+const PUSH_DIAGNOSTIC_BASE_URL = String(
+  process.env.RENDER_EXTERNAL_URL || "https://inventario-victor-api.onrender.com",
+).replace(/\/$/, "");
+
+function crearTokenConfirmacionPush(contexto = "push") {
+  const contenido = Buffer.from(
+    JSON.stringify({
+      v: 1,
+      ts: Date.now(),
+      nonce: crypto.randomBytes(10).toString("hex"),
+      contexto: normalizarTexto(contexto).slice(0, 80) || "push",
+    }),
+  ).toString("base64url");
+  const firma = crypto
+    .createHmac("sha256", PUSH_RECEIPT_SECRET)
+    .update(contenido)
+    .digest("base64url");
+  return `${contenido}.${firma}`;
+}
+
+function verificarTokenConfirmacionPush(token) {
+  try {
+    const [contenido, firma] = String(token || "").split(".");
+    if (!contenido || !firma) return null;
+    const esperada = crypto
+      .createHmac("sha256", PUSH_RECEIPT_SECRET)
+      .update(contenido)
+      .digest("base64url");
+    const a = Buffer.from(firma);
+    const b = Buffer.from(esperada);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    const data = JSON.parse(Buffer.from(contenido, "base64url").toString("utf8"));
+    if (data?.v !== 1 || !Number.isFinite(Number(data?.ts))) return null;
+    if (Math.abs(Date.now() - Number(data.ts)) > 2 * 24 * 60 * 60 * 1000) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function payloadConConfirmacionPush(payload) {
+  const contexto = normalizarTexto(payload?.contexto || payload?.tag || payload?.title || "push");
+  return {
+    ...payload,
+    pushReceipt: {
+      token: crearTokenConfirmacionPush(contexto),
+      url: `${PUSH_DIAGNOSTIC_BASE_URL}/notificaciones/confirmacion-sw`,
+    },
+  };
+}
+
 async function enviarPushConReintentos(s, payload) {
   const subscription = {
     endpoint: s.endpoint,
     keys: { p256dh: s.p256dh, auth: s.auth },
   };
+  const payloadEntrega = payloadConConfirmacionPush(payload);
   const esperas = [0, 400, 1200];
   let ultimoError = null;
 
   for (let intento = 0; intento < esperas.length; intento += 1) {
     if (esperas[intento]) await esperar(esperas[intento]);
     try {
-      await webpush.sendNotification(subscription, JSON.stringify(payload), { TTL: 86400 });
+      await webpush.sendNotification(subscription, JSON.stringify(payloadEntrega), { TTL: 86400 });
       return { ok: true, intentos: intento + 1 };
     } catch (error) {
       ultimoError = error;
@@ -5104,6 +5160,31 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
       mensaje: error.message || "No se pudo guardar la suscripción",
     });
   }
+});
+
+app.post("/notificaciones/confirmacion-sw", express.json({ limit: "8kb" }), (req, res) => {
+  const data = verificarTokenConfirmacionPush(req.body?.token);
+  if (!data) return res.status(401).json({ ok: false });
+
+  const fasePermitida = new Set([
+    "push-recibido",
+    "notificacion-mostrada",
+    "notificacion-mostrada-fallback",
+    "showNotification-error",
+    "showNotification-fallback-error",
+  ]);
+  const fase = String(req.body?.fase || "").trim();
+  if (!fasePermitida.has(fase)) return res.status(400).json({ ok: false });
+
+  const errorNombre = String(req.body?.errorNombre || "").slice(0, 80);
+  const errorMensaje = String(req.body?.errorMensaje || "").slice(0, 180);
+  console.info("[PUSH][SW]", {
+    contexto: String(data.contexto || "push").slice(0, 80),
+    fase,
+    ...(errorNombre ? { errorNombre } : {}),
+    ...(errorMensaje ? { errorMensaje } : {}),
+  });
+  return res.json({ ok: true });
 });
 
 app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
