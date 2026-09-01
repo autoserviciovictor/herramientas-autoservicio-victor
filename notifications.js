@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
-const ESTADO_KEY = "autoservicio_notificaciones_preferencia_v2";
+const ESTADO_KEY_BASE = "autoservicio_notificaciones_preferencia_v3";
 const VAPID_KEY_KEY = "autoservicio_notificaciones_vapid_public_key_v1";
 let sincronizando = false;
 let pushConfirmado = false;
@@ -10,6 +10,17 @@ let avisoPermisoEnCurso = false;
 
 function esDesarrolloLocal() {
   return ["127.0.0.1", "localhost"].includes(location.hostname);
+}
+
+
+function claveUsuarioSesion() {
+  const usuario = window.AutoservicioAuth?.getUsuario?.();
+  return String(usuario?.usuario || usuario?.nombre || "").trim().toLowerCase();
+}
+
+function claveEstadoNotificaciones() {
+  const usuarioClave = claveUsuarioSesion() || "anonimo";
+  return `${ESTADO_KEY_BASE}:${usuarioClave}`;
 }
 
 function base64UrlToUint8Array(base64String) {
@@ -129,7 +140,7 @@ async function registrarSuscripcion({ probar = false } = {}) {
       throw new Error(data.mensaje || "No se pudo registrar este dispositivo para notificaciones");
 
     localStorage.setItem(VAPID_KEY_KEY, publicKey);
-    localStorage.setItem(ESTADO_KEY, "activadas");
+    localStorage.setItem(claveEstadoNotificaciones(), "activadas");
 
     if (probar) {
       actualizarEstado("Enviando notificación de prueba…", "", "syncing");
@@ -146,7 +157,7 @@ async function registrarSuscripcion({ probar = false } = {}) {
     );
     return true;
   } catch (error) {
-    localStorage.removeItem(ESTADO_KEY);
+    localStorage.removeItem(claveEstadoNotificaciones());
     pushConfirmado = false;
     actualizarEstado(
       error.message || "No se pudieron activar las notificaciones",
@@ -180,54 +191,88 @@ async function activarNotificaciones() {
   return registrarSuscripcion({ probar: true });
 }
 
-function claveUsuarioSesion() {
-  const usuario = window.AutoservicioAuth?.getUsuario?.();
-  return String(usuario?.usuario || usuario?.nombre || "").trim().toLowerCase();
-}
-
 async function mostrarAvisoPermisoNotificaciones() {
   if (esDesarrolloLocal() || avisoPermisoEnCurso) return;
   if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
   const usuarioClave = claveUsuarioSesion();
   if (!usuarioClave || avisoPermisoUsuario === usuarioClave) return;
-  avisoPermisoUsuario = usuarioClave;
 
-  // Si el navegador ya concedió permiso, no molestamos al usuario otra vez:
-  // simplemente revalidamos y asociamos la suscripción actual a su cuenta.
+  // Con permiso ya concedido, se registra/repara la suscripción en silencio.
+  // La verificación real se hace una vez por usuario en este dispositivo.
   if (Notification.permission === "granted") {
-    await registrarSuscripcion({ probar: localStorage.getItem(ESTADO_KEY) !== "activadas" });
-    return;
-  }
+    avisoPermisoEnCurso = true;
+    try {
+      const probar = localStorage.getItem(claveEstadoNotificaciones()) !== "activadas";
+      const ok = await registrarSuscripcion({ probar });
+      if (ok) {
+        avisoPermisoUsuario = usuarioClave;
+        return;
+      }
 
-  // Si el permiso fue bloqueado desde el navegador no se puede volver a abrir
-  // el prompt nativo automáticamente. Dejamos el estado visible en Configuración.
-  if (Notification.permission === "denied") {
-    actualizarEstado(
-      "Notificaciones bloqueadas. Habilitalas desde los permisos del navegador.",
-      "error",
-      "error",
-    );
+      const dialogo = window.AppDialog || window.AutoservicioDialog;
+      if (dialogo?.alert) {
+        await dialogo.alert({
+          titulo: "Revisar notificaciones",
+          mensaje:
+            "El permiso está concedido, pero este dispositivo no pudo quedar registrado para recibir avisos. Entrá a Configuración y tocá Reparar notificaciones.",
+          confirmarTexto: "Entendido",
+        });
+      }
+    } finally {
+      avisoPermisoEnCurso = false;
+    }
     return;
   }
 
   const dialogo = window.AppDialog || window.AutoservicioDialog;
-  if (!dialogo?.confirm) return;
+  if (!dialogo?.confirm) {
+    // No marcamos al usuario como avisado: un reintento breve mostrará el cartel
+    // cuando el diálogo compartido termine de inicializarse.
+    return;
+  }
 
   avisoPermisoEnCurso = true;
   try {
+    if (Notification.permission === "denied") {
+      await dialogo.alert({
+        titulo: "Notificaciones bloqueadas",
+        mensaje:
+          "Este dispositivo tiene bloqueadas las notificaciones. Habilitalas desde los permisos del navegador o de la app y después volvé a ingresar.",
+        confirmarTexto: "Entendido",
+      });
+      avisoPermisoUsuario = usuarioClave;
+      actualizarEstado(
+        "Notificaciones bloqueadas. Habilitalas desde los permisos del navegador.",
+        "error",
+        "error",
+      );
+      return;
+    }
+
     const aceptar = await dialogo.confirm({
       titulo: "Activar notificaciones",
       mensaje:
-        "Este dispositivo todavía no está preparado para recibir avisos de Autoservicio Victor. Activá las notificaciones una sola vez; después recibirás únicamente las categorías que tengas habilitadas en Configuración.",
+        "Este dispositivo necesita permiso para recibir avisos de Autoservicio Victor. Activá las notificaciones una sola vez; después recibirás únicamente las categorías que tengas habilitadas en Configuración.",
       confirmarTexto: "Activar notificaciones",
       cancelarTexto: "Ahora no",
     });
-    if (!aceptar) return;
-    await activarNotificaciones();
+    if (!aceptar) {
+      avisoPermisoUsuario = usuarioClave;
+      return;
+    }
+
+    const ok = await activarNotificaciones();
+    if (ok) avisoPermisoUsuario = usuarioClave;
   } finally {
     avisoPermisoEnCurso = false;
   }
+}
+
+function programarAvisoPermisoNotificaciones() {
+  [0, 250, 1000].forEach((demora) => {
+    setTimeout(() => void mostrarAvisoPermisoNotificaciones(), demora);
+  });
 }
 
 function inicializarNotificaciones() {
@@ -248,7 +293,7 @@ function inicializarNotificaciones() {
 
   if (Notification.permission === "granted") {
     actualizarEstado("Verificando notificaciones…", "", "syncing");
-    registrarSuscripcion({ probar: localStorage.getItem(ESTADO_KEY) !== "activadas" });
+    registrarSuscripcion({ probar: localStorage.getItem(claveEstadoNotificaciones()) !== "activadas" });
   } else if (Notification.permission === "denied") {
     actualizarEstado(
       "Notificaciones bloqueadas. Habilitalas desde los permisos del navegador.",
@@ -262,14 +307,15 @@ function inicializarNotificaciones() {
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarNotificaciones();
-  if (window.AutoservicioAuth?.getUsuario?.()) void mostrarAvisoPermisoNotificaciones();
+  if (window.AutoservicioAuth?.getUsuario?.()) programarAvisoPermisoNotificaciones();
 });
 window.addEventListener("autoservicio:sesion", (event) => {
-  if (!event.detail?.usuario) {
+  const usuarioEvento = event.detail?.usuario || event.detail?.nombre || "";
+  if (!usuarioEvento) {
     avisoPermisoUsuario = "";
     return;
   }
-  void mostrarAvisoPermisoNotificaciones();
+  programarAvisoPermisoNotificaciones();
 });
 
 // Preferencias por categoría. Se guardan localmente para la UI y también en
