@@ -330,6 +330,18 @@ function fechaArgentina(fecha = new Date()) {
   return `${obtener("year")}-${obtener("month")}-${obtener("day")}`;
 }
 
+function horaMinutoArgentina(fecha = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(fecha);
+  const obtener = (tipo) =>
+    Number(partes.find((parte) => parte.type === tipo)?.value || 0);
+  return { hora: obtener("hour"), minuto: obtener("minute") };
+}
+
 function diasDesdeHoyArgentina(fechaIso) {
   const valor = normalizarTexto(fechaIso);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
