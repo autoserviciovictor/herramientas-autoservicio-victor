@@ -175,7 +175,7 @@ async function registrarSuscripcionConReintentos({ probar = false } = {}) {
   const esperas = [0, 700, 1800];
   for (let intento = 0; intento < esperas.length; intento += 1) {
     if (esperas[intento]) await new Promise((resolve) => setTimeout(resolve, esperas[intento]));
-    const ok = await registrarSuscripcionConReintentos({ probar });
+    const ok = await registrarSuscripcion({ probar });
     if (ok) return true;
   }
   return false;

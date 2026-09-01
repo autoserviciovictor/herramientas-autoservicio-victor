@@ -1,3 +1,4 @@
+// NOTIFICACIONES_REINTENTOS_RUNTIME_V4_010926: corrige recursión del registro Push y fuerza refresco del módulo.
 // NOTIFICACIONES_PROMPT_NATIVO_V3_010926: fuerza actualización para el flujo nativo de permisos.
 // NOTIFICACIONES_PERMISO_V2_010926: refresco explícito del módulo notifications.js.
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
