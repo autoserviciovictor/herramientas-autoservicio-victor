@@ -4541,8 +4541,32 @@ function suscripcionesUsuario(contexto, usuarioClave) {
   );
 }
 
+function estadoEntregaPush(resultado) {
+  if (!resultado?.configurado) return "no_configurado";
+  if (Number(resultado?.enviados || 0) > 0) return "entregado";
+  if (Number(resultado?.destinatarios || 0) < 1) return "sin_suscripcion";
+  return "fallido";
+}
+
 function entregaPushRequiereReintento(resultado) {
-  return Boolean(resultado?.destinatarios > 0 && resultado?.enviados < 1 && resultado?.fallidos > 0);
+  return estadoEntregaPush(resultado) === "fallido";
+}
+
+function entregaPushPuedeMarcarEnviada(resultado) {
+  return estadoEntregaPush(resultado) === "entregado";
+}
+
+function registrarDiagnosticoEntregaPush(contexto, resultado) {
+  const estado = estadoEntregaPush(resultado);
+  if (estado === "entregado") return;
+  console.warn("[PUSH] Entrega no confirmada", {
+    contexto: normalizarTexto(contexto) || "sin-contexto",
+    estado,
+    destinatarios: Number(resultado?.destinatarios || 0),
+    enviados: Number(resultado?.enviados || 0),
+    fallidos: Number(resultado?.fallidos || 0),
+    configurado: Boolean(resultado?.configurado),
+  });
 }
 
 async function enviarPushAUsuario(contexto, usuarioClave, payload) {
@@ -4622,7 +4646,12 @@ async function procesarNotificacionesTareasPendientes(turno) {
     const resultado = await enviarPushASuscripciones(suscripciones, payload);
     enviados += resultado.enviados || 0;
     if (entregaPushRequiereReintento(resultado)) {
+      registrarDiagnosticoEntregaPush(`tareas-pendientes-${turno}`, resultado);
       retryNeeded = true;
+      continue;
+    }
+    if (!entregaPushPuedeMarcarEnviada(resultado)) {
+      registrarDiagnosticoEntregaPush(`tareas-pendientes-${turno}`, resultado);
       continue;
     }
     await registrarNotificacionEnviada(
@@ -4688,7 +4717,14 @@ async function notificarSupervisorTareaCompletada({
     (s) => s.activo && normalizarUsuario(s.usuario) === normalizarUsuario(supervisor.usuario),
   );
   const resultado = await enviarPushASuscripciones(suscripciones, payload);
-  if (entregaPushRequiereReintento(resultado)) return { ...resultado, retryNeeded: true };
+  if (entregaPushRequiereReintento(resultado)) {
+    registrarDiagnosticoEntregaPush("tarea-completada", resultado);
+    return { ...resultado, retryNeeded: true };
+  }
+  if (!entregaPushPuedeMarcarEnviada(resultado)) {
+    registrarDiagnosticoEntregaPush("tarea-completada", resultado);
+    return { ...resultado, retryNeeded: false };
+  }
   await registrarNotificacionEnviada(
     clave,
     "tarea-completada",
@@ -4792,7 +4828,12 @@ async function procesarNotificacionBano(tipo) {
     const resultado = await enviarPushAUsuario(contexto, usuario.usuario, payload);
     enviados += resultado.enviados || 0;
     if (entregaPushRequiereReintento(resultado)) {
+      registrarDiagnosticoEntregaPush(`bano-${tipo}`, resultado);
       retryNeeded = true;
+      continue;
+    }
+    if (!entregaPushPuedeMarcarEnviada(resultado)) {
+      registrarDiagnosticoEntregaPush(`bano-${tipo}`, resultado);
       continue;
     }
     await registrarNotificacionEnviada(
@@ -4888,7 +4929,12 @@ async function notificarVencimientoAUsuarios(registro, payload, clave, tipo) {
       const resultado = await enviarPushAUsuario(contexto, usuario.usuario, payload);
       enviados += resultado.enviados || 0;
       if (entregaPushRequiereReintento(resultado)) {
+        registrarDiagnosticoEntregaPush(tipo, resultado);
         retryNeeded = true;
+        continue;
+      }
+      if (!entregaPushPuedeMarcarEnviada(resultado)) {
+        registrarDiagnosticoEntregaPush(tipo, resultado);
         continue;
       }
       await registrarNotificacionEnviada(claveUsuario, tipo, registro, payload.body);
@@ -5026,6 +5072,7 @@ app.put("/notificaciones/preferencias", requerirSesion, async (req, res) => {
 });
 
 app.get("/notificaciones/public-key", (req, res) => {
+  console.info("[PUSH] Clave pública solicitada", { configurado: PUSH_CONFIGURED });
   res.json({
     ok: true,
     configurado: PUSH_CONFIGURED,
@@ -5034,19 +5081,24 @@ app.get("/notificaciones/public-key", (req, res) => {
 });
 
 app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
+  console.info("[PUSH] Solicitud de suscripción recibida");
   try {
-    if (!PUSH_CONFIGURED)
+    if (!PUSH_CONFIGURED) {
+      console.warn("[PUSH] Suscripción rechazada: VAPID no configurado");
       return res.status(503).json({
         ok: false,
         mensaje: "Las notificaciones todavía no están configuradas en Render",
       });
+    }
     await guardarSuscripcionPush(req);
+    console.info("[PUSH] Suscripción guardada correctamente");
     res.json({
       ok: true,
       mensaje:
         "Notificaciones activadas y suscripción guardada correctamente.",
     });
   } catch (error) {
+    console.error("[PUSH] Error al guardar suscripción:", error?.message || error);
     res.status(400).json({
       ok: false,
       mensaje: error.message || "No se pudo guardar la suscripción",
@@ -5055,20 +5107,31 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
 });
 
 app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
+  console.info("[PUSH] Prueba solicitada");
   try {
-    if (!PUSH_CONFIGURED)
+    if (!PUSH_CONFIGURED) {
+      console.warn("[PUSH] Prueba rechazada: VAPID no configurado");
       return res.status(503).json({ ok: false, mensaje: "Las claves VAPID no están configuradas" });
+    }
     const suscripciones = (await obtenerSuscripcionesPush()).filter(
       (s) => normalizarUsuario(s.usuario) === normalizarUsuario(req.usuario.usuario) && s.activo,
     );
-    if (!suscripciones.length)
+    console.info("[PUSH] Suscripciones activas para prueba:", suscripciones.length);
+    if (!suscripciones.length) {
+      console.warn("[PUSH] Prueba sin suscripción activa");
       return res.status(409).json({ ok: false, mensaje: "Este usuario no tiene una suscripción push activa" });
+    }
 
     const resultado = await enviarPushASuscripciones(suscripciones, {
       title: "Notificaciones activadas",
       body: "La conexión push de este dispositivo funciona correctamente.",
       tag: `prueba-push-${normalizarUsuario(req.usuario.usuario)}`,
       data: { url: "./" },
+    });
+    console.info("[PUSH] Resultado de prueba", {
+      destinatarios: Number(resultado.destinatarios || 0),
+      enviados: Number(resultado.enviados || 0),
+      fallidos: Number(resultado.fallidos || 0),
     });
     if (resultado.enviados < 1)
       return res.status(502).json({
@@ -5078,7 +5141,7 @@ app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
       });
     return res.json({ ok: true, mensaje: "Notificación de prueba enviada", ...resultado });
   } catch (error) {
-    console.error("Error en prueba de notificaciones push:", error?.message || error);
+    console.error("[PUSH] Error en prueba:", error?.message || error);
     return res.status(500).json({ ok: false, mensaje: "No se pudo completar la prueba de notificaciones" });
   }
 });
