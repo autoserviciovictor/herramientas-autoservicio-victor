@@ -4614,7 +4614,9 @@ function entregaPushPuedeMarcarEnviada(resultado) {
 
 function registrarDiagnosticoEntregaPush(contexto, resultado) {
   const estado = estadoEntregaPush(resultado);
-  if (estado === "entregado") return;
+  // Un usuario sin dispositivo suscripto es un estado normal, no un error.
+  // Se contabiliza en los resúmenes de cada proceso para no inundar Render.
+  if (["entregado", "sin_suscripcion"].includes(estado)) return;
   console.warn("[PUSH] Entrega no confirmada", {
     contexto: normalizarTexto(contexto) || "sin-contexto",
     estado,
@@ -4970,10 +4972,20 @@ async function notificarVencimientoAUsuarios(registro, payload, clave, tipo) {
     const { contexto, usuarios } = await destinatariosVencimientos();
     let enviados = 0;
     let retryNeeded = false;
+    let usuariosProcesados = 0;
+    let usuariosConSuscripcion = 0;
+    let usuariosSinSuscripcion = 0;
+    let suscripcionesActivas = 0;
+    let fallidos = 0;
+    let omitidosPorDedupe = 0;
 
     for (const usuario of usuarios) {
       const claveUsuario = `${clave}|${normalizarUsuario(usuario.usuario)}`;
-      if (enviadas.has(claveUsuario)) continue;
+      if (enviadas.has(claveUsuario)) {
+        omitidosPorDedupe += 1;
+        continue;
+      }
+      usuariosProcesados += 1;
       await registrarCentroNotificacion({
         usuario: usuario.usuario,
         tipo: "vencimientos",
@@ -4983,7 +4995,12 @@ async function notificarVencimientoAUsuarios(registro, payload, clave, tipo) {
         clave: claveUsuario,
       });
       const resultado = await enviarPushAUsuario(contexto, usuario.usuario, payload);
-      enviados += resultado.enviados || 0;
+      const destinatarios = Number(resultado.destinatarios || 0);
+      enviados += Number(resultado.enviados || 0);
+      fallidos += Number(resultado.fallidos || 0);
+      suscripcionesActivas += destinatarios;
+      if (destinatarios > 0) usuariosConSuscripcion += 1;
+      else usuariosSinSuscripcion += 1;
       if (entregaPushRequiereReintento(resultado)) {
         registrarDiagnosticoEntregaPush(tipo, resultado);
         retryNeeded = true;
@@ -4996,6 +5013,17 @@ async function notificarVencimientoAUsuarios(registro, payload, clave, tipo) {
       await registrarNotificacionEnviada(claveUsuario, tipo, registro, payload.body);
       enviadas.add(claveUsuario);
     }
+    console.info("[PUSH][VENCIMIENTOS] Resumen", {
+      contexto: tipo,
+      usuariosCategoria: usuarios.length,
+      usuariosProcesados,
+      usuariosConSuscripcion,
+      usuariosSinSuscripcion,
+      suscripcionesActivas,
+      enviados,
+      fallidos,
+      omitidosPorDedupe,
+    });
     return { enviados, usuarios: usuarios.length, retryNeeded };
   } finally {
     clavesNotificacionEnProceso.delete(clave);

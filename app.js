@@ -607,6 +607,7 @@ function cerrarCargaInventario(mensaje = "") {
 function reiniciarEstadoModulo(modulo) {
   if (!modulo || modulo === "inicio") return;
   if (modulo === "inventario") {
+    cerrarCargaInventario();
     cerrarScanner(true);
     productoEditando = null;
     snapshotProductoEditando = null;
@@ -617,6 +618,8 @@ function reiniciarEstadoModulo(modulo) {
     desactivarModoCantidad();
   }
   if (modulo === "vencimientos") {
+    cerrarCargaVencimientosModal();
+    cerrarModalVencimiento();
     cerrarScannerVencimientos(false);
     if (elementos.vencBuscador) elementos.vencBuscador.value = "";
     if (elementos.vencCodigoManualInput)
@@ -639,6 +642,27 @@ function reiniciarEstadoModulo(modulo) {
   }
   if (modulo === "admin") window.AdminModule?.reiniciar?.();
   window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function reiniciarEstadoTemporalAplicacion() {
+  // Todo lo que pertenece a la navegación o a formularios/búsquedas se descarta
+  // al cerrar sesión. Los datos reales continúan en PostgreSQL/Sheets o en los
+  // caches persistentes de cada módulo.
+  ["inventario", "vencimientos", "anotar", "precios", "horarios", "admin"]
+    .forEach((modulo) => {
+      try { reiniciarEstadoModulo(modulo); } catch (error) {
+        console.warn(`No se pudo reiniciar el estado temporal de ${modulo}:`, error);
+      }
+    });
+  try { window.TareasModule?.reiniciar?.(); } catch (_) {}
+  try { window.BanoModule?.reiniciar?.(); } catch (_) {}
+
+  sessionStorage.removeItem("autoservicio_admin_vista");
+  pantallaActualApp = "inicio";
+  cambiarPantalla("inicio");
+  const state = { autoservicio: true, pantalla: "inicio", modulo: "inicio" };
+  history.replaceState(state, "", location.pathname);
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
 function intentarBloquearOrientacion() {
@@ -3399,8 +3423,13 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) sincronizarEnSegundoPlano();
 });
 
-window.addEventListener("autoservicio:sesion", async () => {
+window.addEventListener("autoservicio:sesion", async (event) => {
   try {
+    if (!event.detail?.usuario) {
+      reiniciarEstadoTemporalAplicacion();
+      return;
+    }
+
     const params = new URLSearchParams(window.location.search);
     if (params.get("modulo")) {
       await abrirDestinoInicial();

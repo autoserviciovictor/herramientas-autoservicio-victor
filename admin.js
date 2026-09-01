@@ -2398,13 +2398,46 @@ window.AdminModule = {
     cambiarTab(tab);
   },
   reiniciar() {
+    cerrarUsuarioModalDirecto();
+    cerrarSectorModalDirecto();
+    cerrarVistaPreviaImportacion();
+    cerrarHistorialVencimientosUI();
+    importacionPendiente = null;
+    importacionResumenPendiente = null;
+    adminUsuariosSeleccionados.clear();
+    adminUsuariosPagina = 1;
+    adminSectoresPagina = 1;
+    historialPagina = 1;
+    historialLimite = 20;
+    adminActividadExpandida = false;
+    adminUsuariosVista = "grid";
+
+    const limpiarTexto = [
+      "adminUsuariosBuscar",
+      "adminSectoresBuscar",
+      "adminHistorialBuscar",
+      "adminHistorialUsuario",
+      "adminHistorialAccion",
+    ];
+    limpiarTexto.forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) input.value = "";
+    });
+    [
+      "adminUsuariosFiltroEstado",
+      "adminUsuariosFiltroSector",
+      "adminUsuariosFiltroRol",
+      "adminSectoresFiltroEstado",
+    ].forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) input.value = "todos";
+    });
+    const seleccionarTodos = document.getElementById("adminUsuariosSeleccionarTodos");
+    if (seleccionarTodos) seleccionarTodos.checked = false;
+    document.getElementById("adminUsuariosVistaGrid")?.classList.add("activo");
+    document.getElementById("adminUsuariosVistaLista")?.classList.remove("activo");
+
     cambiarTab("inicio");
-    const buscar = document.getElementById("adminHistorialBuscar");
-    if (buscar) buscar.value = "";
-    const usuario = document.getElementById("adminHistorialUsuario");
-    if (usuario) usuario.value = "";
-    const accion = document.getElementById("adminHistorialAccion");
-    if (accion) accion.value = "";
     window.scrollTo({ top: 0, behavior: "auto" });
   },
 };

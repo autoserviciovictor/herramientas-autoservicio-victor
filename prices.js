@@ -15,7 +15,6 @@ import {
 import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
-const LAST_KEY_BASE = "autoservicio-precios-ultimo-v3";
 const RECENT_KEY_BASE = "autoservicio-precios-recientes-v2";
 const RECENT_MAX = 12;
 
@@ -29,10 +28,6 @@ let historialExpandido = false;
 function usuarioCacheClave() {
   const usuario = window.AutoservicioAuth?.getUsuario?.()?.usuario;
   return encodeURIComponent(String(usuario || "anonimo").trim().toLowerCase());
-}
-
-function claveUltimo() {
-  return `${LAST_KEY_BASE}:${usuarioCacheClave()}`;
 }
 
 function claveRecientes() {
@@ -85,15 +80,6 @@ async function cargarProductos({ forzar = false } = {}) {
   return cargando;
 }
 
-function leerUltimo() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(claveUltimo()) || "null");
-    return raw ? normalizarProducto(raw) : null;
-  } catch (_) {
-    return null;
-  }
-}
-
 function leerRecientes() {
   try {
     const raw = JSON.parse(localStorage.getItem(claveRecientes()) || "[]");
@@ -121,9 +107,8 @@ function agregarReciente(producto) {
 function guardarUltimo(producto, { registrar = true } = {}) {
   if (!producto) return;
   const item = { ...normalizarProducto(producto), consultadoEn: Date.now() };
-  try {
-    localStorage.setItem(claveUltimo(), JSON.stringify(item));
-  } catch (_) {}
+  // El producto actual es estado temporal de pantalla: no se persiste.
+  // El historial de consultas sí se conserva como dato útil por usuario.
   if (registrar) agregarReciente(item);
   renderUltimo(item);
   renderRecientes();
@@ -478,7 +463,7 @@ function actualizarFab() {
 async function activar() {
   moduloPreciosActivo = true;
   historialExpandido = false;
-  renderUltimo(leerUltimo());
+  renderUltimo(null);
   renderRecientes();
   actualizarFab();
   cargarProductos().catch(() => {});
@@ -492,7 +477,7 @@ function reiniciarModuloPrecios() {
   if (buscador) buscador.value = "";
   const manual = $("precioManualInput");
   if (manual) manual.value = "";
-  renderUltimo(leerUltimo());
+  renderUltimo(null);
   renderRecientes();
   window.scrollTo({ top: 0, behavior: "auto" });
 }
@@ -575,7 +560,10 @@ function init() {
 
   window.addEventListener("autoservicio:sesion", () => {
     historialExpandido = false;
-    renderUltimo(leerUltimo());
+    ocultarSugerenciasPrincipal();
+    const buscador = $("precioConsultaInput");
+    if (buscador) buscador.value = "";
+    renderUltimo(null);
     renderRecientes();
   });
 }
