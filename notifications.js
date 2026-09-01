@@ -7,6 +7,7 @@ let sincronizando = false;
 let pushConfirmado = false;
 let avisoPermisoUsuario = "";
 let avisoPermisoEnCurso = false;
+let permisoNativoIngresoPromise = null;
 
 function esDesarrolloLocal() {
   return ["127.0.0.1", "localhost"].includes(location.hostname);
@@ -170,6 +171,35 @@ async function registrarSuscripcion({ probar = false } = {}) {
   }
 }
 
+async function registrarSuscripcionConReintentos({ probar = false } = {}) {
+  const esperas = [0, 700, 1800];
+  for (let intento = 0; intento < esperas.length; intento += 1) {
+    if (esperas[intento]) await new Promise((resolve) => setTimeout(resolve, esperas[intento]));
+    const ok = await registrarSuscripcionConReintentos({ probar });
+    if (ok) return true;
+  }
+  return false;
+}
+
+async function solicitarPermisoNativoAlIngresar() {
+  if (esDesarrolloLocal() || !("Notification" in window)) return;
+  if (Notification.permission !== "default") return;
+  if (permisoNativoIngresoPromise) return permisoNativoIngresoPromise;
+
+  // Esta función se ejecuta directamente desde el click de Ingresar. De ese modo
+  // Chrome/Android recibe una activación real del usuario y puede mostrar su prompt nativo.
+  permisoNativoIngresoPromise = Notification.requestPermission()
+    .then(async (permiso) => {
+      if (permiso !== "granted") return false;
+      if (!claveUsuarioSesion()) return true;
+      return registrarSuscripcionConReintentos({ probar: true });
+    })
+    .finally(() => {
+      permisoNativoIngresoPromise = null;
+    });
+  return permisoNativoIngresoPromise;
+}
+
 async function activarNotificaciones() {
   if (!("Notification" in window))
     return actualizarEstado("Este dispositivo no admite notificaciones", "error", "error");
@@ -204,7 +234,7 @@ async function mostrarAvisoPermisoNotificaciones() {
     avisoPermisoEnCurso = true;
     try {
       const probar = localStorage.getItem(claveEstadoNotificaciones()) !== "activadas";
-      const ok = await registrarSuscripcion({ probar });
+      const ok = await registrarSuscripcionConReintentos({ probar });
       if (ok) {
         avisoPermisoUsuario = usuarioClave;
         return;
@@ -215,7 +245,7 @@ async function mostrarAvisoPermisoNotificaciones() {
         await dialogo.alert({
           titulo: "Revisar notificaciones",
           mensaje:
-            "El permiso está concedido, pero este dispositivo no pudo quedar registrado para recibir avisos. Entrá a Configuración y tocá Reparar notificaciones.",
+            "Chrome ya tiene permitido mostrar notificaciones, pero no se pudo completar el registro Push de este dispositivo. Cerrá y volvé a abrir la app para reintentar automáticamente.",
           confirmarTexto: "Entendido",
         });
       }
@@ -250,20 +280,13 @@ async function mostrarAvisoPermisoNotificaciones() {
       return;
     }
 
-    const aceptar = await dialogo.confirm({
-      titulo: "Activar notificaciones",
-      mensaje:
-        "Este dispositivo necesita permiso para recibir avisos de Autoservicio Victor. Activá las notificaciones una sola vez; después recibirás únicamente las categorías que tengas habilitadas en Configuración.",
-      confirmarTexto: "Activar notificaciones",
-      cancelarTexto: "Ahora no",
-    });
-    if (!aceptar) {
-      avisoPermisoUsuario = usuarioClave;
-      return;
-    }
-
-    const ok = await activarNotificaciones();
-    if (ok) avisoPermisoUsuario = usuarioClave;
+    // Con permiso en estado "default" no mostramos un cartel intermedio propio.
+    // El prompt nativo de Chrome se solicita directamente desde el click de Ingresar.
+    actualizarEstado(
+      "Chrome pedirá permiso para las notificaciones al ingresar.",
+      "",
+      "inactive",
+    );
   } finally {
     avisoPermisoEnCurso = false;
   }
@@ -293,7 +316,7 @@ function inicializarNotificaciones() {
 
   if (Notification.permission === "granted") {
     actualizarEstado("Verificando notificaciones…", "", "syncing");
-    registrarSuscripcion({ probar: localStorage.getItem(claveEstadoNotificaciones()) !== "activadas" });
+    registrarSuscripcionConReintentos({ probar: localStorage.getItem(claveEstadoNotificaciones()) !== "activadas" });
   } else if (Notification.permission === "denied") {
     actualizarEstado(
       "Notificaciones bloqueadas. Habilitalas desde los permisos del navegador.",
@@ -306,6 +329,7 @@ function inicializarNotificaciones() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  $("btnLoginIngresar")?.addEventListener("click", solicitarPermisoNativoAlIngresar);
   inicializarNotificaciones();
   if (window.AutoservicioAuth?.getUsuario?.()) programarAvisoPermisoNotificaciones();
 });
