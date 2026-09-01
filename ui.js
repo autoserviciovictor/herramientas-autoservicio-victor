@@ -1,4 +1,4 @@
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 
 const elementos = {
   splash: document.getElementById("splash"),

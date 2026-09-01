@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";

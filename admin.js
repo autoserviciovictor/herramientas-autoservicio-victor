@@ -1,4 +1,4 @@
-import { API_BASE_URL, APP_ASSET_BUILD } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { API_BASE_URL, APP_ASSET_BUILD } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const XLSX_SCRIPT_URL = new URL(`./xlsx.full.min.js?v=${APP_ASSET_BUILD}`, import.meta.url).href;
 let promesaCargaXLSX = null;

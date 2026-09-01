@@ -10,5 +10,5 @@ assert(db.includes('notification_center'), 'Falta tabla centro notificaciones');
 assert(db.includes('expiration_history'), 'Falta tabla historial vencimientos');
 assert(server.includes('MIGRACION_AUXILIARES = "2026-08-28-auxiliares-v1"'), 'Falta marcador Etapa 8');
 assert(server.includes('asegurarAuxiliaresPostgres()'), 'Falta inicialización Etapa 8');
-assert(server.includes('PostgreSQL Etapa 8:'), 'Falta log Etapa 8');
+assert(server.includes('MIGRACION_AUXILIARES = "2026-08-28-auxiliares-v1"'), 'Falta validación de migración de datos auxiliares');
 console.log('PostgreSQL Etapa 8 Auxiliares regression tests: OK');

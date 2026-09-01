@@ -16,12 +16,10 @@ const {
   guardarSectorDb,
   eliminarUsuarioConSupervisionDb,
   eliminarSectorConHorariosDb,
-  importarUsuariosSectoresAtomico,
 } = require("./db-usuarios-sectores");
 const {
   asegurarEsquemaHorarios,
   conTransaccionHorarios,
-  importarHorariosAtomico,
   listarTurnosFilas,
   reemplazarTurnosSector,
   listarCalendarioFilas,
@@ -35,21 +33,20 @@ const {
 const {
   asegurarEsquemaTareasBano,
   conTransaccionTareasBano,
-  importarTareasBanoAtomico,
   listarTareasDb,
-  reemplazarTareasDb,
+  guardarTareaDb,
+  eliminarTareasDb,
+  guardarAsignacionTareaDb,
+  eliminarAsignacionTareaDb,
   actualizarOrdenTareasDb,
   leerBanoDb,
-  guardarBanoDb,
+  guardarConfiguracionBanoDb,
+  guardarRegistroBanoDb,
 } = require("./db-tareas-bano");
 const {
   asegurarEsquemaInventarioProductos,
-  conTransaccionInventarioProductos,
-  importarInventarioProductosAtomico,
   listarInventarioDb,
   buscarInventarioPorCodigoDb,
-  crearInventarioDb,
-  actualizarInventarioDb,
   sumarInventarioDb,
   corregirInventarioDb,
   listarInventarioPendienteSheetsDb,
@@ -62,7 +59,6 @@ const {
 } = require("./db-inventario-productos");
 const {
   asegurarEsquemaVencimientos,
-  importarVencimientosAtomico,
   listarVencimientosDb,
   crearVencimientoDb,
   actualizarVencimientoDb,
@@ -71,16 +67,13 @@ const {
 const {
   asegurarEsquemaListasReposicion,
   conTransaccionListasReposicion,
-  importarListasReposicionAtomico,
   listarListasReposicionDb,
   reemplazarListasReposicionDb,
 } = require("./db-listas-reposicion");
 const {
   asegurarEsquemaAuxiliares,
-  importarAuxiliaresAtomico,
   registrarActividadAdminDb,
   listarActividadAdminDb,
-  buscarOperacionOfflineDb,
   reservarOperacionOfflineDb,
   finalizarOperacionOfflineDb,
   listarSuscripcionesPushDb,
@@ -104,7 +97,6 @@ const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const PORT = process.env.PORT || 3000;
 const SPREADSHEET_ID = normalizarTexto(process.env.SPREADSHEET_ID);
 const SHEET_NAME = "Stock";
-const PRODUCTOS_SHEET_NAME = "Productos";
 const GOOGLE_CLIENT_EMAIL = normalizarTexto(process.env.GOOGLE_CLIENT_EMAIL);
 const GOOGLE_LOGIN_CLIENT_ID = normalizarTexto(process.env.GOOGLE_LOGIN_CLIENT_ID);
 const GOOGLE_LOGIN_DOMAIN = normalizarTexto(process.env.GOOGLE_LOGIN_DOMAIN).toLowerCase();
@@ -112,23 +104,6 @@ const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n")
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
 const USER_SESSION_DAYS = Math.max(1, Math.min(30, Number(process.env.USER_SESSION_DAYS) || 7));
-const AUTO_MIGRATE_SHEETS = false; // Etapa 9: compatibilidad legacy; no se usa en runtime
-const USUARIOS_SHEET_NAME = "Usuarios";
-const SECTORES_SHEET_NAME = "Sectores";
-const AUDITORIA_HORARIOS_SHEET_NAME = "Auditoría Horarios";
-const CALENDARIO_HORARIOS_SHEET_NAME = "Calendario Horarios";
-const TURNOS_HORARIOS_SHEET_NAME = "Horarios Turnos";
-const ORDEN_HORARIOS_SHEET_NAME = "Orden Personal Horarios";
-const DETALLES_HORARIOS_SHEET_NAME = "Detalles Horarios";
-const REEMPLAZOS_HORARIOS_SHEET_NAME = "Reemplazos Horarios";
-const HISTORIAL_VENCIMIENTOS_SHEET_NAME = "Historial Vencimientos";
-const HISTORIAL_ADMIN_SHEET_NAME = "Historial Administración";
-const PUSH_SUBSCRIPTIONS_SHEET_NAME = "Notificaciones Suscripciones";
-const NOTIFICATION_LOG_SHEET_NAME = "Notificaciones Vencimientos";
-const NOTIFICATION_CENTER_SHEET_NAME = "Centro Notificaciones";
-const OFFLINE_OPERATIONS_SHEET_NAME = "Operaciones Offline";
-const TAREAS_SHEET_NAME = "Tareas";
-const TAREAS_BANO_SHEET_NAME = "Tareas_Bano";
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
 const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
 const VAPID_SUBJECT = normalizarTexto(
@@ -143,6 +118,7 @@ if (PUSH_CONFIGURED)
 const ADMIN_USERNAME = normalizarTexto(
   process.env.ADMIN_USERNAME || "admin",
 ).toLowerCase();
+const ES_PRODUCCION = process.env.NODE_ENV === "production";
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
   .map((origen) => origen.trim())
@@ -153,8 +129,8 @@ app.use(
     origin(origen, callback) {
       if (
         !origen ||
-        ALLOWED_ORIGINS.length === 0 ||
-        ALLOWED_ORIGINS.includes(origen)
+        ALLOWED_ORIGINS.includes(origen) ||
+        (!ES_PRODUCCION && ALLOWED_ORIGINS.length === 0)
       ) {
         return callback(null, true);
       }
@@ -457,8 +433,6 @@ function verificarPassword(password, guardado) {
   }
 }
 
-let hojaUsuariosAsegurada = false;
-let promesaHojaUsuarios = null;
 const MODULOS_PERMITIDOS = [
   "inventario",
   "vencimientos",
@@ -510,146 +484,8 @@ function normalizarPermisos(valor, rol = "personal") {
     MODULOS_PERMITIDOS.map((m) => [m, entrada[m] === true]),
   );
 }
-function serializarPermisos(permisos, rol) {
-  return JSON.stringify(normalizarPermisos(permisos, rol));
-}
-
-async function asegurarHojaUsuarios() {
-  if (hojaUsuariosAsegurada) return;
-  if (promesaHojaUsuarios) return promesaHojaUsuarios;
-  promesaHojaUsuarios = (async () => {
-    validarConfiguracion();
-    const meta = await sheets.spreadsheets.get({
-      spreadsheetId: SPREADSHEET_ID,
-    });
-    const existe = (meta.data.sheets || []).some(
-      (hoja) => hoja.properties?.title === USUARIOS_SHEET_NAME,
-    );
-    if (!existe) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: {
-          requests: [
-            { addSheet: { properties: { title: USUARIOS_SHEET_NAME } } },
-          ],
-        },
-      });
-    }
-    const encabezados = [
-      "Usuario",
-      "Nombre",
-      "Password hash",
-      "Rol",
-      "Activo",
-      "Creado",
-      "Permisos módulos",
-      "Sector",
-      "Sectores a cargo",
-      "Versión sesión",
-      "Email Google",
-    ];
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${USUARIOS_SHEET_NAME}!A1:K`,
-    });
-    const filas = respuesta.data.values || [];
-    if (!filas[0] || encabezados.some((titulo, i) => filas[0][i] !== titulo)) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A1:K1`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: [encabezados] },
-      });
-    }
-    const filasUsuarios = filas
-      .slice(1)
-      .map((fila, i) => ({ fila, filaGoogle: i + 2 }))
-      .filter(({ fila }) => normalizarUsuario(fila[0]));
-    for (const { fila, filaGoogle } of filasUsuarios) {
-      const versionSesion = Number.parseInt(fila[9], 10);
-      if (!Number.isInteger(versionSesion) || versionSesion < 1) {
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USUARIOS_SHEET_NAME}!J${filaGoogle}`,
-          valueInputOption: "RAW",
-          requestBody: { values: [["1"]] },
-        });
-      }
-    }
-    const tieneUsuarios = filasUsuarios.length > 0;
-    if (!tieneUsuarios) {
-      if (!ADMIN_KEY)
-        throw new Error(
-          "Configurá ADMIN_KEY en Render para crear el primer usuario administrador",
-        );
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${USUARIOS_SHEET_NAME}!A:K`,
-        valueInputOption: "RAW",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: {
-          values: [
-            [
-              ADMIN_USERNAME,
-              "Administrador",
-              hashPassword(ADMIN_KEY),
-              "administrador",
-              "Sí",
-              fechaHoraArgentinaIso(),
-              serializarPermisos(null, "administrador"),
-              "",
-              "",
-              "1",
-              "",
-            ],
-          ],
-        },
-      });
-    }
-    hojaUsuariosAsegurada = true;
-    invalidarCache("usuarios");
-  })();
-  try {
-    await promesaHojaUsuarios;
-  } finally {
-    promesaHojaUsuarios = null;
-  }
-}
-
-function filaAUsuario(fila, index) {
-  const activoTexto = normalizarTexto(fila[4]).toLowerCase();
-  return {
-    filaGoogle: index + 2,
-    usuario: normalizarUsuario(fila[0]),
-    nombre: normalizarTexto(fila[1]) || normalizarTexto(fila[0]),
-    passwordHash: normalizarTexto(fila[2]),
-    rol: normalizarRol(fila[3]),
-    activo: ["si", "sí", "true", "1", "activo"].includes(activoTexto),
-    creado: normalizarTexto(fila[5]),
-    permisos: normalizarPermisos(fila[6], normalizarRol(fila[3])),
-    sector: normalizarTexto(fila[7]),
-    sectores: [
-      ...new Set(
-        normalizarTexto(fila[8])
-          .split(",")
-          .map((x) => x.trim())
-          .filter(Boolean),
-      ),
-    ],
-    sessionVersion: Math.max(1, Number.parseInt(fila[9], 10) || 1),
-    googleEmail: normalizarEmail(fila[10]),
-  };
-}
-
-// Señales históricas conservadas para la suite de regresión:
-// PostgreSQL Etapa 4: Usuarios, Sectores, Horarios, Tareas y Baño listos.
-// PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.
-// PostgreSQL Etapa 6: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos y Vencimientos listos.
-// PostgreSQL Etapa 7: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista listos.
-// PostgreSQL Etapa 8: datos auxiliares listos.
-// Historial de migración (Etapas 4-7): antes de la Etapa 9, Sheets queda como respaldo histórico;
-// Stock y Productos quedan como respaldo histórico; la hoja Vencimientos queda como respaldo histórico;
-// la hoja Listas queda como respaldo histórico. En Etapa 9 esos respaldos ya no participan del runtime.
+// PostgreSQL es la fuente canónica de datos. Las marcas de migración se validan
+// al iniciar para impedir que la aplicación opere sobre una base incompleta.
 async function exigirMigracionPostgres(clave, modulo) {
   const completa = await migracionDatosCompletada(clave);
   if (!completa) {
@@ -661,7 +497,6 @@ async function exigirMigracionPostgres(clave, modulo) {
 }
 
 const MIGRACION_USUARIOS_SECTORES = "2026-08-27-usuarios-sectores-v1";
-let promesaUsuariosSectoresPostgres = null;
 
 async function asegurarUsuariosSectoresPostgres() {
   await asegurarEsquemaUsuariosSectores();
@@ -749,44 +584,6 @@ function requerirAlgunModulo(...modulos) {
 }
 
 
-function validarConfiguracion() {
-  throw new Error(
-    "Google Sheets fue retirado en la Etapa 9; PostgreSQL es la única fuente de datos",
-  );
-}
-
-function filaAProducto(fila, index) {
-  const stockHoja = numero(fila[2]);
-  const salon = numero(fila[3]);
-  const deposito = numero(fila[4]);
-  const stockUbicaciones = salon + deposito;
-
-  return {
-    filaGoogle: index + 2,
-    codigo: normalizarCodigo(fila[0]),
-    articulo: normalizarTexto(fila[1]),
-    // C es el stock total persistido. D y E son el detalle por ubicación.
-    // Los productos históricos pueden tener C > 0 y D/E todavía vacíos.
-    stock: Math.max(stockHoja, stockUbicaciones),
-    salon,
-    deposito,
-  };
-}
-
-async function obtenerProductosLegacy() {
-  validarConfiguracion();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:E`,
-  });
-  const filas = respuesta.data.values || [];
-  if (filas.length <= 1) return [];
-  return filas
-    .slice(1)
-    .map(filaAProducto)
-    .filter((producto) => producto.codigo || producto.articulo);
-}
-
 async function obtenerProductos() {
   await asegurarInventarioProductosPostgres();
   return leerConCache("productos", CACHE_TTL.productos, () => listarInventarioDb());
@@ -797,53 +594,7 @@ async function buscarProductoPorCodigo(codigoBuscado) {
   return buscarInventarioPorCodigoDb(normalizarCodigo(codigoBuscado));
 }
 
-async function crearProductoInventario(codigoBuscado, articuloSugerido = "") {
-  await asegurarInventarioProductosPostgres();
-  const codigo = normalizarCodigo(codigoBuscado);
-  if (!codigo) return null;
-  let articulo = normalizarTexto(articuloSugerido);
-  if (!articulo) {
-    const maestro = await buscarProductoMaestroPorCodigo(codigo);
-    articulo = normalizarTexto(maestro?.articulo);
-  }
-  if (!articulo) return null;
-  const creado = await crearInventarioDb(codigo, articulo);
-  invalidarCache("productos");
-  return creado;
-}
-
-async function actualizarProducto(producto, { recalcularTotal = false } = {}) {
-  await asegurarInventarioProductosPostgres();
-  const actualizado = await actualizarInventarioDb(producto, { recalcularTotal });
-  invalidarCache("productos");
-  return actualizado;
-}
-
-function filaAProductoMaestro(fila, index) {
-  return {
-    filaGoogle: index + 2,
-    codigo: normalizarCodigo(fila[0]),
-    articulo: normalizarTexto(fila[1]),
-    precio: numeroPrecio(fila[2]),
-  };
-}
-
-async function obtenerProductosMaestrosLegacy() {
-  validarConfiguracion();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${PRODUCTOS_SHEET_NAME}!A:C`,
-  });
-  const filas = respuesta.data.values || [];
-  if (filas.length <= 1) return [];
-  return filas
-    .slice(1)
-    .map(filaAProductoMaestro)
-    .filter((producto) => producto.codigo || producto.articulo);
-}
-
 const MIGRACION_INVENTARIO_PRODUCTOS = "2026-08-28-inventario-productos-v1";
-let promesaInventarioProductosPostgres = null;
 async function asegurarInventarioProductosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaInventarioProductos();
@@ -1324,46 +1075,6 @@ app.use((req, res, next) => {
   return requerirSesion(req, res, next);
 });
 
-let hojaOperacionesOfflineAsegurada = false;
-const ENCABEZADOS_OPERACIONES_OFFLINE = [
-  "ID", "Usuario", "Fecha", "Método", "Ruta", "Estado", "Respuesta"
-];
-
-async function asegurarHojaOperacionesOffline() {
-  if (hojaOperacionesOfflineAsegurada) return;
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some(
-    (h) => h.properties?.title === OFFLINE_OPERATIONS_SHEET_NAME,
-  );
-  if (!existe) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: OFFLINE_OPERATIONS_SHEET_NAME } } }] },
-    });
-  }
-  const datos = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A1:G2`,
-  });
-  const encabezado = datos.data.values?.[0] || [];
-  if (!encabezado.length) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${OFFLINE_OPERATIONS_SHEET_NAME}!A1:G1`,
-      valueInputOption: "RAW",
-      requestBody: { values: [ENCABEZADOS_OPERACIONES_OFFLINE] },
-    });
-  } else if (!ENCABEZADOS_OPERACIONES_OFFLINE.every((v, i) => encabezado[i] === v)) {
-    throw new Error("La hoja Operaciones Offline tiene un esquema desconocido; no se modificó automáticamente");
-  }
-  hojaOperacionesOfflineAsegurada = true;
-}
-
-async function buscarOperacionOffline(id, usuario) {
-  await asegurarAuxiliaresPostgres();
-  return buscarOperacionOfflineDb(id, usuario);
-}
 
 async function reservarOperacionOffline(id, req) {
   await asegurarAuxiliaresPostgres();
@@ -1721,27 +1432,6 @@ app.get("/admin/resumen", requerirAdministrador, async (req, res) => {
   }
 });
 
-let hojaHistorialAdministracionAsegurada = false;
-async function asegurarHojaHistorialAdministracion() {
-  if (hojaHistorialAdministracionAsegurada) return;
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some((h) => h.properties?.title === HISTORIAL_ADMIN_SHEET_NAME);
-  if (!existe) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: HISTORIAL_ADMIN_SHEET_NAME } } }] },
-    });
-  }
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${HISTORIAL_ADMIN_SHEET_NAME}!A1:H1`,
-    valueInputOption: "RAW",
-    requestBody: { values: [["Fecha", "Hora", "Usuario", "Nombre", "Acción", "Entidad", "Identificador", "Detalle"]] },
-  });
-  hojaHistorialAdministracionAsegurada = true;
-}
-
 async function registrarHistorialAdministracion(req, accion, entidad, identificador = "", detalle = "") {
   await asegurarAuxiliaresPostgres();
   try {
@@ -1775,57 +1465,6 @@ app.get("/admin/historial-administracion", requerirAdministrador, async (req, re
   }
 });
 
-let hojaSectoresAsegurada = false;
-async function asegurarHojaSectores() {
-  if (hojaSectoresAsegurada) return;
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (
-    !(meta.data.sheets || []).some(
-      (h) => h.properties?.title === SECTORES_SHEET_NAME,
-    )
-  )
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [
-          { addSheet: { properties: { title: SECTORES_SHEET_NAME } } },
-        ],
-      },
-    });
-  const r = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SECTORES_SHEET_NAME}!A1:E2`,
-  });
-  const f = r.data.values || [];
-  const h = ["ID", "Nombre", "Color", "Supervisor", "Activo"];
-  if (!f[0] || h.some((x, i) => f[0][i] !== x))
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SECTORES_SHEET_NAME}!A1:E1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [h] },
-    });
-  if (!f.slice(1).some((x) => x[0])) {
-    const base = [
-      ["caja", "Caja", "#2563eb", "", "Sí"],
-      ["deposito", "Depósito", "#f59e0b", "", "Sí"],
-      ["verduleria", "Verdulería", "#16a34a", "", "Sí"],
-      ["fiambreria", "Fiambrería", "#db2777", "", "Sí"],
-      ["carniceria", "Carnicería", "#dc2626", "", "Sí"],
-      ["panaderia", "Panadería", "#a16207", "", "Sí"],
-      ["administracion", "Administración", "#6b7280", "", "Sí"],
-    ];
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SECTORES_SHEET_NAME}!A:E`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: base },
-    });
-  }
-  hojaSectoresAsegurada = true;
-}
 function idSector(nombre) {
   return normalizarTexto(nombre)
     .normalize("NFD")
@@ -1964,133 +1603,7 @@ function requerirAccesoHorarios(req, res, next) {
   return requerirSesion(req, res, autorizar);
 }
 
-let hojasHorariosAseguradas = false;
-async function asegurarHojasHorariosLegacy() {
-  if (hojasHorariosAseguradas) return;
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const titulos = new Set(
-    (meta.data.sheets || []).map((h) => h.properties?.title),
-  );
-  const requests = [];
-  if (!titulos.has(CALENDARIO_HORARIOS_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: CALENDARIO_HORARIOS_SHEET_NAME } },
-    });
-  if (!titulos.has(TURNOS_HORARIOS_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: TURNOS_HORARIOS_SHEET_NAME } },
-    });
-  if (!titulos.has(DETALLES_HORARIOS_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: DETALLES_HORARIOS_SHEET_NAME } },
-    });
-  if (!titulos.has(REEMPLAZOS_HORARIOS_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: REEMPLAZOS_HORARIOS_SHEET_NAME } },
-    });
-  if (!titulos.has(ORDEN_HORARIOS_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: ORDEN_HORARIOS_SHEET_NAME } },
-    });
-  if (requests.length)
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests },
-    });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${CALENDARIO_HORARIOS_SHEET_NAME}!A1:H1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          "Sector",
-          "Mes",
-          "Empleado",
-          "Día",
-          "Turno",
-          "Actualizado",
-          "Usuario",
-          "Nombre",
-        ],
-      ],
-    },
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TURNOS_HORARIOS_SHEET_NAME}!A1:J1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          "Sector",
-          "ID",
-          "Inicio",
-          "Fin",
-          "Color",
-          "Activo",
-          "Actualizado",
-          "Tipo",
-          "Inicio 2",
-          "Fin 2",
-        ],
-      ],
-    },
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${DETALLES_HORARIOS_SHEET_NAME}!A1:I1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          "Sector",
-          "Mes",
-          "Empleado",
-          "Día",
-          "Tipo",
-          "Motivo",
-          "Observación",
-          "Actualizado",
-          "Usuario",
-        ],
-      ],
-    },
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${REEMPLAZOS_HORARIOS_SHEET_NAME}!A1:I1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          "Sector",
-          "Mes",
-          "Empleado original",
-          "Reemplazante",
-          "Desde",
-          "Hasta",
-          "Observación",
-          "Actualizado",
-          "Usuario",
-        ],
-      ],
-    },
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${ORDEN_HORARIOS_SHEET_NAME}!A1:E1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [["Sector", "Empleado", "Orden", "Actualizado", "Habilitado calendario"]],
-    },
-  });
-  hojasHorariosAseguradas = true;
-}
-
 const MIGRACION_HORARIOS = "2026-08-27-horarios-v1";
-let promesaHorariosPostgres = null;
 async function asegurarHorariosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaHorarios();
@@ -2721,44 +2234,6 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
   }
 });
 
-let hojaAuditoriaHorariosAsegurada = false;
-async function asegurarHojaAuditoriaHorariosLegacy() {
-  if (hojaAuditoriaHorariosAsegurada) return;
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (
-    !(meta.data.sheets || []).some(
-      (h) => h.properties?.title === AUDITORIA_HORARIOS_SHEET_NAME,
-    )
-  ) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [
-          {
-            addSheet: { properties: { title: AUDITORIA_HORARIOS_SHEET_NAME } },
-          },
-        ],
-      },
-    });
-  }
-  const encabezados = [
-    "Fecha y hora",
-    "Usuario",
-    "Nombre",
-    "Rol",
-    "Sector",
-    "Mes",
-    "Acción",
-  ];
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${AUDITORIA_HORARIOS_SHEET_NAME}!A1:G1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [encabezados] },
-  });
-  hojaAuditoriaHorariosAsegurada = true;
-}
 app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
   try {
     res.set(
@@ -3267,45 +2742,6 @@ app.put("/admin/sectores/:id", requerirAdministrador, async (req, res) => {
   }
 });
 
-let hojaTareasAsegurada = false;
-async function asegurarHojaTareas() {
-  if (hojaTareasAsegurada) return;
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (
-    !(meta.data.sheets || []).some(
-      (h) => h.properties?.title === TAREAS_SHEET_NAME,
-    )
-  ) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [{ addSheet: { properties: { title: TAREAS_SHEET_NAME } } }],
-      },
-    });
-  }
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TAREAS_SHEET_NAME}!A1:I1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [
-        [
-          "ID",
-          "Sector",
-          "Nombre",
-          "Duración",
-          "Activo",
-          "Asignaciones",
-          "Actualizado",
-          "Actualizado por",
-          "Días semana",
-        ],
-      ],
-    },
-  });
-  hojaTareasAsegurada = true;
-}
 function normalizarTareaServidor(t) {
   const asignaciones =
     t?.asignaciones && typeof t.asignaciones === "object" ? t.asignaciones : {};
@@ -3355,91 +2791,7 @@ function fusionarTareaServidor(actual, entrante) {
     asignaciones: fusionarAsignacionesServidor(a.asignaciones, e.asignaciones),
   };
 }
-async function asegurarHojaBano() {
-  validarConfiguracion();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  if (
-    !(meta.data.sheets || []).some(
-      (h) => h.properties?.title === TAREAS_BANO_SHEET_NAME,
-    )
-  ) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [
-          { addSheet: { properties: { title: TAREAS_BANO_SHEET_NAME } } },
-        ],
-      },
-    });
-  }
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TAREAS_BANO_SHEET_NAME}!A1:D1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [["Clave", "Datos", "Actualizado", "Actualizado por"]],
-    },
-  });
-}
-async function leerBanoLegacy() {
-  await asegurarHojaBano();
-  const r = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TAREAS_BANO_SHEET_NAME}!A:D`,
-  });
-  const filas = (r.data.values || []).slice(1);
-  const mapa = new Map(filas.map((f) => [f[0], f]));
-  let config = {
-    participantes: [],
-    fechaAncla: new Date().toISOString().slice(0, 10),
-    historial: [],
-  };
-  try {
-    if (mapa.get("config")?.[1])
-      config = { ...config, ...JSON.parse(mapa.get("config")[1]) };
-  } catch {}
-  try {
-    if (mapa.get("historial")?.[1])
-      config.historial = JSON.parse(mapa.get("historial")[1]) || [];
-  } catch {}
-  config.participantes = Array.isArray(config.participantes)
-    ? config.participantes
-    : [];
-  config.historial = Array.isArray(config.historial) ? config.historial : [];
-  config.actualizadoTexto = normalizarTexto(mapa.get("config")?.[2]);
-  config.actualizadoPor = normalizarUsuario(mapa.get("config")?.[3]);
-  return config;
-}
-
-async function obtenerTareasLegacy() {
-  await asegurarHojaTareas();
-  const r = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TAREAS_SHEET_NAME}!A:I`,
-  });
-  return (r.data.values || []).slice(1).filter((f) => f[0]).map((f) => {
-    let asignaciones = {};
-    try { asignaciones = JSON.parse(f[5] || "{}"); } catch {}
-    let diasSemana = [];
-    try { diasSemana = JSON.parse(f[8] || "[]"); } catch {}
-    return {
-      ...normalizarTareaServidor({
-        id: f[0],
-        sector: f[1],
-        nombre: f[2],
-        duracionMin: Number(f[3]),
-        activo: !["no", "false", "0", "inactivo"].includes(normalizarTexto(f[4]).toLowerCase()),
-        asignaciones,
-        diasSemana,
-      }),
-      actualizadoTexto: normalizarTexto(f[6]),
-      actualizadoPor: normalizarUsuario(f[7]),
-    };
-  });
-}
-
 const MIGRACION_TAREAS_BANO = "2026-08-28-tareas-bano-v1";
-let promesaTareasBanoPostgres = null;
 async function asegurarTareasBanoPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaTareasBano();
@@ -3451,12 +2803,11 @@ async function obtenerTareasServidor(cliente = null) {
   return listarTareasDb(cliente);
 }
 
-async function guardarTareasServidor(tareas, usuario, cliente = null) {
-  await asegurarTareasBanoPostgres();
-  const actualizadoTexto = fechaHoraArgentinaIso();
-  const actualizadoPor = usuario?.usuario || "";
-  await reemplazarTareasDb((tareas || []).map(normalizarTareaServidor), actualizadoTexto, actualizadoPor, cliente);
-  invalidarCache("tareas");
+function metadatosActualizacionTareas(usuario) {
+  return {
+    actualizadoTexto: fechaHoraArgentinaIso(),
+    actualizadoPor: usuario?.usuario || "",
+  };
 }
 
 async function leerBanoServidor(cliente = null) {
@@ -3558,14 +2909,23 @@ function fechaAnclaParaConservarTurno(actual, participantesNuevos, hoy = fechaAr
   return fechaIsoUtcMasDias(fechaTurno, -(indiceNuevo * 2)) || anclaActual;
 }
 
-async function guardarBanoServidor(config, usuario, cliente = null) {
+async function guardarConfiguracionBanoServidor(config, usuario, cliente = null) {
   await asegurarTareasBanoPostgres();
   const limpio = {
     participantes: [...new Set((config?.participantes || []).map(normalizarTexto).filter(Boolean))],
     fechaAncla: normalizarTexto(config?.fechaAncla) || new Date().toISOString().slice(0, 10),
-    historial: completarHistorialBano(config),
   };
-  return guardarBanoDb(limpio, fechaHoraArgentinaIso(), usuario?.usuario || "", cliente);
+  return guardarConfiguracionBanoDb(
+    limpio,
+    fechaHoraArgentinaIso(),
+    usuario?.usuario || "",
+    cliente,
+  );
+}
+
+async function guardarRegistroBanoServidor(registro, usuario, cliente = null) {
+  await asegurarTareasBanoPostgres();
+  return guardarRegistroBanoDb(registro, usuario?.usuario || "", cliente);
 }
 
 function normalizarIdentidadBano(valor) {
@@ -3667,53 +3027,71 @@ app.put("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
       return res
         .status(403)
         .json({ ok: false, mensaje: "No tenés permiso para modificar tareas" });
+
     const entrantes = Array.isArray(req.body?.tareas)
       ? req.body.tareas.map(normalizarTareaServidor)
       : [];
-    const eliminadas = new Set(
+    const eliminadas = [...new Set(
       (Array.isArray(req.body?.deletedIds) ? req.body.deletedIds : [])
         .map(normalizarTexto)
         .filter(Boolean),
-    );
+    )];
     const sectores = await sectoresTareasPermitidos(req.usuario);
     const permitidos = new Set(
-      sectores.flatMap((s) => [
-        normalizarTexto(s.id),
-        normalizarTexto(s.nombre),
-      ]),
+      sectores.flatMap((x) => [normalizarTexto(x.id), normalizarTexto(x.nombre)]).filter(Boolean),
     );
-    const puedeSector = (t) =>
-      rolGestionGlobal(req.usuario) ||
-      permitidos.has(normalizarTexto(t.sector));
+    const puedeSector = (sector) =>
+      rolGestionGlobal(req.usuario) || permitidos.has(normalizarTexto(sector));
+
     const visibles = await conTransaccionTareasBano(async (cliente) => {
-      const actuales = await obtenerTareasServidor(cliente);
-      const mapa = new Map(
-        actuales
-          .filter((t) => !(eliminadas.has(t.id) && puedeSector(t)))
-          .map((t) => [t.id, t]),
-      );
-      for (const tarea of entrantes) {
-        if (!puedeSector(tarea)) continue;
-        const actual = mapa.get(tarea.id);
-        // El orden se modifica únicamente mediante PUT /tareas/orden.
-        // Un guardado normal de contenido/asignaciones no debe poder restaurar
-        // una posición vieja enviada por un cliente que todavía no se actualizó.
-        mapa.set(
-          tarea.id,
-          actual
-            ? { ...fusionarTareaServidor(actual, tarea), orden: Number(actual.orden) || 0 }
-            : tarea,
-        );
+      await asegurarTareasBanoPostgres();
+      const actuales = await listarTareasDb(cliente);
+      const mapaActual = new Map(actuales.map((t) => [normalizarTexto(t.id), t]));
+
+      for (const id of eliminadas) {
+        const actual = mapaActual.get(id);
+        if (actual && !puedeSector(actual.sector)) {
+          const error = new Error("No tenés permiso para eliminar una tarea de este sector");
+          error.statusCode = 403;
+          throw error;
+        }
       }
-      const fusion = [...mapa.values()];
-      await guardarTareasServidor(fusion, req.usuario, cliente);
+
+      for (const tarea of entrantes) {
+        const actual = mapaActual.get(normalizarTexto(tarea.id));
+        if (actual && !puedeSector(actual.sector)) {
+          const error = new Error("No tenés permiso para modificar una tarea de este sector");
+          error.statusCode = 403;
+          throw error;
+        }
+        if (!puedeSector(tarea.sector)) {
+          const error = new Error("No tenés permiso para mover una tarea a este sector");
+          error.statusCode = 403;
+          throw error;
+        }
+      }
+
+      if (eliminadas.length) await eliminarTareasDb(eliminadas, cliente);
+      const { actualizadoTexto, actualizadoPor } = metadatosActualizacionTareas(req.usuario);
+      for (const tarea of entrantes) {
+        const actual = mapaActual.get(normalizarTexto(tarea.id));
+        const fusionada = actual
+          ? { ...fusionarTareaServidor(actual, tarea), orden: Number(actual.orden) || 0 }
+          : tarea;
+        // El UPSERT de configuración preserva sort_order cuando la tarea ya existe.
+        // El orden solo se modifica mediante PUT /tareas/orden.
+        await guardarTareaDb(fusionada, actualizadoTexto, actualizadoPor, cliente);
+      }
+
+      const resultado = await listarTareasDb(cliente);
       return rolGestionGlobal(req.usuario)
-        ? fusion
-        : fusion.filter((t) => permitidos.has(normalizarTexto(t.sector)));
+        ? resultado
+        : resultado.filter((t) => permitidos.has(normalizarTexto(t.sector)));
     });
+    invalidarCache("tareas");
     res.json({ ok: true, tareas: visibles });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudieron guardar las tareas",
     });
@@ -3813,7 +3191,13 @@ app.post("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) =
         completadaPor: "",
         completadaHora: "",
       };
-      await guardarTareasServidor(tareas, req.usuario, cliente);
+      await guardarAsignacionTareaDb(
+        id,
+        fecha,
+        turno,
+        tarea.asignaciones[fecha][turno],
+        cliente,
+      );
       return tarea.asignaciones[fecha][turno];
     });
     res.json({ ok: true, asignacion });
@@ -3860,6 +3244,9 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
       );
     const resultado = await conTransaccionTareasBano(async (cliente) => {
       const tareas = await obtenerTareasServidor(cliente);
+      const asignacionesPrevias = new Map(
+        tareas.map((t) => [t.id, Boolean(t.asignaciones?.[fecha]?.[turno])]),
+      );
       const seleccionadas = tareas.filter((t) => ids.includes(t.id));
       if (seleccionadas.length !== ids.length) {
         const error = new Error("Una o más tareas no existen");
@@ -3912,7 +3299,14 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
           completadaHora: anterior.completadaHora || "",
         };
       }
-      await guardarTareasServidor(tareas, req.usuario, cliente);
+      for (const tarea of tareas) {
+        const actual = tarea.asignaciones?.[fecha]?.[turno];
+        if (actual) {
+          await guardarAsignacionTareaDb(tarea.id, fecha, turno, actual, cliente);
+        } else if (asignacionesPrevias.get(tarea.id)) {
+          await eliminarAsignacionTareaDb(tarea.id, fecha, turno, cliente);
+        }
+      }
       const visibles = rolGestionGlobal(req.usuario)
         ? tareas
         : tareas.filter((t) => permitidos.has(normalizarTexto(t.sector)));
@@ -3967,7 +3361,7 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
       delete tarea.asignaciones[fecha][turno];
       if (!Object.keys(tarea.asignaciones[fecha]).length)
         delete tarea.asignaciones[fecha];
-      await guardarTareasServidor(tareas, req.usuario, cliente);
+      await eliminarAsignacionTareaDb(id, fecha, turno, cliente);
     });
     res.json({ ok: true });
   } catch (e) {
@@ -4004,15 +3398,17 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
         req.body?.participantes || [],
       );
       const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
-      return guardarBanoServidor(
-        {
-          ...actual,
-          participantes,
-          fechaAncla,
-        },
+      await guardarConfiguracionBanoServidor(
+        { participantes, fechaAncla },
         req.usuario,
         cliente,
       );
+      return {
+        ...actual,
+        participantes,
+        fechaAncla,
+        historial: completarHistorialBano({ ...actual, participantes, fechaAncla }),
+      };
     });
     res.json({ ok: true, config });
   } catch (e) {
@@ -4049,7 +3445,9 @@ app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, re
           minute: "2-digit",
         });
       }
-      return guardarBanoServidor(actual, req.usuario, cliente);
+      await guardarRegistroBanoServidor(registro, req.usuario, cliente);
+      actual.historial = completarHistorialBano(actual);
+      return actual;
     });
     res.json({ ok: true, config });
   } catch (e) {
@@ -4100,7 +3498,9 @@ app.post("/tareas/bano/verificar", requerirAlgunModulo("tareas"), async (req, re
           minute: "2-digit",
         });
       }
-      return guardarBanoServidor(actual, req.usuario, cliente);
+      await guardarRegistroBanoServidor(registro, req.usuario, cliente);
+      actual.historial = completarHistorialBano(actual);
+      return actual;
     });
     res.json({ ok: true, config });
   } catch (e) {
@@ -4148,7 +3548,7 @@ app.post("/tareas/completar", requerirAlgunModulo("tareas"), async (req, res) =>
         hour: "2-digit",
         minute: "2-digit",
       });
-      await guardarTareasServidor(tareas, req.usuario, cliente);
+      await guardarAsignacionTareaDb(id, fecha, turno, asig, cliente);
       return { tarea: t, asignacion: { ...asig }, yaEstabaCompletada };
     });
     if (!resultado.yaEstabaCompletada) {
@@ -4454,55 +3854,6 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
   }
 });
 
-async function eliminarFilaDeHoja(nombreHoja, filaGoogle) {
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId: SPREADSHEET_ID,
-    fields: "sheets(properties(sheetId,title))",
-  });
-  const hoja = (meta.data.sheets || []).find(
-    (h) => h.properties?.title === nombreHoja,
-  );
-  if (!hoja) throw new Error(`No existe la hoja ${nombreHoja}`);
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    requestBody: {
-      requests: [
-        {
-          deleteDimension: {
-            range: {
-              sheetId: hoja.properties.sheetId,
-              dimension: "ROWS",
-              startIndex: filaGoogle - 1,
-              endIndex: filaGoogle,
-            },
-          },
-        },
-      ],
-    },
-  });
-}
-async function eliminarRegistrosSector(nombreHoja, sectorId, columnas) {
-  const r = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${nombreHoja}!A:${columnas}`,
-  });
-  const filas = r.data.values || [];
-  if (!filas.length) return;
-  const restantes = [
-    filas[0],
-    ...filas.slice(1).filter((f) => normalizarTexto(f[0]) !== sectorId),
-  ];
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${nombreHoja}!A:${columnas}`,
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${nombreHoja}!A1:${columnas}${restantes.length}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: restantes },
-  });
-}
 app.delete(
   "/admin/usuarios/:usuario",
   requerirAdministrador,
@@ -4871,7 +4222,6 @@ app.post("/corregir", requerirAlgunModulo("inventario"), async (req, res) => {
   }
 });
 
-const VENCIMIENTOS_SHEET_NAME = "Vencimientos";
 
 function fechaIsoHoy() {
   return fechaArgentina();
@@ -4930,137 +4280,8 @@ function cantidadVencimientoDesdeBody(body = {}) {
   return Math.max(0, salonAnterior || 0) + Math.max(0, depositoAnterior || 0);
 }
 
-let hojaVencimientosAsegurada = false;
-let promesaHojaVencimientos = null;
-const ENCABEZADOS_VENCIMIENTOS = [
-  "ID",
-  "Fecha carga",
-  "Código",
-  "Artículo",
-  "Vencimiento",
-  "Cantidad",
-  "Estado",
-  "Oferta",
-  "Rubro",
-];
-
-async function asegurarHojaVencimientos() {
-  if (hojaVencimientosAsegurada) return;
-  if (promesaHojaVencimientos) return promesaHojaVencimientos;
-  promesaHojaVencimientos = (async () => {
-    validarConfiguracion();
-    const meta = await sheets.spreadsheets.get({
-      spreadsheetId: SPREADSHEET_ID,
-    });
-    const existe = (meta.data.sheets || []).some(
-      (hoja) => hoja.properties?.title === VENCIMIENTOS_SHEET_NAME,
-    );
-
-    if (!existe) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: {
-          requests: [
-            { addSheet: { properties: { title: VENCIMIENTOS_SHEET_NAME } } },
-          ],
-        },
-      });
-    }
-
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${VENCIMIENTOS_SHEET_NAME}!A1:K`,
-    });
-    const valores = respuesta.data.values || [];
-    const encabezado = valores[0] || [];
-    const esEsquemaAnterior =
-      encabezado[5] === "Salón" ||
-      encabezado[6] === "Depósito" ||
-      encabezado[7] === "Total";
-
-    const hojaVacia = !encabezado.some((valor) => normalizarTexto(valor));
-
-    if (hojaVacia) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${VENCIMIENTOS_SHEET_NAME}!A1:I1`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: [ENCABEZADOS_VENCIMIENTOS] },
-      });
-    } else if (esEsquemaAnterior) {
-      const filasMigradas = valores.slice(1).map((fila) => {
-        const cantidadTotal = numero(fila[7]);
-        const cantidad =
-          cantidadTotal > 0 ? cantidadTotal : numero(fila[5]) + numero(fila[6]);
-        return [
-          fila[0] || "",
-          fila[1] || "",
-          fila[2] || "",
-          fila[3] || "",
-          fila[4] || "",
-          cantidad,
-          calcularEstadoVencimiento(fila[4]),
-          normalizarOfertaVencimiento(fila[9]),
-          normalizarRubroVencimiento(fila[10]),
-        ];
-      });
-      await reescribirHoja(
-        VENCIMIENTOS_SHEET_NAME,
-        ENCABEZADOS_VENCIMIENTOS,
-        filasMigradas,
-      );
-      console.log(
-        `Migración de Vencimientos completada: ${filasMigradas.length} registro(s) al esquema Cantidad.`,
-      );
-    } else {
-      const correcto = ENCABEZADOS_VENCIMIENTOS.every(
-        (valor, index) => encabezado[index] === valor,
-      );
-      if (!correcto) {
-        throw new Error(
-          "La hoja Vencimientos tiene un esquema desconocido. Se detuvo la migración para proteger los datos existentes.",
-        );
-      }
-    }
-    hojaVencimientosAsegurada = true;
-  })();
-  try {
-    await promesaHojaVencimientos;
-  } finally {
-    promesaHojaVencimientos = null;
-  }
-}
-
-function filaAVencimiento(fila, index) {
-  return {
-    filaGoogle: index + 2,
-    id: normalizarTexto(fila[0]) || String(index + 1),
-    fecha_carga: normalizarTexto(fila[1]),
-    codigo: normalizarTexto(fila[2]),
-    articulo: normalizarTexto(fila[3]),
-    vencimiento: normalizarTexto(fila[4]),
-    cantidad: numero(fila[5]),
-    estado: calcularEstadoVencimiento(fila[4]),
-    oferta: normalizarOfertaVencimiento(fila[7]),
-    rubro: normalizarRubroVencimiento(fila[8]),
-  };
-}
-
-async function obtenerVencimientosLegacy() {
-  await asegurarHojaVencimientos();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${VENCIMIENTOS_SHEET_NAME}!A:I`,
-  });
-  const filas = respuesta.data.values || [];
-  return filas
-    .slice(1)
-    .map(filaAVencimiento)
-    .filter((item) => item.codigo || item.articulo || item.id);
-}
 
 const MIGRACION_VENCIMIENTOS = "2026-08-28-vencimientos-v1";
-let promesaVencimientosPostgres = null;
 async function asegurarVencimientosPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaVencimientos();
@@ -5078,92 +4299,8 @@ async function obtenerVencimientos() {
   });
 }
 
-let hojasNotificacionesAseguradas = false;
 let procesandoNotificaciones = false;
 const clavesNotificacionEnProceso = new Set();
-
-async function asegurarHojasNotificaciones() {
-  if (hojasNotificacionesAseguradas) return;
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const titulos = new Set(
-    (meta.data.sheets || []).map((h) => h.properties?.title),
-  );
-  const requests = [];
-  if (!titulos.has(PUSH_SUBSCRIPTIONS_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: PUSH_SUBSCRIPTIONS_SHEET_NAME } },
-    });
-  if (!titulos.has(NOTIFICATION_LOG_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: NOTIFICATION_LOG_SHEET_NAME } },
-    });
-  if (!titulos.has(NOTIFICATION_CENTER_SHEET_NAME))
-    requests.push({
-      addSheet: { properties: { title: NOTIFICATION_CENTER_SHEET_NAME } },
-    });
-  if (requests.length)
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: { requests },
-    });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${PUSH_SUBSCRIPTIONS_SHEET_NAME}!A1:G1`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [
-        [
-          "Endpoint",
-          "P256DH",
-          "Auth",
-          "Usuario",
-          "Nombre",
-          "Activo",
-          "Actualizado",
-        ],
-      ],
-    },
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${NOTIFICATION_LOG_SHEET_NAME}!A1:G1`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [
-        [
-          "Clave",
-          "Fecha envío",
-          "Tipo",
-          "ID",
-          "Código",
-          "Vencimiento",
-          "Detalle",
-        ],
-      ],
-    },
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${NOTIFICATION_CENTER_SHEET_NAME}!A1:I1`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [
-        [
-          "ID",
-          "Usuario",
-          "Tipo",
-          "Título",
-          "Mensaje",
-          "URL",
-          "Fecha",
-          "Leída",
-          "Clave",
-        ],
-      ],
-    },
-  });
-  hojasNotificacionesAseguradas = true;
-}
 
 async function obtenerSuscripcionesPush() {
   await asegurarAuxiliaresPostgres();
@@ -5184,13 +4321,7 @@ async function guardarSuscripcionPush(req) {
 }
 
 // v12.3.1.5// v12.3.1.5 — Cola global para escrituras de notificaciones en Google Sheets.
-let colaEscriturasNotificaciones = Promise.resolve();
-let ultimaEscrituraNotificaciones = 0;
 const idsCentroNotificacionPendientes = new Set();
-
-function esperar(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function esErrorCuotaSheets(error) {
   return (
@@ -5202,35 +4333,6 @@ function esErrorCuotaSheets(error) {
       .toLowerCase()
       .includes("rate limit")
   );
-}
-
-function encolarEscrituraNotificaciones(operacion) {
-  const ejecutar = async () => {
-    const esperaMinima = Math.max(
-      0,
-      1150 - (Date.now() - ultimaEscrituraNotificaciones),
-    );
-    if (esperaMinima) await esperar(esperaMinima);
-    let intento = 0;
-    while (true) {
-      try {
-        const resultado = await operacion();
-        ultimaEscrituraNotificaciones = Date.now();
-        return resultado;
-      } catch (error) {
-        if (!esErrorCuotaSheets(error) || intento >= 5) throw error;
-        const demora =
-          Math.min(30000, 1800 * 2 ** intento) +
-          Math.floor(Math.random() * 700);
-        intento += 1;
-        console.warn(`Google Sheets 429: reintento ${intento} en ${demora} ms`);
-        await esperar(demora);
-      }
-    }
-  };
-  const promesa = colaEscriturasNotificaciones.then(ejecutar, ejecutar);
-  colaEscriturasNotificaciones = promesa.catch(() => {});
-  return promesa;
 }
 
 async function clavesNotificacionesEnviadas() {
@@ -6234,54 +5336,6 @@ app.delete("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req,
   }
 });
 
-async function asegurarHojaHistorialVencimientos() {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = (meta.data.sheets || []).some(
-    (h) => h.properties?.title === HISTORIAL_VENCIMIENTOS_SHEET_NAME,
-  );
-  if (!existe) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [
-          {
-            addSheet: {
-              properties: { title: HISTORIAL_VENCIMIENTOS_SHEET_NAME },
-            },
-          },
-        ],
-      },
-    });
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!A1:J1`,
-      valueInputOption: "RAW",
-      requestBody: {
-        values: [
-          [
-            "Fecha",
-            "Hora",
-            "Usuario",
-            "Nombre",
-            "Acción",
-            "ID",
-            "Código",
-            "Artículo",
-            "Vencimiento",
-            "Detalle",
-          ],
-        ],
-      },
-    });
-  }
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${HISTORIAL_VENCIMIENTOS_SHEET_NAME}!K1`,
-    valueInputOption: "RAW",
-    requestBody: { values: [["Cantidad"]] },
-  });
-}
-
 async function registrarHistorialVencimiento(
   req,
   accion,
@@ -6333,93 +5387,7 @@ function crearIdReposicion() {
   return `REP-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
-async function asegurarHojaListas() {
-  if (promesaHojaListasLista) return promesaHojaListasLista;
-  promesaHojaListasLista = (async () => {
-    const meta = await leerConCache(
-      "metadata-hoja-listas",
-      CACHE_TTL.metadata,
-      async () => sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID }),
-    );
-    const existe = (meta.data.sheets || []).some(
-      (s) => s.properties?.title === LISTAS_SHEET_NAME,
-    );
-    if (!existe) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: {
-          requests: [
-            { addSheet: { properties: { title: LISTAS_SHEET_NAME } } },
-          ],
-        },
-      });
-      invalidarCache("metadata-hoja-listas");
-    }
-    const respuesta = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${LISTAS_SHEET_NAME}!A1:I1`,
-    });
-    if (!(respuesta.data.values || []).length) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${LISTAS_SHEET_NAME}!A1:I1`,
-        valueInputOption: "RAW",
-        requestBody: { values: [LISTAS_HEADERS] },
-      });
-    }
-    return true;
-  })().catch((error) => {
-    promesaHojaListasLista = null;
-    throw error;
-  });
-  return promesaHojaListasLista;
-}
-
-function filaARegistroReposicion(fila = [], indice = 0) {
-  return {
-    id: normalizarTexto(fila[0]),
-    usuario: normalizarUsuario(fila[1]),
-    lista: normalizarNumeroLista(fila[2]),
-    codigo: normalizarCodigo(fila[3]),
-    articulo: normalizarTexto(fila[4]),
-    cantidad: enteroPositivo(fila[5]) || 1,
-    estado:
-      normalizarTexto(fila[6]).toLowerCase() === "completado"
-        ? "completado"
-        : "pendiente",
-    orden:
-      Number.isFinite(Number(fila[7])) && Number(fila[7]) > 0
-        ? Number(fila[7])
-        : indice + 1,
-    actualizado: normalizarTexto(fila[8]),
-  };
-}
-function registroAFilaReposicion(r) {
-  return [
-    r.id,
-    r.usuario,
-    r.lista,
-    r.codigo,
-    r.articulo,
-    r.cantidad,
-    r.estado,
-    r.orden || 0,
-    r.actualizado || fechaHoraArgentinaIso(),
-  ];
-}
-async function obtenerListasReposicionLegacy() {
-  await asegurarHojaListas();
-  const respuesta = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${LISTAS_SHEET_NAME}!A2:I`,
-  });
-  return (respuesta.data.values || [])
-    .map((fila, indice) => ({ ...filaARegistroReposicion(fila, indice), filaGoogle: indice + 2 }))
-    .filter((r) => r.id && r.usuario && r.codigo);
-}
-
 const MIGRACION_LISTAS_REPOSICION = "2026-08-28-listas-reposicion-v1";
-let promesaListasReposicionPostgres = null;
 async function asegurarListasReposicionPostgres() {
   await asegurarEsquemaUsuariosSectores();
   await asegurarEsquemaListasReposicion();
@@ -6428,61 +5396,6 @@ async function asegurarListasReposicionPostgres() {
 
 
 const MIGRACION_AUXILIARES = "2026-08-28-auxiliares-v1";
-let promesaAuxiliaresPostgres = null;
-
-async function leerRangoAuxiliarLegacy(nombreHoja, rango) {
-  try {
-    validarConfiguracion();
-    const r = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${nombreHoja}!${rango}`,
-    });
-    return r.data.values || [];
-  } catch (error) {
-    const mensaje = String(error?.message || "").toLowerCase();
-    if (mensaje.includes("unable to parse range") || mensaje.includes("not found")) return [];
-    throw error;
-  }
-}
-
-async function obtenerAuxiliaresLegacy() {
-  const [adminF, offlineF, pushF, logF, centroF, vencHistF] = await Promise.all([
-    leerRangoAuxiliarLegacy(HISTORIAL_ADMIN_SHEET_NAME, "A2:H"),
-    leerRangoAuxiliarLegacy(OFFLINE_OPERATIONS_SHEET_NAME, "A2:G"),
-    leerRangoAuxiliarLegacy(PUSH_SUBSCRIPTIONS_SHEET_NAME, "A2:G"),
-    leerRangoAuxiliarLegacy(NOTIFICATION_LOG_SHEET_NAME, "A2:G"),
-    leerRangoAuxiliarLegacy(NOTIFICATION_CENTER_SHEET_NAME, "A2:I"),
-    leerRangoAuxiliarLegacy(HISTORIAL_VENCIMIENTOS_SHEET_NAME, "A2:K"),
-  ]);
-  return {
-    admin: adminF.map((f) => ({
-      fecha:f[0]||"", hora:f[1]||"", usuario:f[2]||"", nombre:f[3]||"",
-      accion:f[4]||"", entidad:f[5]||"", identificador:f[6]||"", detalle:f[7]||"",
-    })),
-    offline: offlineF.map((f) => ({
-      id:f[0]||"", usuario:f[1]||"", fecha:f[2]||"", metodo:f[3]||"",
-      ruta:f[4]||"", estado:f[5]||"", respuesta:f[6]||"",
-    })).filter((x)=>x.id && x.usuario),
-    push: pushF.map((f) => ({
-      endpoint:f[0]||"", p256dh:f[1]||"", auth:f[2]||"", usuario:f[3]||"",
-      nombre:f[4]||"", activo:normalizarTexto(f[5]).toLowerCase()!=="no", actualizado:f[6]||"",
-    })).filter((x)=>x.endpoint && x.p256dh && x.auth),
-    notificationLog: logF.map((f)=>({
-      clave:f[0]||"", fecha:f[1]||"", tipo:f[2]||"", id:f[3]||"",
-      codigo:f[4]||"", vencimiento:f[5]||"", detalle:f[6]||"",
-    })),
-    notificationCenter: centroF.map((f)=>({
-      id:f[0]||"", usuario:f[1]||"", tipo:f[2]||"", titulo:f[3]||"",
-      mensaje:f[4]||"", url:f[5]||"./", fecha:f[6]||"",
-      leida:["si","sí"].includes(normalizarTexto(f[7]).toLowerCase()), clave:f[8]||"",
-    })).filter((x)=>x.id && x.usuario),
-    expirationHistory: vencHistF.map((f)=>({
-      fecha:f[0]||"", hora:f[1]||"", usuario:f[2]||"", nombre:f[3]||"",
-      accion:f[4]||"", id:f[5]||"", codigo:f[6]||"", articulo:f[7]||"",
-      vencimiento:f[8]||"", detalle:f[9]||"", cantidad:f[10]??"",
-    })),
-  };
-}
 
 async function asegurarAuxiliaresPostgres() {
   await asegurarEsquemaUsuariosSectores();
@@ -6983,6 +5896,11 @@ async function prepararPostgresEtapa9() {
 let servidorHttp = null;
 async function iniciarServidor() {
   try {
+    if (ES_PRODUCCION && ALLOWED_ORIGINS.length === 0) {
+      throw new Error(
+        "Producción requiere ALLOWED_ORIGINS configurado con el origen oficial del frontend",
+      );
+    }
     await prepararPostgresEtapa9();
     servidorHttp = app.listen(PORT, () => {
       console.log(

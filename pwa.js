@@ -6,7 +6,7 @@ const textoInstalacion = document.getElementById("estadoInstalacionApp");
 const iosModal = document.getElementById("iosInstallModal");
 const iosWarning = document.getElementById("iosInstallBrowserWarning");
 const installCard = document.getElementById("pwaInstallCard");
-const SW_RUNTIME_REVISION = "1960-d21-limpieza-controlada-270826-a";
+const SW_RUNTIME_REVISION = "1960-d21-cierre-etapa6-010926";
 const SW_RELOAD_KEY = `autoservicio-sw-reload-${SW_RUNTIME_REVISION}`;
 
 function estaInstalada() {

@@ -1,12 +1,12 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 import {
   escapeHTML as esc,
   formatDuration as duracionTexto,
-} from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 import {
   shiftSectionTemplate,
   emptyTaskListTemplate,
-} from "./modules/tareas/task-view.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./modules/tareas/task-view.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
 const KEY = "autoservicio_tareas_v3";
@@ -14,7 +14,8 @@ const OLD_KEYS = ["autoservicio_tareas_v2", "autoservicio_tareas_v1"];
 const BANO_KEY = "autoservicio_bano_config_v1";
 const BANO_HISTORY_KEY = "autoservicio_bano_historial_v1";
 const PENDING_KEY = "autoservicio_tareas_pendientes_v1";
-const TASK_ORDER_KEY = "autoservicio_tareas_orden_v2";
+const TASK_ORDER_PENDING_KEY = "autoservicio_tareas_orden_pendiente_v1";
+const LEGACY_TASK_ORDER_KEYS = ["autoservicio_tareas_orden_v1", "autoservicio_tareas_orden_v2"];
 const DIAS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
 let fechaSeleccionada = inicioDia(new Date());
 let semanaBase = inicioSemana(fechaSeleccionada);
@@ -239,20 +240,43 @@ function guardarJSONUsuario(base, valor) {
 function eliminarJSONUsuario(base) {
   localStorage.removeItem(claveUsuarioLocal(base));
 }
-function leerOrdenTareasLocal() {
-  const valor = leerJSONUsuario(TASK_ORDER_KEY, {});
-  return valor && typeof valor === "object" && !Array.isArray(valor) ? valor : {};
+function leerOrdenTareasPendienteLocal() {
+  const valor = leerJSONUsuario(TASK_ORDER_PENDING_KEY, null);
+  if (!valor || typeof valor !== "object" || Array.isArray(valor)) return null;
+  const ids = [...new Set((Array.isArray(valor.ids) ? valor.ids : []).map((x) => String(x || "").trim()).filter(Boolean))];
+  if (!ids.length) return null;
+  return {
+    sector: String(valor.sector || "General").trim() || "General",
+    ids,
+    revision: Number(valor.revision) || 0,
+  };
 }
-function guardarOrdenTareasLocal(ids) {
-  const posiciones = leerOrdenTareasLocal();
-  (ids || []).forEach((id, posicion) => {
-    const clave = String(id || "").trim();
-    if (clave) posiciones[clave] = posicion;
-  });
-  guardarJSONUsuario(TASK_ORDER_KEY, posiciones);
+function guardarOrdenTareasPendienteLocal(sector, ids) {
+  const limpio = [...new Set((ids || []).map((x) => String(x || "").trim()).filter(Boolean))];
+  if (!limpio.length) return null;
+  const pendiente = {
+    sector: String(sector || "General").trim() || "General",
+    ids: limpio,
+    revision: Date.now(),
+  };
+  guardarJSONUsuario(TASK_ORDER_PENDING_KEY, pendiente);
+  return pendiente;
 }
-function aplicarOrdenTareasLocal(lista) {
-  const posiciones = leerOrdenTareasLocal();
+function limpiarOrdenTareasPendienteLocal(revision = null) {
+  const actual = leerOrdenTareasPendienteLocal();
+  if (revision !== null && actual && actual.revision !== revision) return false;
+  eliminarJSONUsuario(TASK_ORDER_PENDING_KEY);
+  return true;
+}
+function limpiarOrdenTareasLegacy() {
+  for (const clave of LEGACY_TASK_ORDER_KEYS) eliminarJSONUsuario(clave);
+}
+function aplicarOrdenTareas(lista) {
+  const pendiente = leerOrdenTareasPendienteLocal();
+  const posicionesPendientes = pendiente
+    ? new Map(pendiente.ids.map((id, posicion) => [String(id), posicion]))
+    : null;
+  const sectorPendiente = normalClave(pendiente?.sector || "");
   return [...(Array.isArray(lista) ? lista : [])]
     .map((tarea, indiceOriginal) => ({ tarea, indiceOriginal }))
     .sort((a, b) => {
@@ -260,14 +284,18 @@ function aplicarOrdenTareasLocal(lista) {
       const sectorB = normalClave(b.tarea?.sector || "General");
       if (sectorA !== sectorB) return a.indiceOriginal - b.indiceOriginal;
 
-      const idA = String(a.tarea?.id || "");
-      const idB = String(b.tarea?.id || "");
-      const localA = Number.isInteger(posiciones[idA]) ? posiciones[idA] : null;
-      const localB = Number.isInteger(posiciones[idB]) ? posiciones[idB] : null;
-      if (localA !== null || localB !== null) {
-        if (localA === null) return 1;
-        if (localB === null) return -1;
-        if (localA !== localB) return localA - localB;
+      if (posicionesPendientes && sectorA === sectorPendiente) {
+        const localA = posicionesPendientes.has(String(a.tarea?.id))
+          ? posicionesPendientes.get(String(a.tarea.id))
+          : null;
+        const localB = posicionesPendientes.has(String(b.tarea?.id))
+          ? posicionesPendientes.get(String(b.tarea.id))
+          : null;
+        if (localA !== null || localB !== null) {
+          if (localA === null) return 1;
+          if (localB === null) return -1;
+          if (localA !== localB) return localA - localB;
+        }
       }
 
       const remotoA = Number(a.tarea?.orden);
@@ -278,27 +306,51 @@ function aplicarOrdenTareasLocal(lista) {
     })
     .map(({ tarea }) => tarea);
 }
+function aplicarCambiosPendientesTareas(lista, pendientes) {
+  const mapa = new Map((Array.isArray(lista) ? lista : []).map((t) => [String(t?.id || ""), t]));
+  for (const id of pendientes?.deletedIds || []) mapa.delete(String(id));
+  for (const tarea of pendientes?.tareas || []) {
+    const id = String(tarea?.id || "").trim();
+    if (id) mapa.set(id, tarea);
+  }
+  return [...mapa.values()];
+}
 function leer() {
   const lista = tareasMemoria.length || localStorage.getItem(claveUsuarioLocal(KEY))
     ? tareasMemoria
     : leerJSONUsuario(KEY, []);
-  return aplicarOrdenTareasLocal(lista);
+  return aplicarOrdenTareas(lista);
 }
 function guardarLocal(v) {
   tareasMemoria = Array.isArray(v) ? v : [];
   guardarJSONUsuario(KEY, tareasMemoria);
 }
-async function sincronizarTareas(v, deletedIds = []) {
-  if (!puedeGestionarTareasPorRol()) return false;
-  const anterior = leerJSONUsuario(PENDING_KEY, { tareas: [], deletedIds: [] });
-  const pendientes = {
-    tareas: Array.isArray(v) ? v : [],
-    deletedIds: [
-      ...new Set(
-        [...(anterior?.deletedIds || []), ...deletedIds].filter(Boolean),
-      ),
-    ],
+function combinarPendientesTareas(anterior, cambios, deletedIds) {
+  const mapa = new Map((anterior?.tareas || []).map((t) => [String(t?.id || ""), t]));
+  const eliminadas = new Set((anterior?.deletedIds || []).map(String));
+  for (const tarea of cambios || []) {
+    const id = String(tarea?.id || "").trim();
+    if (!id) continue;
+    mapa.set(id, tarea);
+    eliminadas.delete(id);
+  }
+  for (const id of deletedIds || []) {
+    const clave = String(id || "").trim();
+    if (!clave) continue;
+    mapa.delete(clave);
+    eliminadas.add(clave);
+  }
+  return {
+    revision: Math.max(Date.now(), Number(anterior?.revision || 0) + 1),
+    tareas: [...mapa.values()],
+    deletedIds: [...eliminadas],
   };
+}
+async function sincronizarTareas(cambios, deletedIds = []) {
+  if (!puedeGestionarTareasPorRol()) return false;
+  const anterior = leerJSONUsuario(PENDING_KEY, { revision: 0, tareas: [], deletedIds: [] });
+  const pendientes = combinarPendientesTareas(anterior, Array.isArray(cambios) ? cambios : [], deletedIds);
+  if (!pendientes.tareas.length && !pendientes.deletedIds.length) return true;
   guardarJSONUsuario(PENDING_KEY, pendientes);
   let exito = false;
   guardadoRemotoEnCurso = guardadoRemotoEnCurso
@@ -306,15 +358,21 @@ async function sincronizarTareas(v, deletedIds = []) {
       const r = await fetch(`${API_BASE_URL}/tareas`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pendientes),
+        body: JSON.stringify({ tareas: pendientes.tareas, deletedIds: pendientes.deletedIds }),
       });
       const data = await r.json();
       if (!r.ok || !data.ok)
-        throw new Error(
-          data.mensaje || "No se pudieron sincronizar las tareas",
-        );
-      if (Array.isArray(data.tareas)) guardarLocal(data.tareas);
-      eliminarJSONUsuario(PENDING_KEY);
+        throw new Error(data.mensaje || "No se pudieron sincronizar las tareas");
+
+      const pendienteActual = leerJSONUsuario(PENDING_KEY, null);
+      if (pendienteActual?.revision === pendientes.revision) {
+        eliminarJSONUsuario(PENDING_KEY);
+        if (Array.isArray(data.tareas)) guardarLocal(data.tareas);
+      } else if (Array.isArray(data.tareas)) {
+        // Si se editó otra tarea mientras esta petición estaba en curso, la respuesta
+        // del servidor no puede borrar ese cambio más nuevo del dispositivo.
+        guardarLocal(aplicarCambiosPendientesTareas(data.tareas, pendienteActual));
+      }
       exito = true;
     })
     .catch((error) =>
@@ -327,9 +385,36 @@ async function sincronizarTareas(v, deletedIds = []) {
   return exito;
 }
 function guardar(v, opciones = {}) {
-  guardarLocal(v);
-  void sincronizarTareas(v, opciones.deletedIds || []);
+  const lista = Array.isArray(v) ? v : [];
+  guardarLocal(lista);
+  const idsCambiados = new Set((opciones.changedIds || []).map(String));
+  const cambios = opciones.changedIds
+    ? lista.filter((t) => idsCambiados.has(String(t?.id || "")))
+    : lista;
+  void sincronizarTareas(cambios, opciones.deletedIds || []);
 }
+async function sincronizarOrdenTareasPendiente() {
+  const pendiente = leerOrdenTareasPendienteLocal();
+  if (!pendiente || !puedeGestionarTareasPorRol()) return false;
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/orden`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sector: pendiente.sector, ids: pendiente.ids }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo sincronizar el orden");
+    const limpiado = limpiarOrdenTareasPendienteLocal(pendiente.revision);
+    if (Array.isArray(data.tareas)) {
+      guardarLocal(limpiado ? data.tareas : aplicarOrdenTareas(data.tareas));
+    }
+    return true;
+  } catch (error) {
+    console.warn("No se pudo sincronizar el orden pendiente de tareas:", error);
+    return false;
+  }
+}
+
 async function cargarContextoTareas() {
   const intentos = [
     `${API_BASE_URL}/tareas/contexto`,
@@ -363,29 +448,40 @@ async function cargarContextoTareas() {
   };
 }
 async function cargarTareasRemotas() {
-  const locales = leerJSONUsuario(KEY, []),
-    pendientes = leerJSONUsuario(PENDING_KEY, null);
+  const locales = leerJSONUsuario(KEY, []);
   try {
-    if (pendientes?.tareas && puedeGestionarTareasPorRol())
-      await sincronizarTareas(pendientes.tareas, pendientes.deletedIds || []);
+    const pendientes = leerJSONUsuario(PENDING_KEY, null);
+    if ((pendientes?.tareas?.length || pendientes?.deletedIds?.length) && puedeGestionarTareasPorRol()) {
+      await sincronizarTareas([], []);
+    }
+    await sincronizarOrdenTareasPendiente();
+
     const r = await fetch(`${API_BASE_URL}/tareas`),
       data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudieron cargar las tareas");
-    tareasMemoria = Array.isArray(data.tareas) ? data.tareas : [];
+
+    const remotas = Array.isArray(data.tareas) ? data.tareas : [];
+    const pendienteActual = leerJSONUsuario(PENDING_KEY, null);
+    const visibles = pendienteActual
+      ? aplicarCambiosPendientesTareas(remotas, pendienteActual)
+      : remotas;
+    guardarLocal(visibles);
+
     if (
       usuario()?.rol === "administrador" &&
-      !tareasMemoria.length &&
-      locales.length
+      !remotas.length &&
+      locales.length &&
+      !pendienteActual
     ) {
       guardarLocal(locales);
       await sincronizarTareas(locales);
-      tareasMemoria = locales;
-    } else guardarLocal(tareasMemoria);
+    }
   } catch {
     tareasMemoria = locales;
   }
 }
+
 function usuario() {
   return window.AutoservicioAuth?.getUsuario?.() || {};
 }
@@ -570,6 +666,7 @@ function migrar() {
   );
 }
 function seed() {
+  limpiarOrdenTareasLegacy();
   migrar();
   if (!leer().length) guardar([]);
   if (!localStorage.getItem(claveUsuarioLocal(BANO_KEY)))
@@ -1385,8 +1482,10 @@ async function guardarForm() {
     if (ok === false) return;
   }
   const all = leer();
+  let idCambiado = "";
   if (tareaEditando) {
     const actual = all.find((x) => x.id === tareaEditando.id);
+    idCambiado = tareaEditando.id;
     Object.assign(actual, {
       nombre,
       duracionMin,
@@ -1394,8 +1493,8 @@ async function guardarForm() {
       diasSemana,
       activo: tareaEstadoSeleccionado,
     });
-  } else
-    all.push({
+  } else {
+    const nueva = {
       id: crypto.randomUUID?.() || String(Date.now()),
       nombre,
       descripcion: "",
@@ -1406,8 +1505,11 @@ async function guardarForm() {
       orden: Math.max(-1, ...all.filter((t) => (t.sector || "General") === sectorSeleccionado).map((t) => Number(t.orden) || 0)) + 1,
       activo: tareaEstadoSeleccionado,
       asignaciones: {},
-    });
-  guardar(all);
+    };
+    idCambiado = nueva.id;
+    all.push(nueva);
+  }
+  guardar(all, { changedIds: [idCambiado] });
   cerrar();
   renderTareas();
   renderConfig();
@@ -1424,7 +1526,7 @@ async function eliminarTareaActual() {
   if (ok === false) return;
   guardar(
     leer().filter((x) => x.id !== id),
-    { deletedIds: [id] },
+    { deletedIds: [id], changedIds: [] },
   );
   cerrar();
   renderTareas();
@@ -2739,9 +2841,10 @@ function bind() {
 
     boton.disabled = true;
 
-    // Una sola fuente local de orden por ID. La respuesta de GET /tareas no puede
-    // deshacer este orden mientras el servidor termina de sincronizarlo.
-    guardarOrdenTareasLocal(idsOrdenados);
+    // El almacenamiento local solo representa un orden todavía no confirmado.
+    // Una vez que PostgreSQL responde OK, se elimina y el orden remoto vuelve a
+    // ser la única fuente de verdad para cualquier dispositivo.
+    guardarOrdenTareasPendienteLocal(sectorSeleccionado, idsOrdenados);
     guardarLocal(
       tareasMemoria.map((tarea) =>
         normalClave(tarea?.sector || "General") === sectorActual && indice.has(String(tarea?.id))
@@ -2750,33 +2853,19 @@ function bind() {
       ),
     );
 
-    try {
-      const r = await fetch(`${API_BASE_URL}/tareas/orden`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sector: sectorSeleccionado, ids: idsOrdenados }),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok || !data.ok)
-        throw new Error(data.mensaje || "No se pudo sincronizar el orden con el servidor");
-
-      if (Array.isArray(data.tareas)) guardarLocal(data.tareas);
-      // Reaplicar después de la respuesta evita que una respuesta con orden anterior
-      // pueda ganar una carrera visual contra la decisión recién guardada.
-      guardarOrdenTareasLocal(idsOrdenados);
+    const sincronizado = await sincronizarOrdenTareasPendiente();
+    if (sincronizado) {
       ordenTareasPendiente = null;
       renderConfig();
       if (vistaActual === "planificacion") renderPlanificacion();
-    } catch (error) {
-      // El orden queda guardado en el dispositivo y visible en Configuración y
-      // Planificación. El botón vuelve a habilitarse para permitir reintentar
-      // la sincronización remota sin perder la selección realizada.
-      ordenTareasPendiente = idsOrdenados;
-      renderConfig();
-      const reintentar = $("btnGuardarOrdenTareas");
-      if (reintentar) reintentar.disabled = false;
-      console.warn("No se pudo sincronizar el orden de tareas:", error);
+      return;
     }
+
+    // Sin red, el orden pendiente continúa visible y puede reintentarse sin perderlo.
+    ordenTareasPendiente = idsOrdenados;
+    renderConfig();
+    const reintentar = $("btnGuardarOrdenTareas");
+    if (reintentar) reintentar.disabled = false;
   });
 
   $("btnBanoAbrirConfig").onclick = () => cambiarVistaBano("config");

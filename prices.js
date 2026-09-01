@@ -1,18 +1,18 @@
 import {
   iniciarScanner as iniciarScannerCompartido,
   detenerScanner as detenerScannerCompartido,
-} from "./scanner.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,
   mostrarErrorCargaProducto,
-} from "./product-loader.js?v=1960-d21-limpieza-controlada-270826-a";
-import { ordenarPorBusqueda } from "./search.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./product-loader.js?v=1960-d21-cierre-etapa6-010926";
+import { ordenarPorBusqueda } from "./search.js?v=1960-d21-cierre-etapa6-010926";
 import {
   obtenerJsonCacheado,
   precargarCatalogo,
-} from "./api-cache.js?v=1960-d21-limpieza-controlada-270826-a";
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./api-cache.js?v=1960-d21-cierre-etapa6-010926";
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
 const LAST_KEY_BASE = "autoservicio-precios-ultimo-v3";

@@ -10,11 +10,11 @@ ok(db.includes("catalog_id BIGSERIAL PRIMARY KEY"), "Catálogo debe poder import
 ok(db.includes("jsonb_to_recordset"), "La importación masiva no debe hacer una consulta PostgreSQL por cada producto");
 ok(db.includes("CHECK(stock_total >= 0)") && db.includes("CHECK(salon >= 0)") && db.includes("CHECK(deposito >= 0)"), "El esquema debe impedir stock negativo");
 ok(db.includes("FOR UPDATE"), "La actualización debe bloquear la fila de inventario durante la transacción");
-ok(server.includes("obtenerProductosLegacy") && server.includes("obtenerProductosMaestrosLegacy"), "Debe existir una ruta explícita de importación inicial desde Sheets");
-ok(server.includes("Stock y Productos quedan como respaldo histórico"), "Debe quedar explícito que Sheets solo participa en la importación inicial de Etapa 5");
+ok(!server.includes("obtenerProductosLegacy") && !server.includes("obtenerProductosMaestrosLegacy"), "No debe quedar lectura legacy de Inventario/Productos");
+ok(!server.includes('const PRODUCTOS_SHEET_NAME ='), "El catálogo no debe conservar una hoja legacy de Productos");
 ok(server.includes("reemplazarCatalogoDb(catalogo)"), "La importación administrativa debe reemplazar el catálogo PostgreSQL");
 ok(!/async function obtenerProductos\(\)[\s\S]{0,450}sheets\.spreadsheets/.test(server), "La lectura activa de Inventario no debe volver a Sheets");
 ok(!/async function obtenerProductosMaestros\(\)[\s\S]{0,450}sheets\.spreadsheets/.test(server), "La lectura activa del catálogo no debe volver a Sheets");
-ok(server.includes('PostgreSQL Etapa 5: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario y Productos listos.'), "Falta señal de inicialización Etapa 5");
+ok(server.includes('MIGRACION_INVENTARIO_PRODUCTOS = "2026-08-28-inventario-productos-v1"'), "Falta validación de migración Inventario/Productos");
 
 console.log("PostgreSQL Etapa 5 Inventario/Productos hardening tests: OK");

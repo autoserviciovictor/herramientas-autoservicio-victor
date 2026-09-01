@@ -10,11 +10,11 @@ ok(db.includes("CHECK(quantity > 0)"), "El esquema debe impedir cantidades cero 
 ok(db.includes("CHECK(list_no IN ('1','2'))"), "El esquema debe limitar las listas a 1 y 2");
 ok(db.includes("CHECK(state IN ('pendiente','completado'))"), "El esquema debe restringir los estados válidos");
 ok(db.includes("jsonb_to_recordset"), "La migración/reemplazo debe usar carga masiva");
-ok(server.includes("obtenerListasReposicionLegacy"), "Debe existir una ruta explícita de importación inicial desde Sheets");
-ok(server.includes("la hoja Listas queda como respaldo histórico"), "Debe quedar explícito que Sheets solo participa como respaldo tras migrar Etapa 7");
+ok(!server.includes("obtenerListasReposicionLegacy"), "No debe quedar lectura legacy de Listas/Mi Lista");
+ok(!server.includes("registroAFilaReposicion"), "Listas no debe conservar serializadores legacy de Sheets");
 ok(!/async function leerTodasLasListas\([^)]*\)[\s\S]{0,700}sheets\.spreadsheets/.test(server), "La lectura activa de Listas no debe volver a Sheets");
 ok(!/async function escribirTodasLasListas\([^)]*\)[\s\S]{0,700}sheets\.spreadsheets/.test(server), "La escritura activa de Listas no debe volver a Sheets");
 ok((server.match(/conTransaccionListasReposicion\(async \(cliente\)/g) || []).length >= 6, "Todos los flujos mutables de reposición deben usar transacción PostgreSQL");
-ok(server.includes('PostgreSQL Etapa 7: Usuarios, Sectores, Horarios, Tareas, Baño, Inventario, Productos, Vencimientos y Listas/Mi Lista listos.'), "Falta señal de inicialización Etapa 7");
+ok(server.includes('MIGRACION_LISTAS_REPOSICION = "2026-08-28-listas-reposicion-v1"'), "Falta validación de migración Listas/Mi Lista");
 
 console.log("PostgreSQL Etapa 7 Listas/Mi Lista hardening tests: OK");

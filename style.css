@@ -1794,7 +1794,6 @@ body.login-bloqueado{
 .admin-tabs{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
   margin: 14px 0;
 }
 
@@ -1805,13 +1804,8 @@ body.login-bloqueado{
   gap: 10px;
 }
 .admin-user-card{
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
   border: 1px solid #e6e0da;
-  border-radius: 16px;
-  padding: 12px;
 }
 .admin-user-card.inactivo{
   opacity: 0.62;
@@ -2025,11 +2019,6 @@ body.login-bloqueado{
   gap: 10px;
 }
 .admin-history-card{
-  background: #fff;
-  border: 1px solid #eee;
-  border-left: 5px solid #f35b66;
-  border-radius: 16px;
-  padding: 14px;
 }
 .admin-history-card strong,
 .admin-history-card span,
@@ -2064,7 +2053,6 @@ body.login-bloqueado{
 
 @media (max-width: 560px) {
   .admin-tabs-clean{
-    grid-template-columns: 1fr;
   }
   
   
@@ -2162,27 +2150,13 @@ body.modal-abierto{
 
 
 .admin-period-filter{
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 7px;
 }
 .admin-period-btn{
-  border: 1px solid #e3ddd7;
-  background: #f7f5f2;
-  color: #666;
-  border-radius: 12px;
   padding: 10px 6px;
-  font-weight: 800;
 }
 .admin-period-btn.activo{
-  border-color: #d99a9e;
-  background: #f7dfe1;
-  color: #a52b32;
 }
 .admin-history-filter-grid{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
 }
 .admin-history-filter-grid label,
 .admin-history-search{
@@ -2204,14 +2178,7 @@ body.modal-abierto{
   color: #333;
 }
 .admin-history-summary{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  background: #f8f4f1;
-  border: 1px solid #ece3dd;
-  border-radius: 15px;
-  padding: 11px 13px;
   margin-bottom: 12px;
 }
 .admin-history-summary > div:first-child{
@@ -2228,18 +2195,8 @@ body.modal-abierto{
   color: #777;
 }
 .admin-history-summary-users{
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 5px;
 }
 .admin-history-summary-users span{
-  font-size: 11px;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid #e8dfd9;
-  color: #666;
 }
 .admin-history-card{
   padding: 0;
@@ -2247,61 +2204,35 @@ body.modal-abierto{
   border-left-width: 5px;
 }
 .admin-history-card.accion-creo{
-  border-left-color: #198754;
 }
 .admin-history-card.accion-edito{
   border-left-color: #e3a008;
 }
 .admin-history-card.accion-elimino{
-  border-left-color: #dc3545;
 }
 .admin-history-toggle{
-  width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  border: 0;
-  background: #fff;
-  padding: 13px;
-  text-align: left;
-  color: inherit;
 }
 .admin-history-action{
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  padding: 5px 7px;
-  border-radius: 999px;
-  background: #f4ecec;
-  color: #a52b32;
 }
 .accion-creo .admin-history-action{
-  background: #e2f5e9;
-  color: #16733d;
 }
 .accion-edito .admin-history-action{
   background: #fff3cd;
   color: #7a5700;
 }
 .accion-elimino .admin-history-action{
-  background: #f8d7da;
-  color: #842029;
 }
 
 
 .admin-history-detail{
-  border-top: 1px solid #eee8e3;
-  background: #faf8f6;
-  padding: 11px 14px;
 }
 .admin-history-detail p{
-  margin: 4px 0;
-  font-size: 13px;
-  color: #555;
 }
 .admin-history-more{
-  width: 100%;
   margin-top: 12px;
 }
 @media (max-width: 560px) {
@@ -2641,7 +2572,6 @@ body.modal-abierto{
   width: 100%;
 }
 .admin-import-status{
-  margin-top: 12px;
   min-height: 20px;
   color: #665b5d;
   font-size: 0.88rem;
@@ -2657,44 +2587,29 @@ body.modal-abierto{
 
 /* Vista previa segura de importación del catálogo valuado */
 .admin-import-preview-modal{
-  max-width: 460px;
 }
 .admin-import-preview-file{
-  margin: 6px 0 14px;
-  color: #6f6265;
   word-break: break-word;
 }
 .admin-import-preview-grid{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-  margin: 14px 0;
 }
 .admin-import-preview-grid > div{
-  padding: 11px;
   border: 1px solid #eadfe1;
-  border-radius: 13px;
-  background: #fffafa;
 }
 .admin-import-preview-grid span{
   display: block;
   color: #786a6d;
-  font-size: 0.78rem;
   line-height: 1.2;
 }
 .admin-import-preview-grid strong{
   display: block;
-  margin-top: 4px;
-  font-size: 1.15rem;
   color: #2d2325;
 }
 .admin-import-warning{
-  padding: 11px 12px;
-  border-radius: 12px;
   background: #fff3d8;
   color: #70551b;
-  font-size: 0.85rem;
-  line-height: 1.4;
 }
 @media (max-width: 420px) {
   .admin-import-preview-grid{
@@ -3374,22 +3289,15 @@ textarea:focus-visible,
 
 .admin-import-validations{
   display: grid;
-  gap: 7px;
-  margin: 12px 0;
 }
 .admin-import-validation{
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 9px 11px;
-  border-radius: 11px;
-  font-size: 0.85rem;
 }
 .admin-import-validation span{
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
   border-radius: 50%;
   font-weight: 900;
   flex: 0 0 22px;
@@ -3879,10 +3787,7 @@ body.horarios-modo-edicion .horarios-table td{
 
 /* Entrega 7.0: permisos por módulo */
 .admin-permissions-fieldset{
-  border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 14px;
-  margin: 4px 0 2px;
   background: #fafafa;
 }
 .admin-permissions-fieldset legend{
@@ -3929,7 +3834,6 @@ body.horarios-modo-edicion .horarios-table td{
 
 @media (max-width: 560px) {
   .admin-permissions-grid{
-    grid-template-columns: 1fr;
   }
 
 }
@@ -4067,18 +3971,12 @@ body.horarios-modo-edicion .horarios-table td{
 #adminSectorModal{
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  align-items: flex-start;
   padding-top: max(18px, env(safe-area-inset-top));
   padding-bottom: max(18px, env(safe-area-inset-bottom));
 }
 #adminUsuarioModal .admin-user-modal,
 #adminSectorModal .admin-user-modal{
-  max-height: calc(100dvh - 36px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
   margin: auto;
-  width: min(560px, 100%);
 }
 #adminUsuarioModal .admin-modal-actions,
 #adminSectorModal .admin-modal-actions{
@@ -4091,15 +3989,10 @@ body.horarios-modo-edicion .horarios-table td{
 @media (max-width: 560px) {
   #adminUsuarioModal,
 #adminSectorModal{
-    padding: 0;
-    align-items: flex-end;
   }
   #adminUsuarioModal .admin-user-modal,
 #adminSectorModal .admin-user-modal{
-    width: 100%;
     max-width: none;
-    max-height: calc(100dvh - env(safe-area-inset-top));
-    border-radius: 26px 26px 0 0;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
   .admin-permissions-grid{
@@ -4644,28 +4537,19 @@ textarea,
   font-weight: 950;
 }
 .admin-user-modal-head h2{
-  margin: 2px 0 1px !important;
-  font-size: 23px;
 }
 .admin-user-modal-head > div:nth-child(2){
   min-width: 0;
 }
 .admin-user-modal-head span{
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 900;
-  color: #b72e35;
 }
 .admin-user-modal-head small{
   display: block;
-  color: #817973;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .admin-user-close{
-  position: static !important;
   align-self: start;
 }
 .admin-user-modal-v2 > .admin-form-section,
@@ -4680,31 +4564,20 @@ textarea,
   border-bottom: 1px solid #eee8e3;
 }
 .admin-form-section-title{
-  display: flex;
   flex-direction: column;
-  gap: 3px;
   margin-bottom: 10px;
 }
 .admin-form-section-title strong{
-  font-size: 15px;
 }
 .admin-form-section-title span{
-  font-size: 12px;
-  color: #817973;
 }
 .admin-form-grid{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 .admin-user-modal-v2 label small{
   font-weight: 500;
   color: #8a817b;
 }
 .admin-active-row{
-  border: 1px solid #e4ddd7;
-  border-radius: 14px;
-  padding: 12px 13px !important;
   gap: 10px;
 }
 .admin-active-row span{
@@ -4718,11 +4591,7 @@ textarea,
 .admin-modal-actions-sticky{
   position: sticky;
   bottom: 0;
-  background: #fff;
-  border-top: 1px solid #e9e2dc;
-  padding: 14px 22px max(14px, env(safe-area-inset-bottom));
   margin-top: 18px !important;
-  box-shadow: 0 -8px 20px rgba(255, 255, 255, 0.92);
 }
 @media (max-width: 560px) {
 .admin-user-modal-v2 > .admin-user-modal-head{
@@ -5173,8 +5042,6 @@ label > strong{
 }
 .admin-period-btn{
   min-height: 40px;
-  border-radius: 11px !important;
-  font-weight: 800;
 }
 .admin-period-btn.activo{
   box-shadow: 0 2px 8px rgba(43, 34, 29, 0.1);
@@ -5324,9 +5191,7 @@ body.horarios-modo-edicion .horario-cell{
   padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
 }
 #adminUsuarioModal .admin-user-modal-head{
-  position: sticky !important;
   top: 0 !important;
-  z-index: 5 !important;
 }
 #adminUsuarioModal .admin-modal-actions,
 #adminSectorModal .admin-modal-actions{
@@ -5643,17 +5508,11 @@ canvas{
 
 /* El modal es una sola superficie: sin cajas blancas internas ni separadores salidos. */
 #adminUsuarioModal .admin-user-modal-v2{
-  background: #fff !important;
-  border: 0 !important;
-  box-shadow: 0 22px 55px rgba(20, 20, 25, 0.24) !important;
   overflow-y: auto !important;
   scrollbar-gutter: stable;
 }
 #adminUsuarioModal .admin-user-modal-head{
-  background: #fff !important;
   background-image: none !important;
-  border: 0 !important;
-  box-shadow: none !important;
   margin: 0 !important;
 }
 #adminUsuarioModal .admin-user-modal-head::before,
@@ -5664,12 +5523,7 @@ canvas{
   display: none !important;
 }
 #adminUsuarioModal .admin-modal-actions-sticky{
-  background: #fff !important;
-  border: 0 !important;
-  box-shadow: 0 -12px 24px rgba(255, 255, 255, 0.98) !important;
-  margin: 0 !important;
   padding-top: 12px !important;
-  z-index: 6 !important;
 }
 #adminUsuarioModal .admin-modal-actions-sticky .cancel-btn,
 #adminUsuarioModal .admin-modal-actions-sticky .save-btn{
@@ -5684,12 +5538,6 @@ canvas{
 
 /* V9.2.1 · Hotfix editor de usuarios: cabecera, contenido y acciones independientes */
 #adminUsuarioModal .admin-user-modal-v2{
-  display: grid !important;
-  grid-template-rows: auto minmax(0, 1fr) auto !important;
-  max-height: calc(100dvh - 36px) !important;
-  overflow: hidden !important;
-  padding: 0 !important;
-  background: #fff !important;
 }
 #adminUsuarioModal .admin-user-modal-head{
   position: relative !important;
@@ -5698,17 +5546,11 @@ canvas{
   min-width: 0 !important;
   z-index: 3 !important;
   border-radius: 24px 24px 0 0 !important;
-  background: #fff !important;
-  padding: 22px !important;
 }
 #adminUsuarioModal .admin-user-modal-body{
   min-height: 0 !important;
-  overflow-y: auto !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
-  background: #fff !important;
-  padding: 0 22px 22px !important;
-  scrollbar-gutter: stable;
 }
 #adminUsuarioModal .admin-user-modal-body > .admin-form-section,
 #adminUsuarioModal .admin-user-modal-body > fieldset,
@@ -5726,11 +5568,9 @@ canvas{
 }
 #adminUsuarioModal .admin-permissions-fieldset{
   float: none !important;
-  display: block !important;
   margin-inline: auto !important;
 }
 #adminUsuarioModal .admin-permissions-grid{
-  width: 100% !important;
   margin-inline: auto !important;
   justify-content: center !important;
 }
@@ -5739,12 +5579,7 @@ canvas{
   inset: auto !important;
   width: 100% !important;
   z-index: 4 !important;
-  margin: 0 !important;
-  padding: 14px 22px max(14px, env(safe-area-inset-bottom)) !important;
-  border: 0 !important;
   border-radius: 0 0 24px 24px !important;
-  background: #fff !important;
-  box-shadow: 0 -10px 24px rgba(32, 24, 20, 0.08) !important;
   box-sizing: border-box !important;
 }
 @media (max-width: 560px) {
@@ -6861,28 +6696,21 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 /* Modal de usuario: secciones respiradas, divisores claros y footer estable. */
 #adminUsuarioModal .admin-user-modal-v2{
-  width: min(640px, 100%) !important;
 }
 #adminUsuarioModal .admin-user-modal-body{
-  padding: 0 22px 18px !important;
   scrollbar-width: auto !important;
 }
 #adminUsuarioModal .admin-user-modal-body > .admin-form-section,
 #adminUsuarioModal .admin-user-modal-body > fieldset{
   margin: 0 !important;
-  padding: 20px 0 !important;
-  border-bottom: 1px solid #ece6e1 !important;
 }
 #adminUsuarioModal .admin-form-section-title{
-  margin-bottom: 14px !important;
   gap: 4px !important;
 }
 #adminUsuarioModal .admin-form-grid{
-  gap: 14px !important;
 }
 #adminUsuarioModal .admin-user-modal label{
   margin: 0 !important;
-  gap: 7px !important;
 }
 #adminUsuarioModal .admin-active-row{
   margin: 18px 0 0 !important;
@@ -6944,13 +6772,10 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 /* Editor de usuarios: una sola superficie limpia, sin cajas anidadas. */
 #adminUsuarioModal .admin-user-modal-v2{
-  border: 0 !important;
-  background: #fff !important;
 }
 #adminUsuarioModal .admin-user-modal-head{
   border: 0 !important;
   box-shadow: none !important;
-  background: #fff !important;
 }
 #adminUsuarioModal .admin-user-modal-body{
   background: #fff !important;
@@ -6973,7 +6798,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
   margin-top: 14px !important;
 }
 #adminUsuarioModal .admin-form-section-title{
-  margin-bottom: 13px !important;
 }
 #adminUsuarioModal .admin-form-section-title strong,
 #adminUsuarioModal .admin-permissions-fieldset legend{
@@ -6997,54 +6821,29 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 /* Módulos visibles centrados, uniformes y sin marcos dobles. */
 #adminUsuarioModal .admin-permissions-fieldset{
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 18px 0 4px !important;
-  border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 #adminUsuarioModal .admin-permissions-fieldset legend{
-  padding: 0 !important;
   margin: 0 0 6px !important;
 }
 #adminUsuarioModal .admin-permissions-fieldset > p{
-  margin: 0 0 14px !important;
 }
 #adminUsuarioModal .admin-permissions-grid{
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   align-items: stretch !important;
   justify-items: stretch !important;
-  gap: 10px !important;
   width: 100% !important;
 }
 #adminUsuarioModal .admin-permissions-grid label{
   position: relative !important;
-  min-height: 68px !important;
-  margin: 0 !important;
-  padding: 12px 14px !important;
-  display: grid !important;
-  grid-template-columns: 22px minmax(0, 1fr) !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 10px !important;
-  border: 0 !important;
-  border-radius: 14px !important;
-  background: #f7f5f3 !important;
   box-shadow: none !important;
-  text-align: center !important;
 }
 #adminUsuarioModal .admin-permissions-grid label:hover{
   background: #f1eeeb !important;
 }
 #adminUsuarioModal .admin-permissions-grid input{
-  width: 19px !important;
-  height: 19px !important;
-  margin: 0 !important;
   justify-self: center !important;
   align-self: center !important;
-  accent-color: #b72e35 !important;
 }
 #adminUsuarioModal .admin-permissions-grid label > span{
   min-width: 0 !important;
@@ -7067,11 +6866,7 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 /* Estado y acción de borrado más livianos. */
 #adminUsuarioModal .admin-active-row{
-  border: 0 !important;
-  background: #f7f5f3 !important;
   box-shadow: none !important;
-  border-radius: 14px !important;
-  padding: 13px 14px !important;
 }
 #adminUsuarioModal .admin-modal-actions-sticky{
   border: 0 !important;
@@ -7195,49 +6990,28 @@ body:not(.horarios-modo-edicion) .horarios-content{
 #adminUsuariosLista.admin-users-list{
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)) !important;
-  gap: 14px !important;
 }
 #adminUsuariosLista .admin-user-card{
-  min-height: 172px !important;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  align-items: stretch !important;
-  gap: 16px !important;
-  padding: 17px !important;
   border: 1px solid #e8e2dd !important;
-  border-radius: 18px !important;
   background: #fff !important;
 }
 
 #adminUsuariosLista .admin-avatar{
-  width: 46px !important;
-  height: 46px !important;
-  border-radius: 15px !important;
-  flex: none !important;
 }
 
 
 #adminUsuariosLista .user-status{
   white-space: nowrap !important;
-  min-width: 62px !important;
   text-align: center !important;
 }
 #adminUsuariosLista .admin-user-card-buttons{
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 8px !important;
-  width: 100% !important;
 }
 #adminUsuariosLista .btn-editar-usuario,
 #adminUsuariosLista .btn-eliminar-usuario{
-  min-height: 38px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  border-radius: 11px !important;
-  padding: 8px 10px !important;
-  font-size: 12px !important;
   font-weight: 850 !important;
   white-space: nowrap !important;
 }
@@ -7253,8 +7027,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 }
 #adminUsuariosLista .btn-editar-usuario .app-icon,
 #adminUsuariosLista .btn-eliminar-usuario .app-icon{
-  width: 15px !important;
-  height: 15px !important;
 }
 #adminUsuarioModal .admin-user-modal-body > .danger-btn-soft{
   display: none !important;
@@ -7264,13 +7036,10 @@ body:not(.horarios-modo-edicion) .horarios-content{
     grid-template-columns: 1fr !important;
   }
   #adminUsuariosLista .admin-user-card{
-    grid-template-columns: 1fr !important;
     min-height: 0 !important;
-    padding: 15px !important;
   }
   
   #adminUsuariosLista .admin-user-card-buttons{
-    justify-self: end !important;
     max-width: 230px !important;
   }
 }
@@ -7284,56 +7053,30 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 /* v12.0.2 — Tarjetas compactas de usuarios y tareas */
 #adminUsuariosLista.admin-users-list{
-  gap: 10px !important;
 }
 #adminUsuariosLista .admin-user-card{
-  min-height: 0 !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  gap: 12px !important;
-  padding: 13px 14px !important;
-  border-radius: 16px !important;
 }
 
 #adminUsuariosLista .admin-avatar{
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 13px !important;
-  font-size: 14px !important;
 }
 
 
 #adminUsuariosLista .user-status{
-  padding: 5px 8px !important;
-  font-size: 10px !important;
-  min-width: 56px !important;
 }
 #adminUsuariosLista .admin-user-card-buttons{
-  display: grid !important;
-  grid-template-columns: 1fr auto !important;
-  gap: 6px !important;
-  width: auto !important;
 }
 #adminUsuariosLista .btn-editar-usuario,
 #adminUsuariosLista .btn-eliminar-usuario{
-  min-height: 34px !important;
-  padding: 6px 9px !important;
-  font-size: 11px !important;
-  border-radius: 10px !important;
 }
 #adminUsuariosLista .btn-eliminar-usuario{
   min-width: 34px !important;
 }
 #adminUsuariosLista .btn-editar-usuario .app-icon,
 #adminUsuariosLista .btn-eliminar-usuario .app-icon{
-  width: 14px !important;
-  height: 14px !important;
 }
 
 @media (max-width: 640px) {
   #adminUsuariosLista .admin-user-card{
-    grid-template-columns: 1fr !important;
-    padding: 12px !important;
-    gap: 9px !important;
   }
   
 
@@ -7347,8 +7090,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 
   #adminUsuariosLista .admin-user-card-buttons{
-    justify-self: stretch !important;
-    grid-template-columns: 1fr auto !important;
   }
   
   
@@ -7370,10 +7111,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 }
 
 #adminUsuariosLista .admin-avatar{
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: 12px !important;
-  font-size: 13px !important;
   flex: none !important;
 }
 
@@ -7385,8 +7122,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
   font-size: 9.5px !important;
 }
 #adminUsuariosLista .admin-user-card-buttons{
-  display: flex !important;
-  gap: 5px !important;
   width: auto !important;
 }
 #adminUsuariosLista .btn-editar-usuario,
@@ -7693,35 +7428,17 @@ html[data-theme="dark"] .notification-item.is-unread{
   justify-content: center !important;
 }
 #adminUsuarioModal .admin-user-modal-v2{
-  width: min(680px, 100%) !important;
-  max-height: calc(100dvh - 36px) !important;
-  padding: 0 !important;
-  border-radius: 26px !important;
-  overflow: hidden !important;
-  background: #fff !important;
 }
 #adminUsuarioModal .admin-user-modal-head{
-  display: grid !important;
-  grid-template-columns: 58px minmax(0, 1fr) 44px !important;
-  align-items: center !important;
-  gap: 14px !important;
-  padding: 20px 22px 17px !important;
-  border-bottom: 0 !important;
   text-align: left !important;
 }
 #adminUsuarioModal .admin-user-modal-avatar{
-  width: 58px !important;
-  height: 58px !important;
   margin: 0 !important;
 }
 
 
 
 #adminUsuarioModal .admin-user-modal-body{
-  padding: 0 22px 18px !important;
-  overflow: auto !important;
-  display: grid !important;
-  gap: 20px !important;
 }
 #adminUsuarioModal .admin-form-section{
   border: 0 !important;
@@ -7747,9 +7464,6 @@ html[data-theme="dark"] .notification-item.is-unread{
   gap: 7px !important;
 }
 #adminUsuarioModal .admin-permissions-fieldset{
-  border: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
   text-align: center !important;
 }
 #adminUsuarioModal .admin-permissions-fieldset legend{
@@ -7762,21 +7476,10 @@ html[data-theme="dark"] .notification-item.is-unread{
   margin: 5px 0 13px !important;
 }
 #adminUsuarioModal .admin-permissions-grid{
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 10px !important;
 }
 #adminUsuarioModal .admin-permissions-grid label{
-  min-height: 82px !important;
-  padding: 12px 9px !important;
-  margin: 0 !important;
-  display: flex !important;
   flex-direction: column !important;
-  align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
-  border: 0 !important;
-  background: #f7f5f2 !important;
-  border-radius: 16px !important;
   text-align: center !important;
 }
 #adminUsuarioModal .admin-permissions-grid label span{
@@ -7789,15 +7492,8 @@ html[data-theme="dark"] .notification-item.is-unread{
 #adminUsuarioModal .admin-active-row{
   width: 100% !important;
   justify-content: center !important;
-  padding: 13px !important;
-  border: 0 !important;
-  border-radius: 16px !important;
-  background: #f7f5f2 !important;
 }
 #adminUsuarioModal .admin-modal-actions-sticky{
-  padding: 14px 22px max(14px, env(safe-area-inset-bottom)) !important;
-  border-top: 1px solid #eee7e2 !important;
-  background: #fff !important;
 }
 @media (max-width: 620px) {
   #adminUsuarioModal{

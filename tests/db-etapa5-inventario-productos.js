@@ -10,7 +10,7 @@ for (const tabla of ["inventory_stock", "product_catalog"]) {
 assert(db.includes('const BLOQUEO_INVENTARIO_PRODUCTOS = "autoservicio-victor:inventario-productos"'), "Falta advisory lock canónico de Inventario/Productos");
 assert(db.includes("pg_advisory_xact_lock(hashtext($1))"), "Inventario/Productos debe serializar escrituras y migración");
 assert(server.includes('MIGRACION_INVENTARIO_PRODUCTOS = "2026-08-28-inventario-productos-v1"'), "Falta migración versionada de Etapa 5");
-assert(server.includes("importarInventarioProductosAtomico"), "Falta importación atómica de Inventario/Productos");
+assert(!server.includes("importarInventarioProductosAtomico"), "El runtime no debe conservar la importación legacy de Inventario/Productos");
 assert(server.includes("listarInventarioDb()"), "Inventario no quedó conectado a PostgreSQL");
 assert(server.includes("buscarInventarioPorCodigoDb"), "La consulta individual de Inventario no usa PostgreSQL");
 assert(server.includes("listarCatalogoDb()"), "Productos no quedó conectado a PostgreSQL");

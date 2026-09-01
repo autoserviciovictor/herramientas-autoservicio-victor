@@ -2603,36 +2603,6 @@ body.en-tareas .tareas-back-label {
   .config-task-table-head {
     display: none !important;
   }
-  body.en-tareas #pantallaTareas .config-task-row {
-    grid-template-columns: minmax(0, 1fr) auto !important;
-    gap: 7px 10px !important;
-    padding: 11px !important;
-    border: 1px solid var(--task-border) !important;
-    border-radius: 13px !important;
-    margin-bottom: 8px;
-  }
-  .config-task-name {
-    grid-column: 1 / 2;
-    align-items: flex-start !important;
-  }
-  .config-task-name strong {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    overflow-wrap: anywhere !important;
-    font-size: 14px !important;
-    line-height: 1.3 !important;
-  }
-  .config-task-duration,
-  .config-task-days-wrap,
-  .config-task-status {
-    grid-column: 1 / 2;
-  }
-  .config-task-open {
-    grid-column: 2;
-    grid-row: 1 / 5;
-    align-self: center;
-  }
   .bano-top-actions {
     margin-bottom: 8px;
   }
@@ -2884,12 +2854,6 @@ body.en-bano #pantallaBano .bano-current-modern.is-completed {
   background: linear-gradient(105deg, #23845a 0%, #42a977 100%) !important;
   box-shadow: 0 14px 30px rgba(35,132,90,.17) !important;
 }
-body.en-bano #pantallaBano .bano-current-modern.is-rest {
-  background: var(--task-surface) !important;
-  border: 1px solid var(--task-border) !important;
-  color: var(--task-text) !important;
-  box-shadow: 0 8px 20px rgba(15,23,42,.05) !important;
-}
 body.en-bano #pantallaBano .bano-modern-hero-copy {
   display: grid;
   gap: 3px;
@@ -2901,20 +2865,17 @@ body.en-bano #pantallaBano .bano-modern-kicker {
   font-weight: 900;
   letter-spacing: .08em;
 }
-body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-kicker { color: var(--task-brand); }
 body.en-bano #pantallaBano .bano-modern-hero-copy strong {
   color: #fff !important;
   font-size: 25px;
   line-height: 1.08;
   letter-spacing: -.025em;
 }
-body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-hero-copy strong { color: var(--task-text) !important; }
 body.en-bano #pantallaBano .bano-modern-hero-copy small {
   color: rgba(255,255,255,.9) !important;
   font-size: 12px;
   text-transform: capitalize;
 }
-body.en-bano #pantallaBano .bano-current-modern.is-rest .bano-modern-hero-copy small { color: var(--task-muted) !important; }
 body.en-bano #pantallaBano .bano-confirm-modern {
   width: auto !important;
   min-width: 210px;
@@ -2983,7 +2944,7 @@ body.en-bano #pantallaBano .bano-kpi.is-status .bano-kpi-icon { background: colo
 body.en-bano #pantallaBano .bano-kpi.is-next .bano-kpi-icon { background: color-mix(in srgb, #4f67e8 11%, var(--task-surface)); color: #4f67e8; }
 body.en-bano #pantallaBano .bano-kpi > div { min-width: 0; display: grid; gap: 1px; }
 body.en-bano #pantallaBano .bano-kpi small { color: var(--task-muted); font-size: 10px; }
-body.en-bano #pantallaBano .bano-kpi strong { color: var(--task-text); font-size: 18px; line-height: 1.12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.en-bano #pantallaBano .bano-kpi strong { color: var(--task-text); line-height: 1.12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.en-bano #pantallaBano .bano-kpi em { color: var(--task-muted); font-style: normal; font-size: 10px; }
 
 body.en-bano #pantallaBano .bano-dashboard-grid {
@@ -3008,8 +2969,8 @@ body.en-bano #pantallaBano .bano-panel-head {
   gap: 12px;
   padding: 0 2px 12px;
 }
-body.en-bano #pantallaBano .bano-panel-head h3 { margin: 0; color: var(--task-text); font-size: 15px; }
-body.en-bano #pantallaBano .bano-panel-head p { margin: 3px 0 0; color: var(--task-muted); font-size: 10.5px; }
+body.en-bano #pantallaBano .bano-panel-head h3 { margin: 0; color: var(--task-text);  }
+body.en-bano #pantallaBano .bano-panel-head p { margin: 3px 0 0; color: var(--task-muted);  }
 body.en-bano #pantallaBano .bano-panel-count {
   min-width: 26px;
   height: 26px;
@@ -3060,15 +3021,14 @@ body.en-bano #pantallaBano .bano-turn-order {
   font-size: 11px;
   font-weight: 900;
 }
-body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy strong { font-size: 12px !important; }
-body.en-bano #pantallaBano .bano-turn-modern .bano-turn-copy span { font-size: 10px !important; }
+
+
 body.en-bano #pantallaBano .bano-turn-day {
   margin-left: auto;
   padding: 5px 9px;
   border-radius: 999px;
   background: var(--task-surface-muted);
   color: var(--task-muted);
-  font-size: 9.5px;
   font-weight: 700;
   text-transform: capitalize;
 }
@@ -3101,8 +3061,8 @@ body.en-bano #pantallaBano .bano-pending-avatar {
   font-weight: 900;
 }
 body.en-bano #pantallaBano .bano-pending-copy { min-width: 0; flex: 1; display: grid; gap: 2px; }
-body.en-bano #pantallaBano .bano-pending-copy strong { color: var(--task-text); font-size: 11.5px; }
-body.en-bano #pantallaBano .bano-pending-copy span { display: flex; align-items: center; gap: 4px; color: var(--task-muted); font-size: 9.5px; text-transform: capitalize; }
+body.en-bano #pantallaBano .bano-pending-copy strong { color: var(--task-text); }
+body.en-bano #pantallaBano .bano-pending-copy span { display: flex; align-items: center; gap: 4px; color: var(--task-muted); text-transform: capitalize; }
 body.en-bano #pantallaBano .bano-pending-copy .app-icon { width: 12px; height: 12px; color: #e32943; }
 body.en-bano #pantallaBano .bano-pending-badge {
   flex: none;
@@ -3110,7 +3070,6 @@ body.en-bano #pantallaBano .bano-pending-badge {
   border-radius: 999px;
   background: color-mix(in srgb, #e32943 10%, var(--task-surface));
   color: #e32943;
-  font-size: 8.5px;
   font-weight: 850;
 }
 body.en-bano #pantallaBano .bano-all-confirmed {
@@ -3158,36 +3117,22 @@ body.en-bano #pantallaBano .bano-rule-icon {
 }
 body.en-bano #pantallaBano .bano-rule-icon .app-icon { width: 18px; height: 18px; }
 body.en-bano #pantallaBano .bano-rule-note > div { display: grid; gap: 2px; }
-body.en-bano #pantallaBano .bano-rule-note strong { color: var(--task-text); font-size: 11.5px; }
-body.en-bano #pantallaBano .bano-rule-note span { color: var(--task-muted); font-size: 9.5px; }
+body.en-bano #pantallaBano .bano-rule-note strong { color: var(--task-text); }
+body.en-bano #pantallaBano .bano-rule-note span { color: var(--task-muted); }
 
 /* Configuración: sólo selección de participantes. */
-body.en-bano #pantallaBano .bano-config-modern { max-width: 1050px !important; }
 body.en-bano #pantallaBano .bano-participants-card {
   padding: 0 !important;
   overflow: hidden;
-  border-radius: 18px !important;
 }
 body.en-bano #pantallaBano .bano-participants-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 20px;
   border-bottom: 1px solid var(--task-border);
 }
 body.en-bano #pantallaBano .bano-participant-actions { display: flex; align-items: center; gap: 12px; }
-body.en-bano #pantallaBano .bano-selected-count {
-  min-width: 72px;
-  display: grid;
-  justify-items: center;
-  gap: 1px;
-  padding: 7px 10px;
-  border-radius: 12px;
-  background: var(--task-surface-muted);
-}
-body.en-bano #pantallaBano .bano-selected-count strong { color: var(--task-brand); font-size: 17px; line-height: 1; }
-body.en-bano #pantallaBano .bano-selected-count small { color: var(--task-muted); font-size: 8.5px; }
 body.en-bano #pantallaBano .bano-selected-users {
   min-height: 74px;
   padding: 14px 20px;
@@ -3226,7 +3171,6 @@ body.en-bano #pantallaBano .bano-no-selected { display: grid; gap: 3px; }
 body.en-bano #pantallaBano .bano-no-selected strong { color: var(--task-text); font-size: 11.5px; }
 body.en-bano #pantallaBano .bano-no-selected span { color: var(--task-muted); font-size: 9.5px; }
 body.en-bano #pantallaBano .bano-participants-card .config-participant-picker {
-  margin: 14px 20px 0 !important;
   padding: 12px !important;
   border-radius: 14px !important;
 }
@@ -3234,16 +3178,11 @@ body.en-bano #pantallaBano .bano-participants-card .config-user-list { max-heigh
 body.en-bano #pantallaBano .bano-config-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  margin-top: 14px;
   border-top: 1px solid var(--task-border);
 }
-body.en-bano #pantallaBano .bano-config-footer p { margin: 0; color: var(--task-muted); font-size: 10.5px; }
+body.en-bano #pantallaBano .bano-config-footer p { margin: 0; color: var(--task-muted); }
 body.en-bano #pantallaBano .bano-config-footer .save-btn {
   min-height: 42px;
-  min-width: 112px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3275,7 +3214,6 @@ body.en-bano #pantallaBano .bano-config-footer .save-btn .app-icon { width: 16px
   body.en-bano #pantallaBano .bano-kpi-grid { gap: 8px; }
   body.en-bano #pantallaBano .bano-kpi { min-height: 76px; padding: 11px; gap: 8px; }
   body.en-bano #pantallaBano .bano-kpi-icon { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
-  body.en-bano #pantallaBano .bano-kpi strong { font-size: 14px; }
   body.en-bano #pantallaBano .bano-turn-day { display: none; }
   body.en-bano #pantallaBano .bano-pending-badge { display: none; }
   body.en-bano #pantallaBano .bano-participants-head { align-items: flex-start; padding: 16px; }
@@ -3285,7 +3223,6 @@ body.en-bano #pantallaBano .bano-config-footer .save-btn .app-icon { width: 16px
   body.en-bano #pantallaBano .bano-participants-card .config-user-list { grid-template-columns: 1fr !important; max-height: 340px; }
   body.en-bano #pantallaBano .bano-config-footer { padding: 14px 16px; }
   body.en-bano #pantallaBano .bano-config-footer p { display: none; }
-  body.en-bano #pantallaBano .bano-config-footer .save-btn { width: 100%; }
 }
 
 /* =========================================================
@@ -3348,7 +3285,6 @@ body.en-bano #pantallaBano .bano-participant-table-head {
   border-top: 1px solid var(--task-border);
   border-bottom: 1px solid var(--task-border);
   color: var(--task-muted);
-  font-size: 8.5px;
   font-weight: 850;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -3363,7 +3299,6 @@ body.en-bano #pantallaBano .bano-participant-row {
   display: grid;
   grid-template-columns: 1.55fr 1.15fr .9fr 84px;
   align-items: center;
-  min-height: 48px;
   padding: 0 22px;
   border-bottom: 1px solid var(--task-border);
   background: var(--task-surface);
@@ -3393,17 +3328,12 @@ body.en-bano #pantallaBano .bano-participant-name i {
 body.en-bano #pantallaBano .bano-participant-name strong {
   overflow: hidden;
   color: var(--task-text);
-  font-size: 10.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 body.en-bano #pantallaBano .bano-participant-sector {
   justify-self: start;
-  padding: 4px 9px;
   border-radius: 999px;
-  background: #f2edff;
-  color: #7652d8;
-  font-size: 8.5px;
   font-weight: 800;
   text-transform: capitalize;
 }
@@ -3412,7 +3342,6 @@ body.en-bano #pantallaBano .bano-participant-status {
   align-items: center;
   gap: 6px;
   color: var(--task-text);
-  font-size: 9.5px;
 }
 body.en-bano #pantallaBano .bano-participant-status i {
   width: 6px;
@@ -3451,14 +3380,7 @@ body.en-bano #pantallaBano .bano-no-selected {
 body.en-bano #pantallaBano .bano-participants-card .config-participant-picker {
   margin: 14px 20px !important;
 }
-body.en-bano #pantallaBano .bano-config-footer {
-  margin-top: 0;
-}
 
-html[data-theme="dark"] body.en-bano #pantallaBano .bano-participant-sector {
-  background: #251f3d;
-  color: #b7a4ff;
-}
 html[data-theme="dark"] body.en-bano #pantallaBano .bano-remove-participant {
   border-color: #5b2a35;
   background: var(--task-surface);
@@ -3473,9 +3395,6 @@ html[data-theme="dark"] body.en-bano #pantallaBano .bano-remove-participant:hove
     gap: 12px;
   }
   body.en-bano #pantallaBano .bano-add-participant-btn {
-    min-width: 42px;
-    width: 42px;
-    height: 42px;
     padding: 0;
   }
   body.en-bano #pantallaBano .bano-add-participant-btn span:last-child {
@@ -3494,9 +3413,6 @@ html[data-theme="dark"] body.en-bano #pantallaBano .bano-remove-participant:hove
   }
   body.en-bano #pantallaBano .bano-participant-status {
     display: none;
-  }
-  body.en-bano #pantallaBano .bano-participant-row-actions {
-    justify-content: flex-end;
   }
 }
 
@@ -3925,8 +3841,6 @@ body.en-bano #pantallaBano .bano-history-head {
 body.en-bano #pantallaBano .bano-history-head > span {
   padding: 9px 11px;
   color: var(--task-text);
-  font-size: 9.5px;
-  line-height: 1.2;
   font-weight: 850;
 }
 body.en-bano #pantallaBano .bano-history-row {
@@ -3941,8 +3855,6 @@ body.en-bano #pantallaBano .bano-history-row > strong {
   min-width: 0;
   padding: 9px 11px;
   color: var(--task-text);
-  font-size: 10.5px;
-  line-height: 1.25;
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -3958,10 +3870,7 @@ body.en-bano #pantallaBano .bano-history-status {
   width: fit-content;
   align-items: center;
   justify-content: center;
-  min-height: 25px;
-  padding: 4px 9px;
   border-radius: 8px;
-  font-size: 9px;
   font-weight: 850;
   white-space: nowrap;
 }
@@ -3976,24 +3885,16 @@ body.en-bano #pantallaBano .bano-history-status.is-unconfirmed {
   border: 1px solid color-mix(in srgb, #e32943 22%, var(--task-border));
 }
 body.en-bano #pantallaBano .bano-history-verify {
-  min-width: 92px;
-  min-height: 30px;
-  padding: 5px 12px;
   border: 1px solid #ed3850;
   border-radius: 8px;
   background: transparent;
   color: #e32943;
   font: inherit;
-  font-size: 9.5px;
   font-weight: 850;
   cursor: pointer;
 }
 body.en-bano #pantallaBano .bano-history-verify:hover {
   background: color-mix(in srgb, #e32943 8%, var(--task-surface));
-}
-body.en-bano #pantallaBano .bano-history-verify:disabled {
-  opacity: .55;
-  cursor: wait;
 }
 body.en-bano #pantallaBano .bano-history-waiting {
   color: var(--task-muted);
@@ -4056,13 +3957,11 @@ body.en-bano #pantallaBano .bano-history-empty {
     display: grid;
     gap: 3px;
     padding: 0;
-    font-size: 11px;
   }
   body.en-bano #pantallaBano .bano-history-row > span::before,
   body.en-bano #pantallaBano .bano-history-row > strong::before {
     content: attr(data-label);
     color: var(--task-muted);
-    font-size: 8px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .03em;
@@ -4129,7 +4028,7 @@ body.en-bano #pantallaBano .bano-history-empty {
 }
 
 /* 31/08/2026 — orden manual de tareas y estado vacío de planificación. */
-body.en-tareas #pantallaTareas .config-task-drag { width:32px; height:40px; display:grid; place-items:center; border:0; background:transparent; cursor:grab; }
+body.en-tareas #pantallaTareas .config-task-drag { width:32px; height:40px; display:grid; place-items:center; border:0; background:transparent; cursor:grab !important; -webkit-user-drag:element; }
 body.en-tareas #pantallaTareas .config-task-drag span,
 body.en-tareas #pantallaTareas .config-task-drag span::before,
 body.en-tareas #pantallaTareas .config-task-drag span::after { width:4px; height:4px; border-radius:50%; background:var(--task-muted); box-shadow:0 7px 0 var(--task-muted); content:""; }
@@ -4139,7 +4038,7 @@ body.en-tareas #pantallaTareas .config-task-row.is-dragging { opacity:.45; }
 body.en-tareas #pantallaTareas .tareas-plan-empty-state { grid-column:1 / -1; min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:24px; border-top:1px solid var(--task-border); text-align:center; color:var(--task-muted); }
 body.en-tareas #pantallaTareas .tareas-plan-empty-state strong { color:var(--task-text); font-size:15px; }
 body.en-tareas #pantallaTareas .tareas-plan-empty-state span { font-size:12.5px; }
-@media/* 31/08/2026 — Orden de tareas y planilla mensual de baño (reglas vigentes). */
+/* 31/08/2026 — Orden de tareas y planilla mensual de baño (reglas vigentes). */
 body.en-tareas #pantallaTareas .config-task-order-footer {
   display:flex;
   align-items:center;
@@ -4151,11 +4050,9 @@ body.en-tareas #pantallaTareas .config-task-order-footer {
 body.en-tareas #pantallaTareas .config-task-order-footer > span { display:none !important; }
 body.en-tareas #pantallaTareas .config-task-order-footer .save-btn { width:auto; min-width:108px; }
 body.en-tareas #pantallaTareas .config-task-order-footer .save-btn:disabled { opacity:.45; cursor:not-allowed; }
-body.en-tareas #pantallaTareas .config-task-drag { cursor:grab !important; -webkit-user-drag:element; }
 body.en-tareas #pantallaTareas .config-task-row.is-dragging .config-task-drag,
 body.en-tareas #pantallaTareas .config-task-drag:active { cursor:grabbing !important; }
 
-body.en-bano #pantallaBano .bano-panel-head { gap:12px; }
 body.en-bano #pantallaBano #btnBanoPlanilla span { font-size:14px; font-weight:850; }
 
 /* Planilla mensual: se monta en body para cubrir toda la interfaz. */
@@ -4210,10 +4107,6 @@ body.bano-planilla-abierta { overflow:hidden; }
 .bano-planilla-row:first-child { border-top:0; }
 .bano-planilla-row time { color:var(--task-muted); text-transform:capitalize; }
 
-@media (max-width:700px) {
-  body.en-tareas #pantallaTareas .config-task-order-footer { align-items:stretch; }
-  body.en-tareas #pantallaTareas .config-task-order-footer .save-btn { width:100%; }
-}
 @media (max-width:600px) {
   .bano-planilla-modal {
     place-items:start stretch;
@@ -4245,8 +4138,10 @@ body.bano-planilla-abierta { overflow:hidden; }
   }
 }
 
-/* 31/08/2026 — Configuración de tareas móvil: tarjeta compacta sin columnas de escritorio. */
+/* 31/08/2026 — Configuración de tareas móvil: una única regla canónica. */
 @media (max-width:700px) {
+  body.en-tareas #pantallaTareas .config-task-order-footer { align-items:stretch; }
+  body.en-tareas #pantallaTareas .config-task-order-footer .save-btn { width:100%; }
   body.en-tareas #pantallaTareas .config-task-list {
     display:grid !important;
     gap:8px !important;
@@ -4259,6 +4154,9 @@ body.bano-planilla-abierta { overflow:hidden; }
     min-width:0 !important;
     width:100% !important;
     padding:11px !important;
+    border:1px solid var(--task-border) !important;
+    border-radius:13px !important;
+    margin-bottom:8px;
   }
   body.en-tareas #pantallaTareas .config-task-drag {
     grid-column:1 !important;
@@ -4281,6 +4179,8 @@ body.bano-planilla-abierta { overflow:hidden; }
     overflow-wrap:break-word !important;
     word-break:normal !important;
     hyphens:none !important;
+    font-size:14px !important;
+    line-height:1.3 !important;
   }
   body.en-tareas #pantallaTareas .config-task-duration {
     grid-column:2 !important;

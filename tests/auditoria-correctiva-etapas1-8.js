@@ -16,8 +16,14 @@ for (const marker of tareasWrites) {
   const end = server.indexOf("\n});", start);
   const bloque = server.slice(start, end + 4);
   assert(bloque.includes("conTransaccionTareasBano"), `${marker} no protege lectura-modificación-escritura con la transacción PostgreSQL`);
-  assert(bloque.includes("obtenerTareasServidor(cliente)"), `${marker} no relee tareas dentro del lock`);
-  assert(bloque.includes("guardarTareasServidor") && bloque.includes("cliente"), `${marker} no guarda usando la misma transacción`);
+  assert(
+    bloque.includes("obtenerTareasServidor(cliente)") || bloque.includes("listarTareasDb(cliente)"),
+    `${marker} no relee tareas dentro del lock`,
+  );
+  assert(
+    ["guardarTareaDb", "eliminarTareasDb", "guardarAsignacionTareaDb", "eliminarAsignacionTareaDb"].some((fn) => bloque.includes(fn)) && bloque.includes("cliente"),
+    `${marker} no guarda cambios puntuales usando la misma transacción`,
+  );
 }
 
 for (const marker of [
@@ -31,7 +37,10 @@ for (const marker of [
   const bloque = server.slice(start, end + 4);
   assert(bloque.includes("conTransaccionTareasBano"), `${marker} no protege la operación de Baño con transacción`);
   assert(bloque.includes("leerBanoServidor(cliente)"), `${marker} no relee Baño dentro del lock`);
-  assert(bloque.includes("guardarBanoServidor") && bloque.includes("cliente"), `${marker} no guarda Baño en la misma transacción`);
+  assert(
+    (bloque.includes("guardarConfiguracionBanoServidor") || bloque.includes("guardarRegistroBanoServidor")) && bloque.includes("cliente"),
+    `${marker} no guarda Baño de forma incremental en la misma transacción`,
+  );
 }
 
 assert(server.includes("Solo el responsable asignado puede confirmar esta limpieza"), "El backend no valida que confirme el responsable del baño");

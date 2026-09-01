@@ -1,4 +1,4 @@
-import { API_BASE_URL, APP_VERSION_LABEL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { API_BASE_URL, APP_VERSION_LABEL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 import {
   cargarProductosDesdeServidor,
   sincronizarProductosDesdeServidor,
@@ -20,15 +20,15 @@ import {
   actualizarVencimiento,
   eliminarVencimiento,
   actualizarOfertaVencimiento,
-} from "./excel.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./excel.js?v=1960-d21-cierre-etapa6-010926";
 
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-limpieza-controlada-270826-a";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,
   limpiarErrorCargaProducto,
   mostrarErrorCargaProducto,
-} from "./product-loader.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./product-loader.js?v=1960-d21-cierre-etapa6-010926";
 
 import {
   ocultarSplash,
@@ -50,7 +50,7 @@ import {
   activarModoCantidad,
   desactivarModoCantidad,
   actualizarConteosUbicacion,
-} from "./ui.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./ui.js?v=1960-d21-cierre-etapa6-010926";
 
 import {
   inicializarReposicion,
@@ -58,9 +58,9 @@ import {
   prepararReposicion,
   resolverSalidaReposicion,
   reiniciarReposicion,
-} from "./reposicion.js?v=1960-d21-limpieza-controlada-270826-a";
-import { coincideBusqueda } from "./search.js?v=1960-d21-limpieza-controlada-270826-a";
-import { escapeHTML } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./reposicion.js?v=1960-d21-cierre-etapa6-010926";
+import { coincideBusqueda } from "./search.js?v=1960-d21-cierre-etapa6-010926";
+import { escapeHTML } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 
 let ubicacionActual = "salon";
 let productoActual = null;

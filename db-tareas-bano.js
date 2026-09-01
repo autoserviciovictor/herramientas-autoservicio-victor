@@ -153,6 +153,109 @@ async function insertarTarea(cliente, tarea, actualizadoTexto = "", actualizadoP
   }
 }
 
+
+async function guardarTareaDb(tarea, actualizadoTexto = "", actualizadoPor = "", cliente = null) {
+  const ejecutar = async (c) => {
+    const id = String(tarea?.id || "").trim();
+    if (!id) throw new Error("La tarea no tiene un identificador válido");
+    const existente = await c.query(`SELECT 1 FROM tasks WHERE task_id=$1`, [id]);
+    await c.query(
+      `INSERT INTO tasks(task_id,sector_key,name,duration_min,active,weekdays,updated_text,updated_by,sort_order)
+       VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9)
+       ON CONFLICT (task_id) DO UPDATE SET
+         sector_key=EXCLUDED.sector_key,
+         name=EXCLUDED.name,
+         duration_min=EXCLUDED.duration_min,
+         active=EXCLUDED.active,
+         weekdays=EXCLUDED.weekdays,
+         updated_text=EXCLUDED.updated_text,
+         updated_by=EXCLUDED.updated_by,
+         updated_at=NOW()`,
+      [
+        id,
+        String(tarea?.sector || "General").trim() || "General",
+        String(tarea?.nombre || "Tarea").trim() || "Tarea",
+        Math.max(1, Math.min(480, Number(tarea?.duracionMin || tarea?.duracion || 10) || 10)),
+        tarea?.activo !== false,
+        JSON.stringify(limpiarDias(tarea?.diasSemana)),
+        actualizadoTexto,
+        actualizadoPor,
+        Math.max(0, Number(tarea?.orden) || 0),
+      ],
+    );
+
+    // Solo una tarea recién creada puede traer asignaciones iniciales (migración o
+    // recuperación offline). Editar su configuración nunca reescribe asignaciones existentes.
+    if (!existente.rowCount) {
+      const asignaciones = tarea?.asignaciones && typeof tarea.asignaciones === "object"
+        ? tarea.asignaciones
+        : {};
+      for (const [fecha, turnos] of Object.entries(asignaciones)) {
+        if (!turnos || typeof turnos !== "object") continue;
+        for (const turno of ["manana", "tarde"]) {
+          if (turnos[turno] == null) continue;
+          await guardarAsignacionTareaDb(id, fecha, turno, turnos[turno], c);
+        }
+      }
+    }
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionTareasBano(ejecutar);
+}
+
+async function eliminarTareasDb(ids, cliente = null) {
+  const lista = [...new Set((ids || []).map((x) => String(x || "").trim()).filter(Boolean))];
+  if (!lista.length) return 0;
+  const ejecutar = async (c) => {
+    const resultado = await c.query(`DELETE FROM tasks WHERE task_id = ANY($1::text[])`, [lista]);
+    return resultado.rowCount || 0;
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionTareasBano(ejecutar);
+}
+
+async function guardarAsignacionTareaDb(taskId, fecha, turno, asignacion, cliente = null) {
+  const id = String(taskId || "").trim();
+  const workDate = String(fecha || "").trim();
+  const shift = String(turno || "").trim();
+  if (!id || !workDate || !["manana", "tarde"].includes(shift)) {
+    throw new Error("Asignación inválida");
+  }
+  const limpia = limpiarAsignacion(asignacion);
+  const ejecutar = async (c) => {
+    await c.query(
+      `INSERT INTO task_assignments(task_id,work_date,shift_type,responsibles,state,completed_by,completed_time,extra)
+       VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8::jsonb)
+       ON CONFLICT (task_id,work_date,shift_type) DO UPDATE SET
+         responsibles=EXCLUDED.responsibles,
+         state=EXCLUDED.state,
+         completed_by=EXCLUDED.completed_by,
+         completed_time=EXCLUDED.completed_time,
+         extra=EXCLUDED.extra,
+         updated_at=NOW()`,
+      [id, workDate, shift, JSON.stringify(limpia.responsables), limpia.estado, limpia.completadaPor, limpia.completadaHora, JSON.stringify(limpia.extra)],
+    );
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionTareasBano(ejecutar);
+}
+
+async function eliminarAsignacionTareaDb(taskId, fecha, turno, cliente = null) {
+  const id = String(taskId || "").trim();
+  const workDate = String(fecha || "").trim();
+  const shift = String(turno || "").trim();
+  if (!id || !workDate || !["manana", "tarde"].includes(shift)) return 0;
+  const ejecutar = async (c) => {
+    const resultado = await c.query(
+      `DELETE FROM task_assignments WHERE task_id=$1 AND work_date=$2 AND shift_type=$3`,
+      [id, workDate, shift],
+    );
+    return resultado.rowCount || 0;
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionTareasBano(ejecutar);
+}
+
 async function importarTareasBanoAtomico(datos, claveMigracion) {
   return conTransaccionTareasBano(async (cliente) => {
     const ya = await cliente.query("SELECT 1 FROM app_data_migrations WHERE migration_key=$1", [claveMigracion]);
@@ -226,15 +329,6 @@ async function listarTareasDb(cliente = null) {
   return [...mapa.values()];
 }
 
-async function reemplazarTareasDb(tareas, actualizadoTexto = "", actualizadoPor = "", cliente = null) {
-  const ejecutar = async (c) => {
-    await c.query("DELETE FROM tasks");
-    for (const tarea of tareas || []) await insertarTarea(c, tarea, actualizadoTexto, actualizadoPor);
-  };
-  if (cliente) return ejecutar(cliente);
-  return conTransaccionTareasBano(ejecutar);
-}
-
 async function actualizarOrdenTareasDb(sector, idsOrdenados, cliente = null) {
   const sectorSolicitado = String(sector || "General").trim() || "General";
   const ids = [...new Set((idsOrdenados || []).map((x) => String(x || "").trim()).filter(Boolean))];
@@ -295,7 +389,7 @@ async function leerBanoDb(cliente = null) {
   };
 }
 
-async function guardarBanoDb(config, actualizadoTexto = "", actualizadoPor = "", cliente = null) {
+async function guardarConfiguracionBanoDb(config, actualizadoTexto = "", actualizadoPor = "", cliente = null) {
   const ejecutar = async (c) => {
     const participantes = [...new Set((config?.participantes || []).map((x) => String(x || "").trim()).filter(Boolean))];
     const fechaAncla = String(config?.fechaAncla || "").trim() || new Date().toISOString().slice(0,10);
@@ -305,33 +399,46 @@ async function guardarBanoDb(config, actualizadoTexto = "", actualizadoPor = "",
        ON CONFLICT(config_id) DO UPDATE SET participants=EXCLUDED.participants,anchor_date=EXCLUDED.anchor_date,updated_text=EXCLUDED.updated_text,updated_by=EXCLUDED.updated_by,updated_at=NOW()`,
       [JSON.stringify(participantes), fechaAncla, actualizadoTexto, actualizadoPor],
     );
-    await c.query("DELETE FROM bathroom_rotation_history");
-    for (const item of Array.isArray(config?.historial) ? config.historial : []) {
-      const fecha = String(item?.fecha || "").trim();
-      if (!fecha) continue;
-      await c.query(
-        `INSERT INTO bathroom_rotation_history(work_date,responsible_key,confirmed_by,confirmed_time,verified_by,verified_time,updated_by)
-         VALUES($1,$2,$3,$4,$5,$6,$7)
-         ON CONFLICT(work_date) DO UPDATE SET
-           responsible_key=EXCLUDED.responsible_key,
-           confirmed_by=EXCLUDED.confirmed_by,
-           confirmed_time=EXCLUDED.confirmed_time,
-           verified_by=EXCLUDED.verified_by,
-           verified_time=EXCLUDED.verified_time,
-           updated_by=EXCLUDED.updated_by,
-           updated_at=NOW()`,
-        [
-          fecha,
-          String(item?.responsable || item?.responsableClave || "").trim(),
-          String(item?.usuario || "").trim(),
-          String(item?.hora || "").trim(),
-          String(item?.supervisadoPor || item?.verificadoPor || "").trim(),
-          String(item?.horaVerificacion || "").trim(),
-          actualizadoPor,
-        ],
-      );
-    }
-    return { participantes, fechaAncla, historial: Array.isArray(config?.historial) ? config.historial : [] };
+    return { participantes, fechaAncla };
+  };
+  if (cliente) return ejecutar(cliente);
+  return conTransaccionTareasBano(ejecutar);
+}
+
+async function guardarRegistroBanoDb(registro, actualizadoPor = "", cliente = null) {
+  const ejecutar = async (c) => {
+    const fecha = String(registro?.fecha || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new Error("Fecha de historial de baño inválida");
+    const limpio = {
+      fecha,
+      responsable: String(registro?.responsable || registro?.responsableClave || "").trim(),
+      usuario: String(registro?.usuario || "").trim(),
+      hora: String(registro?.hora || "").trim(),
+      supervisadoPor: String(registro?.supervisadoPor || registro?.verificadoPor || "").trim(),
+      horaVerificacion: String(registro?.horaVerificacion || "").trim(),
+    };
+    await c.query(
+      `INSERT INTO bathroom_rotation_history(work_date,responsible_key,confirmed_by,confirmed_time,verified_by,verified_time,updated_by,updated_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,NOW())
+       ON CONFLICT(work_date) DO UPDATE SET
+         responsible_key=EXCLUDED.responsible_key,
+         confirmed_by=EXCLUDED.confirmed_by,
+         confirmed_time=EXCLUDED.confirmed_time,
+         verified_by=EXCLUDED.verified_by,
+         verified_time=EXCLUDED.verified_time,
+         updated_by=EXCLUDED.updated_by,
+         updated_at=NOW()`,
+      [
+        limpio.fecha,
+        limpio.responsable,
+        limpio.usuario,
+        limpio.hora,
+        limpio.supervisadoPor,
+        limpio.horaVerificacion,
+        String(actualizadoPor || "").trim(),
+      ],
+    );
+    return limpio;
   };
   if (cliente) return ejecutar(cliente);
   return conTransaccionTareasBano(ejecutar);
@@ -343,8 +450,12 @@ module.exports = {
   conTransaccionTareasBano,
   importarTareasBanoAtomico,
   listarTareasDb,
-  reemplazarTareasDb,
+  guardarTareaDb,
+  eliminarTareasDb,
+  guardarAsignacionTareaDb,
+  eliminarAsignacionTareaDb,
   actualizarOrdenTareasDb,
   leerBanoDb,
-  guardarBanoDb,
+  guardarConfiguracionBanoDb,
+  guardarRegistroBanoDb,
 };

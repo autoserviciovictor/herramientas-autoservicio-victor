@@ -8,7 +8,7 @@ assert(db.includes("CREATE TABLE IF NOT EXISTS expiration_records"), "Falta tabl
 assert(db.includes('const BLOQUEO_VENCIMIENTOS = "autoservicio-victor:vencimientos"'), "Falta advisory lock canónico de Vencimientos");
 assert(db.includes("pg_advisory_xact_lock(hashtext($1))"), "Vencimientos debe serializar escrituras y migración");
 assert(server.includes('MIGRACION_VENCIMIENTOS = "2026-08-28-vencimientos-v1"'), "Falta migración versionada de Etapa 6");
-assert(server.includes("importarVencimientosAtomico"), "Falta importación atómica de Vencimientos");
+assert(!server.includes("importarVencimientosAtomico"), "El runtime no debe conservar importación legacy de Vencimientos");
 assert(server.includes("listarVencimientosDb()"), "La lectura de Vencimientos no quedó conectada a PostgreSQL");
 assert(server.includes("crearVencimientoDb"), "El alta de Vencimientos no usa PostgreSQL");
 assert(server.includes("actualizarVencimientoDb"), "La edición/oferta de Vencimientos no usa PostgreSQL");

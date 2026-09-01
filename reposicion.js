@@ -1,14 +1,14 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-limpieza-controlada-270826-a";
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,
   limpiarErrorCargaProducto,
   mostrarErrorCargaProducto,
-} from "./product-loader.js?v=1960-d21-limpieza-controlada-270826-a";
-import { ordenarPorBusqueda } from "./search.js?v=1960-d21-limpieza-controlada-270826-a";
-import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1960-d21-limpieza-controlada-270826-a";
-import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./product-loader.js?v=1960-d21-cierre-etapa6-010926";
+import { ordenarPorBusqueda } from "./search.js?v=1960-d21-cierre-etapa6-010926";
+import { obtenerJsonCacheado, precargarCatalogo } from "./api-cache.js?v=1960-d21-cierre-etapa6-010926";
+import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
 let productoActual = null;
@@ -339,7 +339,6 @@ export function inicializarReposicion() {
     if (!$("repoNuevaListaModal")?.classList.contains("oculto")) cerrarModalNuevaLista();
   });
 
-  window.addEventListener("autoservicio:sesion", actualizarUsuarioReposicion);
   window.addEventListener("online", sincronizarReposicionAlVolver);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) sincronizarReposicionAlVolver();

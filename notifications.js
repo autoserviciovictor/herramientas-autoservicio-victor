@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
 const ESTADO_KEY = "autoservicio_notificaciones_preferencia_v1";

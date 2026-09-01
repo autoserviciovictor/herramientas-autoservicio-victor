@@ -22,8 +22,8 @@ assert(
   "expiry permission middleware",
 );
 assert(
-  server.includes("OFFLINE_OPERATIONS_SHEET_NAME"),
-  "offline idempotency sheet",
+  server.includes("reservarOperacionOfflineDb") && server.includes("finalizarOperacionOfflineDb"),
+  "offline idempotency PostgreSQL",
 );
 assert(
   auth.includes("usuario: usuarioActual.usuario"),

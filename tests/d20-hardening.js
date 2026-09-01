@@ -23,7 +23,7 @@ assert(server.includes('sessionVersion'), 'Sessions must have a revocation versi
 assert(server.includes('password.length < 8'), 'Backend password minimum must be 8');
 assert(server.includes('req.usuario?.permisos?.[m] === true'), 'Permissions must fail closed');
 assert(server.includes('"X-Content-Type-Options": "nosniff"'), 'API hardening headers must be enabled');
-assert(server.includes('AUTO_MIGRATE_SHEETS'), 'Automatic sheet migration must be configurable');
+assert(!server.includes('AUTO_MIGRATE_SHEETS'), 'Legacy automatic Sheets migration flag must be removed');
 
 assert(auth.includes('recibidos[m] === true'), 'Frontend permissions must fail closed');
 assert(auth.includes('requiereRevision: true'), 'Offline 4xx operations must be retained for review');

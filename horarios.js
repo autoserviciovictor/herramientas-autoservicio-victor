@@ -1,11 +1,11 @@
-import "./ui.js?v=1960-d21-limpieza-controlada-270826-a";
-import { API_BASE_URL } from "./config.js?v=1960-d21-limpieza-controlada-270826-a";
-import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-limpieza-controlada-270826-a";
+import "./ui.js?v=1960-d21-cierre-etapa6-010926";
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
+import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 import {
   shiftSegments,
   cellLabel,
   fullScheduleLabel,
-} from "./modules/horarios/schedule-format.js?v=1960-d21-limpieza-controlada-270826-a";
+} from "./modules/horarios/schedule-format.js?v=1960-d21-cierre-etapa6-010926";
 
 function escAttr(valor) {
   return String(valor ?? "")
