@@ -1,8 +1,10 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
-const ESTADO_KEY = "autoservicio_notificaciones_preferencia_v1";
+const ESTADO_KEY = "autoservicio_notificaciones_preferencia_v2";
+const VAPID_KEY_KEY = "autoservicio_notificaciones_vapid_public_key_v1";
 let sincronizando = false;
+let pushConfirmado = false;
 
 function esDesarrolloLocal() {
   return ["127.0.0.1", "localhost"].includes(location.hostname);
@@ -15,81 +17,138 @@ function base64UrlToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
-function actualizarEstado(texto, tipo = "") {
+function claveAplicacionSuscripcion(subscription) {
+  try {
+    const key = subscription?.options?.applicationServerKey;
+    if (!key) return "";
+    const bytes = new Uint8Array(key);
+    let binary = "";
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  } catch {
+    return "";
+  }
+}
+
+function actualizarEstado(texto, tipo = "", estadoPush = "") {
   const estado = $("estadoNotificaciones");
   if (estado) {
     estado.textContent = texto;
     estado.className = `notification-settings-status ${tipo}`.trim();
   }
+
   const boton = $("btnActivarNotificaciones");
   if (!boton) return;
-  const permiso =
-    "Notification" in window ? Notification.permission : "unsupported";
-  if (permiso === "granted") {
-    boton.textContent = "✓ Notificaciones activadas";
-    boton.disabled = true;
-  } else if (permiso === "denied") {
+  const permiso = "Notification" in window ? Notification.permission : "unsupported";
+  const estadoReal = estadoPush || (pushConfirmado ? "active" : "inactive");
+  boton.dataset.pushState = estadoReal;
+
+  if (permiso === "denied") {
     boton.textContent = "Notificaciones bloqueadas";
     boton.disabled = true;
+  } else if (permiso === "granted" && estadoReal === "active") {
+    boton.textContent = "✓ Notificaciones activadas";
+    boton.disabled = true;
+  } else if (permiso === "granted") {
+    boton.textContent = estadoReal === "syncing" ? "Verificando…" : "Reparar notificaciones";
+    boton.disabled = estadoReal === "syncing";
   } else {
     boton.textContent = "Activar notificaciones";
     boton.disabled = false;
   }
 }
 
-async function registrarSuscripcion() {
+async function obtenerClaveVapid() {
+  const respuesta = await fetch(`${API_BASE_URL}/notificaciones/public-key`, { cache: "no-store" });
+  const data = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok || !data.ok || !data.configurado || !data.publicKey)
+    throw new Error(data.mensaje || "Configurá las claves VAPID en Render");
+  return String(data.publicKey).trim();
+}
+
+async function obtenerSuscripcionVigente(registro, publicKey) {
+  let subscription = await registro.pushManager.getSubscription();
+  const claveGuardada = localStorage.getItem(VAPID_KEY_KEY) || "";
+  const claveSuscripcion = claveAplicacionSuscripcion(subscription);
+
+  // Una suscripción Push está ligada a la clave pública VAPID usada al crearla.
+  // Si cambió la clave (o esta versión aún no registró cuál usó), se recrea una vez.
+  const requiereRenovar = Boolean(
+    subscription &&
+    ((claveGuardada && claveGuardada !== publicKey) ||
+      (claveSuscripcion && claveSuscripcion !== publicKey) ||
+      (!claveGuardada && !claveSuscripcion))
+  );
+
+  if (requiereRenovar) {
+    await subscription.unsubscribe().catch(() => false);
+    subscription = null;
+  }
+
+  if (!subscription) {
+    subscription = await registro.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: base64UrlToUint8Array(publicKey),
+    });
+  }
+  return subscription;
+}
+
+async function enviarPruebaPush() {
+  const r = await fetch(`${API_BASE_URL}/notificaciones/prueba`, { method: "POST" });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.ok || Number(data.enviados || 0) < 1)
+    throw new Error(data.mensaje || "La suscripción se guardó, pero no se pudo entregar la notificación de prueba");
+  return data;
+}
+
+async function registrarSuscripcion({ probar = false } = {}) {
   if (esDesarrolloLocal()) {
-    actualizarEstado(
-      "Las notificaciones push están desactivadas en desarrollo local.",
-    );
+    actualizarEstado("Las notificaciones push están desactivadas en desarrollo local.");
     return false;
   }
-  if (
-    sincronizando ||
-    !("serviceWorker" in navigator) ||
-    !("PushManager" in window)
-  )
-    return false;
+  if (sincronizando || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+
   sincronizando = true;
+  pushConfirmado = false;
+  actualizarEstado("Verificando suscripción…", "", "syncing");
   try {
-    const claveRespuesta = await fetch(
-      `${API_BASE_URL}/notificaciones/public-key`,
-    );
-    const claveData = await claveRespuesta.json();
-    if (
-      !claveRespuesta.ok ||
-      !claveData.ok ||
-      !claveData.configurado ||
-      !claveData.publicKey
-    )
-      throw new Error("Configurá las claves VAPID en Render");
+    const publicKey = await obtenerClaveVapid();
     const registro = await navigator.serviceWorker.ready;
-    let subscription = await registro.pushManager.getSubscription();
-    if (!subscription)
-      subscription = await registro.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlToUint8Array(claveData.publicKey),
-      });
+    const subscription = await obtenerSuscripcionVigente(registro, publicKey);
+
     const r = await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subscription: subscription.toJSON() }),
     });
-    const data = await r.json();
+    const data = await r.json().catch(() => ({}));
     if (!r.ok || !data.ok)
-      throw new Error(data.mensaje || "No se pudo activar las notificaciones");
+      throw new Error(data.mensaje || "No se pudo registrar este dispositivo para notificaciones");
+
+    localStorage.setItem(VAPID_KEY_KEY, publicKey);
     localStorage.setItem(ESTADO_KEY, "activadas");
+
+    if (probar) {
+      actualizarEstado("Enviando notificación de prueba…", "", "syncing");
+      await enviarPruebaPush();
+    }
+
+    pushConfirmado = true;
     actualizarEstado(
-      "Recibirás avisos al cargar, a 15, 7, 3 y 1 día, y cuando estén vencidos.",
+      probar
+        ? "Notificaciones verificadas. Te enviamos una notificación de prueba."
+        : "Notificaciones activadas y sincronizadas con este dispositivo.",
       "ok",
-    );
-    fetch(`${API_BASE_URL}/notificaciones/procesar`, { method: "POST" }).catch(
-      () => {},
+      "active",
     );
     return true;
   } catch (error) {
+    localStorage.removeItem(ESTADO_KEY);
+    pushConfirmado = false;
     actualizarEstado(
       error.message || "No se pudieron activar las notificaciones",
+      "error",
       "error",
     );
     return false;
@@ -100,54 +159,53 @@ async function registrarSuscripcion() {
 
 async function activarNotificaciones() {
   if (!("Notification" in window))
-    return actualizarEstado(
-      "Este dispositivo no admite notificaciones",
-      "error",
-    );
-  const permiso = await Notification.requestPermission();
+    return actualizarEstado("Este dispositivo no admite notificaciones", "error", "error");
+
+  let permiso = Notification.permission;
+  if (permiso !== "granted") permiso = await Notification.requestPermission();
   if (permiso !== "granted") {
     actualizarEstado(
       permiso === "denied"
         ? "Las notificaciones están bloqueadas en el navegador"
         : "Permiso de notificaciones pendiente",
       "error",
+      "error",
     );
     return;
   }
-  actualizarEstado("Activando notificaciones…");
-  await registrarSuscripcion();
+
+  actualizarEstado("Activando y verificando notificaciones…", "", "syncing");
+  await registrarSuscripcion({ probar: true });
 }
 
 function inicializarNotificaciones() {
   const boton = $("btnActivarNotificaciones");
   boton?.addEventListener("click", activarNotificaciones);
+
   if (esDesarrolloLocal()) {
-    actualizarEstado(
-      "Las notificaciones push se habilitan únicamente fuera de localhost.",
-    );
+    actualizarEstado("Las notificaciones push se habilitan únicamente fuera de localhost.");
     if (boton) {
       boton.textContent = "Notificaciones no disponibles en local";
       boton.disabled = true;
     }
     return;
   }
+
   if (!("Notification" in window) || !("PushManager" in window))
-    return actualizarEstado(
-      "Este dispositivo no admite notificaciones",
-      "error",
-    );
+    return actualizarEstado("Este dispositivo no admite notificaciones", "error", "error");
+
   if (Notification.permission === "granted") {
-    actualizarEstado("Notificaciones activadas", "ok");
-    registrarSuscripcion();
-  } else if (Notification.permission === "denied")
+    actualizarEstado("Verificando notificaciones…", "", "syncing");
+    registrarSuscripcion({ probar: localStorage.getItem(ESTADO_KEY) !== "activadas" });
+  } else if (Notification.permission === "denied") {
     actualizarEstado(
       "Notificaciones bloqueadas. Habilitalas desde los permisos del navegador.",
       "error",
+      "error",
     );
-  else
-    actualizarEstado(
-      "Activá las notificaciones para recibir alertas de vencimientos.",
-    );
+  } else {
+    actualizarEstado("Activá las notificaciones para recibir alertas.", "", "inactive");
+  }
 }
 
 document.addEventListener("DOMContentLoaded", inicializarNotificaciones);
@@ -156,27 +214,120 @@ window.addEventListener("autoservicio:sesion", () => {
     !esDesarrolloLocal() &&
     "Notification" in window &&
     Notification.permission === "granted"
-  )
-    registrarSuscripcion();
+  ) registrarSuscripcion({ probar: false });
 });
 
-// Preferencias por categoría. Se guardan localmente y las consume el centro de notificaciones.
-const CATEGORIAS_KEY = "autoservicio_notificaciones_categorias_v1";
-function preferenciasCategorias(){
-  try { return { vencimientos:true, tareas:true, horarios:true, ...JSON.parse(localStorage.getItem(CATEGORIAS_KEY) || "{}") }; }
-  catch { return { vencimientos:true, tareas:true, horarios:true }; }
+// Preferencias por categoría. Se guardan localmente para la UI y también en
+// PostgreSQL para que el servidor respete los interruptores al enviar push.
+const CATEGORIAS_KEY_BASE = "autoservicio_notificaciones_categorias_v2";
+function claveCategoriasUsuario() {
+  const usuario = window.AutoservicioAuth?.getUsuario?.();
+  const clave = String(usuario?.usuario || usuario?.nombre || "anonimo").trim().toLowerCase();
+  return `${CATEGORIAS_KEY_BASE}:${clave || "anonimo"}`;
 }
-function iniciarPreferenciasCategorias(){
-  const mapa = { settingsNotifVencimientos:"vencimientos", settingsNotifTareas:"tareas", settingsNotifHorarios:"horarios" };
-  const prefs = preferenciasCategorias();
+const CATEGORIAS_DEFECTO = Object.freeze({ vencimientos: true, tareas: true, bano: true });
+
+function preferenciasCategorias() {
+  try {
+    return {
+      ...CATEGORIAS_DEFECTO,
+      ...JSON.parse(localStorage.getItem(claveCategoriasUsuario()) || "{}"),
+    };
+  } catch {
+    return { ...CATEGORIAS_DEFECTO };
+  }
+}
+
+function guardarPreferenciasLocales(prefs) {
+  const normalizadas = {
+    vencimientos: prefs?.vencimientos !== false,
+    tareas: prefs?.tareas !== false,
+    bano: prefs?.bano !== false,
+  };
+  localStorage.setItem(claveCategoriasUsuario(), JSON.stringify(normalizadas));
+  return normalizadas;
+}
+
+async function guardarPreferenciasRemotas(prefs) {
+  const r = await fetch(`${API_BASE_URL}/notificaciones/preferencias`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(prefs),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.ok)
+    throw new Error(data.mensaje || "No se pudieron guardar las preferencias");
+  return data.preferencias || prefs;
+}
+
+function aplicarPreferenciasEnControles(prefs = preferenciasCategorias()) {
+  const mapa = {
+    settingsNotifVencimientos: "vencimientos",
+    settingsNotifTareas: "tareas",
+    settingsNotifBano: "bano",
+  };
   Object.entries(mapa).forEach(([id, clave]) => {
-    const input = $(id); if (!input) return;
-    input.checked = prefs[clave] !== false;
-    input.addEventListener("change", () => {
-      const actuales = preferenciasCategorias(); actuales[clave] = input.checked;
-      localStorage.setItem(CATEGORIAS_KEY, JSON.stringify(actuales));
+    const input = $(id);
+    if (input) input.checked = prefs[clave] !== false;
+  });
+}
+
+async function cargarPreferenciasRemotas() {
+  const r = await fetch(`${API_BASE_URL}/notificaciones/preferencias`, { cache: "no-store" });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudieron cargar las preferencias");
+  return data.preferencias || CATEGORIAS_DEFECTO;
+}
+
+async function sincronizarPreferenciasCategorias() {
+  try {
+    const remotas = await cargarPreferenciasRemotas();
+    const guardadas = guardarPreferenciasLocales(remotas);
+    aplicarPreferenciasEnControles(guardadas);
+    window.dispatchEvent(new CustomEvent("autoservicio:notificaciones-preferencias"));
+  } catch (error) {
+    console.warn("No se pudieron cargar las preferencias de notificaciones:", error?.message || error);
+  }
+}
+
+function iniciarPreferenciasCategorias() {
+  const mapa = {
+    settingsNotifVencimientos: "vencimientos",
+    settingsNotifTareas: "tareas",
+    settingsNotifBano: "bano",
+  };
+  const prefs = preferenciasCategorias();
+  aplicarPreferenciasEnControles(prefs);
+
+  Object.entries(mapa).forEach(([id, clave]) => {
+    const input = $(id);
+    if (!input) return;
+    input.addEventListener("change", async () => {
+      const anteriores = preferenciasCategorias();
+      const actuales = guardarPreferenciasLocales({ ...anteriores, [clave]: input.checked });
       window.dispatchEvent(new CustomEvent("autoservicio:notificaciones-preferencias"));
+      try {
+        const guardadas = await guardarPreferenciasRemotas(actuales);
+        guardarPreferenciasLocales(guardadas);
+        aplicarPreferenciasEnControles(guardadas);
+      } catch (error) {
+        guardarPreferenciasLocales(anteriores);
+        aplicarPreferenciasEnControles(anteriores);
+        window.dispatchEvent(new CustomEvent("autoservicio:notificaciones-preferencias"));
+        actualizarEstado(
+          error.message || "No se pudo guardar la configuración de notificaciones",
+          "error",
+          pushConfirmado ? "active" : "error",
+        );
+      }
     });
   });
 }
-document.addEventListener("DOMContentLoaded", iniciarPreferenciasCategorias);
+
+document.addEventListener("DOMContentLoaded", () => {
+  iniciarPreferenciasCategorias();
+  if (window.AutoservicioAuth?.getUsuario?.()) void sincronizarPreferenciasCategorias();
+});
+window.addEventListener("autoservicio:sesion", (event) => {
+  if (event.detail?.usuario) void sincronizarPreferenciasCategorias();
+});

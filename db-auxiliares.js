@@ -27,6 +27,11 @@ async function asegurarEsquemaAuxiliares() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await query(`CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions(user_key,active)`);
 
+    await query(`CREATE TABLE IF NOT EXISTS notification_preferences (
+      user_key TEXT PRIMARY KEY, expirations_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      tasks_enabled BOOLEAN NOT NULL DEFAULT TRUE, bathroom_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+
     await query(`CREATE TABLE IF NOT EXISTS notification_log (
       notification_pk BIGSERIAL PRIMARY KEY, notification_key TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT '',
       record_id TEXT NOT NULL DEFAULT '', code TEXT NOT NULL DEFAULT '', expiry_date TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '')`);
@@ -37,6 +42,10 @@ async function asegurarEsquemaAuxiliares() {
         AND a.notification_key = b.notification_key`);
     await query(`CREATE UNIQUE INDEX IF NOT EXISTS notification_log_key_unique_idx
       ON notification_log(notification_key) WHERE notification_key <> ''`);
+
+    await query(`CREATE TABLE IF NOT EXISTS notification_schedule_runs (
+      run_date TEXT NOT NULL, schedule_key TEXT NOT NULL, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY(run_date,schedule_key))`);
 
     await query(`CREATE TABLE IF NOT EXISTS notification_center (
       notification_id TEXT PRIMARY KEY, user_key TEXT NOT NULL, type TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',
@@ -102,6 +111,28 @@ async function listarSuscripcionesPushDb(){ const r=await query(`SELECT endpoint
 async function guardarSuscripcionPushDb(x){ await query(`INSERT INTO push_subscriptions(endpoint,p256dh,auth_key,user_key,user_name,active,updated_text) VALUES($1,$2,$3,$4,$5,TRUE,$6) ON CONFLICT(endpoint) DO UPDATE SET p256dh=EXCLUDED.p256dh,auth_key=EXCLUDED.auth_key,user_key=EXCLUDED.user_key,user_name=EXCLUDED.user_name,active=TRUE,updated_text=EXCLUDED.updated_text,updated_at=NOW()`,[x.endpoint,x.p256dh,x.auth,x.usuario||'',x.nombre||'',x.actualizado||'']); }
 async function desactivarSuscripcionPushDb(endpoint){ await query(`UPDATE push_subscriptions SET active=FALSE,updated_at=NOW() WHERE endpoint=$1`,[endpoint]); }
 
+async function obtenerPreferenciasNotificacionesDb(usuario){
+  const clave=texto(usuario).toLowerCase();
+  const r=await query(`SELECT expirations_enabled,tasks_enabled,bathroom_enabled FROM notification_preferences WHERE user_key=$1`,[clave]);
+  const x=r.rows[0];
+  return x?{vencimientos:x.expirations_enabled!==false,tareas:x.tasks_enabled!==false,bano:x.bathroom_enabled!==false}:null;
+}
+async function listarPreferenciasNotificacionesDb(){
+  const r=await query(`SELECT user_key,expirations_enabled,tasks_enabled,bathroom_enabled FROM notification_preferences`);
+  return r.rows.map(x=>({usuario:x.user_key,vencimientos:x.expirations_enabled!==false,tareas:x.tasks_enabled!==false,bano:x.bathroom_enabled!==false}));
+}
+async function guardarPreferenciasNotificacionesDb(usuario,prefs){
+  const clave=texto(usuario).toLowerCase();
+  await query(`INSERT INTO notification_preferences(user_key,expirations_enabled,tasks_enabled,bathroom_enabled,updated_at)
+    VALUES($1,$2,$3,$4,NOW())
+    ON CONFLICT(user_key) DO UPDATE SET expirations_enabled=EXCLUDED.expirations_enabled,tasks_enabled=EXCLUDED.tasks_enabled,bathroom_enabled=EXCLUDED.bathroom_enabled,updated_at=NOW()`,
+    [clave,prefs?.vencimientos!==false,prefs?.tareas!==false,prefs?.bano!==false]);
+  return {usuario:clave,vencimientos:prefs?.vencimientos!==false,tareas:prefs?.tareas!==false,bano:prefs?.bano!==false};
+}
+
+async function notificacionHorarioEjecutadaDb(fecha,clave){ const r=await query(`SELECT 1 FROM notification_schedule_runs WHERE run_date=$1 AND schedule_key=$2`,[texto(fecha),texto(clave)]); return Boolean(r.rowCount); }
+async function registrarNotificacionHorarioEjecutadaDb(fecha,clave){ await query(`INSERT INTO notification_schedule_runs(run_date,schedule_key,completed_at) VALUES($1,$2,NOW()) ON CONFLICT(run_date,schedule_key) DO NOTHING`,[texto(fecha),texto(clave)]); }
+
 async function clavesNotificacionesDb(){ const r=await query(`SELECT notification_key,sent_at,type,code,expiry_date FROM notification_log`); const s=new Set(); for(const x of r.rows){if(x.notification_key)s.add(x.notification_key); const f=texto(x.sent_at).slice(0,10); if(x.code&&x.expiry_date&&x.type&&f)s.add([x.code,x.expiry_date,x.type,f].join('|'));} return s; }
 async function registrarNotificacionEnviadaDb(x){ await query(`INSERT INTO notification_log(notification_key,sent_at,type,record_id,code,expiry_date,detail) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`,[x.clave||'',x.fecha||'',x.tipo||'',x.id||'',x.codigo||'',x.vencimiento||'',x.detalle||'']); }
 async function existeCentroNotificacionDb(id){ const r=await query(`SELECT 1 FROM notification_center WHERE notification_id=$1`,[id]); return Boolean(r.rowCount); }
@@ -112,4 +143,4 @@ async function marcarCentroNotificacionDb(usuario,id='',todas=false){ const r=aw
 async function registrarHistorialVencimientoDb(x){ await query(`INSERT INTO expiration_history(event_date,event_time,user_key,user_name,action,record_id,code,article,expiry_date,detail,quantity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,[x.fecha||'',x.hora||'',x.usuario||'',x.nombre||'',x.accion||'',x.id||'',x.codigo||'',x.articulo||'',x.vencimiento||'',x.detalle||'',String(x.cantidad??'')]); }
 async function listarHistorialVencimientosDb(){ const r=await query(`SELECT event_date,event_time,user_key,user_name,action,record_id,code,article,expiry_date,detail,quantity FROM expiration_history ORDER BY history_pk DESC`); return r.rows.map(x=>({fecha:x.event_date,hora:x.event_time,usuario:x.user_key,nombre:x.user_name,accion:x.action,id:x.record_id,codigo:x.code,articulo:x.article,vencimiento:x.expiry_date,detalle:x.detail,cantidad:x.quantity})); }
 
-module.exports={BLOQUEO_AUXILIARES,asegurarEsquemaAuxiliares,conTransaccionAuxiliares,importarAuxiliaresAtomico,registrarActividadAdminDb,listarActividadAdminDb,buscarOperacionOfflineDb,reservarOperacionOfflineDb,finalizarOperacionOfflineDb,listarSuscripcionesPushDb,guardarSuscripcionPushDb,desactivarSuscripcionPushDb,clavesNotificacionesDb,registrarNotificacionEnviadaDb,existeCentroNotificacionDb,registrarCentroNotificacionDb,listarCentroNotificacionesDb,marcarCentroNotificacionDb,registrarHistorialVencimientoDb,listarHistorialVencimientosDb};
+module.exports={BLOQUEO_AUXILIARES,asegurarEsquemaAuxiliares,conTransaccionAuxiliares,importarAuxiliaresAtomico,registrarActividadAdminDb,listarActividadAdminDb,buscarOperacionOfflineDb,reservarOperacionOfflineDb,finalizarOperacionOfflineDb,listarSuscripcionesPushDb,guardarSuscripcionPushDb,desactivarSuscripcionPushDb,obtenerPreferenciasNotificacionesDb,listarPreferenciasNotificacionesDb,guardarPreferenciasNotificacionesDb,notificacionHorarioEjecutadaDb,registrarNotificacionHorarioEjecutadaDb,clavesNotificacionesDb,registrarNotificacionEnviadaDb,existeCentroNotificacionDb,registrarCentroNotificacionDb,listarCentroNotificacionesDb,marcarCentroNotificacionDb,registrarHistorialVencimientoDb,listarHistorialVencimientosDb};

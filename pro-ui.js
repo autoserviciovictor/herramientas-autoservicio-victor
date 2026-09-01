@@ -355,7 +355,8 @@ function syncNotificationSettings() {
   const expiry = $("settingsExpiryAlertsStatus");
   const supported = "Notification" in window;
   const permission = supported ? Notification.permission : "unsupported";
-  const on = permission === "granted";
+  const pushState = button?.dataset?.pushState || "";
+  const on = permission === "granted" && pushState === "active";
   button?.classList.toggle("is-on", on);
   button?.classList.toggle("is-blocked", permission === "denied");
   if (button) {

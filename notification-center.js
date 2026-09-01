@@ -18,14 +18,19 @@ let ultimaCarga = 0;
 let cargaEnCurso = null;
 let ultimoFoco = null;
 
-const CATEGORIAS_KEY = "autoservicio_notificaciones_categorias_v1";
+const CATEGORIAS_KEY_BASE = "autoservicio_notificaciones_categorias_v2";
+function claveCategoriasUsuario() {
+  const usuario = window.AutoservicioAuth?.getUsuario?.();
+  const clave = String(usuario?.usuario || usuario?.nombre || "anonimo").trim().toLowerCase();
+  return `${CATEGORIAS_KEY_BASE}:${clave || "anonimo"}`;
+}
 function categoriaHabilitada(tipo = "") {
-  let prefs = { vencimientos:true, tareas:true, horarios:true };
-  try { prefs = { ...prefs, ...JSON.parse(localStorage.getItem(CATEGORIAS_KEY) || "{}") }; } catch {}
+  let prefs = { vencimientos:true, tareas:true, bano:true };
+  try { prefs = { ...prefs, ...JSON.parse(localStorage.getItem(claveCategoriasUsuario()) || "{}") }; } catch {}
   const t = String(tipo || "").toLowerCase();
   if (t.includes("venc")) return prefs.vencimientos !== false;
-  if (t.includes("tarea") || t.includes("bano") || t.includes("baño")) return prefs.tareas !== false;
-  if (t.includes("horario") || t.includes("turno")) return prefs.horarios !== false;
+  if (t.includes("tarea")) return prefs.tareas !== false;
+  if (t.includes("bano") || t.includes("baño")) return prefs.bano !== false;
   return true;
 }
 

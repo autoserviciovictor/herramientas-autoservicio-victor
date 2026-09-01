@@ -79,6 +79,11 @@ const {
   listarSuscripcionesPushDb,
   guardarSuscripcionPushDb,
   desactivarSuscripcionPushDb,
+  obtenerPreferenciasNotificacionesDb,
+  listarPreferenciasNotificacionesDb,
+  guardarPreferenciasNotificacionesDb,
+  notificacionHorarioEjecutadaDb,
+  registrarNotificacionHorarioEjecutadaDb,
   clavesNotificacionesDb,
   registrarNotificacionEnviadaDb,
   existeCentroNotificacionDb,
@@ -108,9 +113,6 @@ const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
 const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
 const VAPID_SUBJECT = normalizarTexto(
   process.env.VAPID_SUBJECT || "mailto:administracion@autoserviciovictor.com",
-);
-const NOTIFICATION_CRON_SECRET = normalizarTexto(
-  process.env.NOTIFICATION_CRON_SECRET,
 );
 const PUSH_CONFIGURED = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
 if (PUSH_CONFIGURED)
@@ -1071,7 +1073,7 @@ app.get("/auth/session", requerirSesion, (req, res) => {
 
 // Desde aquí, toda la API de trabajo requiere una sesión válida.
 app.use((req, res, next) => {
-  if (req.path === "/" || req.path === "/notificaciones/cron") return next();
+  if (req.path === "/") return next();
   return requerirSesion(req, res, next);
 });
 
@@ -4397,67 +4399,143 @@ async function desactivarSuscripcionPush(endpoint) {
   invalidarCache("suscripcionesPush");
 }
 
-async function obtenerSuscripcionesVencimientosPermitidas() {
-  const [suscripciones, usuarios] = await Promise.all([
+const PREFERENCIAS_NOTIFICACIONES_DEFECTO = Object.freeze({
+  vencimientos: true,
+  tareas: true,
+  bano: true,
+});
+
+function normalizarPreferenciasNotificaciones(valor = {}) {
+  return {
+    vencimientos: valor?.vencimientos !== false,
+    tareas: valor?.tareas !== false,
+    bano: valor?.bano !== false,
+  };
+}
+
+async function preferenciasNotificacionesUsuario(usuarioClave) {
+  await asegurarAuxiliaresPostgres();
+  const guardadas = await obtenerPreferenciasNotificacionesDb(usuarioClave);
+  return normalizarPreferenciasNotificaciones(
+    guardadas || PREFERENCIAS_NOTIFICACIONES_DEFECTO,
+  );
+}
+
+async function contextoDestinatariosNotificaciones() {
+  await asegurarAuxiliaresPostgres();
+  const [suscripciones, usuarios, preferencias] = await Promise.all([
     obtenerSuscripcionesPush(),
     obtenerUsuarios(),
+    listarPreferenciasNotificacionesDb(),
   ]);
-  const porUsuario = new Map(usuarios.map((u) => [u.usuario, u]));
-  return suscripciones.filter((s) => {
-    const usuario = porUsuario.get(normalizarUsuario(s.usuario));
-    return Boolean(
-      usuario && usuario.activo && usuario.permisos?.vencimientos === true,
-    );
+  const preferenciasPorUsuario = new Map(
+    preferencias.map((p) => [normalizarUsuario(p.usuario), normalizarPreferenciasNotificaciones(p)]),
+  );
+  return { suscripciones, usuarios, preferenciasPorUsuario };
+}
+
+function categoriaNotificacionesActiva(contexto, usuarioClave, categoria) {
+  const clave = normalizarUsuario(usuarioClave);
+  const prefs = contexto.preferenciasPorUsuario.get(clave) || PREFERENCIAS_NOTIFICACIONES_DEFECTO;
+  return prefs?.[categoria] !== false;
+}
+
+function usuariosCategoriaNotificaciones(contexto, categoria, modulo = "") {
+  return contexto.usuarios.filter((usuario) => {
+    if (!usuario?.activo) return false;
+    if (modulo && usuario.permisos?.[modulo] !== true) return false;
+    return categoriaNotificacionesActiva(contexto, usuario.usuario, categoria);
   });
 }
 
-async function obtenerSuscripcionesUsuarioModulo(usuarioClave, modulo) {
-  const clave = normalizarUsuario(usuarioClave);
-  if (!clave) return [];
-  const [suscripciones, usuarios] = await Promise.all([
-    obtenerSuscripcionesPush(),
-    obtenerUsuarios(),
-  ]);
-  const usuario = usuarios.find((u) => u.usuario === clave);
-  if (!usuario || !usuario.activo || usuario.permisos?.[modulo] !== true)
-    return [];
-  return suscripciones.filter(
-    (s) => normalizarUsuario(s.usuario) === clave && s.activo,
+function suscripcionesCategoriaNotificaciones(
+  contexto,
+  categoria,
+  modulo = "",
+  usuariosPermitidos = null,
+) {
+  const permitidos = usuariosPermitidos
+    ? new Set(usuariosPermitidos.map((u) => normalizarUsuario(u.usuario)))
+    : new Set(
+        usuariosCategoriaNotificaciones(contexto, categoria, modulo).map((u) =>
+          normalizarUsuario(u.usuario),
+        ),
+      );
+  return contexto.suscripciones.filter(
+    (s) => s.activo && permitidos.has(normalizarUsuario(s.usuario)),
   );
+}
+
+const PUSH_ESTADOS_REINTENTABLES = new Set([429, 500, 502, 503, 504]);
+const PUSH_ESTADOS_INVALIDOS = new Set([400, 401, 403, 404, 410]);
+
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function hostEndpointPush(endpoint) {
+  try { return new URL(endpoint).host; } catch { return "endpoint-invalido"; }
+}
+
+async function enviarPushConReintentos(s, payload) {
+  const subscription = {
+    endpoint: s.endpoint,
+    keys: { p256dh: s.p256dh, auth: s.auth },
+  };
+  const esperas = [0, 400, 1200];
+  let ultimoError = null;
+
+  for (let intento = 0; intento < esperas.length; intento += 1) {
+    if (esperas[intento]) await esperar(esperas[intento]);
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify(payload), { TTL: 86400 });
+      return { ok: true, intentos: intento + 1 };
+    } catch (error) {
+      ultimoError = error;
+      const status = Number(error?.statusCode || 0);
+      if (!PUSH_ESTADOS_REINTENTABLES.has(status) || intento === esperas.length - 1) break;
+    }
+  }
+
+  const status = Number(ultimoError?.statusCode || 0);
+  if (PUSH_ESTADOS_INVALIDOS.has(status)) await desactivarSuscripcionPush(s.endpoint);
+  console.error("Error enviando notificación push:", {
+    status: status || "sin-status",
+    proveedor: hostEndpointPush(s.endpoint),
+    cuerpo: String(ultimoError?.body || ultimoError?.message || "").slice(0, 300),
+  });
+  return { ok: false, status, permanente: PUSH_ESTADOS_INVALIDOS.has(status) };
 }
 
 async function enviarPushASuscripciones(suscripciones, payload) {
   if (!PUSH_CONFIGURED)
-    return { enviados: 0, configurado: false, destinatarios: 0 };
-  let enviados = 0;
-  await Promise.all(
-    (suscripciones || []).map(async (s) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify(payload),
-          { TTL: 86400 },
-        );
-        enviados += 1;
-      } catch (error) {
-        if ([404, 410].includes(error?.statusCode))
-          await desactivarSuscripcionPush(s.endpoint);
-        else
-          console.error(
-            "Error enviando notificación push:",
-            error?.statusCode || error?.message || error,
-          );
-      }
-    }),
-  );
+    return { enviados: 0, fallidos: 0, configurado: false, destinatarios: 0 };
+
+  const lista = suscripciones || [];
+  const resultados = await Promise.all(lista.map((s) => enviarPushConReintentos(s, payload)));
+  const enviados = resultados.filter((r) => r.ok).length;
   return {
     enviados,
+    fallidos: resultados.length - enviados,
     configurado: true,
-    destinatarios: (suscripciones || []).length,
+    destinatarios: lista.length,
   };
 }
 
-let ultimoMinutoProcesadoTareas = "";
+function suscripcionesUsuario(contexto, usuarioClave) {
+  const clave = normalizarUsuario(usuarioClave);
+  return contexto.suscripciones.filter(
+    (s) => s.activo && normalizarUsuario(s.usuario) === clave,
+  );
+}
+
+function entregaPushRequiereReintento(resultado) {
+  return Boolean(resultado?.destinatarios > 0 && resultado?.enviados < 1 && resultado?.fallidos > 0);
+}
+
+async function enviarPushAUsuario(contexto, usuarioClave, payload) {
+  return enviarPushASuscripciones(suscripcionesUsuario(contexto, usuarioClave), payload);
+}
 
 function resolverUsuarioPorResponsable(usuarios, responsable) {
   const clave = normalizarUsuario(responsable);
@@ -4469,126 +4547,55 @@ function resolverUsuarioPorResponsable(usuarios, responsable) {
   );
 }
 
-function horaInicioDesdeTurnoValor(valorTurno, turnosSector) {
-  const valor = normalizarTexto(valorTurno).toLowerCase();
-  if (!valor || ["franco", "vacaciones", "ausente", "licencia"].includes(valor))
-    return "";
-  const configurado = (turnosSector || []).find(
-    (t) => normalizarTexto(t.id).toLowerCase() === valor,
-  );
-  if (configurado?.inicio) return configurado.inicio;
-  const match = normalizarTexto(valorTurno).match(/(\d{1,2})(?::(\d{2}))?/);
-  if (!match) return "";
-  const hora = Number(match[1]),
-    minuto = Number(match[2] || 0);
-  if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) return "";
-  return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+function etiquetaTurnoTarea(turno) {
+  return turno === "tarde" ? "turno tarde" : "turno mañana";
 }
 
-async function datosHorarioEntradaHoy() {
+async function procesarNotificacionesTareasPendientes(turno) {
+  if (!PUSH_CONFIGURED || !["manana", "tarde"].includes(turno))
+    return { enviados: 0 };
+
   const fecha = fechaArgentina();
-  const mes = fecha.slice(0, 7);
-  const dia = Number(fecha.slice(8, 10));
-  return leerConCache(
-    `notificacionesTareasHorario:${fecha}`,
-    45000,
-    async () => {
-      await asegurarHorariosPostgres();
-      const [calendario, sectores, usuarios] = await Promise.all([
-        listarCalendarioFilas(), obtenerSectores(), obtenerUsuarios(),
-      ]);
-      const filas = calendario.filter((f) => normalizarTexto(f[1]) === mes && Number(f[3]) === dia);
-      const porEmpleadoSector = new Map();
-      for (const f of filas) {
-        porEmpleadoSector.set(
-          `${normalizarTexto(f[0])}|${normalizarUsuario(f[2])}`,
-          normalizarTexto(f[4]),
-        );
-      }
-      return { fecha, mes, dia, sectores, usuarios, porEmpleadoSector };
-    },
-  );
-}
-
-async function procesarNotificacionesInicioTareas() {
-  const ahora = horaMinutoArgentina();
-  const minutoActual = `${fechaArgentina()}|${String(ahora.hora).padStart(2, "0")}:${String(ahora.minuto).padStart(2, "0")}`;
-  if (ultimoMinutoProcesadoTareas === minutoActual) return;
-  ultimoMinutoProcesadoTareas = minutoActual;
-
-  const horaActual = minutoActual.slice(-5);
-  const [{ fecha, sectores, usuarios, porEmpleadoSector }, tareas] =
-    await Promise.all([datosHorarioEntradaHoy(), obtenerTareasServidor()]);
-  const sectoresPorIdONombre = new Map();
-  sectores.forEach((s) => {
-    sectoresPorIdONombre.set(normalizarTexto(s.id), s);
-    sectoresPorIdONombre.set(normalizarTexto(s.nombre), s);
-  });
+  const [tareas, contexto, enviadas] = await Promise.all([
+    obtenerTareasServidor(),
+    contextoDestinatariosNotificaciones(),
+    clavesNotificacionesEnviadas(),
+  ]);
   const grupos = new Map();
 
   for (const tarea of tareas) {
-    const asignacionesDia = tarea.asignaciones?.[fecha] || {};
-    for (const [turnoTarea, asignacion] of Object.entries(asignacionesDia)) {
-      if (
-        !asignacion ||
-        normalizarTexto(asignacion.estado).toLowerCase() === "completada"
-      )
-        continue;
-      const sectorInfo = sectoresPorIdONombre.get(
-        normalizarTexto(tarea.sector),
-      );
-      if (!sectorInfo) continue;
-      const turnosSector = await obtenerTurnosSector(sectorInfo.id);
-      for (const responsable of asignacion.responsables || []) {
-        const usuario = resolverUsuarioPorResponsable(usuarios, responsable);
-        if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true)
-          continue;
-        const clavesEmpleado = [usuario.nombre, usuario.usuario]
-          .map(normalizarUsuario)
-          .filter(Boolean);
-        let valorTurno = "";
-        for (const claveEmpleado of clavesEmpleado) {
-          valorTurno =
-            porEmpleadoSector.get(`${sectorInfo.id}|${claveEmpleado}`) ||
-            valorTurno;
-        }
-        const horaEntrada = horaInicioDesdeTurnoValor(valorTurno, turnosSector);
-        if (!horaEntrada || horaEntrada !== horaActual) continue;
-        const claveGrupo = `${usuario.usuario}|${sectorInfo.id}|${fecha}|${horaEntrada}`;
-        const grupo = grupos.get(claveGrupo) || {
-          usuario,
-          sector: sectorInfo,
-          fecha,
-          horaEntrada,
-          tareas: [],
-        };
-        grupo.tareas.push({
-          id: tarea.id,
-          nombre: tarea.nombre,
-          turno: turnoTarea,
-        });
-        grupos.set(claveGrupo, grupo);
-      }
+    const asignacion = tarea?.asignaciones?.[fecha]?.[turno];
+    if (!asignacion) continue;
+    if (normalizarTexto(asignacion.estado).toLowerCase() === "completada") continue;
+
+    for (const responsable of asignacion.responsables || []) {
+      const usuario = resolverUsuarioPorResponsable(contexto.usuarios, responsable);
+      if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true) continue;
+      if (!categoriaNotificacionesActiva(contexto, usuario.usuario, "tareas")) continue;
+
+      const claveUsuario = normalizarUsuario(usuario.usuario);
+      const grupo = grupos.get(claveUsuario) || { usuario, tareas: [] };
+      grupo.tareas.push({ id: tarea.id, nombre: tarea.nombre, sector: tarea.sector });
+      grupos.set(claveUsuario, grupo);
     }
   }
 
-  if (!grupos.size) return;
-  const enviadas = await clavesNotificacionesEnviadas();
+  let enviados = 0;
+  let retryNeeded = false;
   for (const grupo of grupos.values()) {
-    const clave = `tareas-inicio|${grupo.fecha}|${grupo.usuario.usuario}|${grupo.sector.id}|${grupo.horaEntrada}`;
+    const clave = `tareas-pendientes|${fecha}|${turno}|${normalizarUsuario(grupo.usuario.usuario)}`;
     if (enviadas.has(clave)) continue;
     const cantidad = grupo.tareas.length;
     const payload = {
-      title: cantidad === 1 ? "Tarea para hoy" : "Tareas para tu turno",
+      title: "Tareas pendientes",
       body:
         cantidad === 1
-          ? `${grupo.tareas[0].nombre} · ${grupo.sector.nombre}`
-          : `Tenés ${cantidad} tareas asignadas hoy en ${grupo.sector.nombre}`,
+          ? `Tenés 1 tarea pendiente para el ${etiquetaTurnoTarea(turno)}.`
+          : `Tenés ${cantidad} tareas pendientes para el ${etiquetaTurnoTarea(turno)}.`,
       tag: clave,
-      data: {
-        url: `./?modulo=tareas&fecha=${encodeURIComponent(grupo.fecha)}&sector=${encodeURIComponent(grupo.sector.id)}`,
-      },
+      data: { url: `./?modulo=tareas&fecha=${encodeURIComponent(fecha)}` },
     };
+
     await registrarCentroNotificacion({
       usuario: grupo.usuario.usuario,
       tipo: "tarea",
@@ -4597,23 +4604,24 @@ async function procesarNotificacionesInicioTareas() {
       url: payload.data.url,
       clave,
     });
-    const suscripciones = await obtenerSuscripcionesUsuarioModulo(
-      grupo.usuario.usuario,
-      "tareas",
+    const suscripciones = contexto.suscripciones.filter(
+      (s) => s.activo && normalizarUsuario(s.usuario) === normalizarUsuario(grupo.usuario.usuario),
     );
-    await enviarPushASuscripciones(suscripciones, payload);
+    const resultado = await enviarPushASuscripciones(suscripciones, payload);
+    enviados += resultado.enviados || 0;
+    if (entregaPushRequiereReintento(resultado)) {
+      retryNeeded = true;
+      continue;
+    }
     await registrarNotificacionEnviada(
       clave,
-      "tareas-inicio",
-      {
-        id: grupo.usuario.usuario,
-        codigo: grupo.sector.id,
-        vencimiento: grupo.fecha,
-      },
+      `tareas-pendientes-${turno}`,
+      { id: grupo.usuario.usuario, codigo: turno, vencimiento: fecha },
       payload.body,
     );
     enviadas.add(clave);
   }
+  return { enviados, usuarios: grupos.size, retryNeeded };
 }
 
 async function notificarSupervisorTareaCompletada({
@@ -4623,9 +4631,9 @@ async function notificarSupervisorTareaCompletada({
   asignacion,
   completadaPor,
 }) {
-  const [sectores, usuarios, enviadas] = await Promise.all([
+  const [sectores, contexto, enviadas] = await Promise.all([
     obtenerSectores(),
-    obtenerUsuarios(),
+    contextoDestinatariosNotificaciones(),
     clavesNotificacionesEnviadas(),
   ]);
   const sector = sectores.find((s) =>
@@ -4634,12 +4642,12 @@ async function notificarSupervisorTareaCompletada({
     ),
   );
   if (!sector?.supervisor) return;
-  const supervisor = usuarios.find(
-    (u) =>
-      normalizarUsuario(u.usuario) === normalizarUsuario(sector.supervisor),
+  const supervisor = contexto.usuarios.find(
+    (u) => normalizarUsuario(u.usuario) === normalizarUsuario(sector.supervisor),
   );
-  if (!supervisor || !supervisor.activo || supervisor.permisos?.tareas !== true)
-    return;
+  if (!supervisor || !supervisor.activo || supervisor.permisos?.tareas !== true) return;
+  if (!categoriaNotificacionesActiva(contexto, supervisor.usuario, "tareas")) return;
+
   const clave = `tarea-completada|${tarea.id}|${fecha}|${turno}`;
   if (enviadas.has(clave)) return;
   const quien = normalizarTexto(
@@ -4664,11 +4672,11 @@ async function notificarSupervisorTareaCompletada({
     url: payload.data.url,
     clave,
   });
-  const suscripciones = await obtenerSuscripcionesUsuarioModulo(
-    supervisor.usuario,
-    "tareas",
+  const suscripciones = contexto.suscripciones.filter(
+    (s) => s.activo && normalizarUsuario(s.usuario) === normalizarUsuario(supervisor.usuario),
   );
-  await enviarPushASuscripciones(suscripciones, payload);
+  const resultado = await enviarPushASuscripciones(suscripciones, payload);
+  if (entregaPushRequiereReintento(resultado)) return { ...resultado, retryNeeded: true };
   await registrarNotificacionEnviada(
     clave,
     "tarea-completada",
@@ -4698,9 +4706,7 @@ function responsableBanoParaFecha(config, fechaIso) {
   const dias = diasEntreFechasIso(fechaAncla, fechaIso);
   if (dias === null || ((dias % 2) + 2) % 2 !== 0) return "";
   const turno = Math.floor(dias / 2);
-  const indice =
-    ((turno % participantes.length) + participantes.length) %
-    participantes.length;
+  const indice = ((turno % participantes.length) + participantes.length) % participantes.length;
   return participantes[indice] || "";
 }
 
@@ -4717,268 +4723,211 @@ async function resolverUsuarioResponsableBano(valor) {
 
 function limpiezaBanoConfirmada(config, fechaIso) {
   return (Array.isArray(config?.historial) ? config.historial : []).some(
-    (item) => normalizarTexto(item?.fecha) === fechaIso,
+    (item) =>
+      normalizarTexto(item?.fecha) === fechaIso &&
+      Boolean(normalizarTexto(item?.usuario)),
   );
 }
 
-function claveNotificacionBano(fechaIso, tipo, usuario) {
-  return ["bano", fechaIso, tipo, normalizarUsuario(usuario)].join("|");
+function claveNotificacionBano(fechaIso, tipo) {
+  return ["bano", fechaIso, tipo].join("|");
 }
 
 async function procesarNotificacionBano(tipo) {
-  if (!PUSH_CONFIGURED || !["08", "16"].includes(tipo)) return { enviados: 0 };
+  if (!PUSH_CONFIGURED || !["08", "18"].includes(tipo)) return { enviados: 0, retryNeeded: false };
   const fecha = fechaArgentina();
-  const config = await leerBanoServidor();
+  const [config, contexto, enviadas] = await Promise.all([
+    leerBanoServidor(),
+    contextoDestinatariosNotificaciones(),
+    clavesNotificacionesEnviadas(),
+  ]);
   const participante = responsableBanoParaFecha(config, fecha);
-  if (!participante) return { enviados: 0, descanso: true };
-  if (tipo === "16" && limpiezaBanoConfirmada(config, fecha))
-    return { enviados: 0, confirmada: true };
+  if (!participante) return { enviados: 0, descanso: true, retryNeeded: false };
+  if (tipo === "18" && limpiezaBanoConfirmada(config, fecha))
+    return { enviados: 0, confirmada: true, retryNeeded: false };
 
-  const usuario = await resolverUsuarioResponsableBano(participante);
-  if (!usuario || !usuario.activo || usuario.permisos?.tareas !== true)
-    return { enviados: 0, sinDestinatario: true };
+  const responsable = await resolverUsuarioResponsableBano(participante);
+  const nombreResponsable = normalizarTexto(responsable?.nombre || participante);
+  const claveBase = claveNotificacionBano(fecha, tipo);
+  const payload = tipo === "08"
+    ? {
+        title: "Limpieza de baño",
+        body: `Hoy le toca limpiar el baño a ${nombreResponsable}.`,
+        tag: `bano-${fecha}-08`,
+        data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` },
+      }
+    : {
+        title: "Limpieza de baño pendiente",
+        body: `La limpieza todavía no fue marcada como completada. Hoy le toca a ${nombreResponsable}.`,
+        tag: `bano-${fecha}-18`,
+        data: { url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}` },
+      };
 
-  const clave = claveNotificacionBano(fecha, tipo, usuario.usuario);
-  const enviadas = await clavesNotificacionesEnviadas();
-  if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
-
-  const payload =
-    tipo === "08"
-      ? {
-          title: "Hoy te corresponde limpiar el baño",
-          body: "Tu turno es hoy. Confirmá la limpieza cuando termines.",
-          tag: `bano-${fecha}-08-${usuario.usuario}`,
-          data: {
-            url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}`,
-          },
-        }
-      : {
-          title: "Limpieza del baño pendiente",
-          body: "Todavía no registraste la limpieza de hoy.",
-          tag: `bano-${fecha}-16-${usuario.usuario}`,
-          data: {
-            url: `./?modulo=tareas&vista=bano&fecha=${encodeURIComponent(fecha)}`,
-          },
-        };
-
-  await registrarCentroNotificacion({
-    usuario: usuario.usuario,
-    tipo: "bano",
-    titulo: payload.title,
-    mensaje: payload.body,
-    url: payload.data.url,
-    clave: payload.tag,
-  });
-  const suscripciones = await obtenerSuscripcionesUsuarioModulo(
-    usuario.usuario,
-    "tareas",
-  );
-  const resultado = suscripciones.length
-    ? await enviarPushASuscripciones(suscripciones, payload)
-    : { enviados: 0, sinSuscripciones: true };
-  if (resultado.enviados > 0) {
+  const usuarios = usuariosCategoriaNotificaciones(contexto, "bano");
+  let enviados = 0;
+  let retryNeeded = false;
+  for (const usuario of usuarios) {
+    const claveUsuario = `${claveBase}|${normalizarUsuario(usuario.usuario)}`;
+    if (enviadas.has(claveUsuario)) continue;
+    await registrarCentroNotificacion({
+      usuario: usuario.usuario,
+      tipo: "bano",
+      titulo: payload.title,
+      mensaje: payload.body,
+      url: payload.data.url,
+      clave: claveUsuario,
+    });
+    const resultado = await enviarPushAUsuario(contexto, usuario.usuario, payload);
+    enviados += resultado.enviados || 0;
+    if (entregaPushRequiereReintento(resultado)) {
+      retryNeeded = true;
+      continue;
+    }
     await registrarNotificacionEnviada(
-      clave,
+      claveUsuario,
       `bano-${tipo}`,
-      {
-        id: `bano-${fecha}`,
-        codigo: usuario.usuario,
-        vencimiento: fecha,
-      },
+      { id: `bano-${fecha}`, codigo: normalizarUsuario(responsable?.usuario || participante), vencimiento: fecha },
       payload.body,
     );
+    enviadas.add(claveUsuario);
   }
-  return resultado;
+  return { enviados, usuarios: usuarios.length, retryNeeded };
 }
 
-async function enviarPushVencimientos(payload) {
-  if (!PUSH_CONFIGURED)
-    return { enviados: 0, configurado: false, destinatarios: 0 };
-  const suscripciones = await obtenerSuscripcionesVencimientosPermitidas();
-  let enviados = 0;
-  await Promise.all(
-    suscripciones.map(async (s) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify(payload),
-          { TTL: 86400 },
-        );
-        enviados += 1;
-      } catch (error) {
-        if ([404, 410].includes(error?.statusCode))
-          await desactivarSuscripcionPush(s.endpoint);
-        else
-          console.error(
-            "Error enviando notificación push:",
-            error?.statusCode || error?.message || error,
-          );
-      }
-    }),
+async function destinatariosVencimientos() {
+  const contexto = await contextoDestinatariosNotificaciones();
+  // La categoría activa es la única condición funcional para recibir Vencimientos.
+  const usuarios = usuariosCategoriaNotificaciones(contexto, "vencimientos");
+  const suscripciones = suscripcionesCategoriaNotificaciones(
+    contexto,
+    "vencimientos",
+    "",
+    usuarios,
   );
-  return { enviados, configurado: true, destinatarios: suscripciones.length };
+  return { contexto, usuarios, suscripciones };
 }
 
-function claveUnicaAlertaVencimiento(registro, tipo) {
-  if (tipo === "nuevo")
-    return ["vencimiento-nuevo", normalizarTexto(registro.id)].join("|");
+async function enviarPushVencimientos(payload, suscripciones = null) {
+  if (!suscripciones) {
+    const destinatarios = await destinatariosVencimientos();
+    suscripciones = destinatarios.suscripciones;
+  }
+  return enviarPushASuscripciones(suscripciones, payload);
+}
+
+function claveNuevoVencimiento(registro) {
+  return ["vencimiento-nuevo", normalizarTexto(registro.id)].join("|");
+}
+
+function claveProductoVencido(registro) {
   return [
-    normalizarCodigo(registro.codigo),
+    "vencimiento-vencido",
+    normalizarTexto(registro.id),
     normalizarTexto(registro.vencimiento),
-    normalizarTexto(tipo),
-    fechaIsoHoy(),
   ].join("|");
+}
+
+function fechaVencimientoVisible(fechaIso) {
+  const m = normalizarTexto(fechaIso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : normalizarTexto(fechaIso);
 }
 
 function payloadNuevoVencimiento(registro) {
   const cantidad = numero(registro.cantidad);
   const unidades = `${cantidad} ${cantidad === 1 ? "unidad" : "unidades"}`;
   return {
-    title: "Nuevo vencimiento cargado",
-    body: `${registro.articulo} · ${unidades} · vence ${registro.vencimiento}`,
+    title: "Nuevo producto en vencimientos",
+    body: `${registro.articulo} · Vence ${fechaVencimientoVisible(registro.vencimiento)} · ${unidades}`,
     tag: `venc-${registro.id}-nuevo`,
     data: { url: "./?modulo=vencimientos&vista=proximos" },
   };
 }
 
-async function enviarAlertaRegistro(
-  registro,
-  dias,
-  tipo,
-  clave = claveUnicaAlertaVencimiento(registro, tipo),
-  clavesConocidas = null,
-) {
-  if (tipo !== "nuevo") return { enviados: 0, omitida: true };
-  if (clavesNotificacionEnProceso.has(clave))
-    return { enviados: 0, duplicada: true };
-  clavesNotificacionEnProceso.add(clave);
-  try {
-    const enviadas = clavesConocidas || (await clavesNotificacionesEnviadas());
-    if (enviadas.has(clave)) return { enviados: 0, duplicada: true };
-    const payload = payloadNuevoVencimiento(registro);
-    const usuarios = (await obtenerUsuarios()).filter(
-      (u) => u.activo && u.permisos?.vencimientos === true,
-    );
-    await Promise.all(
-      usuarios.map((u) =>
-        registrarCentroNotificacion({
-          usuario: u.usuario,
-          tipo: "vencimientos",
-          titulo: payload.title,
-          mensaje: payload.body,
-          url: payload.data.url,
-          clave: `${clave}|${u.usuario}`,
-        }),
-      ),
-    );
-    const resultado = await enviarPushVencimientos(payload);
-    if (resultado.enviados > 0) {
-      await registrarNotificacionEnviada(clave, tipo, registro, payload.body);
-      enviadas.add(clave);
-    }
-    return resultado;
-  } finally {
-    clavesNotificacionEnProceso.delete(clave);
-  }
-}
-
-function claveResumenVencimientos(fecha, tipo) {
-  return ["resumen-vencimientos", fecha, tipo].join("|");
-}
-
-function payloadResumenVencimientos(tipo, cantidad) {
-  if (tipo === "vencidos") {
-    return {
-      title: "Productos vencidos",
-      body:
-        cantidad === 1
-          ? "Hay 1 producto vencido."
-          : `Hay ${cantidad} productos vencidos.`,
-      tag: `resumen-vencidos-${fechaIsoHoy()}`,
-      data: { url: "./?modulo=vencimientos&vista=vencidos" },
-    };
-  }
-  const dias = Number(tipo);
-  const titulo = dias === 1 ? "Vencen en 1 día" : `Vencen en ${dias} días`;
+function payloadProductoVencido(registro) {
   return {
-    title: titulo,
-    body:
-      cantidad === 1
-        ? `Hay 1 producto que vence en ${dias === 1 ? "1 día" : `${dias} días`}.`
-        : `Hay ${cantidad} productos que vencen en ${dias === 1 ? "1 día" : `${dias} días`}.`,
-    tag: `resumen-vencimientos-${fechaIsoHoy()}-${dias}`,
-    data: { url: `./?modulo=vencimientos&vista=proximos&dias=${dias}` },
+    title: "Producto vencido",
+    body: `${registro.articulo} · Venció ${fechaVencimientoVisible(registro.vencimiento)}`,
+    tag: `venc-${registro.id}-vencido`,
+    data: { url: "./?modulo=vencimientos&vista=vencidos" },
   };
 }
 
-async function enviarResumenVencimientos(tipo, registros, enviadas) {
-  if (!Array.isArray(registros) || !registros.length)
-    return { enviados: 0, vacio: true };
-  const fecha = fechaIsoHoy();
-  const clave = claveResumenVencimientos(fecha, tipo);
-  if (enviadas.has(clave) || clavesNotificacionEnProceso.has(clave))
-    return { enviados: 0, duplicada: true };
+async function notificarVencimientoAUsuarios(registro, payload, clave, tipo) {
+  if (clavesNotificacionEnProceso.has(clave))
+    return { enviados: 0, duplicada: true, retryNeeded: false };
   clavesNotificacionEnProceso.add(clave);
   try {
-    const payload = payloadResumenVencimientos(tipo, registros.length);
-    const usuarios = (await obtenerUsuarios()).filter(
-      (u) => u.activo && u.permisos?.vencimientos === true,
-    );
-    await Promise.all(
-      usuarios.map((u) =>
-        registrarCentroNotificacion({
-          usuario: u.usuario,
-          tipo: "vencimientos",
-          titulo: payload.title,
-          mensaje: payload.body,
-          url: payload.data.url,
-          clave: `${clave}|${u.usuario}`,
-        }),
-      ),
-    );
-    const resultado = await enviarPushVencimientos(payload);
-    if (resultado.enviados > 0) {
-      const registroResumen = {
-        id: `resumen-${tipo}-${fecha}`,
-        codigo: tipo,
-        vencimiento: fecha,
-      };
-      await registrarNotificacionEnviada(
-        clave,
-        `resumen-${tipo}`,
-        registroResumen,
-        payload.body,
-      );
-      enviadas.add(clave);
+    const enviadas = await clavesNotificacionesEnviadas();
+    const { contexto, usuarios } = await destinatariosVencimientos();
+    let enviados = 0;
+    let retryNeeded = false;
+
+    for (const usuario of usuarios) {
+      const claveUsuario = `${clave}|${normalizarUsuario(usuario.usuario)}`;
+      if (enviadas.has(claveUsuario)) continue;
+      await registrarCentroNotificacion({
+        usuario: usuario.usuario,
+        tipo: "vencimientos",
+        titulo: payload.title,
+        mensaje: payload.body,
+        url: payload.data.url,
+        clave: claveUsuario,
+      });
+      const resultado = await enviarPushAUsuario(contexto, usuario.usuario, payload);
+      enviados += resultado.enviados || 0;
+      if (entregaPushRequiereReintento(resultado)) {
+        retryNeeded = true;
+        continue;
+      }
+      await registrarNotificacionEnviada(claveUsuario, tipo, registro, payload.body);
+      enviadas.add(claveUsuario);
     }
-    return resultado;
+    return { enviados, usuarios: usuarios.length, retryNeeded };
   } finally {
     clavesNotificacionEnProceso.delete(clave);
   }
 }
 
-async function procesarAlertasVencimientos() {
-  if (procesandoNotificaciones || !PUSH_CONFIGURED) return;
+async function enviarAlertaNuevoVencimiento(registro) {
+  return notificarVencimientoAUsuarios(
+    registro,
+    payloadNuevoVencimiento(registro),
+    claveNuevoVencimiento(registro),
+    "vencimiento-nuevo",
+  );
+}
+
+async function procesarProductosVencidos() {
+  if (procesandoNotificaciones || !PUSH_CONFIGURED) return { enviados: 0 };
   procesandoNotificaciones = true;
   try {
     const [vencimientos, enviadas] = await Promise.all([
       obtenerVencimientos(),
       clavesNotificacionesEnviadas(),
     ]);
-    const grupos = { 1: [], 3: [], 7: [], 15: [], vencidos: [] };
-
+    let productos = 0;
+    let enviados = 0;
+    let retryNeeded = false;
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
-      if (dias === null) continue;
-      if ([1, 3, 7, 15].includes(dias)) grupos[String(dias)].push(registro);
-      else if (dias < 0) grupos.vencidos.push(registro);
+      if (dias === null || dias >= 0) continue;
+      const clave = claveProductoVencido(registro);
+      if (enviadas.has(clave)) continue;
+      const resultado = await notificarVencimientoAUsuarios(
+        registro,
+        payloadProductoVencido(registro),
+        clave,
+        "vencimiento-vencido",
+      );
+      productos += 1;
+      enviados += resultado.enviados || 0;
+      if (resultado.retryNeeded) retryNeeded = true;
+      enviadas.add(clave);
     }
-
-    for (const tipo of ["1", "3", "7", "15", "vencidos"]) {
-      await enviarResumenVencimientos(tipo, grupos[tipo], enviadas);
-    }
+    return { enviados, productos, retryNeeded };
   } catch (error) {
-    console.error("Error procesando alertas agrupadas de vencimientos:", error);
+    console.error("Error procesando productos vencidos:", error);
+    return { enviados: 0, error: true, retryNeeded: true };
   } finally {
     procesandoNotificaciones = false;
   }
@@ -5035,6 +4984,35 @@ app.patch("/notificaciones/centro-leidas", requerirSesion, async (req, res) => {
   }
 });
 
+app.get("/notificaciones/preferencias", requerirSesion, async (req, res) => {
+  try {
+    const preferencias = await preferenciasNotificacionesUsuario(req.usuario.usuario);
+    res.json({ ok: true, preferencias });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron cargar las preferencias de notificaciones",
+    });
+  }
+});
+
+app.put("/notificaciones/preferencias", requerirSesion, async (req, res) => {
+  try {
+    await asegurarAuxiliaresPostgres();
+    const preferencias = normalizarPreferenciasNotificaciones(req.body || {});
+    const guardadas = await guardarPreferenciasNotificacionesDb(
+      req.usuario.usuario,
+      preferencias,
+    );
+    res.json({ ok: true, preferencias: guardadas });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron guardar las preferencias de notificaciones",
+    });
+  }
+});
+
 app.get("/notificaciones/public-key", (req, res) => {
   res.json({
     ok: true,
@@ -5054,7 +5032,7 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
     res.json({
       ok: true,
       mensaje:
-        "Notificaciones activadas. Los avisos diarios se envían a las 08:00.",
+        "Notificaciones activadas y suscripción guardada correctamente.",
     });
   } catch (error) {
     res.status(400).json({
@@ -5064,19 +5042,33 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
   }
 });
 
-app.post("/notificaciones/procesar", requerirAlgunModulo("vencimientos"), async (req, res) => {
-  await procesarAlertasVencimientos();
-  res.json({ ok: true });
-});
+app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
+  try {
+    if (!PUSH_CONFIGURED)
+      return res.status(503).json({ ok: false, mensaje: "Las claves VAPID no están configuradas" });
+    const suscripciones = (await obtenerSuscripcionesPush()).filter(
+      (s) => normalizarUsuario(s.usuario) === normalizarUsuario(req.usuario.usuario) && s.activo,
+    );
+    if (!suscripciones.length)
+      return res.status(409).json({ ok: false, mensaje: "Este usuario no tiene una suscripción push activa" });
 
-app.all("/notificaciones/cron", async (req, res) => {
-  const secreto = normalizarTexto(req.get("x-cron-secret") || req.query.secret);
-  if (!NOTIFICATION_CRON_SECRET || secreto !== NOTIFICATION_CRON_SECRET)
-    return res
-      .status(403)
-      .json({ ok: false, mensaje: "Secreto de cron inválido" });
-  await procesarAlertasVencimientos();
-  res.json({ ok: true });
+    const resultado = await enviarPushASuscripciones(suscripciones, {
+      title: "Notificaciones activadas",
+      body: "La conexión push de este dispositivo funciona correctamente.",
+      tag: `prueba-push-${normalizarUsuario(req.usuario.usuario)}`,
+      data: { url: "./" },
+    });
+    if (resultado.enviados < 1)
+      return res.status(502).json({
+        ok: false,
+        mensaje: "El dispositivo quedó registrado, pero el proveedor push rechazó el envío. Volvé a activar las notificaciones.",
+        ...resultado,
+      });
+    return res.json({ ok: true, mensaje: "Notificación de prueba enviada", ...resultado });
+  } catch (error) {
+    console.error("Error en prueba de notificaciones push:", error?.message || error);
+    return res.status(500).json({ ok: false, mensaje: "No se pudo completar la prueba de notificaciones" });
+  }
 });
 
 app.get("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) => {
@@ -5152,15 +5144,10 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
       registro,
       `Cantidad: ${registro.cantidad}`,
     );
-    const diasRestantes = diasDesdeHoyArgentina(registro.vencimiento);
     if (PUSH_CONFIGURED) {
-      const tipo = "nuevo";
-      const clave = claveUnicaAlertaVencimiento(registro, tipo);
       setImmediate(async () => {
         try {
-          const enviadas = await clavesNotificacionesEnviadas();
-          if (!enviadas.has(clave))
-            await enviarAlertaRegistro(registro, diasRestantes, tipo, clave);
+          await enviarAlertaNuevoVencimiento(registro);
         } catch (error) {
           console.error(
             "No se pudo enviar la notificación de nuevo vencimiento:",
@@ -5783,45 +5770,58 @@ app.delete("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
 });
 
 const ejecucionesDiariasNotificaciones = new Set();
-function horaMinutoArgentina(fecha = new Date()) {
-  const partes = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(fecha);
-  const valor = (tipo) =>
-    Number(partes.find((parte) => parte.type === tipo)?.value || 0);
-  return { hora: valor("hour"), minuto: valor("minute") };
+function minutosArgentina() {
+  const { hora, minuto } = horaMinutoArgentina();
+  return hora * 60 + minuto;
 }
+
+async function ejecutarHorarioNotificacionPersistente(fecha, clave, tarea) {
+  const id = `${fecha}|${clave}`;
+  if (ejecucionesDiariasNotificaciones.has(id)) return { omitida: true };
+  if (await notificacionHorarioEjecutadaDb(fecha, clave)) {
+    ejecucionesDiariasNotificaciones.add(id);
+    return { omitida: true };
+  }
+  ejecucionesDiariasNotificaciones.add(id);
+  try {
+    const resultado = await tarea();
+    if (resultado?.retryNeeded) {
+      ejecucionesDiariasNotificaciones.delete(id);
+      return resultado;
+    }
+    await registrarNotificacionHorarioEjecutadaDb(fecha, clave);
+    return resultado || { ok: true };
+  } catch (error) {
+    ejecucionesDiariasNotificaciones.delete(id);
+    throw error;
+  }
+}
+
 async function ejecutarNotificacionesDiariasSiCorresponde() {
   const hoy = fechaArgentina();
-  const { hora } = horaMinutoArgentina();
-  const ejecutarUnaVez = async (clave, tarea) => {
-    const id = `${hoy}|${clave}`;
-    if (ejecucionesDiariasNotificaciones.has(id)) return;
-    ejecucionesDiariasNotificaciones.add(id);
-    try {
-      await tarea();
-    } catch (error) {
-      ejecucionesDiariasNotificaciones.delete(id);
-      throw error;
-    }
-  };
+  const ahora = minutosArgentina();
+  const dentro = (desde, hasta = 24 * 60) => ahora >= desde && ahora < hasta;
 
-  if (hora === 8) {
-    await ejecutarUnaVez("vencimientos-08", procesarAlertasVencimientos);
-    await ejecutarUnaVez("bano-08", () => procesarNotificacionBano("08"));
+  // Ventanas de recuperación: si Render reinicia justo a la hora programada,
+  // la ejecución pendiente se recupera al volver a estar disponible.
+  if (dentro(8 * 60)) {
+    await ejecutarHorarioNotificacionPersistente(hoy, "vencimientos-vencidos-08", procesarProductosVencidos);
   }
-  if (hora === 16) {
-    await ejecutarUnaVez("bano-16", () => procesarNotificacionBano("16"));
+  if (dentro(8 * 60, 15 * 60)) {
+    await ejecutarHorarioNotificacionPersistente(hoy, "tareas-manana-08", () => procesarNotificacionesTareasPendientes("manana"));
   }
-
-  await procesarNotificacionesInicioTareas();
+  if (dentro(8 * 60, 18 * 60)) {
+    await ejecutarHorarioNotificacionPersistente(hoy, "bano-08", () => procesarNotificacionBano("08"));
+  }
+  if (dentro(15 * 60)) {
+    await ejecutarHorarioNotificacionPersistente(hoy, "tareas-tarde-15", () => procesarNotificacionesTareasPendientes("tarde"));
+  }
+  if (dentro(18 * 60)) {
+    await ejecutarHorarioNotificacionPersistente(hoy, "bano-18", () => procesarNotificacionBano("18"));
+  }
 
   for (const clave of [...ejecucionesDiariasNotificaciones]) {
-    if (!clave.startsWith(`${hoy}|`))
-      ejecucionesDiariasNotificaciones.delete(clave);
+    if (!clave.startsWith(`${hoy}|`)) ejecucionesDiariasNotificaciones.delete(clave);
   }
 }
 // Etapa 9: el programador se inicia recién después de validar PostgreSQL.
