@@ -5162,6 +5162,37 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
   }
 });
 
+app.post("/notificaciones/diagnostico-cliente", requerirSesion, express.json({ limit: "8kb" }), (req, res) => {
+  const fasesPermitidas = new Set([
+    "vapid-obtenida",
+    "service-worker-ready",
+    "get-subscription",
+    "get-subscription-error",
+    "subscribe-inicio",
+    "subscribe-creada",
+    "subscribe-error",
+    "unsubscribe-inicio",
+    "unsubscribe-error",
+    "unsubscribe-conservada",
+    "unsubscribe-ok",
+    "prueba-error",
+    "registro-error",
+  ]);
+  const fase = String(req.body?.fase || "").trim().slice(0, 80);
+  if (!fasesPermitidas.has(fase)) return res.status(400).json({ ok: false });
+
+  const errorNombre = String(req.body?.errorNombre || "").slice(0, 80);
+  const errorMensaje = String(req.body?.errorMensaje || "").slice(0, 240);
+  console.info("[PUSH][CLIENTE]", {
+    fase,
+    ...(errorNombre ? { errorNombre } : {}),
+    ...(errorMensaje ? { errorMensaje } : {}),
+    ...(fase === "get-subscription" ? { existente: Boolean(req.body?.existente) } : {}),
+    ...(fase === "service-worker-ready" ? { activo: Boolean(req.body?.activo) } : {}),
+  });
+  return res.json({ ok: true });
+});
+
 app.post("/notificaciones/confirmacion-sw", express.json({ limit: "8kb" }), (req, res) => {
   const data = verificarTokenConfirmacionPush(req.body?.token);
   if (!data) return res.status(401).json({ ok: false });

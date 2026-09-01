@@ -80,31 +80,76 @@ async function obtenerClaveVapid() {
   return String(data.publicKey).trim();
 }
 
-async function obtenerSuscripcionVigente(registro, publicKey) {
-  let subscription = await registro.pushManager.getSubscription();
-  const claveGuardada = localStorage.getItem(VAPID_KEY_KEY) || "";
-  const claveSuscripcion = claveAplicacionSuscripcion(subscription);
-
-  // Una suscripción Push está ligada a la clave pública VAPID usada al crearla.
-  // Si cambió la clave (o esta versión aún no registró cuál usó), se recrea una vez.
-  const requiereRenovar = Boolean(
-    subscription &&
-    ((claveGuardada && claveGuardada !== publicKey) ||
-      (claveSuscripcion && claveSuscripcion !== publicKey) ||
-      (!claveGuardada && !claveSuscripcion))
-  );
-
-  if (requiereRenovar) {
-    await subscription.unsubscribe().catch(() => false);
-    subscription = null;
+async function reportarDiagnosticoPushCliente(fase, error = null, extra = {}) {
+  try {
+    await fetch(`${API_BASE_URL}/notificaciones/diagnostico-cliente`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fase: String(fase || "desconocida").slice(0, 80),
+        errorNombre: String(error?.name || "").slice(0, 80),
+        errorMensaje: String(error?.message || "").slice(0, 240),
+        existente: Boolean(extra.existente),
+        activo: Boolean(extra.activo),
+      }),
+      keepalive: true,
+    }).catch(() => null);
+  } catch {
+    // El diagnóstico nunca debe interrumpir la activación Push.
   }
+}
 
-  if (!subscription) {
-    subscription = await registro.pushManager.subscribe({
+async function crearSuscripcionPush(registro, publicKey) {
+  await reportarDiagnosticoPushCliente("subscribe-inicio");
+  try {
+    const subscription = await registro.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: base64UrlToUint8Array(publicKey),
     });
+    await reportarDiagnosticoPushCliente("subscribe-creada");
+    return subscription;
+  } catch (error) {
+    await reportarDiagnosticoPushCliente("subscribe-error", error);
+    throw error;
   }
+}
+
+async function obtenerSuscripcionVigente(registro, publicKey, { forzarRenovacion = false } = {}) {
+  let subscription;
+  try {
+    subscription = await registro.pushManager.getSubscription();
+    await reportarDiagnosticoPushCliente("get-subscription", null, {
+      existente: Boolean(subscription),
+    });
+  } catch (error) {
+    await reportarDiagnosticoPushCliente("get-subscription-error", error);
+    throw error;
+  }
+
+  // Nunca destruimos una suscripción existente sólo por comparar una clave guardada
+  // en localStorage. Primero la reutilizamos y dejamos que el servidor confirme si sirve.
+  if (subscription && !forzarRenovacion) return subscription;
+
+  if (subscription && forzarRenovacion) {
+    await reportarDiagnosticoPushCliente("unsubscribe-inicio");
+    const eliminada = await subscription.unsubscribe().catch(async (error) => {
+      await reportarDiagnosticoPushCliente("unsubscribe-error", error);
+      return false;
+    });
+
+    // Si Chrome no pudo eliminarla, la conservamos. Crear otra encima puede provocar
+    // InvalidStateError y dejar el dispositivo sin registro Push.
+    if (!eliminada) {
+      await reportarDiagnosticoPushCliente("unsubscribe-conservada");
+      return subscription;
+    }
+
+    subscription = null;
+    localStorage.removeItem(VAPID_KEY_KEY);
+    await reportarDiagnosticoPushCliente("unsubscribe-ok");
+  }
+
+  if (!subscription) subscription = await crearSuscripcionPush(registro, publicKey);
   return subscription;
 }
 
@@ -128,25 +173,49 @@ async function registrarSuscripcion({ probar = false } = {}) {
   actualizarEstado("Verificando suscripción…", "", "syncing");
   try {
     const publicKey = await obtenerClaveVapid();
+    await reportarDiagnosticoPushCliente("vapid-obtenida");
+
     const registro = await navigator.serviceWorker.ready;
-    const subscription = await obtenerSuscripcionVigente(registro, publicKey);
-
-    const r = await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subscription: subscription.toJSON() }),
+    await reportarDiagnosticoPushCliente("service-worker-ready", null, {
+      activo: Boolean(registro?.active),
     });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || !data.ok)
-      throw new Error(data.mensaje || "No se pudo registrar este dispositivo para notificaciones");
 
-    localStorage.setItem(VAPID_KEY_KEY, publicKey);
-    localStorage.setItem(claveEstadoNotificaciones(), "activadas");
+    let subscription = await obtenerSuscripcionVigente(registro, publicKey);
+
+    const guardarSuscripcionServidor = async () => {
+      const r = await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok)
+        throw new Error(data.mensaje || "No se pudo registrar este dispositivo para notificaciones");
+    };
+
+    await guardarSuscripcionServidor();
 
     if (probar) {
       actualizarEstado("Enviando notificación de prueba…", "", "syncing");
-      await enviarPruebaPush();
+      try {
+        await enviarPruebaPush();
+      } catch (errorPrueba) {
+        await reportarDiagnosticoPushCliente("prueba-error", errorPrueba);
+
+        // Una única autorreparación controlada: sólo después de que el servidor haya
+        // rechazado la prueba. Así evitamos el bucle que destruía la suscripción antes
+        // de llegar a /notificaciones/suscribir.
+        subscription = await obtenerSuscripcionVigente(registro, publicKey, {
+          forzarRenovacion: true,
+        });
+        await guardarSuscripcionServidor();
+        await enviarPruebaPush();
+      }
     }
+
+    // Guardamos la clave sólo después de completar el registro (y la prueba, si aplica).
+    localStorage.setItem(VAPID_KEY_KEY, publicKey);
+    localStorage.setItem(claveEstadoNotificaciones(), "activadas");
 
     pushConfirmado = true;
     actualizarEstado(
@@ -158,6 +227,7 @@ async function registrarSuscripcion({ probar = false } = {}) {
     );
     return true;
   } catch (error) {
+    await reportarDiagnosticoPushCliente("registro-error", error);
     localStorage.removeItem(claveEstadoNotificaciones());
     pushConfirmado = false;
     actualizarEstado(
@@ -240,15 +310,14 @@ async function mostrarAvisoPermisoNotificaciones() {
         return;
       }
 
-      const dialogo = window.AppDialog || window.AutoservicioDialog;
-      if (dialogo?.alert) {
-        await dialogo.alert({
-          titulo: "Revisar notificaciones",
-          mensaje:
-            "Chrome ya tiene permitido mostrar notificaciones, pero no se pudo completar el registro Push de este dispositivo. Cerrá y volvé a abrir la app para reintentar automáticamente.",
-          confirmarTexto: "Entendido",
-        });
-      }
+      // No mostramos un aviso genérico que obligue al usuario a cerrar la app.
+      // El error concreto queda visible en Configuración y registrado de forma segura
+      // en Render mediante /notificaciones/diagnostico-cliente.
+      actualizarEstado(
+        "No se pudo completar el registro Push. El sistema volverá a intentarlo automáticamente.",
+        "error",
+        "error",
+      );
     } finally {
       avisoPermisoEnCurso = false;
     }
