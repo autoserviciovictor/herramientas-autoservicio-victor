@@ -1570,6 +1570,74 @@
         </section>
 </main>
 
+      <main id="pantallaCartelOferta" class="pantalla offer-poster-screen" aria-hidden="true">
+        <section class="offer-poster-shell">
+          <header class="offer-poster-header">
+            <div>
+              <span class="app-page-eyebrow">VENCIMIENTOS · OFERTAS</span>
+              <h1>Configurar cartel de oferta</h1>
+              <p>Prepará el cartel de consumo inmediato y guardalo para imprimir junto con otros productos.</p>
+            </div>
+            <div class="offer-poster-queue-badge"><span>Carteles guardados</span><strong id="cartelOfertaContador">0 / 4</strong></div>
+          </header>
+
+          <div class="offer-poster-layout">
+            <section class="offer-poster-config">
+              <article class="offer-product-summary">
+                <div class="offer-product-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg></div>
+                <div class="offer-product-copy">
+                  <span>PRODUCTO SELECCIONADO</span>
+                  <h2 id="cartelOfertaProducto">—</h2>
+                  <div><b>Código / EAN</b><strong id="cartelOfertaCodigo">—</strong><b>Vence</b><strong id="cartelOfertaVence">—</strong><b>Cantidad</b><strong id="cartelOfertaCantidad">—</strong></div>
+                </div>
+              </article>
+
+              <article class="offer-config-card">
+                <div class="offer-config-title"><span>1</span><div><h2>Tipo de promoción</h2><p>Elegí cómo querés ofrecer este producto.</p></div></div>
+                <div class="offer-promo-grid" role="radiogroup" aria-label="Tipo de promoción">
+                  <label class="offer-promo-option is-selected"><input type="radio" name="cartelPromoTipo" value="porcentaje" checked><strong>%</strong><b>Descuento</b><small>Ej.: 50% menos</small></label>
+                  <label class="offer-promo-option"><input type="radio" name="cartelPromoTipo" value="2x1"><strong>2×1</strong><b>Llevá 2, pagá 1</b><small>Promo directa</small></label>
+                  <label class="offer-promo-option"><input type="radio" name="cartelPromoTipo" value="2precio"><strong>2 × $</strong><b>2 por un precio</b><small>Ej.: 2 × $5.000</small></label>
+                  <label class="offer-promo-option"><input type="radio" name="cartelPromoTipo" value="especial"><strong>$</strong><b>Precio especial</b><small>Precio fijo</small></label>
+                </div>
+              </article>
+
+              <article class="offer-config-card">
+                <div class="offer-config-title"><span>2</span><div><h2>Valores de la oferta</h2><p>El cartel se actualiza automáticamente mientras completás los valores.</p></div></div>
+                <div class="offer-values-grid">
+                  <label><span>Precio actual</span><div class="offer-money-input"><b>$</b><input id="cartelPrecioActual" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0"></div></label>
+                  <label id="cartelCampoPorcentaje"><span>Descuento (%)</span><div class="offer-money-input"><input id="cartelDescuento" type="number" min="1" max="99" step="1" inputmode="numeric" value="50"><b>%</b></div></label>
+                  <label id="cartelCampoPrecioDescuento"><span>Precio con descuento</span><div class="offer-money-input"><b>$</b><input id="cartelPrecioDescuento" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ingresalo manualmente"></div><small id="cartelPrecioDescuentoSugerido" class="offer-field-help"></small></label>
+                  <label id="cartelCampoPrecioPromo" class="oculto"><span id="cartelPrecioPromoLabel">Precio de la promoción</span><div class="offer-money-input"><b>$</b><input id="cartelPrecioPromo" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0"></div></label>
+                  <label><span>Válido hasta</span><input id="cartelValidoHasta" type="date"></label>
+                </div>
+                <div id="cartelResultadoOferta" class="offer-result-box" aria-live="polite"><span>RESULTADO</span><strong>Completá el precio actual</strong></div>
+                <div id="cartelOfertaError" class="form-error oculto" role="alert"></div>
+              </article>
+
+              <article class="offer-config-card offer-print-queue-card">
+                <div class="offer-config-title"><span>3</span><div><h2>Carteles para esta hoja</h2><p>Guardá hasta 4 productos. Los cuatro se imprimen con el mismo tamaño físico.</p></div></div>
+                <div id="cartelOfertaBandeja" class="offer-queue-grid"></div>
+                <div class="offer-config-actions">
+                  <button id="btnCartelCancelar" type="button" class="secondary-btn">Volver</button>
+                  <button id="btnCartelGuardar" type="button" class="save-btn">Guardar cartel</button>
+                </div>
+              </article>
+            </section>
+
+            <aside class="offer-poster-preview-panel">
+              <div class="offer-preview-head"><div><span>VISTA PREVIA</span><h2>Consumo inmediato</h2></div><small>Diseño definitivo</small></div>
+              <div id="cartelOfertaPreview" class="instant-offer-card" aria-label="Vista previa del cartel"></div>
+              <div class="offer-print-spec"><svg class="app-icon" aria-hidden="true"><use href="#icon-monitor"></use></svg><div><strong>Hoja A4 horizontal · 4 carteles</strong><span>Cada cartel mide 135 × 78 mm. La impresión usa fondo claro para evitar exceso de tóner.</span></div></div>
+              <button id="btnCartelImprimirHoja" class="offer-print-button" type="button" disabled>
+                <svg class="app-icon" aria-hidden="true"><use href="#icon-clipboard"></use></svg>
+                <span><strong>Imprimir hoja A4</strong><small id="cartelImprimirEstado">Faltan 4 carteles</small></span>
+              </button>
+            </aside>
+          </div>
+        </section>
+      </main>
+
       <button
         id="vencimientosFab"
         class="vencimientos-fab oculto"
@@ -3356,6 +3424,11 @@
                 <button type="button" data-venc-edit-oferta="activa"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg>Oferta activa</button>
                 <button type="button" data-venc-edit-oferta="sin">Sin oferta</button>
               </div>
+              <button id="btnVencCrearCartel" class="venc-create-poster-btn" type="button">
+                <svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg>
+                <span><strong>Crear cartel de oferta</strong><small>Configurar promoción y agregar a la hoja A4</small></span>
+                <b aria-hidden="true">›</b>
+              </button>
             </section>
 
             <div id="vencEditError" class="form-error oculto"></div>

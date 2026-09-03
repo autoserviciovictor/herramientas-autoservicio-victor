@@ -5,6 +5,7 @@ const elementos = {
   pantallas: {
     inicio: document.getElementById("pantallaInicio"),
     vencimientos: document.getElementById("pantallaVencimientos"),
+    cartelOferta: document.getElementById("pantallaCartelOferta"),
     anotar: document.getElementById("pantallaAnotar"),
     precios: document.getElementById("pantallaPrecios"),
     horarios: document.getElementById("pantallaHorarios"),
@@ -63,9 +64,9 @@ export function ocultarSplash() {
 }
 
 function moduloDePantalla(nombre) {
-  return ["inventario", "productos", "cargados", "editarProducto"].includes(nombre)
-    ? "inventario"
-    : nombre;
+  if (["inventario", "productos", "cargados", "editarProducto"].includes(nombre)) return "inventario";
+  if (nombre === "cartelOferta") return "vencimientos";
+  return nombre;
 }
 
 function actualizarEstadoPantalla(nombre) {
@@ -86,7 +87,7 @@ export function cambiarPantalla(nombre) {
     if (activa) pantalla.hidden = false;
   });
 
-  const pantallaNav = nombre === "editarProducto" ? "productos" : nombre;
+  const pantallaNav = nombre === "editarProducto" ? "productos" : nombre === "cartelOferta" ? "vencimientos" : nombre;
 
   elementos.navBtns.forEach((btn) => {
     btn.classList.toggle("activo", btn.dataset.pantalla === pantallaNav);
@@ -100,7 +101,8 @@ export function cambiarPantalla(nombre) {
   });
 
   document.body.classList.toggle("en-inicio", nombre === "inicio");
-  document.body.classList.toggle("en-vencimientos", nombre === "vencimientos");
+  document.body.classList.toggle("en-vencimientos", ["vencimientos", "cartelOferta"].includes(nombre));
+  document.body.classList.toggle("en-cartel-oferta", nombre === "cartelOferta");
   document.body.classList.toggle("en-anotar", nombre === "anotar");
   document.body.classList.toggle("en-precios", nombre === "precios");
   document.body.classList.toggle("en-horarios", nombre === "horarios");

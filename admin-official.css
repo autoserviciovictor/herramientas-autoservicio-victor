@@ -472,7 +472,8 @@ html[data-theme="dark"] .history-user-stat em small{color:#eef1f5;}
 
   /* Regreso de Usuarios / Sectores / Sistema al Inicio de Administración. */
   body[data-screen="admin"][data-admin-view]:not([data-admin-view="inicio"]) #adminHeaderBackBtn,
-body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn{
+body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn,
+  body[data-screen="cartelOferta"] #adminHeaderBackBtn{
     display:grid !important;
     place-items:center !important;
     position:absolute !important;
@@ -512,11 +513,13 @@ body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn{
   /* En una vista interna, el primer control del marco superior pasa de menú
      a Volver. Al regresar al Inicio Admin vuelve a mostrarse la hamburguesa. */
   body[data-screen="admin"][data-admin-view]:not([data-admin-view="inicio"]) #brandMenuBtn,
-body[data-screen="vencimientos"].venc-historial-open #brandMenuBtn{
+body[data-screen="vencimientos"].venc-historial-open #brandMenuBtn,
+body[data-screen="cartelOferta"] #brandMenuBtn{
     display:none !important;
   }
   body[data-screen="admin"][data-admin-view]:not([data-admin-view="inicio"]) #adminHeaderBackBtn,
-body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn{
+body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn,
+  body[data-screen="cartelOferta"] #adminHeaderBackBtn{
     display:grid !important;
     grid-column:1 !important;
     grid-row:1 !important;
@@ -4207,7 +4210,8 @@ html[data-theme="dark"] #pantallaAdmin :is(
 
 /* El botón Volver no puede volver a blanco al hacer hover. */
 html[data-theme="dark"] body[data-screen="admin"][data-admin-view]:not([data-admin-view="inicio"]) #adminHeaderBackBtn,
-html[data-theme="dark"] body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn{
+html[data-theme="dark"] body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn,
+  body[data-screen="cartelOferta"] #adminHeaderBackBtn{
   background:var(--pro-panel-2,#192d46) !important;
   border-color:var(--pro-border,#30445e) !important;
   color:var(--pro-muted,#aab8ca) !important;

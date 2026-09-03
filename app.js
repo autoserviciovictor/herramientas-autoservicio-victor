@@ -92,6 +92,9 @@ let pantallaActualApp = "inicio";
 let inventarioRetornoCarga = "cargados";
 let snapshotProductoEditando = null;
 let snapshotVencimientoEditando = null;
+let cartelOfertaItemActual = null;
+const CARTEL_OFERTA_MAX = 4;
+const CARTEL_OFERTA_STORAGE_BASE = "autoservicio_carteles_oferta_v1";
 let resolucionCambiosPendientes = null;
 let resumenInicioUltimaCarga = 0;
 let resumenInicioPromesa = null;
@@ -533,6 +536,7 @@ function moduloDePantalla(nombre = pantallaActualApp) {
   )
     return "inventario";
   if (nombre === "bano") return "tareas";
+  if (nombre === "cartelOferta") return "vencimientos";
   return nombre;
 }
 
@@ -1360,6 +1364,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     if (nombre === "productos" || nombre === "cargados") refrescarProductos();
   }
   if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
+  if (nombre === "cartelOferta") prepararPantallaCartelOferta();
   if (["cargados", "vencimientos"].includes(nombre)) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -1636,6 +1641,23 @@ function configurarEventos() {
     "click",
     guardarEdicionVencimiento,
   );
+  $("btnVencCrearCartel")?.addEventListener("click", abrirConfiguradorCartelOferta);
+  $("btnCartelCancelar")?.addEventListener("click", volverDesdeCartelOferta);
+  $("adminHeaderBackBtn")?.addEventListener("click", (event) => {
+    if (document.body.dataset.screen !== "cartelOferta") return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    volverDesdeCartelOferta();
+  }, true);
+  $("btnCartelGuardar")?.addEventListener("click", guardarCartelOfertaActual);
+  $("btnCartelImprimirHoja")?.addEventListener("click", imprimirHojaCartelesOferta);
+  document.querySelectorAll('input[name="cartelPromoTipo"]').forEach((input) =>
+    input.addEventListener("change", actualizarConfiguradorCartelOferta),
+  );
+  ["cartelPrecioActual", "cartelDescuento", "cartelPrecioDescuento", "cartelPrecioPromo", "cartelValidoHasta"].forEach((id) =>
+    $(id)?.addEventListener("input", actualizarConfiguradorCartelOferta),
+  );
+  $("cartelOfertaBandeja")?.addEventListener("click", manejarAccionBandejaCarteles);
   elementos.btnVencConfirmarEliminar?.addEventListener(
     "click",
     confirmarEliminarVencimiento,
@@ -3095,6 +3117,564 @@ async function alternarOfertaVencimiento(item) {
     restaurarVistaVencimientos(vista);
     mostrarMensaje(error.message, "error");
     reproducirConfirmacion("error");
+  }
+}
+
+function claveBandejaCartelesOferta() {
+  const usuario = window.AutoservicioAuth?.getUsuario?.()?.usuario || "anonimo";
+  return `${CARTEL_OFERTA_STORAGE_BASE}:${encodeURIComponent(String(usuario).trim().toLowerCase())}`;
+}
+
+function leerBandejaCartelesOferta() {
+  try {
+    const data = JSON.parse(localStorage.getItem(claveBandejaCartelesOferta()) || "[]");
+    return Array.isArray(data) ? data.slice(0, CARTEL_OFERTA_MAX) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function guardarBandejaCartelesOferta(items) {
+  const seguros = Array.isArray(items) ? items.slice(0, CARTEL_OFERTA_MAX) : [];
+  localStorage.setItem(claveBandejaCartelesOferta(), JSON.stringify(seguros));
+  renderBandejaCartelesOferta();
+  return seguros;
+}
+
+function formatearDineroCartel(valor) {
+  const numero = Math.max(0, Number(valor) || 0);
+  return `$${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(numero)}`;
+}
+
+function extraerPresentacionCartel(texto = "") {
+  const fuente = String(texto || "").replace(/\s+/g, " ").trim();
+  const matches = [...fuente.matchAll(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*(ML|CC|L|LT|LTS|LITROS?|G|GR|GRS|KG|KGS)\b/gi)];
+  if (!matches.length) return "";
+  const match = matches[matches.length - 1];
+  const valor = String(match[1] || "").replace(",", ".");
+  const unidad = String(match[2] || "").toUpperCase();
+  if (["L", "LT", "LTS", "LITRO", "LITROS"].includes(unidad)) return `${valor.replace(".", ",")} LITROS`;
+  if (["ML", "CC"].includes(unidad)) return `${valor.replace(".", ",")} ${unidad}`;
+  if (["KG", "KGS"].includes(unidad)) return `${valor.replace(".", ",")} KG`;
+  return `${valor.replace(".", ",")} GR`;
+}
+
+function nombreProductoParaCartel(texto = "") {
+  const presentacion = extraerPresentacionCartel(texto);
+  if (!presentacion) return String(texto || "PRODUCTO").trim();
+  const escaped = presentacion.replace(",", "[.,]").replace(" LITROS", "\\s*(?:L|LT|LTS|LITROS?)").replace(" GR", "\\s*(?:G|GR|GRS)").replace(" KG", "\\s*(?:KG|KGS)");
+  try {
+    const limpio = String(texto || "").replace(new RegExp(escaped + "\\s*$", "i"), "").trim();
+    return limpio || String(texto || "PRODUCTO").trim();
+  } catch (_) {
+    return String(texto || "PRODUCTO").trim();
+  }
+}
+
+function tipoPromoCartelSeleccionado() {
+  return document.querySelector('input[name="cartelPromoTipo"]:checked')?.value || "porcentaje";
+}
+
+function datosConfiguradorCartelOferta() {
+  const item = cartelOfertaItemActual || {};
+  const tipo = tipoPromoCartelSeleccionado();
+  const precioActual = Math.max(0, Number($("cartelPrecioActual")?.value) || 0);
+  const descuento = Math.max(1, Math.min(99, Math.round(Number($("cartelDescuento")?.value) || 0)));
+  const precioDescuento = Math.max(0, Number($("cartelPrecioDescuento")?.value) || 0);
+  const precioPromo = Math.max(0, Number($("cartelPrecioPromo")?.value) || 0);
+  let precioOferta = precioActual;
+  let promoGrande = "2×1";
+  let promoTexto = "LLEVÁ 2 · PAGÁ 1";
+  let ahora = "2×1";
+  let descripcion = "2x1";
+  if (tipo === "porcentaje") {
+    precioOferta = precioDescuento;
+    promoGrande = `${descuento}%`;
+    promoTexto = "DESCUENTO";
+    ahora = formatearDineroCartel(precioOferta);
+    descripcion = `${descuento}% de descuento · Ahora ${ahora}`;
+  } else if (tipo === "2precio") {
+    precioOferta = precioPromo;
+    promoGrande = "2 ×";
+    promoTexto = formatearDineroCartel(precioPromo);
+    ahora = `2 × ${formatearDineroCartel(precioPromo)}`;
+    descripcion = `2 por ${formatearDineroCartel(precioPromo)}`;
+  } else if (tipo === "especial") {
+    precioOferta = precioPromo;
+    promoGrande = formatearDineroCartel(precioPromo);
+    promoTexto = "PRECIO ESPECIAL";
+    ahora = formatearDineroCartel(precioPromo);
+    descripcion = `Precio especial ${ahora}`;
+  }
+  return {
+    id: String(item.id || ""),
+    articulo: String(item.articulo || "Producto"),
+    nombreCartel: String(item.articulo || "Producto").trim(),
+    codigo: String(item.codigo || "-"),
+    vencimiento: String($("cartelValidoHasta")?.value || item.vencimiento || ""),
+    cantidad: normalizarCantidadVencimiento(item.cantidad),
+    presentacion: extraerPresentacionCartel(item.articulo),
+    tipo,
+    precioActual,
+    descuento,
+    precioDescuento,
+    precioPromo,
+    precioOferta,
+    promoGrande,
+    promoTexto,
+    ahora,
+    descripcion,
+  };
+}
+
+function mostrarErrorCartelOferta(mensaje = "") {
+  const el = $("cartelOfertaError");
+  if (!el) return;
+  el.textContent = mensaje;
+  el.classList.toggle("oculto", !mensaje);
+}
+
+function actualizarConfiguradorCartelOferta() {
+  const tipo = tipoPromoCartelSeleccionado();
+  document.querySelectorAll(".offer-promo-option").forEach((label) => {
+    label.classList.toggle("is-selected", label.querySelector("input")?.checked === true);
+  });
+  $("cartelCampoPorcentaje")?.classList.toggle("oculto", tipo !== "porcentaje");
+  $("cartelCampoPrecioDescuento")?.classList.toggle("oculto", tipo !== "porcentaje");
+  $("cartelCampoPrecioPromo")?.classList.toggle("oculto", !["2precio", "especial"].includes(tipo));
+  if ($("cartelPrecioPromoLabel")) $("cartelPrecioPromoLabel").textContent = tipo === "2precio" ? "Precio por las 2 unidades" : "Precio especial";
+
+  const datos = datosConfiguradorCartelOferta();
+  const precioSugerido = datos.precioActual > 0 ? datos.precioActual * (1 - datos.descuento / 100) : 0;
+  if ($("cartelPrecioDescuentoSugerido")) {
+    $("cartelPrecioDescuentoSugerido").textContent = tipo === "porcentaje" && precioSugerido > 0
+      ? `Referencia por ${datos.descuento}%: ${formatearDineroCartel(precioSugerido)}. El precio final lo definís vos.`
+      : "";
+  }
+  const precioValido = datos.precioActual > 0 && (
+    tipo === "porcentaje" ? datos.precioDescuento > 0 :
+    ["2precio", "especial"].includes(tipo) ? datos.precioPromo > 0 : true
+  );
+  if ($("cartelResultadoOferta")) {
+    $("cartelResultadoOferta").innerHTML = `<span>RESULTADO</span><strong>${precioValido ? escapeHTML(datos.descripcion) : "Completá los precios para continuar"}</strong>`;
+  }
+  const preview = $("cartelOfertaPreview");
+  if (preview) preview.innerHTML = svgCartelOferta(datos, { precioValido, sufijo: "preview" });
+  mostrarErrorCartelOferta("");
+}
+
+function prepararPantallaCartelOferta() {
+  const item = cartelOfertaItemActual;
+  const botonVolverGlobal = $("adminHeaderBackBtn");
+  if (botonVolverGlobal) {
+    botonVolverGlobal.setAttribute("aria-label", "Volver a Vencimientos");
+    botonVolverGlobal.setAttribute("title", "Volver a Vencimientos");
+  }
+  if (!item) {
+    void entrarPantalla("vencimientos", { forzar: true });
+    return;
+  }
+  $("cartelOfertaProducto").textContent = item.articulo || "Producto";
+  $("cartelOfertaCodigo").textContent = item.codigo || "-";
+  $("cartelOfertaVence").textContent = formatearFecha(item.vencimiento);
+  $("cartelOfertaCantidad").textContent = `${normalizarCantidadVencimiento(item.cantidad)} un.`;
+  $("cartelValidoHasta").value = item.vencimiento || fechaHoyLocalIso();
+  const precio = precioVencimiento(item);
+  $("cartelPrecioActual").value = precio > 0 ? String(precio) : "";
+  $("cartelDescuento").value = "50";
+  $("cartelPrecioDescuento").value = "";
+  $("cartelPrecioPromo").value = "";
+  const radio = document.querySelector('input[name="cartelPromoTipo"][value="porcentaje"]');
+  if (radio) radio.checked = true;
+  const existente = leerBandejaCartelesOferta().find((x) => String(x.id) === String(item.id));
+  if (existente) {
+    const r = document.querySelector(`input[name="cartelPromoTipo"][value="${existente.tipo}"]`);
+    if (r) r.checked = true;
+    $("cartelPrecioActual").value = existente.precioActual || "";
+    $("cartelDescuento").value = existente.descuento || 50;
+    $("cartelPrecioDescuento").value = existente.precioDescuento || (existente.tipo === "porcentaje" ? existente.precioOferta || "" : "");
+    $("cartelPrecioPromo").value = existente.precioPromo || "";
+    $("cartelValidoHasta").value = existente.vencimiento || item.vencimiento || "";
+    $("btnCartelGuardar").textContent = "Actualizar cartel";
+  } else {
+    $("btnCartelGuardar").textContent = "Guardar cartel";
+  }
+  renderBandejaCartelesOferta();
+  actualizarConfiguradorCartelOferta();
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
+
+function abrirConfiguradorCartelOferta() {
+  if (!vencimientoSeleccionado) return;
+  if (hayCambiosVencimiento()) {
+    mostrarErrorEdicionVencimiento("Guardá o descartá los cambios del vencimiento antes de crear el cartel.");
+    return;
+  }
+  cartelOfertaItemActual = { ...vencimientoSeleccionado };
+  cerrarModalVencimiento();
+  void entrarPantalla("cartelOferta", { forzar: true });
+}
+
+function volverDesdeCartelOferta() {
+  cartelOfertaItemActual = null;
+  void entrarPantalla("vencimientos", { forzar: true });
+}
+
+async function guardarCartelOfertaActual() {
+  const datos = datosConfiguradorCartelOferta();
+  if (!datos.id) return;
+  if (datos.precioActual <= 0) {
+    mostrarErrorCartelOferta("Ingresá el precio actual del producto.");
+    $("cartelPrecioActual")?.focus();
+    return;
+  }
+  if (datos.tipo === "porcentaje" && datos.precioDescuento <= 0) {
+    mostrarErrorCartelOferta("Ingresá el precio con descuento que querés mostrar en el cartel.");
+    $("cartelPrecioDescuento")?.focus();
+    return;
+  }
+  if (["2precio", "especial"].includes(datos.tipo) && datos.precioPromo <= 0) {
+    mostrarErrorCartelOferta("Ingresá el precio de la promoción.");
+    $("cartelPrecioPromo")?.focus();
+    return;
+  }
+  if (!datos.vencimiento) {
+    mostrarErrorCartelOferta("Indicá hasta qué fecha es válida la oferta.");
+    $("cartelValidoHasta")?.focus();
+    return;
+  }
+  const bandeja = leerBandejaCartelesOferta();
+  const indice = bandeja.findIndex((x) => String(x.id) === datos.id);
+  if (indice < 0 && bandeja.length >= CARTEL_OFERTA_MAX) {
+    mostrarErrorCartelOferta("La hoja ya tiene 4 carteles. Quitá uno antes de agregar otro.");
+    return;
+  }
+  const registro = { ...datos, guardadoEn: new Date().toISOString() };
+  if (indice >= 0) bandeja[indice] = registro;
+  else bandeja.push(registro);
+  guardarBandejaCartelesOferta(bandeja);
+  try {
+    const original = vencimientosCache.find((x) => String(x.id) === datos.id) || cartelOfertaItemActual;
+    if (original && !tieneOferta(original)) await actualizarOfertaVencimiento(datos.id, true);
+  } catch (error) {
+    console.warn("No se pudo marcar la oferta del vencimiento:", error);
+  }
+  $("btnCartelGuardar").textContent = "Actualizar cartel";
+  mostrarMensaje(indice >= 0 ? "Cartel actualizado" : "Cartel guardado para imprimir", "ok");
+  reproducirConfirmacion("guardado");
+}
+
+function renderBandejaCartelesOferta() {
+  const box = $("cartelOfertaBandeja");
+  const items = leerBandejaCartelesOferta();
+  if ($("cartelOfertaContador")) $("cartelOfertaContador").textContent = `${items.length} / ${CARTEL_OFERTA_MAX}`;
+  const imprimir = $("btnCartelImprimirHoja");
+  if (imprimir) imprimir.disabled = items.length < 1;
+  if ($("cartelImprimirEstado")) $("cartelImprimirEstado").textContent = items.length > 0 ? `Imprimir ${items.length} de ${CARTEL_OFERTA_MAX} posiciones` : "Guardá al menos 1 cartel";
+  if (!box) return;
+  const slots = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
+    const item = items[index];
+    if (!item) return `<div class="offer-queue-slot is-empty"><span>${index + 1}</span><b>Espacio disponible</b><small>Elegí otro producto en Vencimientos</small></div>`;
+    return `<div class="offer-queue-slot"><span>${index + 1}</span><div><b>${escapeHTML(item.articulo)}</b><small>${escapeHTML(item.descripcion)} · vence ${escapeHTML(formatearFecha(item.vencimiento))}</small></div><button type="button" data-cartel-quitar="${escapeHTML(String(item.id))}" aria-label="Quitar ${escapeHTML(item.articulo)}">×</button></div>`;
+  });
+  box.innerHTML = slots.join("");
+}
+
+function manejarAccionBandejaCarteles(event) {
+  const btn = event.target.closest("[data-cartel-quitar]");
+  if (!btn) return;
+  const id = btn.dataset.cartelQuitar || "";
+  const items = leerBandejaCartelesOferta().filter((x) => String(x.id) !== id);
+  guardarBandejaCartelesOferta(items);
+  if (String(cartelOfertaItemActual?.id || "") === id) $("btnCartelGuardar").textContent = "Guardar cartel";
+}
+
+function escaparXmlCartel(valor = "") {
+  return String(valor).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]);
+}
+
+function textoProductoCartel(item = {}) {
+  const articulo = String(item.articulo || item.nombreCartel || "PRODUCTO").replace(/\s+/g, " ").trim();
+  const presentacion = String(item.presentacion || extraerPresentacionCartel(articulo) || "").replace(/\s+/g, " ").trim();
+  if (!presentacion) return articulo || "PRODUCTO";
+
+  const normalizar = (valor = "") =>
+    String(valor)
+      .toUpperCase()
+      .replace(/,/g, ".")
+      .replace(/\bLITROS?\b|\bLTS?\b/g, "L")
+      .replace(/\bKGS?\b/g, "KG")
+      .replace(/\bGRS?\b|\bGRAMOS?\b/g, "GR")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  if (normalizar(articulo).includes(normalizar(presentacion))) return articulo;
+
+  // Compatibilidad con carteles guardados por versiones anteriores que
+  // conservaban el nombre sin la presentación. La presentación vuelve a
+  // integrarse al nombre y nunca se renderiza como una línea independiente.
+  return `${articulo} ${presentacion}`.trim();
+}
+
+function lineasProductoCartel(texto = "") {
+  const palabras = String(texto || "PRODUCTO")
+    .trim()
+    .toUpperCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!palabras.length) return ["PRODUCTO"];
+
+  // El nombre se corta por palabras dentro de una caja fija. Mantener un
+  // máximo corto evita que ninguna línea invada el sector de precios.
+  // La presentación (por ejemplo 1,5 LT) viaja dentro del mismo texto.
+  const maximo = 25;
+  const lineas = [];
+  let actual = "";
+  for (const palabra of palabras) {
+    const candidata = actual ? `${actual} ${palabra}` : palabra;
+    if (actual && candidata.length > maximo && lineas.length < 2) {
+      lineas.push(actual);
+      actual = palabra;
+    } else {
+      actual = candidata;
+    }
+  }
+  if (actual) lineas.push(actual);
+  if (lineas.length > 3) {
+    lineas[2] = lineas.slice(2).join(" ");
+    lineas.length = 3;
+  }
+  return lineas;
+}
+
+function urlLogoCartelOferta() {
+  try {
+    return new URL("./icons/brand-logo-full.png", document.baseURI).href;
+  } catch (_) {
+    return "./icons/brand-logo-full.png";
+  }
+}
+
+function svgCartelOferta(item = {}, opciones = {}) {
+  const sufijo = String(opciones.sufijo || Math.random().toString(36).slice(2));
+  const seguro = sufijo.replace(/[^a-z0-9_-]/gi, "");
+  const clipId = `cartelClip-${seguro}`;
+  const lineas = lineasProductoCartel(textoProductoCartel(item));
+  const largoMax = Math.max(...lineas.map((x) => x.length), 1);
+
+  // Caja de producto fija. El texto se adapta dentro de ella sin desplazar
+  // código, precios, divisores ni pie del cartel.
+  const fontProducto =
+    lineas.length >= 3 ? 34 :
+    largoMax > 23 ? 39 :
+    largoMax > 20 ? 42 : 45;
+  const pasoProducto = lineas.length >= 3 ? 43 : 50;
+  const baseProducto =
+    lineas.length === 1 ? 407 :
+    lineas.length === 2 ? 382 : 354;
+  const producto = lineas
+    .map(
+      (linea, i) =>
+        `<tspan x="398" y="${baseProducto + i * pasoProducto}">${escaparXmlCartel(linea)}</tspan>`,
+    )
+    .join("");
+
+  const promoGrande = escaparXmlCartel(item.promoGrande || "50%");
+  const promoTexto = escaparXmlCartel(item.promoTexto || "DESCUENTO");
+  const ahora =
+    opciones.precioValido === false
+      ? "$—"
+      : escaparXmlCartel(item.ahora || "$—");
+  const antes =
+    item.precioActual > 0
+      ? escaparXmlCartel(formatearDineroCartel(item.precioActual))
+      : "$—";
+  const fecha = item.vencimiento
+    ? escaparXmlCartel(formatearFecha(item.vencimiento))
+    : "—";
+  const codigo = escaparXmlCartel(item.codigo || "—");
+  const logo = escaparXmlCartel(urlLogoCartelOferta());
+  const fontPromo =
+    promoGrande.length > 8 ? 58 :
+    promoGrande.length > 5 ? 76 : 122;
+  const fontAhora =
+    ahora.length > 13 ? 56 :
+    ahora.length > 9 ? 68 : 82;
+
+  return `<svg class="instant-offer-svg" viewBox="0 0 1350 780" width="135mm" height="78mm" role="img" aria-label="Cartel de consumo inmediato" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="${clipId}">
+      <rect x="10" y="10" width="1330" height="760" rx="34" ry="34"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#${clipId})">
+    <rect x="10" y="10" width="1330" height="760" fill="#fff"/>
+
+    <!-- Encabezado: una sola franja, con el logo integrado en el óvalo blanco. -->
+    <rect x="10" y="10" width="1330" height="168" fill="#d71920"/>
+    <path d="M10 10H353C414 10 450 48 448 87C446 131 405 162 333 177C213 202 91 184 10 148Z" fill="#fff"/>
+    <image href="${logo}" x="52" y="22" width="292" height="122" preserveAspectRatio="xMidYMid meet"/>
+    <path d="M11 143C89 190 205 205 326 179C389 166 429 140 447 109" fill="none" stroke="#d71920" stroke-width="5" stroke-linecap="round"/>
+    <text x="888" y="116" text-anchor="middle" fill="#fff"
+      font-family="Arial Black,Arial,sans-serif" font-size="75" font-weight="900"
+      textLength="824" lengthAdjust="spacingAndGlyphs">CONSUMO INMEDIATO</text>
+
+    <!-- Cuerpo izquierdo. -->
+    <text x="398" y="285" text-anchor="middle" fill="#d71920"
+      font-family="Arial Black,Arial,sans-serif" font-size="59" font-weight="900">¡OFERTA!</text>
+    <path d="M211 268l-20-6m25-18-15-15M584 268l20-6m-25-18 15-15"
+      stroke="#d71920" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <text x="398" text-anchor="middle" fill="#050505"
+      font-family="Arial Black,Arial,sans-serif" font-size="${fontProducto}"
+      font-weight="900" letter-spacing=".1">${producto}</text>
+
+    <rect x="150" y="523" width="496" height="61" rx="10" fill="#fff" stroke="#343434" stroke-width="3"/>
+    <text x="398" y="564" text-anchor="middle" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="29" font-weight="900">CÓDIGO: ${codigo}</text>
+
+    <!-- Divisor vertical flotante: no toca encabezado, pie ni marco. -->
+    <line x1="805" y1="211" x2="805" y2="615" stroke="#555" stroke-width="3"/>
+
+    <!-- Promoción y precio. -->
+    <rect x="858" y="205" width="432" height="194" rx="18" fill="#fff" stroke="#343434" stroke-width="3"/>
+    <text x="1074" y="327" text-anchor="middle" fill="#050505"
+      font-family="Arial Black,Arial,sans-serif" font-size="${fontPromo}" font-weight="900">${promoGrande}</text>
+    <text x="1074" y="379" text-anchor="middle" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="38" font-weight="900">${promoTexto}</text>
+
+    <rect x="858" y="419" width="432" height="198" rx="18" fill="#fff" stroke="#343434" stroke-width="3"/>
+    <path d="M858 437q0-18 18-18h396q18 0 18 18v49H858Z" fill="#d71920"/>
+    <text x="1074" y="469" text-anchor="middle" fill="#fff"
+      font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="900">AHORA</text>
+    <text x="1074" y="556" text-anchor="middle" fill="#050505"
+      font-family="Arial Black,Arial,sans-serif" font-size="${fontAhora}" font-weight="900">${ahora}</text>
+    <line x1="858" y1="573" x2="1290" y2="573" stroke="#555" stroke-width="2"/>
+    <text x="895" y="609" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="29" font-weight="900">ANTES</text>
+    <text x="1205" y="609" text-anchor="middle" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900">${antes}</text>
+    <line x1="1135" y1="598" x2="1274" y2="598" stroke="#e02020" stroke-width="5"/>
+
+    <!-- Pie. -->
+    <line x1="10" y1="638" x2="1340" y2="638" stroke="#343434" stroke-width="3"/>
+
+    <g transform="translate(53 661)" stroke="#111" stroke-width="6.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="0" y="12" width="74" height="73" rx="7"/>
+      <line x1="18" y1="0" x2="18" y2="24"/>
+      <line x1="56" y1="0" x2="56" y2="24"/>
+      <line x1="0" y1="36" x2="74" y2="36"/>
+      <rect x="17" y="49" width="14" height="13" fill="#111" stroke="none"/>
+      <rect x="44" y="49" width="14" height="13" fill="#111" stroke="none"/>
+    </g>
+    <text x="151" y="690" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="900">VÁLIDO HASTA:</text>
+    <text x="151" y="739" fill="#050505"
+      font-family="Arial Black,Arial,sans-serif" font-size="49" font-weight="900">${fecha}</text>
+
+    <!-- Divisor inferior flotante. -->
+    <line x1="692" y1="672" x2="692" y2="748" stroke="#555" stroke-width="3"/>
+
+    <g transform="translate(770 665)" stroke="#111" stroke-width="6.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M43 0 0 78h86L43 0Z"/>
+      <line x1="43" y1="25" x2="43" y2="49"/>
+      <circle cx="43" cy="62" r="4" fill="#111" stroke="none"/>
+    </g>
+    <text x="878" y="700" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="900">PRODUCTO PRÓXIMO</text>
+    <text x="878" y="741" fill="#050505"
+      font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="900">A VENCER</text>
+  </g>
+
+  <rect x="10" y="10" width="1330" height="760" rx="34" ry="34"
+    fill="none" stroke="#111" stroke-width="6"/>
+</svg>`;
+}
+
+function htmlCartelOfertaImpresion(item, indice = 0) {
+  return `<div class="poster-svg">${svgCartelOferta(item, { precioValido: true, sufijo: `print-${indice}` })}</div>`;
+}
+
+function imprimirHojaCartelesOferta() {
+  const items = leerBandejaCartelesOferta().slice(0, CARTEL_OFERTA_MAX);
+  if (items.length < 1) {
+    mostrarErrorCartelOferta("Guardá al menos 1 cartel antes de imprimir.");
+    return;
+  }
+  const posiciones = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
+    const item = items[index];
+    return item ? htmlCartelOfertaImpresion(item, index) : '<div class="poster-svg empty" aria-hidden="true"></div>';
+  }).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Carteles de oferta</title><style>
+@page{size:297mm 210mm;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0!important;padding:0!important;width:297mm!important;height:210mm!important;background:#fff!important;overflow:hidden!important}
+body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+.sheet{position:absolute;left:0;top:0;width:297mm;height:210mm;padding:24mm 10.5mm;display:grid;grid-template-columns:135mm 135mm;grid-template-rows:78mm 78mm;column-gap:6mm;row-gap:6mm;align-content:start;justify-content:start;overflow:hidden!important}
+.poster-svg{width:135mm;height:78mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
+.poster-svg.empty{visibility:hidden}
+.poster-svg svg{display:block;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
+@media print{html,body,.sheet{overflow:hidden!important}.sheet{break-after:avoid!important;page-break-after:avoid!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
+</style></head><body><main class="sheet">${posiciones}</main></body></html>`;
+
+  // Imprimir desde un iframe temporal evita sacar al usuario de la aplicación
+  // y evita dejar abierta una pestaña about:blank.
+  document.getElementById("cartelOfertaPrintFrame")?.remove();
+  const frame = document.createElement("iframe");
+  frame.id = "cartelOfertaPrintFrame";
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "1px";
+  frame.style.height = "1px";
+  frame.style.border = "0";
+  frame.style.opacity = "0";
+  frame.style.pointerEvents = "none";
+  document.body.appendChild(frame);
+
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  if (!doc || !win) {
+    frame.remove();
+    mostrarErrorCartelOferta("No se pudo preparar la impresión. Intentá nuevamente.");
+    return;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  let impresionSolicitada = false;
+  const abrirDialogo = () => {
+    if (impresionSolicitada || !document.body.contains(frame)) return;
+    impresionSolicitada = true;
+    try {
+      win.focus();
+      win.print();
+    } catch (error) {
+      console.warn("No se pudo abrir el diálogo de impresión de carteles:", error);
+      frame.remove();
+      mostrarErrorCartelOferta("No se pudo abrir el diálogo de impresión. Intentá nuevamente.");
+    }
+  };
+  win.addEventListener("afterprint", () => setTimeout(() => frame.remove(), 250), { once: true });
+
+  const imagenes = Array.from(doc.images || []);
+  if (!imagenes.length || imagenes.every((img) => img.complete)) {
+    setTimeout(abrirDialogo, 100);
+  } else {
+    let pendientes = imagenes.filter((img) => !img.complete).length;
+    const listo = () => {
+      pendientes -= 1;
+      if (pendientes <= 0) setTimeout(abrirDialogo, 100);
+    };
+    imagenes.forEach((img) => {
+      if (img.complete) return;
+      img.addEventListener("load", listo, { once: true });
+      img.addEventListener("error", listo, { once: true });
+    });
+    setTimeout(abrirDialogo, 1400);
   }
 }
 
