@@ -4282,16 +4282,29 @@ function normalizarRubroVencimiento(valor) {
   return "Sin clasificar";
 }
 
-function cantidadVencimientoDesdeBody(body = {}) {
-  const cantidadDirecta = enteroNoNegativo(body.cantidad);
-  if (cantidadDirecta !== null) return cantidadDirecta;
+function stockVencimientoDesdeBody(body = {}, actual = null) {
+  const salonDirecto = enteroNoNegativo(body.salon);
+  const depositoDirecto = enteroNoNegativo(body.deposito);
 
-  // Compatibilidad temporal con clientes V19 cacheados. El esquema persistido
-  // y las respuestas públicas usan únicamente `cantidad`.
-  const salonAnterior = enteroNoNegativo(body.salon);
-  const depositoAnterior = enteroNoNegativo(body.deposito);
-  if (salonAnterior === null && depositoAnterior === null) return null;
-  return Math.max(0, salonAnterior || 0) + Math.max(0, depositoAnterior || 0);
+  if (salonDirecto !== null || depositoDirecto !== null) {
+    const salon = salonDirecto === null ? Math.max(0, Number(actual?.salon) || 0) : salonDirecto;
+    const deposito = depositoDirecto === null ? Math.max(0, Number(actual?.deposito) || 0) : depositoDirecto;
+    return { salon, deposito, cantidad: salon + deposito };
+  }
+
+  // Compatibilidad con clientes anteriores que enviaban solamente `cantidad`.
+  // Se conserva ese total como stock de salón para no perder información.
+  const cantidadDirecta = enteroNoNegativo(body.cantidad);
+  if (cantidadDirecta !== null) {
+    return { salon: cantidadDirecta, deposito: 0, cantidad: cantidadDirecta };
+  }
+
+  if (actual) {
+    const salon = Math.max(0, Number(actual.salon) || 0);
+    const deposito = Math.max(0, Number(actual.deposito) || 0);
+    return { salon, deposito, cantidad: salon + deposito };
+  }
+  return null;
 }
 
 
@@ -5303,7 +5316,8 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
   try {
     const codigo = normalizarCodigo(req.body.codigo);
     const vencimiento = normalizarTexto(req.body.vencimiento);
-    const cantidad = cantidadVencimientoDesdeBody(req.body);
+    const stock = stockVencimientoDesdeBody(req.body);
+    const cantidad = stock?.cantidad ?? null;
     const rubro = normalizarRubroVencimiento(req.body.rubro);
 
     if (!codigo)
@@ -5343,6 +5357,8 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
       codigo,
       articulo,
       vencimiento,
+      salon: stock.salon,
+      deposito: stock.deposito,
       cantidad,
       oferta: normalizarOfertaVencimiento(req.body.oferta),
       rubro,
@@ -5357,7 +5373,7 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
       req,
       "Creó",
       registro,
-      `Cantidad: ${registro.cantidad}`,
+      `Salón: ${registro.salon} · Depósito: ${registro.deposito} · Total: ${registro.cantidad}`,
     );
     if (PUSH_CONFIGURED) {
       setImmediate(async () => {
@@ -5395,7 +5411,8 @@ app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, re
         .status(404)
         .json({ ok: false, mensaje: "Registro no encontrado" });
 
-    const cantidad = cantidadVencimientoDesdeBody(req.body);
+    const stock = stockVencimientoDesdeBody(req.body, registro);
+    const cantidad = stock?.cantidad ?? null;
     const vencimiento = normalizarTexto(req.body.vencimiento);
     const rubro =
       req.body.rubro === undefined
@@ -5436,6 +5453,8 @@ app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, re
 
     const actualizadoDb = await actualizarVencimientoDb(id, {
       vencimiento,
+      salon: stock.salon,
+      deposito: stock.deposito,
       cantidad,
       rubro,
       oferta:
@@ -5456,7 +5475,8 @@ app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, re
       req,
       "Editó",
       actualizado,
-      `Antes: ${registro.vencimiento} / ${registro.cantidad} · Después: ${actualizado.vencimiento} / ${actualizado.cantidad}`,
+      `Antes: ${registro.vencimiento} · Salón ${registro.salon} · Depósito ${registro.deposito} · Total ${registro.cantidad} / ` +
+        `Después: ${actualizado.vencimiento} · Salón ${actualizado.salon} · Depósito ${actualizado.deposito} · Total ${actualizado.cantidad}`,
     );
     res.json({
       ok: true,

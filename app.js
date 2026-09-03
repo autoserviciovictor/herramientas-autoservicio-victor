@@ -155,7 +155,8 @@ const elementos = {
   vencCodigoProducto: $("vencCodigoProducto"),
   vencFormCard: $("vencFormCard"),
   vencFechaInput: $("vencFechaInput"),
-  vencCantidadInput: $("vencCantidadInput"),
+  vencSalonInput: $("vencSalonInput"),
+  vencDepositoInput: $("vencDepositoInput"),
   vencTotalTexto: $("vencTotalTexto"),
   btnVencGuardar: $("btnVencGuardar"),
   vencListado: $("vencListado"),
@@ -172,7 +173,8 @@ const elementos = {
   btnVencConfirmarEliminar: $("btnVencConfirmarEliminar"),
   btnVencCancelarEliminar: $("btnVencCancelarEliminar"),
   vencEditFechaInput: $("vencEditFechaInput"),
-  vencEditCantidadInput: $("vencEditCantidadInput"),
+  vencEditSalonInput: $("vencEditSalonInput"),
+  vencEditDepositoInput: $("vencEditDepositoInput"),
   vencEditTotalTexto: $("vencEditTotalTexto"),
 };
 
@@ -1586,9 +1588,8 @@ function configurarEventos() {
   elementos.vencCodigoManualInput?.addEventListener("input", () =>
     renderSugerenciasManual("vencimientos"),
   );
-  elementos.vencCantidadInput?.addEventListener(
-    "input",
-    actualizarTotalVencimiento,
+  [elementos.vencSalonInput, elementos.vencDepositoInput].forEach((input) =>
+    input?.addEventListener("input", actualizarTotalVencimiento),
   );
   elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
   elementos.vencBuscador?.addEventListener("input", () => {
@@ -1662,9 +1663,8 @@ function configurarEventos() {
     "click",
     confirmarEliminarVencimiento,
   );
-  elementos.vencEditCantidadInput?.addEventListener(
-    "input",
-    actualizarTotalEdicionVencimiento,
+  [elementos.vencEditSalonInput, elementos.vencEditDepositoInput].forEach((input) =>
+    input?.addEventListener("input", actualizarTotalEdicionVencimiento),
   );
   $("vencEditRubroInput")?.addEventListener(
     "change",
@@ -2423,7 +2423,8 @@ function reiniciarFormularioVencimientos() {
   if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
   if ($("vencRubroInput")) $("vencRubroInput").value = "";
   sincronizarSelectAppPorId("vencRubroInput");
-  if (elementos.vencCantidadInput) elementos.vencCantidadInput.value = 1;
+  if (elementos.vencSalonInput) elementos.vencSalonInput.value = 0;
+  if (elementos.vencDepositoInput) elementos.vencDepositoInput.value = 0;
   actualizarTotalVencimiento();
   elementos.vencFormCard?.classList.add("oculto");
   elementos.vencProductoCard?.classList.add("oculto");
@@ -2497,14 +2498,25 @@ async function manejarCodigoVencimiento(codigo) {
   reproducirConfirmacion("ok");
 }
 
+function stockUbicacionVencimiento(valor) {
+  const numero = Number(valor);
+  return Number.isInteger(numero) && numero >= 0 ? numero : 0;
+}
+
+function stockVencimientoDesdeInputs(salonInput, depositoInput) {
+  const salon = stockUbicacionVencimiento(salonInput?.value);
+  const deposito = stockUbicacionVencimiento(depositoInput?.value);
+  return { salon, deposito, cantidad: salon + deposito };
+}
+
 function actualizarTotalVencimiento() {
-  const cantidad = Math.max(1, Number(elementos.vencCantidadInput?.value) || 1);
-  if (
-    elementos.vencCantidadInput &&
-    Number(elementos.vencCantidadInput.value) !== cantidad
-  )
-    elementos.vencCantidadInput.value = cantidad;
-  if (elementos.vencTotalTexto) elementos.vencTotalTexto.textContent = cantidad;
+  const stock = stockVencimientoDesdeInputs(
+    elementos.vencSalonInput,
+    elementos.vencDepositoInput,
+  );
+  if (elementos.vencTotalTexto)
+    elementos.vencTotalTexto.textContent = `${stock.cantidad} un.`;
+  return stock;
 }
 
 async function guardarVencimientoActual() {
@@ -2515,10 +2527,7 @@ async function guardarVencimientoActual() {
       return;
     }
     const vencimiento = elementos.vencFechaInput.value;
-    const cantidad = Math.max(
-      1,
-      Number(elementos.vencCantidadInput.value) || 1,
-    );
+    const { salon, deposito, cantidad } = actualizarTotalVencimiento();
     const rubro = $("vencRubroInput")?.value || "";
     if (!vencimiento) {
       mostrarMensaje("Cargá la fecha de vencimiento", "error");
@@ -2536,7 +2545,8 @@ async function guardarVencimientoActual() {
       return;
     }
     if (cantidad <= 0) {
-      mostrarMensaje("Ingresá una cantidad válida", "error");
+      mostrarMensaje("Ingresá stock en salón o depósito", "error");
+      (elementos.vencSalonInput || elementos.vencDepositoInput)?.focus();
       return;
     }
 
@@ -2549,6 +2559,8 @@ async function guardarVencimientoActual() {
       articulo: productoVencimientoActual.articulo,
       vencimiento,
       rubro,
+      salon,
+      deposito,
       cantidad,
     });
 
@@ -2843,7 +2855,7 @@ function crearTarjetaVencimiento(item) {
       </div>
       <div class="venc-product-card__data">
         <span><svg class="app-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><span><small>Vencimiento</small><b>${d.fecha}</b></span></span>
-        <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><span><small>Cantidad</small><b>${d.cantidad} un.</b></span></span>
+        <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><span><small>Stock total</small><b>${d.cantidad} un.</b></span></span>
         <span><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg><span><small>Precio unitario</small><b>${d.precio}</b></span></span>
       </div>
       <div class="venc-product-card__footer">
@@ -3493,7 +3505,7 @@ function svgCartelOferta(item = {}, opciones = {}) {
     ? escaparXmlCartel(formatearFecha(item.vencimiento))
     : "—";
   const codigo = escaparXmlCartel(item.codigo || "—");
-  const logo = escaparXmlCartel(urlLogoCartelOferta());
+  const logo = escaparXmlCartel(opciones.logoHref || urlLogoCartelOferta());
   const fontPromo =
     promoGrande.length > 8 ? 58 :
     promoGrande.length > 5 ? 76 : 122;
@@ -3591,30 +3603,52 @@ function svgCartelOferta(item = {}, opciones = {}) {
 </svg>`;
 }
 
-function htmlCartelOfertaImpresion(item, indice = 0) {
-  return `<div class="poster-svg">${svgCartelOferta(item, { precioValido: true, sufijo: `print-${indice}` })}</div>`;
+function htmlCartelOfertaImpresion(item, indice = 0, logoHref = "") {
+  return `<div class="poster-svg poster-slot-${indice + 1}">${svgCartelOferta(item, { precioValido: true, sufijo: `print-${indice}`, logoHref })}</div>`;
 }
 
-function imprimirHojaCartelesOferta() {
+async function logoCartelOfertaDataUri() {
+  try {
+    const respuesta = await fetch(urlLogoCartelOferta(), { cache: "force-cache" });
+    if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+    const blob = await respuesta.blob();
+    return await new Promise((resolve, reject) => {
+      const lector = new FileReader();
+      lector.onload = () => resolve(String(lector.result || ""));
+      lector.onerror = () => reject(lector.error || new Error("No se pudo leer el logo"));
+      lector.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn("No se pudo incrustar el logo para impresión:", error);
+    return urlLogoCartelOferta();
+  }
+}
+
+async function imprimirHojaCartelesOferta() {
   const items = leerBandejaCartelesOferta().slice(0, CARTEL_OFERTA_MAX);
   if (items.length < 1) {
     mostrarErrorCartelOferta("Guardá al menos 1 cartel antes de imprimir.");
     return;
   }
+  const logoImpresion = await logoCartelOfertaDataUri();
   const posiciones = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
     const item = items[index];
-    return item ? htmlCartelOfertaImpresion(item, index) : '<div class="poster-svg empty" aria-hidden="true"></div>';
+    return item ? htmlCartelOfertaImpresion(item, index, logoImpresion) : `<div class="poster-svg poster-slot-${index + 1} empty" aria-hidden="true"></div>`;
   }).join("");
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Carteles de oferta</title><style>
-@page{size:297mm 210mm;margin:0}
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title></title><style>
+@page{size:A4 landscape;margin:0!important}
 *{box-sizing:border-box}
-html,body{margin:0!important;padding:0!important;width:297mm!important;height:210mm!important;background:#fff!important;overflow:hidden!important}
-body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-.sheet{position:absolute;left:0;top:0;width:297mm;height:210mm;padding:24mm 10.5mm;display:grid;grid-template-columns:135mm 135mm;grid-template-rows:78mm 78mm;column-gap:6mm;row-gap:6mm;align-content:start;justify-content:start;overflow:hidden!important}
-.poster-svg{width:135mm;height:78mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
-.poster-svg.empty{visibility:hidden}
-.poster-svg svg{display:block;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
-@media print{html,body,.sheet{overflow:hidden!important}.sheet{break-after:avoid!important;page-break-after:avoid!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
+html,body{margin:0!important;padding:0!important;width:296mm!important;height:209mm!important;min-width:296mm!important;min-height:209mm!important;background:#fff!important;overflow:hidden!important}
+body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;position:relative!important}
+.sheet{position:fixed!important;left:0!important;top:0!important;width:296mm!important;height:209mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important;break-after:avoid!important;page-break-after:avoid!important}
+.poster-svg{position:absolute!important;width:135mm!important;height:78mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
+.poster-slot-1{left:10.5mm!important;top:23.5mm!important}
+.poster-slot-2{left:151.5mm!important;top:23.5mm!important}
+.poster-slot-3{left:10.5mm!important;top:107.5mm!important}
+.poster-slot-4{left:151.5mm!important;top:107.5mm!important}
+.poster-svg.empty{visibility:hidden!important}
+.poster-svg svg{display:block!important;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
+@media print{html,body{width:296mm!important;height:209mm!important;overflow:hidden!important}.sheet{position:fixed!important;overflow:hidden!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
 </style></head><body><main class="sheet">${posiciones}</main></body></html>`;
 
   // Imprimir desde un iframe temporal evita sacar al usuario de la aplicación
@@ -3755,9 +3789,13 @@ function mostrarEdicionVencimiento() {
     : "";
   if ($("vencEditRubroInput")) $("vencEditRubroInput").value = rubroNormalizado;
   sincronizarSelectAppPorId("vencEditRubroInput");
-  if (elementos.vencEditCantidadInput)
-    elementos.vencEditCantidadInput.value = normalizarCantidadVencimiento(
-      item.cantidad,
+  if (elementos.vencEditSalonInput)
+    elementos.vencEditSalonInput.value = normalizarCantidadVencimiento(
+      item.salon ?? item.cantidad,
+    );
+  if (elementos.vencEditDepositoInput)
+    elementos.vencEditDepositoInput.value = normalizarCantidadVencimiento(
+      item.deposito,
     );
   establecerOfertaEdicionVencimiento(tieneOferta(item) ? "activa" : "sin");
   actualizarTotalEdicionVencimiento();
@@ -3766,25 +3804,20 @@ function mostrarEdicionVencimiento() {
 }
 
 function actualizarTotalEdicionVencimiento() {
-  const cantidad = normalizarCantidadVencimiento(
-    elementos.vencEditCantidadInput?.value,
+  const stock = stockVencimientoDesdeInputs(
+    elementos.vencEditSalonInput,
+    elementos.vencEditDepositoInput,
   );
-  if (
-    elementos.vencEditCantidadInput &&
-    Number(elementos.vencEditCantidadInput.value) !== cantidad
-  )
-    elementos.vencEditCantidadInput.value = cantidad;
   if (elementos.vencEditTotalTexto)
-    elementos.vencEditTotalTexto.textContent = cantidad;
+    elementos.vencEditTotalTexto.textContent = `${stock.cantidad} un.`;
+  return stock;
 }
 
 async function guardarEdicionVencimiento() {
   const item = vencimientoSeleccionado;
   if (!item) return;
   const vencimiento = elementos.vencEditFechaInput?.value;
-  const cantidad = normalizarCantidadVencimiento(
-    elementos.vencEditCantidadInput?.value,
-  );
+  const { salon, deposito, cantidad } = actualizarTotalEdicionVencimiento();
   const cantidadOriginal = normalizarCantidadVencimiento(item.cantidad);
   const rubro = $("vencEditRubroInput")?.value || "";
   const ofertaDeseada = $("vencEditOfertaInput")?.value === "activa";
@@ -3814,7 +3847,7 @@ async function guardarEdicionVencimiento() {
       cantidadOriginal === 0
         ? "Ingresá una cantidad válida"
         : "La cantidad debe ser mayor a 0",
-      elementos.vencEditCantidadInput,
+      elementos.vencEditSalonInput || elementos.vencEditDepositoInput,
     );
     return;
   }
@@ -3825,6 +3858,8 @@ async function guardarEdicionVencimiento() {
     await actualizarVencimiento(item.id, {
       vencimiento,
       rubro,
+      salon,
+      deposito,
       cantidad,
     });
     if (ofertaDeseada !== tieneOferta(item)) {
@@ -3906,7 +3941,8 @@ function capturarEstadoEdicionVencimiento() {
   return {
     vencimiento: String(elementos.vencEditFechaInput?.value || ""),
     rubro: String($("vencEditRubroInput")?.value || ""),
-    cantidad: normalizarCantidadVencimiento(elementos.vencEditCantidadInput?.value),
+    salon: stockUbicacionVencimiento(elementos.vencEditSalonInput?.value),
+    deposito: stockUbicacionVencimiento(elementos.vencEditDepositoInput?.value),
     oferta: $("vencEditOfertaInput")?.value === "activa",
   };
 }
@@ -3916,7 +3952,8 @@ function hayCambiosVencimiento() {
   return (
     actual.vencimiento !== snapshotVencimientoEditando.vencimiento ||
     actual.rubro !== snapshotVencimientoEditando.rubro ||
-    actual.cantidad !== snapshotVencimientoEditando.cantidad ||
+    actual.salon !== snapshotVencimientoEditando.salon ||
+    actual.deposito !== snapshotVencimientoEditando.deposito ||
     actual.oferta !== snapshotVencimientoEditando.oferta
   );
 }

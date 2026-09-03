@@ -21,11 +21,21 @@ async function asegurarEsquemaVencimientos() {
       article TEXT NOT NULL DEFAULT '',
       expiry_date TEXT NOT NULL DEFAULT '',
       quantity INTEGER NOT NULL DEFAULT 0 CHECK(quantity >= 0),
+      salon_quantity INTEGER NOT NULL DEFAULT 0 CHECK(salon_quantity >= 0),
+      deposit_quantity INTEGER NOT NULL DEFAULT 0 CHECK(deposit_quantity >= 0),
       offer BOOLEAN NOT NULL DEFAULT FALSE,
       category TEXT NOT NULL DEFAULT 'Sin clasificar',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await query(`ALTER TABLE expiration_records ADD COLUMN IF NOT EXISTS salon_quantity INTEGER NOT NULL DEFAULT 0 CHECK(salon_quantity >= 0)`);
+    await query(`ALTER TABLE expiration_records ADD COLUMN IF NOT EXISTS deposit_quantity INTEGER NOT NULL DEFAULT 0 CHECK(deposit_quantity >= 0)`);
+    await query(`UPDATE expiration_records
+      SET salon_quantity=quantity, deposit_quantity=0
+      WHERE quantity > 0 AND salon_quantity=0 AND deposit_quantity=0`);
+    await query(`UPDATE expiration_records
+      SET quantity=GREATEST(0, salon_quantity) + GREATEST(0, deposit_quantity)
+      WHERE quantity <> GREATEST(0, salon_quantity) + GREATEST(0, deposit_quantity)`);
     await query(`CREATE INDEX IF NOT EXISTS expiration_records_code_idx ON expiration_records(code)`);
     await query(`CREATE INDEX IF NOT EXISTS expiration_records_expiry_idx ON expiration_records(expiry_date)`);
     await query(`CREATE INDEX IF NOT EXISTS expiration_records_category_idx ON expiration_records(category)`);
@@ -77,7 +87,9 @@ function filaVencimiento(row) {
     codigo: texto(row.code),
     articulo: texto(row.article),
     vencimiento: texto(row.expiry_date),
-    cantidad: Number(row.quantity) || 0,
+    salon: Number(row.salon_quantity) || 0,
+    deposito: Number(row.deposit_quantity) || 0,
+    cantidad: (Number(row.salon_quantity) || 0) + (Number(row.deposit_quantity) || 0),
     oferta: row.offer ? "Sí" : "No",
     rubro: texto(row.category) || "Sin clasificar",
   };
@@ -102,7 +114,8 @@ async function importarVencimientosAtomico(vencimientos, claveMigracion) {
           code: texto(item?.codigo),
           article: texto(item?.articulo),
           expiry_date: texto(item?.vencimiento),
-          quantity: enteroNoNegativo(item?.cantidad),
+          salon_quantity: enteroNoNegativo(item?.salon ?? item?.cantidad),
+          deposit_quantity: enteroNoNegativo(item?.deposito),
           offer: ofertaABoolean(item?.oferta),
           category: texto(item?.rubro) || "Sin clasificar",
         };
@@ -112,12 +125,13 @@ async function importarVencimientosAtomico(vencimientos, claveMigracion) {
     if (filas.length) {
       await cliente.query(
         `INSERT INTO expiration_records(
-           legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category
+           legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
          )
-         SELECT legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category
+         SELECT legacy_row,record_id,load_date,code,article,expiry_date,
+                salon_quantity + deposit_quantity,salon_quantity,deposit_quantity,offer,category
          FROM jsonb_to_recordset($1::jsonb) AS x(
            legacy_row INTEGER, record_id TEXT, load_date TEXT, code TEXT, article TEXT,
-           expiry_date TEXT, quantity INTEGER, offer BOOLEAN, category TEXT
+           expiry_date TEXT, salon_quantity INTEGER, deposit_quantity INTEGER, offer BOOLEAN, category TEXT
          )`,
         [JSON.stringify(filas)],
       );
@@ -135,7 +149,7 @@ async function importarVencimientosAtomico(vencimientos, claveMigracion) {
 async function listarVencimientosDb(cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category
+    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
      FROM expiration_records
      ORDER BY COALESCE(legacy_row,2147483647), expiration_pk`,
   );
@@ -145,7 +159,7 @@ async function listarVencimientosDb(cliente = null) {
 async function buscarVencimientoPorIdDb(id, cliente = null, { bloquear = false } = {}) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category
+    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
      FROM expiration_records WHERE record_id=$1${bloquear ? " FOR UPDATE" : ""}`,
     [texto(id)],
   );
@@ -159,9 +173,9 @@ async function crearVencimientoDb(registro, cliente = null) {
     );
     const r = await c.query(
       `INSERT INTO expiration_records(
-         legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category
-       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category`,
+         legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
+       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category`,
       [
         Number(siguiente.rows[0]?.siguiente) || 2,
         texto(registro?.id),
@@ -169,7 +183,9 @@ async function crearVencimientoDb(registro, cliente = null) {
         texto(registro?.codigo),
         texto(registro?.articulo),
         texto(registro?.vencimiento),
-        enteroNoNegativo(registro?.cantidad),
+        enteroNoNegativo(registro?.salon) + enteroNoNegativo(registro?.deposito),
+        enteroNoNegativo(registro?.salon),
+        enteroNoNegativo(registro?.deposito),
         ofertaABoolean(registro?.oferta),
         texto(registro?.rubro) || "Sin clasificar",
       ],
@@ -186,13 +202,16 @@ async function actualizarVencimientoDb(id, cambios, cliente = null) {
     if (!actual) return null;
     const r = await c.query(
       `UPDATE expiration_records SET
-         expiry_date=$2, quantity=$3, offer=$4, category=$5, updated_at=NOW()
+         expiry_date=$2, quantity=$3, salon_quantity=$4, deposit_quantity=$5, offer=$6, category=$7, updated_at=NOW()
        WHERE expiration_pk=$1
-       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,offer,category`,
+       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category`,
       [
         actual.vencimientoPk,
         cambios?.vencimiento === undefined ? actual.vencimiento : texto(cambios.vencimiento),
-        cambios?.cantidad === undefined ? actual.cantidad : enteroNoNegativo(cambios.cantidad),
+        enteroNoNegativo(cambios?.salon === undefined ? actual.salon : cambios.salon) +
+          enteroNoNegativo(cambios?.deposito === undefined ? actual.deposito : cambios.deposito),
+        cambios?.salon === undefined ? actual.salon : enteroNoNegativo(cambios.salon),
+        cambios?.deposito === undefined ? actual.deposito : enteroNoNegativo(cambios.deposito),
         cambios?.oferta === undefined ? ofertaABoolean(actual.oferta) : ofertaABoolean(cambios.oferta),
         cambios?.rubro === undefined ? actual.rubro : (texto(cambios.rubro) || "Sin clasificar"),
       ],

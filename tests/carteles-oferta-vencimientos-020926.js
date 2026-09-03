@@ -17,15 +17,16 @@ assert(ui.includes('nombre === "cartelOferta" ? "vencimientos"'), "Navegación n
 assert(app.includes('const CARTEL_OFERTA_MAX = 4'), "La hoja debe limitarse a 4 carteles");
 assert(app.includes('autoservicio_carteles_oferta_v1'), "Falta persistencia por usuario de la bandeja");
 assert(app.includes('if (items.length < 1)') && app.includes('Array.from({ length: CARTEL_OFERTA_MAX }'), "La impresión debe permitir de 1 a 4 carteles conservando las 4 posiciones");
-assert(app.includes('grid-template-columns:135mm 135mm') && app.includes('grid-template-rows:78mm 78mm'), "Las dimensiones físicas 135x78 mm deben ser fijas");
-assert(app.includes('@page{size:297mm 210mm;margin:0}'), "La salida debe fijar A4 horizontal físico");
-assert(app.includes('width:297mm!important;height:210mm!important'), "La hoja debe mantenerse en una sola página A4 horizontal");
+assert(app.includes('poster-slot-1') && app.includes('poster-slot-4') && app.includes('width:135mm!important;height:78mm!important'), "Las 4 posiciones y dimensiones físicas 135x78 mm deben ser fijas");
+assert(app.includes('@page{size:A4 landscape;margin:0!important}'), "La salida debe fijar A4 horizontal físico sin márgenes CSS");
+assert(app.includes('width:296mm!important;height:209mm!important') && app.includes('position:fixed!important'), "La hoja debe quedar dentro de una sola página A4 sin overflow por redondeo");
 assert(html.includes('id="cartelOfertaPreview" class="instant-offer-card"'), "Falta host único de vista previa");
 assert(!html.includes('previewCartelProducto') && !html.includes('previewCartelPromo'), "No debe quedar una segunda maqueta HTML del cartel");
 assert(app.includes('function svgCartelOferta('), "Falta fuente única SVG para el cartel");
 assert(app.includes('viewBox="0 0 1350 780"') && app.includes('width="135mm" height="78mm"'), "El SVG debe tener geometría física canónica 135x78 mm");
 assert(app.includes('preview.innerHTML = svgCartelOferta(datos'), "La vista previa debe renderizar el SVG único");
-assert(app.includes('htmlCartelOfertaImpresion(item, index)') && app.includes('svgCartelOferta(item, { precioValido: true'), "La impresión debe reutilizar exactamente el mismo SVG");
+assert(app.includes('htmlCartelOfertaImpresion(item, index, logoImpresion)') && app.includes('svgCartelOferta(item, { precioValido: true'), "La impresión debe reutilizar exactamente el mismo SVG");
+assert(app.includes('async function logoCartelOfertaDataUri()') && app.includes('lector.readAsDataURL(blob)') && app.includes('logoHref'), "La impresión debe incrustar el logo para evitar que desaparezca al imprimir");
 assert(css.includes('.instant-offer-svg') && css.includes('aspect-ratio:135/78'), "La vista previa debe escalar el SVG sin remaquetarlo");
 assert(html.includes('id="cartelPrecioDescuento"'), "Falta precio con descuento manual");
 assert(app.includes('precioOferta = precioDescuento'), "El precio final porcentual debe ser manual");
@@ -53,4 +54,4 @@ assert(css.includes('#pantallaCartelOferta .offer-promo-option>b') && css.includ
 assert(css.includes('#pantallaCartelOferta .offer-product-copy>div') && css.includes('gap:5px 9px'), "Los metadatos del producto deben quedar separados y legibles");
 assert(css.includes('#pantallaCartelOferta .offer-money-input') && css.includes('min-height:44px'), "Los campos de valores deben usar altura canónica");
 assert(css.includes('#pantallaCartelOferta .offer-result-box>strong'), "El resultado debe tener jerarquía tipográfica definida");
-console.log("Carteles oferta SVG intacto + interfaz tipográfica profesional 03/09 V17: OK");
+console.log("Carteles oferta SVG intacto + impresión A4 una página/logo incrustado 03/09: OK");

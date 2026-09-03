@@ -1734,15 +1734,27 @@
                 </select>
               </div>
 
-              <label class="venc-form-field venc-qty-box venc-qty-single">
-                <span>Cantidad</span>
+              <label class="venc-form-field venc-qty-box">
+                <span>Stock salón</span>
                 <div class="venc-input-with-unit">
-                  <input type="number" id="vencCantidadInput" min="1" step="1" value="1" inputmode="numeric" aria-label="Cantidad" />
+                  <input type="number" id="vencSalonInput" min="0" step="1" value="0" inputmode="numeric" aria-label="Stock salón" />
                   <span>un.</span>
                 </div>
               </label>
+
+              <label class="venc-form-field venc-qty-box">
+                <span>Stock depósito</span>
+                <div class="venc-input-with-unit">
+                  <input type="number" id="vencDepositoInput" min="0" step="1" value="0" inputmode="numeric" aria-label="Stock depósito" />
+                  <span>un.</span>
+                </div>
+              </label>
+
+              <div class="venc-form-field venc-stock-total" aria-live="polite">
+                <span>Stock total</span>
+                <strong id="vencTotalTexto">0 un.</strong>
+              </div>
             </div>
-            <strong id="vencTotalTexto" class="oculto">1</strong>
             <div class="venc-form-actions">
               <button type="button" id="btnVencGuardar" class="save-btn">Guardar vencimiento</button>
             </div>
@@ -3400,15 +3412,25 @@
                   <option value="Lácteos">Lácteos</option>
                 </select>
               </div>
-              <label class="venc-edit-field venc-edit-qty-reference">
-                <span>Cantidad</span>
+              <label class="venc-edit-field venc-edit-qty-reference venc-edit-stock-salon">
+                <span>Stock salón</span>
                 <div class="venc-input-with-unit">
-                  <input type="number" id="vencEditCantidadInput" min="0" step="1" inputmode="numeric" />
+                  <input type="number" id="vencEditSalonInput" min="0" step="1" inputmode="numeric" aria-label="Stock salón" />
                   <span>un.</span>
                 </div>
               </label>
+              <label class="venc-edit-field venc-edit-qty-reference venc-edit-stock-deposito">
+                <span>Stock depósito</span>
+                <div class="venc-input-with-unit">
+                  <input type="number" id="vencEditDepositoInput" min="0" step="1" inputmode="numeric" aria-label="Stock depósito" />
+                  <span>un.</span>
+                </div>
+              </label>
+              <div class="venc-edit-field venc-stock-total">
+                <span>Stock total</span>
+                <strong id="vencEditTotalTexto">0 un.</strong>
+              </div>
             </div>
-            <strong id="vencEditTotalTexto" class="oculto">0</strong>
 
             <section class="venc-edit-offer-section">
               <div>

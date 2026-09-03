@@ -403,9 +403,15 @@ function cantidadVencimientoCompatible(registro = {}) {
 }
 
 function normalizarVencimientoServidor(registro = {}) {
+  // Compatibilidad con registros creados antes de separar el stock por ubicación:
+  // toda la cantidad histórica se considera stock de Salón y Depósito inicia en 0.
+  const salon = normalizarEntero(registro.salon ?? registro.cantidad ?? 0);
+  const deposito = normalizarEntero(registro.deposito ?? 0);
   return {
     ...registro,
-    cantidad: cantidadVencimientoCompatible(registro),
+    salon,
+    deposito,
+    cantidad: salon + deposito,
   };
 }
 
@@ -424,7 +430,8 @@ export async function buscarProductoMaestroPorCodigo(codigoBuscado) {
 }
 
 export async function guardarVencimiento(registro) {
-  const cantidad = normalizarEntero(registro.cantidad);
+  const salon = normalizarEntero(registro.salon);
+  const deposito = normalizarEntero(registro.deposito);
   const data = await pedirJson("/vencimientos", {
     method: "POST",
     body: JSON.stringify({
@@ -432,27 +439,25 @@ export async function guardarVencimiento(registro) {
       articulo: normalizarTexto(registro.articulo),
       vencimiento: normalizarTexto(registro.vencimiento),
       rubro: normalizarTexto(registro.rubro),
-      cantidad,
-      // Puente temporal para el backend V19 anterior todavía desplegado:
-      // el backend V19.6 prioriza `cantidad`; el anterior calcula salon+deposito.
-      salon: cantidad,
-      deposito: 0,
+      salon,
+      deposito,
+      cantidad: salon + deposito,
     }),
   });
   return data.vencimiento ? normalizarVencimientoServidor(data.vencimiento) : data.vencimiento;
 }
 
 export async function actualizarVencimiento(id, registro) {
-  const cantidad = normalizarEntero(registro.cantidad);
+  const salon = normalizarEntero(registro.salon);
+  const deposito = normalizarEntero(registro.deposito);
   const data = await pedirJson(`/vencimientos/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify({
       vencimiento: normalizarTexto(registro.vencimiento),
       rubro: normalizarTexto(registro.rubro),
-      cantidad,
-      // Compatibilidad de escritura con el esquema previo; no aparece en UI.
-      salon: cantidad,
-      deposito: 0,
+      salon,
+      deposito,
+      cantidad: salon + deposito,
     }),
   });
   return data.vencimiento ? normalizarVencimientoServidor(data.vencimiento) : data.vencimiento;

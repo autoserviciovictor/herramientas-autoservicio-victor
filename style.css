@@ -15700,3 +15700,41 @@ html[data-theme="dark"] .admin-import-preview-modal .modal-actions{ border-color
   #pantallaCartelOferta .offer-promo-option>strong{font-size:21px}
   #pantallaCartelOferta .offer-promo-option>b{font-size:12px}
 }
+
+
+/* Vencimientos: stock separado por ubicación (Salón + Depósito = Total). */
+.venc-edit-stock-salon { grid-column:1 !important; }
+.venc-edit-stock-deposito { grid-column:2 !important; }
+.venc-stock-total {
+  grid-column:1 / -1 !important;
+  min-height:58px;
+  padding:11px 13px;
+  border:1px solid var(--pro-border,#dfe5ec);
+  border-radius:10px;
+  background:#f8fafc;
+  box-sizing:border-box;
+}
+.venc-stock-total > span {
+  display:block;
+  margin:0 0 4px !important;
+  color:var(--pro-muted,#667085);
+  font-size:12px !important;
+  line-height:1.2;
+  font-weight:750;
+}
+.venc-stock-total > strong {
+  display:block;
+  color:var(--pro-text,#101828);
+  font-size:18px;
+  line-height:1.15;
+  font-weight:850;
+}
+html[data-theme="dark"] .venc-stock-total {
+  background:var(--pro-panel-2,#192d46);
+  border-color:var(--pro-border,#30445e);
+}
+@media (max-width:700px) {
+  .venc-edit-stock-salon,
+  .venc-edit-stock-deposito,
+  .venc-stock-total { grid-column:1 !important; }
+}

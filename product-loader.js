@@ -8,46 +8,53 @@ function resolverElemento(valor) {
 }
 
 function configurarCantidadVencimientoEditable() {
-  const input = document.getElementById("vencCantidadInput");
+  const salon = document.getElementById("vencSalonInput");
+  const deposito = document.getElementById("vencDepositoInput");
   const form = document.getElementById("vencFormCard");
   const guardar = document.getElementById("btnVencGuardar");
-  if (!input || !form || input.dataset.cantidadEditableReady === "1") return;
+  const inputs = [salon, deposito].filter(Boolean);
+  if (!inputs.length || !form || form.dataset.stockUbicacionesReady === "1") return;
 
-  input.dataset.cantidadEditableReady = "1";
-  input.value = "0";
+  form.dataset.stockUbicacionesReady = "1";
+  inputs.forEach((input) => { input.value = "0"; });
 
   let estabaOculto = form.classList.contains("oculto");
   const observer = new MutationObserver(() => {
     const oculto = form.classList.contains("oculto");
-    if (estabaOculto && !oculto) input.value = "0";
+    if (estabaOculto && !oculto) inputs.forEach((input) => { input.value = "0"; });
     estabaOculto = oculto;
   });
   observer.observe(form, { attributes: true, attributeFilter: ["class"] });
 
-  input.addEventListener(
-    "input",
-    (event) => {
-      if (input.value === "" || input.value === "0") {
-        input.setCustomValidity("");
-        event.stopImmediatePropagation();
-      }
-    },
-    true,
-  );
+  inputs.forEach((input) => {
+    input.addEventListener(
+      "input",
+      (event) => {
+        if (input.value === "" || input.value === "0") {
+          input.setCustomValidity("");
+          event.stopImmediatePropagation();
+        }
+      },
+      true,
+    );
+  });
 
   guardar?.addEventListener(
     "click",
     (event) => {
-      const cantidad = Number(input.value);
-      if (input.value !== "" && Number.isFinite(cantidad) && cantidad > 0) {
-        input.setCustomValidity("");
+      const valores = inputs.map((input) => Number(input.value));
+      const validos = valores.every((valor) => Number.isInteger(valor) && valor >= 0);
+      const total = validos ? valores.reduce((suma, valor) => suma + valor, 0) : 0;
+      if (validos && total > 0) {
+        inputs.forEach((input) => input.setCustomValidity(""));
         return;
       }
       event.preventDefault();
       event.stopImmediatePropagation();
-      input.setCustomValidity("Ingresá una cantidad mayor a 0.");
-      input.reportValidity();
-      input.focus();
+      const foco = inputs.find((input) => input.value === "" || Number(input.value) < 0) || inputs[0];
+      foco.setCustomValidity("Ingresá stock en salón o depósito. El total debe ser mayor a 0.");
+      foco.reportValidity();
+      foco.focus();
     },
     true,
   );
