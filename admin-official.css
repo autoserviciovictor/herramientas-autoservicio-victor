@@ -155,7 +155,7 @@
 #adminUsuarioModal .admin-user-modal-v2{background:#fff!important;border:1px solid rgba(230,234,240,.95)!important;display:grid!important;padding:0!important;}
 #adminUsuarioModal .admin-user-modal-head{display:grid!important;border-bottom:1px solid #edf0f4!important;}
 #adminUsuarioModal .admin-user-modal-avatar{background:#ffe9ec!important;color:var(--admin-red)!important;}
-#adminUsuarioModal .admin-user-modal-head>div:nth-child(2){}.admin-user-modal-head span{font-size:9px!important;letter-spacing:0!important;text-transform:none!important;color:var(--admin-red)!important;font-weight:800!important}.admin-user-modal-head h2{margin:0!important;font-size:20px!important;color:var(--admin-text)!important}.admin-user-modal-head small{font-size:10px!important;color:#7b8494!important}.admin-user-close{position:static!important;width:34px!important;height:34px!important;border:1px solid #e2e6ec!important;border-radius:9px!important;background:#fff!important;color:#586273!important;}
+.admin-user-modal-head span{font-size:9px!important;letter-spacing:0!important;text-transform:none!important;color:var(--admin-red)!important;font-weight:800!important}.admin-user-modal-head h2{margin:0!important;font-size:20px!important;color:var(--admin-text)!important}.admin-user-modal-head small{font-size:10px!important;color:#7b8494!important}.admin-user-close{position:static!important;width:34px!important;height:34px!important;border:1px solid #e2e6ec!important;border-radius:9px!important;background:#fff!important;color:#586273!important;}
 #adminUsuarioModal .admin-user-modal-body{display:grid!important;overflow:auto!important}.admin-user-modal-body .admin-form-section{display:grid!important;gap:11px!important;padding:0 0 15px!important;margin:0!important;border-bottom:1px solid #edf0f4!important}.admin-user-modal-body .admin-form-section:last-of-type{border-bottom:0!important;padding-bottom:0!important}.admin-form-section-title{text-align:left!important;display:grid!important;gap:2px!important}.admin-form-section-title strong{font-size:13px!important;color:var(--admin-text)!important}.admin-form-section-title span{font-size:9.5px!important;color:#86909f!important}.admin-form-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.admin-user-modal-v2 label{font-size:9.5px!important;font-weight:700!important;color:#5d6777!important;gap:5px!important}.admin-user-modal-v2 input:not([type="checkbox"]):not([type="hidden"]), #adminUsuarioModal .visual-select-button{min-height:42px!important;border:1px solid #dfe4eb!important;border-radius:9px!important;background:#fff!important;font-size:11px!important;padding:0 11px!important;box-shadow:none!important}.admin-user-modal-v2 label>small{font-size:8.5px!important;color:#929aa8!important}.admin-permissions-fieldset{border:0!important;padding:0!important;margin:0!important}.admin-permissions-toggle{min-height:44px!important;border:1px solid #dfe4eb!important;border-radius:9px!important;background:#fff!important}.admin-active-row{min-height:56px!important;padding:10px 12px!important;border:1px solid #e4e8ee!important;border-radius:10px!important;background:#fff!important}.admin-active-row>span{display:grid!important;gap:2px!important}.admin-active-row strong{font-size:10.5px!important}.admin-active-row small{font-size:8.5px!important}.admin-modal-actions-sticky{min-height:65px!important;padding:11px 28px 14px!important;border-top:1px solid #edf0f4!important;background:#fff!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;box-shadow:none!important}.admin-modal-actions-sticky button{height:41px!important;border-radius:9px!important;font-size:11px!important;font-weight:800!important}.admin-modal-actions-sticky .cancel-btn{background:#fff!important;border:1px solid #dfe4eb!important;color:#4d5768!important}.admin-modal-actions-sticky .save-btn{background:linear-gradient(135deg,#f43b48,#dc2836)!important;border:0!important;color:#fff!important}
 
 /* ---------- Modal sector oficial ---------- */
@@ -171,7 +171,6 @@
 html[data-theme="dark"]{
   --admin-surface:#171a1f;--admin-page:#101216;--admin-line:#2a2e35;--admin-text:#f3f5f8;--admin-muted:#98a1af;--admin-soft:#1c2026;
 }
-html[data-theme="dark"] body[data-screen="admin"] #pantallaAdmin.admin-official-screen{}
 html[data-theme="dark"] .admin-kpi-card, html[data-theme="dark"] .admin-module-access-card, html[data-theme="dark"] .admin-surface-card, html[data-theme="dark"] .admin-list-surface, html[data-theme="dark"] .admin-toolbar, html[data-theme="dark"] .admin-system-action-card, html[data-theme="dark"] .admin-health-card, html[data-theme="dark"] .admin-system-import-card, html[data-theme="dark"] .admin-history-filter-surface, html[data-theme="dark"] .admin-history-summary, html[data-theme="dark"] .admin-history-table-surface{background:var(--admin-surface)!important;border-color:var(--admin-line)!important;box-shadow:none!important;color:var(--admin-text)!important}
 html[data-theme="dark"] .admin-search-control, html[data-theme="dark"] .admin-select-control select, html[data-theme="dark"] .admin-list-topline select, html[data-theme="dark"] .admin-pagination select, html[data-theme="dark"] .admin-user-card-official, html[data-theme="dark"] .admin-sector-row, html[data-theme="dark"] .admin-history-toggle, html[data-theme="dark"] .admin-history-filter-grid select, html[data-theme="dark"] .admin-history-search>div{background:#1b1f25!important;border-color:#30353e!important;color:#eef1f5!important}
 html[data-theme="dark"] .admin-user-card-official .admin-user-card-buttons button,
@@ -589,17 +588,9 @@ html[data-theme="dark"] #adminHeaderBackBtn{
 }
 
 /* Editor de usuarios: reproduce la composición horizontal de la referencia. */
-#adminUsuarioModal .admin-user-modal-v2{
-}
-#adminUsuarioModal .admin-user-modal-head{
-}
-#adminUsuarioModal .admin-user-modal-avatar{}
-#adminUsuarioModal .admin-user-modal-head h2{}
-#adminUsuarioModal .admin-user-modal-head small{}
 #adminUsuarioModal .admin-user-modal-body{
   scroll-padding-top:22px !important;
 }
-#adminUsuarioModal .admin-form-section{}
 #adminUsuarioModal .admin-form-section + .admin-form-section{padding-top:20px !important;}
 #adminUsuarioModal .admin-form-section-title-icon{
   display:grid !important;
@@ -624,14 +615,8 @@ html[data-theme="dark"] #adminHeaderBackBtn{
 }
 #adminUsuarioModal .admin-user-modal label>small{line-height:1.35 !important;}
 #adminUsuarioModal .admin-permissions-fieldset{width:100% !important;align-self:start !important;}
-#adminUsuarioModal .admin-permissions-toggle{
-}
 
 
-#adminUsuarioModal .admin-permissions-dropdown-panel{}
-#adminUsuarioModal .admin-user-state-section{}
-#adminUsuarioModal .admin-modal-actions-sticky{}
-#adminUsuarioModal .admin-modal-actions-sticky button{}
 
 /* Switch propio, usado en Usuario activo y Sector activo. */
 .admin-switch-row{
@@ -677,22 +662,9 @@ html[data-theme="dark"] #adminHeaderBackBtn{
 .admin-switch-copy small{font-size:9.5px !important;color:#7e8795 !important;line-height:1.35 !important;}
 
 /* Sectores: modal más próximo al mockup, paleta sin cajas visualmente pesadas. */
-#adminSectorModal .admin-sector-modal-official{
-}
-#adminSectorModal .admin-sector-modal-head{}
-#adminSectorModal .admin-sector-modal-body{}
-#adminSectorModal .admin-sector-modal-actions{}
 #adminSectorModal .admin-official-color-picker .admin-color-palette{
   align-items:center !important;
 }
-#adminSectorModal .admin-official-color-picker .admin-color-option{
-}
-#adminSectorModal .admin-official-color-picker .admin-color-option span{}
-#adminSectorModal .admin-official-color-picker .admin-color-option.seleccionado{
-}
-#adminSectorModal .admin-official-active-row{}
-#adminSectorModal .admin-sector-danger-zone{}
-#adminSectorModal .admin-sector-danger-zone small{}
 
 /* Historial: fecha homogénea, filas y filtros más legibles. */
 #pantallaVencimientos .admin-history-filter-surface{padding:0 20px 20px !important;}
@@ -717,12 +689,8 @@ html[data-theme="dark"] #adminHeaderBackBtn{
 .admin-home-activity-item time{font-size:9px !important;}
 
 @media (max-width:900px){
-  #adminUsuarioModal .admin-user-modal-v2,
-#adminSectorModal .admin-sector-modal-official{}
   #adminUsuarioModal .admin-user-modal-head, #adminSectorModal .admin-sector-modal-head{padding:16px !important;}
   #adminUsuarioModal .admin-user-modal-body, #adminSectorModal .admin-sector-modal-body{padding:16px !important;}
-  #adminUsuarioModal .admin-form-grid-two, #adminUsuarioModal .admin-user-access-grid{}
-  #adminUsuarioModal .admin-modal-actions-sticky, #adminSectorModal .admin-sector-modal-actions{}
   #adminSectorModal .admin-official-color-picker .admin-color-palette{gap:8px !important;}
 }
 
@@ -922,8 +890,6 @@ html[data-theme="dark"] #adminSectorModal .admin-switch-row>input:checked + .adm
   opacity:0;
 }
 #vencHistorialAdmin .admin-history-filter-control>.app-select-custom.is-open .app-select-custom__menu{opacity:1;}
-#vencHistorialAdmin .admin-history-pagination label>.app-select-custom{}
-#vencHistorialAdmin .admin-history-pagination .app-select-custom__trigger{}
 
 /* Estados de foco y controles compactos. */
 #pantallaAdmin :is(.admin-view-toggle button,.admin-pagination-buttons button,.admin-sector-row-actions button,.admin-user-card-buttons button),
@@ -1338,8 +1304,6 @@ html[data-theme="dark"] #vencHistorialAdmin .app-select-custom__option.is-select
 #adminUsuarioModal .admin-password-toggle .app-icon{width:17px !important;height:17px !important;}
 
 /* Acceso: sector y módulos se leen como dos campos del mismo nivel. */
-#adminUsuarioModal .admin-user-access-grid{
-}
 #adminUsuarioModal .admin-user-sector-stack{gap:11px !important;}
 #adminUsuarioModal .admin-permissions-fieldset{
   display:grid !important;
@@ -1534,12 +1498,8 @@ html[data-theme="dark"] #adminUsuarioModal .admin-permissions-grid label{
   border-color:var(--pro-border,#30445e) !important;
 }
 html[data-theme="dark"] #adminUsuariosLista .admin-user-card-buttons{border-color:var(--pro-border,#30445e) !important;}
-html[data-theme="dark"] #adminUsuariosLista .admin-user-card-buttons button{}
-html[data-theme="dark"] #adminUsuariosLista .admin-user-card-buttons button+button{}
 html[data-theme="dark"] #adminUsuariosLista .admin-user-card-buttons button:hover:not(:disabled){background:#232830 !important;border-color:#3b424d !important;}
 html[data-theme="dark"] #adminUsuariosLista .admin-user-card-buttons button+button:hover:not(:disabled){background:#2d1e22 !important;border-color:#72404b !important;}
-html[data-theme="dark"] #adminUsuariosLista .admin-user-title strong,
-html[data-theme="dark"] #adminUsuariosLista .admin-user-card-meta strong{}
 html[data-theme="dark"] #adminUsuariosLista .admin-user-title span,
 html[data-theme="dark"] #adminUsuariosLista .admin-user-card-meta small,
 html[data-theme="dark"] #adminTab-usuarios .admin-user-selection-tools>span,
@@ -2004,12 +1964,6 @@ html[data-theme="dark"] #adminSectorModal .admin-sector-modal-head{border-color:
 html[data-theme="dark"] #adminSectorModal .admin-official-field>span,
 html[data-theme="dark"] #adminSectorModal .admin-color-picker-head>span,
 html[data-theme="dark"] #adminSectorModal .admin-sector-state-label{color:#eef2f7 !important;}
-html[data-theme="dark"] #adminSectorModal .admin-sector-danger-zone{}
-html[data-theme="dark"] #adminSectorModal .admin-danger-symbol{}
-html[data-theme="dark"] #adminTab-sistema .admin-dropzone:hover,
-html[data-theme="dark"] #adminTab-sistema .admin-dropzone:focus-visible,
-html[data-theme="dark"] #adminTab-sistema .admin-dropzone.is-dragover{}
-html[data-theme="dark"] #adminTab-sistema .admin-storage-bar.is-unavailable{}
 html[data-theme="dark"] #adminTab-sectores .admin-sector-cell-main small,
 html[data-theme="dark"] #adminTab-sectores .admin-sector-supervisor,
 html[data-theme="dark"] #adminTab-sectores .admin-sector-users-count,
@@ -2017,9 +1971,6 @@ html[data-theme="dark"] #adminTab-sectores .admin-sector-products-count,
 html[data-theme="dark"] #adminTab-sectores .admin-sector-users-count span,
 html[data-theme="dark"] #adminTab-sectores .admin-sector-products-count span,
 html[data-theme="dark"] #adminTab-sectores .admin-sector-pagination>span{color:#a9b3c2 !important;}
-html[data-theme="dark"] #adminTab-sectores .admin-sector-cell-main strong,
-html[data-theme="dark"] #adminTab-sectores .admin-sector-users-count strong,
-html[data-theme="dark"] #adminTab-sectores .admin-sector-products-count strong{}
 html[data-theme="dark"] #adminTab-sistema .admin-system-action-head p,
 html[data-theme="dark"] #adminTab-sistema .admin-system-last-update small,
 html[data-theme="dark"] #adminTab-sistema .admin-import-head span,
@@ -2359,7 +2310,6 @@ html[data-theme="dark"] #adminTab-sistema .admin-system-utility-card small{color
   white-space:nowrap !important;
 }
 #vencHistorialAdmin .admin-history-date strong span{color:#6f7c8e !important;}
-#vencHistorialAdmin .admin-history-user{}
 #vencHistorialAdmin .admin-history-user-avatar{
   width:34px !important;
   height:34px !important;
@@ -2460,7 +2410,6 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-pagination{
   background:var(--pro-panel,#122238) !important;
   border-color:var(--pro-border,#30445e) !important;
 }
-html[data-theme="dark"] #vencHistorialAdmin .admin-history-table-head{}
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-total-card,
 html[data-theme="dark"] #vencHistorialAdmin .history-user-stat{border-color:var(--pro-border,#30445e) !important;}
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-control strong,
@@ -2472,13 +2421,10 @@ html[data-theme="dark"] #vencHistorialAdmin #adminHistorialBuscar,
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail-summary strong,
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-date strong,
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-user strong{color:#d7dde6 !important;}
-html[data-theme="dark"] #vencHistorialAdmin .admin-history-card.abierta .admin-history-toggle,
-html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{}
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-toggle:hover{background:var(--pro-panel-2,#192d46) !important;}
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail p{color:#c8d0db !important;}
 html[data-theme="dark"] #vencHistorialAdmin .admin-pagination-buttons button{background:var(--pro-panel,#122238) !important;border-color:var(--pro-border,#30445e) !important;color:#cbd3df !important;}
 html[data-theme="dark"] #vencHistorialAdmin .admin-pagination-buttons button.activo{background:#ef2d49 !important;border-color:#ef2d49 !important;color:#fff !important;}
-html[data-theme="dark"] #vencHistorialAdmin .admin-history-total-icon{}
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-chevron{color:#aeb8c6 !important;}
 html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-control:has(.app-select-custom.is-open) .admin-history-filter-chevron{color:#ff7189 !important;}
 
@@ -2497,7 +2443,6 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-control:has(.a
 #vencHistorialAdmin .admin-page-heading-actions{align-items:flex-start !important;}
   #vencHistorialAdmin.admin-history-venc-screen{width:calc(100% - 24px) !important;padding:20px 0 96px !important;}
   #vencHistorialAdmin .admin-history-page-heading{display:grid !important;gap:14px !important;}
-  #vencHistorialAdmin .admin-history-header-actions{}
   #vencHistorialAdmin .admin-history-header-actions button{flex:1 1 0 !important;}
   #vencHistorialAdmin .admin-history-filter-grid{grid-template-columns:1fr 1fr !important;}
   #vencHistorialAdmin .admin-history-search{grid-column:1/-1 !important;}
@@ -2547,16 +2492,12 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-control:has(.a
   #vencHistorialAdmin .admin-pagination-buttons{justify-content:center !important;flex-wrap:wrap !important;}
   #adminUsuarioModal .admin-user-modal,
 #adminSectorModal .admin-sector-modal-official{max-height:calc(100dvh - 12px) !important;}
-  #adminUsuarioModal .admin-modal-actions-sticky,
-#adminSectorModal .admin-sector-modal-actions{}
 }
 
 /* =========================================================
    2026-08-21 · ENTREGA 1 — Ajustes de auditoría Inicio
    ========================================================= */
 /* Las ondas decorativas dejan de formar parte de todos los KPI de Administración. */
-#pantallaAdmin .admin-kpi-spark{
-}
 
 /* El estado saludable queda limpio: sin reservar una línea secundaria vacía. */
 #adminHomeEstadoDetalle:empty{
@@ -2982,10 +2923,6 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-control:has(.a
     align-items:end !important;
     border-top:1px solid #edf1f5 !important;
   }
-  #adminUsuariosLista .admin-user-card-meta small{
-  }
-  #adminUsuariosLista .admin-user-card-meta strong{
-  }
   #adminUsuariosLista .admin-module-badge{
     min-width:30px !important;
     height:25px !important;
@@ -3214,8 +3151,6 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-filter-control:has(.a
     width:23px !important;
     height:23px !important;
   }
-  #adminTab-sistema .admin-dropzone strong{}
-  #adminTab-sistema .admin-dropzone span{}
   #adminTab-sistema .admin-import-side{
     gap:5px !important;
   }
@@ -4030,8 +3965,6 @@ html[data-theme="dark"] #adminTab-sistema .admin-system-utility-card>button{
   color:var(--admin-text) !important;
   box-shadow:none !important;
 }
-html[data-theme="dark"] #adminTab-sistema .admin-dropzone{
-}
 html[data-theme="dark"] #adminTab-sistema .admin-dropzone:hover,
 html[data-theme="dark"] #adminTab-sistema .admin-dropzone:focus-visible,
 html[data-theme="dark"] #adminTab-sistema .admin-dropzone.is-dragover{
@@ -4041,8 +3974,6 @@ html[data-theme="dark"] #adminTab-sistema .admin-dropzone.is-dragover{
 html[data-theme="dark"] #adminTab-sistema .admin-dropzone>strong{color:var(--admin-text) !important;}
 html[data-theme="dark"] #adminTab-sistema .admin-dropzone>span{color:var(--admin-muted) !important;}
 html[data-theme="dark"] #adminTab-sistema .admin-health-card li{border-color:var(--admin-line) !important;color:#c7d2df !important;}
-html[data-theme="dark"] #adminTab-sistema .admin-health-ok{
-}
 html[data-theme="dark"] #adminTab-sistema .admin-storage-bar.is-unavailable{background:#263b55 !important;}
 html[data-theme="dark"] #adminTab-sistema :is(.admin-system-action-head p,.admin-system-last-update small,.admin-import-head span,.admin-import-side small,.admin-system-utility-card p,.admin-system-utility-card small){color:var(--admin-muted) !important;}
 html[data-theme="dark"] #adminTab-sistema .admin-import-side button:hover,
@@ -4102,9 +4033,6 @@ html[data-theme="dark"] #adminSectorModal .modal-close{
 }
 html[data-theme="dark"] #adminUsuarioModal .modal-close:hover,
 html[data-theme="dark"] #adminSectorModal .modal-close:hover{background:#203650 !important;}
-html[data-theme="dark"] #adminUsuarioModal .admin-modal-actions-sticky .save-btn:disabled,
-html[data-theme="dark"] #adminSectorModal .admin-sector-modal-actions .save-btn:disabled{
-}
 html[data-theme="dark"] #adminSectorModal .admin-sector-danger-zone{
   background:rgba(255,85,113,.10) !important;
   border-color:rgba(255,85,113,.34) !important;

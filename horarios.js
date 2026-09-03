@@ -540,6 +540,60 @@ function formatoCelda(id) {
 function formatoHorario24(id) {
   return fullScheduleLabel(id, TURNOS);
 }
+
+function configurarTooltipsHorarios(body) {
+  if (!body || body.dataset.tooltipHorarios === "1") return;
+  body.dataset.tooltipHorarios = "1";
+
+  let tooltip = null;
+  const ocultar = () => {
+    if (!tooltip) return;
+    tooltip.classList.remove("visible");
+    tooltip.setAttribute("aria-hidden", "true");
+  };
+  const mostrar = (boton) => {
+    const texto = String(boton?.dataset?.tooltip || "").trim();
+    if (!texto) return;
+    if (!tooltip) {
+      tooltip = document.createElement("div");
+      tooltip.className = "horarios-turno-tooltip";
+      tooltip.setAttribute("role", "tooltip");
+      tooltip.setAttribute("aria-hidden", "true");
+      document.body.appendChild(tooltip);
+    }
+    tooltip.textContent = texto;
+    tooltip.classList.add("visible");
+    tooltip.setAttribute("aria-hidden", "false");
+
+    const rect = boton.getBoundingClientRect();
+    const margen = 10;
+    const ancho = tooltip.offsetWidth;
+    const alto = tooltip.offsetHeight;
+    const centro = rect.left + rect.width / 2;
+    const left = Math.max(margen, Math.min(window.innerWidth - ancho - margen, centro - ancho / 2));
+    const hayLugarArriba = rect.top >= alto + 16;
+    const top = hayLugarArriba ? rect.top - alto - 9 : rect.bottom + 9;
+    tooltip.style.left = `${Math.round(left)}px`;
+    tooltip.style.top = `${Math.round(top)}px`;
+    tooltip.dataset.posicion = hayLugarArriba ? "arriba" : "abajo";
+  };
+
+  body.addEventListener("mouseover", (event) => {
+    if (!window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches) return;
+    const boton = event.target.closest?.(".horario-cell[data-tooltip]");
+    if (!boton || !body.contains(boton)) return;
+    mostrar(boton);
+  });
+  body.addEventListener("mouseout", (event) => {
+    const boton = event.target.closest?.(".horario-cell[data-tooltip]");
+    if (!boton) return;
+    if (event.relatedTarget && boton.contains(event.relatedTarget)) return;
+    ocultar();
+  });
+  body.addEventListener("scroll", ocultar, { passive: true });
+  window.addEventListener("resize", ocultar, { passive: true });
+}
+
 function coberturaDia(d) {
   let manana = 0,
     tarde = 0;
@@ -1205,13 +1259,15 @@ function renderTabla() {
                   sel = seleccion.has(keyCelda(e, d));
                 const detalle = detalles.get(keyCelda(e, d));
                 const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ""}`;
-                return `<td class="${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${escAttr(e)}" data-dia="${d}" ${feriado ? `title="${escAttr(feriado)}"` : ""}><button type="button" class="horario-cell ${escAttr(t.clase)}" style="${escAttr(t.estilo || "")}" data-tooltip="${escAttr(t.label)}">${esc(formatoCelda(id))}${marcas}</button></td>`;
+                const horarioCompleto = formatoHorario24(id);
+                return `<td class="${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${escAttr(e)}" data-dia="${d}" ${feriado ? `title="${escAttr(feriado)}"` : ""}><button type="button" class="horario-cell ${escAttr(t.clase)}" style="${escAttr(t.estilo || "")}" data-tooltip="${escAttr(horarioCompleto)}" aria-label="${escAttr(horarioCompleto)}">${esc(formatoCelda(id))}${marcas}</button></td>`;
               },
             ).join("")}</tr>`;
           },
         )
         .join("")
     : `<tr><td colspan="${diasDelMes() + 1}" class="horarios-sin-empleados"><strong>No hay personal asignado a este sector</strong><span>Asigná usuarios desde Administrador → Usuarios.</span></td></tr>`;
+  configurarTooltipsHorarios(body);
   head.querySelectorAll("[data-horarios-dia]").forEach(
     (x) =>
       (x.onclick = () => {

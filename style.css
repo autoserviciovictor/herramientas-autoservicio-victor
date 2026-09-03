@@ -2018,8 +2018,6 @@ body.login-bloqueado{
   display: grid;
   gap: 10px;
 }
-.admin-history-card{
-}
 .admin-history-card strong,
 .admin-history-card span,
 .admin-history-card small{
@@ -2052,8 +2050,6 @@ body.login-bloqueado{
 
 
 @media (max-width: 560px) {
-  .admin-tabs-clean{
-  }
   
   
 }
@@ -2149,14 +2145,8 @@ body.modal-abierto{
 
 
 
-.admin-period-filter{
-}
 .admin-period-btn{
   padding: 10px 6px;
-}
-.admin-period-btn.activo{
-}
-.admin-history-filter-grid{
 }
 .admin-history-filter-grid label,
 .admin-history-search{
@@ -2194,21 +2184,13 @@ body.modal-abierto{
   font-size: 12px;
   color: #777;
 }
-.admin-history-summary-users{
-}
-.admin-history-summary-users span{
-}
 .admin-history-card{
   padding: 0;
   overflow: hidden;
   border-left-width: 5px;
 }
-.admin-history-card.accion-creo{
-}
 .admin-history-card.accion-edito{
   border-left-color: #e3a008;
-}
-.admin-history-card.accion-elimino{
 }
 .admin-history-toggle{
   display: grid;
@@ -2216,22 +2198,12 @@ body.modal-abierto{
   align-items: center;
   gap: 10px;
 }
-.admin-history-action{
-}
-.accion-creo .admin-history-action{
-}
 .accion-edito .admin-history-action{
   background: #fff3cd;
   color: #7a5700;
 }
-.accion-elimino .admin-history-action{
-}
 
 
-.admin-history-detail{
-}
-.admin-history-detail p{
-}
 .admin-history-more{
   margin-top: 12px;
 }
@@ -2586,8 +2558,6 @@ body.modal-abierto{
 }
 
 /* Vista previa segura de importación del catálogo valuado */
-.admin-import-preview-modal{
-}
 .admin-import-preview-file{
   word-break: break-word;
 }
@@ -3485,35 +3455,6 @@ textarea:focus-visible,
   transition: opacity 0.14s ease;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .horario-cell::after{
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 9px);
-    transform: translate(-50%, 5px);
-    white-space: pre;
-    min-width: 145px;
-    background: var(--pro-panel, #fff);
-    color: var(--pro-text, #25272d);
-    border: 1px solid var(--pro-border, #e1e4ea);
-    border-radius: 10px;
-    padding: 9px 11px;
-    box-shadow: 0 12px 30px rgba(20, 25, 40, 0.18);
-    font-size: 11px;
-    font-weight: 700;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 30;
-    transition: 0.15s;
-  }
-  .horario-cell:hover::after{
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-
 
 @media (max-width: 700px) {
 
@@ -3833,8 +3774,6 @@ body.horarios-modo-edicion .horarios-table td{
 
 
 @media (max-width: 560px) {
-  .admin-permissions-grid{
-  }
 
 }
 
@@ -3987,9 +3926,6 @@ body.horarios-modo-edicion .horarios-table td{
   z-index: 3;
 }
 @media (max-width: 560px) {
-  #adminUsuarioModal,
-#adminSectorModal{
-  }
   #adminUsuarioModal .admin-user-modal,
 #adminSectorModal .admin-user-modal{
     max-width: none;
@@ -4536,12 +4472,8 @@ textarea,
   font-size: 22px;
   font-weight: 950;
 }
-.admin-user-modal-head h2{
-}
 .admin-user-modal-head > div:nth-child(2){
   min-width: 0;
-}
-.admin-user-modal-head span{
 }
 .admin-user-modal-head small{
   display: block;
@@ -4566,12 +4498,6 @@ textarea,
 .admin-form-section-title{
   flex-direction: column;
   margin-bottom: 10px;
-}
-.admin-form-section-title strong{
-}
-.admin-form-section-title span{
-}
-.admin-form-grid{
 }
 .admin-user-modal-v2 label small{
   font-weight: 500;
@@ -5537,8 +5463,6 @@ canvas{
 }
 
 /* V9.2.1 · Hotfix editor de usuarios: cabecera, contenido y acciones independientes */
-#adminUsuarioModal .admin-user-modal-v2{
-}
 #adminUsuarioModal .admin-user-modal-head{
   position: relative !important;
   inset: auto !important;
@@ -6695,8 +6619,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 }
 
 /* Modal de usuario: secciones respiradas, divisores claros y footer estable. */
-#adminUsuarioModal .admin-user-modal-v2{
-}
 #adminUsuarioModal .admin-user-modal-body{
   scrollbar-width: auto !important;
 }
@@ -6706,8 +6628,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 }
 #adminUsuarioModal .admin-form-section-title{
   gap: 4px !important;
-}
-#adminUsuarioModal .admin-form-grid{
 }
 #adminUsuarioModal .admin-user-modal label{
   margin: 0 !important;
@@ -6771,8 +6691,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 
 
 /* Editor de usuarios: una sola superficie limpia, sin cajas anidadas. */
-#adminUsuarioModal .admin-user-modal-v2{
-}
 #adminUsuarioModal .admin-user-modal-head{
   border: 0 !important;
   box-shadow: none !important;
@@ -6796,8 +6714,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 #adminUsuarioModal .admin-user-modal-body > .admin-form-section + fieldset,
 #adminUsuarioModal .admin-user-modal-body > fieldset + .admin-active-row{
   margin-top: 14px !important;
-}
-#adminUsuarioModal .admin-form-section-title{
 }
 #adminUsuarioModal .admin-form-section-title strong,
 #adminUsuarioModal .admin-permissions-fieldset legend{
@@ -6826,8 +6742,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 }
 #adminUsuarioModal .admin-permissions-fieldset legend{
   margin: 0 0 6px !important;
-}
-#adminUsuarioModal .admin-permissions-fieldset > p{
 }
 #adminUsuarioModal .admin-permissions-grid{
   align-items: stretch !important;
@@ -6996,15 +6910,11 @@ body:not(.horarios-modo-edicion) .horarios-content{
   background: #fff !important;
 }
 
-#adminUsuariosLista .admin-avatar{
-}
 
 
 #adminUsuariosLista .user-status{
   white-space: nowrap !important;
   text-align: center !important;
-}
-#adminUsuariosLista .admin-user-card-buttons{
 }
 #adminUsuariosLista .btn-editar-usuario,
 #adminUsuariosLista .btn-eliminar-usuario{
@@ -7024,9 +6934,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
   border: 1px solid #f1c8cb !important;
   background: #fff7f7 !important;
   color: #b4232d !important;
-}
-#adminUsuariosLista .btn-editar-usuario .app-icon,
-#adminUsuariosLista .btn-eliminar-usuario .app-icon{
 }
 #adminUsuarioModal .admin-user-modal-body > .danger-btn-soft{
   display: none !important;
@@ -7052,32 +6959,14 @@ body:not(.horarios-modo-edicion) .horarios-content{
 }
 
 /* v12.0.2 — Tarjetas compactas de usuarios y tareas */
-#adminUsuariosLista.admin-users-list{
-}
-#adminUsuariosLista .admin-user-card{
-}
-
-#adminUsuariosLista .admin-avatar{
-}
 
 
-#adminUsuariosLista .user-status{
-}
-#adminUsuariosLista .admin-user-card-buttons{
-}
-#adminUsuariosLista .btn-editar-usuario,
-#adminUsuariosLista .btn-eliminar-usuario{
-}
+
 #adminUsuariosLista .btn-eliminar-usuario{
   min-width: 34px !important;
 }
-#adminUsuariosLista .btn-editar-usuario .app-icon,
-#adminUsuariosLista .btn-eliminar-usuario .app-icon{
-}
 
 @media (max-width: 640px) {
-  #adminUsuariosLista .admin-user-card{
-  }
   
 
   #adminUsuariosLista .btn-editar-usuario,
@@ -7089,8 +6978,6 @@ body:not(.horarios-modo-edicion) .horarios-content{
 @media (max-width: 390px) {
 
 
-  #adminUsuariosLista .admin-user-card-buttons{
-  }
   
   
 }
@@ -7427,8 +7314,6 @@ html[data-theme="dark"] .notification-item.is-unread{
   align-items: center !important;
   justify-content: center !important;
 }
-#adminUsuarioModal .admin-user-modal-v2{
-}
 #adminUsuarioModal .admin-user-modal-head{
   text-align: left !important;
 }
@@ -7438,8 +7323,6 @@ html[data-theme="dark"] .notification-item.is-unread{
 
 
 
-#adminUsuarioModal .admin-user-modal-body{
-}
 #adminUsuarioModal .admin-form-section{
   border: 0 !important;
   box-shadow: none !important;
@@ -7475,8 +7358,6 @@ html[data-theme="dark"] .notification-item.is-unread{
   text-align: center !important;
   margin: 5px 0 13px !important;
 }
-#adminUsuarioModal .admin-permissions-grid{
-}
 #adminUsuarioModal .admin-permissions-grid label{
   flex-direction: column !important;
   justify-content: center !important;
@@ -7492,8 +7373,6 @@ html[data-theme="dark"] .notification-item.is-unread{
 #adminUsuarioModal .admin-active-row{
   width: 100% !important;
   justify-content: center !important;
-}
-#adminUsuarioModal .admin-modal-actions-sticky{
 }
 @media (max-width: 620px) {
   #adminUsuarioModal{
@@ -14973,13 +14852,7 @@ body.en-precios .precio-desktop-load-btn {
     line-height: 1.25 !important;
   }
 
-  #pantallaPrecios .precio-current-copy small {
-    font-size: 12px !important;
-  }
 
-  #pantallaPrecios .precio-current-value span {
-    font-size: 12px !important;
-  }
 
   #pantallaPrecios .precio-current-value b {
     font-size: 29px !important;
@@ -15009,9 +14882,6 @@ body.en-precios .precio-desktop-load-btn {
     line-height: 1.18 !important;
   }
 
-  #pantallaPrecios .precios-recent-copy small {
-    font-size: 12px !important;
-  }
 
   #pantallaPrecios .precios-recent-row > b {
     font-size: 12px !important;
@@ -15428,7 +15298,7 @@ html[data-theme="dark"] .admin-import-preview-modal .modal-actions{ border-color
 /* Carteles de oferta / Vencimientos · definición canónica V11 02/09/2026 */
 .venc-create-poster-btn{width:100%;margin-top:13px;min-height:58px;padding:10px 14px;display:flex;align-items:center;gap:11px;border:1px solid #ffc3cc;border-radius:11px;background:#fff7f8;color:var(--pro-red,#f02246);font:inherit;cursor:pointer;text-align:left}.venc-create-poster-btn .app-icon{width:20px;height:20px;flex:0 0 auto}.venc-create-poster-btn span{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}.venc-create-poster-btn strong{font-size:13px}.venc-create-poster-btn small{color:#7b8494;font-size:11px;font-weight:600}.venc-create-poster-btn>b{font-size:22px;font-weight:500}
 
-.offer-poster-screen{background:#f6f7f9!important;min-height:100%}
+.offer-poster-screen{background:var(--pro-bg,#f6f7f9)!important;min-height:100%}
 .offer-poster-shell{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 42px}
 .offer-poster-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px;margin-bottom:20px;width:100%}
 .offer-poster-header>div:first-child{min-width:0}.offer-poster-header h1{margin:3px 0 4px;font-size:28px;line-height:1.12;color:var(--pro-text,#101828)}.offer-poster-header p{margin:0;max-width:760px;color:var(--pro-muted,#667085);font-size:14px}.offer-poster-queue-badge{display:flex;align-items:center;gap:12px;padding:9px 13px;border:1px solid var(--pro-border,#dfe5ec);border-radius:11px;background:#fff}.offer-poster-queue-badge span{font-size:11px;color:var(--pro-muted,#667085);font-weight:700}.offer-poster-queue-badge strong{font-size:17px;color:var(--pro-red,#f02246)}
@@ -15701,6 +15571,103 @@ html[data-theme="dark"] .admin-import-preview-modal .modal-actions{ border-color
   #pantallaCartelOferta .offer-promo-option>b{font-size:12px}
 }
 
+/* Carteles de oferta · tema oscuro canónico 03/09/2026.
+   La vista previa SVG permanece blanca porque representa exactamente la impresión. */
+html[data-theme="dark"] #pantallaCartelOferta{
+  background:var(--pro-bg,#071321)!important;
+  color:var(--pro-text,#f7f9fc);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-poster-header h1,
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-copy h2,
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-title h2,
+html[data-theme="dark"] #pantallaCartelOferta .offer-preview-head h2,
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option>b,
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option>strong,
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-copy>div strong{
+  color:var(--pro-text,#f7f9fc);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-poster-header p,
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-copy>span,
+html[data-theme="dark"] #pantallaCartelOferta .offer-preview-head span,
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-copy>div,
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-copy>div b,
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-title p,
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option small,
+html[data-theme="dark"] #pantallaCartelOferta .offer-values-grid>label>span,
+html[data-theme="dark"] #pantallaCartelOferta .offer-field-help,
+html[data-theme="dark"] #pantallaCartelOferta .offer-result-box>span,
+html[data-theme="dark"] #pantallaCartelOferta .offer-queue-slot{
+  color:var(--pro-muted,#aab8ca);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-summary,
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-card,
+html[data-theme="dark"] #pantallaCartelOferta .offer-poster-preview-panel,
+html[data-theme="dark"] #pantallaCartelOferta .offer-poster-queue-badge{
+  background:var(--pro-panel,#122238);
+  border-color:var(--pro-border,#30445e);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option,
+html[data-theme="dark"] #pantallaCartelOferta .offer-money-input,
+html[data-theme="dark"] #pantallaCartelOferta .offer-values-grid>label>input[type="date"],
+html[data-theme="dark"] #pantallaCartelOferta .offer-queue-slot{
+  background:var(--pro-panel-2,#192d46);
+  border-color:var(--pro-border,#30445e);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-money-input input,
+html[data-theme="dark"] #pantallaCartelOferta .offer-values-grid>label>input[type="date"]{
+  color:var(--pro-text,#f7f9fc);
+  color-scheme:dark;
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-money-input>b{
+  color:var(--pro-muted,#aab8ca);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option::after{
+  background:var(--pro-panel-2,#192d46);
+  border-color:var(--pro-border-strong,#405772);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option.is-selected{
+  background:color-mix(in srgb,var(--pro-red,#ff365b) 13%,var(--pro-panel-2,#192d46));
+  border-color:var(--pro-red,#ff365b);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-promo-option.is-selected::after{
+  border-color:var(--pro-red,#ff365b);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-result-box{
+  background:color-mix(in srgb,var(--pro-red,#ff365b) 10%,var(--pro-panel-2,#192d46));
+  border-color:color-mix(in srgb,var(--pro-red,#ff365b) 48%,var(--pro-border,#30445e));
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-result-box>strong{
+  color:#ff7790;
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-preview-head small{
+  background:var(--pro-panel-2,#192d46);
+  color:var(--pro-muted,#aab8ca);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-print-spec{
+  background:color-mix(in srgb,#2878d7 12%,var(--pro-panel-2,#192d46));
+  border-color:color-mix(in srgb,#2878d7 45%,var(--pro-border,#30445e));
+  color:var(--pro-text,#f7f9fc);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-print-spec span{
+  color:var(--pro-muted,#aab8ca);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-actions{
+  border-top-color:var(--pro-border,#30445e);
+}
+
+/* El acceso al configurador dentro del editor de vencimientos usa la misma paleta oscura. */
+html[data-theme="dark"] .venc-create-poster-btn{
+  background:color-mix(in srgb,var(--pro-red,#ff365b) 10%,var(--pro-panel-2,#192d46));
+  border-color:color-mix(in srgb,var(--pro-red,#ff365b) 48%,var(--pro-border,#30445e));
+  color:var(--pro-red,#ff365b);
+}
+html[data-theme="dark"] .venc-create-poster-btn small{
+  color:var(--pro-muted,#aab8ca);
+}
+html[data-theme="dark"] .venc-create-poster-btn:hover,
+html[data-theme="dark"] .venc-create-poster-btn:focus-visible{
+  background:color-mix(in srgb,var(--pro-red,#ff365b) 16%,var(--pro-panel-2,#192d46));
+}
 
 /* Vencimientos: stock separado por ubicación (Salón + Depósito = Total). */
 .venc-edit-stock-salon { grid-column:1 !important; }
@@ -15737,4 +15704,55 @@ html[data-theme="dark"] .venc-stock-total {
   .venc-edit-stock-salon,
   .venc-edit-stock-deposito,
   .venc-stock-total { grid-column:1 !important; }
+}
+
+
+/* Carteles de oferta · cierre visual tema oscuro + móvil 03/09/2026.
+   Mantener una sola capa final para esta pantalla. El SVG de impresión no se altera. */
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-actions .secondary-btn{
+  background:var(--pro-panel-2,#192d46) !important;
+  border-color:var(--pro-border,#30445e) !important;
+  color:var(--pro-text,#f7f9fc) !important;
+  box-shadow:none !important;
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-actions .secondary-btn:hover,
+html[data-theme="dark"] #pantallaCartelOferta .offer-config-actions .secondary-btn:focus-visible{
+  background:color-mix(in srgb,var(--pro-panel-2,#192d46) 82%,#fff) !important;
+  border-color:var(--pro-border-strong,#405772) !important;
+  color:var(--pro-text,#f7f9fc) !important;
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-queue-slot.is-filled{
+  color:var(--pro-text,#f7f9fc);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-queue-slot-copy strong{
+  color:var(--pro-text,#f7f9fc);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-queue-slot-copy span{
+  color:var(--pro-muted,#aab8ca);
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-product-icon{
+  background:color-mix(in srgb,var(--pro-red,#ff365b) 12%,var(--pro-panel-2,#192d46));
+}
+html[data-theme="dark"] #pantallaCartelOferta .offer-poster-queue-badge{
+  color:var(--pro-text,#f7f9fc);
+}
+
+/* En móvil esta pantalla sigue el patrón general de la app: sin título/bajada de página.
+   Se conserva el contador de carteles porque es un control funcional. */
+@media (max-width:700px){
+  #pantallaCartelOferta .offer-poster-shell{
+    padding-top:18px;
+  }
+  #pantallaCartelOferta .offer-poster-header{
+    display:block;
+    margin-bottom:16px;
+  }
+  #pantallaCartelOferta .offer-poster-header>div:first-child{
+    display:none !important;
+  }
+  #pantallaCartelOferta .offer-poster-queue-badge{
+    width:max-content;
+    max-width:100%;
+    margin:0;
+  }
 }

@@ -2659,3 +2659,36 @@ body.en-horarios.horarios-vista-config #horariosOrdenEstado.is-pending {
   }
 }
 
+
+/* Horarios · tooltip completo de turno 03/09/2026.
+   Se monta fuera de la tabla para que nunca quede recortado por sus celdas. */
+.horarios-turno-tooltip {
+  position: fixed;
+  z-index: 10050;
+  max-width: min(300px, calc(100vw - 20px));
+  padding: 9px 12px;
+  border: 1px solid var(--horarios-border, var(--pro-border, #dfe5ec));
+  border-radius: 9px;
+  background: var(--horarios-surface, var(--pro-panel, #fff));
+  color: var(--horarios-text, var(--pro-text, #101828));
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .22);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 750;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(3px);
+  pointer-events: none;
+  transition: opacity .12s ease, transform .12s ease;
+}
+.horarios-turno-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+html[data-theme="dark"] .horarios-turno-tooltip {
+  border-color: var(--pro-border-strong, #405772);
+  background: var(--pro-panel-2, #192d46);
+  color: var(--pro-text, #f7f9fc);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .34);
+}
