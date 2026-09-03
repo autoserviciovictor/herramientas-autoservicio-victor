@@ -19,7 +19,7 @@ assert(app.includes('autoservicio_carteles_oferta_v1'), "Falta persistencia por 
 assert(app.includes('if (items.length < 1)') && app.includes('Array.from({ length: CARTEL_OFERTA_MAX }'), "La impresión debe permitir de 1 a 4 carteles conservando las 4 posiciones");
 assert(app.includes('poster-slot-1') && app.includes('poster-slot-4') && app.includes('width:135mm!important;height:78mm!important'), "Las 4 posiciones y dimensiones físicas 135x78 mm deben ser fijas");
 assert(app.includes('@page{size:A4 landscape;margin:0!important}'), "La salida debe fijar A4 horizontal físico sin márgenes CSS");
-assert(app.includes('width:296mm!important;height:209mm!important') && app.includes('position:fixed!important'), "La hoja debe quedar dentro de una sola página A4 sin overflow por redondeo");
+assert(app.includes('width:296mm!important;height:174mm!important') && app.includes('position:absolute!important'), "La hoja imprimible debe quedar en un único flujo físico sin position fixed ni segunda página");
 assert(html.includes('id="cartelOfertaPreview" class="instant-offer-card"'), "Falta host único de vista previa");
 assert(!html.includes('previewCartelProducto') && !html.includes('previewCartelPromo'), "No debe quedar una segunda maqueta HTML del cartel");
 assert(app.includes('function svgCartelOferta('), "Falta fuente única SVG para el cartel");
@@ -54,4 +54,4 @@ assert(css.includes('#pantallaCartelOferta .offer-promo-option>b') && css.includ
 assert(css.includes('#pantallaCartelOferta .offer-product-copy>div') && css.includes('gap:5px 9px'), "Los metadatos del producto deben quedar separados y legibles");
 assert(css.includes('#pantallaCartelOferta .offer-money-input') && css.includes('min-height:44px'), "Los campos de valores deben usar altura canónica");
 assert(css.includes('#pantallaCartelOferta .offer-result-box>strong'), "El resultado debe tener jerarquía tipográfica definida");
-console.log("Carteles oferta SVG intacto + impresión A4 una página/logo incrustado 03/09: OK");
+console.log("Carteles oferta SVG intacto + impresión A4 una sola página real/logo incrustado 03/09: OK");

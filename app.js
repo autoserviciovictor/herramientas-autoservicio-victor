@@ -3638,17 +3638,17 @@ async function imprimirHojaCartelesOferta() {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title></title><style>
 @page{size:A4 landscape;margin:0!important}
 *{box-sizing:border-box}
-html,body{margin:0!important;padding:0!important;width:296mm!important;height:209mm!important;min-width:296mm!important;min-height:209mm!important;background:#fff!important;overflow:hidden!important}
+html,body{margin:0!important;padding:0!important;width:296mm!important;height:174mm!important;min-width:296mm!important;background:#fff!important;overflow:hidden!important}
 body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;position:relative!important}
-.sheet{position:fixed!important;left:0!important;top:0!important;width:296mm!important;height:209mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important;break-after:avoid!important;page-break-after:avoid!important}
+.sheet{position:absolute!important;left:0!important;top:0!important;width:296mm!important;height:174mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
 .poster-svg{position:absolute!important;width:135mm!important;height:78mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
-.poster-slot-1{left:10.5mm!important;top:23.5mm!important}
-.poster-slot-2{left:151.5mm!important;top:23.5mm!important}
-.poster-slot-3{left:10.5mm!important;top:107.5mm!important}
-.poster-slot-4{left:151.5mm!important;top:107.5mm!important}
+.poster-slot-1{left:10.5mm!important;top:6mm!important}
+.poster-slot-2{left:151.5mm!important;top:6mm!important}
+.poster-slot-3{left:10.5mm!important;top:88mm!important}
+.poster-slot-4{left:151.5mm!important;top:88mm!important}
 .poster-svg.empty{visibility:hidden!important}
 .poster-svg svg{display:block!important;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
-@media print{html,body{width:296mm!important;height:209mm!important;overflow:hidden!important}.sheet{position:fixed!important;overflow:hidden!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
+@media print{html,body{width:296mm!important;height:174mm!important;overflow:hidden!important}.sheet{position:absolute!important;overflow:hidden!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
 </style></head><body><main class="sheet">${posiciones}</main></body></html>`;
 
   // Imprimir desde un iframe temporal evita sacar al usuario de la aplicación
