@@ -7,7 +7,7 @@ const {
 } = require("./db-catalogo-publico");
 
 const OFF_TIMEOUT_MS = 6500;
-const GOOGLE_TIMEOUT_MS = 7000;
+const BRAVE_TIMEOUT_MS = 7000;
 const IMAGEN_TIMEOUT_MS = 8000;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const MAX_LOTE = 60;
@@ -30,7 +30,7 @@ function urlHttps(valor = "") {
   }
 }
 
-async function fetchJson(url, timeoutMs) {
+async function fetchJson(url, timeoutMs, extraHeaders = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -39,6 +39,7 @@ async function fetchJson(url, timeoutMs) {
       headers: {
         Accept: "application/json",
         "User-Agent": "AutoservicioVictorCatalogo/1.0 (product-image-matching)",
+        ...extraHeaders,
       },
     });
     if (!r.ok) return null;
@@ -179,22 +180,27 @@ async function normalizarImagenCatalogo(buffer) {
 
 async function validarCandidato(candidato) {
   if (!candidato?.url) return null;
-  try {
-    const buffer = await descargarImagen(candidato.url);
-    const calidad = await analizarCalidadImagen(buffer);
-    if (!calidad.acepta) return null;
-    const normalizada = await normalizarImagenCatalogo(buffer);
-    return {
-      ...candidato,
-      puntaje: Math.max(Number(candidato.puntaje) || 0, calidad.score || 0),
-      calidadVerificada: true,
-      calidad,
-      normalizada,
-      mime: "image/jpeg",
-    };
-  } catch {
-    return null;
+  const urls = [...new Set([candidato.url, candidato.fallbackUrl].map(urlHttps).filter(Boolean))];
+  for (const url of urls) {
+    try {
+      const buffer = await descargarImagen(url);
+      const calidad = await analizarCalidadImagen(buffer);
+      if (!calidad.acepta) continue;
+      const normalizada = await normalizarImagenCatalogo(buffer);
+      return {
+        ...candidato,
+        url,
+        puntaje: Math.max(Number(candidato.puntaje) || 0, calidad.score || 0),
+        calidadVerificada: true,
+        calidad,
+        normalizada,
+        mime: "image/jpeg",
+      };
+    } catch {
+      // Si el sitio original bloquea la descarga, intentamos la miniatura proxy de Brave.
+    }
   }
+  return null;
 }
 
 function candidatosOpenFacts(data, fuente) {
@@ -233,46 +239,68 @@ async function buscarPorEAN(codigo) {
   return null;
 }
 
-async function buscarGoogle(producto) {
-  const apiKey = String(process.env.GOOGLE_CSE_API_KEY || "").trim();
-  const cx = String(process.env.GOOGLE_CSE_CX || "").trim();
-  if (!apiKey || !cx) return null;
-  const consulta = [producto.marca, producto.nombre, producto.presentacion].filter(Boolean).join(" ").trim();
-  if (!consulta) return null;
-  const consultaCalidad = [producto.codigo, consulta, 'producto fondo blanco solo producto packshot'].filter(Boolean).join(" ").trim();
+async function buscarBrave(producto) {
+  const apiKey = String(process.env.BRAVE_SEARCH_API_KEY || "").trim();
+  if (!apiKey) return null;
+
+  const descripcion = [producto.marca, producto.nombre, producto.presentacion].filter(Boolean).join(" ").trim();
+  if (!descripcion) return null;
+
+  const consulta = [
+    codigoEAN(producto.codigo),
+    descripcion,
+    "producto fondo blanco solo producto packshot envase",
+  ].filter(Boolean).join(" ").trim();
+
   const params = new URLSearchParams({
-    key: apiKey,
-    cx,
-    searchType: "image",
-    safe: "active",
-    num: "10",
-    imgType: "photo",
-    imgSize: "large",
-    q: consultaCalidad.slice(0, 220),
+    q: consulta.slice(0, 380),
+    country: "AR",
+    search_lang: "es",
+    safesearch: "strict",
+    count: "30",
+    spellcheck: "true",
   });
-  const data = await fetchJson(`https://www.googleapis.com/customsearch/v1?${params}`, GOOGLE_TIMEOUT_MS);
-  const items = Array.isArray(data?.items) ? data.items : [];
+
+  const data = await fetchJson(
+    `https://api.search.brave.com/res/v1/images/search?${params}`,
+    BRAVE_TIMEOUT_MS,
+    { "X-Subscription-Token": apiKey }
+  );
+
+  const items = Array.isArray(data?.results) ? data.results : [];
   const candidatos = items.map((item) => {
-    const imagen = urlHttps(item?.link);
-    const w = Number(item?.image?.width) || 0;
-    const h = Number(item?.image?.height) || 0;
-    if (!imagen || w < 400 || h < 400) return null;
-    const ratio = w / h;
-    if (ratio < 0.45 || ratio > 2.2) return null;
+    const imagen = urlHttps(item?.properties?.url);
+    const miniatura = urlHttps(item?.thumbnail?.src);
+    if (!imagen && !miniatura) return null;
+
+    const w = Number(item?.properties?.width) || Number(item?.thumbnail?.width) || 0;
+    const h = Number(item?.properties?.height) || Number(item?.thumbnail?.height) || 0;
+    if (w && h && (w < 400 || h < 400)) return null;
+
+    const ratio = w && h ? w / h : 1;
+    if (ratio < 0.42 || ratio > 2.35) return null;
+
+    const confianza = String(item?.confidence || "").toLowerCase();
+    const bonusConfianza = confianza === "high" ? 8 : confianza === "medium" ? 4 : 0;
     const cercaniaCuadrado = 1 - Math.min(1, Math.abs(1 - ratio));
+    const dominio = String(item?.source || item?.meta_url?.hostname || "web").trim();
+
     return {
-      url: imagen,
-      fuente: "Google Programmable Search · fondo blanco",
-      titulo: String(item?.title || consulta).slice(0, 220),
+      url: imagen || miniatura,
+      fallbackUrl: imagen && miniatura && miniatura !== imagen ? miniatura : "",
+      fuente: `Brave Search · ${dominio}`.slice(0, 220),
+      titulo: String(item?.title || descripcion).trim().slice(0, 220),
       marca: producto.marca || "",
       presentacion: producto.presentacion || "",
-      puntaje: 70 + Math.round(cercaniaCuadrado * 8),
+      puntaje: 70 + bonusConfianza + Math.round(cercaniaCuadrado * 7),
       exacta: false,
       calidadVerificada: false,
     };
   }).filter(Boolean);
 
-  for (const candidato of candidatos) {
+  // Limitamos las descargas de candidatos: la búsqueda puede devolver hasta 30,
+  // pero validar demasiadas imágenes hace innecesariamente lenta cada operación.
+  for (const candidato of candidatos.slice(0, 12)) {
     const valido = await validarCandidato(candidato);
     if (valido) return valido;
   }
@@ -283,10 +311,10 @@ async function buscarImagenProducto(codigo, { guardar = true } = {}) {
   const producto = await obtenerProductoCatalogoAdminDb(codigo);
   if (!producto) throw new Error("Producto no encontrado");
 
-  // Primero intentamos una búsqueda comercial con fondo blanco. Si no hay Google CSE,
-  // el EAN sigue siendo útil, pero solo aceptamos la foto si pasa el control automático.
-  let candidato = await buscarGoogle(producto);
-  if (!candidato) candidato = await buscarPorEAN(producto.codigo);
+  // Prioridad 1: coincidencia exacta por EAN en bases de productos.
+  // Prioridad 2: búsqueda comercial por nombre/marca/presentación con Brave Search.
+  let candidato = await buscarPorEAN(producto.codigo);
+  if (!candidato) candidato = await buscarBrave(producto);
 
   if (!guardar) return { producto, candidato };
 
@@ -309,10 +337,10 @@ async function buscarImagenProducto(codigo, { guardar = true } = {}) {
     };
   }
 
-  const googleConfigurado = Boolean(String(process.env.GOOGLE_CSE_API_KEY || "").trim() && String(process.env.GOOGLE_CSE_CX || "").trim());
-  const error = googleConfigurado
-    ? "No se encontró una imagen que cumpla fondo blanco, producto completo y buena resolución."
-    : "No se encontró una imagen del EAN que cumpla fondo blanco y buena calidad. La búsqueda comercial de Google necesita GOOGLE_CSE_API_KEY y GOOGLE_CSE_CX en Render.";
+  const braveConfigurado = Boolean(String(process.env.BRAVE_SEARCH_API_KEY || "").trim());
+  const error = braveConfigurado
+    ? "No se encontró una imagen que cumpla fondo blanco, producto completo y buena resolución. Podés pegar una URL manual o volver a intentar más adelante."
+    : "No se encontró una imagen válida por EAN. Para ampliar la búsqueda por nombre, marca y presentación configurá BRAVE_SEARCH_API_KEY en Render.";
   await guardarResultadoImagenCatalogoDb(producto.codigo, {
     estado: "sin_imagen",
     candidatoUrl: "",
@@ -323,7 +351,7 @@ async function buscarImagenProducto(codigo, { guardar = true } = {}) {
     candidatoMime: "",
     error,
   });
-  return { encontrado: false, confirmado: false, candidato: null, mensaje: error, producto: await obtenerProductoCatalogoAdminDb(producto.codigo) };
+  return { encontrado: false, confirmado: false, candidato: null, mensaje: error, requiereConfiguracion: !braveConfigurado, producto: await obtenerProductoCatalogoAdminDb(producto.codigo) };
 }
 
 async function obtenerImagenNormalizadaProducto(codigo, tipo = "candidato") {

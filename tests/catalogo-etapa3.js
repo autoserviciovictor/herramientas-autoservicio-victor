@@ -17,7 +17,7 @@ assert(server.includes('/admin/catalogo/imagenes/buscar-lote'), "falta endpoint 
 assert(server.includes('/admin/catalogo/productos/:codigo/imagen/confirmar'), "falta endpoint confirmar");
 assert(imagenes.includes("openfoodfacts.org"), "falta búsqueda por EAN en Open Food Facts");
 assert(imagenes.includes("openproductsfacts.org"), "falta fallback Open Products Facts");
-assert(imagenes.includes("GOOGLE_CSE_API_KEY"), "falta proveedor opcional Google CSE");
+assert(imagenes.includes("BRAVE_SEARCH_API_KEY"), "falta proveedor comercial Brave Search");
 assert(imagenes.includes("CONCURRENCIA = 3"), "falta límite de concurrencia");
 assert(admin.includes("catalogFiltroImagen"), "falta filtro de imágenes");
 assert(admin.includes("buscarImagenesLote"), "falta acción por lote");

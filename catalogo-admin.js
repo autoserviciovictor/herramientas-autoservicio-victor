@@ -272,7 +272,7 @@ async function buscarImagenProductoActual() {
     await cargarEstado();
     if (!data.encontrado && status) {
       status.textContent = data.mensaje || data.producto?.errorImagen || "No se encontró una imagen que cumpla las condiciones del catálogo.";
-      status.className = "catalog-image-search-status error";
+      status.className = `catalog-image-search-status ${data.requiereConfiguracion ? "aviso" : "error"}`;
     }
   } catch (e) {
     if (status) { status.textContent = e.message; status.className = "catalog-image-search-status error"; }
