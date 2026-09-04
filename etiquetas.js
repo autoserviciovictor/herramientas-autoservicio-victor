@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
 import { obtenerJsonCacheado } from "./api-cache.js?v=1960-d21-cierre-etapa6-010926";
 import { ordenarPorBusqueda } from "./search.js?v=1960-d21-cierre-etapa6-010926";
@@ -61,7 +62,7 @@ async function guardarListaServidor({ inmediato = true } = {}) {
   // llegar al servidor fuera de orden y dejar guardado un snapshot anterior.
   const trabajo = async () => {
     try {
-      const respuesta = await fetch("/etiquetas/lista", {
+      const respuesta = await fetch(`${API_BASE_URL}/etiquetas/lista`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: cuerpo,
@@ -106,7 +107,7 @@ async function cargarListaUsuario(usuario = window.AutoservicioAuth?.getUsuario?
   render();
 
   try {
-    const respuesta = await fetch("/etiquetas/lista", { cache: "no-store" });
+    const respuesta = await fetch(`${API_BASE_URL}/etiquetas/lista`, { cache: "no-store" });
     if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
     const data = await respuesta.json();
     if (secuencia !== cargaUsuarioSecuencia || nuevaClave !== claveUsuarioActiva) return;
