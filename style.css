@@ -16206,3 +16206,68 @@ html[data-theme="dark"] #pantallaBano .bano-reassign-btn:not(.is-hero):hover{
     display:none;
   }
 }
+
+
+/* Etiquetas · feedback de escaneo + carga limpia 04/09/2026 */
+/* El splash debe cubrir también los FAB: nunca se muestran sobre la pantalla de carga. */
+.splash{
+  z-index:5000 !important;
+}
+
+#etiquetasCameraCard .venc-scanner-stage{
+  position:relative;
+}
+.etiquetas-scan-feedback{
+  position:absolute;
+  left:50%;
+  bottom:58px;
+  z-index:8;
+  width:min(88%,360px);
+  transform:translate(-50%,12px);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  padding:11px 14px;
+  border-radius:14px;
+  background:rgba(12,126,72,.94);
+  color:#fff;
+  text-align:center;
+  box-shadow:0 10px 28px rgba(0,0,0,.28);
+  transition:opacity .16s ease, transform .16s ease, visibility .16s ease;
+}
+.etiquetas-scan-feedback.mostrar{
+  opacity:1;
+  visibility:visible;
+  transform:translate(-50%,0);
+}
+.etiquetas-scan-feedback.error{
+  background:rgba(190,42,51,.95);
+}
+.etiquetas-scan-feedback strong{
+  font-size:14px;
+  line-height:1.2;
+  font-weight:800;
+}
+.etiquetas-scan-feedback span{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:11.5px;
+  line-height:1.25;
+  font-weight:650;
+}
+@media (max-width:700px){
+  .etiquetas-scan-feedback{
+    bottom:52px;
+    width:calc(100% - 28px);
+    padding:12px 14px;
+    border-radius:13px;
+  }
+  .etiquetas-scan-feedback strong{font-size:15px;}
+  .etiquetas-scan-feedback span{font-size:12px;}
+}

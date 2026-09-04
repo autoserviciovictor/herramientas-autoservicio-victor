@@ -10,6 +10,7 @@ let cargandoCatalogo = null;
 let items = [];
 let scannerAbierto = false;
 let bloqueoLecturaHasta = 0;
+let temporizadorFeedbackScanner = null;
 let claveUsuarioActiva = "";
 
 const STORAGE_ETIQUETAS_PREFIX = "autoservicio:etiquetas:v1:";
@@ -219,18 +220,55 @@ function renderSugerencias(lista) {
 async function agregarDesdeEntrada(valor) {
   await cargarCatalogo();
   const q = String(valor || "").trim();
-  if (!q) return false;
+  if (!q) return null;
   const exacto = buscarExacto(q);
   if (exacto) {
     agregarProducto(exacto);
-    return true;
+    return exacto;
   }
   const encontrados = buscar(q, 1);
   if (encontrados.length === 1) {
     agregarProducto(encontrados[0]);
-    return true;
+    return encontrados[0];
   }
-  return false;
+  return null;
+}
+
+function mostrarFeedbackScanner(producto) {
+  const stage = $("etiquetasCameraCard")?.querySelector(".venc-scanner-stage");
+  if (!stage) return;
+  let feedback = $("etiquetasScanFeedback");
+  if (!feedback) {
+    feedback = document.createElement("div");
+    feedback.id = "etiquetasScanFeedback";
+    feedback.className = "etiquetas-scan-feedback";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+    const titulo = document.createElement("strong");
+    const detalle = document.createElement("span");
+    feedback.append(titulo, detalle);
+    stage.appendChild(feedback);
+  }
+
+  const titulo = feedback.querySelector("strong");
+  const detalle = feedback.querySelector("span");
+  const encontrado = Boolean(producto);
+  if (titulo) titulo.textContent = encontrado ? "✓ Producto agregado" : "Producto no encontrado";
+  if (detalle) detalle.textContent = encontrado
+    ? String(producto.articulo || producto.codigo || "Producto")
+    : "El código fue leído, pero no está en el catálogo.";
+
+  feedback.classList.toggle("error", !encontrado);
+  feedback.classList.remove("mostrar");
+  void feedback.offsetWidth;
+  feedback.classList.add("mostrar");
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate(encontrado ? [55, 35, 55] : 90); } catch {}
+  }
+
+  clearTimeout(temporizadorFeedbackScanner);
+  temporizadorFeedbackScanner = setTimeout(() => feedback?.classList.remove("mostrar"), 1200);
 }
 
 function resetearCargaScanner() {
@@ -246,6 +284,9 @@ function resetearCargaScanner() {
     error.classList.add("oculto");
   }
   ocultarSugerenciasScanner();
+  clearTimeout(temporizadorFeedbackScanner);
+  temporizadorFeedbackScanner = null;
+  $("etiquetasScanFeedback")?.classList.remove("mostrar");
 }
 
 function ocultarSugerenciasScanner() {
@@ -317,7 +358,8 @@ async function iniciarCamaraEtiquetas() {
     await iniciarScanner("videoEtiquetas", async (codigo) => {
       if (!scannerAbierto || Date.now() < bloqueoLecturaHasta) return;
       bloqueoLecturaHasta = Date.now() + 900;
-      await agregarDesdeEntrada(codigo);
+      const producto = await agregarDesdeEntrada(codigo);
+      mostrarFeedbackScanner(producto);
     });
   } catch (err) {
     detenerScanner();
