@@ -75,7 +75,7 @@ const {
   guardarImagenManualCatalogoDb,
   quitarImagenCatalogoDb,
 } = require("./db-catalogo-publico");
-const { buscarImagenProducto, buscarImagenesLote } = require("./catalogo-imagenes");
+const { buscarImagenProducto, buscarImagenesLote, obtenerImagenNormalizadaProducto } = require("./catalogo-imagenes");
 const {
   asegurarEsquemaVencimientos,
   listarVencimientosDb,
@@ -1599,6 +1599,22 @@ app.post("/admin/catalogo/imagenes/buscar-lote", requerirAdministrador, async (r
   } catch (error) {
     console.error("Error buscando imágenes por lote:", error);
     res.status(error.status || 500).json({ ok: false, mensaje: error.message || "No se pudo procesar el lote de imágenes" });
+  }
+});
+
+app.get("/admin/catalogo/productos/:codigo/imagen/contenido", requerirAdministrador, async (req, res) => {
+  try {
+    const tipo = req.query?.tipo === "confirmada" ? "confirmada" : "candidato";
+    const imagen = await obtenerImagenNormalizadaProducto(req.params.codigo, tipo);
+    res.set({
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "private, max-age=300",
+      "Content-Disposition": "inline; filename=producto-catalogo.jpg",
+    });
+    res.send(imagen);
+  } catch (error) {
+    console.error("Error preparando vista previa normalizada del catálogo:", error);
+    res.status(error.status || 422).json({ ok: false, mensaje: error.message || "No se pudo preparar la vista previa" });
   }
 });
 

@@ -12,6 +12,7 @@ const estado = {
   rubros: [],
   busquedaTimer: null,
   cargando: false,
+  imagenPreviewObjectUrl: "",
 };
 
 const esc = (v = "") => String(v).replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -25,6 +26,22 @@ async function api(ruta, opciones = {}) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok || data.ok === false) throw new Error(data.mensaje || "No se pudo completar la operación");
   return data;
+}
+
+async function apiBlob(ruta) {
+  const r = await fetch(`${API_BASE_URL}${ruta}`, { cache: "no-store" });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.mensaje || "No se pudo descargar la imagen");
+  }
+  return r.blob();
+}
+
+function liberarPreviewImagen() {
+  if (estado.imagenPreviewObjectUrl) {
+    URL.revokeObjectURL(estado.imagenPreviewObjectUrl);
+    estado.imagenPreviewObjectUrl = "";
+  }
 }
 
 function mensaje(texto = "", tipo = "") {
@@ -180,24 +197,48 @@ function renderImagenProducto(p = {}) {
   const confirmar = $("catalogProductoConfirmarImagen");
   const quitar = $("catalogProductoQuitarImagen");
   const estadoEl = $("catalogProductoEstadoImagen");
+  const status = $("catalogProductoImagenEstadoBusqueda");
   const candidata = p.candidatoImagen || "";
   const imagen = p.imagen || "";
-  const mostrada = candidata || imagen;
   if (estadoEl) estadoEl.textContent = etiquetaEstadoImagen(p.estadoImagen);
   if (input) input.value = imagen || candidata || "";
-  if (preview) {
-    preview.innerHTML = mostrada
-      ? `<img src="${esc(mostrada)}" alt="Vista previa de ${esc(p.nombre || "producto")}" referrerpolicy="no-referrer" />`
-      : '<span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small>';
-  }
   if (confirmar) confirmar.classList.toggle("oculto", !candidata);
   if (quitar) quitar.classList.toggle("oculto", !imagen && !candidata);
   if (meta) {
-    if (candidata) meta.textContent = `Candidata: ${p.candidatoFuente || "fuente automática"}${p.candidatoPuntaje ? ` · coincidencia ${p.candidatoPuntaje}%` : ""}`;
+    if (candidata) meta.textContent = `Candidata: ${p.candidatoFuente || "fuente automática"}${p.candidatoPuntaje ? ` · calidad/coincidencia ${p.candidatoPuntaje}%` : ""}`;
     else if (imagen) meta.textContent = `Fuente: ${p.fuenteImagen || "configurada"}`;
     else if (p.errorImagen) meta.textContent = p.errorImagen;
     else meta.textContent = "Todavía no se buscó una imagen para este producto.";
   }
+
+  liberarPreviewImagen();
+  if (!preview) return;
+  if (!candidata && !imagen) {
+    preview.innerHTML = '<span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small>';
+    return;
+  }
+
+  preview.innerHTML = '<span class="catalog-image-preview-loading">Preparando vista previa…</span>';
+  const codigo = p.codigo || $("catalogProductoModal")?.dataset.codigo || "";
+  const tipo = candidata ? "candidato" : "confirmada";
+  apiBlob(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/contenido?tipo=${tipo}`)
+    .then((blob) => {
+      if (!preview.isConnected) return;
+      liberarPreviewImagen();
+      estado.imagenPreviewObjectUrl = URL.createObjectURL(blob);
+      preview.innerHTML = `<img src="${estado.imagenPreviewObjectUrl}" alt="Vista previa normalizada de ${esc(p.nombre || "producto")}" />`;
+      if (status && candidata) {
+        status.textContent = "Imagen descargada y normalizada a 600×600 con fondo blanco. Revisala antes de confirmar.";
+        status.className = "catalog-image-search-status ok";
+      }
+    })
+    .catch((error) => {
+      preview.innerHTML = '<span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>No se pudo mostrar</small>';
+      if (status) {
+        status.textContent = error.message || "No se pudo descargar la vista previa.";
+        status.className = "catalog-image-search-status error";
+      }
+    });
 }
 
 async function recargarProductoAbierto() {
@@ -219,16 +260,22 @@ async function buscarImagenProductoActual() {
   const codigo = $("catalogProductoModal")?.dataset.codigo;
   if (!codigo) return;
   const boton = $("catalogProductoBuscarImagen");
+  const status = $("catalogProductoImagenEstadoBusqueda");
   boton.disabled = true;
-  estadoBusquedaImagen("Buscando imagen… Puede demorar unos segundos.", "buscando");
+  if (status) {
+    status.textContent = "Buscando una imagen con fondo blanco, producto completo y buena resolución…";
+    status.className = "catalog-image-search-status buscando";
+  }
   try {
     const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/buscar`, { method: "POST" });
     renderImagenProducto(data.producto || {});
     await cargarEstado();
-    if (data.encontrado) estadoBusquedaImagen("Imagen candidata encontrada. Revisala antes de confirmarla.", "ok");
-    else estadoBusquedaImagen("No se encontró una imagen automática para este producto.", "error");
+    if (!data.encontrado && status) {
+      status.textContent = data.mensaje || data.producto?.errorImagen || "No se encontró una imagen que cumpla las condiciones del catálogo.";
+      status.className = "catalog-image-search-status error";
+    }
   } catch (e) {
-    estadoBusquedaImagen(e.message || "No se pudo buscar la imagen.", "error");
+    if (status) { status.textContent = e.message; status.className = "catalog-image-search-status error"; }
   } finally {
     boton.disabled = false;
   }

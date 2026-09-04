@@ -120,3 +120,5 @@
 .catalog-image-search-status.buscando{background:#f2f4f7;color:#475467;border:1px solid #e4e7ec}
 .catalog-image-search-status.ok{background:#ecfdf3;color:#067647;border:1px solid #abefc6}
 .catalog-image-search-status.error{background:#fff1f3;color:#b42318;border:1px solid #fecdd6}
+
+.catalog-image-preview-loading{font-size:.72rem;color:#667085;font-weight:700;text-align:center;padding:12px}
