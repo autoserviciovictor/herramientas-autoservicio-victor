@@ -280,6 +280,10 @@ function renderSugerenciasScanner(resultados) {
   });
 }
 
+function esVistaMovil() {
+  return window.matchMedia?.("(max-width: 700px)")?.matches === true;
+}
+
 async function abrirScanner() {
   if (scannerAbierto) return;
   const modal = $("etiquetasScannerModal");
@@ -288,6 +292,12 @@ async function abrirScanner() {
   scannerAbierto = true;
   resetearCargaScanner();
   await cargarCatalogo().catch(() => {});
+
+  // En celular, igual que el resto de los módulos, el FAB abre directamente
+  // el visor de cámara. En escritorio se conserva la pantalla previa.
+  if (esVistaMovil() && scannerAbierto) {
+    await iniciarCamaraEtiquetas();
+  }
 }
 
 async function iniciarCamaraEtiquetas() {
