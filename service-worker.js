@@ -25,6 +25,7 @@ const APP_SHELL = [
   "./config.js?v=1960-d21-cierre-etapa6-010926",
   "./excel.js?v=1960-d21-cierre-etapa6-010926",
   "./scanner.js?v=1960-d21-cierre-etapa6-010926",
+  "./etiquetas.js?v=1960-d21-cierre-etapa6-010926",
   "./product-loader.js?v=1960-d21-cierre-etapa6-010926",
   "./reposicion.js?v=1960-d21-cierre-etapa6-010926",
   "./ui.js?v=1960-d21-cierre-etapa6-010926",
@@ -146,7 +147,8 @@ self.addEventListener("fetch", (event) => {
       (async () => {
         const cache = await caches.open(CACHE_VERSION);
         try {
-          const respuesta = await fetch(request);
+          const esEtiquetas = url.pathname.endsWith("/etiquetas.js");
+          const respuesta = await fetch(request, esEtiquetas ? { cache: "reload" } : undefined);
           if (respuesta?.ok) await cache.put(request, respuesta.clone());
           return respuesta;
         } catch {

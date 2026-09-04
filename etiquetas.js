@@ -280,9 +280,6 @@ function renderSugerenciasScanner(resultados) {
   });
 }
 
-function esVistaMovil() {
-  return window.matchMedia?.("(max-width: 700px)")?.matches === true;
-}
 
 async function abrirScanner() {
   if (scannerAbierto) return;
@@ -292,12 +289,17 @@ async function abrirScanner() {
   scannerAbierto = true;
   resetearCargaScanner();
   await cargarCatalogo().catch(() => {});
+}
 
-  // En celular, igual que el resto de los módulos, el FAB abre directamente
-  // el visor de cámara. En escritorio se conserva la pantalla previa.
-  if (esVistaMovil() && scannerAbierto) {
-    await iniciarCamaraEtiquetas();
-  }
+async function abrirScannerDirecto() {
+  if (scannerAbierto) return;
+  const modal = $("etiquetasScannerModal");
+  modal?.classList.remove("oculto");
+  modal?.setAttribute("aria-hidden", "false");
+  scannerAbierto = true;
+  resetearCargaScanner();
+  await cargarCatalogo().catch(() => {});
+  if (scannerAbierto) await iniciarCamaraEtiquetas();
 }
 
 async function iniciarCamaraEtiquetas() {
@@ -385,7 +387,8 @@ function desactivar() {
 
 function init() {
   $("btnEtiquetasEscanear")?.addEventListener("click", abrirScanner);
-  $("etiquetasFab")?.addEventListener("click", abrirScanner);
+  // El FAB existe solo en móvil: abre el visor directamente, sin el paso "Usar cámara".
+  $("etiquetasFab")?.addEventListener("click", abrirScannerDirecto);
   $("btnEtiquetasScannerCerrar")?.addEventListener("click", cerrarScanner);
   $("etiquetasScannerModal")?.addEventListener("click", (e) => { if (e.target?.matches?.("[data-etiquetas-scan-close]")) cerrarScanner(); });
   $("btnEtiquetasAbrirCamara")?.addEventListener("click", iniciarCamaraEtiquetas);
