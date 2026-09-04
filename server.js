@@ -452,6 +452,7 @@ const MODULOS_PERMITIDOS = [
   "vencimientos",
   "anotar",
   "precios",
+  "etiquetas",
   "horarios",
   "tareas",
 ];
@@ -4088,7 +4089,7 @@ app.get("/producto/:codigo", requerirAlgunModulo("inventario"), async (req, res)
   }
 });
 
-app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar"), async (req, res) => {
+app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar", "etiquetas"), async (req, res) => {
   try {
     const productos = await obtenerProductosMaestros();
     const etag = `"${crypto.createHash("sha1").update(JSON.stringify(productos)).digest("hex")}"`;
@@ -4105,7 +4106,7 @@ app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", 
   }
 });
 
-app.get("/producto-maestro/:codigo", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar"), async (req, res) => {
+app.get("/producto-maestro/:codigo", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar", "etiquetas"), async (req, res) => {
   try {
     const producto = await buscarProductoMaestroPorCodigo(req.params.codigo);
     if (!producto) {

@@ -8,6 +8,7 @@ const elementos = {
     cartelOferta: document.getElementById("pantallaCartelOferta"),
     anotar: document.getElementById("pantallaAnotar"),
     precios: document.getElementById("pantallaPrecios"),
+    etiquetas: document.getElementById("pantallaEtiquetas"),
     horarios: document.getElementById("pantallaHorarios"),
     tareas: document.getElementById("pantallaTareas"),
     bano: document.getElementById("pantallaBano"),
@@ -105,6 +106,7 @@ export function cambiarPantalla(nombre) {
   document.body.classList.toggle("en-cartel-oferta", nombre === "cartelOferta");
   document.body.classList.toggle("en-anotar", nombre === "anotar");
   document.body.classList.toggle("en-precios", nombre === "precios");
+  document.body.classList.toggle("en-etiquetas", nombre === "etiquetas");
   document.body.classList.toggle("en-horarios", nombre === "horarios");
   document.body.classList.toggle("en-tareas", nombre === "tareas");
   document.body.classList.toggle("en-bano", nombre === "bano");

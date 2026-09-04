@@ -112,6 +112,7 @@ body.precio-scan-open {
   #pantallaPrecios > .precios-vista,
   #pantallaHorarios > .horarios-shell,
   #pantallaAnotar > .repo-pro-shell,
+  #pantallaEtiquetas > .etiquetas-shell,
   #pantallaAjustes > .user-settings-shell,
   #pantallaAdmin > .admin-message,
   #pantallaAdmin > .admin-tab-panel {

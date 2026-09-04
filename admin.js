@@ -37,6 +37,7 @@ const MODULOS_PERMISO = [
   "vencimientos",
   "anotar",
   "precios",
+  "etiquetas",
   "horarios",
   "tareas",
 ];

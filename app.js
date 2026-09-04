@@ -1337,6 +1337,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     document.body.classList.remove("venc-scan-open");
   }
   if (nombre !== "precios") window.PreciosModule?.desactivar?.();
+  if (nombre !== "etiquetas") window.EtiquetasModule?.desactivar?.();
   if (nombre !== "horarios") window.HorariosModule?.desactivar?.();
   if (nombre !== "tareas") window.TareasModule?.desactivar?.();
   if (nombre !== "bano") window.BanoModule?.desactivar?.();
@@ -1380,6 +1381,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     await refrescarReposicion();
   }
   if (nombre === "precios") await window.PreciosModule?.activar?.();
+  if (nombre === "etiquetas") await window.EtiquetasModule?.activar?.();
   if (nombre === "horarios") window.HorariosModule?.activar?.();
   if (nombre === "tareas") window.TareasModule?.activar?.();
   if (nombre === "bano") await window.BanoModule?.activar?.();
@@ -1403,6 +1405,9 @@ async function abrirDestinoInicial() {
     manejado = true;
   } else if (modulo === "precios") {
     await entrarPantalla("precios");
+    manejado = true;
+  } else if (modulo === "etiquetas") {
+    await entrarPantalla("etiquetas");
     manejado = true;
   } else if (modulo === "horarios") {
     await entrarPantalla("horarios");

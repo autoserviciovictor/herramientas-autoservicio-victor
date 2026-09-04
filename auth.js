@@ -24,6 +24,7 @@ const MODULOS_DISPONIBLES = [
   "vencimientos",
   "anotar",
   "precios",
+  "etiquetas",
   "horarios",
   "tareas",
 ];

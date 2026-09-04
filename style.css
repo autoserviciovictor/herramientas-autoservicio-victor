@@ -15756,3 +15756,368 @@ html[data-theme="dark"] #pantallaCartelOferta .offer-poster-queue-badge{
     margin:0;
   }
 }
+
+/* ==================== MÓDULO ETIQUETAS ==================== */
+.etiquetas-screen{background:var(--pro-bg,#f4f6f9);min-height:100dvh;color:var(--pro-text,#172235)}
+.etiquetas-shell{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 48px}
+.etiquetas-page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:20px}
+.etiquetas-page-header h1{margin:3px 0 4px;font-size:30px;line-height:1.1}.etiquetas-page-header p{margin:0;color:var(--pro-muted,#748096)}
+.etiquetas-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--pro-muted,#748096)}
+.etiquetas-primary-btn,.etiquetas-print-btn{border:0;border-radius:12px;background:var(--pro-red,#ff365b);color:#fff;font-weight:800;min-height:46px;padding:0 18px;cursor:pointer}
+.etiquetas-toolbar-card,.etiquetas-list-card{background:var(--pro-panel,#fff);border:1px solid var(--pro-border,#d9e0e9);border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(12,30,50,.05)}
+.etiquetas-toolbar-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:end;margin-bottom:16px}
+.etiquetas-search-wrap>label{display:block;font-size:12px;font-weight:800;margin-bottom:8px}.etiquetas-search-row{display:flex;gap:10px}.etiquetas-search-field{position:relative;flex:1}.etiquetas-search-field svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--pro-muted,#748096)}
+.etiquetas-search-field input{width:100%;height:44px;border:1px solid var(--pro-border,#d9e0e9);border-radius:10px;background:var(--pro-panel-2,#f7f9fc);color:var(--pro-text,#172235);outline:none}.etiquetas-search-field input{padding:0 14px 0 42px}
+.etiquetas-search-row>button{height:44px;border:1px solid var(--pro-red,#ff365b);border-radius:10px;background:transparent;color:var(--pro-red,#ff365b);font-weight:800;padding:0 18px;cursor:pointer}
+.etiquetas-sugerencias{position:absolute;z-index:50;width:min(680px,calc(100vw - 70px));margin-top:6px;background:var(--pro-panel,#fff);border:1px solid var(--pro-border,#d9e0e9);border-radius:12px;box-shadow:0 18px 42px rgba(10,25,45,.2);overflow:hidden}.etiquetas-sugerencias button{width:100%;display:grid;grid-template-columns:1fr auto;gap:2px 16px;padding:11px 14px;border:0;border-bottom:1px solid var(--pro-border,#d9e0e9);background:transparent;color:var(--pro-text,#172235);text-align:left;cursor:pointer}.etiquetas-sugerencias button:last-child{border-bottom:0}.etiquetas-sugerencias small{color:var(--pro-muted,#748096)}.etiquetas-sugerencias span{grid-row:1/3;grid-column:2;align-self:center;color:var(--pro-red,#ff365b);font-size:20px}
+.etiquetas-resumen{display:grid;grid-template-columns:auto auto;gap:3px 12px;min-width:150px;padding:10px 14px;border-radius:12px;background:var(--pro-panel-2,#f7f9fc);border:1px solid var(--pro-border,#d9e0e9)}.etiquetas-resumen span{font-size:11px;color:var(--pro-muted,#748096)}.etiquetas-resumen strong{text-align:right}
+.etiquetas-list-card>header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--pro-border,#d9e0e9)}.etiquetas-list-card h2{margin:0 0 4px;font-size:18px}.etiquetas-list-card p{margin:0;color:var(--pro-muted,#748096);font-size:12px}.etiquetas-secondary-btn{border:1px solid var(--pro-border,#d9e0e9);border-radius:10px;background:var(--pro-panel-2,#f7f9fc);color:var(--pro-text,#172235);height:38px;padding:0 14px;font-weight:700;cursor:pointer}.etiquetas-secondary-btn:disabled{opacity:.45;cursor:not-allowed}
+.etiquetas-lista{display:grid;gap:8px;padding-top:12px}.etiquetas-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto 36px;align-items:center;gap:12px;min-height:64px;padding:9px 10px;border:1px solid var(--pro-border,#d9e0e9);border-radius:12px;background:var(--pro-panel-2,#f7f9fc)}.etiquetas-item-index{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:rgba(255,54,91,.12);color:var(--pro-red,#ff365b);font-weight:900}.etiquetas-item-copy{min-width:0;display:flex;flex-direction:column;gap:4px}.etiquetas-item-copy strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.etiquetas-item-copy small{color:var(--pro-muted,#748096)}
+.etiquetas-qty{display:grid;grid-template-columns:34px 34px 34px;align-items:center;border:1px solid var(--pro-border,#d9e0e9);border-radius:10px;overflow:hidden}.etiquetas-qty button{height:34px;border:0;background:transparent;color:var(--pro-text,#172235);font-size:18px;cursor:pointer}.etiquetas-qty b{text-align:center}.etiquetas-remove{width:34px;height:34px;border:0;border-radius:9px;background:transparent;color:var(--pro-red,#ff365b);font-size:22px;cursor:pointer}.etiquetas-empty{min-height:210px;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;color:var(--pro-muted,#748096)}.etiquetas-empty span{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(255,54,91,.1);color:var(--pro-red,#ff365b)}.etiquetas-empty svg{width:23px;height:23px}.etiquetas-empty strong{color:var(--pro-text,#172235)}
+.etiquetas-actions{display:flex;justify-content:flex-end;margin-top:16px}.etiquetas-print-btn{min-width:220px}.etiquetas-print-btn:disabled{opacity:.45;cursor:not-allowed}
+.etiquetas-print-sheet{display:none}
+html[data-theme="dark"] .etiquetas-screen{background:var(--pro-bg,#071526)}
+html[data-theme="dark"] .etiquetas-toolbar-card,html[data-theme="dark"] .etiquetas-list-card{background:var(--pro-panel,#10233a);border-color:var(--pro-border,#30445e);color:var(--pro-text,#f7f9fc)}
+html[data-theme="dark"] .etiquetas-search-field input,html[data-theme="dark"] .etiquetas-resumen,html[data-theme="dark"] .etiquetas-item,html[data-theme="dark"] .etiquetas-secondary-btn{background:var(--pro-panel-2,#192d46);border-color:var(--pro-border,#30445e);color:var(--pro-text,#f7f9fc)}
+html[data-theme="dark"] .etiquetas-sugerencias{background:var(--pro-panel,#10233a);border-color:var(--pro-border,#30445e)}
+html[data-theme="dark"] .etiquetas-sugerencias button{color:var(--pro-text,#f7f9fc);border-color:var(--pro-border,#30445e)}
+@media(max-width:700px){.etiquetas-shell{width:100%;padding:14px 14px 90px}.etiquetas-page-header{justify-content:flex-end;margin-bottom:12px}.etiquetas-page-header>div{display:none!important}.etiquetas-primary-btn{width:100%}.etiquetas-toolbar-card{grid-template-columns:1fr;gap:12px;padding:14px}.etiquetas-search-row{display:grid;grid-template-columns:1fr auto}.etiquetas-resumen{grid-template-columns:1fr auto;min-width:0}.etiquetas-list-card{padding:12px}.etiquetas-list-card>header{align-items:flex-start}.etiquetas-list-card>header p{display:none}.etiquetas-item{grid-template-columns:26px minmax(0,1fr) 32px;gap:8px}.etiquetas-qty{grid-column:2/4;justify-self:start}.etiquetas-remove{grid-column:3;grid-row:1}.etiquetas-actions{position:sticky;bottom:10px;z-index:20}.etiquetas-print-btn{width:100%;box-shadow:0 10px 28px rgba(0,0,0,.22)}.etiquetas-sugerencias{width:calc(100vw - 28px)}}
+@media print{
+  @page{size:A4 portrait;margin:10mm 9mm}
+  body>*:not(#etiquetasPrintSheet){display:none!important}
+  html,body{background:#fff!important;margin:0!important;padding:0!important;width:auto!important;height:auto!important;overflow:visible!important}
+  #etiquetasPrintSheet.etiquetas-print-sheet{display:grid!important;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(31mm,auto);column-gap:8mm;row-gap:3mm;width:100%;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
+  .etiqueta-print-item{break-inside:avoid;display:flex;flex-direction:column;justify-content:flex-start;padding:2mm 1mm 1.5mm;border:0;background:#fff;min-width:0}
+  .etiqueta-print-item strong{font-size:13.5pt;line-height:1.18;font-weight:700;overflow-wrap:anywhere;margin-bottom:auto}
+  .etiqueta-print-meta{display:grid;grid-template-columns:1fr auto;align-items:end;gap:4mm;margin-top:4mm;font-size:8.5pt;white-space:nowrap}
+  .etiqueta-print-meta b{font-weight:700;overflow:hidden;text-overflow:ellipsis}.etiqueta-print-meta span{font-weight:400}
+}
+
+/* ==================== ETIQUETAS · DISEÑO FINAL 04/09/2026 ====================
+   Consolida cabecera, listado, vista previa y formato impreso sin capas legacy. */
+#pantallaEtiquetas .etiquetas-shell{padding-top:26px!important;padding-bottom:42px!important}
+#pantallaEtiquetas .etiquetas-page-header{align-items:center!important;margin:0 0 14px!important;gap:24px}
+#pantallaEtiquetas .etiquetas-page-header>div{min-width:0}
+#pantallaEtiquetas .etiquetas-eyebrow{display:block;margin:0 0 4px;font-size:11px;line-height:1.2;font-weight:800;letter-spacing:.14em;color:var(--pro-muted,#667085)}
+#pantallaEtiquetas .etiquetas-page-header h1{margin:0!important;color:var(--pro-text,#101828);font-size:28px!important;line-height:1.1!important;font-weight:700;letter-spacing:-.03em}
+#pantallaEtiquetas .etiquetas-page-header p{margin:6px 0 0!important;color:var(--pro-muted,#667085);font-size:13px!important;line-height:1.4;font-weight:400}
+#pantallaEtiquetas .etiquetas-primary-btn{width:168px;min-width:168px;height:46px;min-height:46px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+
+#pantallaEtiquetas .etiquetas-lista{display:block;padding-top:12px;overflow-x:auto}
+#pantallaEtiquetas .etiquetas-table-head,
+#pantallaEtiquetas .etiquetas-item{display:grid;grid-template-columns:42px minmax(260px,1.7fr) minmax(160px,.9fr) minmax(110px,.6fr) 126px 54px;align-items:center;column-gap:12px}
+#pantallaEtiquetas .etiquetas-table-head{min-width:860px;padding:0 10px 8px;color:var(--pro-muted,#667085);font-size:11px;font-weight:800;border-bottom:1px solid var(--pro-border,#d9e0e9)}
+#pantallaEtiquetas .etiquetas-table-head span:last-child{text-align:center}
+#pantallaEtiquetas .etiquetas-item{min-width:860px;min-height:48px;padding:7px 10px;border:0;border-bottom:1px solid var(--pro-border,#e4e9f0);border-radius:0;background:transparent}
+#pantallaEtiquetas .etiquetas-item:last-child{border-bottom:0}
+#pantallaEtiquetas .etiquetas-item-index{width:auto;height:auto;display:block;background:transparent;color:var(--pro-text,#172235);font-weight:500;text-align:center}
+#pantallaEtiquetas .etiquetas-item-copy{display:block}
+#pantallaEtiquetas .etiquetas-item-copy strong{font-size:13px;font-weight:600}
+#pantallaEtiquetas .etiquetas-item-copy small{display:none}
+#pantallaEtiquetas .etiquetas-item-code{font-size:12px;color:var(--pro-text,#172235);white-space:nowrap}
+#pantallaEtiquetas .etiquetas-item-price{font-size:12px;white-space:nowrap}
+#pantallaEtiquetas .etiquetas-qty{grid-template-columns:30px 34px 30px;justify-self:start}
+#pantallaEtiquetas .etiquetas-qty button{height:30px}
+#pantallaEtiquetas .etiquetas-remove{justify-self:center;font-size:0;position:relative}
+#pantallaEtiquetas .etiquetas-remove::before{content:"×";font-size:20px;line-height:1}
+#pantallaEtiquetas .etiquetas-actions{margin-top:14px}
+#pantallaEtiquetas .etiquetas-print-btn{min-width:280px}
+
+html[data-theme="dark"] #pantallaEtiquetas .etiquetas-table-head,html[data-theme="dark"] #pantallaEtiquetas .etiquetas-item{border-color:var(--pro-border,#30445e)}
+html[data-theme="dark"] #pantallaEtiquetas .etiquetas-item-index,html[data-theme="dark"] #pantallaEtiquetas .etiquetas-item-code{color:var(--pro-text,#f7f9fc)}
+
+@media(max-width:700px){
+  #pantallaEtiquetas .etiquetas-shell{padding-top:14px!important}
+  #pantallaEtiquetas .etiquetas-page-header{margin-bottom:12px!important;justify-content:flex-end}
+  #pantallaEtiquetas .etiquetas-page-header>div{display:none!important}
+  #pantallaEtiquetas .etiquetas-primary-btn{width:100%;min-width:0}
+  #pantallaEtiquetas .etiquetas-table-head{display:none}
+  #pantallaEtiquetas .etiquetas-lista{display:grid;overflow:visible}
+  #pantallaEtiquetas .etiquetas-item{min-width:0;display:grid;grid-template-columns:28px minmax(0,1fr) 34px;gap:7px 9px;border:1px solid var(--pro-border,#d9e0e9);border-radius:11px;background:var(--pro-panel-2,#f7f9fc);padding:10px}
+  #pantallaEtiquetas .etiquetas-item-copy{grid-column:2;min-width:0}
+  #pantallaEtiquetas .etiquetas-item-copy strong{display:block;white-space:normal;line-height:1.25}
+  #pantallaEtiquetas .etiquetas-item-code{grid-column:2;font-size:11px;color:var(--pro-muted,#667085)}
+  #pantallaEtiquetas .etiquetas-item-price{grid-column:2;font-size:13px}
+  #pantallaEtiquetas .etiquetas-qty{grid-column:2;justify-self:start}
+  #pantallaEtiquetas .etiquetas-remove{grid-column:3;grid-row:1}
+}
+
+@media print{
+  .etiqueta-print-item strong{font-size:11.5pt!important;line-height:1.14!important;font-weight:700!important;margin-bottom:0!important}
+  .etiqueta-print-price{margin-top:auto;padding-top:3mm;font-size:15.5pt;line-height:1;font-weight:700}
+  .etiqueta-print-meta{margin-top:3mm!important}
+}
+
+
+/* Etiquetas · cierre UI + impresión directa 04/09/2026.
+   La vista previa intermedia fue eliminada: el botón A4 abre directamente window.print(). */
+#pantallaEtiquetas .etiquetas-shell{padding-top:28px!important}
+#pantallaEtiquetas .etiquetas-page-header{align-items:center!important;margin-bottom:16px!important}
+#pantallaEtiquetas .etiquetas-page-header h1{font-size:30px!important;line-height:1.12!important;font-weight:750!important;letter-spacing:-.025em}
+#pantallaEtiquetas .etiquetas-page-header p{font-size:14px!important;line-height:1.45!important;margin-top:6px!important}
+#pantallaEtiquetas .etiquetas-eyebrow{font-size:11.5px!important;line-height:1.2!important;margin-bottom:5px!important}
+#pantallaEtiquetas .etiquetas-primary-btn{
+  width:auto!important;min-width:190px!important;max-width:none!important;height:46px!important;
+  padding:0 20px!important;white-space:nowrap!important;flex-wrap:nowrap!important;flex-shrink:0;
+  font-size:13.5px!important;line-height:1!important;gap:7px!important;
+}
+#pantallaEtiquetas .etiquetas-primary-btn>span{display:inline-grid;place-items:center;line-height:1;font-size:16px;flex:0 0 auto}
+#pantallaEtiquetas .etiquetas-toolbar-card{padding:20px!important;gap:24px!important}
+#pantallaEtiquetas .etiquetas-search-wrap>label{font-size:13px!important;margin-bottom:9px!important}
+#pantallaEtiquetas .etiquetas-search-field svg{left:15px!important;width:17px!important;height:17px!important;pointer-events:none}
+#pantallaEtiquetas .etiquetas-search-field input{height:46px!important;padding-left:46px!important;font-size:14px!important}
+#pantallaEtiquetas .etiquetas-search-row>button{height:46px!important;padding:0 20px!important;font-size:13.5px!important;white-space:nowrap}
+#pantallaEtiquetas .etiquetas-resumen{min-width:154px!important;padding:11px 15px!important;gap:5px 14px!important}
+#pantallaEtiquetas .etiquetas-resumen span{font-size:12px!important}
+#pantallaEtiquetas .etiquetas-resumen strong{font-size:14px!important;line-height:1.2}
+#pantallaEtiquetas .etiquetas-list-card{padding:20px!important}
+#pantallaEtiquetas .etiquetas-list-card h2{font-size:20px!important;line-height:1.2!important}
+#pantallaEtiquetas .etiquetas-list-card p{font-size:13px!important;line-height:1.4!important}
+#pantallaEtiquetas .etiquetas-secondary-btn{font-size:13px!important;white-space:nowrap}
+#pantallaEtiquetas .etiquetas-table-head{font-size:12px!important;line-height:1.2!important}
+#pantallaEtiquetas .etiquetas-item{min-height:52px!important}
+#pantallaEtiquetas .etiquetas-item-copy strong{font-size:14px!important;line-height:1.3!important}
+#pantallaEtiquetas .etiquetas-item-code{font-size:13px!important;line-height:1.25!important}
+#pantallaEtiquetas .etiquetas-item-price{font-size:13.5px!important;line-height:1.2!important}
+#pantallaEtiquetas .etiquetas-qty{grid-template-columns:32px 38px 32px!important}
+#pantallaEtiquetas .etiquetas-qty button{height:32px!important;line-height:1!important;display:grid;place-items:center}
+#pantallaEtiquetas .etiquetas-qty b{font-size:13px!important;line-height:1}
+#pantallaEtiquetas .etiquetas-remove{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;line-height:1!important}
+#pantallaEtiquetas .etiquetas-remove::before{font-size:21px!important;line-height:1!important}
+#pantallaEtiquetas .etiquetas-print-btn{min-width:300px!important;height:46px!important;font-size:13.5px!important;white-space:nowrap}
+
+@media(max-width:700px){
+  #pantallaEtiquetas .etiquetas-shell{padding-top:14px!important}
+  #pantallaEtiquetas .etiquetas-primary-btn{width:100%!important;min-width:0!important}
+  #pantallaEtiquetas .etiquetas-toolbar-card,#pantallaEtiquetas .etiquetas-list-card{padding:14px!important}
+  #pantallaEtiquetas .etiquetas-search-field input{font-size:16px!important}
+  #pantallaEtiquetas .etiquetas-item-copy strong{font-size:14px!important}
+  #pantallaEtiquetas .etiquetas-print-btn{min-width:0!important;width:100%!important}
+}
+
+@media print{
+  .etiqueta-print-item strong{
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:11.5pt!important;
+    line-height:1.32!important;
+    letter-spacing:.035em!important;
+    word-spacing:.015em!important;
+    font-weight:700!important;
+    margin:0 0 1mm!important;
+    overflow-wrap:break-word!important;
+  }
+  .etiqueta-print-price{margin-top:auto!important;padding-top:2.5mm!important;font-size:15.5pt!important;line-height:1.05!important;font-weight:700!important}
+  .etiqueta-print-meta{margin-top:2.6mm!important;line-height:1.15!important}
+}
+
+
+/* ================= ETIQUETAS · MÓVIL CANÓNICO 04/09/2026 =================
+   Usa el mismo eje móvil y FAB que Inventario. Se elimina el doble margen
+   interno y se compactan las tarjetas sin cambiar el layout de escritorio. */
+.etiquetas-fab{display:none}
+
+@media (max-width:900px){
+  /* El app-shell ya aporta 12px laterales. No sumar otros 14px dentro. */
+  #pantallaEtiquetas>.etiquetas-shell{
+    width:calc(100% - (var(--app-shell-mobile-inline,12px) * 2))!important;
+    max-width:none!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    padding:10px 0 88px!important;
+    box-sizing:border-box!important;
+  }
+
+  /* En móvil la acción principal vive únicamente en el FAB común. */
+  #pantallaEtiquetas .etiquetas-page-header{
+    display:none!important;
+  }
+  #pantallaEtiquetas .etiquetas-primary-btn{
+    display:none!important;
+  }
+  #pantallaEtiquetas .etiquetas-fab{
+    display:grid!important;
+  }
+
+  /* Superficies a todo el ancho útil, como Inventario. */
+  #pantallaEtiquetas .etiquetas-toolbar-card,
+  #pantallaEtiquetas .etiquetas-list-card{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+  #pantallaEtiquetas .etiquetas-toolbar-card{
+    padding:12px!important;
+    gap:10px!important;
+    margin-bottom:10px!important;
+  }
+  #pantallaEtiquetas .etiquetas-list-card{
+    padding:11px!important;
+  }
+  #pantallaEtiquetas .etiquetas-list-card>header{
+    padding-bottom:9px!important;
+    gap:10px!important;
+  }
+  #pantallaEtiquetas .etiquetas-list-card h2{
+    font-size:18px!important;
+    line-height:1.12!important;
+  }
+  #pantallaEtiquetas .etiquetas-secondary-btn{
+    height:34px!important;
+    padding:0 11px!important;
+    font-size:11.5px!important;
+  }
+  #pantallaEtiquetas .etiquetas-lista{
+    padding-top:9px!important;
+    gap:7px!important;
+  }
+
+  /* Tarjeta compacta: dos filas útiles en lugar de cuatro. */
+  #pantallaEtiquetas .etiquetas-item{
+    min-height:0!important;
+    display:grid!important;
+    grid-template-columns:22px minmax(0,1fr) auto 28px!important;
+    grid-template-rows:auto auto!important;
+    column-gap:7px!important;
+    row-gap:4px!important;
+    align-items:center!important;
+    padding:8px 8px!important;
+    border-radius:10px!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-index{
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:start!important;
+    padding-top:1px!important;
+    font-size:11px!important;
+    line-height:1.2!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-copy{
+    grid-column:2 / 4!important;
+    grid-row:1!important;
+    min-width:0!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-copy strong{
+    display:block!important;
+    margin:0!important;
+    font-size:12.5px!important;
+    line-height:1.2!important;
+    font-weight:700!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-code{
+    grid-column:2!important;
+    grid-row:2!important;
+    min-width:0!important;
+    font-size:10.5px!important;
+    line-height:1.15!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-price{
+    grid-column:3!important;
+    grid-row:2!important;
+    justify-self:end!important;
+    font-size:11.5px!important;
+    line-height:1.15!important;
+  }
+  #pantallaEtiquetas .etiquetas-qty{
+    grid-column:2 / 4!important;
+    grid-row:3!important;
+    justify-self:start!important;
+    grid-template-columns:27px 30px 27px!important;
+    min-height:28px!important;
+    border-radius:8px!important;
+  }
+  #pantallaEtiquetas .etiquetas-qty button{
+    width:27px!important;
+    height:28px!important;
+    min-height:28px!important;
+    padding:0!important;
+    font-size:15px!important;
+  }
+  #pantallaEtiquetas .etiquetas-qty b{
+    font-size:11.5px!important;
+  }
+  #pantallaEtiquetas .etiquetas-remove{
+    grid-column:4!important;
+    grid-row:1!important;
+    align-self:start!important;
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    min-height:28px!important;
+  }
+  #pantallaEtiquetas .etiquetas-remove::before{
+    font-size:18px!important;
+  }
+  #pantallaEtiquetas .etiquetas-actions{
+    margin-top:10px!important;
+  }
+  #pantallaEtiquetas .etiquetas-print-btn{
+    min-height:44px!important;
+    height:44px!important;
+  }
+}
+
+@media (min-width:901px){
+  #pantallaEtiquetas .etiquetas-fab{display:none!important}
+}
+
+
+/* ================= ETIQUETAS · AJUSTE TIPOGRAFÍA MÓVIL 04/09/2026 =================
+   Mayor legibilidad sin aumentar la altura de las tarjetas. */
+@media (max-width:900px){
+  #pantallaEtiquetas .etiquetas-search-wrap>label{
+    font-size:14px!important;
+    line-height:1.25!important;
+  }
+  #pantallaEtiquetas .etiquetas-search-field input{
+    font-size:16px!important;
+    line-height:1.25!important;
+  }
+  #pantallaEtiquetas .etiquetas-search-row>button{
+    font-size:14px!important;
+    font-weight:700!important;
+  }
+  #pantallaEtiquetas .etiquetas-resumen span{
+    font-size:12.5px!important;
+    line-height:1.25!important;
+  }
+  #pantallaEtiquetas .etiquetas-resumen strong{
+    font-size:15px!important;
+  }
+  #pantallaEtiquetas .etiquetas-list-card h2{
+    font-size:20px!important;
+    line-height:1.15!important;
+  }
+  #pantallaEtiquetas .etiquetas-secondary-btn{
+    font-size:12.5px!important;
+    font-weight:650!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-index{
+    font-size:12.5px!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-copy strong{
+    font-size:14px!important;
+    line-height:1.22!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-code{
+    font-size:12px!important;
+    line-height:1.2!important;
+  }
+  #pantallaEtiquetas .etiquetas-item-price{
+    font-size:13px!important;
+    line-height:1.2!important;
+    font-weight:750!important;
+  }
+  #pantallaEtiquetas .etiquetas-qty b{
+    font-size:13px!important;
+  }
+  #pantallaEtiquetas .etiquetas-print-btn{
+    font-size:14px!important;
+    font-weight:700!important;
+  }
+}

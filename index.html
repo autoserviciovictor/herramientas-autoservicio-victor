@@ -448,6 +448,15 @@
                 <svg class="app-icon"><use href="#icon-tag"></use></svg
                 ><span>Consulta Precios</span>
               </button>
+              <button
+                type="button"
+                data-modulo="etiquetas"
+                class="pro-global-nav"
+                data-pro-nav="etiquetas"
+              >
+                <svg class="app-icon"><use href="#icon-tag"></use></svg
+                ><span>Etiquetas</span>
+              </button>
             </nav>
 
             <p class="pro-nav-label">GESTIÓN DE PERSONAL</p>
@@ -578,6 +587,15 @@
           >
             <svg class="app-icon"><use href="#icon-tag"></use></svg
             ><span>Consulta Precios</span>
+          </button>
+          <button
+            type="button"
+            data-modulo="etiquetas"
+            class="pro-global-nav"
+            data-pro-nav="etiquetas"
+          >
+            <svg class="app-icon"><use href="#icon-tag"></use></svg
+            ><span>Etiquetas</span>
           </button>
         </nav>
         <p class="pro-nav-label">GESTIÓN DE PERSONAL</p>
@@ -1761,6 +1779,116 @@
           </section>
         </section>
       </div>
+
+      <main id="pantallaEtiquetas" class="pantalla etiquetas-screen" aria-hidden="true">
+        <section class="etiquetas-shell">
+          <header class="etiquetas-page-header">
+            <div class="mobile-page-title-block">
+              <span class="etiquetas-eyebrow">IMPRESIÓN</span>
+              <h1>Etiquetas</h1>
+              <p>Escaneá productos, armá la hoja e imprimí todas las etiquetas juntas.</p>
+            </div>
+            <button id="btnEtiquetasEscanear" type="button" class="etiquetas-primary-btn">
+              <span aria-hidden="true">＋</span> Escanear producto
+            </button>
+          </header>
+
+          <section class="etiquetas-toolbar-card">
+            <div class="etiquetas-search-wrap">
+              <label for="etiquetasBuscarInput">Agregar producto</label>
+              <div class="etiquetas-search-row">
+                <div class="etiquetas-search-field">
+                  <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+                  <input id="etiquetasBuscarInput" type="search" autocomplete="off" placeholder="Buscar" />
+                </div>
+                <button id="btnEtiquetasBuscar" type="button">Agregar</button>
+              </div>
+              <div id="etiquetasSugerencias" class="etiquetas-sugerencias oculto" aria-live="polite"></div>
+            </div>
+            <div class="etiquetas-resumen">
+              <span>Productos</span><strong id="etiquetasProductosCount">0</strong>
+              <span>Etiquetas</span><strong id="etiquetasTotalCount">0</strong>
+            </div>
+          </section>
+
+          <section class="etiquetas-list-card">
+            <header>
+              <div>
+                <h2>Productos para imprimir</h2>
+                <p>La fecha se toma automáticamente al momento de imprimir.</p>
+              </div>
+              <button id="btnEtiquetasVaciar" type="button" class="etiquetas-secondary-btn">Vaciar lista</button>
+            </header>
+            <div id="etiquetasLista" class="etiquetas-lista" aria-live="polite"></div>
+          </section>
+
+          <div class="etiquetas-actions">
+            <button id="btnEtiquetasImprimir" type="button" class="etiquetas-print-btn" disabled>
+              Imprimir hoja A4
+            </button>
+          </div>
+        </section>
+
+        <button id="etiquetasFab" class="inventory-fab etiquetas-fab" type="button" aria-label="Escanear producto" aria-haspopup="dialog" aria-expanded="false" title="Escanear producto">
+          <span aria-hidden="true">+</span>
+        </button>
+
+        <div id="etiquetasScannerModal" class="product-loader-modal oculto" aria-hidden="true">
+          <div class="product-loader-backdrop" data-etiquetas-scan-close></div>
+          <section class="product-loader-dialog" role="dialog" aria-modal="true" aria-labelledby="etiquetasScannerTitulo">
+            <header class="product-loader-head">
+              <div>
+                <span class="product-loader-kicker">PRODUCTOS</span>
+                <h2 id="etiquetasScannerTitulo">Cargar producto</h2>
+                <p>Escaneá un código o buscá el producto manualmente.</p>
+              </div>
+              <button id="btnEtiquetasScannerCerrar" class="product-loader-close" type="button" aria-label="Cerrar">×</button>
+            </header>
+
+            <section id="etiquetasScanStart" class="product-loader-start" aria-label="Modo de carga">
+              <div class="product-loader-hero">
+                <span class="product-loader-symbol" aria-hidden="true">
+                  <svg class="app-icon"><use href="#icon-camera"></use></svg>
+                </span>
+                <strong>Escanear código de barras</strong>
+                <small>Acercá el código al escáner para identificar el producto.</small>
+                <div id="etiquetasCameraError" class="product-loader-inline-alert oculto" role="alert"></div>
+                <button type="button" id="btnEtiquetasAbrirCamara" class="product-loader-camera-btn">
+                  <svg class="app-icon" aria-hidden="true"><use href="#icon-camera"></use></svg>
+                  <span>Usar cámara</span>
+                </button>
+              </div>
+
+              <div class="product-loader-divider"><span>o</span></div>
+              <button type="button" id="btnEtiquetasManualToggle" class="product-loader-manual-toggle">
+                Ingresar producto manual
+              </button>
+
+              <div id="etiquetasManualPanel" class="product-loader-manual-panel oculto">
+                <div class="product-loader-search-row">
+                  <input id="etiquetasCodigoManual" type="text" inputmode="text" autocomplete="off" placeholder="Código o nombre del artículo" aria-label="Buscar producto por código o nombre" />
+                  <button id="btnEtiquetasCodigoManual" type="button">Agregar</button>
+                </div>
+                <div id="etiquetasScannerSugerencias" class="product-loader-suggestions oculto"></div>
+              </div>
+            </section>
+
+            <section id="etiquetasCameraCard" class="product-loader-camera-card oculto">
+              <div class="venc-scanner-stage">
+                <video id="videoEtiquetas" autoplay muted playsinline></video>
+                <div class="camera-overlay">
+                  <strong>Apuntá al código de barras</strong>
+                  <div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div>
+                </div>
+              </div>
+            </section>
+            <button id="btnEtiquetasManualDesdeScanner" class="product-loader-manual-from-scanner" type="button">
+              <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+              <span>Ingresar manual</span>
+            </button>
+          </section>
+        </div>
+      </main>
 
       <main id="pantallaPrecios" class="pantalla precios-screen">
         <section id="preciosConsultarVista" class="precios-vista precios-pro-shell">
@@ -3262,6 +3390,7 @@
                     <label><input type="checkbox" data-permiso-modulo="vencimientos" checked /><span><svg class="app-icon"><use href="#icon-calendar"></use></svg>Vencimientos</span></label>
                     <label><input type="checkbox" data-permiso-modulo="anotar" checked /><span><svg class="app-icon"><use href="#icon-list"></use></svg>Lista</span></label>
                     <label><input type="checkbox" data-permiso-modulo="precios" checked /><span><svg class="app-icon"><use href="#icon-tag"></use></svg>Precios</span></label>
+                    <label><input type="checkbox" data-permiso-modulo="etiquetas" checked /><span><svg class="app-icon"><use href="#icon-tag"></use></svg>Etiquetas</span></label>
                     <label><input type="checkbox" data-permiso-modulo="horarios" checked /><span><svg class="app-icon"><use href="#icon-clock"></use></svg>Horarios</span></label>
                     <label><input type="checkbox" data-permiso-modulo="tareas" checked /><span><svg class="app-icon"><use href="#icon-tasks"></use></svg>Tareas</span></label>
                   </div>
@@ -3562,6 +3691,7 @@
     <script type="module" src="./notifications.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./notification-center.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./prices.js?v=1960-d21-cierre-etapa6-010926"></script>
+    <script type="module" src="./etiquetas.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./app.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./tareas.js?v=1960-d21-cierre-etapa6-010926"></script>
 

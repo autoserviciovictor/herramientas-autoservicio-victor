@@ -392,7 +392,8 @@ body.en-precios main#pantallaPrecios.pantalla.activa,
 body.en-horarios main#pantallaHorarios.pantalla.activa,
 body.en-tareas main#pantallaTareas.pantalla.activa,
 body.en-admin main#pantallaAdmin.pantalla.activa,
-body.en-cartel-oferta main#pantallaCartelOferta.pantalla.activa {
+body.en-cartel-oferta main#pantallaCartelOferta.pantalla.activa,
+body.en-etiquetas main#pantallaEtiquetas.pantalla.activa {
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
@@ -416,7 +417,8 @@ body.en-admin #adminTab-inicio,
 body.en-admin #adminTab-usuarios,
 body.en-admin #adminTab-sectores,
 body.en-admin #adminTab-sistema,
-body.en-cartel-oferta #pantallaCartelOferta > .offer-poster-shell {
+body.en-cartel-oferta #pantallaCartelOferta > .offer-poster-shell,
+body.en-etiquetas #pantallaEtiquetas > .etiquetas-shell {
     width: min(
       var(--primary-module-max-width),
       calc(100% - (var(--ds-page-edge, var(--app-shell-desktop-edge, 36px)) * 2))
@@ -474,7 +476,8 @@ body.en-cartel-oferta #pantallaCartelOferta > .offer-poster-shell {
     padding-top: 26px !important;
     padding-bottom: 42px !important;
   }
-  body.en-cartel-oferta #pantallaCartelOferta > .offer-poster-shell {
+  body.en-cartel-oferta #pantallaCartelOferta > .offer-poster-shell,
+body.en-etiquetas #pantallaEtiquetas > .etiquetas-shell {
     padding-top: 26px !important;
     padding-bottom: 42px !important;
   }
