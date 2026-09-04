@@ -1341,6 +1341,7 @@ async function entrarPantalla(nombre, opciones = {}) {
   if (nombre !== "horarios") window.HorariosModule?.desactivar?.();
   if (nombre !== "tareas") window.TareasModule?.desactivar?.();
   if (nombre !== "bano") window.BanoModule?.desactivar?.();
+  if (nombre !== "catalogo") window.CatalogoAdminModule?.desactivar?.();
 
   if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
   if (elementos.vencBuscador) elementos.vencBuscador.value = "";
@@ -1385,6 +1386,7 @@ async function entrarPantalla(nombre, opciones = {}) {
   if (nombre === "horarios") window.HorariosModule?.activar?.();
   if (nombre === "tareas") window.TareasModule?.activar?.();
   if (nombre === "bano") await window.BanoModule?.activar?.();
+  if (nombre === "catalogo") await window.CatalogoAdminModule?.activar?.();
   if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) {
     cambiarPantalla("inicio");
   }
@@ -1428,6 +1430,9 @@ async function abrirDestinoInicial() {
   } else if (modulo === "vencimientos") {
     await entrarPantalla("vencimientos");
     cambiarTabVencimientos("proximos");
+    manejado = true;
+  } else if (modulo === "catalogo") {
+    await entrarPantalla("catalogo");
     manejado = true;
   } else if (modulo === "admin") {
     await entrarPantalla("admin");

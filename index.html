@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="horarios-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-cierre-etapa6-010926" />
+    <link rel="stylesheet" href="catalogo-admin.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="ui-unification.css?v=1960-d21-cierre-etapa6-010926" />
@@ -484,6 +485,15 @@
             <p class="pro-nav-label pro-admin-nav-label">SISTEMA</p>
             <nav class="pro-drawer-nav pro-admin-nav">
               <button
+                type="button"
+                data-modulo="catalogo"
+                data-pro-nav="catalogo"
+                class="pro-global-nav"
+              >
+                <svg class="app-icon"><use href="#icon-cart"></use></svg
+                ><span>Catálogo</span>
+              </button>
+              <button
                 id="proDrawerAdmin"
                 type="button"
                 data-modulo="admin"
@@ -621,6 +631,10 @@
         </nav>
         <p class="pro-nav-label pro-admin-nav-label">SISTEMA</p>
         <nav class="pro-desktop-nav pro-admin-nav">
+          <button type="button" data-modulo="catalogo" data-pro-nav="catalogo" class="pro-global-nav">
+            <svg class="app-icon"><use href="#icon-cart"></use></svg
+            ><span>Catálogo</span>
+          </button>
           <button type="button" data-modulo="admin" data-pro-nav="admin" class="pro-global-nav">
             <svg class="app-icon"><use href="#icon-shield"></use></svg
             ><span>Administración</span>
@@ -3171,6 +3185,120 @@
         </div>
       </div>
 
+      <main id="pantallaCatalogoAdmin" class="pantalla catalog-admin-screen" aria-hidden="true">
+        <section class="catalog-admin-shell">
+          <header class="catalog-admin-header">
+            <div class="catalog-admin-heading">
+              <span class="catalog-admin-kicker">CATÁLOGO ONLINE</span>
+              <h1>Catálogo de productos</h1>
+              <p>Gestioná los productos que se muestran a tus clientes.</p>
+            </div>
+            <div class="catalog-admin-header-actions">
+              <button id="catalogBtnVerPublico" class="catalog-btn catalog-btn-secondary" type="button">
+                <svg class="app-icon"><use href="#icon-eye"></use></svg><span>Ver catálogo</span>
+              </button>
+            </div>
+          </header>
+
+          <div id="catalogAdminMensaje" class="catalog-admin-message" role="status" aria-live="polite"></div>
+
+          <section class="catalog-admin-metrics" aria-label="Resumen del catálogo">
+            <article><span class="catalog-metric-icon tone-blue"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><strong id="catalogMetricaTotal">—</strong><small>Productos totales</small></div></article>
+            <article><span class="catalog-metric-icon tone-green"><svg class="app-icon"><use href="#icon-eye"></use></svg></span><div><strong id="catalogMetricaVisibles">—</strong><small>Visibles</small></div></article>
+            <article><span class="catalog-metric-icon tone-red"><svg class="app-icon"><use href="#icon-eye-off"></use></svg></span><div><strong id="catalogMetricaOcultos">—</strong><small>Ocultos</small></div></article>
+            <article><span class="catalog-metric-icon tone-violet"><svg class="app-icon"><use href="#icon-tag"></use></svg></span><div><strong id="catalogMetricaRubros">—</strong><small>Rubros</small></div></article>
+          </section>
+
+          <div class="catalog-admin-tabs" role="tablist" aria-label="Secciones del catálogo">
+            <button id="catalogTabProductos" class="activo" type="button" data-catalog-tab="productos" role="tab" aria-selected="true">Productos</button>
+            <button id="catalogTabRubros" type="button" data-catalog-tab="rubros" role="tab" aria-selected="false">Rubros</button>
+          </div>
+
+          <section id="catalogPanelProductos" class="catalog-admin-panel" data-catalog-panel="productos">
+            <div class="catalog-toolbar">
+              <label class="catalog-search">
+                <svg class="app-icon"><use href="#icon-search"></use></svg>
+                <input id="catalogBuscarProductos" type="search" autocomplete="off" placeholder="Buscar por producto, código, marca..." />
+              </label>
+              <select id="catalogFiltroRubro" aria-label="Filtrar por rubro"><option value="todos">Todos los rubros</option></select>
+              <select id="catalogFiltroEstado" aria-label="Filtrar por estado">
+                <option value="todos">Todos los estados</option>
+                <option value="visible">Visibles</option>
+                <option value="oculto">Ocultos</option>
+                <option value="sin-configurar">Sin configurar</option>
+                <option value="destacado">Destacados</option>
+              </select>
+              <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar">
+                <svg class="app-icon"><use href="#icon-refresh"></use></svg>
+              </button>
+            </div>
+
+            <div class="catalog-table-card">
+              <div class="catalog-table-scroll">
+                <table class="catalog-products-table">
+                  <thead><tr><th>Producto</th><th>Rubro</th><th>Precio</th><th>Unidad</th><th>Estado</th><th class="catalog-col-order">Orden</th><th class="catalog-col-actions">Acciones</th></tr></thead>
+                  <tbody id="catalogProductosBody"><tr><td colspan="7"><div class="catalog-loading">Cargando productos…</div></td></tr></tbody>
+                </table>
+              </div>
+              <footer class="catalog-pagination-bar">
+                <span id="catalogProductosResumen">—</span>
+                <div class="catalog-pagination" id="catalogProductosPaginacion"></div>
+              </footer>
+            </div>
+          </section>
+
+          <section id="catalogPanelRubros" class="catalog-admin-panel oculto" data-catalog-panel="rubros">
+            <div class="catalog-rubros-head">
+              <div><h2>Gestión de rubros</h2><p>Organizá las categorías que usarán tus clientes para navegar el catálogo.</p></div>
+              <button id="catalogBtnNuevoRubro" class="catalog-btn catalog-btn-primary" type="button"><span>+</span> Agregar rubro</button>
+            </div>
+            <div id="catalogRubrosGrid" class="catalog-rubros-grid"></div>
+          </section>
+        </section>
+      </main>
+
+      <div id="catalogProductoModal" class="modal-overlay catalog-modal-overlay oculto" aria-hidden="true">
+        <div class="modal-card catalog-product-modal" role="dialog" aria-modal="true" aria-labelledby="catalogProductoModalTitulo">
+          <header class="catalog-modal-head">
+            <div class="catalog-modal-title-wrap"><span class="catalog-modal-icon"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><span>CATÁLOGO</span><h2 id="catalogProductoModalTitulo">Editar producto</h2><p id="catalogProductoModalCodigo">—</p></div></div>
+            <button id="catalogProductoCerrar" class="modal-close" type="button" aria-label="Cerrar"><svg class="app-icon"><use href="#icon-close"></use></svg></button>
+          </header>
+          <div class="catalog-modal-body">
+            <div class="catalog-form-grid">
+              <label class="catalog-field catalog-field-wide"><span>Nombre del producto *</span><input id="catalogProductoNombre" type="text" maxlength="220" /></label>
+              <label class="catalog-field"><span>Precio *</span><div class="catalog-price-input"><b>$</b><input id="catalogProductoPrecio" type="number" min="0" step="0.01" inputmode="decimal" /></div></label>
+              <label class="catalog-field"><span>Rubro</span><select id="catalogProductoRubro"><option value="">Sin rubro</option></select></label>
+              <label class="catalog-field"><span>Marca</span><input id="catalogProductoMarca" type="text" maxlength="120" placeholder="Ej.: Coca-Cola" /></label>
+              <label class="catalog-field"><span>Presentación</span><input id="catalogProductoPresentacion" type="text" maxlength="120" placeholder="Ej.: 2,25 L" /></label>
+              <label class="catalog-field"><span>Unidad de venta</span><select id="catalogProductoUnidad"><option value="unidad">Unidad</option><option value="kg">Kg</option><option value="pack">Pack</option><option value="cajon">Cajón</option><option value="bulto">Bulto</option><option value="litro">Litro</option><option value="metro">Metro</option></select></label>
+              <label class="catalog-field"><span>Orden de visualización</span><input id="catalogProductoOrden" type="number" step="1" value="0" /></label>
+            </div>
+            <div class="catalog-switches">
+              <label class="catalog-switch-row"><input id="catalogProductoVisible" type="checkbox" /><span class="catalog-switch"></span><span><strong>Visible para clientes</strong><small>El producto podrá aparecer en el catálogo público cuando tenga un rubro activo.</small></span></label>
+              <label class="catalog-switch-row"><input id="catalogProductoDestacado" type="checkbox" /><span class="catalog-switch"></span><span><strong>Producto destacado</strong><small>Podrá mostrarse con prioridad en secciones destacadas.</small></span></label>
+            </div>
+            <div class="catalog-image-stage-note"><span><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><strong>Imagen del producto</strong><p>La búsqueda automática, revisión y carga de imágenes se implementará en la Etapa 3.</p></div><em id="catalogProductoEstadoImagen">Sin imagen</em></div>
+          </div>
+          <footer class="catalog-modal-actions"><button id="catalogProductoCancelar" class="catalog-btn catalog-btn-secondary" type="button">Cancelar</button><button id="catalogProductoGuardar" class="catalog-btn catalog-btn-primary" type="button">Guardar cambios</button></footer>
+        </div>
+      </div>
+
+      <div id="catalogRubroModal" class="modal-overlay catalog-modal-overlay oculto" aria-hidden="true">
+        <div class="modal-card catalog-rubro-modal" role="dialog" aria-modal="true" aria-labelledby="catalogRubroModalTitulo">
+          <header class="catalog-modal-head"><div class="catalog-modal-title-wrap"><span class="catalog-modal-icon"><svg class="app-icon"><use href="#icon-tag"></use></svg></span><div><span>CATÁLOGO</span><h2 id="catalogRubroModalTitulo">Nuevo rubro</h2><p>Organizá la navegación del catálogo público.</p></div></div><button id="catalogRubroCerrar" class="modal-close" type="button" aria-label="Cerrar"><svg class="app-icon"><use href="#icon-close"></use></svg></button></header>
+          <div class="catalog-modal-body">
+            <input id="catalogRubroId" type="hidden" />
+            <div class="catalog-form-grid">
+              <label class="catalog-field catalog-field-wide"><span>Nombre del rubro *</span><input id="catalogRubroNombre" type="text" maxlength="80" placeholder="Ej.: Bebidas" /></label>
+              <label class="catalog-field"><span>Orden de visualización</span><input id="catalogRubroOrden" type="number" step="1" value="0" /></label>
+              <label class="catalog-field catalog-field-wide"><span>Descripción</span><textarea id="catalogRubroDescripcion" rows="3" maxlength="500" placeholder="Descripción opcional del rubro"></textarea></label>
+            </div>
+            <label class="catalog-switch-row catalog-rubro-active"><input id="catalogRubroActivo" type="checkbox" checked /><span class="catalog-switch"></span><span><strong>Rubro activo</strong><small>Los rubros inactivos no se muestran a los clientes.</small></span></label>
+          </div>
+          <footer class="catalog-modal-actions catalog-rubro-actions"><button id="catalogRubroEliminar" class="catalog-btn catalog-btn-danger oculto" type="button">Eliminar rubro</button><span></span><button id="catalogRubroCancelar" class="catalog-btn catalog-btn-secondary" type="button">Cancelar</button><button id="catalogRubroGuardar" class="catalog-btn catalog-btn-primary" type="button">Guardar rubro</button></footer>
+        </div>
+      </div>
+
       <main id="pantallaAdmin" class="pantalla admin-screen admin-official-screen" aria-hidden="true">
         <div id="adminMensaje" class="admin-message"></div>
 
@@ -3687,6 +3815,7 @@
     <script src="./pwa.js?v=1960-d21-cierre-etapa6-010926" defer></script>
     <script type="module" src="./auth.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script src="./horarios-config.js?v=1960-d21-cierre-etapa6-010926"></script>
+    <script type="module" src="./catalogo-admin.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./admin.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./notifications.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./notification-center.js?v=1960-d21-cierre-etapa6-010926"></script>

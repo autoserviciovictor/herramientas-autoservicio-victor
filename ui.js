@@ -15,6 +15,7 @@ const elementos = {
     productos: document.getElementById("pantallaProductos"),
     editarProducto: document.getElementById("pantallaEditarProducto"),
     ajustes: document.getElementById("pantallaAjustes"),
+    catalogo: document.getElementById("pantallaCatalogoAdmin"),
     admin: document.getElementById("pantallaAdmin"),
   },
   navBtns: document.querySelectorAll(".nav-btn"),
@@ -111,6 +112,7 @@ export function cambiarPantalla(nombre) {
   document.body.classList.toggle("en-tareas", nombre === "tareas");
   document.body.classList.toggle("en-bano", nombre === "bano");
   document.body.classList.toggle("en-ajustes", nombre === "ajustes");
+  document.body.classList.toggle("en-catalogo", nombre === "catalogo");
   document.body.classList.toggle("en-admin", nombre === "admin");
   document.body.classList.toggle(
     "en-modulo-inventario",

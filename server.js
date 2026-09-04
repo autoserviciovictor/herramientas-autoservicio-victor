@@ -58,6 +58,21 @@ const {
   reemplazarCatalogoDb,
 } = require("./db-inventario-productos");
 const {
+  asegurarEsquemaCatalogoPublico,
+  obtenerEstadoCatalogoPublicoDb,
+  listarRubrosPublicosDb,
+  listarProductosPublicosDb,
+  obtenerEstadoCatalogoAdminDb,
+  listarRubrosAdminDb,
+  crearRubroCatalogoAdminDb,
+  actualizarRubroCatalogoAdminDb,
+  eliminarRubroCatalogoAdminDb,
+  listarProductosCatalogoAdminDb,
+  obtenerProductoCatalogoAdminDb,
+  actualizarProductoCatalogoAdminDb,
+  actualizarVisibilidadProductoCatalogoAdminDb,
+} = require("./db-catalogo-publico");
+const {
   asegurarEsquemaVencimientos,
   listarVencimientosDb,
   crearVencimientoDb,
@@ -965,6 +980,58 @@ async function verificarCredencialGoogle(credential) {
   }
 }
 
+// Catálogo público: estas rutas son deliberadamente anónimas y se declaran
+// antes del middleware global de sesión. Solo exponen productos marcados como
+// visibles; la administración del catálogo se implementa en la Etapa 2.
+app.use("/catalogo/api", (req, res, next) => {
+  res.set({
+    "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    "X-Robots-Tag": "noindex",
+  });
+  next();
+});
+
+app.get("/catalogo/api/estado", async (req, res) => {
+  try {
+    const estado = await obtenerEstadoCatalogoPublicoDb();
+    res.json({
+      ok: true,
+      nombre: "Autoservicio Victor",
+      eslogan: "Brindamos calidad y atención",
+      ...estado,
+    });
+  } catch (error) {
+    console.error("Error consultando estado del catálogo público:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudo consultar el catálogo" });
+  }
+});
+
+app.get("/catalogo/api/rubros", async (req, res) => {
+  try {
+    const rubros = await listarRubrosPublicosDb();
+    res.json({ ok: true, rubros });
+  } catch (error) {
+    console.error("Error listando rubros públicos:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudieron cargar los rubros" });
+  }
+});
+
+app.get("/catalogo/api/productos", async (req, res) => {
+  try {
+    const resultado = await listarProductosPublicosDb({
+      pagina: req.query.pagina,
+      limite: req.query.limite,
+      busqueda: req.query.q,
+      rubro: req.query.rubro,
+      destacado: String(req.query.destacado || "") === "1",
+    });
+    res.json({ ok: true, ...resultado });
+  } catch (error) {
+    console.error("Error listando productos públicos:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudieron cargar los productos" });
+  }
+});
+
 app.get("/auth/google/config", (req, res) => {
   res.json({
     ok: true,
@@ -1410,6 +1477,103 @@ app.get("/dashboard/resumen", requerirSesion, async (req, res) => {
       ok: false,
       mensaje: error.message || "No se pudo cargar el resumen del inicio",
     });
+  }
+});
+
+
+app.get("/admin/catalogo/estado", requerirAdministrador, async (req, res) => {
+  try {
+    const estado = await obtenerEstadoCatalogoAdminDb();
+    res.json({ ok: true, ...estado });
+  } catch (error) {
+    console.error("Error consultando estado administrativo del catálogo:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo consultar el catálogo" });
+  }
+});
+
+app.get("/admin/catalogo/rubros", requerirAdministrador, async (req, res) => {
+  try {
+    res.json({ ok: true, rubros: await listarRubrosAdminDb() });
+  } catch (error) {
+    console.error("Error listando rubros del catálogo:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudieron cargar los rubros" });
+  }
+});
+
+app.post("/admin/catalogo/rubros", requerirAdministrador, async (req, res) => {
+  try {
+    const id = await crearRubroCatalogoAdminDb(req.body || {});
+    res.status(201).json({ ok: true, id, rubros: await listarRubrosAdminDb() });
+  } catch (error) {
+    console.error("Error creando rubro del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo crear el rubro" });
+  }
+});
+
+app.put("/admin/catalogo/rubros/:id", requerirAdministrador, async (req, res) => {
+  try {
+    await actualizarRubroCatalogoAdminDb(req.params.id, req.body || {});
+    res.json({ ok: true, rubros: await listarRubrosAdminDb() });
+  } catch (error) {
+    console.error("Error actualizando rubro del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo actualizar el rubro" });
+  }
+});
+
+app.delete("/admin/catalogo/rubros/:id", requerirAdministrador, async (req, res) => {
+  try {
+    await eliminarRubroCatalogoAdminDb(req.params.id);
+    res.json({ ok: true, rubros: await listarRubrosAdminDb() });
+  } catch (error) {
+    console.error("Error eliminando rubro del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo eliminar el rubro" });
+  }
+});
+
+app.get("/admin/catalogo/productos", requerirAdministrador, async (req, res) => {
+  try {
+    const resultado = await listarProductosCatalogoAdminDb({
+      pagina: req.query.pagina,
+      limite: req.query.limite,
+      busqueda: req.query.q,
+      rubro: req.query.rubro,
+      estado: req.query.estado,
+    });
+    res.json({ ok: true, ...resultado });
+  } catch (error) {
+    console.error("Error listando productos administrativos del catálogo:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudieron cargar los productos" });
+  }
+});
+
+app.get("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, res) => {
+  try {
+    const producto = await obtenerProductoCatalogoAdminDb(req.params.codigo);
+    if (!producto) return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
+    res.json({ ok: true, producto });
+  } catch (error) {
+    console.error("Error consultando producto del catálogo:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo consultar el producto" });
+  }
+});
+
+app.put("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, res) => {
+  try {
+    const producto = await actualizarProductoCatalogoAdminDb(req.params.codigo, req.body || {});
+    res.json({ ok: true, producto });
+  } catch (error) {
+    console.error("Error actualizando producto del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo actualizar el producto" });
+  }
+});
+
+app.patch("/admin/catalogo/productos/:codigo/visibilidad", requerirAdministrador, async (req, res) => {
+  try {
+    const producto = await actualizarVisibilidadProductoCatalogoAdminDb(req.params.codigo, req.body?.visible);
+    res.json({ ok: true, producto });
+  } catch (error) {
+    console.error("Error actualizando visibilidad del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo cambiar la visibilidad" });
   }
 });
 
@@ -6232,6 +6396,7 @@ async function prepararPostgresEtapa9() {
   await asegurarHorariosPostgres();
   await asegurarTareasBanoPostgres();
   await asegurarInventarioProductosPostgres();
+  await asegurarEsquemaCatalogoPublico();
   await asegurarVencimientosPostgres();
   await asegurarListasReposicionPostgres();
   await asegurarAuxiliaresPostgres();

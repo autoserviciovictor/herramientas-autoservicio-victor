@@ -43,7 +43,7 @@ function permisosUsuario(usuario = usuarioActual) {
 
 function puedeVerModulo(modulo, usuario = usuarioActual) {
   if (["inicio", "ajustes"].includes(modulo)) return true;
-  if (modulo === "admin") return usuario?.rol === "administrador";
+  if (["admin", "catalogo"].includes(modulo)) return usuario?.rol === "administrador";
   return permisosUsuario(usuario)[modulo] === true;
 }
 
