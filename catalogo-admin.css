@@ -82,3 +82,27 @@
     margin-top: 0 !important;
   }
 }
+
+/* D23 · Catálogo Etapa 3 — gestión de imágenes */
+.catalog-toolbar{grid-template-columns:minmax(260px,1fr) 165px 165px 175px auto 42px}
+.catalog-image-batch-btn{height:42px;padding:0 13px}
+.catalog-product-thumb.has-image{overflow:hidden;background:#fff}
+.catalog-product-thumb.has-image img{width:100%;height:100%;object-fit:contain;display:block}
+.catalog-image-manager{margin-top:14px;border:1px solid #e1e6ed;border-radius:14px;background:#fafbfc;padding:14px}
+.catalog-image-manager-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:12px}
+.catalog-image-manager-head strong{display:block;color:#344054;font-size:.84rem}
+.catalog-image-manager-head p{margin:3px 0 0;color:#98a2b3;font-size:.74rem;line-height:1.4}
+.catalog-image-manager-head em{font-style:normal;font-size:.7rem;font-weight:800;background:#f2f4f7;color:#667085;padding:5px 8px;border-radius:999px;white-space:nowrap}
+.catalog-image-manager-grid{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:start}
+.catalog-image-preview{height:150px;border:1px dashed #d8dee7;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#98a2b3;overflow:hidden}
+.catalog-image-preview>span{width:42px;height:42px;border-radius:11px;background:#f2f4f7;display:grid;place-items:center}
+.catalog-image-preview .app-icon{width:20px;height:20px}
+.catalog-image-preview small{font-size:.72rem}
+.catalog-image-preview img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
+.catalog-image-controls{min-width:0}
+.catalog-image-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.catalog-image-actions .catalog-btn{padding:9px 11px;font-size:.78rem}
+.catalog-image-meta{margin:9px 0 0;color:#7b8494;font-size:.72rem;line-height:1.4;min-height:1em}
+@media(max-width:1150px){.catalog-toolbar{grid-template-columns:minmax(240px,1fr) 1fr 1fr 1fr 42px}.catalog-image-batch-btn{grid-column:1/-2}}
+@media(max-width:900px){.catalog-toolbar{grid-template-columns:1fr 1fr}.catalog-search{grid-column:1/-1}.catalog-image-batch-btn{grid-column:1/-1}.catalog-icon-btn{justify-self:end}}
+@media(max-width:640px){.catalog-toolbar{grid-template-columns:1fr 42px}.catalog-toolbar select,.catalog-image-batch-btn{grid-column:1/-1}.catalog-image-manager-grid{grid-template-columns:1fr}.catalog-image-preview{height:190px}.catalog-image-manager-head{align-items:center}}

@@ -39,6 +39,12 @@ async function asegurarEsquemaCatalogoPublico() {
       image_url TEXT NOT NULL DEFAULT '',
       image_source TEXT NOT NULL DEFAULT '',
       image_status TEXT NOT NULL DEFAULT 'sin_imagen',
+      image_candidate_url TEXT NOT NULL DEFAULT '',
+      image_candidate_source TEXT NOT NULL DEFAULT '',
+      image_candidate_title TEXT NOT NULL DEFAULT '',
+      image_candidate_score INTEGER NOT NULL DEFAULT 0,
+      image_checked_at TIMESTAMPTZ,
+      image_error TEXT NOT NULL DEFAULT '',
       visible BOOLEAN NOT NULL DEFAULT FALSE,
       featured BOOLEAN NOT NULL DEFAULT FALSE,
       sort_order INTEGER NOT NULL DEFAULT 0,
@@ -52,6 +58,14 @@ async function asegurarEsquemaCatalogoPublico() {
         image_status IN ('sin_imagen','pendiente','confirmada','revisar')
       )
     )`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_url TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_source TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_title TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_score INTEGER NOT NULL DEFAULT 0`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_checked_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_error TEXT NOT NULL DEFAULT ''`);
+    await query(`CREATE INDEX IF NOT EXISTS catalog_product_settings_image_status_idx
+      ON catalog_product_settings(image_status, image_checked_at, code)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_product_settings_public_idx
       ON catalog_product_settings(visible, category_id, sort_order, code)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_product_settings_featured_idx
@@ -237,6 +251,8 @@ async function obtenerEstadoCatalogoAdminDb() {
       (SELECT COUNT(*)::int FROM catalog_product_settings WHERE visible=TRUE) AS visibles,
       (SELECT COUNT(*)::int FROM catalog_product_settings WHERE visible=FALSE) AS ocultos_configurados,
       (SELECT COUNT(*)::int FROM catalog_product_settings WHERE image_status='confirmada') AS imagenes_confirmadas,
+      (SELECT COUNT(*)::int FROM catalog_product_settings WHERE image_status='revisar') AS imagenes_revisar,
+      (SELECT COUNT(*)::int FROM catalog_product_settings WHERE image_status='pendiente') AS imagenes_pendientes,
       (SELECT COUNT(*)::int FROM catalog_categories) AS rubros,
       (SELECT COUNT(*)::int FROM catalog_categories WHERE active=TRUE) AS rubros_activos
   `);
@@ -251,6 +267,9 @@ async function obtenerEstadoCatalogoAdminDb() {
     configurados,
     pendientesConfigurar: Math.max(0, total - configurados),
     imagenesConfirmadas: Number(f.imagenes_confirmadas) || 0,
+    imagenesRevisar: Number(f.imagenes_revisar) || 0,
+    imagenesPendientes: Number(f.imagenes_pendientes) || 0,
+    imagenesSinImagen: Math.max(0, total - (Number(f.imagenes_confirmadas) || 0) - (Number(f.imagenes_revisar) || 0) - (Number(f.imagenes_pendientes) || 0)),
     rubros: Number(f.rubros) || 0,
     rubrosActivos: Number(f.rubros_activos) || 0,
   };
@@ -355,6 +374,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   const busqueda = normalizarBusqueda(opciones.busqueda);
   const rubro = textoLimitado(opciones.rubro, 80);
   const estado = textoLimitado(opciones.estado, 30);
+  const estadoImagen = textoLimitado(opciones.estadoImagen, 30);
   const condiciones = ["1=1"];
   const parametros = [];
   if (busqueda) {
@@ -373,6 +393,10 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   else if (estado === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
   else if (estado === "sin-configurar") condiciones.push("s.code IS NULL");
   else if (estado === "destacado") condiciones.push("s.featured=TRUE");
+  if (estadoImagen === "confirmada") condiciones.push("s.image_status='confirmada'");
+  else if (estadoImagen === "revisar") condiciones.push("s.image_status='revisar'");
+  else if (estadoImagen === "pendiente") condiciones.push("s.image_status='pendiente'");
+  else if (estadoImagen === "sin_imagen") condiciones.push("COALESCE(s.image_status,'sin_imagen')='sin_imagen'");
   const where = condiciones.join(" AND ");
   const conteo = await query(`
     SELECT COUNT(*)::int AS total
@@ -389,6 +413,12 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
            COALESCE(s.sale_unit,'unidad') AS sale_unit,
            COALESCE(s.image_url,'') AS image_url,
            COALESCE(s.image_status,'sin_imagen') AS image_status,
+           COALESCE(s.image_source,'') AS image_source,
+           COALESCE(s.image_candidate_url,'') AS image_candidate_url,
+           COALESCE(s.image_candidate_source,'') AS image_candidate_source,
+           COALESCE(s.image_candidate_title,'') AS image_candidate_title,
+           COALESCE(s.image_candidate_score,0) AS image_candidate_score,
+           s.image_checked_at, COALESCE(s.image_error,'') AS image_error,
            COALESCE(s.visible,FALSE) AS visible,
            COALESCE(s.featured,FALSE) AS featured,
            COALESCE(s.sort_order,0) AS sort_order,
@@ -417,6 +447,13 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
       unidadVenta: String(f.sale_unit || "unidad"),
       imagen: String(f.image_url || ""),
       estadoImagen: String(f.image_status || "sin_imagen"),
+      fuenteImagen: String(f.image_source || ""),
+      candidatoImagen: String(f.image_candidate_url || ""),
+      candidatoFuente: String(f.image_candidate_source || ""),
+      candidatoTitulo: String(f.image_candidate_title || ""),
+      candidatoPuntaje: Number(f.image_candidate_score) || 0,
+      imagenRevisadaEn: f.image_checked_at || null,
+      errorImagen: String(f.image_error || ""),
       visible: Boolean(f.visible),
       destacado: Boolean(f.featured),
       orden: Number(f.sort_order) || 0,
@@ -437,6 +474,12 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
            COALESCE(s.sale_unit,'unidad') AS sale_unit,
            COALESCE(s.image_url,'') AS image_url,
            COALESCE(s.image_status,'sin_imagen') AS image_status,
+           COALESCE(s.image_source,'') AS image_source,
+           COALESCE(s.image_candidate_url,'') AS image_candidate_url,
+           COALESCE(s.image_candidate_source,'') AS image_candidate_source,
+           COALESCE(s.image_candidate_title,'') AS image_candidate_title,
+           COALESCE(s.image_candidate_score,0) AS image_candidate_score,
+           s.image_checked_at, COALESCE(s.image_error,'') AS image_error,
            COALESCE(s.visible,FALSE) AS visible,
            COALESCE(s.featured,FALSE) AS featured,
            COALESCE(s.sort_order,0) AS sort_order,
@@ -537,6 +580,114 @@ async function actualizarVisibilidadProductoCatalogoAdminDb(codigo, visible) {
   return actualizarProductoCatalogoAdminDb(codigo, { visible });
 }
 
+async function guardarResultadoImagenCatalogoDb(codigo, datos = {}) {
+  await asegurarEsquemaCatalogoPublico();
+  const code = textoLimitado(codigo, 160);
+  if (!code) throw new Error("Código de producto inválido");
+  const existe = await query(`SELECT 1 FROM product_catalog WHERE code=$1 LIMIT 1`, [code]);
+  if (!existe.rowCount) throw new Error("El producto no existe en el catálogo maestro");
+  const actual = await query(`SELECT * FROM catalog_product_settings WHERE code=$1`, [code]);
+  const s = actual.rows[0] || {};
+  const estado = textoLimitado(datos.estado === undefined ? (s.image_status || "sin_imagen") : datos.estado, 30);
+  if (!ESTADOS_IMAGEN.includes(estado)) throw new Error("Estado de imagen inválido");
+  await query(`
+    INSERT INTO catalog_product_settings(
+      code, category_id, brand, presentation, sale_unit,
+      image_url, image_source, image_status,
+      image_candidate_url, image_candidate_source, image_candidate_title, image_candidate_score,
+      image_checked_at, image_error, visible, featured, sort_order, updated_at
+    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),$13,$14,$15,$16,NOW())
+    ON CONFLICT(code) DO UPDATE SET
+      image_url=EXCLUDED.image_url,
+      image_source=EXCLUDED.image_source,
+      image_status=EXCLUDED.image_status,
+      image_candidate_url=EXCLUDED.image_candidate_url,
+      image_candidate_source=EXCLUDED.image_candidate_source,
+      image_candidate_title=EXCLUDED.image_candidate_title,
+      image_candidate_score=EXCLUDED.image_candidate_score,
+      image_checked_at=NOW(),
+      image_error=EXCLUDED.image_error,
+      updated_at=NOW()
+  `, [
+    code,
+    s.category_id ?? null,
+    String(s.brand || ""),
+    String(s.presentation || ""),
+    String(s.sale_unit || "unidad"),
+    datos.imagen === undefined ? String(s.image_url || "") : textoLimitado(datos.imagen, 1200),
+    datos.fuente === undefined ? String(s.image_source || "") : textoLimitado(datos.fuente, 160),
+    estado,
+    datos.candidatoUrl === undefined ? String(s.image_candidate_url || "") : textoLimitado(datos.candidatoUrl, 1200),
+    datos.candidatoFuente === undefined ? String(s.image_candidate_source || "") : textoLimitado(datos.candidatoFuente, 160),
+    datos.candidatoTitulo === undefined ? String(s.image_candidate_title || "") : textoLimitado(datos.candidatoTitulo, 220),
+    datos.candidatoPuntaje === undefined ? Number(s.image_candidate_score) || 0 : enteroEnRango(datos.candidatoPuntaje, 0, 100, 0),
+    datos.error === undefined ? String(s.image_error || "") : textoLimitado(datos.error, 500),
+    Boolean(s.visible),
+    Boolean(s.featured),
+    Number(s.sort_order) || 0,
+  ]);
+  return obtenerProductoCatalogoAdminDb(code);
+}
+
+async function confirmarCandidatoImagenCatalogoDb(codigo) {
+  await asegurarEsquemaCatalogoPublico();
+  const code = textoLimitado(codigo, 160);
+  const r = await query(`SELECT image_candidate_url, image_candidate_source FROM catalog_product_settings WHERE code=$1`, [code]);
+  if (!r.rowCount || !String(r.rows[0].image_candidate_url || "").trim()) throw new Error("No hay una imagen candidata para confirmar");
+  return guardarResultadoImagenCatalogoDb(code, {
+    imagen: r.rows[0].image_candidate_url,
+    fuente: r.rows[0].image_candidate_source || "Revisión manual",
+    estado: "confirmada",
+    candidatoUrl: "",
+    candidatoFuente: "",
+    error: "",
+  });
+}
+
+async function guardarImagenManualCatalogoDb(codigo, imagen) {
+  const url = String(imagen || "").trim();
+  if (!/^https:\/\//i.test(url)) throw new Error("La imagen debe usar una URL HTTPS válida");
+  return guardarResultadoImagenCatalogoDb(codigo, {
+    imagen: url,
+    fuente: "Manual",
+    estado: "confirmada",
+    candidatoUrl: "",
+    candidatoFuente: "",
+    candidatoTitulo: "",
+    candidatoPuntaje: 100,
+    error: "",
+  });
+}
+
+async function quitarImagenCatalogoDb(codigo) {
+  return guardarResultadoImagenCatalogoDb(codigo, {
+    imagen: "",
+    fuente: "",
+    estado: "sin_imagen",
+    candidatoUrl: "",
+    candidatoFuente: "",
+    candidatoTitulo: "",
+    candidatoPuntaje: 0,
+    error: "",
+  });
+}
+
+async function listarPendientesImagenCatalogoDb(limite = 20) {
+  await asegurarEsquemaCatalogoPublico();
+  const cantidad = enteroEnRango(limite, 1, 60, 20);
+  const r = await query(`
+    SELECT p.code
+    FROM product_catalog p
+    LEFT JOIN catalog_product_settings s ON s.code=p.code
+    WHERE COALESCE(s.image_status,'sin_imagen')='sin_imagen'
+      AND COALESCE(s.image_url,'')=''
+      AND (s.image_checked_at IS NULL OR s.image_checked_at < NOW() - INTERVAL '7 days')
+    ORDER BY s.image_checked_at NULLS FIRST, p.catalog_id
+    LIMIT $1
+  `, [cantidad]);
+  return r.rows.map((f) => ({ codigo: String(f.code || "") }));
+}
+
 module.exports = {
   UNIDADES_VENTA,
   ESTADOS_IMAGEN,
@@ -553,4 +704,9 @@ module.exports = {
   obtenerProductoCatalogoAdminDb,
   actualizarProductoCatalogoAdminDb,
   actualizarVisibilidadProductoCatalogoAdminDb,
+  guardarResultadoImagenCatalogoDb,
+  confirmarCandidatoImagenCatalogoDb,
+  guardarImagenManualCatalogoDb,
+  quitarImagenCatalogoDb,
+  listarPendientesImagenCatalogoDb,
 };

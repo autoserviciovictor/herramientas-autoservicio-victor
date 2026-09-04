@@ -3228,6 +3228,15 @@
                 <option value="sin-configurar">Sin configurar</option>
                 <option value="destacado">Destacados</option>
               </select>
+              <select id="catalogFiltroImagen" aria-label="Filtrar por imagen">
+                <option value="todos">Todas las imágenes</option>
+                <option value="confirmada">Imagen confirmada</option>
+                <option value="revisar">Para revisar</option>
+                <option value="sin_imagen">Sin imagen</option>
+              </select>
+              <button id="catalogBtnBuscarImagenes" class="catalog-btn catalog-btn-secondary catalog-image-batch-btn" type="button" title="Buscar imágenes automáticamente para los próximos productos sin imagen">
+                <svg class="app-icon"><use href="#icon-search"></use></svg><span>Buscar 20 imágenes</span>
+              </button>
               <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar">
                 <svg class="app-icon"><use href="#icon-refresh"></use></svg>
               </button>
@@ -3277,7 +3286,22 @@
               <label class="catalog-switch-row"><input id="catalogProductoVisible" type="checkbox" /><span class="catalog-switch"></span><span><strong>Visible para clientes</strong><small>El producto podrá aparecer en el catálogo público cuando tenga un rubro activo.</small></span></label>
               <label class="catalog-switch-row"><input id="catalogProductoDestacado" type="checkbox" /><span class="catalog-switch"></span><span><strong>Producto destacado</strong><small>Podrá mostrarse con prioridad en secciones destacadas.</small></span></label>
             </div>
-            <div class="catalog-image-stage-note"><span><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><strong>Imagen del producto</strong><p>La búsqueda automática, revisión y carga de imágenes se implementará en la Etapa 3.</p></div><em id="catalogProductoEstadoImagen">Sin imagen</em></div>
+            <section class="catalog-image-manager" aria-label="Imagen del producto">
+              <div class="catalog-image-manager-head"><div><strong>Imagen del producto</strong><p>Se prioriza el código EAN. Las coincidencias exactas pueden confirmarse automáticamente.</p></div><em id="catalogProductoEstadoImagen">Sin imagen</em></div>
+              <div class="catalog-image-manager-grid">
+                <div class="catalog-image-preview" id="catalogProductoImagenPreview"><span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small></div>
+                <div class="catalog-image-controls">
+                  <label class="catalog-field"><span>URL de imagen HTTPS</span><input id="catalogProductoImagenUrl" type="url" maxlength="1200" placeholder="https://..." /></label>
+                  <div class="catalog-image-actions">
+                    <button id="catalogProductoBuscarImagen" class="catalog-btn catalog-btn-secondary" type="button"><svg class="app-icon"><use href="#icon-search"></use></svg><span>Buscar automática</span></button>
+                    <button id="catalogProductoGuardarImagen" class="catalog-btn catalog-btn-secondary" type="button">Usar URL</button>
+                    <button id="catalogProductoConfirmarImagen" class="catalog-btn catalog-btn-primary oculto" type="button">Confirmar candidata</button>
+                    <button id="catalogProductoQuitarImagen" class="catalog-btn catalog-btn-danger oculto" type="button">Quitar imagen</button>
+                  </div>
+                  <p id="catalogProductoImagenMeta" class="catalog-image-meta"></p>
+                </div>
+              </div>
+            </section>
           </div>
           <footer class="catalog-modal-actions"><button id="catalogProductoCancelar" class="catalog-btn catalog-btn-secondary" type="button">Cancelar</button><button id="catalogProductoGuardar" class="catalog-btn catalog-btn-primary" type="button">Guardar cambios</button></footer>
         </div>

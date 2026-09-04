@@ -71,7 +71,11 @@ const {
   obtenerProductoCatalogoAdminDb,
   actualizarProductoCatalogoAdminDb,
   actualizarVisibilidadProductoCatalogoAdminDb,
+  confirmarCandidatoImagenCatalogoDb,
+  guardarImagenManualCatalogoDb,
+  quitarImagenCatalogoDb,
 } = require("./db-catalogo-publico");
+const { buscarImagenProducto, buscarImagenesLote } = require("./catalogo-imagenes");
 const {
   asegurarEsquemaVencimientos,
   listarVencimientosDb,
@@ -1538,6 +1542,7 @@ app.get("/admin/catalogo/productos", requerirAdministrador, async (req, res) => 
       busqueda: req.query.q,
       rubro: req.query.rubro,
       estado: req.query.estado,
+      estadoImagen: req.query.imagen,
     });
     res.json({ ok: true, ...resultado });
   } catch (error) {
@@ -1574,6 +1579,53 @@ app.patch("/admin/catalogo/productos/:codigo/visibilidad", requerirAdministrador
   } catch (error) {
     console.error("Error actualizando visibilidad del catálogo:", error);
     res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo cambiar la visibilidad" });
+  }
+});
+
+app.post("/admin/catalogo/productos/:codigo/imagen/buscar", requerirAdministrador, async (req, res) => {
+  try {
+    const resultado = await buscarImagenProducto(req.params.codigo);
+    res.json({ ok: true, ...resultado });
+  } catch (error) {
+    console.error("Error buscando imagen del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo buscar la imagen" });
+  }
+});
+
+app.post("/admin/catalogo/imagenes/buscar-lote", requerirAdministrador, async (req, res) => {
+  try {
+    const resumen = await buscarImagenesLote({ limite: req.body?.limite });
+    res.json({ ok: true, resumen });
+  } catch (error) {
+    console.error("Error buscando imágenes por lote:", error);
+    res.status(error.status || 500).json({ ok: false, mensaje: error.message || "No se pudo procesar el lote de imágenes" });
+  }
+});
+
+app.post("/admin/catalogo/productos/:codigo/imagen/confirmar", requerirAdministrador, async (req, res) => {
+  try {
+    const producto = await confirmarCandidatoImagenCatalogoDb(req.params.codigo);
+    res.json({ ok: true, producto });
+  } catch (error) {
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo confirmar la imagen" });
+  }
+});
+
+app.put("/admin/catalogo/productos/:codigo/imagen", requerirAdministrador, async (req, res) => {
+  try {
+    const producto = await guardarImagenManualCatalogoDb(req.params.codigo, req.body?.imagen);
+    res.json({ ok: true, producto });
+  } catch (error) {
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo guardar la imagen" });
+  }
+});
+
+app.delete("/admin/catalogo/productos/:codigo/imagen", requerirAdministrador, async (req, res) => {
+  try {
+    const producto = await quitarImagenCatalogoDb(req.params.codigo);
+    res.json({ ok: true, producto });
+  } catch (error) {
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo quitar la imagen" });
   }
 });
 

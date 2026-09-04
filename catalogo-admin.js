@@ -72,9 +72,11 @@ function parametrosProductos() {
   const q = $("catalogBuscarProductos")?.value.trim();
   const rubro = $("catalogFiltroRubro")?.value || "todos";
   const est = $("catalogFiltroEstado")?.value || "todos";
+  const imagen = $("catalogFiltroImagen")?.value || "todos";
   if (q) p.set("q", q);
   if (rubro !== "todos") p.set("rubro", rubro);
   if (est !== "todos") p.set("estado", est);
+  if (imagen !== "todos") p.set("imagen", imagen);
   return p;
 }
 
@@ -109,7 +111,7 @@ function renderProductos() {
     body.innerHTML = estado.productos.map((p) => {
       const chip = !p.configurado ? '<span class="catalog-chip unconfigured">Sin configurar</span>' : p.visible ? '<span class="catalog-chip visible">Visible</span>' : '<span class="catalog-chip hidden">Oculto</span>';
       return `<tr data-code="${esc(p.codigo)}">
-        <td><div class="catalog-product-cell"><span class="catalog-product-thumb"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""}</small></div></div></td>
+        <td><div class="catalog-product-cell"><span class="catalog-product-thumb ${p.imagen ? "has-image" : ""}">${p.imagen ? `<img src="${esc(p.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : '<svg class="app-icon"><use href="#icon-box"></use></svg>'}</span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""} · ${esc(({confirmada:"Imagen confirmada",revisar:"Revisar imagen",pendiente:"Imagen pendiente",sin_imagen:"Sin imagen"})[p.estadoImagen] || "Sin imagen")}</small></div></div></td>
         <td>${p.rubro ? esc(p.rubro) : '<span class="catalog-chip unconfigured">Sin rubro</span>'}</td>
         <td><span class="catalog-price">${moneda(p.precio)}</span></td>
         <td>${esc(etiquetaUnidad(p.unidadVenta))}</td>
@@ -167,6 +169,111 @@ function cambiarTab(tab) {
   document.querySelectorAll("[data-catalog-panel]").forEach((p) => p.classList.toggle("oculto", p.dataset.catalogPanel !== estado.tab));
 }
 
+function etiquetaEstadoImagen(valor) {
+  return ({ confirmada: "Confirmada", revisar: "Revisar", pendiente: "Pendiente", sin_imagen: "Sin imagen" })[valor] || "Sin imagen";
+}
+
+function renderImagenProducto(p = {}) {
+  const preview = $("catalogProductoImagenPreview");
+  const input = $("catalogProductoImagenUrl");
+  const meta = $("catalogProductoImagenMeta");
+  const confirmar = $("catalogProductoConfirmarImagen");
+  const quitar = $("catalogProductoQuitarImagen");
+  const estadoEl = $("catalogProductoEstadoImagen");
+  const candidata = p.candidatoImagen || "";
+  const imagen = p.imagen || "";
+  const mostrada = candidata || imagen;
+  if (estadoEl) estadoEl.textContent = etiquetaEstadoImagen(p.estadoImagen);
+  if (input) input.value = imagen || candidata || "";
+  if (preview) {
+    preview.innerHTML = mostrada
+      ? `<img src="${esc(mostrada)}" alt="Vista previa de ${esc(p.nombre || "producto")}" referrerpolicy="no-referrer" />`
+      : '<span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small>';
+  }
+  if (confirmar) confirmar.classList.toggle("oculto", !candidata);
+  if (quitar) quitar.classList.toggle("oculto", !imagen && !candidata);
+  if (meta) {
+    if (candidata) meta.textContent = `Candidata: ${p.candidatoFuente || "fuente automática"}${p.candidatoPuntaje ? ` · coincidencia ${p.candidatoPuntaje}%` : ""}`;
+    else if (imagen) meta.textContent = `Fuente: ${p.fuenteImagen || "configurada"}`;
+    else if (p.errorImagen) meta.textContent = p.errorImagen;
+    else meta.textContent = "Todavía no se buscó una imagen para este producto.";
+  }
+}
+
+async function recargarProductoAbierto() {
+  const codigo = $("catalogProductoModal")?.dataset.codigo;
+  if (!codigo) return null;
+  const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}`);
+  renderImagenProducto(data.producto || {});
+  return data.producto;
+}
+
+async function buscarImagenProductoActual() {
+  const codigo = $("catalogProductoModal")?.dataset.codigo;
+  if (!codigo) return;
+  const boton = $("catalogProductoBuscarImagen");
+  boton.disabled = true;
+  mensaje("Buscando imagen por código EAN…");
+  try {
+    const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/buscar`, { method: "POST" });
+    renderImagenProducto(data.producto || {});
+    await cargarEstado();
+    mensaje(data.confirmado ? "Imagen encontrada y confirmada por EAN." : data.encontrado ? "Se encontró una candidata para revisar." : "No se encontró una imagen automática.", data.encontrado ? "ok" : "");
+  } catch (e) { mensaje(e.message); }
+  finally { boton.disabled = false; }
+}
+
+async function guardarImagenManualActual() {
+  const codigo = $("catalogProductoModal")?.dataset.codigo;
+  const imagen = $("catalogProductoImagenUrl")?.value.trim();
+  if (!codigo || !imagen) return mensaje("Pegá una URL HTTPS de imagen.");
+  try {
+    const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen`, { method: "PUT", body: JSON.stringify({ imagen }) });
+    renderImagenProducto(data.producto || {});
+    await Promise.all([cargarEstado(), cargarProductos()]);
+    mensaje("Imagen guardada y confirmada.", "ok");
+  } catch (e) { mensaje(e.message); }
+}
+
+async function confirmarImagenActual() {
+  const codigo = $("catalogProductoModal")?.dataset.codigo;
+  if (!codigo) return;
+  try {
+    const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/confirmar`, { method: "POST" });
+    renderImagenProducto(data.producto || {});
+    await Promise.all([cargarEstado(), cargarProductos()]);
+    mensaje("Imagen confirmada.", "ok");
+  } catch (e) { mensaje(e.message); }
+}
+
+async function quitarImagenActual() {
+  const codigo = $("catalogProductoModal")?.dataset.codigo;
+  if (!codigo) return;
+  try {
+    const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen`, { method: "DELETE" });
+    renderImagenProducto(data.producto || {});
+    await Promise.all([cargarEstado(), cargarProductos()]);
+    mensaje("Imagen quitada.", "ok");
+  } catch (e) { mensaje(e.message); }
+}
+
+async function buscarImagenesLote() {
+  const boton = $("catalogBtnBuscarImagenes");
+  if (!boton || boton.disabled) return;
+  boton.disabled = true;
+  const texto = boton.querySelector("span");
+  const anterior = texto?.textContent || "Buscar 20 imágenes";
+  if (texto) texto.textContent = "Buscando…";
+  mensaje("Buscando imágenes para 20 productos sin imagen…");
+  try {
+    const data = await api("/admin/catalogo/imagenes/buscar-lote", { method: "POST", body: JSON.stringify({ limite: 20 }) });
+    const r = data.resumen || {};
+    await Promise.all([cargarEstado(), cargarProductos()]);
+    mensaje(`Procesados ${numero(r.procesados)} · confirmadas ${numero(r.confirmadas)} · revisar ${numero(r.revisar)} · sin imagen ${numero(r.sinImagen)}`, "ok");
+  } catch (e) { mensaje(e.message); }
+  finally { boton.disabled = false; if (texto) texto.textContent = anterior; }
+}
+
 async function abrirProducto(codigo) {
   try {
     const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}`);
@@ -183,7 +290,7 @@ async function abrirProducto(codigo) {
     $("catalogProductoOrden").value = Number(p.orden) || 0;
     $("catalogProductoVisible").checked = Boolean(p.visible);
     $("catalogProductoDestacado").checked = Boolean(p.destacado);
-    $("catalogProductoEstadoImagen").textContent = ({ confirmada: "Confirmada", revisar: "Revisar", pendiente: "Pendiente", sin_imagen: "Sin imagen" })[p.estadoImagen] || "Sin imagen";
+    renderImagenProducto(p);
     abrirModal("catalogProductoModal");
   } catch (e) { mensaje(e.message); }
 }
@@ -277,10 +384,16 @@ function bind() {
   $("catalogBuscarProductos")?.addEventListener("input", () => { clearTimeout(estado.busquedaTimer); estado.busquedaTimer = setTimeout(() => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)), 260); });
   $("catalogFiltroRubro")?.addEventListener("change", () => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)));
   $("catalogFiltroEstado")?.addEventListener("change", () => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)));
+  $("catalogFiltroImagen")?.addEventListener("change", () => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)));
+  $("catalogBtnBuscarImagenes")?.addEventListener("click", buscarImagenesLote);
   $("catalogBtnRecargar")?.addEventListener("click", () => Promise.all([cargarEstado(), cargarRubros(), cargarProductos()]).catch((e) => mensaje(e.message)));
   $("catalogBtnVerPublico")?.addEventListener("click", () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener"));
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());
   $("catalogProductoGuardar")?.addEventListener("click", guardarProducto);
+  $("catalogProductoBuscarImagen")?.addEventListener("click", buscarImagenProductoActual);
+  $("catalogProductoGuardarImagen")?.addEventListener("click", guardarImagenManualActual);
+  $("catalogProductoConfirmarImagen")?.addEventListener("click", confirmarImagenActual);
+  $("catalogProductoQuitarImagen")?.addEventListener("click", quitarImagenActual);
   $("catalogProductoCerrar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogProductoCancelar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogRubroGuardar")?.addEventListener("click", guardarRubro);
