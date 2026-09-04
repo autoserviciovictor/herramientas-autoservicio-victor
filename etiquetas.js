@@ -14,6 +14,9 @@ let temporizadorFeedbackScanner = null;
 let claveUsuarioActiva = "";
 let temporizadorGuardadoServidor = null;
 let cargaUsuarioSecuencia = 0;
+let colaGuardadoServidor = Promise.resolve();
+let ultimoSnapshotServidor = "";
+let sincronizacionRemotaEnCurso = null;
 
 const STORAGE_ETIQUETAS_PREFIX = "autoservicio:etiquetas:v1:";
 
@@ -44,31 +47,43 @@ function guardarListaLocal() {
   }
 }
 
-async function guardarListaServidor({ inmediato = false } = {}) {
-  if (!identidadUsuario()) return;
-  if (!inmediato) {
-    clearTimeout(temporizadorGuardadoServidor);
-    temporizadorGuardadoServidor = setTimeout(() => void guardarListaServidor({ inmediato: true }), 250);
-    return;
-  }
+async function guardarListaServidor({ inmediato = true } = {}) {
+  const usuario = identidadUsuario();
+  if (!usuario) return false;
   clearTimeout(temporizadorGuardadoServidor);
   temporizadorGuardadoServidor = null;
+
   const snapshot = normalizarItemsGuardados(items);
-  try {
-    const respuesta = await fetch("/etiquetas/lista", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: snapshot }),
-    });
-    if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-  } catch (error) {
-    console.warn("No se pudo sincronizar la lista de etiquetas con el servidor. Se conserva la copia local.", error);
-  }
+  const cuerpo = JSON.stringify({ items: snapshot });
+  if (cuerpo === ultimoSnapshotServidor) return true;
+
+  // Las escrituras se encadenan para que dos escaneos rápidos nunca puedan
+  // llegar al servidor fuera de orden y dejar guardado un snapshot anterior.
+  const trabajo = async () => {
+    try {
+      const respuesta = await fetch("/etiquetas/lista", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: cuerpo,
+        cache: "no-store",
+        keepalive: true,
+      });
+      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+      ultimoSnapshotServidor = cuerpo;
+      return true;
+    } catch (error) {
+      console.warn("No se pudo sincronizar la lista de etiquetas con el servidor. Se conserva la copia local.", error);
+      return false;
+    }
+  };
+
+  colaGuardadoServidor = colaGuardadoServidor.then(trabajo, trabajo);
+  return colaGuardadoServidor;
 }
 
 function guardarListaUsuario() {
   guardarListaLocal();
-  void guardarListaServidor();
+  void guardarListaServidor({ inmediato: true });
 }
 
 async function cargarListaUsuario(usuario = window.AutoservicioAuth?.getUsuario?.()) {
@@ -98,6 +113,7 @@ async function cargarListaUsuario(usuario = window.AutoservicioAuth?.getUsuario?
 
     if (data?.existe) {
       items = normalizarItemsGuardados(data.items);
+      ultimoSnapshotServidor = JSON.stringify({ items });
       guardarListaLocal();
       render();
       return;
@@ -113,6 +129,16 @@ async function cargarListaUsuario(usuario = window.AutoservicioAuth?.getUsuario?
   } catch (error) {
     console.warn("No se pudo cargar la lista de etiquetas del servidor. Se usa la copia local.", error);
   }
+}
+
+async function sincronizarListaDesdeServidor() {
+  const usuario = window.AutoservicioAuth?.getUsuario?.();
+  if (!identidadUsuario(usuario)) return;
+  if (sincronizacionRemotaEnCurso) return sincronizacionRemotaEnCurso;
+  sincronizacionRemotaEnCurso = cargarListaUsuario(usuario).finally(() => {
+    sincronizacionRemotaEnCurso = null;
+  });
+  return sincronizacionRemotaEnCurso;
 }
 
 function vaciarListaUsuario() {
@@ -473,7 +499,7 @@ function imprimir() {
 }
 
 async function activar() {
-  cargarListaUsuario();
+  await sincronizarListaDesdeServidor();
   await cargarCatalogo().catch(() => {});
   render();
 }
@@ -517,7 +543,11 @@ function init() {
   $("etiquetasCodigoManual")?.addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnEtiquetasCodigoManual")?.click(); });
   window.addEventListener("afterprint", () => document.getElementById("etiquetasPrintSheet")?.remove());
   window.addEventListener("autoservicio:sesion", (event) => cargarListaUsuario(event.detail));
-  cargarListaUsuario();
+  window.addEventListener("focus", () => void sincronizarListaDesdeServidor());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void sincronizarListaDesdeServidor();
+  });
+  void sincronizarListaDesdeServidor();
 }
 
 window.EtiquetasModule = { activar, desactivar };
