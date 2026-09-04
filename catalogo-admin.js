@@ -213,12 +213,12 @@ async function buscarImagenProductoActual() {
   if (!codigo) return;
   const boton = $("catalogProductoBuscarImagen");
   boton.disabled = true;
-  mensaje("Buscando imagen por código EAN…");
+  mensaje("Buscando una imagen de producto con fondo blanco…");
   try {
     const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/buscar`, { method: "POST" });
     renderImagenProducto(data.producto || {});
     await cargarEstado();
-    mensaje(data.confirmado ? "Imagen encontrada y confirmada por EAN." : data.encontrado ? "Se encontró una candidata para revisar." : "No se encontró una imagen automática.", data.encontrado ? "ok" : "");
+    mensaje(data.encontrado ? "Se encontró una candidata. Revisá que tenga fondo blanco, solo el producto y buena escala antes de confirmarla." : "No se encontró una imagen automática.", data.encontrado ? "ok" : "");
   } catch (e) { mensaje(e.message); }
   finally { boton.disabled = false; }
 }

@@ -55,8 +55,9 @@ function candidatoOpenFacts(data, fuente) {
     titulo: String(p.product_name || "").trim().slice(0, 220),
     marca: String(p.brands || "").trim().slice(0, 160),
     presentacion: String(p.quantity || "").trim().slice(0, 120),
-    puntaje: 98,
+    puntaje: 82,
     exacta: true,
+    calidadVerificada: false,
   };
 }
 
@@ -82,26 +83,40 @@ async function buscarGoogle(producto) {
   if (!apiKey || !cx) return null;
   const consulta = [producto.marca, producto.nombre, producto.presentacion].filter(Boolean).join(" ").trim();
   if (!consulta) return null;
+  const consultaCalidad = [producto.codigo, consulta, 'producto fondo blanco solo producto packshot'].filter(Boolean).join(" ").trim();
   const params = new URLSearchParams({
     key: apiKey,
     cx,
     searchType: "image",
     safe: "active",
-    num: "1",
-    q: consulta.slice(0, 180),
+    num: "5",
+    imgType: "photo",
+    imgSize: "large",
+    q: consultaCalidad.slice(0, 220),
   });
   const data = await fetchJson(`https://www.googleapis.com/customsearch/v1?${params}`, GOOGLE_TIMEOUT_MS);
-  const item = data?.items?.[0];
-  const imagen = urlHttps(item?.link);
-  if (!imagen) return null;
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const candidatos = items.map((item) => {
+    const imagen = urlHttps(item?.link);
+    const w = Number(item?.image?.width) || 0;
+    const h = Number(item?.image?.height) || 0;
+    if (!imagen || w < 400 || h < 400) return null;
+    const ratio = w / h;
+    if (ratio < 0.45 || ratio > 2.2) return null;
+    const cercaniaCuadrado = 1 - Math.min(1, Math.abs(1 - ratio));
+    return { item, imagen, w, h, score: 70 + Math.round(cercaniaCuadrado * 8) };
+  }).filter(Boolean).sort((a,b) => b.score - a.score);
+  const mejor = candidatos[0];
+  if (!mejor) return null;
   return {
-    url: imagen,
-    fuente: "Google Programmable Search",
-    titulo: String(item?.title || consulta).slice(0, 220),
+    url: mejor.imagen,
+    fuente: "Google Programmable Search · fondo blanco",
+    titulo: String(mejor.item?.title || consulta).slice(0, 220),
     marca: producto.marca || "",
     presentacion: producto.presentacion || "",
-    puntaje: 72,
+    puntaje: mejor.score,
     exacta: false,
+    calidadVerificada: false,
   };
 }
 
@@ -109,27 +124,17 @@ async function buscarImagenProducto(codigo, { guardar = true } = {}) {
   const producto = await obtenerProductoCatalogoAdminDb(codigo);
   if (!producto) throw new Error("Producto no encontrado");
 
-  let candidato = await buscarPorEAN(producto.codigo);
-  if (!candidato) candidato = await buscarGoogle(producto);
+  // Para calidad visual priorizamos una búsqueda comercial con fondo blanco.
+  // El EAN sigue siendo la clave de identidad, pero una coincidencia exacta NO confirma la calidad de la foto.
+  let candidato = await buscarGoogle(producto);
+  if (!candidato) candidato = await buscarPorEAN(producto.codigo);
 
   if (!guardar) return { producto, candidato };
 
-  if (candidato?.exacta) {
-    await guardarResultadoImagenCatalogoDb(producto.codigo, {
-      imagen: candidato.url,
-      fuente: candidato.fuente,
-      estado: "confirmada",
-      candidatoUrl: "",
-      candidatoFuente: "",
-      candidatoTitulo: candidato.titulo,
-      candidatoPuntaje: candidato.puntaje,
-      error: "",
-    });
-    return { encontrado: true, confirmado: true, candidato, producto: await obtenerProductoCatalogoAdminDb(producto.codigo) };
-  }
-
   if (candidato) {
     await guardarResultadoImagenCatalogoDb(producto.codigo, {
+      // Toda imagen automática requiere revisión visual: fondo blanco, producto solo,
+      // completo, centrado, nítido y con escala razonable. El EAN valida identidad, no calidad.
       estado: "revisar",
       candidatoUrl: candidato.url,
       candidatoFuente: candidato.fuente,

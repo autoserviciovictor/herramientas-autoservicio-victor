@@ -3287,7 +3287,7 @@
               <label class="catalog-switch-row"><input id="catalogProductoDestacado" type="checkbox" /><span class="catalog-switch"></span><span><strong>Producto destacado</strong><small>Podrá mostrarse con prioridad en secciones destacadas.</small></span></label>
             </div>
             <section class="catalog-image-manager" aria-label="Imagen del producto">
-              <div class="catalog-image-manager-head"><div><strong>Imagen del producto</strong><p>Se prioriza el código EAN. Las coincidencias exactas pueden confirmarse automáticamente.</p></div><em id="catalogProductoEstadoImagen">Sin imagen</em></div>
+              <div class="catalog-image-manager-head"><div><strong>Imagen del producto</strong><p>Se prioriza el EAN para identificar el producto. Toda imagen automática debe revisarse: fondo blanco, solo el producto, completo, centrado y nítido.</p></div><em id="catalogProductoEstadoImagen">Sin imagen</em></div>
               <div class="catalog-image-manager-grid">
                 <div class="catalog-image-preview" id="catalogProductoImagenPreview"><span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small></div>
                 <div class="catalog-image-controls">
@@ -3298,7 +3298,7 @@
                     <button id="catalogProductoConfirmarImagen" class="catalog-btn catalog-btn-primary oculto" type="button">Confirmar candidata</button>
                     <button id="catalogProductoQuitarImagen" class="catalog-btn catalog-btn-danger oculto" type="button">Quitar imagen</button>
                   </div>
-                  <p id="catalogProductoImagenMeta" class="catalog-image-meta"></p>
+                  <p id="catalogProductoImagenMeta" class="catalog-image-meta"></p><p class="catalog-image-standard">Formato del catálogo: cuadrado 1:1, fondo blanco y escala uniforme. Las imágenes con manos, fondos reales, recortes o producto demasiado pequeño deben rechazarse.</p>
                 </div>
               </div>
             </section>

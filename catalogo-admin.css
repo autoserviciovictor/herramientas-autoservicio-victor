@@ -106,3 +106,11 @@
 @media(max-width:1150px){.catalog-toolbar{grid-template-columns:minmax(240px,1fr) 1fr 1fr 1fr 42px}.catalog-image-batch-btn{grid-column:1/-2}}
 @media(max-width:900px){.catalog-toolbar{grid-template-columns:1fr 1fr}.catalog-search{grid-column:1/-1}.catalog-image-batch-btn{grid-column:1/-1}.catalog-icon-btn{justify-self:end}}
 @media(max-width:640px){.catalog-toolbar{grid-template-columns:1fr 42px}.catalog-toolbar select,.catalog-image-batch-btn{grid-column:1/-1}.catalog-image-manager-grid{grid-template-columns:1fr}.catalog-image-preview{height:190px}.catalog-image-manager-head{align-items:center}}
+
+/* D23 · Estándar visual de imágenes del catálogo */
+.catalog-product-thumb.has-image{background:#fff;padding:4px;box-sizing:border-box}
+.catalog-product-thumb.has-image img{width:100%;height:100%;object-fit:contain;object-position:center;background:#fff}
+.catalog-image-preview{aspect-ratio:1/1;height:auto;min-height:150px;padding:12px;box-sizing:border-box;background:#fff}
+.catalog-image-preview img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;background:#fff}
+.catalog-image-standard{margin:9px 0 0;padding:9px 10px;border-radius:9px;background:#fff;color:#667085;font-size:.69rem;line-height:1.45;border:1px solid #e8ecf1}
+@media(max-width:640px){.catalog-image-preview{height:auto;min-height:190px}}
