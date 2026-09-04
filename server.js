@@ -3433,6 +3433,95 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
     });
   }
 });
+app.post("/tareas/bano/reasignar", requerirAlgunModulo("tareas"), async (req, res) => {
+  try {
+    if (!rolGestionSector(req.usuario))
+      return res.status(403).json({
+        ok: false,
+        mensaje: "Solo supervisores o administración pueden cambiar la rotación",
+      });
+
+    const fecha = normalizarTexto(req.body?.fecha);
+    const reemplazoSolicitado = normalizarTexto(req.body?.reemplazo);
+    const hoy = fechaArgentina();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha < hoy)
+      return res.status(400).json({ ok: false, mensaje: "Solo se pueden cambiar turnos de hoy o futuros" });
+    if (!reemplazoSolicitado)
+      return res.status(400).json({ ok: false, mensaje: "Seleccioná un reemplazo válido" });
+
+    const config = await conTransaccionTareasBano(async (cliente) => {
+      const actual = await leerBanoServidor(cliente);
+      const participantes = Array.isArray(actual.participantes)
+        ? actual.participantes.map(normalizarTexto).filter(Boolean)
+        : [];
+      if (participantes.length < 2) {
+        const error = new Error("Se necesitan al menos dos participantes para cambiar el responsable");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const distancia = diasEntreIso(actual.fechaAncla, fecha);
+      if (distancia === null || distancia < 0 || distancia % 2 !== 0) {
+        const error = new Error("La fecha seleccionada no corresponde a un día de limpieza");
+        error.statusCode = 400;
+        throw error;
+      }
+      const indiceActual = Math.floor(distancia / 2) % participantes.length;
+      const responsableActual = participantes[indiceActual] || "";
+      const identidadReemplazo = normalizarIdentidadBano(reemplazoSolicitado);
+      const indiceReemplazo = participantes.findIndex(
+        (participante) => normalizarIdentidadBano(participante) === identidadReemplazo,
+      );
+      if (indiceReemplazo < 0) {
+        const error = new Error("El usuario seleccionado no participa de la rotación");
+        error.statusCode = 400;
+        throw error;
+      }
+      if (indiceReemplazo === indiceActual) {
+        const error = new Error("Ese usuario ya es el responsable de ese turno");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const historialActual = Array.isArray(actual.historial) ? actual.historial : [];
+      const registroExistente = historialActual.find((x) => normalizarTexto(x?.fecha) === fecha);
+      if (normalizarTexto(registroExistente?.usuario)) {
+        const error = new Error("La limpieza de ese día ya fue confirmada y no puede reasignarse");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const nuevoOrden = participantes.slice();
+      [nuevoOrden[indiceActual], nuevoOrden[indiceReemplazo]] = [
+        nuevoOrden[indiceReemplazo],
+        nuevoOrden[indiceActual],
+      ];
+      await guardarConfiguracionBanoServidor(
+        { participantes: nuevoOrden, fechaAncla: actual.fechaAncla },
+        req.usuario,
+        cliente,
+      );
+
+      // Si existe un registro pendiente persistido para hoy, actualizamos su responsable
+      // para que la confirmación posterior valide contra la nueva rotación.
+      if (registroExistente && !normalizarTexto(registroExistente.usuario)) {
+        registroExistente.responsable = nuevoOrden[indiceActual];
+        await guardarRegistroBanoServidor(registroExistente, req.usuario, cliente);
+      }
+
+      const actualizado = await leerBanoServidor(cliente);
+      actualizado.historial = completarHistorialBano(actualizado);
+      return actualizado;
+    });
+    res.json({ ok: true, config });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({
+      ok: false,
+      mensaje: e.message || "No se pudo cambiar el responsable",
+    });
+  }
+});
+
 app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const fecha = normalizarTexto(req.body?.fecha) || fechaArgentina();

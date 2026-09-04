@@ -16121,3 +16121,88 @@ html[data-theme="dark"] #pantallaEtiquetas .etiquetas-item-index,html[data-theme
     font-weight:700!important;
   }
 }
+
+/* ================= BAÑO · REASIGNACIÓN PERSISTENTE 04/09/2026 =================
+   Un único control para intercambiar participantes sin alterar el resto del módulo. */
+#pantallaBano .bano-current-actions{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+}
+#pantallaBano .bano-reassign-btn{
+  min-height:34px;
+  padding:0 12px;
+  border:1px solid #ead7dc;
+  border-radius:10px;
+  background:#fff;
+  color:#d92e4e;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  font:inherit;
+  font-size:12px;
+  font-weight:750;
+  line-height:1;
+  white-space:nowrap;
+  cursor:pointer;
+}
+#pantallaBano .bano-reassign-btn .app-icon{
+  width:15px;
+  height:15px;
+  flex:none;
+}
+#pantallaBano .bano-reassign-btn:hover{
+  border-color:#ef4b68;
+  background:#fff5f7;
+}
+#pantallaBano .bano-reassign-btn:disabled,
+#pantallaBano .bano-reassign-btn.is-loading{
+  opacity:.55;
+  cursor:wait;
+}
+#pantallaBano .bano-reassign-btn.is-hero{
+  min-height:42px;
+  padding:0 15px;
+  border-color:rgba(255,255,255,.72);
+  background:rgba(255,255,255,.12);
+  color:#fff;
+}
+#pantallaBano .bano-reassign-btn.is-hero:hover{
+  background:rgba(255,255,255,.2);
+  border-color:#fff;
+}
+#pantallaBano .bano-turn-modern .bano-reassign-btn{
+  margin-left:auto;
+  flex:none;
+}
+html[data-theme="dark"] #pantallaBano .bano-reassign-btn:not(.is-hero){
+  background:#172a43;
+  border-color:#38506d;
+  color:#ff6680;
+}
+html[data-theme="dark"] #pantallaBano .bano-reassign-btn:not(.is-hero):hover{
+  background:#20364f;
+}
+@media(max-width:700px){
+  #pantallaBano .bano-current-actions{
+    width:100%;
+    margin-left:0;
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  #pantallaBano .bano-reassign-btn.is-hero,
+  #pantallaBano .bano-confirm-modern{
+    width:100%;
+  }
+  #pantallaBano .bano-turn-modern .bano-reassign-btn{
+    padding:0 9px;
+    min-height:32px;
+  }
+  #pantallaBano .bano-turn-modern .bano-reassign-btn span{
+    display:none;
+  }
+}

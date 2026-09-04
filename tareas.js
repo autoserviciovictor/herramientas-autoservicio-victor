@@ -2037,6 +2037,9 @@ function historialCompletoBano(cfg, hoy = inicioDia(new Date())) {
 function puedeVerificarBano() {
   return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
 }
+function puedeReasignarBano() {
+  return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
+}
 
 function abrirPlanillaBano() {
   const modal = $("banoPlanillaModal"), contenido = $("banoPlanillaContenido");
@@ -2099,9 +2102,14 @@ function renderBano() {
         <strong>${esc(responsable || "Sin participantes")}</strong>
         <small>${esc(fechaLarga)}</small>
       </div>
-      ${confirmado
-        ? `<div class="bano-modern-confirmed"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Completado</span></div>`
-        : `<button id="btnConfirmarBano" class="bano-confirm-btn bano-confirm-modern" type="button" ${sinParticipantes ? "disabled" : ""}><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Marcar como completado</span></button>`}`;
+      <div class="bano-current-actions">
+        ${!confirmado && puedeReasignarBano() && cfg.participantes.length > 1
+          ? `<button type="button" class="bano-reassign-btn is-hero" data-bano-reasignar="${esc(iso(hoy))}" aria-label="Cambiar responsable de hoy"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 7h10l-3-3m3 3-3 3M16 17H6l3 3m-3-3 3-3"/></svg><span>Cambiar responsable</span></button>`
+          : ""}
+        ${confirmado
+          ? `<div class="bano-modern-confirmed"><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Completado</span></div>`
+          : `<button id="btnConfirmarBano" class="bano-confirm-btn bano-confirm-modern" type="button" ${sinParticipantes ? "disabled" : ""}><svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Marcar como completado</span></button>`}
+      </div>`;
   }
 
   const proximos = [];
@@ -2118,7 +2126,9 @@ function renderBano() {
           <div class="bano-turn-date"><strong>${x.fecha.getDate()}</strong><span>${fmt(x.fecha, { month: "short" }).replace(".", "")}</span></div>
           <div class="bano-turn-copy"><strong>${esc(x.nombre)}</strong><span>Limpieza del baño</span></div>
           <span class="bano-turn-day">${esc(fmt(x.fecha, { weekday: "long" }))}</span>
-          <svg class="app-icon bano-turn-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          ${puedeReasignarBano() && cfg.participantes.length > 1
+            ? `<button type="button" class="bano-reassign-btn" data-bano-reasignar="${esc(iso(x.fecha))}" aria-label="Cambiar responsable del ${esc(fmt(x.fecha, { day: "numeric", month: "long" }))}"><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 7h10l-3-3m3 3-3 3M16 17H6l3 3m-3-3 3-3"/></svg><span>Cambiar</span></button>`
+            : `<svg class="app-icon bano-turn-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`}
         </article>`).join("")
     : '<div class="tareas-empty"><strong>Sin participantes</strong><span>Seleccioná usuarios desde Configuración.</span></div>';
 
@@ -2161,6 +2171,9 @@ function renderBano() {
   $("banoPendientes").querySelectorAll("[data-bano-verificar]").forEach((boton) => {
     boton.addEventListener("click", () => verificarBano(boton.dataset.banoVerificar, boton));
   });
+  document.querySelectorAll("#pantallaBano [data-bano-reasignar]").forEach((boton) => {
+    boton.addEventListener("click", () => cambiarResponsableBano(boton.dataset.banoReasignar, boton));
+  });
 
   $("banoKpiParticipantes").textContent = String(cfg.participantes.length);
   const proxima = siguienteDiaLimpieza(hoy, cfg, !corresponde);
@@ -2179,6 +2192,81 @@ function renderBano() {
         boton.disabled = false;
       }
     };
+  }
+}
+
+async function cambiarResponsableBano(fecha, boton = null) {
+  if (!puedeReasignarBano() || !fecha) return;
+  const cfg = configBano();
+  const fechaObj = parseFecha(fecha);
+  if (!esDiaLimpieza(fechaObj, cfg) || cfg.participantes.length < 2) return;
+  const indiceActual = indiceBano(fechaObj, cfg);
+  const claveActual = indiceActual >= 0 ? claveParticipante(cfg.participantes[indiceActual]) : "";
+  const actualNombre = nombreParticipante(claveActual);
+  const opciones = cfg.participantes
+    .map(claveParticipante)
+    .filter((clave) => clave && clave !== claveActual)
+    .map((clave) => {
+      const u = usuarioParticipante(clave);
+      return {
+        value: clave,
+        label: u?.nombre || u?.usuario || clave,
+        description: u?.sector || "Participante de la rotación",
+        color: colorSectorBano(u?.sector || ""),
+      };
+    });
+  if (!opciones.length) return;
+
+  let reemplazo = "";
+  if (window.AppChoicePicker?.open) {
+    reemplazo = await window.AppChoicePicker.open({
+      title: "Cambiar responsable",
+      kicker: fmt(fechaObj, { weekday: "long", day: "numeric", month: "long" }),
+      value: "",
+      options: opciones,
+    });
+  } else {
+    reemplazo = prompt(`Reemplazar a ${actualNombre} por:`, opciones[0]?.label || "") || "";
+    const porNombre = opciones.find((x) => normalClave(x.label) === normalClave(reemplazo));
+    if (porNombre) reemplazo = porNombre.value;
+  }
+  if (!reemplazo || reemplazo === claveActual) return;
+
+  const reemplazoNombre = nombreParticipante(reemplazo);
+  const confirmar = await window.AutoservicioDialog?.confirm?.({
+    title: "Guardar nuevo orden",
+    message: `${actualNombre} será reemplazado por ${reemplazoNombre}. Ambos intercambiarán su posición en la rotación y el nuevo orden quedará guardado para los próximos turnos.`,
+    confirmText: "Cambiar responsable",
+    cancelText: "Cancelar",
+  });
+  if (confirmar !== true) return;
+
+  if (boton) {
+    boton.disabled = true;
+    boton.classList.add("is-loading");
+  }
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/bano/reasignar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fecha, reemplazo }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo cambiar el responsable");
+    banoMemoria = data.config;
+    guardarJSONUsuario(BANO_KEY, banoMemoria);
+    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
+    renderBano();
+  } catch (error) {
+    window.AutoservicioDialog?.alert?.({
+      title: "No se pudo cambiar el responsable",
+      message: error.message || "Intentá nuevamente.",
+    });
+    if (boton) {
+      boton.disabled = false;
+      boton.classList.remove("is-loading");
+    }
   }
 }
 
