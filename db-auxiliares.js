@@ -32,6 +32,10 @@ async function asegurarEsquemaAuxiliares() {
       tasks_enabled BOOLEAN NOT NULL DEFAULT TRUE, bathroom_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
 
+    await query(`CREATE TABLE IF NOT EXISTS label_lists (
+      user_key TEXT PRIMARY KEY, items JSONB NOT NULL DEFAULT '[]'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+
     await query(`CREATE TABLE IF NOT EXISTS notification_log (
       notification_pk BIGSERIAL PRIMARY KEY, notification_key TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT '',
       record_id TEXT NOT NULL DEFAULT '', code TEXT NOT NULL DEFAULT '', expiry_date TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '')`);
@@ -130,6 +134,21 @@ async function guardarPreferenciasNotificacionesDb(usuario,prefs){
   return {usuario:clave,vencimientos:prefs?.vencimientos!==false,tareas:prefs?.tareas!==false,bano:prefs?.bano!==false};
 }
 
+async function obtenerListaEtiquetasDb(usuario){
+  const clave=texto(usuario).toLowerCase();
+  const r=await query(`SELECT items,updated_at FROM label_lists WHERE user_key=$1`,[clave]);
+  const x=r.rows[0];
+  return x?{items:Array.isArray(x.items)?x.items:[],actualizado:x.updated_at||null}:null;
+}
+async function guardarListaEtiquetasDb(usuario,items){
+  const clave=texto(usuario).toLowerCase();
+  const lista=Array.isArray(items)?items:[];
+  const r=await query(`INSERT INTO label_lists(user_key,items,updated_at) VALUES($1,$2::jsonb,NOW())
+    ON CONFLICT(user_key) DO UPDATE SET items=EXCLUDED.items,updated_at=NOW()
+    RETURNING updated_at`,[clave,JSON.stringify(lista)]);
+  return {usuario:clave,items:lista,actualizado:r.rows[0]?.updated_at||null};
+}
+
 async function notificacionHorarioEjecutadaDb(fecha,clave){ const r=await query(`SELECT 1 FROM notification_schedule_runs WHERE run_date=$1 AND schedule_key=$2`,[texto(fecha),texto(clave)]); return Boolean(r.rowCount); }
 async function registrarNotificacionHorarioEjecutadaDb(fecha,clave){ await query(`INSERT INTO notification_schedule_runs(run_date,schedule_key,completed_at) VALUES($1,$2,NOW()) ON CONFLICT(run_date,schedule_key) DO NOTHING`,[texto(fecha),texto(clave)]); }
 
@@ -143,4 +162,4 @@ async function marcarCentroNotificacionDb(usuario,id='',todas=false){ const r=aw
 async function registrarHistorialVencimientoDb(x){ await query(`INSERT INTO expiration_history(event_date,event_time,user_key,user_name,action,record_id,code,article,expiry_date,detail,quantity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,[x.fecha||'',x.hora||'',x.usuario||'',x.nombre||'',x.accion||'',x.id||'',x.codigo||'',x.articulo||'',x.vencimiento||'',x.detalle||'',String(x.cantidad??'')]); }
 async function listarHistorialVencimientosDb(){ const r=await query(`SELECT event_date,event_time,user_key,user_name,action,record_id,code,article,expiry_date,detail,quantity FROM expiration_history ORDER BY history_pk DESC`); return r.rows.map(x=>({fecha:x.event_date,hora:x.event_time,usuario:x.user_key,nombre:x.user_name,accion:x.action,id:x.record_id,codigo:x.code,articulo:x.article,vencimiento:x.expiry_date,detalle:x.detail,cantidad:x.quantity})); }
 
-module.exports={BLOQUEO_AUXILIARES,asegurarEsquemaAuxiliares,conTransaccionAuxiliares,importarAuxiliaresAtomico,registrarActividadAdminDb,listarActividadAdminDb,buscarOperacionOfflineDb,reservarOperacionOfflineDb,finalizarOperacionOfflineDb,listarSuscripcionesPushDb,guardarSuscripcionPushDb,desactivarSuscripcionPushDb,obtenerPreferenciasNotificacionesDb,listarPreferenciasNotificacionesDb,guardarPreferenciasNotificacionesDb,notificacionHorarioEjecutadaDb,registrarNotificacionHorarioEjecutadaDb,clavesNotificacionesDb,registrarNotificacionEnviadaDb,existeCentroNotificacionDb,registrarCentroNotificacionDb,listarCentroNotificacionesDb,marcarCentroNotificacionDb,registrarHistorialVencimientoDb,listarHistorialVencimientosDb};
+module.exports={BLOQUEO_AUXILIARES,asegurarEsquemaAuxiliares,conTransaccionAuxiliares,importarAuxiliaresAtomico,registrarActividadAdminDb,listarActividadAdminDb,buscarOperacionOfflineDb,reservarOperacionOfflineDb,finalizarOperacionOfflineDb,listarSuscripcionesPushDb,guardarSuscripcionPushDb,desactivarSuscripcionPushDb,obtenerPreferenciasNotificacionesDb,listarPreferenciasNotificacionesDb,guardarPreferenciasNotificacionesDb,obtenerListaEtiquetasDb,guardarListaEtiquetasDb,notificacionHorarioEjecutadaDb,registrarNotificacionHorarioEjecutadaDb,clavesNotificacionesDb,registrarNotificacionEnviadaDb,existeCentroNotificacionDb,registrarCentroNotificacionDb,listarCentroNotificacionesDb,marcarCentroNotificacionDb,registrarHistorialVencimientoDb,listarHistorialVencimientosDb};

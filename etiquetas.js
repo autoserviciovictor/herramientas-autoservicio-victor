@@ -12,6 +12,8 @@ let scannerAbierto = false;
 let bloqueoLecturaHasta = 0;
 let temporizadorFeedbackScanner = null;
 let claveUsuarioActiva = "";
+let temporizadorGuardadoServidor = null;
+let cargaUsuarioSecuencia = 0;
 
 const STORAGE_ETIQUETAS_PREFIX = "autoservicio:etiquetas:v1:";
 
@@ -33,31 +35,84 @@ function normalizarItemsGuardados(valor) {
   })).filter((item) => item.codigo || item.articulo);
 }
 
-function guardarListaUsuario() {
+function guardarListaLocal() {
   if (!claveUsuarioActiva) return;
   try {
     localStorage.setItem(claveUsuarioActiva, JSON.stringify(items));
   } catch (error) {
-    console.warn("No se pudo guardar la lista de etiquetas del usuario.", error);
+    console.warn("No se pudo guardar la lista local de etiquetas del usuario.", error);
   }
 }
 
-function cargarListaUsuario(usuario = window.AutoservicioAuth?.getUsuario?.()) {
+async function guardarListaServidor({ inmediato = false } = {}) {
+  if (!identidadUsuario()) return;
+  if (!inmediato) {
+    clearTimeout(temporizadorGuardadoServidor);
+    temporizadorGuardadoServidor = setTimeout(() => void guardarListaServidor({ inmediato: true }), 250);
+    return;
+  }
+  clearTimeout(temporizadorGuardadoServidor);
+  temporizadorGuardadoServidor = null;
+  const snapshot = normalizarItemsGuardados(items);
+  try {
+    const respuesta = await fetch("/etiquetas/lista", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: snapshot }),
+    });
+    if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+  } catch (error) {
+    console.warn("No se pudo sincronizar la lista de etiquetas con el servidor. Se conserva la copia local.", error);
+  }
+}
+
+function guardarListaUsuario() {
+  guardarListaLocal();
+  void guardarListaServidor();
+}
+
+async function cargarListaUsuario(usuario = window.AutoservicioAuth?.getUsuario?.()) {
+  const secuencia = ++cargaUsuarioSecuencia;
   const nuevaClave = claveStorageUsuario(usuario);
-  if (claveUsuarioActiva && claveUsuarioActiva !== nuevaClave) guardarListaUsuario();
   claveUsuarioActiva = nuevaClave;
   if (!nuevaClave) {
     items = [];
     render();
     return;
   }
+
+  let listaLocal = [];
   try {
-    items = normalizarItemsGuardados(JSON.parse(localStorage.getItem(nuevaClave) || "[]"));
+    listaLocal = normalizarItemsGuardados(JSON.parse(localStorage.getItem(nuevaClave) || "[]"));
   } catch (error) {
-    console.warn("No se pudo recuperar la lista de etiquetas del usuario.", error);
-    items = [];
+    console.warn("No se pudo recuperar la copia local de etiquetas del usuario.", error);
   }
+  items = listaLocal;
   render();
+
+  try {
+    const respuesta = await fetch("/etiquetas/lista", { cache: "no-store" });
+    if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+    const data = await respuesta.json();
+    if (secuencia !== cargaUsuarioSecuencia || nuevaClave !== claveUsuarioActiva) return;
+
+    if (data?.existe) {
+      items = normalizarItemsGuardados(data.items);
+      guardarListaLocal();
+      render();
+      return;
+    }
+
+    // Primera sincronización tras instalar esta versión: si el teléfono ya tenía
+    // productos guardados localmente, se suben para que aparezcan en los demás dispositivos.
+    if (listaLocal.length) {
+      items = listaLocal;
+      guardarListaLocal();
+      await guardarListaServidor({ inmediato: true });
+    }
+  } catch (error) {
+    console.warn("No se pudo cargar la lista de etiquetas del servidor. Se usa la copia local.", error);
+  }
 }
 
 function vaciarListaUsuario() {
@@ -66,6 +121,7 @@ function vaciarListaUsuario() {
     try { localStorage.removeItem(claveUsuarioActiva); } catch {}
   }
   render();
+  void guardarListaServidor({ inmediato: true });
 }
 
 function normalizarProducto(p) {

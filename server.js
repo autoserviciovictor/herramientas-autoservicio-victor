@@ -82,6 +82,8 @@ const {
   obtenerPreferenciasNotificacionesDb,
   listarPreferenciasNotificacionesDb,
   guardarPreferenciasNotificacionesDb,
+  obtenerListaEtiquetasDb,
+  guardarListaEtiquetasDb,
   notificacionHorarioEjecutadaDb,
   registrarNotificacionHorarioEjecutadaDb,
   clavesNotificacionesDb,
@@ -5226,6 +5228,36 @@ app.patch("/notificaciones/centro-leidas", requerirSesion, async (req, res) => {
       ok: false,
       mensaje: error.message || "No se pudieron actualizar las notificaciones",
     });
+  }
+});
+
+app.get("/etiquetas/lista", requerirAlgunModulo("etiquetas"), async (req, res) => {
+  try {
+    await asegurarAuxiliaresPostgres();
+    const guardada = await obtenerListaEtiquetasDb(req.usuario.usuario);
+    res.json({ ok: true, existe: Boolean(guardada), items: guardada?.items || [], actualizado: guardada?.actualizado || null });
+  } catch (error) {
+    console.error("Error en GET /etiquetas/lista:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo cargar la lista de etiquetas" });
+  }
+});
+
+app.put("/etiquetas/lista", requerirAlgunModulo("etiquetas"), express.json({ limit: "96kb" }), async (req, res) => {
+  try {
+    await asegurarAuxiliaresPostgres();
+    const entrada = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (entrada.length > 500) return res.status(400).json({ ok: false, mensaje: "La lista supera el máximo permitido" });
+    const items = entrada.map((item) => ({
+      codigo: normalizarCodigo(item?.codigo || item?.ean || "").slice(0, 80),
+      articulo: normalizarTexto(item?.articulo || item?.descripcion || "Producto").slice(0, 240),
+      precio: Math.max(0, Number(item?.precio || 0) || 0),
+      cantidad: Math.max(1, Math.min(999, Math.trunc(Number(item?.cantidad || 1)) || 1)),
+    })).filter((item) => item.codigo || item.articulo);
+    const guardada = await guardarListaEtiquetasDb(req.usuario.usuario, items);
+    res.json({ ok: true, items: guardada.items, actualizado: guardada.actualizado });
+  } catch (error) {
+    console.error("Error en PUT /etiquetas/lista:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo guardar la lista de etiquetas" });
   }
 });
 
