@@ -208,19 +208,30 @@ async function recargarProductoAbierto() {
   return data.producto;
 }
 
+function estadoBusquedaImagen(texto = "", tipo = "") {
+  const el = $("catalogProductoImagenEstadoBusqueda");
+  if (!el) return;
+  el.textContent = texto;
+  el.className = `catalog-image-search-status ${tipo}`.trim();
+}
+
 async function buscarImagenProductoActual() {
   const codigo = $("catalogProductoModal")?.dataset.codigo;
   if (!codigo) return;
   const boton = $("catalogProductoBuscarImagen");
   boton.disabled = true;
-  mensaje("Buscando una imagen de producto con fondo blanco…");
+  estadoBusquedaImagen("Buscando imagen… Puede demorar unos segundos.", "buscando");
   try {
     const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/buscar`, { method: "POST" });
     renderImagenProducto(data.producto || {});
     await cargarEstado();
-    mensaje(data.encontrado ? "Se encontró una candidata. Revisá que tenga fondo blanco, solo el producto y buena escala antes de confirmarla." : "No se encontró una imagen automática.", data.encontrado ? "ok" : "");
-  } catch (e) { mensaje(e.message); }
-  finally { boton.disabled = false; }
+    if (data.encontrado) estadoBusquedaImagen("Imagen candidata encontrada. Revisala antes de confirmarla.", "ok");
+    else estadoBusquedaImagen("No se encontró una imagen automática para este producto.", "error");
+  } catch (e) {
+    estadoBusquedaImagen(e.message || "No se pudo buscar la imagen.", "error");
+  } finally {
+    boton.disabled = false;
+  }
 }
 
 async function guardarImagenManualActual() {
