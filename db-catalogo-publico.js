@@ -43,6 +43,10 @@ async function asegurarEsquemaCatalogoPublico() {
       image_candidate_source TEXT NOT NULL DEFAULT '',
       image_candidate_title TEXT NOT NULL DEFAULT '',
       image_candidate_score INTEGER NOT NULL DEFAULT 0,
+      image_data BYTEA,
+      image_mime TEXT NOT NULL DEFAULT '',
+      image_candidate_data BYTEA,
+      image_candidate_mime TEXT NOT NULL DEFAULT '',
       image_checked_at TIMESTAMPTZ,
       image_error TEXT NOT NULL DEFAULT '',
       visible BOOLEAN NOT NULL DEFAULT FALSE,
@@ -62,6 +66,10 @@ async function asegurarEsquemaCatalogoPublico() {
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_source TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_title TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_score INTEGER NOT NULL DEFAULT 0`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_data BYTEA`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_mime TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_data BYTEA`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_mime TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_checked_at TIMESTAMPTZ`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_error TEXT NOT NULL DEFAULT ''`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_product_settings_image_status_idx
@@ -600,18 +608,22 @@ async function guardarResultadoImagenCatalogoDb(codigo, datos = {}) {
   await query(`
     INSERT INTO catalog_product_settings(
       code, category_id, brand, presentation, sale_unit,
-      image_url, image_source, image_status,
-      image_candidate_url, image_candidate_source, image_candidate_title, image_candidate_score,
+      image_url, image_source, image_status, image_data, image_mime,
+      image_candidate_url, image_candidate_source, image_candidate_title, image_candidate_score, image_candidate_data, image_candidate_mime,
       image_checked_at, image_error, visible, featured, sort_order, updated_at
-    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),$13,$14,$15,$16,NOW())
+    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),$17,$18,$19,$20,NOW())
     ON CONFLICT(code) DO UPDATE SET
       image_url=EXCLUDED.image_url,
       image_source=EXCLUDED.image_source,
       image_status=EXCLUDED.image_status,
+      image_data=EXCLUDED.image_data,
+      image_mime=EXCLUDED.image_mime,
       image_candidate_url=EXCLUDED.image_candidate_url,
       image_candidate_source=EXCLUDED.image_candidate_source,
       image_candidate_title=EXCLUDED.image_candidate_title,
       image_candidate_score=EXCLUDED.image_candidate_score,
+      image_candidate_data=EXCLUDED.image_candidate_data,
+      image_candidate_mime=EXCLUDED.image_candidate_mime,
       image_checked_at=NOW(),
       image_error=EXCLUDED.image_error,
       updated_at=NOW()
@@ -624,10 +636,14 @@ async function guardarResultadoImagenCatalogoDb(codigo, datos = {}) {
     datos.imagen === undefined ? String(s.image_url || "") : textoLimitado(datos.imagen, 1200),
     datos.fuente === undefined ? String(s.image_source || "") : textoLimitado(datos.fuente, 160),
     estado,
+    datos.imagenData === undefined ? (s.image_data || null) : (datos.imagenData || null),
+    datos.imagenMime === undefined ? String(s.image_mime || "") : textoLimitado(datos.imagenMime, 80),
     datos.candidatoUrl === undefined ? String(s.image_candidate_url || "") : textoLimitado(datos.candidatoUrl, 1200),
     datos.candidatoFuente === undefined ? String(s.image_candidate_source || "") : textoLimitado(datos.candidatoFuente, 160),
     datos.candidatoTitulo === undefined ? String(s.image_candidate_title || "") : textoLimitado(datos.candidatoTitulo, 220),
     datos.candidatoPuntaje === undefined ? Number(s.image_candidate_score) || 0 : enteroEnRango(datos.candidatoPuntaje, 0, 100, 0),
+    datos.candidatoData === undefined ? (s.image_candidate_data || null) : (datos.candidatoData || null),
+    datos.candidatoMime === undefined ? String(s.image_candidate_mime || "") : textoLimitado(datos.candidatoMime, 80),
     datos.error === undefined ? String(s.image_error || "") : textoLimitado(datos.error, 500),
     Boolean(s.visible),
     Boolean(s.featured),
@@ -639,31 +655,42 @@ async function guardarResultadoImagenCatalogoDb(codigo, datos = {}) {
 async function confirmarCandidatoImagenCatalogoDb(codigo) {
   await asegurarEsquemaCatalogoPublico();
   const code = textoLimitado(codigo, 160);
-  const r = await query(`SELECT image_candidate_url, image_candidate_source FROM catalog_product_settings WHERE code=$1`, [code]);
-  if (!r.rowCount || !String(r.rows[0].image_candidate_url || "").trim()) throw new Error("No hay una imagen candidata para confirmar");
+  const r = await query(`SELECT image_candidate_url, image_candidate_source, image_candidate_data, image_candidate_mime FROM catalog_product_settings WHERE code=$1`, [code]);
+  if (!r.rowCount || !r.rows[0].image_candidate_data) throw new Error("No hay una imagen candidata descargada para confirmar");
   return guardarResultadoImagenCatalogoDb(code, {
-    imagen: r.rows[0].image_candidate_url,
+    imagen: r.rows[0].image_candidate_url || "",
     fuente: r.rows[0].image_candidate_source || "Revisión manual",
     estado: "confirmada",
+    imagenData: r.rows[0].image_candidate_data,
+    imagenMime: r.rows[0].image_candidate_mime || "image/jpeg",
     candidatoUrl: "",
     candidatoFuente: "",
+    candidatoTitulo: "",
+    candidatoPuntaje: 0,
+    candidatoData: null,
+    candidatoMime: "",
     error: "",
   });
+}
+
+async function obtenerImagenCatalogoDb(codigo, tipo = "confirmada") {
+  await asegurarEsquemaCatalogoPublico();
+  const code = textoLimitado(codigo, 160);
+  const r = await query(`SELECT image_data, image_mime, image_candidate_data, image_candidate_mime FROM catalog_product_settings WHERE code=$1`, [code]);
+  if (!r.rowCount) return null;
+  const f = r.rows[0];
+  if (tipo === "candidato") {
+    if (!f.image_candidate_data) return null;
+    return { data: f.image_candidate_data, mime: String(f.image_candidate_mime || "image/jpeg") };
+  }
+  if (!f.image_data) return null;
+  return { data: f.image_data, mime: String(f.image_mime || "image/jpeg") };
 }
 
 async function guardarImagenManualCatalogoDb(codigo, imagen) {
   const url = String(imagen || "").trim();
   if (!/^https:\/\//i.test(url)) throw new Error("La imagen debe usar una URL HTTPS válida");
-  return guardarResultadoImagenCatalogoDb(codigo, {
-    imagen: url,
-    fuente: "Manual",
-    estado: "confirmada",
-    candidatoUrl: "",
-    candidatoFuente: "",
-    candidatoTitulo: "",
-    candidatoPuntaje: 100,
-    error: "",
-  });
+  return guardarResultadoImagenCatalogoDb(codigo, { imagen: url, fuente: "Manual", estado: "revisar", error: "La URL debe descargarse y validarse antes de confirmarse." });
 }
 
 async function quitarImagenCatalogoDb(codigo) {
@@ -675,6 +702,10 @@ async function quitarImagenCatalogoDb(codigo) {
     candidatoFuente: "",
     candidatoTitulo: "",
     candidatoPuntaje: 0,
+    imagenData: null,
+    imagenMime: "",
+    candidatoData: null,
+    candidatoMime: "",
     error: "",
   });
 }
@@ -713,6 +744,7 @@ module.exports = {
   actualizarVisibilidadProductoCatalogoAdminDb,
   guardarResultadoImagenCatalogoDb,
   confirmarCandidatoImagenCatalogoDb,
+  obtenerImagenCatalogoDb,
   guardarImagenManualCatalogoDb,
   quitarImagenCatalogoDb,
   listarPendientesImagenCatalogoDb,

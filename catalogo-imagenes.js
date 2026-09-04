@@ -2,6 +2,7 @@ const sharp = require("sharp");
 const {
   obtenerProductoCatalogoAdminDb,
   guardarResultadoImagenCatalogoDb,
+  obtenerImagenCatalogoDb,
   listarPendientesImagenCatalogoDb,
 } = require("./db-catalogo-publico");
 
@@ -182,11 +183,14 @@ async function validarCandidato(candidato) {
     const buffer = await descargarImagen(candidato.url);
     const calidad = await analizarCalidadImagen(buffer);
     if (!calidad.acepta) return null;
+    const normalizada = await normalizarImagenCatalogo(buffer);
     return {
       ...candidato,
       puntaje: Math.max(Number(candidato.puntaje) || 0, calidad.score || 0),
       calidadVerificada: true,
       calidad,
+      normalizada,
+      mime: "image/jpeg",
     };
   } catch {
     return null;
@@ -293,6 +297,8 @@ async function buscarImagenProducto(codigo, { guardar = true } = {}) {
       candidatoFuente: candidato.fuente,
       candidatoTitulo: candidato.titulo,
       candidatoPuntaje: candidato.puntaje,
+      candidatoData: candidato.normalizada,
+      candidatoMime: candidato.mime || "image/jpeg",
       error: "",
     });
     return {
@@ -313,22 +319,61 @@ async function buscarImagenProducto(codigo, { guardar = true } = {}) {
     candidatoFuente: "",
     candidatoTitulo: "",
     candidatoPuntaje: 0,
+    candidatoData: null,
+    candidatoMime: "",
     error,
   });
   return { encontrado: false, confirmado: false, candidato: null, mensaje: error, producto: await obtenerProductoCatalogoAdminDb(producto.codigo) };
 }
 
 async function obtenerImagenNormalizadaProducto(codigo, tipo = "candidato") {
+  const guardada = await obtenerImagenCatalogoDb(codigo, tipo);
+  if (guardada?.data) return { buffer: guardada.data, mime: guardada.mime || "image/jpeg" };
+
+  // Compatibilidad con imágenes guardadas antes de esta corrección: se importan una sola vez.
   const producto = await obtenerProductoCatalogoAdminDb(codigo);
   if (!producto) throw new Error("Producto no encontrado");
-  const url = tipo === "confirmada" ? producto.imagen : (producto.candidatoImagen || producto.imagen);
-  if (!url) throw new Error("El producto no tiene una imagen disponible");
+  const esCandidato = tipo === "candidato";
+  const url = esCandidato ? (producto.candidatoImagen || producto.imagen) : producto.imagen;
+  if (!url) throw new Error("El producto no tiene una imagen descargada disponible");
+  const original = await descargarImagen(url);
+  const calidad = await analizarCalidadImagen(original);
+  if (!calidad.acepta) throw new Error(`La imagen guardada fue rechazada: ${calidad.motivo}`);
+  const normalizada = await normalizarImagenCatalogo(original);
+  if (esCandidato) {
+    await guardarResultadoImagenCatalogoDb(codigo, { candidatoData: normalizada, candidatoMime: "image/jpeg", error: "" });
+  } else {
+    await guardarResultadoImagenCatalogoDb(codigo, { imagenData: normalizada, imagenMime: "image/jpeg", error: "" });
+  }
+  return { buffer: normalizada, mime: "image/jpeg" };
+}
+
+async function importarImagenManual(codigo, url) {
+  const producto = await obtenerProductoCatalogoAdminDb(codigo);
+  if (!producto) throw new Error("Producto no encontrado");
   const buffer = await descargarImagen(url);
   const calidad = await analizarCalidadImagen(buffer);
-  if (tipo === "candidato" && !calidad.acepta) {
-    throw new Error(`La imagen candidata fue rechazada: ${calidad.motivo}`);
+  if (!calidad.acepta) {
+    const error = new Error(`La imagen fue rechazada: ${calidad.motivo}`);
+    error.status = 422;
+    throw error;
   }
-  return normalizarImagenCatalogo(buffer);
+  const normalizada = await normalizarImagenCatalogo(buffer);
+  await guardarResultadoImagenCatalogoDb(producto.codigo, {
+    imagen: String(url || "").trim(),
+    fuente: "Manual · descargada y normalizada",
+    estado: "confirmada",
+    imagenData: normalizada,
+    imagenMime: "image/jpeg",
+    candidatoUrl: "",
+    candidatoFuente: "",
+    candidatoTitulo: "",
+    candidatoPuntaje: 0,
+    candidatoData: null,
+    candidatoMime: "",
+    error: "",
+  });
+  return obtenerProductoCatalogoAdminDb(producto.codigo);
 }
 
 async function mapConcurrencia(items, concurrencia, fn) {
@@ -364,5 +409,6 @@ module.exports = {
   buscarImagenProducto,
   buscarImagenesLote,
   obtenerImagenNormalizadaProducto,
+  importarImagenManual,
   analizarCalidadImagen,
 };

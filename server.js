@@ -72,10 +72,11 @@ const {
   actualizarProductoCatalogoAdminDb,
   actualizarVisibilidadProductoCatalogoAdminDb,
   confirmarCandidatoImagenCatalogoDb,
+  obtenerImagenCatalogoDb,
   guardarImagenManualCatalogoDb,
   quitarImagenCatalogoDb,
 } = require("./db-catalogo-publico");
-const { buscarImagenProducto, buscarImagenesLote, obtenerImagenNormalizadaProducto } = require("./catalogo-imagenes");
+const { buscarImagenProducto, buscarImagenesLote, obtenerImagenNormalizadaProducto, importarImagenManual } = require("./catalogo-imagenes");
 const {
   asegurarEsquemaVencimientos,
   listarVencimientosDb,
@@ -1036,6 +1037,22 @@ app.get("/catalogo/api/productos", async (req, res) => {
   }
 });
 
+app.get("/catalogo/api/productos/:codigo/imagen", async (req, res) => {
+  try {
+    const imagen = await obtenerImagenCatalogoDb(req.params.codigo, "confirmada");
+    if (!imagen?.data) return res.status(404).end();
+    res.set({
+      "Content-Type": imagen.mime || "image/jpeg",
+      "Cache-Control": "public, max-age=86400",
+      "Content-Disposition": "inline",
+    });
+    res.send(imagen.data);
+  } catch (error) {
+    console.error("Error sirviendo imagen pública del catálogo:", error);
+    res.status(404).end();
+  }
+});
+
 app.get("/auth/google/config", (req, res) => {
   res.json({
     ok: true,
@@ -1607,11 +1624,11 @@ app.get("/admin/catalogo/productos/:codigo/imagen/contenido", requerirAdministra
     const tipo = req.query?.tipo === "confirmada" ? "confirmada" : "candidato";
     const imagen = await obtenerImagenNormalizadaProducto(req.params.codigo, tipo);
     res.set({
-      "Content-Type": "image/jpeg",
+      "Content-Type": imagen.mime || "image/jpeg",
       "Cache-Control": "private, max-age=300",
       "Content-Disposition": "inline; filename=producto-catalogo.jpg",
     });
-    res.send(imagen);
+    res.send(imagen.buffer);
   } catch (error) {
     console.error("Error preparando vista previa normalizada del catálogo:", error);
     res.status(error.status || 422).json({ ok: false, mensaje: error.message || "No se pudo preparar la vista previa" });
@@ -1629,10 +1646,10 @@ app.post("/admin/catalogo/productos/:codigo/imagen/confirmar", requerirAdministr
 
 app.put("/admin/catalogo/productos/:codigo/imagen", requerirAdministrador, async (req, res) => {
   try {
-    const producto = await guardarImagenManualCatalogoDb(req.params.codigo, req.body?.imagen);
+    const producto = await importarImagenManual(req.params.codigo, req.body?.imagen);
     res.json({ ok: true, producto });
   } catch (error) {
-    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo guardar la imagen" });
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo descargar y validar la imagen" });
   }
 });
 
