@@ -750,6 +750,41 @@ async function buscarImagenProductoActual() {
   }
 }
 
+async function subirImagenArchivoActual(archivo) {
+  const codigo = $("catalogProductoModal")?.dataset.codigo;
+  if (!codigo || !archivo) return;
+  const tipos = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (!tipos.has(String(archivo.type || "").toLowerCase())) return mensaje("Usá una imagen JPG, PNG o WEBP.");
+  if (archivo.size > 6 * 1024 * 1024) return mensaje("La imagen no puede superar los 6 MB.");
+  const boton = $("catalogProductoElegirImagen");
+  const status = $("catalogProductoImagenEstadoBusqueda");
+  if (boton) boton.disabled = true;
+  if (status) { status.textContent = "Subiendo y preparando la imagen…"; status.className = "catalog-image-search-status buscando"; }
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const lector = new FileReader();
+      lector.onload = () => resolve(String(lector.result || ""));
+      lector.onerror = () => reject(new Error("No se pudo leer el archivo seleccionado"));
+      lector.readAsDataURL(archivo);
+    });
+    const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen/subir`, {
+      method: "POST",
+      body: JSON.stringify({ imagen: dataUrl, nombre: archivo.name, mime: archivo.type }),
+    });
+    renderImagenProducto(data.producto || {});
+    await Promise.all([cargarEstado(), cargarProductos()]);
+    if (status) { status.textContent = "Imagen cargada correctamente. Ya podés verla en la vista previa."; status.className = "catalog-image-search-status ok"; }
+    mensaje("Imagen cargada y guardada.", "ok");
+  } catch (e) {
+    if (status) { status.textContent = e.message || "No se pudo subir la imagen."; status.className = "catalog-image-search-status error"; }
+    mensaje(e.message || "No se pudo subir la imagen.");
+  } finally {
+    if (boton) boton.disabled = false;
+    const input = $("catalogProductoImagenArchivo");
+    if (input) input.value = "";
+  }
+}
+
 async function guardarImagenManualActual() {
   const codigo = $("catalogProductoModal")?.dataset.codigo;
   const imagen = $("catalogProductoImagenUrl")?.value.trim();
@@ -862,6 +897,8 @@ async function abrirProducto(codigo) {
     window.AppSelect?.refresh?.($("catalogProductoUnidad"));
     $("catalogProductoVisible").checked = Boolean(p.visible);
     $("catalogProductoDestacado").checked = Boolean(p.destacado);
+    renderImagenProducto(p);
+    estadoBusquedaImagen("");
     abrirModal("catalogProductoModal");
   } catch (e) { mensaje(e.message); }
 }
@@ -987,6 +1024,12 @@ function bind() {
   $("catalogBtnVerPublico")?.addEventListener("click", () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener"));
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());
   $("catalogProductoGuardar")?.addEventListener("click", guardarProducto);
+  $("catalogProductoElegirImagen")?.addEventListener("click", () => $("catalogProductoImagenArchivo")?.click());
+  $("catalogProductoImagenArchivo")?.addEventListener("change", (e) => subirImagenArchivoActual(e.target.files?.[0]));
+  $("catalogProductoBuscarImagen")?.addEventListener("click", buscarImagenProductoActual);
+  $("catalogProductoGuardarImagenUrl")?.addEventListener("click", guardarImagenManualActual);
+  $("catalogProductoConfirmarImagen")?.addEventListener("click", confirmarImagenActual);
+  $("catalogProductoQuitarImagen")?.addEventListener("click", quitarImagenActual);
   $("catalogProductoCerrar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogProductoCancelar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogRubroGuardar")?.addEventListener("click", guardarRubro);

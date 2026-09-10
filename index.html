@@ -3457,6 +3457,27 @@
               <label class="catalog-field"><span>Presentación</span><input id="catalogProductoPresentacion" type="text" maxlength="120" placeholder="Ej.: 2,25 L" /></label>
               <label class="catalog-field"><span>Unidad de venta</span><select id="catalogProductoUnidad"><option value="unidad">Unidad</option><option value="kg">Kg</option><option value="pack">Pack</option><option value="cajon">Cajón</option><option value="bulto">Bulto</option><option value="litro">Litro</option><option value="metro">Metro</option></select></label>
             </div>
+            <section class="catalog-product-image-editor" aria-labelledby="catalogProductoImagenTitulo">
+              <div class="catalog-product-image-editor__head">
+                <div><strong id="catalogProductoImagenTitulo">Imagen del producto</strong><small>Podés cargar una imagen desde tu PC para probar cómo se verá en el catálogo.</small></div>
+                <span id="catalogProductoEstadoImagen" class="catalog-image-state">Sin imagen</span>
+              </div>
+              <div class="catalog-product-image-editor__body">
+                <div id="catalogProductoImagenPreview" class="catalog-product-image-preview"><span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small></div>
+                <div class="catalog-product-image-controls">
+                  <input id="catalogProductoImagenArchivo" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+                  <div class="catalog-product-image-actions">
+                    <button id="catalogProductoElegirImagen" class="catalog-btn catalog-btn-primary" type="button">Cargar desde mi PC</button>
+                    <button id="catalogProductoBuscarImagen" class="catalog-btn catalog-btn-secondary" type="button">Buscar imagen</button>
+                    <button id="catalogProductoConfirmarImagen" class="catalog-btn catalog-btn-secondary oculto" type="button">Confirmar candidata</button>
+                    <button id="catalogProductoQuitarImagen" class="catalog-btn catalog-btn-danger oculto" type="button">Quitar imagen</button>
+                  </div>
+                  <label class="catalog-field catalog-image-url-field"><span>O pegar una URL HTTPS</span><div class="catalog-image-url-row"><input id="catalogProductoImagenUrl" type="url" placeholder="https://..." /><button id="catalogProductoGuardarImagenUrl" class="catalog-btn catalog-btn-secondary" type="button">Usar URL</button></div></label>
+                  <small id="catalogProductoImagenMeta" class="catalog-image-meta">Todavía no se cargó una imagen para este producto.</small>
+                  <div id="catalogProductoImagenEstadoBusqueda" class="catalog-image-search-status" role="status" aria-live="polite"></div>
+                </div>
+              </div>
+            </section>
             <div class="catalog-switches">
               <label class="catalog-switch-row"><input id="catalogProductoVisible" type="checkbox" /><span class="catalog-switch"></span><span><strong>Visible para clientes</strong><small>El producto podrá aparecer en el catálogo público cuando tenga un rubro activo.</small></span></label>
               <label class="catalog-switch-row"><input id="catalogProductoDestacado" type="checkbox" /><span class="catalog-switch"></span><span><strong>Producto destacado</strong><small>Podrá mostrarse con prioridad en secciones destacadas.</small></span></label>

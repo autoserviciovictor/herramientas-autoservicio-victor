@@ -90,7 +90,7 @@ const {
   eliminarPedidoArchivadoCatalogoDb,
   obtenerResumenPedidosCatalogoDb,
 } = require("./db-catalogo-pedidos");
-const { buscarImagenProducto, obtenerImagenNormalizadaProducto, importarImagenManual } = require("./catalogo-imagenes");
+const { buscarImagenProducto, obtenerImagenNormalizadaProducto, importarImagenManual, importarImagenArchivoManual } = require("./catalogo-imagenes");
 const {
   iniciarProcesoImagenes,
   pausarProcesoImagenes,
@@ -1835,6 +1835,21 @@ app.post("/admin/catalogo/productos/:codigo/imagen/confirmar", requerirAdministr
     res.json({ ok: true, producto });
   } catch (error) {
     res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo confirmar la imagen" });
+  }
+});
+
+app.post("/admin/catalogo/productos/:codigo/imagen/subir", requerirAdministrador, async (req, res) => {
+  try {
+    const dataUrl = String(req.body?.imagen || "");
+    const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/i);
+    if (!match) return res.status(400).json({ ok: false, mensaje: "Archivo de imagen inválido. Usá JPG, PNG o WEBP." });
+    const buffer = Buffer.from(match[2], "base64");
+    if (!buffer.length || buffer.length > 8 * 1024 * 1024) return res.status(413).json({ ok: false, mensaje: "La imagen está vacía o supera los 8 MB." });
+    const producto = await importarImagenArchivoManual(req.params.codigo, buffer, match[1].toLowerCase());
+    res.json({ ok: true, producto });
+  } catch (error) {
+    console.error("Error subiendo imagen manual del catálogo:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo subir la imagen" });
   }
 });
 

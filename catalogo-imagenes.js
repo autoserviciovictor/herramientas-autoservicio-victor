@@ -387,6 +387,44 @@ async function obtenerImagenNormalizadaProducto(codigo, tipo = "candidato") {
   return { buffer: normalizada, mime: "image/jpeg" };
 }
 
+async function importarImagenArchivoManual(codigo, buffer, mime = "") {
+  const producto = await obtenerProductoCatalogoAdminDb(codigo);
+  if (!producto) throw new Error("Producto no encontrado");
+  if (!Buffer.isBuffer(buffer) || !buffer.length) {
+    const error = new Error("El archivo de imagen está vacío");
+    error.status = 400;
+    throw error;
+  }
+  if (buffer.length > MAX_IMAGEN_BYTES) {
+    const error = new Error("La imagen supera el tamaño permitido");
+    error.status = 413;
+    throw error;
+  }
+  const tipo = String(mime || "").toLowerCase();
+  if (tipo && !["image/jpeg", "image/png", "image/webp"].includes(tipo)) {
+    const error = new Error("Formato no permitido. Usá JPG, PNG o WEBP");
+    error.status = 415;
+    throw error;
+  }
+  const calidad = await analizarCalidadImagen(buffer);
+  if (!calidad.acepta) {
+    const error = new Error(`La imagen fue rechazada: ${calidad.motivo}`);
+    error.status = 422;
+    throw error;
+  }
+  const normalizada = await normalizarImagenCatalogo(buffer);
+  await guardarResultadoImagenCatalogoDb(producto.codigo, {
+    imagen: `archivo-manual://${producto.codigo}`,
+    fuente: "Manual · archivo local normalizado",
+    estado: ESTADOS_IMAGEN.CONFIRMADA,
+    imagenData: normalizada,
+    imagenMime: "image/jpeg",
+    candidatoUrl: "", candidatoFuente: "", candidatoTitulo: "", candidatoPuntaje: 0,
+    candidatoData: null, candidatoMime: "", candidatos: [], error: "",
+  }, { forzarConfirmada: true });
+  return obtenerProductoCatalogoAdminDb(producto.codigo);
+}
+
 async function importarImagenManual(codigo, url) {
   const producto = await obtenerProductoCatalogoAdminDb(codigo);
   if (!producto) throw new Error("Producto no encontrado");
@@ -421,5 +459,6 @@ module.exports = {
   buscarImagenProducto,
   obtenerImagenNormalizadaProducto,
   importarImagenManual,
+  importarImagenArchivoManual,
   analizarCalidadImagen,
 };
