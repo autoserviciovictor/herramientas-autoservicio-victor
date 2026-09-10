@@ -16,7 +16,7 @@ const HISTORICAS = new Set([
   "inventario-sheets-toro-290826.js",
   "tareas-ancho-titulo.js",
 ]);
-const EXCLUIDAS = new Set(["run-current.js", "e2e-browser-etapa6.js", ...HISTORICAS]);
+const EXCLUIDAS = new Set(["run-current.js", "run-catalogo-current.js", "check-js.js", "e2e-browser-etapa6.js", ...HISTORICAS]);
 const archivos = fs.readdirSync(__dirname)
   .filter((nombre) => nombre.endsWith(".js") && !EXCLUIDAS.has(nombre))
   .sort();
@@ -27,10 +27,13 @@ for (const nombre of archivos) {
     cwd: path.join(__dirname, ".."),
     encoding: "utf8",
     stdio: "pipe",
+    timeout: 20000,
+    maxBuffer: 4 * 1024 * 1024,
   });
   if (resultado.status !== 0) {
     fallas++;
-    console.error(`\nFAIL ${nombre}`);
+    const detalle = resultado.error?.code === "ETIMEDOUT" ? " (timeout 20s)" : "";
+    console.error(`\nFAIL ${nombre}${detalle}`);
     process.stderr.write(resultado.stdout || "");
     process.stderr.write(resultado.stderr || "");
   }

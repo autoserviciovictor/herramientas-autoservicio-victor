@@ -1,5 +1,0 @@
-/* Etapa 8B — hoja de preparación e impresión */
-.catalog-order-modal-actions{display:flex;align-items:center;gap:8px}
-.catalog-order-print-btn{min-height:36px;padding:0 12px;gap:6px}
-.catalog-order-print-btn>span:first-child{font-size:14px}
-@media(max-width:620px){.catalog-order-print-btn span:last-child{display:none}.catalog-order-print-btn{width:38px;padding:0}}

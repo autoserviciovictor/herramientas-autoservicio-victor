@@ -13,7 +13,6 @@ const estado = {
   busquedaTimer: null,
   cargando: false,
   imagenPreviewObjectUrl: "",
-  procesoImagenesTimer: null,
   pedidosPagina: 1,
   pedidosLimite: 50,
   pedidosPaginas: 1,
@@ -22,7 +21,6 @@ const estado = {
   pedidoAbierto: null,
   pedidoObservacionesSucias: false,
   pedidosBusquedaTimer: null,
-  pedidosFiltroRapido: "todos",
 };
 
 const esc = (v = "") => String(v).replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -93,6 +91,9 @@ function poblarSelectRubros() {
     producto.innerHTML = `<option value="">Sin rubro</option>${opciones}`;
     if ([...producto.options].some((o) => o.value === actualProducto)) producto.value = actualProducto;
   }
+  window.AppSelect?.refresh?.(filtro);
+  window.AppSelect?.refresh?.(producto);
+  actualizarUIFiltrosProductos();
 }
 
 function parametrosProductos() {
@@ -106,6 +107,101 @@ function parametrosProductos() {
   if (est !== "todos") p.set("estado", est);
   if (imagen !== "todos") p.set("imagen", imagen);
   return p;
+}
+
+function cantidadFiltrosProductosActivos() {
+  return ["catalogFiltroRubro", "catalogFiltroEstado", "catalogFiltroImagen"]
+    .reduce((total, id) => total + (($(id)?.value || "todos") !== "todos" ? 1 : 0), 0);
+}
+
+function actualizarUIFiltrosProductos() {
+  const cantidad = cantidadFiltrosProductosActivos();
+  const boton = $("catalogBtnFiltros");
+  const badge = $("catalogFiltrosBadge");
+  if (boton) boton.classList.toggle("has-active", cantidad > 0);
+  if (badge) {
+    badge.textContent = String(cantidad);
+    badge.classList.toggle("oculto", cantidad === 0);
+  }
+}
+
+function cerrarFiltrosProductos() {
+  const menu = $("catalogFiltrosMenu");
+  const boton = $("catalogBtnFiltros");
+  if (!menu || !boton) return;
+  menu.classList.add("oculto");
+  boton.setAttribute("aria-expanded", "false");
+}
+
+function alternarFiltrosProductos() {
+  const menu = $("catalogFiltrosMenu");
+  const boton = $("catalogBtnFiltros");
+  if (!menu || !boton) return;
+  const abrir = menu.classList.contains("oculto");
+  window.AppSelect?.closeAll?.();
+  menu.classList.toggle("oculto", !abrir);
+  boton.setAttribute("aria-expanded", abrir ? "true" : "false");
+}
+
+async function limpiarFiltrosProductos() {
+  ["catalogFiltroRubro", "catalogFiltroEstado", "catalogFiltroImagen"].forEach((id) => {
+    const select = $(id);
+    if (!select) return;
+    select.value = "todos";
+    window.AppSelect?.refresh?.(select);
+  });
+  actualizarUIFiltrosProductos();
+  actualizarBotonesPublicacionMasiva();
+  await cargarProductos({ conservarPagina: false });
+}
+
+function prepararSelectorCatalogo(id, { ancho = "normal", buscable = false } = {}) {
+  const select = $(id);
+  if (!select) return;
+  window.AppSelect?.enhance?.(id);
+  const wrapper = select.closest(".app-select-custom");
+  const menu = wrapper?._appSelectMenu;
+  if (!wrapper || !menu) return;
+  wrapper.classList.add(`catalog-select-${ancho}`);
+  menu.classList.add("catalog-select-menu", `catalog-select-menu-${ancho}`);
+  if (!buscable || wrapper.dataset.catalogSearchBound === "1") return;
+  wrapper.dataset.catalogSearchBound = "1";
+  wrapper.querySelector(".app-select-custom__trigger")?.addEventListener("click", () => {
+    setTimeout(() => {
+      const menuActual = wrapper._appSelectMenu;
+      if (!menuActual || !wrapper.classList.contains("is-open")) return;
+      const existente = menuActual.querySelector(".catalog-select-search input");
+      if (existente) { existente.focus({ preventScroll: true }); return; }
+      if (!menuActual.querySelector(".catalog-select-search")) {
+        const cabecera = document.createElement("div");
+        cabecera.className = "catalog-select-search-shell";
+        const contenedor = document.createElement("label");
+        contenedor.className = "catalog-select-search";
+        contenedor.innerHTML = '<svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><input type="search" autocomplete="off" placeholder="Buscar rubro..." aria-label="Buscar rubro" />';
+        const input = contenedor.querySelector("input");
+        input.addEventListener("input", () => {
+          const termino = input.value.trim().toLocaleLowerCase("es");
+          menuActual.querySelectorAll(".app-select-custom__option").forEach((opcion) => {
+            opcion.hidden = Boolean(termino) && !opcion.textContent.toLocaleLowerCase("es").includes(termino);
+          });
+        });
+        cabecera.appendChild(contenedor);
+        menuActual.prepend(cabecera);
+        menuActual.scrollTop = 0;
+        requestAnimationFrame(() => input.focus({ preventScroll: true }));
+        window.dispatchEvent(new Event("resize"));
+      }
+    }, 0);
+  });
+}
+
+function prepararSelectoresCatalogo() {
+  prepararSelectorCatalogo("catalogFiltroRubro", { ancho: "wide", buscable: true });
+  prepararSelectorCatalogo("catalogFiltroEstado", { ancho: "normal" });
+  prepararSelectorCatalogo("catalogFiltroImagen", { ancho: "normal" });
+  prepararSelectorCatalogo("catalogProductoRubro", { ancho: "wide", buscable: true });
+  prepararSelectorCatalogo("catalogProductoUnidad", { ancho: "compact" });
+  prepararSelectorCatalogo("catalogPedidosFiltroEstado", { ancho: "orders" });
 }
 
 async function cargarProductos({ conservarPagina = true } = {}) {
@@ -212,11 +308,10 @@ function etiquetaEstadoPedido(estadoPedido) {
 }
 
 function parametrosPedidos() {
-  const filtroRapido = estado.pedidosFiltroRapido || "todos";
-  const estadoSelect = $("catalogPedidosFiltroEstado")?.value || "todos";
-  const estadoPedido = ["recibido", "preparando", "listo", "entregado", "cancelado"].includes(filtroRapido)
-    ? filtroRapido
-    : estadoSelect;
+  const filtro = $("catalogPedidosFiltroEstado")?.value || "todos";
+  const estadoPedido = ["recibido", "preparando", "listo", "entregado", "cancelado"].includes(filtro)
+    ? filtro
+    : "todos";
 
   const p = new URLSearchParams({
     pagina: String(estado.pedidosPagina),
@@ -224,36 +319,11 @@ function parametrosPedidos() {
     estado: estadoPedido,
   });
 
-  if (filtroRapido === "hoy") p.set("fecha", "hoy");
-  if (filtroRapido === "archivados") p.set("archivados", "si");
+  if (filtro === "archivados") p.set("archivados", "si");
 
   const q = $("catalogPedidosBuscar")?.value?.trim();
   if (q) p.set("q", q);
   return p.toString();
-}
-
-function actualizarFiltrosRapidosPedidos() {
-  document.querySelectorAll("[data-pedido-filtro]").forEach((boton) => {
-    const activo = boton.dataset.pedidoFiltro === estado.pedidosFiltroRapido;
-    boton.classList.toggle("activo", activo);
-    boton.setAttribute("aria-pressed", activo ? "true" : "false");
-  });
-}
-
-function aplicarFiltroRapidoPedidos(filtro) {
-  estado.pedidosFiltroRapido = filtro || "todos";
-
-  const selectEstado = $("catalogPedidosFiltroEstado");
-  if (selectEstado) {
-    if (["recibido", "preparando", "listo", "entregado", "cancelado"].includes(estado.pedidosFiltroRapido)) {
-      selectEstado.value = estado.pedidosFiltroRapido;
-    } else if (estado.pedidosFiltroRapido === "todos") {
-      selectEstado.value = "todos";
-    }
-  }
-
-  actualizarFiltrosRapidosPedidos();
-  cargarPedidos({ conservarPagina: false }).catch((e) => mensaje(e.message));
 }
 
 async function cargarResumenPedidos() {
@@ -298,7 +368,7 @@ function renderPedidos() {
         <td>
           <div class="catalog-order-row-actions">
             <button class="catalog-edit-btn" type="button" data-pedido-open="${esc(p.numero)}">Ver pedido</button>
-            ${estado.pedidosFiltroRapido === "archivados"
+            ${$("catalogPedidosFiltroEstado")?.value === "archivados"
               ? `<button class="catalog-delete-btn" type="button" data-pedido-delete="${esc(p.numero)}">Eliminar</button>`
               : ""}
           </div>
@@ -579,6 +649,7 @@ function cambiarTab(tab) {
     b.setAttribute("aria-selected", String(on));
   });
   document.querySelectorAll("[data-catalog-panel]").forEach((p) => p.classList.toggle("oculto", p.dataset.catalogPanel !== estado.tab));
+  $("pantallaCatalogoAdmin")?.classList.toggle("catalog-tab-pedidos-activo", estado.tab === "pedidos");
   if (estado.tab === "pedidos") {
     Promise.all([cargarPedidos({ conservarPagina: false }), cargarResumenPedidos()]).catch((e) => mensaje(e.message));
   }
@@ -713,97 +784,6 @@ async function quitarImagenActual() {
   } catch (e) { mensaje(e.message); }
 }
 
-function renderProcesoImagenes(proceso = {}) {
-  const panel = $("catalogImagenesProceso");
-  const titulo = $("catalogImagenesProcesoTitulo");
-  const texto = $("catalogImagenesProcesoTexto");
-  const barra = $("catalogImagenesProcesoBarra");
-  const stats = $("catalogImagenesProcesoStats");
-  const iniciar = $("catalogBtnBuscarImagenes");
-  const pausar = $("catalogBtnPausarImagenes");
-  const reiniciar = $("catalogBtnReiniciarImagenes");
-  if (!panel) return;
-
-  const estadoProceso = proceso.estado || "idle";
-  const total = Number(proceso.totalObjetivo) || 0;
-  const procesados = Number(proceso.procesados) || 0;
-  const pct = total ? Math.min(100, Math.round((procesados / total) * 100)) : (estadoProceso === "finished" ? 100 : 0);
-  panel.classList.toggle("oculto", estadoProceso === "idle" && !total);
-  if (barra) barra.style.width = `${pct}%`;
-  if (titulo) titulo.textContent = estadoProceso === "running" ? "Completando imágenes automáticamente" : estadoProceso === "paused" ? "Proceso de imágenes pausado" : estadoProceso === "finished" ? "Proceso de imágenes finalizado" : "Imágenes automáticas";
-  if (texto) texto.textContent = estadoProceso === "running" ? `${numero(procesados)} de ${numero(total)} productos procesados (${pct}%).` : (proceso.mensaje || "Listo para completar las imágenes faltantes.");
-  if (stats) stats.textContent = `Asignadas ${numero(proceso.confirmadas)} · Revisar ${numero(proceso.revisar)} · Sin resultado ${numero(proceso.sinResultado)} · Errores ${numero(proceso.errores)} · Omitidas ${numero(proceso.omitidas)}`;
-  if (pausar) pausar.classList.toggle("oculto", estadoProceso !== "running");
-  if (reiniciar) reiniciar.classList.toggle("oculto", estadoProceso !== "paused");
-  if (iniciar) {
-    const span = iniciar.querySelector("span");
-    iniciar.disabled = estadoProceso === "running";
-    if (span) span.textContent = estadoProceso === "paused" ? "Reanudar imágenes" : estadoProceso === "finished" ? "Completar imágenes faltantes" : "Completar imágenes automáticamente";
-  }
-}
-
-async function cargarProcesoImagenes({ refrescarCatalogo = false } = {}) {
-  try {
-    const data = await api("/admin/catalogo/imagenes/proceso");
-    renderProcesoImagenes(data.proceso || {});
-    const estadoProceso = data.proceso?.estado;
-    if (refrescarCatalogo || estadoProceso === "finished") await Promise.all([cargarEstado(), cargarProductos()]);
-    clearTimeout(estado.procesoImagenesTimer);
-    if (estado.activo && estadoProceso === "running") {
-      estado.procesoImagenesTimer = setTimeout(() => cargarProcesoImagenes({ refrescarCatalogo: true }), 4000);
-    }
-    return data.proceso || {};
-  } catch (e) {
-    console.warn("No se pudo consultar el proceso de imágenes:", e);
-    return null;
-  }
-}
-
-async function iniciarProcesoImagenesMasivo() {
-  const boton = $("catalogBtnBuscarImagenes");
-  if (!boton || boton.disabled) return;
-  boton.disabled = true;
-  try {
-    const actual = await cargarProcesoImagenes();
-    const reanudar = actual?.estado === "paused";
-    const data = await api("/admin/catalogo/imagenes/proceso/iniciar", { method: "POST", body: JSON.stringify({ reanudar }) });
-    renderProcesoImagenes(data.proceso || {});
-    mensaje(reanudar ? "Proceso de imágenes reanudado." : "Proceso automático de imágenes iniciado. Podés salir de esta pantalla y continuará en el servidor.", "ok");
-    clearTimeout(estado.procesoImagenesTimer);
-    estado.procesoImagenesTimer = setTimeout(() => cargarProcesoImagenes({ refrescarCatalogo: true }), 2000);
-  } catch (e) {
-    mensaje(e.message);
-  } finally {
-    boton.disabled = false;
-  }
-}
-
-async function pausarImagenes() {
-  try {
-    const data = await api("/admin/catalogo/imagenes/proceso/pausar", { method: "POST" });
-    renderProcesoImagenes(data.proceso || {});
-    clearTimeout(estado.procesoImagenesTimer);
-    mensaje("Proceso de imágenes pausado.", "ok");
-  } catch (e) { mensaje(e.message); }
-}
-
-async function reiniciarImagenesGratis() {
-  const boton = $("catalogBtnReiniciarImagenes");
-  if (!boton || boton.disabled) return;
-  boton.disabled = true;
-  try {
-    const data = await api("/admin/catalogo/imagenes/proceso/iniciar", { method: "POST", body: JSON.stringify({ reanudar: false }) });
-    renderProcesoImagenes(data.proceso || {});
-    mensaje("Búsqueda gratuita reiniciada desde el primer producto pendiente. Se volverán a intentar los productos sin imagen.", "ok");
-    clearTimeout(estado.procesoImagenesTimer);
-    estado.procesoImagenesTimer = setTimeout(() => cargarProcesoImagenes({ refrescarCatalogo: true }), 2000);
-  } catch (e) {
-    mensaje(e.message);
-  } finally {
-    boton.disabled = false;
-  }
-}
-
 function alcancePublicacionMasiva() {
   const valor = $("catalogFiltroRubro")?.value || "todos";
   if (valor === "sin-rubro") return { rubroId: null, nombre: "productos sin rubro", sinRubro: true };
@@ -878,9 +858,10 @@ async function abrirProducto(codigo) {
     $("catalogProductoMarca").value = p.marca || "";
     $("catalogProductoPresentacion").value = p.presentacion || "";
     $("catalogProductoUnidad").value = p.unidadVenta || "unidad";
+    window.AppSelect?.refresh?.($("catalogProductoRubro"));
+    window.AppSelect?.refresh?.($("catalogProductoUnidad"));
     $("catalogProductoVisible").checked = Boolean(p.visible);
     $("catalogProductoDestacado").checked = Boolean(p.destacado);
-    renderImagenProducto(p);
     abrirModal("catalogProductoModal");
   } catch (e) { mensaje(e.message); }
 }
@@ -970,33 +951,34 @@ function cerrarModal(id) { const m = $(id); if (!m) return; m.classList.add("ocu
 function bind() {
   if (document.body.dataset.catalogAdminBound === "1") return;
   document.body.dataset.catalogAdminBound = "1";
+  prepararSelectoresCatalogo();
+  actualizarUIFiltrosProductos();
   document.querySelectorAll("[data-catalog-tab]").forEach((b) => b.addEventListener("click", () => cambiarTab(b.dataset.catalogTab)));
   $("catalogBuscarProductos")?.addEventListener("input", () => { clearTimeout(estado.busquedaTimer); estado.busquedaTimer = setTimeout(() => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)), 260); });
   $("catalogFiltroRubro")?.addEventListener("change", () => {
+    actualizarUIFiltrosProductos();
     actualizarBotonesPublicacionMasiva();
     cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message));
   });
-  $("catalogFiltroEstado")?.addEventListener("change", () => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)));
-  $("catalogFiltroImagen")?.addEventListener("change", () => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)));
+  $("catalogFiltroEstado")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
+  $("catalogFiltroImagen")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
+  $("catalogBtnFiltros")?.addEventListener("click", alternarFiltrosProductos);
+  $("catalogFiltrosLimpiar")?.addEventListener("click", () => limpiarFiltrosProductos().catch((e) => mensaje(e.message)));
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".catalog-filter-popover-wrap, .app-select-custom__menu.is-portal")) return;
+    cerrarFiltrosProductos();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarFiltrosProductos(); });
   $("catalogBtnPublicarMasivo")?.addEventListener("click", () => cambiarVisibilidadMasiva(true));
   $("catalogBtnOcultarMasivo")?.addEventListener("click", () => cambiarVisibilidadMasiva(false));
-  $("catalogBtnBuscarImagenes")?.addEventListener("click", iniciarProcesoImagenesMasivo);
-  $("catalogBtnPausarImagenes")?.addEventListener("click", pausarImagenes);
-  $("catalogBtnReiniciarImagenes")?.addEventListener("click", reiniciarImagenesGratis);
   $("catalogBtnRecargar")?.addEventListener("click", () => Promise.all([cargarEstado(), cargarRubros(), cargarProductos()]).catch((e) => mensaje(e.message)));
   $("catalogPedidosBuscar")?.addEventListener("input", () => {
     clearTimeout(estado.pedidosBusquedaTimer);
     estado.pedidosBusquedaTimer = setTimeout(() => cargarPedidos({ conservarPagina: false }).catch((e) => mensaje(e.message)), 260);
   });
   $("catalogPedidosFiltroEstado")?.addEventListener("change", () => {
-    estado.pedidosFiltroRapido = "todos";
-    actualizarFiltrosRapidosPedidos();
     cargarPedidos({ conservarPagina: false }).catch((e) => mensaje(e.message));
   });
-  document.querySelectorAll("[data-pedido-filtro]").forEach((boton) => {
-    boton.addEventListener("click", () => aplicarFiltroRapidoPedidos(boton.dataset.pedidoFiltro));
-  });
-  actualizarFiltrosRapidosPedidos();
   $("catalogPedidosRecargar")?.addEventListener("click", () => Promise.all([cargarPedidos(), cargarResumenPedidos()]).catch((e) => mensaje(e.message)));
   $("catalogPedidoGuardarEstado")?.addEventListener("click", guardarEstadoPedido);
   $("catalogPedidoImprimir")?.addEventListener("click", imprimirPedidoCatalogo);
@@ -1005,10 +987,6 @@ function bind() {
   $("catalogBtnVerPublico")?.addEventListener("click", () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener"));
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());
   $("catalogProductoGuardar")?.addEventListener("click", guardarProducto);
-  $("catalogProductoBuscarImagen")?.addEventListener("click", buscarImagenProductoActual);
-  $("catalogProductoGuardarImagen")?.addEventListener("click", guardarImagenManualActual);
-  $("catalogProductoConfirmarImagen")?.addEventListener("click", confirmarImagenActual);
-  $("catalogProductoQuitarImagen")?.addEventListener("click", quitarImagenActual);
   $("catalogProductoCerrar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogProductoCancelar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogRubroGuardar")?.addEventListener("click", guardarRubro);
@@ -1025,12 +1003,10 @@ async function activar() {
   try {
     await Promise.all([cargarEstado(), cargarRubros(), cargarResumenPedidos()]);
     await cargarProductos({ conservarPagina: false });
-    await cargarProcesoImagenes();
   } catch (e) { mensaje(e.message); }
 }
 function desactivar() {
   estado.activo = false;
-  clearTimeout(estado.procesoImagenesTimer);
   cerrarModal("catalogProductoModal");
   cerrarModal("catalogRubroModal");
   cerrarModal("catalogPedidoModal");

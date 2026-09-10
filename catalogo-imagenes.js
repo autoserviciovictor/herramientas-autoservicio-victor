@@ -118,20 +118,31 @@ async function analizarCalidadImagen(buffer) {
       return { acepta: false, motivo: "el producto aparece demasiado pequeño", width, height, blancoBorde, score: 42 };
     }
 
-    // P2: el fondo blanco suma calidad pero ya no es un requisito absoluto.
-    // Esto permite cubrir muchos más productos; la selección automática sigue
-    // priorizando packshots limpios y la normalización deja un lienzo 600x600.
+    // El catálogo usa una presentación homogénea: las imágenes automáticas
+    // deben ser packshots con fondo blanco antes de poder confirmarse.
     const fondoBlanco = blancoBorde >= FONDO_BLANCO_MINIMO;
+    if (!fondoBlanco) {
+      return {
+        acepta: false,
+        motivo: "el fondo no es suficientemente blanco",
+        width,
+        height,
+        blancoBorde,
+        fondoBlanco: false,
+        score: 35,
+        caja,
+      };
+    }
     const resolucion = Math.min(100, Math.round((Math.min(width, height) / 1000) * 100));
     const encuadre = Math.min(100, Math.round((Math.min(anchoRel, 0.82) / 0.82) * 55 + (Math.min(altoRel, 0.88) / 0.88) * 45));
     const score = Math.max(45, Math.min(99, Math.round(
-      (fondoBlanco ? 28 : Math.max(4, blancoBorde * 18))
+      28
       + resolucion * 0.28
       + encuadre * 0.44
     )));
     return {
       acepta: true,
-      motivo: fondoBlanco ? "packshot limpio y escala apta" : "imagen de referencia utilizable; fondo no ideal",
+      motivo: "packshot limpio, fondo blanco y escala apta",
       width,
       height,
       blancoBorde,

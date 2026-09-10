@@ -15,18 +15,18 @@ const state = {
   loading: false,
   estadoCatalogo: null,
   carrito: cargarCarrito(),
-  cantidades: new Map(),
   editoresCantidad: new Set(),
   timersCantidad: new Map(),
   checkoutPaso: 1,
   checkout: cargarCheckout(),
   pedidoRegistrado: null,
   enviandoPedido: false,
+  modoCatalogo: false,
+  orden: "relevancia",
 };
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  quick: $("catalogoQuickCategories"),
   nav: $("catalogoCategoryNav"),
   mobileNav: $("catalogoMobileCategoryNav"),
   grid: $("catalogoProductsGrid"),
@@ -36,10 +36,8 @@ const els = {
   feedback: $("catalogoFeedback"),
   loadMoreWrap: $("catalogoLoadMoreWrap"),
   loadMore: $("catalogoLoadMore"),
-  search: $("catalogoSearch"),
-  searchCompact: $("catalogoSearchCompact"),
-  searchForm: $("catalogoSearchForm"),
-  searchFormCompact: $("catalogoSearchFormCompact"),
+  search: $("catalogoHeaderSearch"),
+  searchForm: $("catalogoHeaderSearchForm"),
   cartButton: $("catalogoCartButton"),
   cartBadge: $("catalogoCartBadge"),
   cart: $("catalogoCart"),
@@ -52,7 +50,6 @@ const els = {
   menuBtn: $("catalogoMenuBtn"),
   mobileCategories: $("catalogoMobileCategories"),
   categoriesClose: $("catalogoCategoriesClose"),
-  searchFocusBtn: $("catalogoSearchFocusBtn"),
   mobileCartbar: $("catalogoMobileCartbar"),
   mobileCartCount: $("catalogoMobileCartCount"),
   mobileCartTotal: $("catalogoMobileCartTotal"),
@@ -85,6 +82,13 @@ const els = {
   checkoutReviewTotal: $("checkoutReviewTotal"),
   checkoutOrderConfirmation: $("checkoutOrderConfirmation"),
   checkoutOrderNumber: $("checkoutOrderNumber"),
+  headerCartTotal: $("catalogoHeaderCartTotal"),
+  home: $("catalogoHome"),
+  bestSellersGrid: $("catalogoBestSellersGrid"),
+  sortCustom: $("catalogoSortCustom"),
+  sortTrigger: $("catalogoSortTrigger"),
+  sortMenu: $("catalogoSortMenu"),
+  sortLabel: $("catalogoSortLabel"),
 };
 
 function escapeHtml(value = "") {
@@ -470,9 +474,6 @@ function guardarCarrito() {
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.carrito));
 }
 
-function cantidadTemporal(codigo) { return state.cantidades.get(codigo) || 1; }
-function setCantidadTemporal(codigo, cantidad) { state.cantidades.set(codigo, Math.min(999, Math.max(1, Number(cantidad) || 1))); }
-
 function imagenProducto(producto, clase = "") {
   const codigo = encodeURIComponent(producto.codigo);
   const src = `${API_BASE_URL}/catalogo/api/productos/${codigo}/imagen`;
@@ -488,7 +489,7 @@ function categoryButton(rubro, mobile = false) {
   const active = state.rubro === slug;
   const name = rubro?.nombre || "Todos";
   const count = rubro?.productos ?? state.total;
-  return `<button class="category-button${active ? " is-active" : ""}" type="button" data-rubro="${escapeHtml(slug)}"${active ? ' aria-current="true"' : ""}>
+  return `<button class="category-button${active ? " is-active" : ""}" type="button" data-rubro="${escapeHtml(slug)}" title="${escapeHtml(name)}"${active ? ' aria-current="true"' : ""}>
     <span class="category-button__icon category-logo ${slug ? categoryTone(name) : "tone-red"}" aria-hidden="true">${slug ? categoryIcon(name) : categoryIcon("todos")}</span>
     <span>${escapeHtml(name)}</span>
     ${mobile || Number.isFinite(Number(count)) ? `<span class="category-button__count">${Number(count).toLocaleString("es-AR")}</span>` : ""}
@@ -500,13 +501,7 @@ function renderCategories() {
   const list = [todos, ...state.rubros];
   els.nav.innerHTML = list.map((r) => categoryButton(r)).join("");
   els.mobileNav.innerHTML = list.map((r) => categoryButton(r, true)).join("");
-  els.quick.innerHTML = list.slice(0, 9).map((r) => {
-    const active = state.rubro === r.slug;
-    return `<button class="quick-category${active ? " is-active" : ""}" type="button" data-rubro="${escapeHtml(r.slug)}">
-      <span class="quick-category__icon category-logo ${r.slug ? categoryTone(r.nombre) : "tone-red"}" aria-hidden="true">${r.slug ? categoryIcon(r.nombre) : categoryIcon("todos")}</span>
-      <span>${escapeHtml(r.nombre)}</span>
-    </button>`;
-  }).join("");
+
 }
 
 function cantidadEnCarrito(codigo) {
@@ -568,6 +563,7 @@ function abrirEditorCantidad(codigo) {
 }
 
 function renderProductCard(producto) {
+  const marca = String(producto.marca || "").trim();
   return `<article class="product-card" data-product="${escapeHtml(producto.codigo)}">
     <div class="product-card__image">
       ${producto.destacado ? '<span class="product-card__featured">DESTACADO</span>' : ""}
@@ -576,6 +572,7 @@ function renderProductCard(producto) {
     <div class="product-card__body">
       <div class="product-card__rubric">${escapeHtml(producto.rubro?.nombre || "Producto")}</div>
       <h3 title="${escapeHtml(producto.nombre)}">${escapeHtml(producto.nombre)}</h3>
+      ${marca ? `<div class="product-card__brand">${escapeHtml(marca)}</div>` : '<div class="product-card__brand">&nbsp;</div>'}
       <div class="product-card__meta"><strong class="product-card__price">${formatMoney(producto.precio)}</strong><span class="product-card__unit">${escapeHtml(producto.unidadVenta || "unidad")}</span></div>
       <div class="product-card__actions purchase-control" data-purchase-control="${escapeHtml(producto.codigo)}">
         ${controlCompraHtml(producto)}
@@ -584,13 +581,51 @@ function renderProductCard(producto) {
   </article>`;
 }
 
+function renderHomeProducts() {
+  if (!els.bestSellersGrid) return;
+  const destacados = state.productos.filter((p) => p.destacado);
+  const base = destacados.length >= 6 ? destacados : state.productos;
+  els.bestSellersGrid.innerHTML = base.slice(0, 6).map(renderProductCard).join("");
+}
+
+function syncViewMode() {
+  const browse = Boolean(state.modoCatalogo || state.rubro || state.busqueda);
+  document.body.classList.toggle("catalogo-browse-mode", browse);
+  if (els.home) els.home.hidden = browse;
+}
+
+function abrirCatalogoCompleto() {
+  state.modoCatalogo = true;
+  state.rubro = "";
+  state.busqueda = "";
+  state.pagina = 1;
+  if (els.search) els.search.value = "";
+  syncViewMode();
+  cargarProductos();
+  document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function seleccionarRubroPorNombre(nombre = "") {
+  const buscado = String(nombre || "").trim().toLowerCase();
+  const rubro = state.rubros.find((r) => String(r.nombre || "").trim().toLowerCase() === buscado || String(r.nombre || "").toLowerCase().includes(buscado));
+  if (rubro) seleccionarRubro(rubro.slug || "");
+}
+
+function productosOrdenados() {
+  const items = [...state.productos];
+  if (state.orden === "precio-asc") items.sort((a,b) => (Number(a.precio)||0) - (Number(b.precio)||0));
+  else if (state.orden === "precio-desc") items.sort((a,b) => (Number(b.precio)||0) - (Number(a.precio)||0));
+  else if (state.orden === "nombre") items.sort((a,b) => String(a.nombre||"").localeCompare(String(b.nombre||""), "es"));
+  return items;
+}
+
 function renderProducts({ append = false } = {}) {
   if (!state.productos.length && !append) {
     const noVisible = !state.busqueda && !state.rubro;
     els.grid.innerHTML = `<div class="catalogo-empty"><div><div class="catalogo-empty__icon">⌕</div><h3>${noVisible ? "Todavía no hay productos publicados" : "No encontramos productos"}</h3><p>${noVisible ? "El catálogo está listo. Los productos aparecerán acá cuando sean marcados como visibles desde la administración." : "Probá con otro nombre, código o rubro."}</p></div></div>`;
     return;
   }
-  const html = state.productos.map(renderProductCard).join("");
+  const html = productosOrdenados().map(renderProductCard).join("");
   if (append) els.grid.insertAdjacentHTML("beforeend", html); else els.grid.innerHTML = html;
 }
 
@@ -654,8 +689,10 @@ async function cargarProductos({ append = false } = {}) {
     state.total = Number(data.total) || 0;
     state.paginas = Number(data.paginas) || 0;
     renderProducts({ append: false });
+    renderHomeProducts();
     updateHeading();
     renderCategories();
+    syncViewMode();
   } catch (error) {
     console.error("No se pudieron cargar los productos:", error);
     if (!append) state.productos = [];
@@ -668,11 +705,10 @@ async function cargarProductos({ append = false } = {}) {
 }
 
 function seleccionarRubro(slug = "") {
-  if (state.rubro === slug && !state.busqueda) return;
+  state.modoCatalogo = true;
   state.rubro = slug;
   state.busqueda = "";
   els.search.value = "";
-  els.searchCompact.value = "";
   state.pagina = 1;
   cerrarDrawers();
   cargarProductos();
@@ -680,11 +716,11 @@ function seleccionarRubro(slug = "") {
 }
 
 function buscar(texto = "") {
+  state.modoCatalogo = true;
   const q = String(texto || "").trim().replace(/\s+/g, " ").slice(0, 100);
   state.busqueda = q;
   state.pagina = 1;
   els.search.value = q;
-  els.searchCompact.value = q;
   cargarProductos();
   document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -780,6 +816,7 @@ function renderCart() {
   els.cartBadge.textContent = totals.unidades > 99 ? "99+" : String(totals.unidades);
   els.cartProductsLabel.textContent = pluralProductos(state.carrito.length);
   els.cartTotal.textContent = formatMoney(totals.total);
+  if (els.headerCartTotal) els.headerCartTotal.textContent = formatMoney(totals.total);
   els.mobileCartCount.textContent = pluralProductos(state.carrito.length);
   els.mobileCartTotal.textContent = formatMoney(totals.total);
   els.mobileCartbar.hidden = state.carrito.length === 0;
@@ -820,6 +857,12 @@ function cerrarDrawers() {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
+    const showProducts = event.target.closest("[data-show-products]");
+    if (showProducts) return abrirCatalogoCompleto();
+
+    const promo = event.target.closest("[data-rubro-name]");
+    if (promo) return seleccionarRubroPorNombre(promo.dataset.rubroName || "");
+
     const category = event.target.closest("[data-rubro]");
     if (category) return seleccionarRubro(category.dataset.rubro || "");
 
@@ -843,9 +886,43 @@ function bindEvents() {
   });
 
   els.searchForm.addEventListener("submit", (e) => { e.preventDefault(); buscar(els.search.value); });
-  els.searchFormCompact.addEventListener("submit", (e) => { e.preventDefault(); buscar(els.searchCompact.value); });
-  let timer;
-  els.searchCompact.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => buscar(els.searchCompact.value), 450); });
+
+  const sortLabels = {
+    relevancia: "Más relevantes",
+    "precio-asc": "Menor precio",
+    "precio-desc": "Mayor precio",
+    nombre: "Nombre A–Z",
+  };
+
+  const cerrarSort = () => {
+    if (!els.sortMenu || !els.sortTrigger) return;
+    els.sortMenu.hidden = true;
+    els.sortTrigger.setAttribute("aria-expanded", "false");
+    els.sortCustom?.classList.remove("is-open");
+  };
+
+  els.sortTrigger?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const abrir = els.sortMenu?.hidden ?? true;
+    if (!els.sortMenu) return;
+    els.sortMenu.hidden = !abrir;
+    els.sortTrigger.setAttribute("aria-expanded", String(abrir));
+    els.sortCustom?.classList.toggle("is-open", abrir);
+  });
+
+  els.sortMenu?.addEventListener("click", (e) => {
+    const option = e.target.closest("[data-sort-value]");
+    if (!option) return;
+    state.orden = option.dataset.sortValue || "relevancia";
+    if (els.sortLabel) els.sortLabel.textContent = sortLabels[state.orden] || sortLabels.relevancia;
+    els.sortMenu.querySelectorAll("[data-sort-value]").forEach((btn) => btn.setAttribute("aria-selected", String(btn === option)));
+    cerrarSort();
+    renderProducts();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!els.sortCustom?.contains(e.target)) cerrarSort();
+  });
   els.loadMore.addEventListener("click", async () => {
     if (state.pagina >= state.paginas || state.loading) return;
     state.pagina += 1;
@@ -865,7 +942,13 @@ function bindEvents() {
       els.feedback.textContent = "No pudimos cargar más productos. Intentá nuevamente.";
     } finally { state.loading = false; }
   });
-  els.cartButton.addEventListener("click", () => abrirDrawer("cart"));
+  els.cartButton.addEventListener("click", () => {
+    if (window.matchMedia("(min-width: 1100px)").matches) {
+      els.cart?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      abrirDrawer("cart");
+    }
+  });
   els.mobileCartbar.addEventListener("click", () => abrirDrawer("cart"));
   els.cartClose.addEventListener("click", cerrarDrawers);
   els.cartContinue.addEventListener("click", abrirCheckout);
@@ -886,7 +969,6 @@ function bindEvents() {
   els.menuBtn.addEventListener("click", () => abrirDrawer("categories"));
   els.categoriesClose.addEventListener("click", cerrarDrawers);
   els.overlay.addEventListener("click", cerrarDrawers);
-  els.searchFocusBtn.addEventListener("click", () => { els.search.focus(); els.search.scrollIntoView({ behavior: "smooth", block: "center" }); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarDrawers(); });
 }
 

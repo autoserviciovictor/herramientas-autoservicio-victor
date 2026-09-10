@@ -17,10 +17,37 @@ function codigoEAN(valor = "") {
   return limpio.length >= 8 && limpio.length <= 14 ? limpio : "";
 }
 
+function esHostPrivado(hostname = "") {
+  const host = String(hostname || "").trim().toLowerCase().replace(/^\[|\]$/g, "");
+  if (!host) return true;
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
+  if (host === "::1" || host === "0.0.0.0") return true;
+
+  // Bloqueo conservador de IPv4 locales, privadas, loopback y link-local.
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b, c, d] = m.slice(1).map(Number);
+    if ([a, b, c, d].some((n) => n < 0 || n > 255)) return true;
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+  }
+
+  // Bloqueo de rangos IPv6 locales más comunes cuando vienen como literal.
+  if (host.includes(":")) {
+    if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe8") || host.startsWith("fe9") || host.startsWith("fea") || host.startsWith("feb")) return true;
+  }
+  return false;
+}
+
 function urlHttps(valor = "", base = "") {
   try {
     const u = base ? new URL(String(valor || "").trim(), base) : new URL(String(valor || "").trim());
-    if (u.protocol !== "https:") return "";
+    if (u.protocol !== "https:" || !u.hostname || esHostPrivado(u.hostname)) return "";
+    u.username = "";
+    u.password = "";
     return u.href.slice(0, 1200);
   } catch {
     return "";
@@ -569,6 +596,7 @@ async function buscarCandidatosMultiples(producto) {
 }
 
 module.exports = {
+  esHostPrivado,
   buscarCandidatosMultiples,
   codigoEAN,
   urlHttps,

@@ -2706,12 +2706,19 @@ function textoEstadoVencimiento(item) {
 }
 
 function bucketVencimiento(item) {
-  const dias = diasHastaVencimiento(item.vencimiento);
+  const fecha = String(item?.vencimiento || "").trim();
+  if (!fecha) return "fuera";
+
+  const vence = new Date(`${fecha}T00:00:00`);
+  if (Number.isNaN(vence.getTime())) return "fuera";
+
+  const dias = diasHastaVencimiento(fecha);
   if (dias < 0) return "vencidos";
   if (dias <= 7) return "7";
   if (dias <= 15) return "15";
-  if (dias <= 30) return "30";
-  return "fuera";
+
+  // Desde 16 días en adelante no hay límite superior.
+  return "30";
 }
 
 
@@ -2780,7 +2787,7 @@ function renderResumenVencimientos() {
   el.innerHTML = [
     fila("venc-resumen-7", "app-kpi-blue", "7", "Próximos 7 días", resumen.siete),
     fila("venc-resumen-15", "app-kpi-red", "15", "8 a 15 días", resumen.quince),
-    fila("venc-resumen-30", "app-kpi-amber", "30", "16 a 30 días", resumen.treinta),
+    fila("venc-resumen-30", "app-kpi-amber", "30", "16 días en adelante", resumen.treinta),
     fila("venc-resumen-vencidos", "app-kpi-green", "vencidos", "Vencidos", resumen.vencidos),
   ].join("");
 }
@@ -2943,8 +2950,8 @@ function renderListadoVencimientos() {
     },
     {
       bucket: "30",
-      titulo: "16 a 30 días",
-      detalle: "Vencen entre 16 y 30 días",
+      titulo: "16 días en adelante",
+      detalle: "Vencen dentro de 16 días o más",
     },
     {
       bucket: "vencidos",

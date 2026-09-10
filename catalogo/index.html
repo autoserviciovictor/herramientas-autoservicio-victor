@@ -7,18 +7,10 @@
   <meta name="description" content="Catálogo online de Autoservicio Victor. Brindamos calidad y atención.">
   <title>Catálogo online | Autoservicio Victor</title>
   <link rel="icon" href="../icons/favicon.png">
-  <link rel="stylesheet" href="./catalogo-base.css?v=1960-d21-catalogo-etapa4-070926">
-  <link rel="stylesheet" href="./catalogo-etapa4-2.css?v=1960-d21-catalogo-etapa4-2-070926">
-  <link rel="stylesheet" href="./catalogo-etapa4-2-1.css?v=1960-d21-catalogo-etapa4-2-1-070926">
-  <link rel="stylesheet" href="./catalogo-etapa4-3.css?v=1960-d21-catalogo-etapa4-3-070926">
-  <link rel="stylesheet" href="./catalogo-etapa4-3-1.css?v=1960-d21-catalogo-etapa4-3-1-070926">
-  <link rel="stylesheet" href="./catalogo-etapa4-3-2.css?v=1960-d21-catalogo-etapa4-3-2-070926">
-  <link rel="stylesheet" href="./catalogo-etapa4-4.css?v=1960-d21-catalogo-etapa4-4-070926">
-  <link rel="stylesheet" href="./catalogo-etapa5.css?v=1960-d21-catalogo-etapa5-070926">
-  <link rel="stylesheet" href="./catalogo-etapa6.css?v=1960-d21-cierre-etapa6-010926">
+  <link rel="stylesheet" href="./catalogo-diseno.css?v=hero-final-exacto-120926">
 </head>
 <body>
-  <div class="catalogo-app" id="catalogoApp">
+  <div class="catalogo-app catalogo-final-design" id="catalogoApp">
     <header class="catalogo-header">
       <div class="catalogo-header__inner">
         <button class="icon-btn catalogo-menu-btn" id="catalogoMenuBtn" type="button" aria-label="Ver rubros" aria-controls="catalogoMobileCategories" aria-expanded="false">
@@ -31,46 +23,53 @@
             <small>Brindamos calidad y atención.</small>
           </span>
         </a>
+        <form class="catalogo-header-search" id="catalogoHeaderSearchForm" role="search">
+          <label class="sr-only" for="catalogoHeaderSearch">Buscar productos</label>
+          <span aria-hidden="true">⌕</span>
+          <input id="catalogoHeaderSearch" type="search" autocomplete="off" placeholder="Buscar productos, marcas o códigos…" maxlength="100">
+          <button type="submit" aria-label="Buscar">⌕</button>
+        </form>
         <div class="catalogo-header__actions">
-          <button class="icon-btn" id="catalogoSearchFocusBtn" type="button" aria-label="Buscar productos">⌕</button>
+          <button class="catalogo-account-button" type="button" aria-label="Mi cuenta"><span class="catalogo-account-button__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.8 19v-1.8c0-3 2.3-5.2 5.2-5.2s5.2 2.2 5.2 5.2V19z"/></svg></span><span>Mi cuenta</span></button>
           <button class="cart-button" id="catalogoCartButton" type="button" aria-label="Abrir carrito">
             <span class="cart-button__icon" aria-hidden="true">🛒</span>
             <span class="cart-button__badge" id="catalogoCartBadge" hidden>0</span>
+            <span class="cart-button__copy"><strong>Mi carrito</strong><small id="catalogoHeaderCartTotal">$ 0,00</small></span>
           </button>
         </div>
       </div>
     </header>
 
     <main>
-      <section class="catalogo-hero" aria-labelledby="catalogoTitle">
-        <div class="catalogo-hero__backdrop" aria-hidden="true">
-          <div class="shelf shelf--one"></div>
-          <div class="shelf shelf--two"></div>
-          <div class="shelf shelf--three"></div>
-        </div>
-        <div class="catalogo-hero__content">
-          <p class="catalogo-eyebrow">AUTOSERVICIO VICTOR</p>
-          <h1 id="catalogoTitle">Todo lo que necesitás,<br>en un solo lugar.</h1>
-          <p>Encontrá tus productos por nombre, marca, código o rubro.</p>
-          <form class="catalogo-search catalogo-search--hero" id="catalogoSearchForm" role="search">
-            <label class="sr-only" for="catalogoSearch">Buscar productos</label>
-            <input id="catalogoSearch" type="search" autocomplete="off" placeholder="Buscar productos, marcas o códigos…" maxlength="100">
-            <button type="submit" aria-label="Buscar">⌕</button>
-          </form>
-        </div>
+      <section class="catalogo-hero catalogo-hero--final" aria-label="Autoservicio Victor. Variedad de productos, precios siempre claros y pedido simple y rápido. Brindamos calidad y atención. Siempre cerca tuyo.">
+        <img
+          class="catalogo-hero__final-image"
+          src="./assets/hero-diseno-final.webp"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          fetchpriority="high"
+        />
       </section>
 
-      <section class="catalogo-quick-categories" aria-label="Rubros destacados">
-        <div class="catalogo-container">
-          <div class="quick-categories" id="catalogoQuickCategories" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <section class="catalogo-benefits" aria-label="Beneficios del catálogo">
-        <div class="catalogo-container catalogo-benefits__grid">
-          <article><span aria-hidden="true">▦</span><div><strong>Variedad de productos</strong><small>Todo el catálogo en un solo lugar.</small></div></article>
-          <article><span aria-hidden="true">$</span><div><strong>Precios claros</strong><small>Consultá el valor antes de pedir.</small></div></article>
-          <article><span aria-hidden="true">✓</span><div><strong>Pedido simple</strong><small>Armá tu carrito rápido y fácil.</small></div></article>
+      <section class="catalogo-services" aria-label="Información del autoservicio">
+        <div class="catalogo-container catalogo-services__inner">
+          <div class="catalogo-service catalogo-service--delivery">
+            <span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 6.5h10v9h-10zM13.5 9h3.2l3.8 3.8v2.7h-7z"/><circle cx="7" cy="17.5" r="1.7"/><circle cx="17.5" cy="17.5" r="1.7"/></svg></span>
+            <div><strong>Hacemos delivery</strong><small>Consultá zonas y horarios.</small></div>
+          </div>
+          <div class="catalogo-service catalogo-service--payments">
+            <span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17M7 14h4"/></svg></span>
+            <div><strong>Medios de pago</strong><small>Efectivo, Tarjeta, Transferencia, Mercado Pago.</small></div>
+          </div>
+          <div class="catalogo-service catalogo-service--hours">
+            <span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></span>
+            <div><strong>Horario de atención</strong><small>Todos los días de 08:00 a 22:00.</small></div>
+          </div>
+          <div class="catalogo-service catalogo-service--whatsapp">
+            <span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 11.8a8 8 0 0 1-11.8 7l-4.1 1 1.1-4A8 8 0 1 1 20 11.8Z"/><path d="M9.1 8.4c.3-.6.6-.6.9-.6h.4c.2 0 .4.1.5.4l.9 2c.1.3.1.5-.1.7l-.7.8c-.2.2-.2.4-.1.6.5 1 1.2 1.8 2.2 2.3.2.1.4.1.6-.1l.9-1c.2-.2.4-.3.7-.2l2 .9c.3.1.4.3.4.5v.5c0 .4-.2.8-.5 1.1-.5.5-1.3.8-2 .7-1.3-.2-3.3-1-5.1-2.7-1.6-1.5-2.5-3.4-2.7-4.6-.1-.6.1-1.1.4-1.3Z"/></svg></span>
+            <div><strong>Hacé tu pedido por WhatsApp</strong><small>Rápido y sencillo.</small></div>
+          </div>
         </div>
       </section>
 
@@ -84,17 +83,37 @@
           </aside>
 
           <div class="catalogo-products-main">
+            <div class="catalogo-home" id="catalogoHome">
+              <div class="catalogo-promo-grid">
+                <button class="catalogo-promo catalogo-promo--meat" type="button" data-rubro-name="CARNICERIA"><span><strong>Carnes<br>de primera calidad</strong><small>Ver carnicería →</small></span></button>
+                <button class="catalogo-promo catalogo-promo--produce" type="button" data-rubro-name="VERDULERIA"><span><strong>Verduras y frutas<br>siempre frescas</strong><small>Ver verdulería →</small></span></button>
+                <button class="catalogo-promo catalogo-promo--clean" type="button" data-rubro-name="LIMPIEZA"><span><strong>Limpieza e higiene<br>para tu hogar</strong><small>Ver productos →</small></span></button>
+              </div>
+              <section class="catalogo-best-sellers" aria-labelledby="catalogoBestSellersTitle">
+                <div class="catalogo-section-head"><h2 id="catalogoBestSellersTitle"><span>★</span> Más vendidos</h2><button type="button" class="catalogo-link-button" data-show-products>Ver todos los productos →</button></div>
+                <div class="catalogo-grid catalogo-grid--home" id="catalogoBestSellersGrid"></div>
+              </section>
+            </div>
             <div class="catalogo-products-toolbar">
               <div>
                 <p class="catalogo-eyebrow" id="catalogoContextEyebrow">CATÁLOGO</p>
                 <h2 id="catalogoProductsTitle">Todos los productos</h2>
                 <p class="catalogo-products-count" id="catalogoProductsCount">Cargando productos…</p>
               </div>
-              <form class="catalogo-search catalogo-search--compact" id="catalogoSearchFormCompact" role="search">
-                <label class="sr-only" for="catalogoSearchCompact">Buscar dentro del catálogo</label>
-                <input id="catalogoSearchCompact" type="search" autocomplete="off" placeholder="Buscar…" maxlength="100">
-                <button type="submit" aria-label="Buscar">⌕</button>
-              </form>
+              <div class="catalogo-toolbar-actions">
+                <div class="catalogo-sort-custom" id="catalogoSortCustom">
+                  <button class="catalogo-sort-trigger" id="catalogoSortTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="catalogoSortLabel">Más relevantes</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
+                  </button>
+                  <div class="catalogo-sort-menu" id="catalogoSortMenu" role="listbox" aria-label="Ordenar productos" hidden>
+                    <button type="button" role="option" aria-selected="true" data-sort-value="relevancia">Más relevantes</button>
+                    <button type="button" role="option" aria-selected="false" data-sort-value="precio-asc">Menor precio</button>
+                    <button type="button" role="option" aria-selected="false" data-sort-value="precio-desc">Mayor precio</button>
+                    <button type="button" role="option" aria-selected="false" data-sort-value="nombre">Nombre A–Z</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="catalogo-feedback" id="catalogoFeedback" role="status" aria-live="polite"></div>
@@ -104,16 +123,34 @@
               <button class="secondary-button" id="catalogoLoadMore" type="button">Ver más productos</button>
             </div>
           </div>
+          <aside class="catalogo-cart" id="catalogoCart" aria-hidden="true" aria-labelledby="catalogoCartTitle">
+                <div class="drawer-header">
+                  <div><small>TU PEDIDO</small><h2 id="catalogoCartTitle">Tu carrito</h2></div>
+                  <button class="icon-btn" id="catalogoCartClose" type="button" aria-label="Cerrar carrito">×</button>
+                </div>
+                <div class="cart-items" id="catalogoCartItems"></div>
+                <div class="cart-summary">
+                  <div><span id="catalogoCartProductsLabel">0 productos</span><strong>Total estimado</strong></div>
+                  <strong class="cart-summary__total" id="catalogoCartTotal">$ 0,00</strong>
+                </div>
+                <button class="primary-button" id="catalogoCartContinue" type="button">Enviar pedido por WhatsApp</button>
+                <p class="cart-summary__note">Completá tus datos para preparar el pedido por WhatsApp.</p>
+              </aside>
         </div>
       </section>
     </main>
 
-    <footer class="catalogo-footer">
+    <footer class="catalogo-footer catalogo-footer--final">
       <div class="catalogo-container catalogo-footer__inner">
-        <img src="../icons/brand-logo-desktop-dark.png" alt="Autoservicio Victor">
-        <span></span>
-        <p>Brindamos calidad y atención.</p>
-        <div><strong>Catálogo online</strong><small>Simple. Rápido. Siempre cerca.</small></div>
+        <div class="catalogo-footer__brand">
+          <img src="../icons/brand-logo-desktop-dark.png" alt="Autoservicio Victor">
+          <span class="catalogo-footer__divider" aria-hidden="true"></span>
+          <p>Brindamos calidad y atención.</p>
+        </div>
+        <div class="catalogo-footer__copy">
+          <strong>Catálogo online</strong>
+          <small>Simple. Rápido. Siempre cerca.</small>
+        </div>
       </div>
     </footer>
 
@@ -127,19 +164,7 @@
       <nav id="catalogoMobileCategoryNav"></nav>
     </aside>
 
-    <aside class="catalogo-cart" id="catalogoCart" aria-hidden="true" aria-labelledby="catalogoCartTitle">
-      <div class="drawer-header">
-        <div><small>TU PEDIDO</small><h2 id="catalogoCartTitle">Tu carrito</h2></div>
-        <button class="icon-btn" id="catalogoCartClose" type="button" aria-label="Cerrar carrito">×</button>
-      </div>
-      <div class="cart-items" id="catalogoCartItems"></div>
-      <div class="cart-summary">
-        <div><span id="catalogoCartProductsLabel">0 productos</span><strong>Total estimado</strong></div>
-        <strong class="cart-summary__total" id="catalogoCartTotal">$ 0,00</strong>
-      </div>
-      <button class="primary-button" id="catalogoCartContinue" type="button">Continuar con el pedido</button>
-      <p class="cart-summary__note">Completá tus datos para preparar el pedido por WhatsApp.</p>
-    </aside>
+
 
 
     <aside class="catalogo-checkout" id="catalogoCheckout" aria-hidden="true" aria-labelledby="catalogoCheckoutTitle">
@@ -236,6 +261,6 @@
     </button>
   </div>
 
-  <script type="module" src="./catalogo-base.js?v=1960-d21-catalogo-etapa4-070926"></script>
+  <script type="module" src="./catalogo-base.js?v=final-110926"></script>
 </body>
 </html>

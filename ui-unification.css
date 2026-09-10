@@ -119,6 +119,7 @@
 
 #pantallaInicio .pro-metrics-grid,
 #pantallaProductos .inventory-loaded-metrics,
+#pantallaCatalogoAdmin .catalog-admin-metrics,
 #pantallaVencimientos .venc-resumen,
 #pantallaTareas .tareas-kpi-grid,
 #pantallaTareas .tareas-plan-kpis,
@@ -130,6 +131,7 @@
 @media (min-width: 901px) {
   #pantallaInicio .pro-metrics-grid,
   #pantallaProductos .inventory-loaded-metrics,
+  #pantallaCatalogoAdmin .catalog-admin-metrics,
   #pantallaVencimientos .venc-resumen,
   #pantallaTareas .tareas-kpi-grid,
   #pantallaTareas .tareas-plan-kpis,
@@ -140,6 +142,7 @@
 
   #pantallaInicio .app-kpi-card,
   #pantallaProductos .app-kpi-card,
+  #pantallaCatalogoAdmin .app-kpi-card,
   #pantallaVencimientos .app-kpi-card,
   #pantallaTareas .app-kpi-card,
   #pantallaTareas .tareas-plan-kpi,
@@ -223,6 +226,7 @@
 
 /* Anatomía compartida de Inventario, Vencimientos, Tareas y Administración. */
 #pantallaProductos .inventory-loaded-metrics .app-kpi-card,
+#pantallaCatalogoAdmin .catalog-admin-metrics .app-kpi-card,
 #pantallaVencimientos .venc-resumen-card.app-kpi-card,
 #pantallaTareas .tareas-kpi.app-kpi-card,
 #pantallaAdmin .admin-kpi-card.app-kpi-card,
@@ -234,6 +238,7 @@
 }
 
 #pantallaProductos .inventory-loaded-metrics .app-kpi-card,
+#pantallaCatalogoAdmin .catalog-admin-metrics .app-kpi-card,
 #pantallaTareas .tareas-kpi.app-kpi-card,
 #pantallaAdmin .admin-kpi-card.app-kpi-card,
 #pantallaTareas .tareas-plan-kpi,
@@ -244,6 +249,7 @@
 }
 
 #pantallaProductos .inventory-loaded-metrics .metric-icon,
+#pantallaCatalogoAdmin .catalog-admin-metrics .catalog-metric-icon,
 #pantallaVencimientos .venc-summary-icon,
 #pantallaTareas .tareas-kpi-icon,
 #pantallaAdmin .admin-kpi-icon,
@@ -260,6 +266,7 @@
 }
 
 #pantallaProductos .inventory-loaded-metrics .app-icon,
+#pantallaCatalogoAdmin .catalog-metric-icon .app-icon,
 #pantallaVencimientos .venc-summary-icon .app-icon,
 #pantallaTareas .tareas-kpi-icon .app-icon,
 #pantallaAdmin .admin-kpi-icon .app-icon,
@@ -270,6 +277,7 @@
 }
 
 #pantallaProductos .inventory-loaded-metrics small,
+#pantallaCatalogoAdmin .catalog-admin-metrics small,
 #pantallaVencimientos .venc-resumen-rango,
 #pantallaTareas .tareas-kpi small,
 #pantallaAdmin .admin-kpi-card small,
@@ -281,6 +289,7 @@
 }
 
 #pantallaProductos .inventory-loaded-metrics strong,
+#pantallaCatalogoAdmin .catalog-admin-metrics strong,
 #pantallaVencimientos .venc-resumen-datos strong,
 #pantallaTareas .tareas-kpi strong,
 #pantallaAdmin .admin-kpi-card > div > strong,
@@ -592,6 +601,7 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
   /* KPIs móviles: 2 x 2, legibles y sin cortes. */
   #pantallaInicio .pro-metrics-grid,
   #pantallaProductos .inventory-loaded-metrics,
+  #pantallaCatalogoAdmin .catalog-admin-metrics,
   #pantallaVencimientos .venc-resumen,
   #pantallaTareas .tareas-kpi-grid,
   #pantallaTareas .tareas-plan-kpis,
@@ -603,6 +613,7 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
 
   #pantallaInicio .app-kpi-card,
   #pantallaProductos .app-kpi-card,
+  #pantallaCatalogoAdmin .app-kpi-card,
   #pantallaVencimientos .app-kpi-card,
   #pantallaTareas .app-kpi-card,
   #pantallaTareas .tareas-plan-kpi,
@@ -615,6 +626,7 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
 
   #pantallaInicio .pro-metric-card.app-kpi-card,
   #pantallaProductos .inventory-loaded-metrics .app-kpi-card,
+  #pantallaCatalogoAdmin .catalog-admin-metrics .app-kpi-card,
   #pantallaVencimientos .venc-resumen-card.app-kpi-card,
   #pantallaTareas .tareas-kpi.app-kpi-card,
   #pantallaAdmin .admin-kpi-card.app-kpi-card,
@@ -632,6 +644,7 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
 
   #pantallaInicio .pro-metric-icon,
   #pantallaProductos .inventory-loaded-metrics .metric-icon,
+  #pantallaCatalogoAdmin .catalog-metric-icon,
   #pantallaVencimientos .venc-summary-icon,
   #pantallaTareas .tareas-kpi-icon,
   #pantallaAdmin .admin-kpi-icon,
@@ -645,6 +658,7 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
 
   #pantallaInicio .pro-metric-card.app-kpi-card > strong,
   #pantallaProductos .inventory-loaded-metrics strong,
+  #pantallaCatalogoAdmin .catalog-admin-metrics strong,
   #pantallaVencimientos .venc-resumen-datos strong,
   #pantallaTareas .tareas-kpi strong,
   #pantallaAdmin .admin-kpi-card > div > strong,
@@ -1013,7 +1027,7 @@ body.en-tareas[data-tareas-vista="config"] .tareas-back-topbar:not(.oculto) {
 /* --------------------------------------------------------------------------
    Dark mode
    -------------------------------------------------------------------------- */
-html[data-theme="dark"] { --app-kpi-value: #f8fafc; }
+html[data-theme="dark"] { --app-kpi-value: #101828; }
 html[data-theme="dark"] .app-kpi-blue { --app-kpi-soft: #193b61; --app-kpi-border: #315f8e; }
 html[data-theme="dark"] .app-kpi-red { --app-kpi-soft: #421f2d; --app-kpi-border: #6f2b3a; }
 html[data-theme="dark"] .app-kpi-amber { --app-kpi-soft: #49331c; --app-kpi-border: #6c4b22; }

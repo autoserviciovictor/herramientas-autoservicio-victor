@@ -38,13 +38,7 @@
     <link rel="stylesheet" href="horarios-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-etapa9c.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-etapa9d.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-admin.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-etapa7.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-etapa8a.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-etapa8b.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-etapa8c.css?v=1960-d21-cierre-etapa6-010926" />
+    <link rel="stylesheet" href="catalogo-admin-diseno.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="ui-unification.css?v=1960-d21-cierre-etapa6-010926" />
@@ -3200,7 +3194,7 @@
               <p>Gestioná los productos que se muestran a tus clientes.</p>
             </div>
             <div class="catalog-admin-header-actions">
-              <button id="catalogBtnVerPublico" class="catalog-btn catalog-btn-secondary" type="button">
+              <button id="catalogBtnVerPublico" class="catalog-btn catalog-btn-primary" type="button">
                 <svg class="app-icon"><use href="#icon-eye"></use></svg><span>Ver catálogo</span>
               </button>
             </div>
@@ -3209,11 +3203,30 @@
           <div id="catalogAdminMensaje" class="catalog-admin-message" role="status" aria-live="polite"></div>
 
           <section class="catalog-admin-metrics" aria-label="Resumen del catálogo">
-            <article><span class="catalog-metric-icon tone-blue"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><strong id="catalogMetricaTotal">—</strong><small>Productos totales</small></div></article>
-            <article><span class="catalog-metric-icon tone-green"><svg class="app-icon"><use href="#icon-eye"></use></svg></span><div><strong id="catalogMetricaVisibles">—</strong><small>Visibles</small></div></article>
-            <article><span class="catalog-metric-icon tone-red"><svg class="app-icon"><use href="#icon-eye-off"></use></svg></span><div><strong id="catalogMetricaOcultos">—</strong><small>Ocultos</small></div></article>
-            <article><span class="catalog-metric-icon tone-violet"><svg class="app-icon"><use href="#icon-tag"></use></svg></span><div><strong id="catalogMetricaRubros">—</strong><small>Rubros</small></div></article>
+            <article class="app-kpi-card app-kpi-blue"><span class="catalog-metric-icon"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><small>Productos totales</small><strong id="catalogMetricaTotal">—</strong></div></article>
+            <article class="app-kpi-card app-kpi-red"><span class="catalog-metric-icon"><svg class="app-icon"><use href="#icon-eye"></use></svg></span><div><small>Visibles</small><strong id="catalogMetricaVisibles">—</strong></div></article>
+            <article class="app-kpi-card app-kpi-amber"><span class="catalog-metric-icon"><svg class="app-icon"><use href="#icon-eye-off"></use></svg></span><div><small>Ocultos</small><strong id="catalogMetricaOcultos">—</strong></div></article>
+            <article class="app-kpi-card app-kpi-green"><span class="catalog-metric-icon"><svg class="app-icon"><use href="#icon-tag"></use></svg></span><div><small>Rubros</small><strong id="catalogMetricaRubros">—</strong></div></article>
           </section>
+
+            <section class="catalog-order-metrics catalog-order-metrics-top" aria-label="Resumen de pedidos">
+              <article class="app-kpi-card app-kpi-blue">
+                <span class="catalog-order-metric-icon"><svg class="app-icon"><use href="#icon-box"></use></svg></span>
+                <div><small>Recibidos</small><strong id="catalogPedidosRecibidos">—</strong><span>Pendientes de tomar</span></div>
+              </article>
+              <article class="app-kpi-card app-kpi-red">
+                <span class="catalog-order-metric-icon"><svg class="app-icon"><use href="#icon-clock"></use></svg></span>
+                <div><small>Preparando</small><strong id="catalogPedidosPreparando">—</strong><span>En preparación</span></div>
+              </article>
+              <article class="app-kpi-card app-kpi-amber">
+                <span class="catalog-order-metric-icon"><svg class="app-icon"><use href="#icon-check"></use></svg></span>
+                <div><small>Listos</small><strong id="catalogPedidosListos">—</strong><span>Para entregar</span></div>
+              </article>
+              <article class="app-kpi-card app-kpi-green">
+                <span class="catalog-order-metric-icon"><svg class="app-icon"><use href="#icon-trend-up"></use></svg></span>
+                <div><small>Venta de hoy</small><strong id="catalogPedidosVentaHoy">—</strong><span>Sin cancelados</span></div>
+              </article>
+            </section>
 
           <div class="catalog-admin-tabs" role="tablist" aria-label="Secciones del catálogo">
             <button id="catalogTabProductos" class="activo" type="button" data-catalog-tab="productos" role="tab" aria-selected="true">Productos</button>
@@ -3227,54 +3240,72 @@
                 <svg class="app-icon"><use href="#icon-search"></use></svg>
                 <input id="catalogBuscarProductos" type="search" autocomplete="off" placeholder="Buscar por producto, código, marca..." />
               </label>
-              <select id="catalogFiltroRubro" aria-label="Filtrar por rubro"><option value="todos">Todos los rubros</option></select>
-              <select id="catalogFiltroEstado" aria-label="Filtrar por estado">
-                <option value="todos">Todos los estados</option>
-                <option value="visible">Visibles</option>
-                <option value="oculto">Ocultos</option>
-                <option value="sin-configurar">Sin configurar</option>
-                <option value="destacado">Destacados</option>
-              </select>
-              <select id="catalogFiltroImagen" aria-label="Filtrar por imagen">
-                <option value="todos">Todas las imágenes</option>
-                <option value="confirmada">Imagen confirmada</option>
-                <option value="candidato">Candidatas</option>
-                <option value="buscando">Buscando</option>
-                <option value="sin_resultado">Sin resultado</option>
-                <option value="error">Con error</option>
-                <option value="sin_imagen">Sin imagen</option>
-              </select>
-              <div class="catalog-bulk-actions" aria-label="Publicación masiva">
-                <button id="catalogBtnPublicarMasivo" class="catalog-btn catalog-btn-success" type="button" title="Publicar todos los productos del alcance seleccionado">
-                  <svg class="app-icon"><use href="#icon-eye"></use></svg><span>Publicar</span>
+
+              <div class="catalog-filter-popover-wrap">
+                <button id="catalogBtnFiltros" class="catalog-btn catalog-btn-secondary catalog-filter-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="catalogFiltrosMenu">
+                  <svg class="app-icon"><use href="#icon-filter"></use></svg>
+                  <span>Filtros</span>
+                  <b id="catalogFiltrosBadge" class="catalog-filter-badge oculto" aria-label="Filtros activos">0</b>
                 </button>
-                <button id="catalogBtnOcultarMasivo" class="catalog-btn catalog-btn-secondary" type="button" title="Ocultar todos los productos del alcance seleccionado">
-                  <svg class="app-icon"><use href="#icon-eye-off"></use></svg><span>Ocultar</span>
-                </button>
+                <div id="catalogFiltrosMenu" class="catalog-filter-popover oculto" role="dialog" aria-modal="false" aria-labelledby="catalogFiltrosTitulo">
+                  <header class="catalog-filter-popover-head">
+                    <div><strong id="catalogFiltrosTitulo">Filtros</strong><span>Acotá los productos que querés ver.</span></div>
+                    <button id="catalogFiltrosLimpiar" class="catalog-filter-clear" type="button">Limpiar</button>
+                  </header>
+                  <div class="catalog-filter-fields">
+                    <label class="catalog-filter-field">
+                      <span>Rubro</span>
+                      <select id="catalogFiltroRubro" aria-label="Filtrar por rubro"><option value="todos">Todos los rubros</option></select>
+                    </label>
+                    <label class="catalog-filter-field">
+                      <span>Estado</span>
+                      <select id="catalogFiltroEstado" aria-label="Filtrar por estado">
+                        <option value="todos">Todos los estados</option>
+                        <option value="visible">Visibles</option>
+                        <option value="oculto">Ocultos</option>
+                        <option value="sin-configurar">Sin configurar</option>
+                        <option value="destacado">Destacados</option>
+                      </select>
+                    </label>
+                    <label class="catalog-filter-field">
+                      <span>Estado de imagen</span>
+                      <select id="catalogFiltroImagen" aria-label="Filtrar por imagen">
+                        <option value="todos">Todas las imágenes</option>
+                        <option value="confirmada">Imagen confirmada</option>
+                        <option value="candidato">Candidatas</option>
+                        <option value="buscando">Buscando</option>
+                        <option value="sin_resultado">Sin resultado</option>
+                        <option value="error">Con error</option>
+                        <option value="sin_imagen">Sin imagen</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
               </div>
-              <button id="catalogBtnBuscarImagenes" class="catalog-btn catalog-btn-secondary catalog-image-batch-btn" type="button" title="Completar automáticamente las imágenes faltantes">
-                <svg class="app-icon"><use href="#icon-search"></use></svg><span>Completar imágenes automáticamente</span>
+
+              <button id="catalogBtnPublicarMasivo" class="catalog-btn catalog-btn-success" type="button" title="Publicar todos los productos del alcance seleccionado">
+                <svg class="app-icon"><use href="#icon-eye"></use></svg><span>Publicar todos</span>
               </button>
-              <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar">
+              <button id="catalogBtnOcultarMasivo" class="catalog-btn catalog-btn-secondary" type="button" title="Ocultar todos los productos del alcance seleccionado">
+                <svg class="app-icon"><use href="#icon-eye-off"></use></svg><span>Ocultar todos</span>
+              </button>
+              <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar productos">
                 <svg class="app-icon"><use href="#icon-refresh"></use></svg>
               </button>
-            </div>
-
-            <div id="catalogImagenesProceso" class="catalog-image-process oculto" aria-live="polite">
-              <div class="catalog-image-process-copy">
-                <strong id="catalogImagenesProcesoTitulo">Imágenes automáticas</strong>
-                <span id="catalogImagenesProcesoTexto">Listo para completar las imágenes faltantes.</span>
-              </div>
-              <div class="catalog-image-process-progress"><span id="catalogImagenesProcesoBarra"></span></div>
-              <div class="catalog-image-process-stats" id="catalogImagenesProcesoStats"></div>
-              <button id="catalogBtnPausarImagenes" class="catalog-btn catalog-btn-secondary oculto" type="button">Pausar</button>
-              <button id="catalogBtnReiniciarImagenes" class="catalog-btn catalog-btn-secondary oculto" type="button">Reiniciar búsqueda gratuita</button>
             </div>
 
             <div class="catalog-table-card">
               <div class="catalog-table-scroll">
                 <table class="catalog-products-table">
-                  <thead><tr><th>Producto</th><th>Rubro</th><th>Precio</th><th>Unidad</th><th>Estado</th><th class="catalog-col-actions">Acciones</th></tr></thead>
+                  <colgroup>
+                    <col class="catalog-col-producto">
+                    <col class="catalog-col-rubro">
+                    <col class="catalog-col-precio">
+                    <col class="catalog-col-unidad">
+                    <col class="catalog-col-estado">
+                    <col class="catalog-col-acciones">
+                  </colgroup>
+                  <thead><tr><th>Producto</th><th>Rubro</th><th>Precio</th><th>Unidad</th><th>Estado</th><th>Acciones</th></tr></thead>
                   <tbody id="catalogProductosBody"><tr><td colspan="6"><div class="catalog-loading">Cargando productos…</div></td></tr></tbody>
                 </table>
               </div>
@@ -3304,23 +3335,6 @@
               </button>
             </div>
 
-            <section class="catalog-order-metrics" aria-label="Resumen de pedidos">
-              <article><small>Recibidos</small><strong id="catalogPedidosRecibidos">—</strong><span>Pendientes de tomar</span></article>
-              <article><small>Preparando</small><strong id="catalogPedidosPreparando">—</strong><span>En preparación</span></article>
-              <article><small>Listos</small><strong id="catalogPedidosListos">—</strong><span>Para entregar</span></article>
-              <article><small>Venta de hoy</small><strong id="catalogPedidosVentaHoy">—</strong><span>Sin cancelados</span></article>
-            </section>
-
-            <div class="catalog-orders-quick-filters" id="catalogPedidosFiltrosRapidos" aria-label="Filtros rápidos de pedidos">
-              <button type="button" class="activo" data-pedido-filtro="todos" aria-pressed="true">Todos</button>
-              <button type="button" data-pedido-filtro="recibido" aria-pressed="false">Recibidos</button>
-              <button type="button" data-pedido-filtro="preparando" aria-pressed="false">Preparando</button>
-              <button type="button" data-pedido-filtro="listo" aria-pressed="false">Listos</button>
-              <button type="button" data-pedido-filtro="entregado" aria-pressed="false">Entregados</button>
-              <button type="button" data-pedido-filtro="cancelado" aria-pressed="false">Cancelados</button>
-              <button type="button" data-pedido-filtro="hoy" aria-pressed="false">Hoy</button>
-              <button type="button" data-pedido-filtro="archivados" aria-pressed="false">Archivados</button>
-            </div>
 
             <div class="catalog-orders-toolbar">
               <label class="catalog-search">
@@ -3334,6 +3348,7 @@
                 <option value="listo">Listos</option>
                 <option value="entregado">Entregados</option>
                 <option value="cancelado">Cancelados</option>
+                <option value="archivados">Archivados</option>
               </select>
             </div>
 
@@ -3446,28 +3461,6 @@
               <label class="catalog-switch-row"><input id="catalogProductoVisible" type="checkbox" /><span class="catalog-switch"></span><span><strong>Visible para clientes</strong><small>El producto podrá aparecer en el catálogo público cuando tenga un rubro activo.</small></span></label>
               <label class="catalog-switch-row"><input id="catalogProductoDestacado" type="checkbox" /><span class="catalog-switch"></span><span><strong>Producto destacado</strong><small>Podrá mostrarse con prioridad en secciones destacadas.</small></span></label>
             </div>
-            <div class="catalog-image-stage-note" role="note" aria-label="Estado de imágenes del catálogo">
-              <span><svg class="app-icon"><use href="#icon-box"></use></svg></span>
-              <div><strong>Imágenes automáticas activas</strong><p>El sistema busca, selecciona, descarga y guarda una copia propia. Las imágenes confirmadas no se sobrescriben automáticamente.</p></div>
-              <em>Activo</em>
-            </div>
-            <section class="catalog-image-manager" aria-label="Imagen del producto">
-              <div class="catalog-image-manager-head"><div><strong>Imagen del producto</strong><p>Se prioriza el EAN y la coincidencia de nombre, marca y presentación. Las imágenes confiables se descargan, normalizan y quedan asignadas automáticamente.</p></div><em id="catalogProductoEstadoImagen">Sin imagen</em></div>
-              <div class="catalog-image-manager-grid">
-                <div class="catalog-image-preview" id="catalogProductoImagenPreview"><span><svg class="app-icon"><use href="#icon-box"></use></svg></span><small>Sin imagen</small></div>
-                <div class="catalog-image-controls">
-                  <label class="catalog-field"><span>URL de imagen HTTPS</span><input id="catalogProductoImagenUrl" type="url" maxlength="1200" placeholder="https://..." /></label>
-                  <div class="catalog-image-actions">
-                    <button id="catalogProductoBuscarImagen" class="catalog-btn catalog-btn-secondary" type="button"><svg class="app-icon"><use href="#icon-search"></use></svg><span>Buscar automática</span></button>
-                    <button id="catalogProductoGuardarImagen" class="catalog-btn catalog-btn-secondary" type="button">Usar URL</button>
-                    <button id="catalogProductoConfirmarImagen" class="catalog-btn catalog-btn-primary oculto" type="button">Confirmar candidata</button>
-                    <button id="catalogProductoQuitarImagen" class="catalog-btn catalog-btn-danger oculto" type="button">Quitar imagen</button>
-                  </div>
-                  <p id="catalogProductoImagenEstadoBusqueda" class="catalog-image-search-status" role="status" aria-live="polite"></p>
-                  <p id="catalogProductoImagenMeta" class="catalog-image-meta"></p><p class="catalog-image-standard">Formato del catálogo: cuadrado 1:1 y escala uniforme. Las imágenes automáticas quedan guardadas en el sistema y no dependen del sitio original.</p>
-                </div>
-              </div>
-            </section>
           </div>
           <footer class="catalog-modal-actions"><button id="catalogProductoCancelar" class="catalog-btn catalog-btn-secondary" type="button">Cancelar</button><button id="catalogProductoGuardar" class="catalog-btn catalog-btn-primary" type="button">Guardar cambios</button></footer>
         </div>
