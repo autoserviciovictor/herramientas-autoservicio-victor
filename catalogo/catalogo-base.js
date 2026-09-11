@@ -567,6 +567,7 @@ function renderProductCard(producto) {
   return `<article class="product-card" data-product="${escapeHtml(producto.codigo)}">
     <div class="product-card__image">
       ${producto.destacado ? '<span class="product-card__featured">DESTACADO</span>' : ""}
+      <span class="product-card__favorite" aria-hidden="true">♡</span>
       ${imagenProducto(producto)}
     </div>
     <div class="product-card__body">

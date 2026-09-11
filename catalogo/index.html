@@ -7,7 +7,7 @@
   <meta name="description" content="Catálogo online de Autoservicio Victor. Brindamos calidad y atención.">
   <title>Catálogo online | Autoservicio Victor</title>
   <link rel="icon" href="../icons/favicon.png">
-  <link rel="stylesheet" href="./catalogo-diseno.css?v=hero-final-exacto-120926">
+  <link rel="stylesheet" href="./catalogo-diseno.css?v=mobile-drawers-icons-quality-100926">
 </head>
 <body>
   <div class="catalogo-app catalogo-final-design" id="catalogoApp">
@@ -25,12 +25,12 @@
         </a>
         <form class="catalogo-header-search" id="catalogoHeaderSearchForm" role="search">
           <label class="sr-only" for="catalogoHeaderSearch">Buscar productos</label>
-          <span aria-hidden="true">⌕</span>
+          <span class="catalogo-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></span>
           <input id="catalogoHeaderSearch" type="search" autocomplete="off" placeholder="Buscar productos, marcas o códigos…" maxlength="100">
-          <button type="submit" aria-label="Buscar">⌕</button>
+          <button type="submit" aria-label="Buscar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></button>
         </form>
         <div class="catalogo-header__actions">
-          <button class="catalogo-account-button" type="button" aria-label="Mi cuenta"><span class="catalogo-account-button__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.8 19v-1.8c0-3 2.3-5.2 5.2-5.2s5.2 2.2 5.2 5.2V19z"/></svg></span><span>Mi cuenta</span></button>
+          <button class="catalogo-account-button" type="button" aria-label="Mi cuenta"><span class="catalogo-account-button__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.5"/><path d="M5.5 20c.45-4.1 2.7-6.2 6.5-6.2s6.05 2.1 6.5 6.2"/></svg></span><span>Mi cuenta</span></button>
           <button class="cart-button" id="catalogoCartButton" type="button" aria-label="Abrir carrito">
             <span class="cart-button__icon" aria-hidden="true">🛒</span>
             <span class="cart-button__badge" id="catalogoCartBadge" hidden>0</span>
@@ -50,6 +50,11 @@
           decoding="async"
           fetchpriority="high"
         />
+        <div class="catalogo-hero__mobile-copy" aria-hidden="true">
+          <strong>Brindamos</strong>
+          <em>calidad y atención.</em>
+          <small>Siempre cerca tuyo.</small>
+        </div>
       </section>
 
       <section class="catalogo-services" aria-label="Información del autoservicio">
@@ -68,7 +73,7 @@
           </div>
           <div class="catalogo-service catalogo-service--whatsapp">
             <span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 11.8a8 8 0 0 1-11.8 7l-4.1 1 1.1-4A8 8 0 1 1 20 11.8Z"/><path d="M9.1 8.4c.3-.6.6-.6.9-.6h.4c.2 0 .4.1.5.4l.9 2c.1.3.1.5-.1.7l-.7.8c-.2.2-.2.4-.1.6.5 1 1.2 1.8 2.2 2.3.2.1.4.1.6-.1l.9-1c.2-.2.4-.3.7-.2l2 .9c.3.1.4.3.4.5v.5c0 .4-.2.8-.5 1.1-.5.5-1.3.8-2 .7-1.3-.2-3.3-1-5.1-2.7-1.6-1.5-2.5-3.4-2.7-4.6-.1-.6.1-1.1.4-1.3Z"/></svg></span>
-            <div><strong>Hacé tu pedido por WhatsApp</strong><small>Rápido y sencillo.</small></div>
+            <div><strong class="catalogo-service__desktop-label">Hacé tu pedido por WhatsApp</strong><small class="catalogo-service__desktop-label">Rápido y sencillo.</small><strong class="catalogo-service__mobile-label">Ofertas especiales</strong><small class="catalogo-service__mobile-label">Beneficios para vos.</small></div>
           </div>
         </div>
       </section>
@@ -261,6 +266,6 @@
     </button>
   </div>
 
-  <script type="module" src="./catalogo-base.js?v=final-110926"></script>
+  <script type="module" src="./catalogo-base.js?v=mobile-final-corregido-100926"></script>
 </body>
 </html>
