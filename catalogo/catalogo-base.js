@@ -519,7 +519,9 @@ function controlCompraHtml(producto) {
 
   if (!editando) {
     return `<button class="purchase-count-button" type="button" data-action="open-qty" data-code="${codigo}" aria-label="Editar cantidad: ${cantidad}">
-      <span>${cantidad}</span>
+      <span class="purchase-count-button__minus" aria-hidden="true">−</span>
+      <span class="purchase-count-button__value">${cantidad}</span>
+      <span class="purchase-count-button__plus" aria-hidden="true">+</span>
     </button>`;
   }
 
@@ -813,8 +815,9 @@ function cartTotals() {
 
 function renderCart() {
   const totals = cartTotals();
-  els.cartBadge.hidden = totals.unidades === 0;
-  els.cartBadge.textContent = totals.unidades > 99 ? "99+" : String(totals.unidades);
+  const productosDistintos = state.carrito.length;
+  els.cartBadge.hidden = productosDistintos === 0;
+  els.cartBadge.textContent = productosDistintos > 99 ? "99+" : String(productosDistintos);
   els.cartProductsLabel.textContent = pluralProductos(state.carrito.length);
   els.cartTotal.textContent = formatMoney(totals.total);
   if (els.headerCartTotal) els.headerCartTotal.textContent = formatMoney(totals.total);

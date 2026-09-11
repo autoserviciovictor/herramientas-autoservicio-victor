@@ -378,3 +378,114 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
   .catalogo-grid,.catalogo-grid--home{gap:8px}.product-card__image{height:178px}.product-card__body{padding:10px 8px 10px}.product-card h3{font-size:13px;min-height:40px}.product-card__price{font-size:18px}.product-card__unit{font-size:9px}.add-button,.purchase-add-button,.purchase-count-button,.qty-control{height:40px}.add-button,.purchase-add-button{font-size:12px}
   .catalogo-mobile-cartbar{left:12px;right:12px;height:68px;grid-template-columns:42px minmax(0,1fr) 118px;padding-inline:12px}.catalogo-mobile-cartbar__icon{font-size:29px}.catalogo-mobile-cartbar strong{font-size:14px}.catalogo-mobile-cartbar small{font-size:11px}.catalogo-mobile-cartbar b{height:44px;font-size:12px}
 }
+
+.purchase-count-button__minus,.purchase-count-button__plus{display:none}
+.purchase-count-button__value{display:inline}
+
+/* =========================================================
+   AJUSTE MOVIL FINAL 11-09-2026
+   Correcciones basadas en prueba real de telefono.
+   No modifica la vista de escritorio.
+   ========================================================= */
+@media (max-width:760px){
+  /* Encabezado de sección sin superposiciones */
+  .catalogo-section-head{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    column-gap:10px;
+    row-gap:6px;
+    width:100%;
+  }
+  .catalogo-section-head h2{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    white-space:nowrap;
+    font-size:25px;
+    line-height:1.05;
+  }
+  .catalogo-section-head h2 span{flex:0 0 auto}
+  .catalogo-link-button{
+    max-width:118px;
+    line-height:1.15;
+    white-space:normal;
+    text-align:right;
+    justify-self:end;
+  }
+
+  /* Cards mas compactas para aprovechar mejor una pantalla real */
+  .product-card__image{height:156px}
+  .product-card__image img{padding:11px}
+  .product-card__body{padding:9px 9px 10px}
+  .product-card h3{
+    min-height:36px;
+    margin-bottom:4px;
+    font-size:13px;
+    line-height:1.18;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
+  }
+  .product-card__meta{padding-top:6px;gap:4px}
+  .product-card__price{font-size:18px}
+  .product-card__actions{margin-top:7px}
+
+  /* Cuando un producto ya esta en carrito, mostrar visualmente - cantidad + */
+  .purchase-count-button{
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr) 38px;
+    align-items:center;
+    padding:0;
+    overflow:hidden;
+    background:#fff;
+  }
+  .purchase-count-button__minus,.purchase-count-button__plus{
+    height:100%;
+    display:grid;
+    place-items:center;
+    font-size:18px;
+    font-weight:900;
+    color:#111827;
+    background:#f7f8fa;
+  }
+  .purchase-count-button__value{
+    display:grid;
+    place-items:center;
+    font-size:14px;
+    font-weight:900;
+  }
+
+  /* Barra flotante mas baja para no tapar tantas tarjetas */
+  .catalogo-mobile-cartbar{
+    height:62px;
+    grid-template-columns:38px minmax(0,1fr) 112px;
+    gap:8px;
+    padding:0 11px;
+    border-radius:16px;
+  }
+  .catalogo-mobile-cartbar__icon{font-size:26px}
+  .catalogo-mobile-cartbar strong{font-size:13px}
+  .catalogo-mobile-cartbar small{font-size:10.5px}
+  .catalogo-mobile-cartbar b{height:42px;border-radius:12px;font-size:11.5px}
+
+  /* Los beneficios solo muestran titulo en movil para que queden parejos */
+  .catalogo-service small,.catalogo-service__mobile-label + small{display:none!important}
+}
+
+@media (max-width:420px){
+  .catalogo-section-head h2{font-size:22px}
+  .catalogo-section-head h2 span{width:36px;height:36px;margin-right:6px;font-size:18px}
+  .catalogo-link-button{max-width:104px;font-size:10px}
+  .product-card__image{height:145px}
+  .product-card__body{padding:8px 8px 9px}
+  .product-card h3{min-height:34px;font-size:12.5px}
+  .product-card__price{font-size:17px}
+  .product-card__unit{font-size:8.5px}
+  .add-button,.purchase-add-button,.purchase-count-button,.qty-control{height:38px}
+  .purchase-count-button{grid-template-columns:36px minmax(0,1fr) 36px}
+  .catalogo-mobile-cartbar{left:12px;right:12px;height:60px;grid-template-columns:36px minmax(0,1fr) 108px;padding-inline:10px}
+  .catalogo-mobile-cartbar b{height:40px}
+}
+
