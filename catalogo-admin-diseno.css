@@ -749,3 +749,1171 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
 .catalog-bulk-image-result{display:grid;gap:12px}.catalog-bulk-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.catalog-bulk-summary-grid>div{padding:11px 9px;border-radius:10px;background:#f8fafc;border:1px solid #e8ecf1;text-align:center}.catalog-bulk-summary-grid strong{display:block;color:#1d2939;font-size:1.05rem}.catalog-bulk-summary-grid span{display:block;margin-top:3px;color:#667085;font-size:.68rem}.catalog-bulk-summary-grid .ok strong{color:#067647}.catalog-bulk-summary-grid .warn strong{color:#b54708}
 .catalog-bulk-note{margin:0;padding:9px 11px;border-radius:9px;background:#f8fafc;color:#667085;font-size:.72rem;line-height:1.4}.catalog-bulk-note.ok{background:#ecfdf3;color:#067647}.catalog-bulk-errors{max-height:220px;overflow:auto;border:1px solid #e8ecf1;border-radius:10px;background:#fff}.catalog-bulk-errors>strong{display:block;position:sticky;top:0;padding:9px 11px;background:#f8fafc;color:#475467;font-size:.73rem;border-bottom:1px solid #e8ecf1}.catalog-bulk-errors>div{display:grid;grid-template-columns:130px 1fr;gap:9px;padding:8px 11px;border-bottom:1px solid #f0f2f5;font-size:.7rem}.catalog-bulk-errors>div:last-child{border-bottom:0}.catalog-bulk-errors code{font-weight:800;color:#344054}.catalog-bulk-errors span{color:#667085}
 @media(max-width:640px){.catalog-bulk-image-body{padding:14px 14px 4px}.catalog-bulk-image-file{grid-template-columns:auto 1fr}.catalog-bulk-image-file .catalog-btn{grid-column:1/-1;width:100%}.catalog-bulk-summary-grid{grid-template-columns:1fr 1fr}.catalog-bulk-errors>div{grid-template-columns:1fr}.catalog-bulk-image-modal{width:calc(100vw - 18px);max-height:calc(100vh - 18px)}}
+
+/* ===== D23 · Responsive móvil integral del catálogo (11/09/2026) ===== */
+.catalog-mobile-public-btn{display:none}
+
+@media(max-width:640px){
+  /* En móvil la cabecera descriptiva se elimina: las pestañas ya indican la sección. */
+  .catalog-admin-header{display:none!important}
+  .catalog-admin-shell{width:calc(100% - 20px);padding:12px 0 28px}
+  .catalog-admin-message{margin:0 0 6px}
+
+  /* KPI más compactos. */
+  .catalog-admin-metrics,.catalog-order-metrics{gap:8px;margin-bottom:12px}
+  .catalog-admin-metrics .app-kpi-card,
+  .catalog-order-metrics .app-kpi-card{min-height:92px;padding:12px!important;gap:10px}
+  .catalog-order-metrics .app-kpi-card{grid-template-columns:40px minmax(0,1fr)}
+  .catalog-order-metric-icon{width:40px;height:40px;min-width:40px;border-radius:11px}
+  .catalog-order-metrics .app-kpi-card strong{font-size:22px}
+  .catalog-order-metrics .app-kpi-card small{font-size:11.5px}
+  .catalog-order-metrics .app-kpi-card span:not(.catalog-order-metric-icon){font-size:10.5px}
+
+  /* Pestañas compactas y sin desplazamiento horizontal. */
+  .catalog-admin-tabs{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible!important;margin:0 0 10px}
+  .catalog-admin-tabs button{min-width:0;padding:10px 6px!important;font-size:12px;white-space:nowrap}
+
+  /* Barra de productos: búsqueda arriba y acciones compactas abajo. */
+  .catalog-toolbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 42px 42px!important;gap:8px;margin-bottom:10px}
+  .catalog-toolbar .catalog-search{grid-column:1/-1!important;grid-row:auto!important;height:44px}
+  .catalog-filter-popover-wrap{grid-column:1/2!important;grid-row:auto!important}
+  .catalog-filter-btn{width:100%;height:42px}
+  .catalog-toolbar>#catalogBtnPublicarMasivo{grid-column:2/3!important;grid-row:auto!important;width:100%;height:42px}
+  .catalog-toolbar>#catalogBtnOcultarMasivo{grid-column:1/3!important;grid-row:auto!important;width:100%;height:42px}
+  .catalog-toolbar>#catalogBtnImportarImagenes{grid-column:3/5!important;grid-row:2!important;width:100%;height:42px;min-width:0;padding:0 8px}
+  .catalog-toolbar>#catalogBtnRecargar{grid-column:3!important;grid-row:3!important}
+  .catalog-mobile-public-btn{display:grid!important;grid-column:4!important;grid-row:3!important;background:#ef233c!important;border-color:#ef233c!important;color:#fff!important;box-shadow:0 6px 16px rgba(239,35,60,.16)}
+  .catalog-toolbar .catalog-btn span{display:none!important}
+  .catalog-toolbar>#catalogBtnImportarImagenes span{display:inline!important;font-size:11px}
+
+  /* Productos: las filas se convierten en tarjetas, sin scroll lateral. */
+  #catalogPanelProductos .catalog-table-card{background:transparent;border:0;box-shadow:none;overflow:visible}
+  #catalogPanelProductos .catalog-table-scroll{overflow:visible!important}
+  #catalogPanelProductos .catalog-products-table{display:block;width:100%;min-width:0!important;table-layout:auto}
+  #catalogPanelProductos .catalog-products-table colgroup,
+  #catalogPanelProductos .catalog-products-table thead{display:none}
+  #catalogPanelProductos .catalog-products-table tbody{display:grid;gap:9px}
+  #catalogPanelProductos .catalog-products-table tbody tr{display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid #e1e6ed;border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(16,24,40,.03)}
+  #catalogPanelProductos .catalog-products-table td{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px;height:auto!important;min-height:38px;padding:7px 12px;border-bottom:1px solid #f0f2f5;font-size:12px;white-space:normal!important;overflow:visible!important;text-align:left!important}
+  #catalogPanelProductos .catalog-products-table td::before{content:attr(data-label);color:#98a2b3;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+  #catalogPanelProductos .catalog-products-table td:first-child{grid-column:1/-1;display:block;padding:11px 12px}
+  #catalogPanelProductos .catalog-products-table td:first-child::before{display:none}
+  #catalogPanelProductos .catalog-products-table td:nth-child(2),
+  #catalogPanelProductos .catalog-products-table td:nth-child(3),
+  #catalogPanelProductos .catalog-products-table td:nth-child(4),
+  #catalogPanelProductos .catalog-products-table td:nth-child(5){grid-column:auto}
+  #catalogPanelProductos .catalog-products-table td:nth-child(6){grid-column:1/-1;border-bottom:0;grid-template-columns:72px 1fr}
+  #catalogPanelProductos .catalog-product-thumb{width:46px;height:46px;flex-basis:46px;border-radius:11px}
+  #catalogPanelProductos .catalog-product-copy strong{font-size:13.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  #catalogPanelProductos .catalog-product-copy small{font-size:10.5px;white-space:normal}
+  #catalogPanelProductos .catalog-row-actions{justify-content:flex-end;min-width:0;gap:10px;padding:0}
+  #catalogPanelProductos .catalog-row-actions .catalog-edit-btn{min-width:84px}
+
+  /* Paginación compacta. */
+  #catalogPanelProductos .catalog-pagination-bar,
+  #catalogPanelPedidos .catalog-pagination-bar{margin-top:9px;min-height:0;padding:8px 4px 0;display:grid;justify-items:center;gap:7px;background:transparent;border:0}
+  #catalogPanelProductos .catalog-pagination-bar>span,
+  #catalogPanelPedidos .catalog-pagination-bar>span{font-size:11px;text-align:center}
+  #catalogPanelProductos .catalog-pagination,
+  #catalogPanelPedidos .catalog-pagination{max-width:100%;gap:4px;flex-wrap:wrap;justify-content:center}
+  #catalogPanelProductos .catalog-pagination button,
+  #catalogPanelPedidos .catalog-pagination button{min-width:32px;height:32px;padding:0 8px}
+
+  /* Rubros: sin título redundante y tarjetas más bajas. */
+  .catalog-rubros-head{margin-bottom:10px!important}
+  .catalog-rubros-head>div{display:none!important}
+  .catalog-rubros-head .catalog-btn{min-height:44px!important;width:100%!important}
+  .catalog-rubro-card{min-height:76px!important;grid-template-columns:38px minmax(0,1fr) auto!important;gap:10px!important;padding:10px 11px!important}
+  .catalog-rubro-icon{width:38px!important;height:38px!important;border-radius:10px!important}
+  .catalog-rubro-copy strong{font-size:13px;line-height:1.25;overflow-wrap:anywhere}
+  .catalog-rubro-copy small{font-size:10.5px;margin-top:2px;overflow-wrap:anywhere}
+  .catalog-rubro-meta{margin-top:5px;gap:4px}.catalog-rubro-meta span{font-size:9.5px;padding:3px 6px}
+
+  /* Pedidos: sin título redundante; actualizar compacto; tarjetas verticales. */
+  .catalog-orders-head{margin:0 0 8px!important;display:flex!important;justify-content:flex-end!important;align-items:center!important}
+  .catalog-orders-head>div{display:none!important}
+  .catalog-orders-head .catalog-btn{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:0!important}
+  .catalog-orders-head .catalog-btn span{display:none!important}
+  .catalog-orders-toolbar{grid-template-columns:1fr!important;gap:8px;margin-bottom:10px}
+  #catalogPanelPedidos .catalog-search{height:44px}
+  #catalogPanelPedidos .app-select-custom__trigger{height:44px;min-height:44px}
+  #catalogPanelPedidos .catalog-table-card{background:transparent;border:0;box-shadow:none;overflow:visible}
+  #catalogPanelPedidos .catalog-table-scroll{overflow:visible!important}
+  #catalogPanelPedidos .catalog-orders-table{display:block;width:100%;min-width:0!important;table-layout:auto}
+  #catalogPanelPedidos .catalog-orders-table thead{display:none}
+  #catalogPanelPedidos .catalog-orders-table tbody{display:grid;gap:9px}
+  #catalogPanelPedidos .catalog-orders-table tbody tr{display:block;background:#fff;border:1px solid #e1e6ed;border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(16,24,40,.03)}
+  #catalogPanelPedidos .catalog-orders-table td{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:start;gap:8px;width:auto!important;height:auto!important;min-height:38px;padding:8px 12px!important;border-bottom:1px solid #f0f2f5!important;text-align:left!important;white-space:normal!important}
+  #catalogPanelPedidos .catalog-orders-table td::before{content:attr(data-label);color:#98a2b3;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+  #catalogPanelPedidos .catalog-orders-table td:first-child{padding-top:11px!important}
+  #catalogPanelPedidos .catalog-orders-table td:last-child{border-bottom:0!important}
+  #catalogPanelPedidos .catalog-orders-table td[colspan="7"]{display:block!important;padding:0!important;border:0!important}
+  #catalogPanelPedidos .catalog-orders-table td[colspan="7"]::before{display:none}
+  .catalog-order-number strong,.catalog-order-customer strong,.catalog-order-delivery strong{font-size:12.5px}
+  .catalog-order-number small,.catalog-order-customer small,.catalog-order-delivery small{white-space:normal;overflow:visible;max-width:none}
+  .catalog-order-row-actions{display:grid;grid-template-columns:1fr;gap:7px;width:100%}
+  .catalog-order-row-actions>button{width:100%!important;min-height:38px!important}
+
+  /* Editor de producto: una sola columna y acciones contenidas. */
+  .catalog-product-modal,.catalog-rubro-modal{width:calc(100vw - 14px)!important;max-height:calc(100dvh - 14px)!important;border-radius:16px}
+  .catalog-product-modal .catalog-form-grid,.catalog-rubro-modal .catalog-form-grid{grid-template-columns:1fr!important}
+  .catalog-modal-head{padding:14px 14px 11px!important}
+  .catalog-modal-body{padding:12px 14px 14px!important}
+  .catalog-modal-title-wrap{gap:9px}.catalog-modal-icon{width:38px;height:38px;border-radius:10px}
+  .catalog-modal-title-wrap h2{font-size:1.05rem}.catalog-modal-title-wrap p{font-size:.72rem}
+  .catalog-modal-actions{padding:10px 14px 12px!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .catalog-modal-actions .catalog-btn{width:100%!important;min-width:0!important;white-space:normal!important;padding:10px 8px!important}
+  #catalogRubroModal .catalog-modal-actions{grid-template-columns:1fr 1fr!important}
+  #catalogRubroModal #catalogRubroGuardar{grid-column:1/-1;grid-row:1}
+  #catalogRubroModal #catalogRubroCancelar{grid-column:1;grid-row:2}
+  #catalogRubroModal #catalogRubroEliminar{grid-column:2;grid-row:2}
+  .catalog-product-image-editor{padding:11px;margin-top:12px}
+  .catalog-product-image-preview{height:165px!important;max-width:none!important}
+  .catalog-product-image-actions{display:grid;grid-template-columns:1fr 1fr}.catalog-product-image-actions .catalog-btn{min-width:0!important}
+
+  /* Detalle de pedido: menos aire y acciones siempre dentro del viewport. */
+  .catalog-order-detail-modal{width:calc(100vw - 14px)!important;max-height:calc(100dvh - 14px)!important}
+}
+
+/* ===== D24 · Mobile Pro — jerarquía, tarjetas y modales full-screen (11/09/2026) ===== */
+@media(max-width:640px){
+  :root{--catalog-mobile-radius:16px;--catalog-mobile-border:#e6eaf0;--catalog-mobile-shadow:0 8px 24px rgba(15,23,42,.06)}
+
+  #pantallaCatalogoAdmin{background:#f5f7fa}
+  .catalog-admin-shell{width:calc(100% - 16px);padding-top:10px}
+
+  /* Resumen: menos aire, mejor jerarquía y aspecto más actual. */
+  .catalog-admin-metrics,.catalog-order-metrics{gap:8px;margin-bottom:10px}
+  .catalog-admin-metrics .app-kpi-card,
+  .catalog-order-metrics .app-kpi-card{
+    min-height:86px!important;padding:11px!important;border-radius:15px!important;
+    box-shadow:0 5px 18px rgba(15,23,42,.035)!important;background:#fff!important;
+  }
+  .catalog-admin-metrics .app-kpi-card strong,
+  .catalog-order-metrics .app-kpi-card strong{font-size:21px!important;line-height:1}
+  .catalog-admin-metrics .app-kpi-card small,
+  .catalog-order-metrics .app-kpi-card small{font-size:10.5px!important;font-weight:800;letter-spacing:.01em}
+
+  /* Navegación tipo segmented-control profesional. */
+  .catalog-admin-tabs{
+    position:sticky;top:0;z-index:18;padding:4px;margin:0 0 10px!important;
+    border:1px solid #e8ebf0;border-radius:14px;background:rgba(255,255,255,.96);
+    box-shadow:0 5px 18px rgba(15,23,42,.05);backdrop-filter:blur(10px)
+  }
+  .catalog-admin-tabs button{
+    border:0!important;border-radius:10px!important;padding:9px 6px!important;color:#667085!important;
+    font-weight:800!important;background:transparent!important
+  }
+  .catalog-admin-tabs button::after{display:none!important}
+  .catalog-admin-tabs button[aria-selected="true"]{
+    color:#e91d3c!important;background:#fff1f3!important;box-shadow:inset 0 0 0 1px rgba(233,29,60,.08)
+  }
+
+  /* Barra de acciones: nada se corta, cada acción tiene un lugar claro. */
+  .catalog-toolbar{
+    display:grid!important;grid-template-columns:1fr 1fr 42px 42px!important;
+    gap:7px!important;margin-bottom:10px!important
+  }
+  .catalog-toolbar .catalog-search{grid-column:1/-1!important;height:44px;border-radius:13px!important;background:#fff}
+  .catalog-filter-popover-wrap{grid-column:1!important}
+  .catalog-toolbar>#catalogBtnPublicarMasivo{grid-column:2!important;width:100%!important}
+  .catalog-toolbar>#catalogBtnRecargar{grid-column:3!important;grid-row:2!important}
+  .catalog-mobile-public-btn{grid-column:4!important;grid-row:2!important}
+  .catalog-toolbar>#catalogBtnOcultarMasivo{grid-column:1/3!important;grid-row:3!important;height:42px!important}
+  .catalog-toolbar>#catalogBtnImportarImagenes{
+    grid-column:3/5!important;grid-row:3!important;height:42px!important;width:100%!important;
+    padding:0 7px!important;gap:5px!important;overflow:hidden!important
+  }
+  .catalog-toolbar>#catalogBtnImportarImagenes span{
+    display:block!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;
+    white-space:nowrap!important;font-size:10.5px!important
+  }
+  .catalog-toolbar .catalog-btn,.catalog-toolbar .catalog-icon-btn{border-radius:12px!important}
+
+  /* PRODUCTOS · tarjeta con encabezado, ficha de datos y pie de acciones. */
+  #catalogPanelProductos .catalog-products-table tbody{gap:10px}
+  #catalogPanelProductos .catalog-products-table tbody tr{
+    display:grid!important;grid-template-columns:1fr 1fr!important;
+    border:1px solid var(--catalog-mobile-border)!important;border-radius:var(--catalog-mobile-radius)!important;
+    background:#fff!important;box-shadow:var(--catalog-mobile-shadow)!important;overflow:hidden!important
+  }
+  #catalogPanelProductos .catalog-products-table td{
+    min-height:0!important;padding:9px 11px!important;border:0!important;background:#fff!important;
+    grid-template-columns:1fr!important;gap:3px!important
+  }
+  #catalogPanelProductos .catalog-products-table td::before{
+    display:block!important;margin:0 0 2px;color:#98a2b3;font-size:8.5px!important;line-height:1;
+    letter-spacing:.08em;font-weight:900
+  }
+  #catalogPanelProductos .catalog-products-table td:first-child{
+    grid-column:1/-1!important;padding:11px!important;border-bottom:1px solid #eef1f5!important;
+    background:linear-gradient(180deg,#fff,#fbfcfd)!important
+  }
+  #catalogPanelProductos .catalog-products-table td:first-child::before{display:none!important}
+  #catalogPanelProductos .catalog-product-cell{align-items:center;gap:10px}
+  #catalogPanelProductos .catalog-product-thumb{
+    width:52px!important;height:52px!important;flex-basis:52px!important;border-radius:13px!important;
+    background:#f7f9fc!important;border:1px solid #e8edf3!important
+  }
+  #catalogPanelProductos .catalog-product-thumb.has-image{background:#fff!important}
+  #catalogPanelProductos .catalog-product-copy{min-width:0}
+  #catalogPanelProductos .catalog-product-copy strong{
+    font-size:13px!important;line-height:1.25!important;font-weight:800!important;color:#172033!important
+  }
+  #catalogPanelProductos .catalog-product-copy small{
+    margin-top:3px!important;font-size:9.8px!important;color:#8a94a6!important;line-height:1.25!important
+  }
+  #catalogPanelProductos .catalog-products-table td:nth-child(2),
+  #catalogPanelProductos .catalog-products-table td:nth-child(3),
+  #catalogPanelProductos .catalog-products-table td:nth-child(4),
+  #catalogPanelProductos .catalog-products-table td:nth-child(5){
+    min-height:54px!important;border-bottom:1px solid #f1f3f6!important
+  }
+  #catalogPanelProductos .catalog-products-table td:nth-child(2),
+  #catalogPanelProductos .catalog-products-table td:nth-child(4){border-right:1px solid #f1f3f6!important}
+  #catalogPanelProductos .catalog-products-table td:nth-child(3) .catalog-price{
+    font-size:14px!important;font-weight:900!important;color:#172033!important
+  }
+  #catalogPanelProductos .catalog-products-table td:nth-child(5) .catalog-chip{justify-self:start}
+  #catalogPanelProductos .catalog-products-table td:nth-child(6){
+    grid-column:1/-1!important;display:flex!important;align-items:center!important;justify-content:space-between!important;
+    padding:9px 11px!important;background:#fafbfc!important
+  }
+  #catalogPanelProductos .catalog-products-table td:nth-child(6)::before{margin:0!important}
+  #catalogPanelProductos .catalog-row-actions{margin-left:auto!important;gap:8px!important}
+  #catalogPanelProductos .catalog-row-actions .catalog-edit-btn{
+    min-width:82px!important;height:34px!important;border-radius:10px!important;font-weight:800!important
+  }
+  #catalogPanelProductos .catalog-visibility-toggle{transform:scale(.92);transform-origin:center right}
+
+  /* RUBROS · tarjetas menos altas, con mejor alineación y profundidad. */
+  .catalog-rubros-grid{gap:9px!important}
+  .catalog-rubro-card{
+    min-height:72px!important;padding:10px 11px!important;border-radius:16px!important;
+    border:1px solid var(--catalog-mobile-border)!important;box-shadow:var(--catalog-mobile-shadow)!important;background:#fff!important
+  }
+  .catalog-rubro-copy strong{font-size:13px!important;line-height:1.2!important;word-break:normal!important;overflow-wrap:break-word!important}
+  .catalog-rubro-meta{flex-wrap:wrap!important}
+  .catalog-rubro-card .catalog-edit-btn{height:34px!important;border-radius:10px!important;font-weight:800!important}
+  .catalog-rubros-head .catalog-btn{border-radius:13px!important;box-shadow:0 7px 18px rgba(239,35,60,.15)!important}
+
+  /* PEDIDOS · cabecera visual + grilla de información, sin aspecto de tabla reconvertida. */
+  #catalogPanelPedidos .catalog-orders-head{margin-bottom:7px!important}
+  #catalogPanelPedidos .catalog-orders-toolbar{gap:7px!important}
+  #catalogPanelPedidos .catalog-orders-table tbody{gap:10px!important}
+  #catalogPanelPedidos .catalog-orders-table tbody tr{
+    display:grid!important;grid-template-columns:1fr 1fr!important;
+    border:1px solid var(--catalog-mobile-border)!important;border-radius:16px!important;
+    overflow:hidden!important;background:#fff!important;box-shadow:var(--catalog-mobile-shadow)!important
+  }
+  #catalogPanelPedidos .catalog-orders-table td{
+    display:block!important;min-height:0!important;padding:9px 11px!important;border:0!important;
+    background:#fff!important;width:auto!important
+  }
+  #catalogPanelPedidos .catalog-orders-table td::before{
+    display:block!important;margin-bottom:4px;color:#98a2b3;font-size:8.5px!important;line-height:1;
+    letter-spacing:.08em;font-weight:900
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(1){
+    grid-column:1!important;background:#fafbfc!important;border-bottom:1px solid #eef1f5!important
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4){
+    grid-column:2!important;grid-row:1!important;text-align:right!important;background:#fafbfc!important;border-bottom:1px solid #eef1f5!important
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4)::before{text-align:right!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(2),
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(3){min-height:65px!important;border-bottom:1px solid #f0f2f5!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(2){border-right:1px solid #f0f2f5!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(5),
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(6){min-height:57px!important;border-bottom:1px solid #f0f2f5!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(5){border-right:1px solid #f0f2f5!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(7){
+    grid-column:1/-1!important;padding:9px 11px!important;background:#fafbfc!important
+  }
+  .catalog-order-number strong{font-size:12.5px!important}.catalog-order-number small{font-size:9.5px!important}
+  .catalog-order-customer strong,.catalog-order-delivery strong{font-size:12px!important;line-height:1.2}
+  .catalog-order-customer small,.catalog-order-delivery small{font-size:9.5px!important;line-height:1.25!important;margin-top:3px!important}
+  #catalogPanelPedidos .catalog-price{font-size:15px!important;font-weight:900!important}
+  .catalog-order-status{font-size:10px!important;padding:5px 8px!important}
+  .catalog-order-row-actions{grid-template-columns:1fr 1fr!important;gap:7px!important}
+  .catalog-order-row-actions>button:only-child{grid-column:1/-1!important}
+  .catalog-order-row-actions>button{min-height:36px!important;border-radius:10px!important;font-weight:800!important}
+
+  /* Estados vacíos más cuidados. */
+  .catalog-empty,.catalog-loading{min-height:84px!important;border-radius:15px!important;background:#fff!important;color:#8a94a6!important}
+
+  /* MODALES MÓVILES · realmente full-screen, sin márgenes laterales. */
+  .catalog-modal-overlay{
+    padding:0!important;align-items:stretch!important;justify-content:stretch!important;background:rgba(15,23,42,.34)!important
+  }
+  .catalog-product-modal,.catalog-rubro-modal,.catalog-order-modal,.catalog-bulk-image-modal{
+    width:100vw!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;
+    margin:0!important;border-radius:0!important;border:0!important;box-shadow:none!important;background:#f7f9fc!important;
+    display:flex!important;flex-direction:column!important
+  }
+  .catalog-modal-head{
+    position:sticky!important;top:0!important;z-index:12!important;flex:0 0 auto!important;
+    min-height:68px!important;padding:12px 14px!important;background:rgba(255,255,255,.97)!important;
+    border-bottom:1px solid #e9edf2!important;backdrop-filter:blur(12px)
+  }
+  .catalog-modal-title-wrap h2{font-size:1.08rem!important;line-height:1.15!important}
+  .catalog-modal-title-wrap p{font-size:.7rem!important;color:#98a2b3!important}
+  .catalog-modal-title-wrap>span:first-child{width:38px!important;height:38px!important;min-width:38px!important}
+  .catalog-modal-body{
+    flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;padding:13px 14px 92px!important;background:#f7f9fc!important
+  }
+  .catalog-modal-actions{
+    position:sticky!important;bottom:0!important;z-index:14!important;flex:0 0 auto!important;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom))!important;background:rgba(255,255,255,.98)!important;
+    border-top:1px solid #e8ecf1!important;box-shadow:0 -8px 24px rgba(15,23,42,.06)!important
+  }
+  .catalog-product-modal .catalog-modal-actions{grid-template-columns:.72fr 1.28fr!important}
+  .catalog-modal-actions .catalog-btn{min-height:44px!important;border-radius:12px!important;font-weight:850!important}
+  .modal-close{width:40px!important;height:40px!important;border-radius:12px!important;background:#f5f7fa!important}
+
+  /* Formulario de producto moderno y legible. */
+  .catalog-product-modal .catalog-form-grid{gap:10px!important}
+  .catalog-field>span{font-size:10.5px!important;font-weight:800!important;color:#475467!important;margin-bottom:5px!important}
+  .catalog-field input,.catalog-field textarea,.catalog-field select,
+  .catalog-price-input,.app-select-custom__trigger{
+    border-radius:12px!important;border-color:#dde3ea!important;background:#fff!important;box-shadow:0 1px 2px rgba(15,23,42,.02)!important
+  }
+  .catalog-product-image-editor,.catalog-switches,.catalog-order-status-editor,
+  .catalog-order-items-card,.catalog-order-notes-card,.catalog-order-history-card{
+    border:1px solid #e4e9ef!important;border-radius:16px!important;background:#fff!important;
+    box-shadow:0 5px 18px rgba(15,23,42,.035)!important
+  }
+  .catalog-product-image-editor{margin-top:12px!important;padding:12px!important}
+  .catalog-product-image-preview{height:205px!important;border-radius:14px!important;background:#fafbfc!important}
+  .catalog-switches{margin-top:12px!important;overflow:hidden!important}
+  .catalog-switch-row{padding:12px!important}
+
+  /* DETALLE DE PEDIDO · pantalla completa y contenido mejor distribuido. */
+  .catalog-order-modal .catalog-modal-body{padding-bottom:24px!important}
+  .catalog-order-modal-actions{gap:7px!important}
+  .catalog-order-print-btn{width:40px!important;min-width:40px!important;height:40px!important;padding:0!important;border-radius:12px!important}
+  .catalog-order-print-btn span:last-child{display:none!important}
+  .catalog-order-detail-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .catalog-order-detail-grid article{
+    min-height:92px!important;padding:12px!important;border-radius:14px!important;background:#fff!important;
+    border:1px solid #e5e9ef!important;box-shadow:0 3px 12px rgba(15,23,42,.025)!important
+  }
+  .catalog-order-detail-grid article small{font-size:9px!important;letter-spacing:.08em!important}
+  .catalog-order-detail-grid article strong{font-size:13px!important;margin-top:6px!important}
+  .catalog-order-detail-grid article span{font-size:10.5px!important;line-height:1.3!important;margin-top:4px!important}
+  .catalog-order-status-editor{padding:11px!important;gap:9px!important;margin-top:10px!important}
+  .catalog-order-status-editor .catalog-btn{height:42px!important;border-radius:11px!important}
+  .catalog-order-items-card,.catalog-order-notes-card,.catalog-order-history-card{margin-top:10px!important}
+
+  /* Rubro full-screen también mantiene consistencia visual. */
+  #catalogRubroModal .catalog-modal-body{padding-top:14px!important}
+}
+
+/* =========================================================
+   D25 · CATÁLOGO MÓVIL FINAL — refinamiento visual y UX
+   ========================================================= */
+@media (max-width: 700px){
+  #pantallaCatalogoAdmin{
+    --cat-gap:10px;
+    --cat-radius:16px;
+    --cat-border:#e4e9f0;
+    --cat-muted:#667085;
+    --cat-ink:#172033;
+  }
+  #pantallaCatalogoAdmin .catalog-admin-shell{padding:12px 12px 84px!important;max-width:none!important}
+  #pantallaCatalogoAdmin .catalog-admin-header{display:none!important}
+
+  /* KPI más compactos */
+  #pantallaCatalogoAdmin .catalog-admin-metrics,
+  #pantallaCatalogoAdmin .catalog-order-metrics.catalog-order-metrics-top{gap:8px!important;margin:0 0 10px!important}
+  #pantallaCatalogoAdmin .catalog-admin-metrics .app-kpi-card,
+  #pantallaCatalogoAdmin .catalog-order-metrics .app-kpi-card{
+    min-height:84px!important;padding:10px 11px!important;gap:9px!important;border-radius:14px!important;
+  }
+  #pantallaCatalogoAdmin .catalog-metric-icon,
+  #pantallaCatalogoAdmin .catalog-order-metric-icon{width:38px!important;height:38px!important;min-width:38px!important;border-radius:11px!important}
+  #pantallaCatalogoAdmin .catalog-admin-metrics strong,
+  #pantallaCatalogoAdmin .catalog-order-metrics strong{font-size:20px!important}
+  #pantallaCatalogoAdmin .catalog-admin-metrics small,
+  #pantallaCatalogoAdmin .catalog-order-metrics small{font-size:10.5px!important}
+  #pantallaCatalogoAdmin .catalog-order-metrics span:not(.catalog-order-metric-icon){font-size:9.5px!important}
+
+  /* Tabs compactas, no una barra gigante */
+  #pantallaCatalogoAdmin .catalog-admin-tabs{
+    width:max-content!important;max-width:100%!important;margin:8px auto 10px!important;padding:3px!important;
+    display:flex!important;gap:3px!important;border:1px solid #e3e7ee!important;border-radius:12px!important;background:#fff!important;
+    box-shadow:0 4px 14px rgba(16,24,40,.04)!important;
+  }
+  #pantallaCatalogoAdmin .catalog-admin-tabs button{
+    min-width:82px!important;height:32px!important;padding:0 13px!important;border:0!important;border-radius:9px!important;
+    background:transparent!important;color:#667085!important;font-size:11px!important;font-weight:750!important;
+  }
+  #pantallaCatalogoAdmin .catalog-admin-tabs button.activo{background:#fff0f2!important;color:#e51f3d!important;box-shadow:inset 0 0 0 1px #ffd6dc!important}
+
+  /* Toolbar productos: búsqueda / filtro + refresh / ocultar + publicar + importar */
+  #catalogPanelProductos .catalog-toolbar{
+    display:grid!important;grid-template-columns:minmax(0,1fr) 44px!important;grid-template-areas:
+      "search search"
+      "filter refresh"
+      "bulk bulk"!important;gap:8px!important;align-items:stretch!important;margin-bottom:10px!important;
+  }
+  #catalogPanelProductos .catalog-search{grid-area:search!important;height:44px!important;border-radius:12px!important}
+  #catalogPanelProductos .catalog-filter-popover-wrap{grid-area:filter!important;min-width:0!important}
+  #catalogPanelProductos #catalogBtnFiltros{width:100%!important;height:42px!important;justify-content:center!important;border-radius:11px!important}
+  #catalogPanelProductos #catalogBtnRecargar{grid-area:refresh!important;width:44px!important;height:42px!important;border-radius:11px!important}
+  #catalogPanelProductos #catalogBtnOcultarMasivo,
+  #catalogPanelProductos #catalogBtnPublicarMasivo,
+  #catalogPanelProductos #catalogBtnImportarImagenes{height:42px!important;border-radius:11px!important;min-width:0!important;padding:0 10px!important;font-size:11px!important}
+  #catalogPanelProductos #catalogBtnOcultarMasivo{grid-area:auto!important}
+  #catalogPanelProductos #catalogBtnPublicarMasivo{grid-area:auto!important}
+  #catalogPanelProductos #catalogBtnImportarImagenes{grid-area:auto!important}
+  #catalogPanelProductos .catalog-toolbar:after{
+    content:"";grid-area:bulk;display:block;height:42px;visibility:hidden;
+  }
+  #catalogPanelProductos #catalogBtnOcultarMasivo,
+  #catalogPanelProductos #catalogBtnPublicarMasivo,
+  #catalogPanelProductos #catalogBtnImportarImagenes{
+    position:absolute!important;
+  }
+  #catalogPanelProductos .catalog-toolbar{position:relative!important;padding-bottom:50px!important}
+  #catalogPanelProductos #catalogBtnOcultarMasivo{left:0!important;bottom:0!important;width:calc((100% - 16px)/3)!important}
+  #catalogPanelProductos #catalogBtnPublicarMasivo{left:calc((100% - 16px)/3 + 8px)!important;bottom:0!important;width:calc((100% - 16px)/3)!important}
+  #catalogPanelProductos #catalogBtnImportarImagenes{right:0!important;bottom:0!important;width:calc((100% - 16px)/3)!important}
+
+  /* Ver catálogo flotante, mismo concepto que el FAB de Inventario */
+  #catalogBtnVerPublicoMobile{
+    display:grid!important;place-items:center!important;position:fixed!important;right:16px!important;bottom:18px!important;z-index:1200!important;
+    width:54px!important;height:54px!important;border-radius:16px!important;background:#ef233c!important;color:#fff!important;border:0!important;
+    box-shadow:0 10px 24px rgba(239,35,60,.28)!important;
+  }
+  #catalogBtnVerPublicoMobile .app-icon{width:22px!important;height:22px!important}
+
+  /* Cards productos: jerarquía y aire profesional */
+  #catalogPanelProductos .catalog-table-card{border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
+  #catalogPanelProductos .catalog-table-scroll{overflow:visible!important}
+  #catalogPanelProductos .catalog-products-table{display:block!important;min-width:0!important;width:100%!important}
+  #catalogPanelProductos .catalog-products-table thead{display:none!important}
+  #catalogPanelProductos .catalog-products-table tbody{display:grid!important;gap:10px!important}
+  #catalogPanelProductos .catalog-products-table tr{display:grid!important;grid-template-columns:1fr 1fr!important;background:#fff!important;border:1px solid var(--cat-border)!important;border-radius:16px!important;overflow:hidden!important;box-shadow:0 6px 18px rgba(16,24,40,.045)!important}
+  #catalogPanelProductos .catalog-products-table td{display:block!important;height:auto!important;min-width:0!important;padding:10px 12px!important;border:0!important;border-bottom:1px solid #eef1f5!important}
+  #catalogPanelProductos .catalog-products-table td:first-child{grid-column:1/-1!important;padding:12px!important;background:linear-gradient(180deg,#fff,#fbfcfe)!important}
+  #catalogPanelProductos .catalog-products-table td:nth-child(2),#catalogPanelProductos .catalog-products-table td:nth-child(3),#catalogPanelProductos .catalog-products-table td:nth-child(4),#catalogPanelProductos .catalog-products-table td:nth-child(5){position:relative!important;padding-top:24px!important}
+  #catalogPanelProductos .catalog-products-table td:nth-child(2):before{content:"RUBRO"}
+  #catalogPanelProductos .catalog-products-table td:nth-child(3):before{content:"PRECIO"}
+  #catalogPanelProductos .catalog-products-table td:nth-child(4):before{content:"UNIDAD"}
+  #catalogPanelProductos .catalog-products-table td:nth-child(5):before{content:"ESTADO"}
+  #catalogPanelProductos .catalog-products-table td:nth-child(n+2):nth-child(-n+5):before{position:absolute;left:12px;top:8px;font-size:8px;line-height:1;color:#98a2b3;font-weight:800;letter-spacing:.12em}
+  #catalogPanelProductos .catalog-products-table td:nth-child(6){grid-column:1/-1!important;border-bottom:0!important;padding:8px 10px!important;background:#fbfcfd!important}
+  #catalogPanelProductos .catalog-product-main{gap:10px!important}
+  #catalogPanelProductos .catalog-product-copy strong{font-size:13px!important;white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important}
+  #catalogPanelProductos .catalog-product-thumb{width:42px!important;height:42px!important;border-radius:11px!important}
+  #catalogPanelProductos .catalog-row-actions{min-width:0!important;width:100%!important;justify-content:flex-end!important;gap:10px!important}
+  #catalogPanelProductos .catalog-row-actions .catalog-edit-btn{margin-left:auto!important;min-width:74px!important}
+  #catalogPanelProductos .catalog-pagination-bar{border:0!important;background:transparent!important;padding:8px 2px!important;min-height:44px!important}
+
+  /* Rubros: tarjeta compacta, botón realmente a la derecha */
+  #catalogPanelRubros .catalog-rubros-head{margin:0 0 10px!important;display:block!important}
+  #catalogPanelRubros .catalog-rubros-head>div{display:none!important}
+  #catalogPanelRubros #catalogBtnNuevoRubro{height:42px!important;border-radius:11px!important;width:100%!important}
+  #catalogPanelRubros .catalog-rubros-grid{grid-template-columns:1fr!important;gap:9px!important}
+  #catalogPanelRubros .catalog-rubro-card{grid-template-columns:38px minmax(0,1fr) auto!important;min-height:76px!important;padding:10px 12px!important;gap:10px!important;border-radius:15px!important;box-shadow:0 5px 16px rgba(16,24,40,.04)!important}
+  #catalogPanelRubros .catalog-rubro-icon{width:38px!important;height:38px!important;border-radius:11px!important}
+  #catalogPanelRubros .catalog-rubro-card .catalog-edit-btn{justify-self:end!important;margin-left:12px!important;min-width:68px!important}
+  #catalogPanelRubros .catalog-rubro-meta{gap:4px!important;margin-top:5px!important}
+  #catalogPanelRubros .catalog-rubro-meta span{padding:3px 6px!important;font-size:9px!important}
+
+  /* Pedidos: search + filtro + actualizar */
+  #catalogPanelPedidos .catalog-orders-head{display:none!important}
+  #catalogPanelPedidos .catalog-orders-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) 44px 44px!important;gap:7px!important;margin:0 0 10px!important;align-items:center!important}
+  #catalogPanelPedidos .catalog-search{height:42px!important;border-radius:11px!important;min-width:0!important}
+  #catalogPanelPedidos .catalog-orders-filter-wrap{width:44px!important;height:42px!important;overflow:visible!important}
+  #catalogPanelPedidos .catalog-orders-filter-wrap>.app-select-custom{width:44px!important;min-width:44px!important}
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__trigger{width:44px!important;height:42px!important;padding:0!important;font-size:0!important;border-radius:11px!important;display:grid!important;place-items:center!important}
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__trigger:before{content:"";width:18px;height:18px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M4 5h16l-6 7v5l-4 2v-7z'/%3E%3C/svg%3E") center/contain no-repeat;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M4 5h16l-6 7v5l-4 2v-7z'/%3E%3C/svg%3E") center/contain no-repeat}
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__chevron{display:none!important}
+  #catalogPanelPedidos .catalog-orders-refresh{width:44px!important;height:42px!important;border-radius:11px!important}
+  #catalogPanelPedidos .catalog-table-card{border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
+  #catalogPanelPedidos .catalog-table-scroll{overflow:visible!important}
+  #catalogPanelPedidos .catalog-orders-table{display:block!important;min-width:0!important;width:100%!important}
+  #catalogPanelPedidos .catalog-orders-table thead{display:none!important}
+  #catalogPanelPedidos .catalog-orders-table tbody{display:grid!important;gap:10px!important}
+  #catalogPanelPedidos .catalog-orders-table tr{display:grid!important;grid-template-columns:1fr 1fr!important;background:#fff!important;border:1px solid var(--cat-border)!important;border-radius:16px!important;overflow:hidden!important;box-shadow:0 6px 18px rgba(16,24,40,.045)!important}
+  #catalogPanelPedidos .catalog-orders-table td{display:block!important;height:auto!important;min-width:0!important;padding:9px 12px!important;border:0!important;border-bottom:1px solid #eef1f5!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(1){grid-column:1/-1!important;background:#fbfcfe!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4){font-size:15px!important;font-weight:800!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(7){grid-column:1/-1!important;border-bottom:0!important;background:#fbfcfd!important}
+  #catalogPanelPedidos .catalog-orders-table td:before{display:block!important;margin-bottom:4px!important;color:#98a2b3!important;font-size:8px!important;font-weight:800!important;letter-spacing:.11em!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(1):before{content:"PEDIDO"}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(2):before{content:"CLIENTE"}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(3):before{content:"ENTREGA"}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4):before{content:"TOTAL"}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(5):before{content:"ESTADO"}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(6):before{content:"FECHA"}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(7):before{content:"ACCIONES"}
+
+  /* Modales como bottom-sheet profesional tipo Vencimientos */
+  #catalogProductoModal.catalog-modal-overlay,
+  #catalogRubroModal.catalog-modal-overlay,
+  #catalogPedidoModal.catalog-modal-overlay{align-items:flex-end!important;padding:0 10px 10px!important;background:rgba(15,23,42,.46)!important;backdrop-filter:blur(4px)!important}
+  #catalogProductoModal .modal-card,
+  #catalogRubroModal .modal-card,
+  #catalogPedidoModal .modal-card{
+    width:100%!important;max-width:none!important;height:auto!important;max-height:calc(100dvh - 74px)!important;margin:0!important;border-radius:22px!important;
+    overflow:hidden!important;box-shadow:0 -14px 40px rgba(15,23,42,.18)!important;background:#fff!important;
+  }
+  #catalogProductoModal .catalog-modal-head,
+  #catalogRubroModal .catalog-modal-head,
+  #catalogPedidoModal .catalog-modal-head{padding:14px 14px 12px!important;position:sticky!important;top:0!important;z-index:5!important;background:#fff!important}
+  #catalogProductoModal .catalog-modal-body,
+  #catalogRubroModal .catalog-modal-body,
+  #catalogPedidoModal .catalog-modal-body{padding:12px 14px 18px!important;overflow:auto!important}
+  #catalogProductoModal .catalog-modal-actions,
+  #catalogRubroModal .catalog-modal-actions{padding:10px 14px 12px!important;background:rgba(255,255,255,.98)!important;border-top:1px solid #edf0f4!important}
+  #catalogProductoModal .catalog-form-grid{grid-template-columns:1fr!important;gap:10px!important}
+
+  /* tipografía y densidad */
+  #pantallaCatalogoAdmin .catalog-btn,#pantallaCatalogoAdmin .catalog-icon-btn,#pantallaCatalogoAdmin button{touch-action:manipulation}
+}
+
+/* ===== D26 · Ajustes finales móvil catálogo (11/09/2026) ===== */
+@media (max-width:640px){
+  /* Navegación Productos / Rubros / Pedidos: ancho útil completo. */
+  #pantallaCatalogoAdmin .catalog-admin-tabs{
+    width:100%!important;
+    max-width:none!important;
+    margin:8px 0 10px!important;
+    padding:3px!important;
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:3px!important;
+    box-sizing:border-box!important;
+  }
+  #pantallaCatalogoAdmin .catalog-admin-tabs button{
+    width:100%!important;
+    min-width:0!important;
+    height:32px!important;
+    padding:0 6px!important;
+  }
+
+  /* Productos: buscador + filtro cuadrado + actualizar cuadrado, todo en una fila. */
+  #catalogPanelProductos .catalog-toolbar{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 42px 42px!important;
+    grid-template-areas:"search filter refresh"!important;
+    gap:8px!important;
+    align-items:center!important;
+    position:relative!important;
+    padding-bottom:50px!important;
+    margin-bottom:10px!important;
+  }
+  #catalogPanelProductos .catalog-search{
+    grid-area:search!important;
+    width:100%!important;
+    min-width:0!important;
+    height:42px!important;
+    border-radius:11px!important;
+  }
+  #catalogPanelProductos .catalog-filter-popover-wrap{
+    grid-area:filter!important;
+    width:42px!important;
+    min-width:42px!important;
+    height:42px!important;
+  }
+  #catalogPanelProductos #catalogBtnFiltros,
+  #catalogPanelProductos #catalogBtnRecargar{
+    width:42px!important;
+    min-width:42px!important;
+    max-width:42px!important;
+    height:42px!important;
+    min-height:42px!important;
+    padding:0!important;
+    border-radius:11px!important;
+    display:grid!important;
+    place-items:center!important;
+  }
+  #catalogPanelProductos #catalogBtnFiltros span{display:none!important}
+  #catalogPanelProductos #catalogBtnFiltros .app-icon,
+  #catalogPanelProductos #catalogBtnRecargar .app-icon{
+    width:18px!important;
+    height:18px!important;
+    margin:0!important;
+  }
+  #catalogPanelProductos #catalogFiltrosBadge{
+    position:absolute!important;
+    right:-4px!important;
+    top:-4px!important;
+  }
+  #catalogPanelProductos #catalogBtnRecargar{grid-area:refresh!important}
+
+  /* Segunda fila: Ocultar / Publicar / Importar, tres botones iguales. */
+  #catalogPanelProductos #catalogBtnOcultarMasivo,
+  #catalogPanelProductos #catalogBtnPublicarMasivo,
+  #catalogPanelProductos #catalogBtnImportarImagenes{
+    position:absolute!important;
+    bottom:0!important;
+    height:42px!important;
+    min-height:42px!important;
+    width:calc((100% - 16px)/3)!important;
+    padding:0 7px!important;
+    border-radius:11px!important;
+    font-size:10.5px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:5px!important;
+  }
+  #catalogPanelProductos #catalogBtnOcultarMasivo{left:0!important}
+  #catalogPanelProductos #catalogBtnPublicarMasivo{left:calc((100% - 16px)/3 + 8px)!important}
+  #catalogPanelProductos #catalogBtnImportarImagenes{right:0!important}
+
+  /* FAB Ver catálogo: mismas dimensiones/forma que Inventario y Vencimientos. */
+  #catalogBtnVerPublicoMobile{
+    position:fixed!important;
+    z-index:var(--app-z-fab,1200)!important;
+    right:max(16px,env(safe-area-inset-right))!important;
+    bottom:calc(16px + env(safe-area-inset-bottom))!important;
+    width:58px!important;
+    min-width:58px!important;
+    max-width:58px!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    display:grid!important;
+    place-items:center!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:19px!important;
+    background:linear-gradient(145deg,#ef393f,#d92734)!important;
+    color:#fff!important;
+    box-shadow:0 14px 30px rgba(205,39,52,.34),0 3px 8px rgba(36,39,44,.16)!important;
+  }
+  #catalogBtnVerPublicoMobile .app-icon{width:23px!important;height:23px!important;margin:0!important}
+
+  /* Rubros: el alta pasa a FAB idéntico a los demás módulos. */
+  #catalogPanelRubros .catalog-rubros-head{
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #catalogPanelRubros #catalogBtnNuevoRubro{
+    position:fixed!important;
+    z-index:var(--app-z-fab,1200)!important;
+    right:max(16px,env(safe-area-inset-right))!important;
+    bottom:calc(16px + env(safe-area-inset-bottom))!important;
+    width:58px!important;
+    min-width:58px!important;
+    max-width:58px!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    display:grid!important;
+    place-items:center!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:19px!important;
+    background:linear-gradient(145deg,#ef393f,#d92734)!important;
+    color:#fff!important;
+    box-shadow:0 14px 30px rgba(205,39,52,.34),0 3px 8px rgba(36,39,44,.16)!important;
+    font-size:0!important;
+    line-height:1!important;
+    overflow:hidden!important;
+  }
+  #catalogPanelRubros #catalogBtnNuevoRubro>span{
+    position:absolute!important;
+    inset:0!important;
+    display:grid!important;
+    place-items:center!important;
+    width:100%!important;
+    height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    font-family:Arial,sans-serif!important;
+    font-size:31px!important;
+    font-weight:300!important;
+    line-height:1!important;
+  }
+  #catalogPanelRubros .catalog-rubros-grid{margin-top:0!important}
+  #catalogPanelRubros .catalog-rubro-card .catalog-edit-btn{
+    justify-self:end!important;
+    align-self:center!important;
+    margin-left:auto!important;
+  }
+
+  /* Pedidos: filtro y refrescar cuadrados idénticos y centrados. */
+  #catalogPanelPedidos .catalog-orders-toolbar{
+    grid-template-columns:minmax(0,1fr) 42px 42px!important;
+    gap:8px!important;
+  }
+  #catalogPanelPedidos .catalog-orders-filter-wrap,
+  #catalogPanelPedidos .catalog-orders-filter-wrap>.app-select-custom,
+  #catalogPanelPedidos .catalog-orders-refresh{
+    width:42px!important;
+    min-width:42px!important;
+    max-width:42px!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+  }
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__trigger,
+  #catalogPanelPedidos .catalog-orders-refresh{
+    width:42px!important;
+    height:42px!important;
+    padding:0!important;
+    border-radius:11px!important;
+    display:grid!important;
+    place-items:center!important;
+    align-items:center!important;
+    justify-items:center!important;
+    line-height:1!important;
+  }
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__trigger:before{
+    display:block!important;
+    width:18px!important;
+    height:18px!important;
+    margin:auto!important;
+    align-self:center!important;
+    justify-self:center!important;
+  }
+  #catalogPanelPedidos .catalog-orders-refresh .app-icon{
+    width:18px!important;
+    height:18px!important;
+    margin:0!important;
+  }
+
+  /* Editar producto / rubro / detalle pedido: bottom sheet de ancho completo y hasta abajo. */
+  #catalogProductoModal.catalog-modal-overlay,
+  #catalogRubroModal.catalog-modal-overlay,
+  #catalogPedidoModal.catalog-modal-overlay{
+    align-items:flex-end!important;
+    justify-content:center!important;
+    padding:54px 0 0!important;
+    background:rgba(15,23,42,.46)!important;
+    backdrop-filter:blur(4px)!important;
+    -webkit-backdrop-filter:blur(4px)!important;
+  }
+  #catalogProductoModal .modal-card,
+  #catalogRubroModal .modal-card,
+  #catalogPedidoModal .modal-card{
+    width:100vw!important;
+    max-width:100vw!important;
+    height:calc(100dvh - 54px)!important;
+    min-height:calc(100dvh - 54px)!important;
+    max-height:calc(100dvh - 54px)!important;
+    margin:0!important;
+    border-radius:22px 22px 0 0!important;
+    overflow:hidden!important;
+    box-shadow:0 -14px 40px rgba(15,23,42,.20)!important;
+    background:#fff!important;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  #catalogProductoModal .catalog-modal-head,
+  #catalogRubroModal .catalog-modal-head,
+  #catalogPedidoModal .catalog-modal-head{
+    flex:0 0 auto!important;
+    width:100%!important;
+    padding:14px 16px 12px!important;
+    box-sizing:border-box!important;
+  }
+  #catalogProductoModal .catalog-modal-body,
+  #catalogRubroModal .catalog-modal-body,
+  #catalogPedidoModal .catalog-modal-body{
+    flex:1 1 auto!important;
+    width:100%!important;
+    min-height:0!important;
+    padding:12px 16px 20px!important;
+    box-sizing:border-box!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  #catalogProductoModal .catalog-modal-actions,
+  #catalogRubroModal .catalog-modal-actions{
+    flex:0 0 auto!important;
+    width:100%!important;
+    margin:0!important;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom))!important;
+    box-sizing:border-box!important;
+    border-top:1px solid #edf0f4!important;
+    background:#fff!important;
+  }
+
+  /* Más ancho útil dentro de detalle de pedido. */
+  #catalogPedidoModal .catalog-order-overview,
+  #catalogPedidoModal .catalog-order-status-box,
+  #catalogPedidoModal .catalog-order-section{
+    width:100%!important;
+    box-sizing:border-box!important;
+  }
+}
+
+/* ===== D27 · Correcciones finas móvil catálogo (11/09/2026) ===== */
+@media (max-width:640px){
+  /* Navegador principal: aprovechar mejor el ancho útil. */
+  #pantallaCatalogoAdmin .catalog-admin-tabs{
+    width:calc(100% + 4px)!important;
+    max-width:none!important;
+    margin:8px -2px 8px!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Productos: primera fila completa y segunda fila sin hueco vertical. */
+  #catalogPanelProductos .catalog-toolbar{
+    width:100%!important;
+    grid-template-columns:minmax(0,1fr) 42px 42px!important;
+    grid-template-areas:"search filter refresh"!important;
+    column-gap:6px!important;
+    row-gap:6px!important;
+    padding-bottom:48px!important;
+    margin:0 0 8px!important;
+    box-sizing:border-box!important;
+  }
+  #catalogPanelProductos .catalog-toolbar:after{display:none!important;content:none!important}
+  #catalogPanelProductos .catalog-search{width:100%!important;min-width:0!important}
+  #catalogPanelProductos .catalog-filter-popover-wrap,
+  #catalogPanelProductos #catalogBtnFiltros,
+  #catalogPanelProductos #catalogBtnRecargar{
+    width:42px!important;min-width:42px!important;max-width:42px!important;
+  }
+  #catalogPanelProductos #catalogBtnOcultarMasivo,
+  #catalogPanelProductos #catalogBtnPublicarMasivo,
+  #catalogPanelProductos #catalogBtnImportarImagenes{
+    bottom:0!important;
+  }
+
+  /* Rubros: acción Editar anclada al lateral derecho real de cada tarjeta. */
+  #catalogPanelRubros .catalog-rubro-card{
+    position:relative!important;
+    grid-template-columns:38px minmax(0,1fr)!important;
+    padding-right:94px!important;
+  }
+  #catalogPanelRubros .catalog-rubro-card .catalog-edit-btn{
+    position:absolute!important;
+    right:12px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    margin:0!important;
+    justify-self:auto!important;
+    align-self:auto!important;
+  }
+
+  /* Pedidos: ícono de filtro centrado de forma absoluta. */
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__trigger{
+    position:relative!important;
+    display:block!important;
+    padding:0!important;
+  }
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__value,
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__chevron{display:none!important}
+  #catalogPanelPedidos .catalog-orders-filter-wrap .app-select-custom__trigger:before{
+    content:""!important;
+    position:absolute!important;
+    left:50%!important;
+    top:50%!important;
+    transform:translate(-50%,-50%)!important;
+    width:18px!important;
+    height:18px!important;
+    margin:0!important;
+  }
+
+  /* Menú de estados: siempre dentro del viewport. */
+  body>.app-select-custom__menu.catalog-select-menu-orders.is-portal{
+    left:auto!important;
+    right:8px!important;
+    width:min(190px,calc(100vw - 16px))!important;
+    max-width:calc(100vw - 16px)!important;
+    box-sizing:border-box!important;
+    overflow-x:hidden!important;
+  }
+
+  /* Tarjeta de pedido: número y total comparten la primera fila. */
+  #catalogPanelPedidos .catalog-orders-table tr{
+    grid-template-columns:minmax(0,1fr) minmax(112px,.78fr)!important;
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(1){
+    grid-column:1!important;grid-row:1!important;
+    background:#fbfcfe!important;
+    border-right:1px solid #eef1f5!important;
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4){
+    grid-column:2!important;grid-row:1!important;
+    background:#fbfcfe!important;
+    text-align:right!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-end!important;
+    justify-content:center!important;
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4):before{text-align:right!important;width:100%!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(2){grid-column:1!important;grid-row:2!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(3){grid-column:2!important;grid-row:2!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(5){grid-column:1!important;grid-row:3!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(6){grid-column:2!important;grid-row:3!important}
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(7){grid-column:1/-1!important;grid-row:4!important}
+
+  /* Bottom sheets: ancho completo real y pegados al borde inferior. */
+  #catalogProductoModal.catalog-modal-overlay,
+  #catalogRubroModal.catalog-modal-overlay,
+  #catalogPedidoModal.catalog-modal-overlay{
+    padding:48px 0 0!important;
+    align-items:flex-end!important;
+    justify-content:stretch!important;
+  }
+  #catalogProductoModal .modal-card,
+  #catalogRubroModal .modal-card,
+  #catalogPedidoModal .modal-card{
+    width:100dvw!important;
+    min-width:100dvw!important;
+    max-width:100dvw!important;
+    height:calc(100dvh - 48px)!important;
+    min-height:calc(100dvh - 48px)!important;
+    max-height:calc(100dvh - 48px)!important;
+    align-self:stretch!important;
+    margin:0!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:0!important;
+    border-radius:22px 22px 0 0!important;
+  }
+}
+
+
+/* ===== D30 · Ajuste fino móvil Catálogo (11/09/2026) =====
+   Capa final deliberadamente acotada. No elimina las reglas D23–D27:
+   solo normaliza ancho, tipografía de Rubros/Pedidos y estado vacío. */
+@media (max-width: 640px) {
+  /* Eje móvil: exactamente el mismo ancho útil del shell compartido (12px por lado).
+     El padding horizontal previo del Catálogo era el que lo hacía verse más angosto. */
+  body.en-catalogo #pantallaCatalogoAdmin > .catalog-admin-shell,
+  #pantallaCatalogoAdmin > .catalog-admin-shell {
+    width: calc(100% - (var(--app-shell-mobile-inline, 12px) * 2)) !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 12px 0 84px !important;
+    box-sizing: border-box !important;
+  }
+
+  #pantallaCatalogoAdmin .catalog-admin-metrics,
+  #pantallaCatalogoAdmin .catalog-admin-tabs,
+  #catalogPanelProductos,
+  #catalogPanelRubros,
+  #catalogPanelPedidos,
+  #catalogPanelProductos .catalog-toolbar,
+  #catalogPanelPedidos .catalog-orders-toolbar,
+  #catalogPanelRubros .catalog-rubros-grid,
+  #catalogPanelProductos .catalog-table-card,
+  #catalogPanelPedidos .catalog-table-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Pestañas: legibles y alineadas con el ancho del resto del módulo. */
+  #pantallaCatalogoAdmin .catalog-admin-tabs {
+    font-size: 12.5px !important;
+  }
+  #pantallaCatalogoAdmin .catalog-admin-tabs button {
+    font-size: 12.5px !important;
+    font-weight: 760 !important;
+  }
+
+  /* Rubros: recuperar legibilidad equivalente a Inicio/Inventario. */
+  #catalogPanelRubros .catalog-rubro-copy strong {
+    font-size: 14px !important;
+    line-height: 1.22 !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em !important;
+  }
+  #catalogPanelRubros .catalog-rubro-copy small {
+    margin-top: 3px !important;
+    font-size: 11.5px !important;
+    line-height: 1.3 !important;
+  }
+  #catalogPanelRubros .catalog-rubro-card .catalog-chip,
+  #catalogPanelRubros .catalog-rubro-card .catalog-rubro-meta,
+  #catalogPanelRubros .catalog-rubro-card .catalog-rubro-meta span {
+    font-size: 10.5px !important;
+    line-height: 1.2 !important;
+  }
+  #catalogPanelRubros .catalog-rubro-card .catalog-edit-btn {
+    right: 10px !important;
+    min-width: 68px !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 12.5px !important;
+    font-weight: 780 !important;
+  }
+
+  /* Pedidos: tipografía útil en teléfono. */
+  #catalogPanelPedidos .catalog-orders-table td {
+    font-size: 12.5px !important;
+    line-height: 1.35 !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table td::before {
+    font-size: 9.5px !important;
+    line-height: 1.2 !important;
+    letter-spacing: .08em !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(1) strong,
+  #catalogPanelPedidos .catalog-order-code {
+    font-size: 13.5px !important;
+    line-height: 1.25 !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table td:nth-child(4) {
+    font-size: 15.5px !important;
+    line-height: 1.2 !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table small,
+  #catalogPanelPedidos .catalog-order-muted {
+    font-size: 10.5px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Estado vacío de Pedidos: sin columnas, sin pseudo-etiqueta PEDIDO y sin piezas flotantes. */
+  #catalogPanelPedidos .catalog-table-card:has(.catalog-empty-row) {
+    overflow: hidden !important;
+    border: 1px solid #e1e6ed !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: 0 4px 14px rgba(16,24,40,.035) !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table tbody:has(.catalog-empty-row) {
+    display: block !important;
+    width: 100% !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table tbody .catalog-empty-row {
+    display: block !important;
+    width: 100% !important;
+    min-height: 126px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table .catalog-empty-cell,
+  #catalogPanelPedidos .catalog-orders-table td.catalog-empty-cell {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 126px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    text-align: center !important;
+  }
+  #catalogPanelPedidos .catalog-orders-table .catalog-empty-cell::before,
+  #catalogPanelPedidos .catalog-orders-table td.catalog-empty-cell::before {
+    content: none !important;
+    display: none !important;
+  }
+  #catalogPanelPedidos .catalog-empty-row .catalog-empty {
+    width: 100% !important;
+    min-height: 126px !important;
+    margin: 0 !important;
+    padding: 24px 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    font-weight: 650 !important;
+  }
+  #catalogPedidosResumen:empty,
+  #catalogPanelPedidos .catalog-orders-summary:empty {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   D31 · CATÁLOGO ESCRITORIO — BARRAS DE ACCIONES EN UNA FILA
+   Solo escritorio. No modifica el responsive móvil D30.
+   ========================================================= */
+@media (min-width: 901px){
+  /* Productos: búsqueda + filtros + actualizar + ocultar + publicar + importar */
+  #catalogPanelProductos .catalog-toolbar{
+    display:grid!important;
+    grid-template-columns:minmax(320px,1fr) auto 42px auto auto auto!important;
+    gap:9px!important;
+    align-items:center!important;
+    margin-bottom:12px!important;
+  }
+  #catalogPanelProductos .catalog-search{
+    grid-column:auto!important;
+    grid-row:auto!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  #catalogPanelProductos .catalog-filter-popover-wrap,
+  #catalogPanelProductos #catalogBtnRecargar,
+  #catalogPanelProductos #catalogBtnOcultarMasivo,
+  #catalogPanelProductos #catalogBtnPublicarMasivo,
+  #catalogPanelProductos #catalogBtnImportarImagenes{
+    grid-column:auto!important;
+    grid-row:auto!important;
+    position:static!important;
+    inset:auto!important;
+    width:auto!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  #catalogPanelProductos .catalog-filter-btn{
+    min-width:104px!important;
+    height:42px!important;
+  }
+  #catalogPanelProductos #catalogBtnRecargar{
+    width:42px!important;
+    height:42px!important;
+    justify-self:auto!important;
+  }
+  #catalogPanelProductos #catalogBtnOcultarMasivo,
+  #catalogPanelProductos #catalogBtnPublicarMasivo,
+  #catalogPanelProductos #catalogBtnImportarImagenes{
+    height:42px!important;
+    padding:0 12px!important;
+    white-space:nowrap!important;
+  }
+  #catalogPanelProductos #catalogBtnOcultarMasivo{min-width:118px!important}
+  #catalogPanelProductos #catalogBtnPublicarMasivo{min-width:120px!important}
+  #catalogPanelProductos #catalogBtnImportarImagenes{min-width:108px!important}
+  #catalogPanelProductos .catalog-toolbar:after{display:none!important;content:none!important}
+
+  /* Pedidos: búsqueda + estado + actualizar */
+  #catalogPanelPedidos .catalog-orders-toolbar{
+    display:grid!important;
+    grid-template-columns:minmax(360px,1fr) 210px 42px!important;
+    gap:9px!important;
+    align-items:center!important;
+    margin:0 0 12px!important;
+  }
+  #catalogPanelPedidos .catalog-search,
+  #catalogPanelPedidos .catalog-orders-filter-wrap,
+  #catalogPanelPedidos #catalogPedidosRecargar{
+    grid-column:auto!important;
+    grid-row:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  #catalogPanelPedidos #catalogPedidosRecargar{
+    width:42px!important;
+    height:42px!important;
+  }
+}

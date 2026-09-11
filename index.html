@@ -38,7 +38,7 @@
     <link rel="stylesheet" href="horarios-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="catalogo-admin-diseno.css?v=1960-d21-cierre-etapa6-010926" />
+    <link rel="stylesheet" href="catalogo-admin-diseno.css?v=desktop-toolbar-d31-110926" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="ui-unification.css?v=1960-d21-cierre-etapa6-010926" />
@@ -3283,18 +3283,21 @@
                 </div>
               </div>
 
-              <button id="catalogBtnPublicarMasivo" class="catalog-btn catalog-btn-success" type="button" title="Publicar todos los productos del alcance seleccionado">
-                <svg class="app-icon"><use href="#icon-eye"></use></svg><span>Publicar todos</span>
+              <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar productos">
+                <svg class="app-icon"><use href="#icon-refresh"></use></svg>
               </button>
               <button id="catalogBtnOcultarMasivo" class="catalog-btn catalog-btn-secondary" type="button" title="Ocultar todos los productos del alcance seleccionado">
-                <svg class="app-icon"><use href="#icon-eye-off"></use></svg><span>Ocultar todos</span>
+                <svg class="app-icon"><use href="#icon-eye-off"></use></svg><span>Ocultar</span>
+              </button>
+              <button id="catalogBtnPublicarMasivo" class="catalog-btn catalog-btn-success" type="button" title="Publicar todos los productos del alcance seleccionado">
+                <svg class="app-icon"><use href="#icon-eye"></use></svg><span>Publicar</span>
               </button>
               <input id="catalogImportarImagenesArchivo" type="file" accept=".zip,application/zip,application/x-zip-compressed" hidden />
               <button id="catalogBtnImportarImagenes" class="catalog-btn catalog-btn-primary" type="button" title="Importar imágenes por código de barras desde un ZIP">
-                <svg class="app-icon"><use href="#icon-box"></use></svg><span>Importar imágenes</span>
+                <svg class="app-icon"><use href="#icon-box"></use></svg><span>Importar</span>
               </button>
-              <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar productos">
-                <svg class="app-icon"><use href="#icon-refresh"></use></svg>
+              <button id="catalogBtnVerPublicoMobile" class="catalog-icon-btn catalog-mobile-public-btn" type="button" aria-label="Ver catálogo público" title="Ver catálogo público">
+                <svg class="app-icon"><use href="#icon-eye"></use></svg>
               </button>
             </div>
 
@@ -3334,9 +3337,6 @@
                 <h2>Pedidos del catálogo</h2>
                 <p>Consultá los pedidos recibidos desde el catálogo online y actualizá su estado.</p>
               </div>
-              <button id="catalogPedidosRecargar" class="catalog-btn catalog-btn-secondary" type="button">
-                <svg class="app-icon"><use href="#icon-refresh"></use></svg><span>Actualizar</span>
-              </button>
             </div>
 
 
@@ -3345,15 +3345,20 @@
                 <svg class="app-icon"><use href="#icon-search"></use></svg>
                 <input id="catalogPedidosBuscar" type="search" autocomplete="off" placeholder="Buscar por pedido, cliente, teléfono o dirección..." />
               </label>
-              <select id="catalogPedidosFiltroEstado" aria-label="Filtrar pedidos por estado">
-                <option value="todos">Todos los estados</option>
-                <option value="recibido">Recibidos</option>
-                <option value="preparando">Preparando</option>
-                <option value="listo">Listos</option>
-                <option value="entregado">Entregados</option>
-                <option value="cancelado">Cancelados</option>
-                <option value="archivados">Archivados</option>
-              </select>
+              <div class="catalog-orders-filter-wrap" title="Filtrar por estado">
+                <select id="catalogPedidosFiltroEstado" aria-label="Filtrar pedidos por estado">
+                  <option value="todos">Todos los estados</option>
+                  <option value="recibido">Recibidos</option>
+                  <option value="preparando">Preparando</option>
+                  <option value="listo">Listos</option>
+                  <option value="entregado">Entregados</option>
+                  <option value="cancelado">Cancelados</option>
+                  <option value="archivados">Archivados</option>
+                </select>
+              </div>
+              <button id="catalogPedidosRecargar" class="catalog-icon-btn catalog-orders-refresh" type="button" aria-label="Actualizar pedidos" title="Actualizar pedidos">
+                <svg class="app-icon"><use href="#icon-refresh"></use></svg>
+              </button>
             </div>
 
             <div class="catalog-table-card">
@@ -4047,7 +4052,7 @@
     <script src="./pwa.js?v=1960-d21-cierre-etapa6-010926" defer></script>
     <script type="module" src="./auth.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script src="./horarios-config.js?v=1960-d21-cierre-etapa6-010926"></script>
-    <script type="module" src="./catalogo-admin.js?v=1960-d21-cierre-etapa6-010926"></script>
+    <script type="module" src="./catalogo-admin.js?v=mobile-fix-d30-110926"></script>
     <script type="module" src="./admin.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./notifications.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./notification-center.js?v=1960-d21-cierre-etapa6-010926"></script>

@@ -377,3 +377,12 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
   .catalogo-grid,.catalogo-grid--home{gap:8px}.product-card__image{height:178px}.product-card__body{padding:10px 8px 10px}.product-card h3{font-size:13px;min-height:40px}.product-card__price{font-size:18px}.product-card__unit{font-size:9px}.add-button,.purchase-add-button,.purchase-count-button,.qty-control{height:40px}.add-button,.purchase-add-button{font-size:12px}
   .catalogo-mobile-cartbar{left:12px;right:12px;height:68px;grid-template-columns:42px minmax(0,1fr) 118px;padding-inline:12px}.catalogo-mobile-cartbar__icon,.catalogo-mobile-cartbar__icon svg{width:29px;height:29px}.catalogo-mobile-cartbar strong{font-size:14px}.catalogo-mobile-cartbar small{font-size:11px}.catalogo-mobile-cartbar b{height:44px;font-size:12px}
 }
+
+/* Ajuste D23: carrito del encabezado sin superposición */
+@media(min-width:769px){
+  .catalogo-header__inner{grid-template-columns:minmax(250px,300px) minmax(0,1fr) minmax(330px,390px)}
+  .catalogo-header__actions{gap:14px}
+  .cart-button{padding:6px 8px 6px 4px;gap:10px}
+  .cart-button__badge{top:-3px;left:12px;border:2px solid #fff;z-index:2}
+  .cart-button__copy{padding-left:2px;min-width:92px}
+}

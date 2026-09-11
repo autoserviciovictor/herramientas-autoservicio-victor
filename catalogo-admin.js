@@ -251,12 +251,12 @@ function renderProductos() {
     body.innerHTML = estado.productos.map((p) => {
       const chip = !p.configurado ? '<span class="catalog-chip unconfigured">Sin configurar</span>' : p.visible ? '<span class="catalog-chip visible">Visible</span>' : '<span class="catalog-chip hidden">Oculto</span>';
       return `<tr data-code="${esc(p.codigo)}">
-        <td><div class="catalog-product-cell"><span class="catalog-product-thumb ${p.imagen ? "has-image" : ""}">${p.estadoImagen === "confirmada" ? `<img src="${API_BASE_URL}/catalogo/api/productos/${encodeURIComponent(p.codigo)}/imagen" alt="" loading="lazy" />` : '<svg class="app-icon"><use href="#icon-box"></use></svg>'}</span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""} · ${esc(({confirmada:"Imagen confirmada",candidato:"Imagen candidata",buscando:"Buscando imagen",sin_resultado:"Sin resultado",error:"Error de imagen",sin_imagen:"Sin imagen"})[p.estadoImagen] || "Sin imagen")}</small></div></div></td>
-        <td>${p.rubro ? esc(p.rubro) : '<span class="catalog-chip unconfigured">Sin rubro</span>'}</td>
-        <td><span class="catalog-price">${moneda(p.precio)}</span></td>
-        <td>${esc(etiquetaUnidad(p.unidadVenta))}</td>
-        <td>${chip}</td>
-        <td><div class="catalog-row-actions"><label class="catalog-visibility-toggle" title="${p.visible ? "Ocultar producto" : "Mostrar producto"}"><input type="checkbox" data-catalog-visible="${esc(p.codigo)}" ${p.visible ? "checked" : ""}><span></span></label><button class="catalog-edit-btn" type="button" data-catalog-edit="${esc(p.codigo)}">Editar</button></div></td>
+        <td data-label="Producto"><div class="catalog-product-cell"><span class="catalog-product-thumb ${p.imagen ? "has-image" : ""}">${p.estadoImagen === "confirmada" ? `<img src="${API_BASE_URL}/catalogo/api/productos/${encodeURIComponent(p.codigo)}/imagen" alt="" loading="lazy" onerror="this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.remove()" />` : '<svg class="app-icon"><use href="#icon-box"></use></svg>'}</span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""} · ${esc(({confirmada:"Imagen confirmada",candidato:"Imagen candidata",buscando:"Buscando imagen",sin_resultado:"Sin resultado",error:"Error de imagen",sin_imagen:"Sin imagen"})[p.estadoImagen] || "Sin imagen")}</small></div></div></td>
+        <td data-label="Rubro">${p.rubro ? esc(p.rubro) : '<span class="catalog-chip unconfigured">Sin rubro</span>'}</td>
+        <td data-label="Precio"><span class="catalog-price">${moneda(p.precio)}</span></td>
+        <td data-label="Unidad">${esc(etiquetaUnidad(p.unidadVenta))}</td>
+        <td data-label="Estado">${chip}</td>
+        <td data-label="Acciones"><div class="catalog-row-actions"><label class="catalog-visibility-toggle" title="${p.visible ? "Ocultar producto" : "Mostrar producto"}"><input type="checkbox" data-catalog-visible="${esc(p.codigo)}" ${p.visible ? "checked" : ""}><span></span></label><button class="catalog-edit-btn" type="button" data-catalog-edit="${esc(p.codigo)}">Editar</button></div></td>
       </tr>`;
     }).join("");
   }
@@ -371,17 +371,17 @@ function renderPedidos() {
   const body = $("catalogPedidosBody");
   if (!body) return;
   if (!estado.pedidos.length) {
-    body.innerHTML = '<tr><td colspan="7"><div class="catalog-empty">No hay pedidos para mostrar.</div></td></tr>';
+    body.innerHTML = '<tr class="catalog-empty-row"><td colspan="7" class="catalog-empty-cell"><div class="catalog-empty">No hay pedidos para mostrar.</div></td></tr>';
   } else {
     body.innerHTML = estado.pedidos.map((p) => `
       <tr>
-        <td><div class="catalog-order-number"><strong>${esc(p.numero)}</strong><small>${numero(p.unidades)} unidades · ${numero(p.productos)} productos</small></div></td>
-        <td><div class="catalog-order-customer"><strong>${esc(p.cliente)}</strong><small>${esc(p.telefono)}</small></div></td>
-        <td><div class="catalog-order-delivery"><strong>${p.entrega === "delivery" ? `Delivery ${esc(p.horario || "")}` : "Retiro"}</strong><small>${p.entrega === "delivery" ? esc(p.direccion || "") : "Retiro en autoservicio"}</small></div></td>
-        <td><strong class="catalog-price">${moneda(p.total)}</strong></td>
-        <td><span class="catalog-order-status status-${esc(p.estado)}">${esc(etiquetaEstadoPedido(p.estado))}</span>${p.archivado ? `<small class="catalog-order-archived-label">Archivado</small>` : ""}</td>
-        <td>${fechaHora(p.creadoEn)}</td>
-        <td>
+        <td data-label="Pedido"><div class="catalog-order-number"><strong>${esc(p.numero)}</strong><small>${numero(p.unidades)} unidades · ${numero(p.productos)} productos</small></div></td>
+        <td data-label="Cliente"><div class="catalog-order-customer"><strong>${esc(p.cliente)}</strong><small>${esc(p.telefono)}</small></div></td>
+        <td data-label="Entrega"><div class="catalog-order-delivery"><strong>${p.entrega === "delivery" ? `Delivery ${esc(p.horario || "")}` : "Retiro"}</strong><small>${p.entrega === "delivery" ? esc(p.direccion || "") : "Retiro en autoservicio"}</small></div></td>
+        <td data-label="Total"><strong class="catalog-price">${moneda(p.total)}</strong></td>
+        <td data-label="Estado"><span class="catalog-order-status status-${esc(p.estado)}">${esc(etiquetaEstadoPedido(p.estado))}</span>${p.archivado ? `<small class="catalog-order-archived-label">Archivado</small>` : ""}</td>
+        <td data-label="Fecha">${fechaHora(p.creadoEn)}</td>
+        <td data-label="Acciones">
           <div class="catalog-order-row-actions">
             <button class="catalog-edit-btn" type="button" data-pedido-open="${esc(p.numero)}">Ver pedido</button>
             ${$("catalogPedidosFiltroEstado")?.value === "archivados"
@@ -396,7 +396,7 @@ function renderPedidos() {
   const hasta = Math.min(estado.pedidosTotal, estado.pedidosPagina * estado.pedidosLimite);
   $("catalogPedidosResumen").textContent = estado.pedidosTotal
     ? `Mostrando ${numero(desde)}–${numero(hasta)} de ${numero(estado.pedidosTotal)} pedidos`
-    : "Sin pedidos";
+    : "";
 
   renderPaginacionPedidos();
   body.querySelectorAll("[data-pedido-open]").forEach((b) => b.addEventListener("click", () => abrirPedido(b.dataset.pedidoOpen)));
@@ -1112,7 +1112,9 @@ function bind() {
   $("catalogPedidoImprimir")?.addEventListener("click", imprimirPedidoCatalogo);
   $("catalogPedidoGuardarObservaciones")?.addEventListener("click", guardarObservacionesPedido);
   $("catalogPedidoCerrar")?.addEventListener("click", () => cerrarModal("catalogPedidoModal"));
-  $("catalogBtnVerPublico")?.addEventListener("click", () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener"));
+  const abrirCatalogoPublico = () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener");
+  $("catalogBtnVerPublico")?.addEventListener("click", abrirCatalogoPublico);
+  $("catalogBtnVerPublicoMobile")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());
   $("catalogProductoGuardar")?.addEventListener("click", guardarProducto);
   $("catalogProductoElegirImagen")?.addEventListener("click", () => $("catalogProductoImagenArchivo")?.click());
