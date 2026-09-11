@@ -519,9 +519,7 @@ function controlCompraHtml(producto) {
 
   if (!editando) {
     return `<button class="purchase-count-button" type="button" data-action="open-qty" data-code="${codigo}" aria-label="Editar cantidad: ${cantidad}">
-      <span class="purchase-count-button__minus" aria-hidden="true">−</span>
-      <span class="purchase-count-button__value">${cantidad}</span>
-      <span class="purchase-count-button__plus" aria-hidden="true">+</span>
+      <span>${cantidad}</span>
     </button>`;
   }
 
@@ -569,7 +567,6 @@ function renderProductCard(producto) {
   return `<article class="product-card" data-product="${escapeHtml(producto.codigo)}">
     <div class="product-card__image">
       ${producto.destacado ? '<span class="product-card__featured">DESTACADO</span>' : ""}
-      <span class="product-card__favorite" aria-hidden="true">♡</span>
       ${imagenProducto(producto)}
     </div>
     <div class="product-card__body">
@@ -815,9 +812,8 @@ function cartTotals() {
 
 function renderCart() {
   const totals = cartTotals();
-  const productosDistintos = state.carrito.length;
-  els.cartBadge.hidden = productosDistintos === 0;
-  els.cartBadge.textContent = productosDistintos > 99 ? "99+" : String(productosDistintos);
+  els.cartBadge.hidden = totals.unidades === 0;
+  els.cartBadge.textContent = totals.unidades > 99 ? "99+" : String(totals.unidades);
   els.cartProductsLabel.textContent = pluralProductos(state.carrito.length);
   els.cartTotal.textContent = formatMoney(totals.total);
   if (els.headerCartTotal) els.headerCartTotal.textContent = formatMoney(totals.total);

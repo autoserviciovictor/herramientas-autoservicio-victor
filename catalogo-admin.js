@@ -21,6 +21,8 @@ const estado = {
   pedidoAbierto: null,
   pedidoObservacionesSucias: false,
   pedidosBusquedaTimer: null,
+  archivoImportacionImagenes: null,
+  importandoImagenes: false,
 };
 
 const esc = (v = "") => String(v).replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -43,6 +45,20 @@ async function apiBlob(ruta) {
     throw new Error(data.mensaje || "No se pudo descargar la imagen");
   }
   return r.blob();
+}
+
+async function apiZip(ruta, archivo, { reemplazar = false } = {}) {
+  const r = await fetch(`${API_BASE_URL}${ruta}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/zip",
+      "X-Reemplazar-Imagenes": reemplazar ? "1" : "0",
+    },
+    body: archivo,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || data.ok === false) throw new Error(data.mensaje || "No se pudo importar el archivo ZIP");
+  return data;
 }
 
 function liberarPreviewImagen() {
@@ -982,6 +998,75 @@ async function eliminarRubro() {
   } catch (e) { mensaje(e.message); }
 }
 
+function seleccionarZipImagenes(archivo) {
+  if (!archivo) return;
+  const nombre = String(archivo.name || "");
+  if (!/\.zip$/i.test(nombre)) {
+    mensaje("Seleccioná un archivo ZIP.");
+    return;
+  }
+  if (archivo.size > 120 * 1024 * 1024) {
+    mensaje("El ZIP supera el máximo de 120 MB.");
+    return;
+  }
+  estado.archivoImportacionImagenes = archivo;
+  const nombreEl = $("catalogImportarImagenesNombre");
+  if (nombreEl) nombreEl.textContent = `${nombre} · ${(archivo.size / (1024 * 1024)).toFixed(1)} MB`;
+  const status = $("catalogImportarImagenesEstado");
+  if (status) { status.textContent = "Listo para importar."; status.className = "catalog-bulk-image-status listo"; }
+  $("catalogImportarImagenesResultado")?.classList.add("oculto");
+  abrirModal("catalogImportarImagenesModal");
+}
+
+function renderResultadoImportacionImagenes(data) {
+  const cont = $("catalogImportarImagenesResultado");
+  if (!cont) return;
+  const r = data?.resumen || {};
+  const problemas = (data?.resultados || []).filter((item) => item.estado !== "importada" && item.estado !== "omitida").slice(0, 80);
+  cont.innerHTML = `
+    <div class="catalog-bulk-summary-grid">
+      <div><strong>${numero(r.detectadas)}</strong><span>Detectadas</span></div>
+      <div class="ok"><strong>${numero(r.importadas)}</strong><span>Importadas</span></div>
+      <div><strong>${numero(r.omitidasExistentes)}</strong><span>Ya existentes</span></div>
+      <div class="warn"><strong>${numero((r.productosNoEncontrados || 0) + (r.rechazadas || 0))}</strong><span>Para revisar</span></div>
+    </div>
+    ${r.usaCarpetaListas ? '<p class="catalog-bulk-note">Se detectó <b>listas/</b>: se importaron solamente las imágenes aprobadas de esa carpeta.</p>' : ""}
+    ${problemas.length ? `<div class="catalog-bulk-errors"><strong>Casos para revisar</strong>${problemas.map((item) => `<div><code>${esc(item.codigo)}</code><span>${esc(item.mensaje)}</span></div>`).join("")}</div>` : '<p class="catalog-bulk-note ok">Todas las imágenes detectadas quedaron asociadas o ya existían.</p>'}
+  `;
+  cont.classList.remove("oculto");
+}
+
+async function importarZipImagenes() {
+  const archivo = estado.archivoImportacionImagenes;
+  if (!archivo || estado.importandoImagenes) return;
+  const boton = $("catalogImportarImagenesConfirmar");
+  const status = $("catalogImportarImagenesEstado");
+  estado.importandoImagenes = true;
+  if (boton) boton.disabled = true;
+  if (status) { status.textContent = "Subiendo y asociando imágenes por código de barras…"; status.className = "catalog-bulk-image-status procesando"; }
+  try {
+    const data = await apiZip("/admin/catalogo/imagenes/importar-zip", archivo, { reemplazar: $("catalogImportarImagenesReemplazar")?.checked });
+    renderResultadoImportacionImagenes(data);
+    const r = data.resumen || {};
+    if (status) {
+      status.textContent = `Importación terminada: ${numero(r.importadas)} imagen(es) asociada(s).`;
+      status.className = "catalog-bulk-image-status ok";
+    }
+    await Promise.all([cargarEstado(), cargarProductos()]);
+    mensaje(`${numero(r.importadas)} imágenes importadas al catálogo.`, "ok");
+  } catch (e) {
+    if (status) { status.textContent = e.message; status.className = "catalog-bulk-image-status error"; }
+  } finally {
+    estado.importandoImagenes = false;
+    if (boton) boton.disabled = false;
+  }
+}
+
+function cerrarImportacionImagenes() {
+  if (estado.importandoImagenes) return;
+  cerrarModal("catalogImportarImagenesModal");
+}
+
 function abrirModal(id) { const m = $(id); if (!m) return; m.classList.remove("oculto"); m.setAttribute("aria-hidden", "false"); }
 function cerrarModal(id) { const m = $(id); if (!m) return; m.classList.add("oculto"); m.setAttribute("aria-hidden", "true"); }
 
@@ -1008,6 +1093,12 @@ function bind() {
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarFiltrosProductos(); });
   $("catalogBtnPublicarMasivo")?.addEventListener("click", () => cambiarVisibilidadMasiva(true));
   $("catalogBtnOcultarMasivo")?.addEventListener("click", () => cambiarVisibilidadMasiva(false));
+  $("catalogBtnImportarImagenes")?.addEventListener("click", () => $("catalogImportarImagenesArchivo")?.click());
+  $("catalogImportarImagenesArchivo")?.addEventListener("change", (e) => seleccionarZipImagenes(e.target.files?.[0]));
+  $("catalogImportarImagenesCambiar")?.addEventListener("click", () => $("catalogImportarImagenesArchivo")?.click());
+  $("catalogImportarImagenesConfirmar")?.addEventListener("click", importarZipImagenes);
+  $("catalogImportarImagenesCerrar")?.addEventListener("click", cerrarImportacionImagenes);
+  $("catalogImportarImagenesCancelar")?.addEventListener("click", cerrarImportacionImagenes);
   $("catalogBtnRecargar")?.addEventListener("click", () => Promise.all([cargarEstado(), cargarRubros(), cargarProductos()]).catch((e) => mensaje(e.message)));
   $("catalogPedidosBuscar")?.addEventListener("input", () => {
     clearTimeout(estado.pedidosBusquedaTimer);
@@ -1036,7 +1127,7 @@ function bind() {
   $("catalogRubroEliminar")?.addEventListener("click", eliminarRubro);
   $("catalogRubroCerrar")?.addEventListener("click", () => cerrarModal("catalogRubroModal"));
   $("catalogRubroCancelar")?.addEventListener("click", () => cerrarModal("catalogRubroModal"));
-  ["catalogProductoModal", "catalogRubroModal", "catalogPedidoModal"].forEach((id) => $(id)?.addEventListener("click", (e) => { if (e.target.id === id) cerrarModal(id); }));
+  ["catalogProductoModal", "catalogRubroModal", "catalogPedidoModal", "catalogImportarImagenesModal"].forEach((id) => $(id)?.addEventListener("click", (e) => { if (e.target.id === id) id === "catalogImportarImagenesModal" ? cerrarImportacionImagenes() : cerrarModal(id); }));
 }
 
 async function activar() {
@@ -1053,6 +1144,7 @@ function desactivar() {
   cerrarModal("catalogProductoModal");
   cerrarModal("catalogRubroModal");
   cerrarModal("catalogPedidoModal");
+  cerrarModal("catalogImportarImagenesModal");
 }
 
 window.CatalogoAdminModule = { activar, desactivar, recargar: activar };

@@ -3289,6 +3289,10 @@
               <button id="catalogBtnOcultarMasivo" class="catalog-btn catalog-btn-secondary" type="button" title="Ocultar todos los productos del alcance seleccionado">
                 <svg class="app-icon"><use href="#icon-eye-off"></use></svg><span>Ocultar todos</span>
               </button>
+              <input id="catalogImportarImagenesArchivo" type="file" accept=".zip,application/zip,application/x-zip-compressed" hidden />
+              <button id="catalogBtnImportarImagenes" class="catalog-btn catalog-btn-primary" type="button" title="Importar imágenes por código de barras desde un ZIP">
+                <svg class="app-icon"><use href="#icon-box"></use></svg><span>Importar imágenes</span>
+              </button>
               <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar productos">
                 <svg class="app-icon"><use href="#icon-refresh"></use></svg>
               </button>
@@ -3439,6 +3443,31 @@
               </div>
             </section>
           </div>
+        </div>
+      </div>
+
+      <div id="catalogImportarImagenesModal" class="modal-overlay catalog-modal-overlay oculto" aria-hidden="true">
+        <div class="modal-card catalog-bulk-image-modal" role="dialog" aria-modal="true" aria-labelledby="catalogImportarImagenesTitulo">
+          <header class="catalog-modal-head">
+            <div class="catalog-modal-title-wrap"><span class="catalog-modal-icon"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><span>CATÁLOGO</span><h2 id="catalogImportarImagenesTitulo">Importar imágenes masivamente</h2><p>Las imágenes se asocian por código de barras.</p></div></div>
+            <button id="catalogImportarImagenesCerrar" class="modal-close" type="button" aria-label="Cerrar"><svg class="app-icon"><use href="#icon-close"></use></svg></button>
+          </header>
+          <div class="catalog-bulk-image-body">
+            <div class="catalog-bulk-image-file">
+              <span class="catalog-bulk-image-file-icon"><svg class="app-icon"><use href="#icon-box"></use></svg></span>
+              <div><strong id="catalogImportarImagenesNombre">Ningún archivo seleccionado</strong><small>ZIP con JPG, PNG o WEBP. El nombre de cada imagen debe ser el código del producto.</small></div>
+              <button id="catalogImportarImagenesCambiar" class="catalog-btn catalog-btn-secondary" type="button">Cambiar archivo</button>
+            </div>
+            <div class="catalog-bulk-image-help">
+              <strong>Formato esperado</strong>
+              <code>7794000006188.jpg</code>
+              <p>Si el ZIP contiene una carpeta <b>listas/</b>, se importarán solamente esas imágenes y se ignorará la carpeta <b>revisar/</b>.</p>
+            </div>
+            <label class="catalog-bulk-image-replace"><input id="catalogImportarImagenesReemplazar" type="checkbox" /><span><strong>Reemplazar imágenes confirmadas existentes</strong><small>Dejalo desactivado para proteger las imágenes que ya fueron aprobadas.</small></span></label>
+            <div id="catalogImportarImagenesEstado" class="catalog-bulk-image-status" aria-live="polite"></div>
+            <div id="catalogImportarImagenesResultado" class="catalog-bulk-image-result oculto"></div>
+          </div>
+          <footer class="catalog-modal-actions"><button id="catalogImportarImagenesCancelar" class="catalog-btn catalog-btn-secondary" type="button">Cancelar</button><button id="catalogImportarImagenesConfirmar" class="catalog-btn catalog-btn-primary" type="button">Importar imágenes</button></footer>
         </div>
       </div>
 

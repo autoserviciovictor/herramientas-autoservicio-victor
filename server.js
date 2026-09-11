@@ -91,6 +91,7 @@ const {
   obtenerResumenPedidosCatalogoDb,
 } = require("./db-catalogo-pedidos");
 const { buscarImagenProducto, obtenerImagenNormalizadaProducto, importarImagenManual, importarImagenArchivoManual } = require("./catalogo-imagenes");
+const { seleccionarImagenesImportables } = require("./catalogo-imagenes-importacion");
 const {
   iniciarProcesoImagenes,
   pausarProcesoImagenes,
@@ -1837,6 +1838,74 @@ app.post("/admin/catalogo/productos/:codigo/imagen/confirmar", requerirAdministr
     res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo confirmar la imagen" });
   }
 });
+
+app.post(
+  "/admin/catalogo/imagenes/importar-zip",
+  requerirAdministrador,
+  express.raw({ type: ["application/zip", "application/octet-stream", "application/x-zip-compressed"], limit: "120mb" }),
+  async (req, res) => {
+    try {
+      const archivo = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      if (!archivo.length) return res.status(400).json({ ok: false, mensaje: "Seleccioná un archivo ZIP con las imágenes." });
+
+      const reemplazar = String(req.headers["x-reemplazar-imagenes"] || "").trim() === "1";
+      const seleccion = seleccionarImagenesImportables(archivo);
+      const resultados = [];
+      let importadas = 0;
+      let omitidasExistentes = 0;
+      let productosNoEncontrados = 0;
+      let rechazadas = 0;
+
+      // Se procesa de a pocas imágenes a la vez para no saturar memoria/CPU en Render.
+      const cola = [...seleccion.items];
+      const workers = Array.from({ length: Math.min(3, cola.length) }, async () => {
+        while (cola.length) {
+          const item = cola.shift();
+          if (!item) break;
+          try {
+            const actual = await obtenerProductoCatalogoAdminDb(item.codigo);
+            if (!actual) {
+              productosNoEncontrados += 1;
+              resultados.push({ codigo: item.codigo, estado: "no_encontrado", mensaje: "No existe un producto con este código." });
+              continue;
+            }
+            if (!reemplazar && actual.estadoImagen === "confirmada") {
+              omitidasExistentes += 1;
+              resultados.push({ codigo: item.codigo, estado: "omitida", mensaje: "Ya tiene una imagen confirmada." });
+              continue;
+            }
+
+            const buffer = item.obtenerBuffer();
+            await importarImagenArchivoManual(item.codigo, buffer, item.mime);
+            importadas += 1;
+            resultados.push({ codigo: item.codigo, estado: "importada", mensaje: "Imagen asociada correctamente." });
+          } catch (error) {
+            rechazadas += 1;
+            resultados.push({ codigo: item.codigo, estado: "rechazada", mensaje: error?.message || "No se pudo importar la imagen." });
+          }
+        }
+      });
+      await Promise.all(workers);
+
+      res.json({
+        ok: true,
+        resumen: {
+          detectadas: seleccion.items.length,
+          importadas,
+          omitidasExistentes,
+          productosNoEncontrados,
+          rechazadas,
+          usaCarpetaListas: seleccion.usaCarpetaListas,
+          ignoradasNombre: seleccion.ignoradasNombre,
+        },
+        resultados,
+      });
+    } catch (error) {
+      console.error("Error importando imágenes masivas del catálogo:", error);
+      res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo importar el ZIP de imágenes." });
+    }
+  },
+);
 
 app.post("/admin/catalogo/productos/:codigo/imagen/subir", requerirAdministrador, async (req, res) => {
   try {
