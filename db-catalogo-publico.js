@@ -419,6 +419,25 @@ async function eliminarRubroCatalogoAdminDb(id) {
   return true;
 }
 
+async function listarProductosSinImagenDb(cliente = null) {
+  if (!cliente) await asegurarEsquemaCatalogoPublico();
+  const resultado = await ejecutarConsultaCatalogo(cliente, `
+    SELECT p.code, p.article
+    FROM product_catalog p
+    LEFT JOIN catalog_product_settings s ON s.code=p.code
+    WHERE p.stock > 0
+      AND NOT (
+        COALESCE(s.image_status, 'sin_imagen') = 'confirmada'
+        AND s.image_data IS NOT NULL
+      )
+    ORDER BY p.article, p.code
+  `);
+  return resultado.rows.map((fila) => ({
+    codigo: String(fila.code || ""),
+    nombre: String(fila.article || ""),
+  }));
+}
+
 async function sincronizarVisibilidadStockCatalogoDb(productos = [], cliente = null) {
   if (!cliente) await asegurarEsquemaCatalogoPublico();
 
@@ -1080,6 +1099,7 @@ module.exports = {
   finalizarProcesoImagenesDb,
   sumarResultadoProcesoImagenesDb,
   listarPendientesProcesoImagenesDb,
+  listarProductosSinImagenDb,
   sincronizarVisibilidadStockCatalogoDb,
   sincronizarRubrosImportadosCatalogoDb,
 };

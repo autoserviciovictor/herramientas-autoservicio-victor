@@ -1,6 +1,32 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const $ = (id) => document.getElementById(id);
+
+let catalogoXlsxPromise = null;
+async function asegurarXlsxCatalogo() {
+  if (globalThis.XLSX?.utils?.aoa_to_sheet && globalThis.XLSX?.writeFile) return globalThis.XLSX;
+  if (!catalogoXlsxPromise) {
+    catalogoXlsxPromise = new Promise((resolve, reject) => {
+      const existente = document.querySelector('script[data-catalogo-xlsx="1"], script[data-autoservicio-xlsx="1"]');
+      const completar = () => globalThis.XLSX?.utils?.aoa_to_sheet && globalThis.XLSX?.writeFile
+        ? resolve(globalThis.XLSX)
+        : reject(new Error("No se pudo cargar el generador de Excel"));
+      if (existente) {
+        if (globalThis.XLSX?.utils?.aoa_to_sheet && globalThis.XLSX?.writeFile) return completar();
+        existente.addEventListener("load", completar, { once: true });
+        existente.addEventListener("error", () => reject(new Error("No se pudo cargar el generador de Excel")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.dataset.catalogoXlsx = "1";
+      script.src = new URL("./xlsx.full.min.js", import.meta.url).href;
+      script.onload = completar;
+      script.onerror = () => reject(new Error("No se pudo cargar el generador de Excel"));
+      document.head.appendChild(script);
+    }).catch((error) => { catalogoXlsxPromise = null; throw error; });
+  }
+  return catalogoXlsxPromise;
+}
 const estado = {
   activo: false,
   tab: "productos",
@@ -235,6 +261,34 @@ async function cargarProductos({ conservarPagina = true } = {}) {
     renderProductos();
   } finally {
     estado.cargando = false;
+  }
+}
+
+async function exportarProductosSinImagenExcel() {
+  const boton = $("catalogBtnExportarSinImagen");
+  if (boton) boton.disabled = true;
+  try {
+    mensaje("Preparando Excel de productos sin imagen…");
+    const [data, XLSX] = await Promise.all([
+      api("/admin/catalogo/productos-sin-imagen"),
+      asegurarXlsxCatalogo(),
+    ]);
+    const productos = Array.isArray(data.productos) ? data.productos : [];
+    const filas = [
+      ["Código de barras", "Producto"],
+      ...productos.map((producto) => [String(producto.codigo || ""), String(producto.nombre || "")]),
+    ];
+    const hoja = XLSX.utils.aoa_to_sheet(filas);
+    hoja["!cols"] = [{ wch: 22 }, { wch: 60 }];
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, "Productos sin imagen");
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(libro, `productos-sin-imagen-${fecha}.xlsx`);
+    mensaje(`${numero(productos.length)} producto(s) sin imagen exportados.`, "ok");
+  } catch (e) {
+    mensaje(e.message || "No se pudo generar el Excel");
+  } finally {
+    if (boton) boton.disabled = false;
   }
 }
 
@@ -1113,6 +1167,7 @@ function bind() {
   $("catalogPedidoGuardarObservaciones")?.addEventListener("click", guardarObservacionesPedido);
   $("catalogPedidoCerrar")?.addEventListener("click", () => cerrarModal("catalogPedidoModal"));
   const abrirCatalogoPublico = () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener");
+  $("catalogBtnExportarSinImagen")?.addEventListener("click", exportarProductosSinImagenExcel);
   $("catalogBtnVerPublico")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnVerPublicoMobile")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());

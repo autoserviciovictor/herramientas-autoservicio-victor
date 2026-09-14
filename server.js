@@ -69,6 +69,7 @@ const {
   actualizarRubroCatalogoAdminDb,
   eliminarRubroCatalogoAdminDb,
   listarProductosCatalogoAdminDb,
+  listarProductosSinImagenDb,
   obtenerProductoCatalogoAdminDb,
   actualizarProductoCatalogoAdminDb,
   actualizarVisibilidadProductoCatalogoAdminDb,
@@ -1749,6 +1750,16 @@ app.get("/admin/catalogo/productos", requerirAdministrador, async (req, res) => 
   } catch (error) {
     console.error("Error listando productos administrativos del catálogo:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudieron cargar los productos" });
+  }
+});
+
+app.get("/admin/catalogo/productos-sin-imagen", requerirAdministrador, async (req, res) => {
+  try {
+    const productos = await listarProductosSinImagenDb();
+    res.json({ ok: true, total: productos.length, productos });
+  } catch (error) {
+    console.error("Error exportando productos sin imagen:", error);
+    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo generar el listado" });
   }
 });
 
