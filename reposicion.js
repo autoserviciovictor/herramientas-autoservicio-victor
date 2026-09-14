@@ -544,7 +544,7 @@ function cerrarEscribirModal() {
 }
 
 export function prepararReposicion() {
-  cargarProductosMaestroRepo();
+  cargarProductosMaestroRepo({ forzar: true });
   tab = "registro";
   filtroEstado = "todos";
   cerrarMenuCarga();
@@ -725,7 +725,7 @@ async function sincronizarReposicionAlVolver() {
   ultimaSincronizacionAutomatica = ahora;
   await Promise.allSettled([
     refrescarReposicion({ mostrarCarga: false }),
-    cargarProductosMaestroRepo(),
+    cargarProductosMaestroRepo({ forzar: true }),
   ]);
 }
 function limpiarSugerenciasRepo() {

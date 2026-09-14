@@ -579,7 +579,7 @@ async function abrirCargaInventario() {
   inventarioRetornoCarga = pantallaActualApp;
   resetearCargaInventario();
   try {
-    await cargarCatalogoMaestroDesdeServidor();
+    await cargarCatalogoMaestroDesdeServidor({ forzar: true });
   } catch (error) {
     console.warn("No se pudo precargar el catálogo maestro para Inventario", error);
   }
@@ -2638,7 +2638,7 @@ async function cargarListadoVencimientos(opciones = {}) {
 
     const [vencimientos] = await Promise.all([
       listarVencimientos(),
-      cargarCatalogoMaestroDesdeServidor().catch((error) => {
+      cargarCatalogoMaestroDesdeServidor({ forzar: true }).catch((error) => {
         console.warn(
           "No se pudo cargar el catálogo de precios para Vencimientos",
           error,

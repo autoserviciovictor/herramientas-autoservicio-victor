@@ -466,7 +466,7 @@ async function activar() {
   renderUltimo(null);
   renderRecientes();
   actualizarFab();
-  cargarProductos().catch(() => {});
+  cargarProductos({ forzar: true }).catch(() => {});
 }
 
 function reiniciarModuloPrecios() {

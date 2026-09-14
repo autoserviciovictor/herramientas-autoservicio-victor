@@ -412,7 +412,7 @@ async function abrirScanner() {
   modal?.setAttribute("aria-hidden", "false");
   scannerAbierto = true;
   resetearCargaScanner();
-  await cargarCatalogo().catch(() => {});
+  await cargarCatalogo({ forzar: true }).catch(() => {});
 }
 
 async function abrirScannerDirecto() {
@@ -422,7 +422,7 @@ async function abrirScannerDirecto() {
   modal?.setAttribute("aria-hidden", "false");
   scannerAbierto = true;
   resetearCargaScanner();
-  await cargarCatalogo().catch(() => {});
+  await cargarCatalogo({ forzar: true }).catch(() => {});
   if (scannerAbierto) await iniciarCamaraEtiquetas();
 }
 

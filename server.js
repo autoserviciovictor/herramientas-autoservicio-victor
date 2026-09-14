@@ -4576,6 +4576,74 @@ function normalizarProductoImportado(item) {
   return { codigo, articulo, precio, rubro };
 }
 
+async function sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente) {
+  const filas = (catalogo || [])
+    .map((producto) => ({
+      code: normalizarCodigo(producto?.codigo),
+      article: normalizarTexto(producto?.articulo),
+    }))
+    .filter((producto) => producto.code && producto.article);
+
+  if (!filas.length) {
+    return { inventario: 0, vencimientos: 0, reposicion: 0 };
+  }
+
+  const json = JSON.stringify(filas);
+
+  // Inventario conserva cantidades y ubicaciones, pero el nombre siempre debe
+  // reflejar Productos. Además dejamos el registro pendiente para que la hoja
+  // Stock de Google Sheets reciba también el nombre actualizado.
+  const inventario = await cliente.query(`
+    WITH maestros AS (
+      SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, article TEXT)
+    ), actualizados AS (
+      UPDATE inventory_stock i
+      SET article=m.article, updated_at=NOW()
+      FROM maestros m
+      WHERE i.code=m.code AND i.article IS DISTINCT FROM m.article
+      RETURNING i.inventory_id
+    )
+    INSERT INTO inventory_sheet_sync(inventory_id,pending,attempts,last_error,updated_at)
+    SELECT inventory_id,TRUE,0,'',NOW() FROM actualizados
+    ON CONFLICT(inventory_id) DO UPDATE
+      SET pending=TRUE, attempts=0, last_error='', updated_at=NOW()
+    RETURNING inventory_id
+  `, [json]);
+
+  // Vencimientos conserva fecha, cantidad, oferta y rubro operativo. El nombre
+  // del producto se sincroniza por código. El precio no se duplica acá: la UI
+  // lo obtiene del catálogo maestro, por lo que cambia automáticamente.
+  const vencimientos = await cliente.query(`
+    WITH maestros AS (
+      SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, article TEXT)
+    )
+    UPDATE expiration_records e
+    SET article=m.article, updated_at=NOW()
+    FROM maestros m
+    WHERE e.code=m.code AND e.article IS DISTINCT FROM m.article
+    RETURNING e.expiration_pk
+  `, [json]);
+
+  // Las listas de reposición son registros activos de la app, por eso también
+  // deben mostrar el nombre maestro vigente sin alterar cantidades ni estado.
+  const reposicion = await cliente.query(`
+    WITH maestros AS (
+      SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, article TEXT)
+    )
+    UPDATE replenishment_list_entries r
+    SET article=m.article, updated_at=NOW()
+    FROM maestros m
+    WHERE r.code=m.code AND r.article IS DISTINCT FROM m.article
+    RETURNING r.entry_pk
+  `, [json]);
+
+  return {
+    inventario: inventario.rowCount || 0,
+    vencimientos: vencimientos.rowCount || 0,
+    reposicion: reposicion.rowCount || 0,
+  };
+}
+
 async function ejecutarImportacionProductos(items, aplicarCambios = true) {
   // El archivo importado pasa a ser la fuente completa del catálogo.
   // No se comparan altas ni modificaciones: Productos se reemplaza entero.
@@ -4606,17 +4674,26 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
       "No se encontraron productos válidos para reemplazar el catálogo",
     );
 
+  let resumenSincronizacion = null;
+
   if (aplicarCambios) {
     // Los esquemas se crean fuera de la transacción de datos. El reemplazo
     // del catálogo y la sincronización de rubros se confirman juntos: si una
     // parte falla, PostgreSQL revierte ambas.
     await asegurarInventarioProductosPostgres();
     await asegurarEsquemaCatalogoPublico();
-    await conTransaccionInventarioProductos(async (cliente) => {
+    await asegurarEsquemaVencimientos();
+    await asegurarEsquemaListasReposicion();
+    const sincronizacion = await conTransaccionInventarioProductos(async (cliente) => {
       await reemplazarCatalogoDb(catalogo, cliente);
-      await sincronizarRubrosImportadosCatalogoDb(catalogo, cliente);
+      const rubros = await sincronizarRubrosImportadosCatalogoDb(catalogo, cliente);
+      const dependencias = await sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente);
+      return { rubros, dependencias };
     });
-    invalidarCache("productosMaestros");
+    // Productos afecta tanto el catálogo maestro como los nombres visibles del
+    // Inventario. Invalidamos ambos cachés en el mismo instante de la importación.
+    invalidarCache("productosMaestros", "productos");
+    resumenSincronizacion = sincronizacion;
   }
 
   const rubros = new Set(catalogo.map((p) => p.rubro).filter(Boolean));
@@ -4628,6 +4705,15 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     rubrosDetectados: rubros.size,
     productosSinRubro,
     reemplazoCompleto: true,
+    sincronizacion: aplicarCambios
+      ? {
+          inventario: Number(resumenSincronizacion?.dependencias?.inventario) || 0,
+          vencimientos: Number(resumenSincronizacion?.dependencias?.vencimientos) || 0,
+          reposicion: Number(resumenSincronizacion?.dependencias?.reposicion) || 0,
+          productosAsignadosRubro: Number(resumenSincronizacion?.rubros?.productosAsignados) || 0,
+          productosSinRubro: Number(resumenSincronizacion?.rubros?.productosSinRubro) || 0,
+        }
+      : null,
   };
 }
 

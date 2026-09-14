@@ -2124,7 +2124,9 @@ function construirResumenImportacionFinal(r) {
   const detalleAdvertencias = advertencias.length
     ? `<br><span>Advertencias: ${advertencias.join(" · ")}.</span>`
     : "";
-  return `<strong>Catálogo reemplazado</strong><span>Se guardaron ${r.totalCatalogo || r.procesados || 0} productos.</span>${detalleAdvertencias}<span>La hoja Stock no fue modificada.</span>`;
+  const sync = r.sincronizacion || {};
+  const detalleSync = `<span>Sincronización automática: ${Number(sync.inventario) || 0} nombre(s) actualizados en Inventario · ${Number(sync.vencimientos) || 0} en Vencimientos · ${Number(sync.reposicion) || 0} en Reposición.</span><span>Precios y nombres del catálogo público se actualizan desde Productos, y los cambios de rubro se reasignan automáticamente por código.</span>`;
+  return `<strong>Catálogo reemplazado y sincronizado</strong><span>Se guardaron ${r.totalCatalogo || r.procesados || 0} productos.</span>${detalleAdvertencias}${detalleSync}<span>Las cantidades de Stock, vencimientos y listas no fueron modificadas.</span>`;
 }
 
 async function confirmarImportacionCatalogo() {
