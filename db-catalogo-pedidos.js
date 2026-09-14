@@ -62,6 +62,19 @@ async function asegurarEsquemaCatalogoPedidos() {
       CONSTRAINT catalog_orders_customer_phone_nonempty CHECK (length(btrim(customer_phone)) >= 8)
     )`);
 
+    // Migración compatible con instalaciones donde catalog_orders ya existía
+    // antes de incorporar client_token. CREATE TABLE IF NOT EXISTS no agrega
+    // columnas nuevas sobre una tabla existente, por eso se asegura aquí.
+    await query(`ALTER TABLE catalog_orders
+      ADD COLUMN IF NOT EXISTS client_token TEXT`);
+    await query(`UPDATE catalog_orders
+      SET client_token='legacy_' || order_id::text
+      WHERE client_token IS NULL OR btrim(client_token)=''`);
+    await query(`ALTER TABLE catalog_orders
+      ALTER COLUMN client_token SET NOT NULL`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS catalog_orders_client_token_unique_idx
+      ON catalog_orders(client_token)`);
+
     await query(`CREATE INDEX IF NOT EXISTS catalog_orders_created_idx ON catalog_orders(created_at DESC)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_orders_status_idx ON catalog_orders(status, created_at DESC)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_orders_phone_idx ON catalog_orders(customer_phone, created_at DESC)`);

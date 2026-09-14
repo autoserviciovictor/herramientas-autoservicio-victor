@@ -6905,6 +6905,7 @@ async function prepararPostgresEtapa9() {
   await asegurarTareasBanoPostgres();
   await asegurarInventarioProductosPostgres();
   await asegurarEsquemaCatalogoPublico();
+  await asegurarEsquemaCatalogoPedidos();
   await asegurarVencimientosPostgres();
   await asegurarListasReposicionPostgres();
   await asegurarAuxiliaresPostgres();
