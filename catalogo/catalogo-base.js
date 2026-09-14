@@ -1,5 +1,14 @@
-import { API_BASE_URL } from "./config-publico.js";
-import { CATALOGO_PEDIDO_CONFIG } from "./catalogo-pedido-config.js?v=1960-d21-cierre-etapa6-010926";
+const API_BASE_URL = "https://inventario-victor-api.onrender.com";
+const CATALOGO_PEDIDO_CONFIG = Object.freeze({
+  negocio: "Autoservicio Victor",
+  whatsappNumero: "5492994670570",
+  pedidoMinimoDelivery: 50000,
+  horariosDelivery: ["12:00", "17:00"],
+  formasPago: ["Efectivo", "Tarjeta", "Transferencia", "Mercado Pago"],
+  notaDelivery: "Los horarios de entrega están sujetos a confirmación.",
+  notaFinDeSemana: "Sábados y domingos: si pedís de 09:00 a 12:00, entregamos tu pedido al mediodía.",
+  notaFeriado: "Feriados sin delivery.",
+});
 
 const CART_STORAGE_KEY = "autoservicio-victor-catalogo-carrito-v1";
 const CHECKOUT_STORAGE_KEY = "autoservicio-victor-catalogo-checkout-v1";
