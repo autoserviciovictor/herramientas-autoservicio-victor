@@ -1118,6 +1118,44 @@ app.post("/catalogo/api/pedidos/:numero/whatsapp-abierto", async (req, res) => {
   }
 });
 
+
+// Catálogo público independiente.
+// Se sirve únicamente la carpeta /catalogo en esta ruta; la aplicación interna
+// no queda expuesta por este enlace.
+const CATALOGO_PUBLIC_DIR = path.join(__dirname, "catalogo");
+
+app.get("/catalogo", (_req, res) => {
+  res.redirect(301, "/catalogo/");
+});
+
+app.use("/catalogo", (req, res, next) => {
+  res.set({
+    "Content-Security-Policy": [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "connect-src 'self' https://inventario-victor-api.onrender.com",
+      "font-src 'self' data:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; "),
+    "X-Robots-Tag": "index, follow",
+  });
+  next();
+});
+
+app.use(
+  "/catalogo",
+  express.static(CATALOGO_PUBLIC_DIR, {
+    index: "index.html",
+    fallthrough: true,
+    maxAge: ES_PRODUCCION ? "1h" : 0,
+  }),
+);
+
 app.get("/auth/google/config", (req, res) => {
   res.json({
     ok: true,

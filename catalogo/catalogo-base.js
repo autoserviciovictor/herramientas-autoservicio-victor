@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../config.js?v=1960-d21-cierre-etapa6-010926";
+import { API_BASE_URL } from "./config-publico.js";
 import { CATALOGO_PEDIDO_CONFIG } from "./catalogo-pedido-config.js?v=1960-d21-cierre-etapa6-010926";
 
 const CART_STORAGE_KEY = "autoservicio-victor-catalogo-carrito-v1";
