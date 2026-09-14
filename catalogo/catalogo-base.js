@@ -423,23 +423,48 @@ async function enviarPedidoWhatsApp() {
   state.enviandoPedido = true;
   if (els.checkoutEnviarWhatsapp) {
     els.checkoutEnviarWhatsapp.disabled = true;
-    els.checkoutEnviarWhatsapp.textContent = "Registrando pedido...";
+    els.checkoutEnviarWhatsapp.textContent = "Preparando WhatsApp...";
   }
   mensajeCheckout(els.checkoutMensajePaso3, "");
 
+  let pedido = null;
+  let errorRegistro = null;
+
   try {
-    const pedido = await registrarPedidoCatalogo();
-    mensajeCheckout(els.checkoutMensajePaso3, `Pedido ${pedido.numero} registrado correctamente. Abriendo WhatsApp...`, "ok");
+    try {
+      pedido = await registrarPedidoCatalogo();
+    } catch (error) {
+      errorRegistro = error;
+      state.pedidoRegistrado = null;
+    }
 
     const url = `https://wa.me/${numero}?text=${encodeURIComponent(generarMensajePedido())}`;
-    window.open(url, "_blank", "noopener,noreferrer");
 
-    fetch(`${API_BASE_URL}/catalogo/api/pedidos/${encodeURIComponent(pedido.numero)}/whatsapp-abierto`, {
-      method: "POST",
-      keepalive: true,
-    }).catch(() => {});
-  } catch (error) {
-    mensajeCheckout(els.checkoutMensajePaso3, error?.message || "No se pudo registrar el pedido. No se abrió WhatsApp.", "error");
+    // Abrir WhatsApp aunque el guardado interno falle. El cliente no debe perder
+    // la posibilidad de enviar su pedido por un problema temporal de registro.
+    window.location.href = url;
+
+    if (pedido?.numero) {
+      fetch(`${API_BASE_URL}/catalogo/api/pedidos/${encodeURIComponent(pedido.numero)}/whatsapp-abierto`, {
+        method: "POST",
+        keepalive: true,
+      }).catch(() => {});
+    }
+
+    if (errorRegistro) {
+      mensajeCheckout(
+        els.checkoutMensajePaso3,
+        "WhatsApp se abrió correctamente. El pedido no pudo guardarse automáticamente en el sistema interno.",
+        "error",
+      );
+      console.error("No se pudo registrar el pedido antes de abrir WhatsApp:", errorRegistro);
+    } else if (pedido?.numero) {
+      mensajeCheckout(
+        els.checkoutMensajePaso3,
+        `Pedido ${pedido.numero} registrado correctamente. Abriendo WhatsApp...`,
+        "ok",
+      );
+    }
   } finally {
     state.enviandoPedido = false;
     if (els.checkoutEnviarWhatsapp) {
