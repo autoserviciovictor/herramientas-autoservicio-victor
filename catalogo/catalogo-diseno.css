@@ -386,3 +386,117 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
   .cart-button__badge{top:-3px;left:12px;border:2px solid #fff;z-index:2}
   .cart-button__copy{padding-left:2px;min-width:92px}
 }
+
+/* =========================================================
+   DISEÑO DEFINIDO - ENCABEZADO "MÁS VENDIDOS"
+   Única regla final para escritorio y móvil.
+   ========================================================= */
+.catalogo-best-sellers .catalogo-section-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  column-gap:16px;
+  width:100%;
+  min-width:0;
+}
+
+.catalogo-best-sellers .catalogo-section-head h2{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  margin:0;
+  color:#111318;
+  font-size:30px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:-.035em;
+  white-space:nowrap;
+}
+
+.catalogo-best-sellers .catalogo-section-head h2 > span{
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  width:42px;
+  height:42px;
+  margin:0;
+  border-radius:50%;
+  background:#ef1726;
+  color:#fff;
+  font-size:22px;
+  line-height:1;
+}
+
+.catalogo-best-sellers .catalogo-link-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:5px;
+  flex:0 0 auto;
+  margin:0;
+  padding:4px 0;
+  border:0;
+  background:transparent;
+  color:#ef1726;
+  font-size:14px;
+  line-height:1;
+  font-weight:800;
+  white-space:nowrap;
+  text-decoration:underline;
+  text-underline-offset:4px;
+}
+
+.catalogo-best-sellers .catalogo-link-button > span{
+  font-size:18px;
+  line-height:1;
+  text-decoration:none;
+}
+
+@media (max-width:768px){
+  .catalogo-best-sellers .catalogo-section-head{
+    column-gap:10px;
+  }
+
+  .catalogo-best-sellers .catalogo-section-head h2{
+    gap:10px;
+    font-size:clamp(23px,7vw,28px);
+  }
+
+  .catalogo-best-sellers .catalogo-section-head h2 > span{
+    flex-basis:40px;
+    width:40px;
+    height:40px;
+    font-size:21px;
+  }
+
+  .catalogo-best-sellers .catalogo-link-button{
+    font-size:12px;
+  }
+
+  .catalogo-best-sellers .catalogo-link-button > span{
+    font-size:16px;
+  }
+}
+
+@media (max-width:380px){
+  .catalogo-best-sellers .catalogo-section-head{
+    column-gap:7px;
+  }
+
+  .catalogo-best-sellers .catalogo-section-head h2{
+    gap:8px;
+    font-size:22px;
+  }
+
+  .catalogo-best-sellers .catalogo-section-head h2 > span{
+    flex-basis:36px;
+    width:36px;
+    height:36px;
+    font-size:19px;
+  }
+
+  .catalogo-best-sellers .catalogo-link-button{
+    font-size:11px;
+  }
+}
