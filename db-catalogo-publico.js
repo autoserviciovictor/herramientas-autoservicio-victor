@@ -171,7 +171,7 @@ async function listarRubrosPublicosDb() {
     LEFT JOIN catalog_product_settings s
       ON s.category_id=c.category_id AND s.visible=TRUE
     LEFT JOIN product_catalog p
-      ON p.code=s.code
+      ON p.code=s.code AND p.stock > 0
     WHERE c.active=TRUE
     GROUP BY c.category_id, c.name, c.slug, c.description, c.image_url, c.sort_order
     HAVING COUNT(p.code) > 0
@@ -198,7 +198,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const rubro = String(opciones.rubro || "").trim().slice(0, 80);
   const destacado = opciones.destacado === true;
 
-  const condiciones = ["s.visible=TRUE", "c.active=TRUE"];
+  const condiciones = ["s.visible=TRUE", "c.active=TRUE", "p.stock > 0"];
   const parametros = [];
 
   if (busqueda) {
@@ -417,6 +417,36 @@ async function eliminarRubroCatalogoAdminDb(id) {
   const r = await query(`DELETE FROM catalog_categories WHERE category_id=$1`, [rubroId]);
   if (!r.rowCount) throw new Error("El rubro no existe");
   return true;
+}
+
+async function sincronizarVisibilidadStockCatalogoDb(productos = [], cliente = null) {
+  if (!cliente) await asegurarEsquemaCatalogoPublico();
+
+  const filas = (productos || [])
+    .map((producto) => {
+      const code = textoLimitado(producto?.codigo, 160);
+      const stock = Number(producto?.stock);
+      if (!code) return null;
+      return { code, visible: Number.isFinite(stock) && stock > 0 };
+    })
+    .filter(Boolean);
+
+  if (!filas.length) return { activos: 0, desactivados: 0 };
+
+  // La importación del Excel manda sobre la visibilidad comercial: stock > 0
+  // publica; stock <= 0 (o inválido, normalizado a 0) oculta. Se preservan
+  // imágenes, rubro, marca, presentación, unidad y destacado.
+  await ejecutarConsultaCatalogo(cliente, `
+    INSERT INTO catalog_product_settings(code, visible, updated_at)
+    SELECT x.code, x.visible, NOW()
+    FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, visible BOOLEAN)
+    JOIN product_catalog p ON p.code=x.code
+    ON CONFLICT(code) DO UPDATE
+      SET visible=EXCLUDED.visible, updated_at=NOW()
+  `, [JSON.stringify(filas)]);
+
+  const activos = filas.filter((fila) => fila.visible).length;
+  return { activos, desactivados: filas.length - activos };
 }
 
 async function sincronizarRubrosImportadosCatalogoDb(productos = [], cliente = null) {
@@ -1013,7 +1043,8 @@ async function listarPendientesProcesoImagenesDb(limite = 10) {
     SELECT p.code
     FROM product_catalog p
     LEFT JOIN catalog_product_settings s ON s.code=p.code
-    WHERE COALESCE(s.image_status,'sin_imagen') <> 'confirmada'
+    WHERE p.stock > 0
+      AND COALESCE(s.image_status,'sin_imagen') <> 'confirmada'
       AND s.image_data IS NULL
       AND (s.image_checked_at IS NULL OR s.image_checked_at < $2)
     ORDER BY s.image_checked_at NULLS FIRST, p.catalog_id
@@ -1049,5 +1080,6 @@ module.exports = {
   finalizarProcesoImagenesDb,
   sumarResultadoProcesoImagenesDb,
   listarPendientesProcesoImagenesDb,
+  sincronizarVisibilidadStockCatalogoDb,
   sincronizarRubrosImportadosCatalogoDb,
 };

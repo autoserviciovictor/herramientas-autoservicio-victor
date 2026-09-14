@@ -1828,6 +1828,22 @@ function parsearPrecioImportacion(valor) {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+function parsearStockImportacion(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
+  let texto = String(valor).trim().replace(/\s/g, "");
+  if (!texto) return null;
+  if (texto.includes(",") && texto.includes("."))
+    texto =
+      texto.lastIndexOf(",") > texto.lastIndexOf(".")
+        ? texto.replace(/\./g, "").replace(",", ".")
+        : texto.replace(/,/g, "");
+  else if (texto.includes(","))
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : null;
+}
+
 function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   importacionResumenPendiente = resumen;
   $("adminImportarPreviewArchivo").textContent = archivoNombre;
@@ -1877,6 +1893,14 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
     advertencias.push(
       `${resumen.preciosInvalidos} precio(s) inválido(s); se guardarán vacíos`,
     );
+  if (resumen.stocksInvalidos)
+    advertencias.push(
+      `${resumen.stocksInvalidos} stock(s) inválido(s); se tomarán como 0 y quedarán fuera del catálogo`,
+    );
+  if (resumen.productosSinStock)
+    advertencias.push(
+      `${resumen.productosSinStock} producto(s) con stock 0 o negativo quedarán desactivados`,
+    );
   if (resumen.productosSinRubro)
     advertencias.push(
       `${resumen.productosSinRubro} producto(s) no quedaron asociados a un rubro del Excel`,
@@ -1922,6 +1946,9 @@ function extraerProductosImportacion(filas, columnas) {
     sinArticulo: 0,
     codigosInvalidos: 0,
     preciosInvalidos: 0,
+    stocksInvalidos: 0,
+    productosConStock: 0,
+    productosSinStock: 0,
     duplicadosArchivo: 0,
     filasIgnoradas: 0,
     productosSinRubro: 0,
@@ -1950,6 +1977,15 @@ function extraerProductosImportacion(filas, columnas) {
     const precio = columnas.rangos.precio
       ? parsearPrecioImportacion(precioOriginal)
       : null;
+    const stockOriginal = columnas.rangos.stock
+      ? leerCampoImportacion(fila, columnas.rangos.stock)
+      : "";
+    const stockParseado = columnas.rangos.stock
+      ? parsearStockImportacion(stockOriginal)
+      : null;
+    // Un stock vacío o inválido se trata como 0 por seguridad: el producto
+    // queda fuera del catálogo público hasta que llegue un valor positivo.
+    const stock = stockParseado === null ? 0 : stockParseado;
 
     // En el Inventario Valuado los rubros aparecen como una fila independiente
     // en la columna Código (por ejemplo ADEREZOS, BEBIDAS, LACTEOS), sin
@@ -1960,7 +1996,8 @@ function extraerProductosImportacion(filas, columnas) {
       posibleRubro &&
       !/^\d+$/.test(limpiarCodigoImportacion(posibleRubro)) &&
       !articulo &&
-      String(precioOriginal ?? "").trim() === "",
+      String(precioOriginal ?? "").trim() === "" &&
+      String(stockOriginal ?? "").trim() === "",
     );
     if (filaEsRubro) {
       rubroActual = posibleRubro;
@@ -1989,6 +2026,12 @@ function extraerProductosImportacion(filas, columnas) {
       precio === null
     )
       estadisticas.preciosInvalidos++;
+    if (
+      columnas.rangos.stock &&
+      String(stockOriginal ?? "").trim() !== "" &&
+      stockParseado === null
+    )
+      estadisticas.stocksInvalidos++;
     const clave = claveCodigoImportacion(codigo);
     if (mapa.has(clave)) estadisticas.duplicadosArchivo++;
 
@@ -1997,10 +2040,13 @@ function extraerProductosImportacion(filas, columnas) {
     // Los códigos numéricos con y sin ceros iniciales representan el mismo
     // producto (por ejemplo 00663 y 663). Se conserva la última aparición,
     // incluyendo el rubro detectado para esa fila.
-    mapa.set(clave, { codigo, articulo, precio, rubro: rubroActual });
+    mapa.set(clave, { codigo, articulo, precio, stock, rubro: rubroActual });
   }
+  const productos = [...mapa.values()];
+  estadisticas.productosConStock = productos.filter((producto) => Number(producto.stock) > 0).length;
+  estadisticas.productosSinStock = productos.length - estadisticas.productosConStock;
   estadisticas.rubrosDetectados = rubrosDetectados.size;
-  return { productos: [...mapa.values()], ...estadisticas };
+  return { productos, ...estadisticas };
 }
 
 async function importarArchivoCatalogo(archivo) {
@@ -2028,6 +2074,7 @@ async function importarArchivoCatalogo(archivo) {
   const columnas = hojaEncontrada ? detectarColumnasImportacion(filas) : null;
   const tieneCodigo = Boolean(columnas?.rangos?.codigo);
   const tieneArticulo = Boolean(columnas?.rangos?.articulo);
+  const tieneStock = Boolean(columnas?.rangos?.stock);
   const tienePrecio = Boolean(columnas?.rangos?.precio);
   const extraidos = columnas
     ? extraerProductosImportacion(filas, columnas)
@@ -2038,6 +2085,9 @@ async function importarArchivoCatalogo(archivo) {
         sinArticulo: 0,
         codigosInvalidos: 0,
         preciosInvalidos: 0,
+        stocksInvalidos: 0,
+        productosConStock: 0,
+        productosSinStock: 0,
         duplicadosArchivo: 0,
         filasIgnoradas: 0,
         productosSinRubro: 0,
@@ -2054,6 +2104,7 @@ async function importarArchivoCatalogo(archivo) {
     },
     { ok: tieneCodigo, texto: "Columna Código encontrada" },
     { ok: tieneArticulo, texto: "Columna Artículo encontrada" },
+    { ok: tieneStock, texto: "Columna Stock encontrada" },
     { ok: tienePrecio, texto: "Columna Precio encontrada" },
     {
       ok: extraidos.rubrosDetectados > 0,
@@ -2121,12 +2172,14 @@ function construirResumenImportacionFinal(r) {
     advertencias.push(`${r.filasIgnoradas} fila(s) ignorada(s)`);
   if (r.preciosInvalidos)
     advertencias.push(`${r.preciosInvalidos} precio(s) inválido(s)`);
+  if (r.stocksInvalidos)
+    advertencias.push(`${r.stocksInvalidos} stock(s) inválido(s) tratados como 0`);
   const detalleAdvertencias = advertencias.length
     ? `<br><span>Advertencias: ${advertencias.join(" · ")}.</span>`
     : "";
   const sync = r.sincronizacion || {};
-  const detalleSync = `<span>Sincronización automática: ${Number(sync.inventario) || 0} nombre(s) actualizados en Inventario · ${Number(sync.vencimientos) || 0} en Vencimientos · ${Number(sync.reposicion) || 0} en Reposición.</span><span>Precios y nombres del catálogo público se actualizan desde Productos, y los cambios de rubro se reasignan automáticamente por código.</span>`;
-  return `<strong>Catálogo reemplazado y sincronizado</strong><span>Se guardaron ${r.totalCatalogo || r.procesados || 0} productos.</span>${detalleAdvertencias}${detalleSync}<span>Las cantidades de Stock, vencimientos y listas no fueron modificadas.</span>`;
+  const detalleSync = `<span>Sincronización automática: ${Number(sync.inventario) || 0} nombre(s) actualizados en Inventario · ${Number(sync.vencimientos) || 0} en Vencimientos · ${Number(sync.reposicion) || 0} en Reposición.</span><span>Catálogo público por stock: ${Number(sync.productosActivos) || 0} activo(s) con stock mayor a 0 · ${Number(sync.productosDesactivados) || 0} desactivado(s) con stock 0 o negativo.</span><span>Precios, nombres y rubros se sincronizan automáticamente por código.</span>`;
+  return `<strong>Catálogo reemplazado y sincronizado</strong><span>Se guardaron ${r.totalCatalogo || r.procesados || 0} productos.</span>${detalleAdvertencias}${detalleSync}<span>Las cantidades de Inventario, vencimientos y listas no fueron modificadas.</span>`;
 }
 
 async function confirmarImportacionCatalogo() {

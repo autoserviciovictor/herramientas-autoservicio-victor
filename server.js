@@ -76,6 +76,7 @@ const {
   confirmarCandidatoImagenCatalogoDb,
   obtenerImagenCatalogoDb,
   quitarImagenCatalogoDb,
+  sincronizarVisibilidadStockCatalogoDb,
   sincronizarRubrosImportadosCatalogoDb,
 } = require("./db-catalogo-publico");
 const {
@@ -4601,13 +4602,30 @@ app.get("/", (req, res) => {
 const IMPORTACION_MAX_FILAS = 30000;
 let importacionProductosEnCurso = Promise.resolve();
 
+function numeroStockImportado(valor) {
+  if (valor === null || valor === undefined || valor === "") return 0;
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+  let texto = String(valor).trim().replace(/\s/g, "");
+  if (!texto) return 0;
+  if (texto.includes(",") && texto.includes("."))
+    texto =
+      texto.lastIndexOf(",") > texto.lastIndexOf(".")
+        ? texto.replace(/\./g, "").replace(",", ".")
+        : texto.replace(/,/g, "");
+  else if (texto.includes(","))
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function normalizarProductoImportado(item) {
   const codigo = normalizarCodigo(item?.codigo);
   const articulo = normalizarTexto(item?.articulo);
   const precio = numeroPrecio(item?.precio);
+  const stock = numeroStockImportado(item?.stock);
   const rubro = normalizarTexto(item?.rubro).slice(0, 80);
   if (!codigo || !articulo) return null;
-  return { codigo, articulo, precio, rubro };
+  return { codigo, articulo, precio, stock, rubro };
 }
 
 async function sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente) {
@@ -4721,8 +4739,9 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     const sincronizacion = await conTransaccionInventarioProductos(async (cliente) => {
       await reemplazarCatalogoDb(catalogo, cliente);
       const rubros = await sincronizarRubrosImportadosCatalogoDb(catalogo, cliente);
+      const stockCatalogo = await sincronizarVisibilidadStockCatalogoDb(catalogo, cliente);
       const dependencias = await sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente);
-      return { rubros, dependencias };
+      return { rubros, stockCatalogo, dependencias };
     });
     // Productos afecta tanto el catálogo maestro como los nombres visibles del
     // Inventario. Invalidamos ambos cachés en el mismo instante de la importación.
@@ -4746,6 +4765,8 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
           reposicion: Number(resumenSincronizacion?.dependencias?.reposicion) || 0,
           productosAsignadosRubro: Number(resumenSincronizacion?.rubros?.productosAsignados) || 0,
           productosSinRubro: Number(resumenSincronizacion?.rubros?.productosSinRubro) || 0,
+          productosActivos: Number(resumenSincronizacion?.stockCatalogo?.activos) || 0,
+          productosDesactivados: Number(resumenSincronizacion?.stockCatalogo?.desactivados) || 0,
         }
       : null,
   };

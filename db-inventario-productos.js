@@ -42,9 +42,11 @@ async function asegurarEsquemaInventarioProductos() {
       code TEXT NOT NULL,
       article TEXT NOT NULL,
       price DOUBLE PRECISION,
+      stock DOUBLE PRECISION NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await query(`ALTER TABLE product_catalog ADD COLUMN IF NOT EXISTS stock DOUBLE PRECISION NOT NULL DEFAULT 0`);
     await query(`CREATE INDEX IF NOT EXISTS product_catalog_code_idx ON product_catalog(code)`);
     await query(`CREATE INDEX IF NOT EXISTS product_catalog_article_idx ON product_catalog(article)`);
     esquemaAsegurado = true;
@@ -97,6 +99,7 @@ function filaCatalogo(row) {
     codigo: String(row.code || ""),
     articulo: String(row.article || ""),
     precio: row.price === null || row.price === undefined ? null : Number(row.price),
+    stock: Number(row.stock) || 0,
   };
 }
 
@@ -149,15 +152,16 @@ async function importarInventarioProductosAtomico(datos, claveMigracion) {
           price: producto?.precio === null || producto?.precio === undefined || producto?.precio === ""
             ? null
             : Number(producto.precio),
+          stock: Number.isFinite(Number(producto?.stock)) ? Number(producto.stock) : 0,
         };
       })
       .filter(Boolean);
     if (catalogo.length) {
       await cliente.query(
-        `INSERT INTO product_catalog(legacy_row,code,article,price)
-         SELECT legacy_row,code,article,price
+        `INSERT INTO product_catalog(legacy_row,code,article,price,stock)
+         SELECT legacy_row,code,article,price,stock
          FROM jsonb_to_recordset($1::jsonb) AS x(
-           legacy_row INTEGER, code TEXT, article TEXT, price DOUBLE PRECISION
+           legacy_row INTEGER, code TEXT, article TEXT, price DOUBLE PRECISION, stock DOUBLE PRECISION
          )`,
         [JSON.stringify(catalogo)],
       );
@@ -364,7 +368,7 @@ async function actualizarFilaGoogleInventarioDb(inventoryId, filaGoogle, cliente
 async function listarCatalogoDb(cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT code,article,price FROM product_catalog
+    `SELECT code,article,price,stock FROM product_catalog
      ORDER BY COALESCE(legacy_row, 2147483647), catalog_id`,
   );
   return r.rows.map(filaCatalogo);
@@ -373,7 +377,7 @@ async function listarCatalogoDb(cliente = null) {
 async function buscarCatalogoPorCodigoDb(codigo, cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT code,article,price FROM product_catalog WHERE code=$1
+    `SELECT code,article,price,stock FROM product_catalog WHERE code=$1
      ORDER BY COALESCE(legacy_row, 2147483647), catalog_id LIMIT 1`,
     [String(codigo || "")],
   );
@@ -390,15 +394,16 @@ async function reemplazarCatalogoDb(catalogo, cliente = null) {
         price: producto?.precio === null || producto?.precio === undefined || producto?.precio === ""
           ? null
           : Number(producto.precio),
+        stock: Number.isFinite(Number(producto?.stock)) ? Number(producto.stock) : 0,
       }))
       .filter((producto) => producto.code && producto.article);
     await c.query("DELETE FROM product_catalog");
     if (!filas.length) return;
     await c.query(
-      `INSERT INTO product_catalog(legacy_row,code,article,price)
-       SELECT legacy_row,code,article,price
+      `INSERT INTO product_catalog(legacy_row,code,article,price,stock)
+       SELECT legacy_row,code,article,price,stock
        FROM jsonb_to_recordset($1::jsonb) AS x(
-         legacy_row INTEGER, code TEXT, article TEXT, price DOUBLE PRECISION
+         legacy_row INTEGER, code TEXT, article TEXT, price DOUBLE PRECISION, stock DOUBLE PRECISION
        )`,
       [JSON.stringify(filas)],
     );
