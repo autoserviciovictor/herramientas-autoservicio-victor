@@ -1124,10 +1124,6 @@ app.post("/catalogo/api/pedidos/:numero/whatsapp-abierto", async (req, res) => {
 // no queda expuesta por este enlace.
 const CATALOGO_PUBLIC_DIR = path.join(__dirname, "catalogo");
 
-app.get("/catalogo", (_req, res) => {
-  res.redirect(301, "/catalogo/");
-});
-
 app.use("/catalogo", (req, res, next) => {
   res.set({
     "Content-Security-Policy": [
