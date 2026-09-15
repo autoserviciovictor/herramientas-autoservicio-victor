@@ -296,28 +296,17 @@ async function mostrarAvisoPermisoNotificaciones() {
   if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
   const usuarioClave = claveUsuarioSesion();
-  if (!usuarioClave || avisoPermisoUsuario === usuarioClave) return;
+  if (!usuarioClave) return;
 
-  // Con permiso ya concedido, se registra/repara la suscripción en silencio.
-  // La verificación real se hace una vez por usuario en este dispositivo.
+  // Si el permiso real del teléfono ya está concedido, no mostramos ningún cartel.
+  // Sólo reparamos/sincronizamos Push en silencio cuando hace falta.
   if (Notification.permission === "granted") {
+    if (avisoPermisoUsuario === usuarioClave) return;
     avisoPermisoEnCurso = true;
     try {
       const probar = localStorage.getItem(claveEstadoNotificaciones()) !== "activadas";
       const ok = await registrarSuscripcionConReintentos({ probar });
-      if (ok) {
-        avisoPermisoUsuario = usuarioClave;
-        return;
-      }
-
-      // No mostramos un aviso genérico que obligue al usuario a cerrar la app.
-      // El error concreto queda visible en Configuración y registrado de forma segura
-      // en Render mediante /notificaciones/diagnostico-cliente.
-      actualizarEstado(
-        "No se pudo completar el registro Push. El sistema volverá a intentarlo automáticamente.",
-        "error",
-        "error",
-      );
+      if (ok) avisoPermisoUsuario = usuarioClave;
     } finally {
       avisoPermisoEnCurso = false;
     }
@@ -325,42 +314,49 @@ async function mostrarAvisoPermisoNotificaciones() {
   }
 
   const dialogo = window.AppDialog || window.AutoservicioDialog;
-  if (!dialogo?.confirm) {
-    // No marcamos al usuario como avisado: un reintento breve mostrará el cartel
-    // cuando el diálogo compartido termine de inicializarse.
-    return;
-  }
+  if (!dialogo?.confirm) return;
 
   avisoPermisoEnCurso = true;
   try {
-    if (Notification.permission === "denied") {
-      await dialogo.alert({
-        titulo: "Notificaciones bloqueadas",
+    if (Notification.permission === "default") {
+      const aceptar = await dialogo.confirm({
+        titulo: "Activar notificaciones",
         mensaje:
-          "Este dispositivo tiene bloqueadas las notificaciones. Habilitalas desde los permisos del navegador o de la app y después volvé a ingresar.",
-        confirmarTexto: "Entendido",
+          "Permití las notificaciones de Autoservicio para recibir avisos de vencimientos, tareas y limpieza de baño. Sólo tenés que autorizarlo una vez.",
+        confirmarTexto: "Permitir notificaciones",
+        cancelarTexto: "Ahora no",
       });
-      avisoPermisoUsuario = usuarioClave;
-      actualizarEstado(
-        "Notificaciones bloqueadas. Habilitalas desde los permisos del navegador.",
-        "error",
-        "error",
-      );
-      return;
+      if (!aceptar) return;
+
+      // El click en "Permitir notificaciones" es una acción explícita del usuario,
+      // por lo que Android/Chrome puede mostrar el permiso oficial sin salir de la app.
+      const permiso = await Notification.requestPermission();
+      if (permiso === "granted") {
+        actualizarEstado("Activando y verificando notificaciones…", "", "syncing");
+        const ok = await registrarSuscripcionConReintentos({ probar: true });
+        if (ok) avisoPermisoUsuario = usuarioClave;
+        return;
+      }
     }
 
-    // Con permiso en estado "default" no mostramos un cartel intermedio propio.
-    // El prompt nativo de Chrome se solicita directamente desde el click de Ingresar.
+    // Cuando Android ya tiene el permiso bloqueado/denegado, una PWA no puede
+    // concedérselo por código. Seguimos mostrando este aviso en cada nueva sesión
+    // hasta que el permiso real cambie a granted.
+    await dialogo.alert({
+      titulo: "Permitir notificaciones",
+      mensaje:
+        "Android tiene bloqueadas las notificaciones de Autoservicio. Entrá a Información de la aplicación > Notificaciones y activá “Permitir notificaciones”. Este aviso dejará de aparecer apenas el teléfono detecte el permiso.",
+      confirmarTexto: "Entendido",
+    });
     actualizarEstado(
-      "Chrome pedirá permiso para las notificaciones al ingresar.",
-      "",
-      "inactive",
+      "Notificaciones bloqueadas por Android. Activá Permitir notificaciones en los ajustes de Autoservicio.",
+      "error",
+      "error",
     );
   } finally {
     avisoPermisoEnCurso = false;
   }
 }
-
 function programarAvisoPermisoNotificaciones() {
   [0, 250, 1000].forEach((demora) => {
     setTimeout(() => void mostrarAvisoPermisoNotificaciones(), demora);
@@ -398,7 +394,6 @@ function inicializarNotificaciones() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  $("btnLoginIngresar")?.addEventListener("click", solicitarPermisoNativoAlIngresar);
   inicializarNotificaciones();
   if (window.AutoservicioAuth?.getUsuario?.()) programarAvisoPermisoNotificaciones();
 });
