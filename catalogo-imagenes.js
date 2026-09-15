@@ -376,8 +376,8 @@ async function obtenerImagenNormalizadaProducto(codigo, tipo = "candidato") {
   const url = esCandidato ? (producto.candidatoImagen || producto.imagen) : producto.imagen;
   if (!url) throw new Error("El producto no tiene una imagen descargada disponible");
   const original = await descargarImagen(url);
-  const calidad = await analizarCalidadImagen(original);
-  if (!calidad.acepta) throw new Error(`La imagen guardada fue rechazada: ${calidad.motivo}`);
+  // Las imágenes elegidas manualmente no vuelven a pasar por filtros de calidad.
+  // Solo se normalizan al formato interno del catálogo para poder mostrarlas.
   const normalizada = await normalizarImagenCatalogo(original);
   if (esCandidato) {
     await guardarResultadoImagenCatalogoDb(codigo, { candidatoData: normalizada, candidatoMime: "image/jpeg", error: "" });
@@ -400,19 +400,17 @@ async function importarImagenArchivoManual(codigo, buffer, mime = "") {
     error.status = 413;
     throw error;
   }
-  const tipo = String(mime || "").toLowerCase();
-  if (tipo && !["image/jpeg", "image/png", "image/webp"].includes(tipo)) {
-    const error = new Error("Formato no permitido. Usá JPG, PNG o WEBP");
+  // Una carga manual es una decisión explícita del administrador: no se aplican
+  // filtros de fondo, resolución, tamaño del producto, bordes ni encuadre.
+  // Sharp valida que el archivo sea realmente una imagen al normalizarlo.
+  let normalizada;
+  try {
+    normalizada = await normalizarImagenCatalogo(buffer);
+  } catch {
+    const error = new Error("El archivo seleccionado no se pudo procesar como imagen");
     error.status = 415;
     throw error;
   }
-  const calidad = await analizarCalidadImagen(buffer);
-  if (!calidad.acepta) {
-    const error = new Error(`La imagen fue rechazada: ${calidad.motivo}`);
-    error.status = 422;
-    throw error;
-  }
-  const normalizada = await normalizarImagenCatalogo(buffer);
   await guardarResultadoImagenCatalogoDb(producto.codigo, {
     imagen: `archivo-manual://${producto.codigo}`,
     fuente: "Manual · archivo local normalizado",
@@ -429,12 +427,7 @@ async function importarImagenManual(codigo, url) {
   const producto = await obtenerProductoCatalogoAdminDb(codigo);
   if (!producto) throw new Error("Producto no encontrado");
   const buffer = await descargarImagen(url);
-  const calidad = await analizarCalidadImagen(buffer);
-  if (!calidad.acepta) {
-    const error = new Error(`La imagen fue rechazada: ${calidad.motivo}`);
-    error.status = 422;
-    throw error;
-  }
+  // Las URLs ingresadas manualmente tampoco pasan por filtros de calidad.
   const normalizada = await normalizarImagenCatalogo(buffer);
   await guardarResultadoImagenCatalogoDb(producto.codigo, {
     imagen: String(url || "").trim(),

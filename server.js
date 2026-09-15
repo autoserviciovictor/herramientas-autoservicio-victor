@@ -186,7 +186,7 @@ app.use(
   }),
 );
 app.disable("x-powered-by");
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "12mb" }));
 app.use((req, res, next) => {
   res.set({
     "X-Content-Type-Options": "nosniff",
@@ -1956,8 +1956,8 @@ app.post(
 app.post("/admin/catalogo/productos/:codigo/imagen/subir", requerirAdministrador, async (req, res) => {
   try {
     const dataUrl = String(req.body?.imagen || "");
-    const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/i);
-    if (!match) return res.status(400).json({ ok: false, mensaje: "Archivo de imagen inválido. Usá JPG, PNG o WEBP." });
+    const match = dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i);
+    if (!match) return res.status(400).json({ ok: false, mensaje: "Archivo de imagen inválido." });
     const buffer = Buffer.from(match[2], "base64");
     if (!buffer.length || buffer.length > 8 * 1024 * 1024) return res.status(413).json({ ok: false, mensaje: "La imagen está vacía o supera los 8 MB." });
     const producto = await importarImagenArchivoManual(req.params.codigo, buffer, match[1].toLowerCase());
@@ -1973,7 +1973,7 @@ app.put("/admin/catalogo/productos/:codigo/imagen", requerirAdministrador, async
     const producto = await importarImagenManual(req.params.codigo, req.body?.imagen);
     res.json({ ok: true, producto });
   } catch (error) {
-    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo descargar y validar la imagen" });
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo guardar la imagen" });
   }
 });
 

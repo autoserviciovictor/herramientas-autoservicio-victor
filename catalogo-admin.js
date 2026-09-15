@@ -823,9 +823,8 @@ async function buscarImagenProductoActual() {
 async function subirImagenArchivoActual(archivo) {
   const codigo = $("catalogProductoModal")?.dataset.codigo;
   if (!codigo || !archivo) return;
-  const tipos = new Set(["image/jpeg", "image/png", "image/webp"]);
-  if (!tipos.has(String(archivo.type || "").toLowerCase())) return mensaje("Usá una imagen JPG, PNG o WEBP.");
-  if (archivo.size > 6 * 1024 * 1024) return mensaje("La imagen no puede superar los 6 MB.");
+  if (!String(archivo.type || "").toLowerCase().startsWith("image/")) return mensaje("Seleccioná un archivo de imagen.");
+  if (archivo.size > 8 * 1024 * 1024) return mensaje("La imagen no puede superar los 8 MB.");
   const boton = $("catalogProductoElegirImagen");
   const status = $("catalogProductoImagenEstadoBusqueda");
   if (boton) boton.disabled = true;
