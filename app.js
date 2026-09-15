@@ -154,6 +154,7 @@ const elementos = {
   vencEstadoProducto: $("vencEstadoProducto"),
   vencNombreProducto: $("vencNombreProducto"),
   vencCodigoProducto: $("vencCodigoProducto"),
+  vencProductoDuplicadoAviso: $("vencProductoDuplicadoAviso"),
   vencFormCard: $("vencFormCard"),
   vencFechaInput: $("vencFechaInput"),
   vencSalonInput: $("vencSalonInput"),
@@ -1602,6 +1603,9 @@ function configurarEventos() {
   [elementos.vencSalonInput, elementos.vencDepositoInput].forEach((input) =>
     input?.addEventListener("input", actualizarTotalVencimiento),
   );
+  elementos.vencFechaInput?.addEventListener("change", () =>
+    actualizarAvisoVencimientoProducto(elementos.vencFechaInput.value || ""),
+  );
   elementos.btnVencGuardar?.addEventListener("click", guardarVencimientoActual);
   elementos.vencBuscador?.addEventListener("input", () => {
     busquedaVencimientos = elementos.vencBuscador.value || "";
@@ -2428,9 +2432,27 @@ function mostrarAccionesVencimientos() {
   establecerModoCargaVencimientos("scanner");
 }
 
+function actualizarAvisoVencimientoProducto(fechaSeleccionada = "") {
+  const aviso = elementos.vencProductoDuplicadoAviso;
+  if (!aviso) return;
+  if (!fechasVencimientoProductoActual.length) {
+    aviso.textContent = "";
+    aviso.classList.add("oculto");
+    return;
+  }
+
+  const fechas = fechasVencimientoProductoActual.map(formatearFecha).join(", ");
+  const repetida = fechaSeleccionada && fechasVencimientoProductoActual.includes(fechaSeleccionada);
+  aviso.textContent = repetida
+    ? `⚠ Este producto ya fue cargado con vencimiento ${formatearFecha(fechaSeleccionada)}. Elegí otra fecha.`
+    : `⚠ Este producto ya fue cargado con vencimiento: ${fechas}. Podés cargarlo nuevamente con una fecha diferente.`;
+  aviso.classList.remove("oculto");
+}
+
 function reiniciarFormularioVencimientos() {
   productoVencimientoActual = null;
   fechasVencimientoProductoActual = [];
+  actualizarAvisoVencimientoProducto();
   establecerModoCargaVencimientos("scanner");
   if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
   if ($("vencRubroInput")) $("vencRubroInput").value = "";
@@ -2509,6 +2531,7 @@ async function manejarCodigoVencimiento(codigo) {
     fechasVencimientoProductoActual = [];
     console.warn("No se pudieron consultar vencimientos previos del producto:", error);
   }
+  actualizarAvisoVencimientoProducto(elementos.vencFechaInput?.value || "");
   elementos.vencProductoCard?.classList.remove("oculto");
   elementos.vencProductoCard?.classList.remove("empty", "error");
   elementos.vencProductoCard?.classList.add("found");
@@ -2519,10 +2542,6 @@ async function manejarCodigoVencimiento(codigo) {
   ocultarAccionesVencimientos();
   elementos.vencFechaInput.focus();
   actualizarTotalVencimiento();
-  if (fechasVencimientoProductoActual.length) {
-    const fechas = fechasVencimientoProductoActual.map(formatearFecha).join(", ");
-    mostrarMensaje(`Este producto ya fue cargado con vencimiento: ${fechas}. Podés agregarlo con una fecha diferente.`, "error");
-  }
   reproducirConfirmacion("ok");
 }
 
@@ -2563,6 +2582,7 @@ async function guardarVencimientoActual() {
       return;
     }
     if (fechasVencimientoProductoActual.includes(vencimiento)) {
+      actualizarAvisoVencimientoProducto(vencimiento);
       mostrarMensaje(`Este producto ya fue cargado con vencimiento ${formatearFecha(vencimiento)}. Elegí una fecha diferente.`, "error");
       elementos.vencFechaInput.focus();
       return;
@@ -2587,7 +2607,7 @@ async function guardarVencimientoActual() {
     elementos.btnVencGuardar.disabled = true;
     mostrarMensaje("Guardando vencimiento...", "ok");
 
-    await guardarVencimiento({
+    const vencimientoCreado = await guardarVencimiento({
       codigo: productoVencimientoActual.codigo,
       articulo: productoVencimientoActual.articulo,
       vencimiento,
@@ -2600,7 +2620,10 @@ async function guardarVencimientoActual() {
     cerrarCargaVencimientosModal();
     if (vencTabRetornoCarga && vencTabActual !== vencTabRetornoCarga)
       cambiarTabVencimientos(vencTabRetornoCarga);
-    await cargarListadoVencimientos({ mantenerVista: false });
+    await cargarListadoVencimientos({
+      mantenerVista: false,
+      vencimientoRecienCreado: vencimientoCreado,
+    });
     mostrarMensaje("Vencimiento guardado", "ok");
     reproducirConfirmacion("guardado");
     return true;
@@ -2669,7 +2692,21 @@ async function cargarListadoVencimientos(opciones = {}) {
         return 0;
       }),
     ]);
-    vencimientosCache = vencimientos;
+    vencimientosCache = Array.isArray(vencimientos) ? vencimientos : [];
+
+    // El servidor puede conservar durante unos segundos una lectura anterior de
+    // /vencimientos. Si acabamos de crear un lote, garantizamos que ese registro
+    // aparezca inmediatamente como su propia tarjeta aunque la relectura todavía
+    // no lo incluya. En la siguiente actualización normal llegará desde servidor.
+    const recienCreado = opciones.vencimientoRecienCreado;
+    if (recienCreado?.id) {
+      const idNuevo = String(recienCreado.id);
+      const yaIncluido = vencimientosCache.some(
+        (item) => String(item?.id || "") === idNuevo,
+      );
+      if (!yaIncluido) vencimientosCache = [...vencimientosCache, recienCreado];
+    }
+
     renderListadoVencimientos();
 
     if (mantenerVista) restaurarVistaVencimientos(vista);
