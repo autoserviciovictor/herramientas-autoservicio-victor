@@ -6206,6 +6206,14 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
       vencimiento: registro,
     });
   } catch (error) {
+    if (error?.code === "VENCIMIENTO_DUPLICADO") {
+      return res.status(409).json({
+        ok: false,
+        codigo: error.codigo,
+        vencimiento: error.vencimiento,
+        mensaje: `Este producto ya fue cargado con vencimiento ${error.vencimiento}. Elegí una fecha diferente.`,
+      });
+    }
     console.error("Error en POST /vencimientos:", error);
     res.status(500).json({
       ok: false,
@@ -6297,6 +6305,14 @@ app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, re
       vencimiento: actualizado,
     });
   } catch (error) {
+    if (error?.code === "VENCIMIENTO_DUPLICADO") {
+      return res.status(409).json({
+        ok: false,
+        codigo: error.codigo,
+        vencimiento: error.vencimiento,
+        mensaje: `Este producto ya fue cargado con vencimiento ${error.vencimiento}. Elegí una fecha diferente.`,
+      });
+    }
     console.error("Error en PUT /vencimientos/:id:", error);
     res.status(500).json({
       ok: false,

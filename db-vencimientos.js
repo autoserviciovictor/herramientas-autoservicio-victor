@@ -166,8 +166,23 @@ async function buscarVencimientoPorIdDb(id, cliente = null, { bloquear = false }
   return r.rows[0] ? filaVencimiento(r.rows[0]) : null;
 }
 
+function errorVencimientoDuplicado(codigo, vencimiento) {
+  const error = new Error(`Este producto ya fue cargado con vencimiento ${texto(vencimiento)}`);
+  error.code = "VENCIMIENTO_DUPLICADO";
+  error.codigo = texto(codigo);
+  error.vencimiento = texto(vencimiento);
+  return error;
+}
+
 async function crearVencimientoDb(registro, cliente = null) {
   const ejecutar = async (c) => {
+    const codigo = texto(registro?.codigo);
+    const vencimiento = texto(registro?.vencimiento);
+    const duplicado = await c.query(
+      `SELECT record_id FROM expiration_records WHERE code=$1 AND expiry_date=$2 LIMIT 1`,
+      [codigo, vencimiento],
+    );
+    if (duplicado.rowCount) throw errorVencimientoDuplicado(codigo, vencimiento);
     const siguiente = await c.query(
       "SELECT GREATEST(COALESCE(MAX(legacy_row),1)+1,2) AS siguiente FROM expiration_records",
     );
@@ -200,6 +215,12 @@ async function actualizarVencimientoDb(id, cambios, cliente = null) {
   const ejecutar = async (c) => {
     const actual = await buscarVencimientoPorIdDb(id, c, { bloquear: true });
     if (!actual) return null;
+    const nuevoVencimiento = cambios?.vencimiento === undefined ? actual.vencimiento : texto(cambios.vencimiento);
+    const duplicado = await c.query(
+      `SELECT record_id FROM expiration_records WHERE code=$1 AND expiry_date=$2 AND record_id<>$3 LIMIT 1`,
+      [actual.codigo, nuevoVencimiento, actual.id],
+    );
+    if (duplicado.rowCount) throw errorVencimientoDuplicado(actual.codigo, nuevoVencimiento);
     const r = await c.query(
       `UPDATE expiration_records SET
          expiry_date=$2, quantity=$3, salon_quantity=$4, deposit_quantity=$5, offer=$6, category=$7, updated_at=NOW()
@@ -207,7 +228,7 @@ async function actualizarVencimientoDb(id, cambios, cliente = null) {
        RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category`,
       [
         actual.vencimientoPk,
-        cambios?.vencimiento === undefined ? actual.vencimiento : texto(cambios.vencimiento),
+        nuevoVencimiento,
         enteroNoNegativo(cambios?.salon === undefined ? actual.salon : cambios.salon) +
           enteroNoNegativo(cambios?.deposito === undefined ? actual.deposito : cambios.deposito),
         cambios?.salon === undefined ? actual.salon : enteroNoNegativo(cambios.salon),

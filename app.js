@@ -72,6 +72,7 @@ let corrigiendo = false;
 let sincronizando = false;
 let sincronizacionAutomatica = null;
 let productoVencimientoActual = null;
+let fechasVencimientoProductoActual = [];
 let guardandoVencimiento = false;
 let vencimientosCache = [];
 let filtroVencimientos = "todos";
@@ -2429,6 +2430,7 @@ function mostrarAccionesVencimientos() {
 
 function reiniciarFormularioVencimientos() {
   productoVencimientoActual = null;
+  fechasVencimientoProductoActual = [];
   establecerModoCargaVencimientos("scanner");
   if (elementos.vencFechaInput) elementos.vencFechaInput.value = "";
   if ($("vencRubroInput")) $("vencRubroInput").value = "";
@@ -2495,6 +2497,18 @@ async function manejarCodigoVencimiento(codigo) {
   }
 
   productoVencimientoActual = resultado.producto;
+  try {
+    const existentes = await listarVencimientos();
+    fechasVencimientoProductoActual = [...new Set(
+      (Array.isArray(existentes) ? existentes : [])
+        .filter((item) => String(item?.codigo || "").trim() === String(productoVencimientoActual.codigo || "").trim())
+        .map((item) => String(item?.vencimiento || "").trim())
+        .filter(Boolean),
+    )].sort();
+  } catch (error) {
+    fechasVencimientoProductoActual = [];
+    console.warn("No se pudieron consultar vencimientos previos del producto:", error);
+  }
   elementos.vencProductoCard?.classList.remove("oculto");
   elementos.vencProductoCard?.classList.remove("empty", "error");
   elementos.vencProductoCard?.classList.add("found");
@@ -2505,6 +2519,10 @@ async function manejarCodigoVencimiento(codigo) {
   ocultarAccionesVencimientos();
   elementos.vencFechaInput.focus();
   actualizarTotalVencimiento();
+  if (fechasVencimientoProductoActual.length) {
+    const fechas = fechasVencimientoProductoActual.map(formatearFecha).join(", ");
+    mostrarMensaje(`Este producto ya fue cargado con vencimiento: ${fechas}. Podés agregarlo con una fecha diferente.`, "error");
+  }
   reproducirConfirmacion("ok");
 }
 
@@ -2541,6 +2559,11 @@ async function guardarVencimientoActual() {
     const rubro = $("vencRubroInput")?.value || "";
     if (!vencimiento) {
       mostrarMensaje("Cargá la fecha de vencimiento", "error");
+      elementos.vencFechaInput.focus();
+      return;
+    }
+    if (fechasVencimientoProductoActual.includes(vencimiento)) {
+      mostrarMensaje(`Este producto ya fue cargado con vencimiento ${formatearFecha(vencimiento)}. Elegí una fecha diferente.`, "error");
       elementos.vencFechaInput.focus();
       return;
     }
