@@ -107,7 +107,7 @@ const {
   actualizarVencimientoDb,
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
-const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb } = require("./db-lotes");
+const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLotesProductoDb } = require("./db-lotes");
 const {
   asegurarEsquemaListasReposicion,
   conTransaccionListasReposicion,
@@ -6120,6 +6120,31 @@ app.get("/lotes", requerirAlgunModulo("vencimientos"), async (req, res) => {
 app.get("/lotes/producto/:codigo", requerirAlgunModulo("vencimientos"), async (req,res)=>{
   try { const lotes=await listarLotesProductoDb(req.params.codigo); res.json({ok:true,lotes}); }
   catch(error){res.status(500).json({ok:false,mensaje:error.message||"Error al obtener lotes del producto"});}
+});
+app.delete("/lotes/producto/:codigo", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+  try {
+    const codigo=String(req.params.codigo||"").trim();
+    if(!codigo) return res.status(400).json({ok:false,mensaje:"Falta el código"});
+    const eliminados=await eliminarLotesProductoDb(codigo);
+    for(const lote of eliminados){
+      if(!lote.cortaFecha) continue;
+      try {
+        const vencimientos=await listarVencimientosDb();
+        const vinculado=vencimientos.find((v)=>String(v.codigo)===String(lote.codigo)&&String(v.vencimiento)===String(lote.vencimiento));
+        if(vinculado){
+          const eliminado=await eliminarVencimientoDb(vinculado.id);
+          if(eliminado){
+            await registrarHistorialVencimiento(req,"Eliminó",eliminado,"Eliminado desde Control de Lotes");
+          }
+        }
+      } catch(error){ console.error("No se pudo sincronizar eliminación con Vencimientos:",error); }
+    }
+    invalidarCache("vencimientos");
+    res.json({ok:true,total:eliminados.length,lotes:eliminados});
+  } catch(error){
+    console.error("Error en DELETE /lotes/producto/:codigo:",error);
+    res.status(500).json({ok:false,mensaje:error.message||"No se pudo eliminar el producto de Control de Lotes"});
+  }
 });
 app.post("/lotes", requerirAlgunModulo("vencimientos"), async (req,res)=>{
   try {
