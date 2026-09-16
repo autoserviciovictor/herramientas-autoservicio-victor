@@ -244,3 +244,101 @@
  #lotesModal .lotes-camera.product-loader-camera-card{margin:16px 18px 0!important}
  #lotesModal #btnLotesManualCamara.product-loader-manual-from-scanner{margin:12px 18px calc(18px + env(safe-area-inset-bottom))!important;width:calc(100% - 36px)!important}
 }
+
+/* Control de Lotes · MOBILE: buscador + Filtros arriba, rubros abajo, sin scroll */
+@media (max-width:700px){
+  body[data-module="lotes"] #pantallaLotes .lotes-toolbar{
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+    grid-template-rows:42px 38px!important;gap:8px!important;width:100%!important;
+    padding:7px!important;overflow:visible!important;box-sizing:border-box!important;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-search{
+    grid-column:1!important;grid-row:1!important;width:auto!important;min-width:0!important;
+    height:42px!important;box-sizing:border-box!important;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters{display:contents!important;margin:0!important;overflow:visible!important}
+  body[data-module="lotes"] #pantallaLotes .lotes-filter-button{
+    grid-column:2!important;grid-row:1!important;width:auto!important;height:42px!important;
+    margin:0!important;padding:0 11px!important;border-radius:10px!important;white-space:nowrap!important;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters>button:not(.lotes-filter-button){
+    grid-row:2!important;width:calc((100% - 16px)/3)!important;min-width:0!important;height:38px!important;
+    margin:0!important;padding:0 5px!important;font-size:12px!important;line-height:1!important;
+    white-space:nowrap!important;box-sizing:border-box!important;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters>button[data-lotes-rubro="todos"]{
+    grid-column:1!important;justify-self:start!important;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters>button[data-lotes-rubro="Fiambrería"]{
+    grid-column:1!important;justify-self:center!important;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters>button[data-lotes-rubro="Lácteos"]{
+    grid-column:1!important;justify-self:end!important;
+  }
+}
+
+
+/* Control de Lotes · MOBILE: buscador con un solo marco */
+@media (max-width:700px){
+  body[data-module="lotes"] #pantallaLotes .lotes-search{
+    border:1px solid #e4e7ec !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-search input{
+    border:0 !important;
+    outline:0 !important;
+    box-shadow:none !important;
+    background:transparent !important;
+    border-radius:0 !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-search input:focus,
+  body[data-module="lotes"] #pantallaLotes .lotes-search input:focus-visible{
+    border:0 !important;
+    outline:0 !important;
+    box-shadow:none !important;
+  }
+}
+
+
+/* Control de Lotes · MOBILE: botón + con las mismas medidas de Vencimientos */
+@media (max-width:700px){
+  #lotesFab.lotes-fab{
+    position:fixed !important;
+    z-index:1000 !important;
+    right:max(16px,env(safe-area-inset-right)) !important;
+    left:auto !important;
+    bottom:calc(16px + env(safe-area-inset-bottom)) !important;
+    width:58px !important;
+    min-width:58px !important;
+    max-width:58px !important;
+    height:58px !important;
+    min-height:58px !important;
+    max-height:58px !important;
+    display:grid !important;
+    place-items:center !important;
+    margin:0 !important;
+    padding:0 0 3px 0 !important;
+    border:0 !important;
+    border-radius:19px !important;
+    background:linear-gradient(145deg,#ef393f,#d92734) !important;
+    color:#fff !important;
+    box-shadow:0 14px 30px rgba(205,39,52,.34),0 3px 8px rgba(36,39,44,.16) !important;
+    font-family:Arial,sans-serif !important;
+    font-size:31px !important;
+    font-weight:300 !important;
+    line-height:1 !important;
+    cursor:pointer !important;
+    touch-action:manipulation;
+    overflow:hidden !important;
+  }
+  #lotesFab.lotes-fab:active{transform:scale(.96) !important}
+  #lotesFab.lotes-fab:focus-visible{
+    outline:3px solid rgba(239,57,63,.24) !important;
+    outline-offset:4px !important;
+  }
+  #lotesFab.lotes-fab.oculto{display:none !important}
+}
