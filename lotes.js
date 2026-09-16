@@ -299,8 +299,10 @@ async function seleccionarCodigo(codigo) {
     await preparar(d.producto, solicitud);
   } catch (e) {
     if (solicitud !== solicitudProductoActual) return;
-    mostrarAvisoLotes(e.message || 'Producto no encontrado en Productos', 'Producto no encontrado');
-    cerrar();
+    mostrarAvisoLotes('Producto no encontrado', '', () => {
+      abrir();
+      iniciarCamara();
+    });
   }
 }
 function limpiarSeleccionLotes() {
@@ -863,7 +865,7 @@ function inyectarAjustesVisuales() {
 }
 
 
-function mostrarAvisoLotes(mensaje, titulo = 'Atención') {
+function mostrarAvisoLotes(mensaje, titulo = '', alCerrar = null) {
   document.getElementById('lotesNotice')?.remove();
   const modal = document.createElement('div');
   modal.id = 'lotesNotice';
@@ -872,11 +874,14 @@ function mostrarAvisoLotes(mensaje, titulo = 'Atención') {
     <div class="lotes-notice-backdrop"></div>
     <section class="lotes-notice-dialog" role="alertdialog" aria-modal="true">
       <div class="lotes-notice-icon" aria-hidden="true">!</div>
-      <h3>${esc(titulo)}</h3>
+      ${titulo ? `<h3>${esc(titulo)}</h3>` : ''}
       <p>${esc(String(mensaje || 'Ocurrió un error.'))}</p>
       <button type="button">Aceptar</button>
     </section>`;
-  const cerrarAviso = () => modal.remove();
+  const cerrarAviso = () => {
+    modal.remove();
+    if (typeof alCerrar === 'function') alCerrar();
+  };
   modal.querySelector('.lotes-notice-backdrop').onclick = cerrarAviso;
   modal.querySelector('button').onclick = cerrarAviso;
   document.body.appendChild(modal);
@@ -934,11 +939,18 @@ function inicializarControlesLotes() {
 
 function activar() {
   inyectarAjustesVisuales();
+  $('lotesFab')?.classList.remove('oculto');
   cargar();
+}
+
+function desactivar() {
+  cerrar();
+  $('lotesFab')?.classList.add('oculto');
 }
 
 inyectarAjustesVisuales();
 inicializarControlesLotes();
+$('lotesFab')?.classList.add('oculto');
 
 $('lotesFab')?.addEventListener('click', abrir);
 $('btnLotesCargaHeader')?.addEventListener('click', abrir);
@@ -970,4 +982,4 @@ document.querySelectorAll('[data-lotes-rubro]').forEach((b) => {
   };
 });
 
-window.LotesModule = { activar, cerrar, reiniciar: cerrar };
+window.LotesModule = { activar, desactivar, cerrar, reiniciar: cerrar };

@@ -1344,7 +1344,7 @@ async function entrarPantalla(nombre, opciones = {}) {
   if (nombre !== "tareas") window.TareasModule?.desactivar?.();
   if (nombre !== "bano") window.BanoModule?.desactivar?.();
   if (nombre !== "catalogo") window.CatalogoAdminModule?.desactivar?.();
-  if (nombre !== "lotes") window.LotesModule?.cerrar?.();
+  if (nombre !== "lotes") window.LotesModule?.desactivar?.();
 
   if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
   if (elementos.vencBuscador) elementos.vencBuscador.value = "";

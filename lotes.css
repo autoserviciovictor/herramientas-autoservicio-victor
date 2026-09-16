@@ -421,3 +421,34 @@
   #lotesModal .lotes-quantity-control{grid-template-columns:52px minmax(0,1fr) 52px;min-height:52px}
   #lotesModal .lotes-quantity-control input{min-height:52px!important}
 }
+
+
+/* Control de Lotes · ajustes finales aviso / rubro / fecha */
+.lotes-notice-dialog:has(h3:empty) h3{display:none}
+.lotes-notice-dialog:not(:has(h3)) p{
+  margin:4px 0 20px;
+  color:#101828;
+  font-size:18px;
+  font-weight:800;
+  line-height:1.35;
+}
+#lotesModal .lotes-rubro-chevron{
+  width:22px;height:22px;display:grid;place-items:center;flex:0 0 22px;
+  color:#667085;transition:transform .18s ease;
+}
+#lotesModal .lotes-rubro-chevron svg{display:block}
+#lotesModal .lotes-rubro-trigger[aria-expanded="true"] .lotes-rubro-chevron{transform:rotate(180deg)}
+
+#lotesModal .lotes-date-control{position:relative;width:100%}
+#lotesModal .lotes-date-control input{
+  width:100%!important;padding-right:48px!important;
+}
+#lotesModal .lotes-date-control input::-webkit-calendar-picker-indicator{
+  position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
+}
+#lotesModal .lotes-date-icon{
+  position:absolute;right:15px;top:50%;transform:translateY(-50%);
+  width:24px;height:24px;display:grid;place-items:center;color:#667085;
+  pointer-events:none;
+}
+#lotesModal .lotes-date-icon svg{display:block}
