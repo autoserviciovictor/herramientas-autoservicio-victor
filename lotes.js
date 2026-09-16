@@ -228,10 +228,11 @@ function modo(m) {
   manualCamara?.classList.toggle('oculto', m !== 'camara');
 
   if (m === 'manual') {
-    requestAnimationFrame(() => {
-      $('lotesManualInput')?.focus();
-      if (($('lotesManualInput')?.value || '').trim()) buscarManual();
-    });
+    const inputManual = $('lotesManualInput');
+    if (inputManual) inputManual.value = '';
+    $('lotesSugerencias')?.classList.add('oculto');
+    if ($('lotesSugerencias')) $('lotesSugerencias').innerHTML = '';
+    requestAnimationFrame(() => inputManual?.focus());
   }
 }
 
@@ -239,6 +240,11 @@ async function abrir() {
   actualizarEncabezadoModal();
   producto = null;
   lotesProducto = [];
+  if ($('lotesManualInput')) $('lotesManualInput').value = '';
+  if ($('lotesSugerencias')) {
+    $('lotesSugerencias').innerHTML = '';
+    $('lotesSugerencias').classList.add('oculto');
+  }
   accion = 'nuevo';
   loteReemplazo = '';
   $('lotesModal').classList.remove('oculto');
@@ -934,6 +940,11 @@ function inicializarControlesLotes() {
   $('lotesCantidad')?.addEventListener('change', () => {
     const input = $('lotesCantidad');
     input.value = String(Math.max(1, parseInt(input.value, 10) || 1));
+  });
+
+  const fecha = $('lotesFecha');
+  fecha?.addEventListener('click', () => {
+    try { fecha.showPicker?.(); } catch {}
   });
 }
 

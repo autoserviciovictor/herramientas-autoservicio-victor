@@ -452,3 +452,78 @@
   pointer-events:none;
 }
 #lotesModal .lotes-date-icon svg{display:block}
+
+
+/* Control de Lotes · corrección gestión mobile / búsqueda limpia / fecha */
+#lotesModal .lotes-date-control input{
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  background-image:none !important;
+}
+#lotesModal .lotes-date-control input::-webkit-calendar-picker-indicator{
+  display:none !important;
+  -webkit-appearance:none !important;
+  opacity:0 !important;
+  width:0 !important;
+  height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+#lotesModal .lotes-date-control input::-webkit-inner-spin-button,
+#lotesModal .lotes-date-control input::-webkit-clear-button{
+  display:none !important;
+  -webkit-appearance:none !important;
+}
+
+@media (max-width:700px){
+  /* Cada lote ocupa su propia fila y las 3 acciones quedan debajo, sin desbordes */
+  #lotesModal .lote-existing{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    gap:10px !important;
+    align-items:stretch !important;
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    padding:12px !important;
+  }
+  #lotesModal .lote-existing > span{
+    display:block !important;
+    min-width:0 !important;
+  }
+  #lotesModal .lote-existing > span b,
+  #lotesModal .lote-existing > span small{
+    display:block !important;
+  }
+  #lotesModal .lote-existing-actions{
+    display:grid !important;
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:7px !important;
+    width:100% !important;
+    min-width:0 !important;
+  }
+  #lotesModal .lote-existing-actions button{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:40px !important;
+    margin:0 !important;
+    padding:0 5px !important;
+    border-radius:9px !important;
+    font-size:11.5px !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    box-sizing:border-box !important;
+  }
+  #lotesModal .lote-add-new{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+  }
+  #lotesModal .lotes-existing{
+    width:100% !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+}
