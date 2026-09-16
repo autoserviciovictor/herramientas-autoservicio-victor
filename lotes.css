@@ -342,3 +342,82 @@
   }
   #lotesFab.lotes-fab.oculto{display:none !important}
 }
+
+
+/* Control de Lotes · formulario mobile refinado */
+#lotesModal .lotes-field{display:block;margin-bottom:10px}
+#lotesModal .lotes-field-label{display:block;font-size:13px;font-weight:700;line-height:1.3;margin-bottom:5px}
+#lotesModal .lotes-rubro-custom{position:relative}
+#lotesModal .lotes-rubro-trigger{
+  width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:0 16px;border:1px solid #dfe5ed;border-radius:12px;background:#fff;
+  color:#101828;font:inherit;font-size:14px;font-weight:700;text-align:left;box-shadow:none;
+}
+#lotesModal .lotes-rubro-chevron{font-size:18px;color:#667085;line-height:1;transform:translateY(-2px)}
+#lotesModal .lotes-rubro-menu{
+  position:absolute;z-index:30;top:calc(100% + 7px);left:0;right:0;padding:6px;
+  border:1px solid #dfe5ed;border-radius:12px;background:#fff;
+  box-shadow:0 14px 34px rgba(16,24,40,.14);
+}
+#lotesModal .lotes-rubro-menu button{
+  width:100%;min-height:44px;display:flex;align-items:center;padding:0 12px;border:0;
+  border-radius:9px;background:#fff;color:#101828;font:inherit;font-size:14px;font-weight:650;text-align:left;
+}
+#lotesModal .lotes-rubro-menu button:hover,
+#lotesModal .lotes-rubro-menu button.activo{background:#f7f8fa;color:#f32646}
+
+#lotesModal .lotes-quantity-control{
+  display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:stretch;
+  min-height:50px;border:1px solid #dfe5ed;border-radius:12px;background:#fff;overflow:hidden;
+}
+#lotesModal .lotes-quantity-control button{
+  border:0;background:#f8fafc;color:#344054;font:inherit;font-size:24px;font-weight:500;line-height:1;
+}
+#lotesModal .lotes-quantity-control button:first-child{border-right:1px solid #e4e7ec}
+#lotesModal .lotes-quantity-control button:last-child{border-left:1px solid #e4e7ec}
+#lotesModal .lotes-quantity-control input{
+  width:100%!important;min-height:48px!important;margin:0!important;padding:0 8px!important;
+  border:0!important;border-radius:0!important;background:#fff!important;text-align:center;
+  font-size:16px!important;font-weight:750!important;outline:0!important;box-shadow:none!important;
+  -moz-appearance:textfield;
+}
+#lotesModal .lotes-quantity-control input::-webkit-inner-spin-button,
+#lotesModal .lotes-quantity-control input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+/* Ningún campo obtiene marco rojo al seleccionarlo */
+#lotesModal .lotes-form input:focus,
+#lotesModal .lotes-form input:focus-visible,
+#lotesModal .lotes-form select:focus,
+#lotesModal .lotes-form select:focus-visible,
+#lotesModal .lotes-rubro-trigger:focus,
+#lotesModal .lotes-rubro-trigger:focus-visible,
+#lotesModal .lotes-quantity-control:focus-within{
+  outline:0!important;box-shadow:none!important;border-color:#dfe5ed!important;
+}
+#lotesModal .lotes-form input{caret-color:#101828}
+#lotesModal .lotes-short-check:focus-within{outline:0!important;box-shadow:none!important;border-color:transparent!important}
+
+/* Avisos propios, sin alert nativo del navegador */
+.lotes-notice{position:fixed;inset:0;z-index:10100;display:grid;place-items:center;padding:20px}
+.lotes-notice-backdrop{position:absolute;inset:0;background:rgba(16,24,40,.48);backdrop-filter:blur(2px)}
+.lotes-notice-dialog{
+  position:relative;width:min(390px,calc(100vw - 36px));padding:26px 22px 20px;
+  border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(16,24,40,.25);text-align:center
+}
+.lotes-notice-icon{
+  width:42px;height:42px;margin:0 auto 13px;display:grid;place-items:center;border-radius:50%;
+  background:#fff0f2;color:#f32646;font-size:21px;font-weight:850
+}
+.lotes-notice-dialog h3{margin:0;color:#101828;font-size:18px}
+.lotes-notice-dialog p{margin:9px 0 19px;color:#667085;font-size:13px;line-height:1.45}
+.lotes-notice-dialog button{
+  width:100%;min-height:44px;border:0;border-radius:10px;background:#f32646;color:#fff;
+  font:inherit;font-size:14px;font-weight:800
+}
+
+@media(max-width:700px){
+  #lotesModal .lotes-rubro-trigger{min-height:50px;font-size:15px}
+  #lotesModal .lotes-rubro-menu button{min-height:48px;font-size:15px}
+  #lotesModal .lotes-quantity-control{grid-template-columns:52px minmax(0,1fr) 52px;min-height:52px}
+  #lotesModal .lotes-quantity-control input{min-height:52px!important}
+}

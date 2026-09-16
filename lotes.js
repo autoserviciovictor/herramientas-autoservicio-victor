@@ -192,7 +192,7 @@ function render() {
         await json(`/lotes/producto/${encodeURIComponent(codigo)}`, { method: 'DELETE' });
         await cargar();
       } catch (error) {
-        alert(error.message);
+        mostrarAvisoLotes(error.message);
         btn.disabled = false;
       }
     });
@@ -299,7 +299,7 @@ async function seleccionarCodigo(codigo) {
     await preparar(d.producto, solicitud);
   } catch (e) {
     if (solicitud !== solicitudProductoActual) return;
-    alert(e.message);
+    mostrarAvisoLotes(e.message || 'Producto no encontrado en Productos', 'Producto no encontrado');
     cerrar();
   }
 }
@@ -342,7 +342,7 @@ async function preparar(p, solicitud = solicitudProductoActual) {
 
   const rubroExistente = lotesProducto[0]?.rubro || '';
   $('lotesRubroCampo').classList.toggle('oculto', Boolean(rubroExistente));
-  $('lotesRubro').value = rubroExistente || '';
+  actualizarRubroVisual(rubroExistente || '');
   $('lotesFecha').value = '';
   $('lotesCantidad').value = '1';
   $('lotesCorta').checked = false;
@@ -404,7 +404,7 @@ async function preparar(p, solicitud = solicitudProductoActual) {
           }
           await preparar(producto, solicitudProductoActual);
         } catch (error) {
-          alert(error.message);
+          mostrarAvisoLotes(error.message);
           b.disabled = false;
         }
       };
@@ -478,7 +478,7 @@ async function buscarManual() {
     });
     pintarSugerencias(items, q);
   } catch (e) {
-    alert(e.message);
+    mostrarAvisoLotes(e.message);
   }
 }
 
@@ -538,9 +538,9 @@ async function guardar() {
   const cortaFecha = $('lotesCorta').checked;
 
   if (!vencimiento || !Number.isInteger(cantidad) || cantidad <= 0) {
-    return alert('Completá fecha de vencimiento y una cantidad válida.');
+    return mostrarAvisoLotes('Completá fecha de vencimiento y una cantidad válida.');
   }
-  if (!rubro) return alert('Seleccioná Fiambrería o Lácteos.');
+  if (!rubro) return mostrarAvisoLotes('Seleccioná Fiambrería o Lácteos.');
 
   const body = {
     codigo: producto.codigo,
@@ -589,7 +589,7 @@ async function guardar() {
     accion = 'nuevo';
     loteReemplazo = '';
   } catch (e) {
-    alert(e.message);
+    mostrarAvisoLotes(e.message);
   }
 }
 function inyectarAjustesVisuales() {
@@ -862,12 +862,83 @@ function inyectarAjustesVisuales() {
   document.head.appendChild(style);
 }
 
+
+function mostrarAvisoLotes(mensaje, titulo = 'Atención') {
+  document.getElementById('lotesNotice')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'lotesNotice';
+  modal.className = 'lotes-notice';
+  modal.innerHTML = `
+    <div class="lotes-notice-backdrop"></div>
+    <section class="lotes-notice-dialog" role="alertdialog" aria-modal="true">
+      <div class="lotes-notice-icon" aria-hidden="true">!</div>
+      <h3>${esc(titulo)}</h3>
+      <p>${esc(String(mensaje || 'Ocurrió un error.'))}</p>
+      <button type="button">Aceptar</button>
+    </section>`;
+  const cerrarAviso = () => modal.remove();
+  modal.querySelector('.lotes-notice-backdrop').onclick = cerrarAviso;
+  modal.querySelector('button').onclick = cerrarAviso;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.querySelector('button')?.focus());
+}
+
+function actualizarRubroVisual(valor = '') {
+  const input = $('lotesRubro');
+  const texto = $('lotesRubroTexto');
+  if (input) input.value = valor;
+  if (texto) texto.textContent = valor || 'Seleccionar rubro';
+  document.querySelectorAll('[data-rubro-opcion]').forEach((b) => {
+    b.classList.toggle('activo', b.dataset.rubroOpcion === valor);
+    b.setAttribute('aria-selected', b.dataset.rubroOpcion === valor ? 'true' : 'false');
+  });
+}
+
+function cerrarSelectorRubro() {
+  $('lotesRubroMenu')?.classList.add('oculto');
+  $('lotesRubroBtn')?.setAttribute('aria-expanded', 'false');
+}
+
+function ajustarCantidad(delta) {
+  const input = $('lotesCantidad');
+  if (!input) return;
+  const actual = Math.max(1, parseInt(input.value, 10) || 1);
+  input.value = String(Math.max(1, actual + delta));
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function inicializarControlesLotes() {
+  $('lotesRubroBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = $('lotesRubroMenu');
+    const abrir = menu?.classList.contains('oculto');
+    menu?.classList.toggle('oculto', !abrir);
+    $('lotesRubroBtn')?.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-rubro-opcion]').forEach((b) => {
+    b.addEventListener('click', () => {
+      actualizarRubroVisual(b.dataset.rubroOpcion || '');
+      cerrarSelectorRubro();
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.lotes-rubro-custom')) cerrarSelectorRubro();
+  });
+  $('lotesCantidadMenos')?.addEventListener('click', () => ajustarCantidad(-1));
+  $('lotesCantidadMas')?.addEventListener('click', () => ajustarCantidad(1));
+  $('lotesCantidad')?.addEventListener('change', () => {
+    const input = $('lotesCantidad');
+    input.value = String(Math.max(1, parseInt(input.value, 10) || 1));
+  });
+}
+
 function activar() {
   inyectarAjustesVisuales();
   cargar();
 }
 
 inyectarAjustesVisuales();
+inicializarControlesLotes();
 
 $('lotesFab')?.addEventListener('click', abrir);
 $('btnLotesCargaHeader')?.addEventListener('click', abrir);
