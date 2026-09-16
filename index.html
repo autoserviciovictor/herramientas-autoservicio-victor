@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="ui-unification.css?v=1960-d21-cierre-etapa6-010926" />
+    <link rel="stylesheet" href="lotes.css?v=lotes-kpi-vencimientos-160926" />
 </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
@@ -431,6 +432,7 @@
                 <svg class="app-icon"><use href="#icon-calendar"></use></svg
                 ><span>Vencimientos</span>
               </button>
+              <button type="button" data-modulo="lotes" class="pro-global-nav" data-pro-nav="lotes"><svg class="app-icon"><use href="#icon-box"></use></svg><span>Control de Lotes</span></button>
               <button
                 type="button"
                 data-modulo="anotar"
@@ -580,6 +582,7 @@
             <svg class="app-icon"><use href="#icon-calendar"></use></svg
             ><span>Vencimientos</span>
           </button>
+          <button type="button" data-modulo="lotes" class="pro-global-nav" data-pro-nav="lotes"><svg class="app-icon"><use href="#icon-box"></use></svg><span>Control de Lotes</span></button>
           <button
             type="button"
             data-modulo="anotar"
@@ -1498,6 +1501,20 @@
         </div>
       </main>
 
+
+      <main id="pantallaLotes" class="pantalla lotes-screen" aria-hidden="true">
+        <section class="lotes-shell">
+          <header class="lotes-header mobile-page-title-block"><div><span class="eyebrow">GESTIÓN DE MERCADERÍA</span><h1>Control de Lotes</h1><p>Fiambrería y Lácteos · control por lote y vencimiento.</p></div><button id="btnLotesCargaHeader" class="lotes-load" type="button">＋ Cargar mercadería</button></header>
+          <section class="lotes-metrics" aria-label="Resumen de lotes">
+            <article class="lote-metric app-kpi-card app-kpi-blue"><i><svg class="app-icon"><use href="#icon-box"></use></svg></i><div><span>Lotes activos</span><strong id="lotesMetricaActivos">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-red"><i><svg class="app-icon"><use href="#icon-box"></use></svg></i><div><span>Unidades en stock</span><strong id="lotesMetricaUnidades">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-amber"><i><svg class="app-icon"><use href="#icon-tag"></use></svg></i><div><span>Productos</span><strong id="lotesMetricaProductos">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-green"><i><svg class="app-icon"><use href="#icon-calendar"></use></svg></i><div><span>Corta fecha</span><strong id="lotesMetricaCorta">0</strong></div></article>
+          </section>
+          <section class="lotes-toolbar"><label class="lotes-search"><svg class="app-icon"><use href="#icon-search"></use></svg><input id="lotesBuscar" type="search" placeholder="Buscar producto o código..." /></label><div class="lotes-filters"><button class="activo" data-lotes-rubro="todos" type="button">Todos</button><button data-lotes-rubro="Fiambrería" type="button">Fiambrería</button><button data-lotes-rubro="Lácteos" type="button">Lácteos</button><button id="btnLotesFiltros" class="lotes-filter-button" type="button" aria-label="Filtros"><svg class="app-icon"><use href="#icon-filter"></use></svg><span>Filtros</span></button></div></section>
+          <section id="lotesLista" class="lotes-grid"><div class="lotes-empty">Cargando productos...</div></section>
+        </section>
+      </main>
       <main id="pantallaVencimientos" class="pantalla vencimientos-pro-screen">
         <section class="venc-pro-shell">
           <header class="venc-pro-header mobile-page-title-block">
@@ -1670,6 +1687,20 @@
         </section>
       </main>
 
+
+      <button id="lotesFab" class="lotes-fab" type="button" aria-label="Cargar mercadería">+</button>
+      <div id="lotesModal" class="lotes-modal product-loader-modal oculto" aria-hidden="true"><div id="lotesBackdrop" class="lotes-backdrop product-loader-backdrop"></div><section class="lotes-dialog product-loader-dialog" role="dialog" aria-modal="true" aria-labelledby="lotesModalTitulo">
+        <header class="lotes-modal-head product-loader-head"><div><span class="product-loader-kicker">PRODUCTOS</span><h2 id="lotesModalTitulo">Cargar producto</h2><p>Escaneá un código o buscá el producto manualmente.</p></div><button id="btnLotesCerrar" class="lotes-close product-loader-close" type="button" aria-label="Cerrar">×</button></header>
+        <section id="lotesInicio" class="lotes-mode product-loader-start">
+          <div id="lotesHero" class="lotes-hero product-loader-hero"><span class="camera-symbol product-loader-symbol"><svg class="app-icon"><use href="#icon-camera"></use></svg></span><strong>Escanear código de barras</strong><small>Acercá el código al escáner para identificar el producto.</small><div id="lotesCameraError" class="lotes-alert product-loader-inline-alert oculto" role="alert"></div><button id="btnLotesCamara" class="lotes-primary product-loader-camera-btn" type="button"><svg class="app-icon" aria-hidden="true"><use href="#icon-camera"></use></svg><span>Usar cámara</span></button></div>
+          <div id="lotesDivider" class="product-loader-divider"><span>o</span></div>
+          <button id="btnLotesManual" class="lotes-secondary product-loader-manual-toggle" type="button">Ingresar producto manual</button>
+          <div id="lotesManual" class="lotes-manual-panel product-loader-manual-panel oculto"><button id="btnLotesVolverScanner" class="lotes-secondary product-loader-manual-toggle" type="button">Volver al escáner</button><div class="lotes-manual-row product-loader-search-row"><input id="lotesManualInput" type="text" autocomplete="off" placeholder="Código o nombre del artículo"><button id="btnLotesBuscarManual" type="button">Buscar</button></div><div id="lotesSugerencias" class="lotes-suggestions product-loader-suggestions oculto"></div></div>
+        </section>
+        <section id="lotesCamara" class="lotes-camera product-loader-camera-card oculto"><div class="venc-scanner-stage"><video id="videoLotes" autoplay muted playsinline></video><div class="camera-overlay"><strong>Apuntá al código de barras</strong><div class="corner corner-tl"></div><div class="corner corner-tr"></div><div class="corner corner-bl"></div><div class="corner corner-br"></div></div></div></section>
+        <button id="btnLotesManualCamara" class="product-loader-manual-from-scanner oculto" type="button"><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><span>Ingresar manual</span></button>
+        <section id="lotesProducto" class="lotes-mode oculto"><div class="lotes-product-box"><h3 id="lotesProductoNombre"></h3><p id="lotesProductoCodigo"></p></div><div id="lotesExistentes" class="lotes-existing oculto"></div><div id="lotesForm" class="lotes-form"><label id="lotesRubroCampo">Rubro<select id="lotesRubro"><option value="">Seleccionar rubro</option><option value="Fiambrería">Fiambrería</option><option value="Lácteos">Lácteos</option></select></label><label>Fecha de vencimiento<input id="lotesFecha" type="date"></label><label>Cantidad recibida<input id="lotesCantidad" type="number" min="1" step="1" value="1" inputmode="numeric"></label><label class="lotes-short-check"><input id="lotesCorta" type="checkbox"><span><b>Corta fecha</b><br><small>También se cargará en Vencimientos</small></span></label><button id="btnLotesGuardar" class="lotes-primary" type="button">Guardar y seguir escaneando</button></div></section>
+      </section></div>
       <button
         id="vencimientosFab"
         class="vencimientos-fab oculto"
@@ -4059,11 +4090,12 @@
     <script src="./horarios-config.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./catalogo-admin.js?v=mobile-fix-d30-110926"></script>
     <script type="module" src="./admin.js?v=1960-d21-cierre-etapa6-010926"></script>
-    <script type="module" src="./notifications.js?v=1960-permiso-notificaciones-ingreso-150926"></script>
+    <script type="module" src="./notifications.js?v=1960-sin-aviso-permiso-160926"></script>
     <script type="module" src="./notification-center.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./prices.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./etiquetas.js?v=1960-d21-cierre-etapa6-010926"></script>
-    <script type="module" src="./app.js?v=venc-duplicados-aviso-150926"></script>
+    <script type="module" src="./app.js?v=1960-d21-cierre-etapa6-010926"></script>
+    <script type="module" src="./lotes.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./tareas.js?v=1960-d21-cierre-etapa6-010926"></script>
 
     <script type="module" src="./horarios.js?v=1960-d21-cierre-etapa6-010926"></script>

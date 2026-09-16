@@ -5,6 +5,7 @@ const elementos = {
   pantallas: {
     inicio: document.getElementById("pantallaInicio"),
     vencimientos: document.getElementById("pantallaVencimientos"),
+    lotes: document.getElementById("pantallaLotes"),
     cartelOferta: document.getElementById("pantallaCartelOferta"),
     anotar: document.getElementById("pantallaAnotar"),
     precios: document.getElementById("pantallaPrecios"),

@@ -1,0 +1,246 @@
+.lotes-screen{background:#f6f8fb}.lotes-shell{max-width:1440px;margin:0 auto;padding:24px 28px 90px}.lotes-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px}.lotes-header .eyebrow{font-size:11px;letter-spacing:.12em;color:#64748b;font-weight:800}.lotes-header h1{font-size:26px;margin:4px 0}.lotes-header p{margin:0;color:#64748b}.lotes-load{border:0;background:#f32646;color:#fff;border-radius:10px;padding:12px 18px;font-weight:800;box-shadow:0 8px 18px #f3264630}.lotes-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.lote-metric{position:relative;display:grid!important;grid-template-columns:46px minmax(0,1fr)!important;gap:13px!important;align-items:center!important;min-width:0;height:116px;min-height:116px;max-height:116px;padding:15px 17px!important;border-radius:14px!important}.lote-metric i{width:46px!important;height:46px!important;min-width:46px;border-radius:13px!important;display:grid;place-items:center;background:var(--app-kpi-soft)!important;color:var(--app-kpi-accent)!important}.lote-metric i .app-icon{width:22px!important;height:22px!important}.lote-metric div{display:grid;grid-template-columns:1fr;align-items:start;row-gap:5px;min-width:0}.lote-metric span{display:block;color:var(--app-kpi-accent)!important;font-size:12.5px!important;line-height:1.15;font-weight:700!important}.lote-metric strong{display:block;color:var(--app-kpi-value)!important;font-size:25px!important;line-height:1.05!important;font-weight:850}.lote-metric:nth-child(1){--app-kpi-accent:var(--app-kpi-blue);--app-kpi-soft:var(--app-kpi-blue-soft);--app-kpi-border:var(--app-kpi-blue-border)}.lote-metric:nth-child(2){--app-kpi-accent:var(--app-kpi-red);--app-kpi-soft:var(--app-kpi-red-soft);--app-kpi-border:var(--app-kpi-red-border)}.lote-metric:nth-child(3){--app-kpi-accent:var(--app-kpi-amber);--app-kpi-soft:var(--app-kpi-amber-soft);--app-kpi-border:var(--app-kpi-amber-border)}.lote-metric:nth-child(4){--app-kpi-accent:var(--app-kpi-green);--app-kpi-soft:var(--app-kpi-green-soft);--app-kpi-border:var(--app-kpi-green-border)}.lotes-toolbar{display:flex;gap:10px;background:#fff;border:1px solid #e4e9f0;padding:10px;border-radius:14px;margin-bottom:14px}.lotes-search{flex:1;display:flex;align-items:center;border:1px solid #dfe5ed;border-radius:10px;padding:0 12px}.lotes-search input{border:0!important;outline:0!important;box-shadow:none!important;-webkit-appearance:none;appearance:none;width:100%;padding:10px;background:transparent!important}.lotes-search input:focus,.lotes-search input:hover{border:0!important;outline:0!important;box-shadow:none!important}.lotes-search input::-webkit-search-decoration,.lotes-search input::-webkit-search-cancel-button,.lotes-search input::-webkit-search-results-button,.lotes-search input::-webkit-search-results-decoration{-webkit-appearance:none}.lotes-filters{display:flex;gap:8px}.lotes-filters button{border:1px solid #dfe5ed;background:#fff;border-radius:999px;padding:9px 15px;font-weight:700;color:#536174}.lotes-filters button.activo{background:#f32646;color:#fff;border-color:#f32646}.lotes-filters .lotes-filter-button{display:flex;align-items:center;gap:7px;border-radius:10px;padding:9px 13px}.lotes-filter-button .app-icon{width:16px;height:16px}.lotes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.lote-card{background:#fff;border:1px solid #dfe5ed;border-radius:12px;padding:14px}.lote-card.is-short{border-color:#ff8798;background:linear-gradient(180deg,#fff 0,#fff8f9 100%)}.lote-card-top{display:flex;justify-content:space-between;gap:8px}.lote-rubro,.lote-short{font-size:10px;font-weight:800;border-radius:999px;padding:4px 8px;background:#eef6ff;color:#3977ed}.lote-short{background:#ffe9ed;color:#e51e3d}.lote-card h3{font-size:14px;margin:10px 0 3px}.lote-card small{color:#7b8797}.lote-card-data{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #edf0f4;margin-top:12px;padding-top:10px}.lote-card-data span{font-size:10px;color:#7b8797;display:block}.lote-card-data b{font-size:13px}.lotes-empty{grid-column:1/-1;text-align:center;padding:40px;color:#718096;background:#fff;border:1px dashed #d6dde7;border-radius:14px}.lotes-fab{display:none}.lotes-modal{position:fixed;inset:0;z-index:10000;display:grid;place-items:center}.lotes-modal.oculto{display:none}.lotes-backdrop{position:absolute;inset:0;background:#17203399;backdrop-filter:blur(2px)}.lotes-dialog{position:relative;width:min(440px,calc(100vw - 24px));max-height:90vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px #0004}.lotes-modal-head{padding:18px 18px 14px;border-bottom:1px solid #e8edf3;display:flex;justify-content:space-between}.lotes-modal-head span{color:#f32646;font-size:10px;font-weight:900;letter-spacing:.12em}.lotes-modal-head h2{margin:3px 0;font-size:18px}.lotes-modal-head p{margin:0;color:#667085;font-size:12px}.lotes-close{border:1px solid #dfe5ed;background:#f8fafc;border-radius:9px;width:34px;height:34px}.lotes-mode{padding:16px}.lotes-hero{border:1px dashed #ff8b9c;background:#fff8f9;border-radius:14px;padding:18px;text-align:center}.lotes-hero .camera-symbol{width:46px;height:46px;margin:0 auto 10px;border-radius:12px;background:#ffe6eb;color:#f32646;display:grid;place-items:center}.lotes-hero strong,.lotes-hero small{display:block}.lotes-hero small{color:#667085;margin:6px 0 12px}.lotes-primary{width:100%;border:0;background:#f32646;color:#fff;border-radius:10px;padding:12px;font-weight:800}.lotes-secondary{width:100%;margin-top:12px;border:1px solid #dfe5ed;background:#f8fafc;border-radius:10px;padding:11px;font-weight:750}.lotes-alert{font-size:11px;color:#b42318;background:#fff0f2;border:1px solid #ffc4cd;padding:9px;border-radius:9px;margin:10px 0}.lotes-camera video{width:100%;min-height:300px;object-fit:cover;background:#111}.lotes-manual-row{display:flex;gap:8px}.lotes-manual-row input{flex:1;border:1px solid #dfe5ed;border-radius:10px;padding:11px}.lotes-manual-row button{border:0;background:#f32646;color:#fff;border-radius:10px;padding:0 15px;font-weight:800}.lotes-suggestions{margin-top:10px;max-height:350px;overflow:auto}.lotes-suggestions button{display:block;width:100%;text-align:left;padding:11px;border:0;border-bottom:1px solid #e8edf3;background:#fff}.lotes-suggestions small{display:block;color:#7b8797}.lotes-product-box{background:#f8fafc;border:1px solid #e1e7ef;border-radius:12px;padding:12px;margin-bottom:10px}.lotes-product-box h3{margin:0 0 3px;font-size:15px}.lotes-product-box p{margin:0;color:#64748b;font-size:11px}.lotes-existing{border:1px solid #e1e7ef;border-radius:12px;padding:12px;margin-bottom:10px}.lote-existing{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf0f4}.lote-existing span small{display:block;color:#64748b}.lote-existing button,.lote-add-new{border:1px solid #f32646;color:#f32646;background:#fff;border-radius:8px;padding:7px 9px;font-weight:750}.lote-add-new{width:100%;margin-top:10px}.lotes-form{border:1px solid #e1e7ef;border-radius:12px;padding:12px}.lotes-form label{display:block;font-size:12px;font-weight:700;margin-bottom:10px}.lotes-form input,.lotes-form select{display:block;width:100%;box-sizing:border-box;border:1px solid #dfe5ed;border-radius:9px;padding:10px;margin-top:5px}.lotes-short-check{display:flex!important;align-items:center;gap:8px;background:#fff4f6;padding:10px;border-radius:9px}.lotes-short-check input{width:auto!important;margin:0!important}.oculto{display:none!important}
+@media(max-width:700px){.lotes-shell{padding:20px 12px 90px}.lotes-header{display:none}.lotes-metrics{grid-template-columns:1fr 1fr;gap:8px}.lote-metric{height:auto;min-height:98px;max-height:none;padding:12px!important;grid-template-columns:38px minmax(0,1fr)!important;gap:10px!important}.lote-metric i{width:38px!important;height:38px!important;min-width:38px}.lote-metric strong{font-size:23px!important}.lotes-toolbar{display:flex;padding:7px;background:#fff;border:1px solid #e4e9f0;overflow-x:auto}.lotes-search{background:#fff;height:42px;min-width:190px}.lotes-filters{margin-top:0;overflow:visible;flex:0 0 auto}.lotes-filters button{white-space:nowrap;padding:8px 13px}.lotes-grid{grid-template-columns:1fr}.lotes-fab{display:grid;place-items:center;position:fixed;right:18px;bottom:18px;z-index:900;width:54px;height:54px;border:0;border-radius:16px;background:#f32646;color:#fff;font-size:28px;box-shadow:0 10px 24px #f3264655}.lotes-dialog{position:absolute;bottom:0;width:100%;max-height:86vh;border-radius:18px 18px 0 0}.lote-card{padding:13px}.lotes-modal{place-items:end center}}
+
+/* Control de Lotes · eje canónico de módulos principales */
+@media (min-width: 901px) {
+  body[data-module="lotes"] main#pantallaLotes.pantalla.activa {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes > .lotes-shell {
+    width: min(
+      var(--ds-page-max, var(--app-shell-desktop-max, 1380px)),
+      calc(100% - (var(--ds-page-edge, var(--app-shell-desktop-edge, 36px)) * 2))
+    ) !important;
+    max-width: var(--ds-page-max, var(--app-shell-desktop-max, 1380px)) !important;
+    min-width: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 26px var(--app-shell-desktop-inline, 0px) 42px !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+}
+
+/* Control de Lotes · encabezado canónico idéntico a Vencimientos */
+@media (min-width: 901px) {
+  body[data-module="lotes"] #pantallaLotes .lotes-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+    margin: 0 0 14px !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-header > div {
+    min-width: 0 !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-header .eyebrow {
+    display: block !important;
+    margin: 0 0 4px !important;
+    color: var(--pro-muted, #667085) !important;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    font-weight: 750 !important;
+    letter-spacing: .13em !important;
+    text-transform: uppercase !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-header h1 {
+    margin: 0 !important;
+    color: var(--pro-text, #101828) !important;
+    font-size: 28px !important;
+    line-height: 1.1 !important;
+    font-weight: 700 !important;
+    letter-spacing: -.03em !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-header p {
+    margin: 6px 0 0 !important;
+    color: var(--pro-muted, #667085) !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    font-weight: 400 !important;
+  }
+
+  body[data-module="lotes"] #pantallaLotes .lotes-load {
+    width: 168px !important;
+    min-width: 168px !important;
+    max-width: 168px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    flex: 0 0 168px !important;
+    margin: 0 !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--pro-red, #f02246) !important;
+    border-radius: 11px !important;
+    background: var(--pro-red, #f02246) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(244, 63, 94, .18) !important;
+    font: inherit !important;
+    font-size: 14px !important;
+    font-weight: 750 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Control de Lotes · barra de búsqueda y filtros alineada con Vencimientos */
+@media (min-width:701px){
+  body[data-module="lotes"] #pantallaLotes .lotes-toolbar{
+    display:grid;
+    grid-template-columns:minmax(300px,1.45fr) auto 1fr auto;
+    gap:9px;
+    align-items:center;
+    margin-bottom:10px;
+    padding:8px;
+    border:1px solid #e4e9f0;
+    border-radius:12px;
+    background:#fff;
+    overflow:visible;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-search{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    height:44px;
+    padding:0 13px;
+    border:1px solid #dfe5ed;
+    border-radius:10px;
+    background:#fff;
+    overflow:hidden;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-search:focus-within{
+    border-color:#f7a2b0;
+    box-shadow:0 0 0 3px rgba(243,38,70,.08);
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-search .app-icon{
+    width:17px;
+    height:17px;
+    color:#758299;
+    flex:0 0 auto;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-search input,
+  body[data-module="lotes"] #pantallaLotes .lotes-search input[type="search"]{
+    appearance:none;
+    -webkit-appearance:none;
+    width:100%;
+    min-width:0;
+    height:42px;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    outline:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    font:inherit;
+    font-size:12px;
+    font-weight:550;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-search input::placeholder{color:#7e8a9b}
+  body[data-module="lotes"] #pantallaLotes .lotes-filters{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    min-width:0;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters button{
+    flex:0 0 auto;
+    height:34px;
+    padding:0 13px;
+    border:1px solid #dfe5ed;
+    border-radius:999px;
+    background:#fafbfc;
+    color:#536076;
+    font:inherit;
+    font-size:13.5px;
+    font-weight:700;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters button.activo{
+    border-color:#f32646;
+    background:#f32646;
+    color:#fff;
+    box-shadow:0 4px 9px rgba(240,34,70,.13);
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filters .lotes-filter-button{
+    grid-column:4;
+    height:38px;
+    padding:0 13px;
+    border-radius:9px;
+    background:#fff;
+    margin-left:0;
+    gap:7px;
+  }
+  body[data-module="lotes"] #pantallaLotes .lotes-filter-button .app-icon{width:16px;height:16px}
+  body[data-module="lotes"] #pantallaLotes .lotes-toolbar::after{content:"";grid-column:3;grid-row:1}
+  body[data-module="lotes"] #pantallaLotes .lotes-search{grid-column:1;grid-row:1}
+  body[data-module="lotes"] #pantallaLotes .lotes-filters{grid-column:2 / 5;grid-row:1}
+  body[data-module="lotes"] #pantallaLotes .lotes-filters .lotes-filter-button{margin-left:auto}
+}
+
+/* Control de Lotes: el selector de producto reutiliza exactamente el loader compartido. */
+#lotesModal.product-loader-modal{display:grid;place-items:center;padding:24px}
+#lotesModal.product-loader-modal.oculto{display:none!important}
+#lotesModal .lotes-dialog.product-loader-dialog{width:min(640px,calc(100vw - 48px));max-width:640px;max-height:none;overflow:visible;border-radius:20px}
+#lotesModal .lotes-modal-head.product-loader-head{padding:22px 24px 16px}
+#lotesModal .lotes-mode.product-loader-start{padding:20px 24px 24px}
+#lotesModal .lotes-hero.product-loader-hero{min-height:238px;padding:28px 24px 24px}
+#lotesModal .lotes-primary.product-loader-camera-btn{width:auto;min-width:170px}
+#lotesModal .lotes-secondary.product-loader-manual-toggle{margin-top:0}
+#lotesModal .lotes-manual-panel.product-loader-manual-panel{padding:0}
+#lotesModal .lotes-manual-panel .product-loader-manual-toggle{margin:0 0 12px;width:100%}
+#lotesModal .lotes-manual-row.product-loader-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+#lotesModal .lotes-suggestions.product-loader-suggestions{margin-top:8px}
+#lotesModal .lotes-camera.product-loader-camera-card{margin:20px 24px 0}
+#lotesModal #btnLotesManualCamara.product-loader-manual-from-scanner{margin:12px 24px 24px;width:calc(100% - 48px)}
+@media(max-width:700px){
+ #lotesModal.product-loader-modal{align-items:end;padding:0}
+ #lotesModal .lotes-dialog.product-loader-dialog{width:100%;max-width:none;border-radius:20px 20px 0 0}
+ #lotesModal .lotes-modal-head.product-loader-head{padding:17px 16px 13px}
+ #lotesModal .lotes-mode.product-loader-start{padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
+ #lotesModal .lotes-hero.product-loader-hero{min-height:190px;padding:20px 16px 18px}
+ #lotesModal .lotes-camera.product-loader-camera-card{margin:16px 18px 0}
+ #lotesModal #btnLotesManualCamara.product-loader-manual-from-scanner{margin:12px 18px calc(18px + env(safe-area-inset-bottom));width:calc(100% - 36px)}
+}
+
+/* Control de Lotes · selector de producto idéntico al loader compartido de Vencimientos. */
+#lotesModal.product-loader-modal{display:grid!important;place-items:center!important;padding:24px!important}
+#lotesModal.product-loader-modal.oculto{display:none!important}
+#lotesModal .lotes-dialog.product-loader-dialog{width:min(640px,calc(100vw - 48px))!important;max-width:640px!important;max-height:none!important;overflow:visible!important;border-radius:20px!important}
+#lotesModal .lotes-modal-head.product-loader-head{padding:22px 24px 16px!important}
+#lotesModal .lotes-mode.product-loader-start{padding:20px 24px 24px!important}
+#lotesModal .lotes-hero.product-loader-hero{min-height:238px!important;padding:28px 24px 24px!important}
+#lotesModal .lotes-primary.product-loader-camera-btn{width:auto!important;min-width:170px!important}
+#lotesModal .lotes-secondary.product-loader-manual-toggle{margin-top:0!important}
+#lotesModal .lotes-manual-panel.product-loader-manual-panel{padding:0!important}
+#lotesModal .lotes-manual-panel .product-loader-manual-toggle{margin:0 0 12px!important;width:100%!important}
+#lotesModal .lotes-manual-row.product-loader-search-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}
+#lotesModal .lotes-suggestions.product-loader-suggestions{margin-top:8px!important}
+#lotesModal .lotes-camera.product-loader-camera-card{margin:20px 24px 0!important}
+#lotesModal #btnLotesManualCamara.product-loader-manual-from-scanner{margin:12px 24px 24px!important;width:calc(100% - 48px)!important}
+@media(max-width:700px){
+ #lotesModal.product-loader-modal{align-items:end!important;padding:0!important}
+ #lotesModal .lotes-dialog.product-loader-dialog{width:100%!important;max-width:none!important;border-radius:20px 20px 0 0!important}
+ #lotesModal .lotes-modal-head.product-loader-head{padding:17px 16px 13px!important}
+ #lotesModal .lotes-mode.product-loader-start{padding:14px 16px calc(16px + env(safe-area-inset-bottom))!important}
+ #lotesModal .lotes-hero.product-loader-hero{min-height:190px!important;padding:20px 16px 18px!important}
+ #lotesModal .lotes-camera.product-loader-camera-card{margin:16px 18px 0!important}
+ #lotesModal #btnLotesManualCamara.product-loader-manual-from-scanner{margin:12px 18px calc(18px + env(safe-area-inset-bottom))!important;width:calc(100% - 36px)!important}
+}

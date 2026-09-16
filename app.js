@@ -540,7 +540,7 @@ function moduloDePantalla(nombre = pantallaActualApp) {
   )
     return "inventario";
   if (nombre === "bano") return "tareas";
-  if (nombre === "cartelOferta") return "vencimientos";
+  if (nombre === "cartelOferta" || nombre === "lotes") return "vencimientos";
   return nombre;
 }
 
@@ -1344,6 +1344,7 @@ async function entrarPantalla(nombre, opciones = {}) {
   if (nombre !== "tareas") window.TareasModule?.desactivar?.();
   if (nombre !== "bano") window.BanoModule?.desactivar?.();
   if (nombre !== "catalogo") window.CatalogoAdminModule?.desactivar?.();
+  if (nombre !== "lotes") window.LotesModule?.cerrar?.();
 
   if (elementos.buscadorProducto) elementos.buscadorProducto.value = "";
   if (elementos.vencBuscador) elementos.vencBuscador.value = "";
@@ -1370,6 +1371,7 @@ async function entrarPantalla(nombre, opciones = {}) {
     if (nombre === "productos" || nombre === "cargados") refrescarProductos();
   }
   if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
+  if (nombre === "lotes") await window.LotesModule?.activar?.();
   if (nombre === "cartelOferta") prepararPantallaCartelOferta();
   if (["cargados", "vencimientos"].includes(nombre)) {
     requestAnimationFrame(() => {
@@ -1428,6 +1430,9 @@ async function abrirDestinoInicial() {
     manejado = true;
   } else if (modulo === "bano") {
     await entrarPantalla("bano");
+    manejado = true;
+  } else if (modulo === "lotes") {
+    await entrarPantalla("lotes");
     manejado = true;
   } else if (modulo === "vencimientos") {
     await entrarPantalla("vencimientos");

@@ -107,6 +107,7 @@ const {
   actualizarVencimientoDb,
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
+const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb } = require("./db-lotes");
 const {
   asegurarEsquemaListasReposicion,
   conTransaccionListasReposicion,
@@ -6110,6 +6111,33 @@ app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
     console.error("[PUSH] Error en prueba:", error?.message || error);
     return res.status(500).json({ ok: false, mensaje: "No se pudo completar la prueba de notificaciones" });
   }
+});
+
+app.get("/lotes", requerirAlgunModulo("vencimientos"), async (req, res) => {
+  try { const lotes = await listarLotesDb(); res.json({ ok:true, total:lotes.length, lotes }); }
+  catch(error){ console.error("Error en GET /lotes:",error); res.status(500).json({ok:false,mensaje:error.message||"Error al obtener lotes"}); }
+});
+app.get("/lotes/producto/:codigo", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+  try { const lotes=await listarLotesProductoDb(req.params.codigo); res.json({ok:true,lotes}); }
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"Error al obtener lotes del producto"});}
+});
+app.post("/lotes", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+  try {
+    const codigo=String(req.body?.codigo||"").trim(), articulo=String(req.body?.articulo||"").trim(), rubro=String(req.body?.rubro||"").trim(), vencimiento=String(req.body?.vencimiento||"").trim(), cantidad=Number(req.body?.cantidad), cortaFecha=Boolean(req.body?.cortaFecha);
+    if(!codigo||!articulo||!["Fiambrería","Lácteos"].includes(rubro)||!/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)||!Number.isInteger(cantidad)||cantidad<=0) return res.status(400).json({ok:false,mensaje:"Datos del lote incompletos o inválidos"});
+    const lote=await crearLoteDb({id:`LOT-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,codigo,articulo,rubro,vencimiento,cantidad,cortaFecha});
+    if(cortaFecha){ try { await crearVencimientoDb({id:`LOT-VENC-${lote.id}`,fecha_carga:new Date().toISOString().slice(0,10),codigo,articulo,vencimiento,salon:cantidad,deposito:0,oferta:false,rubro}); invalidarCache("vencimientos"); } catch(error){ if(error?.code!=="VENCIMIENTO_DUPLICADO") throw error; } }
+    res.status(201).json({ok:true,lote});
+  } catch(error){ console.error("Error en POST /lotes:",error); res.status(500).json({ok:false,mensaje:error.message||"Error al guardar lote"}); }
+});
+app.put("/lotes/:id", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+  try {
+    const vencimiento=String(req.body?.vencimiento||"").trim(),cantidad=Number(req.body?.cantidad),cortaFecha=Boolean(req.body?.cortaFecha);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)||!Number.isInteger(cantidad)||cantidad<=0) return res.status(400).json({ok:false,mensaje:"Fecha o cantidad inválida"});
+    const lote=await reemplazarLoteDb(req.params.id,{...req.body,vencimiento,cantidad,cortaFecha}); if(!lote)return res.status(404).json({ok:false,mensaje:"Lote no encontrado"});
+    if(cortaFecha){ try { await crearVencimientoDb({id:`LOT-VENC-${lote.id}-${Date.now()}`,fecha_carga:new Date().toISOString().slice(0,10),codigo:lote.codigo,articulo:lote.articulo,vencimiento:lote.vencimiento,salon:lote.cantidad,deposito:0,oferta:false,rubro:lote.rubro}); invalidarCache("vencimientos"); } catch(error){ if(error?.code!=="VENCIMIENTO_DUPLICADO") throw error; } }
+    res.json({ok:true,lote});
+  } catch(error){console.error("Error en PUT /lotes/:id:",error);res.status(500).json({ok:false,mensaje:error.message||"Error al reemplazar lote"});}
 });
 
 app.get("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) => {
