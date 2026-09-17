@@ -536,3 +536,71 @@
 .lotes-new-product-prompt .lotes-confirm-delete-icon{background:#fff4df;color:#f59e0b;}
 .lotes-new-product-prompt .lotes-confirm-accept{background:#f52549!important;color:#fff!important;}
 @media(max-width:700px){.lotes-new-product-prompt .lotes-confirm-delete-actions{grid-template-columns:1fr!important;}.lotes-new-product-prompt .lotes-confirm-delete-actions button{width:100%!important;}}
+
+
+/* Corrección 17/09 · alta directa de productos */
+#btnLotesNuevoProducto.lotes-new-product-direct{
+  margin-top:8px;
+  background:#fff;
+  border:1px solid #f32646;
+  color:#f32646;
+}
+#btnLotesNuevoProducto.lotes-new-product-direct:hover{
+  background:#fff5f7;
+}
+#lotesProductoNuevoPrompt,
+#lotesCodigoNuevoPrompt{
+  z-index:11050 !important;
+}
+.lotes-new-code-field{
+  display:grid;
+  gap:6px;
+  margin:14px 0 4px;
+  text-align:left;
+}
+.lotes-new-code-field label{
+  font-size:12px;
+  font-weight:800;
+  color:#344054;
+}
+.lotes-new-code-field input{
+  width:100%;
+  box-sizing:border-box;
+  min-height:44px;
+  border:1px solid #dfe5ed;
+  border-radius:10px;
+  padding:10px 12px;
+  outline:none;
+  font:inherit;
+}
+.lotes-new-code-field input:focus{
+  border-color:#98a2b3;
+  box-shadow:0 0 0 3px #f2f4f7;
+}
+.lotes-new-code-field input.is-invalid{
+  border-color:#f32646;
+}
+.lotes-new-code-field small{
+  color:#667085;
+  font-size:10px;
+  line-height:1.35;
+}
+
+#lotesModal .lotes-provisional-code,
+#lotesModal .lotes-provisional-description{
+  width:100%;
+  box-sizing:border-box;
+  min-height:44px;
+  border:1px solid #dfe5ed;
+  border-radius:10px;
+  padding:10px 12px;
+  background:#fff;
+  color:#101828;
+  font:inherit;
+  outline:none;
+}
+#lotesModal .lotes-provisional-code:focus,
+#lotesModal .lotes-provisional-description:focus{
+  border-color:#98a2b3;
+  box-shadow:0 0 0 3px #f2f4f7;
+}

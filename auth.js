@@ -393,14 +393,19 @@ function actualizarInterfazUsuario() {
   if ($("desktopSesionRol")) $("desktopSesionRol").textContent = textoRol;
   const esAdministrador = usuarioActual?.rol === "administrador";
   document
-    .querySelectorAll(
-      ".module-card[data-modulo], .pro-global-nav[data-modulo], .pro-module-row[data-modulo]",
-    )
+    .querySelectorAll("[data-modulo]")
     .forEach((elemento) => {
-      elemento.classList.toggle(
-        "oculto",
-        !puedeVerModulo(elemento.dataset.modulo),
-      );
+      const modulo = elemento.dataset.modulo;
+      if (!modulo) return;
+      const visible = puedeVerModulo(modulo);
+      elemento.classList.toggle("oculto", !visible);
+      elemento.hidden = !visible;
+      elemento.setAttribute("aria-hidden", visible ? "false" : "true");
+      if (!visible) {
+        elemento.style.setProperty("display", "none", "important");
+      } else {
+        elemento.style.removeProperty("display");
+      }
     });
   const adminModule = document.querySelector(".admin-module-card");
   if (adminModule) adminModule.classList.toggle("oculto", !esAdministrador);
@@ -431,6 +436,7 @@ function guardarSesion(nuevoToken, usuario, recordar = false) {
   googleCredentialPendiente = "";
   document.querySelector(".login-v2-auth")?.classList.remove("google-link-pending");
   actualizarInterfazUsuario();
+  requestAnimationFrame(() => actualizarInterfazUsuario());
   ocultarLogin();
   sincronizarColaOffline();
 }
@@ -450,6 +456,7 @@ function cerrarSesion(mostrar = true) {
     window.google?.accounts?.id?.disableAutoSelect?.();
   } catch {}
   actualizarInterfazUsuario();
+  requestAnimationFrame(() => actualizarInterfazUsuario());
   if (mostrar) mostrarLogin();
   else mostrarLogin("La sesión venció. Volvé a ingresar.");
 }
