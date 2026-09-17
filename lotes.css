@@ -527,3 +527,12 @@
     box-sizing:border-box !important;
   }
 }
+
+
+/* Productos provisionales · Control de Lotes */
+#lotesModal .lotes-provisional-description{width:100%;min-height:48px;border:1px solid #d7dce3;border-radius:12px;padding:0 14px;font:inherit;font-weight:650;color:#111827;background:#fff;box-sizing:border-box;outline:none!important;box-shadow:none!important;}
+#lotesModal .lotes-provisional-description:focus{border-color:#98a2b3!important;box-shadow:none!important;}
+.lote-pending{display:inline-flex;align-items:center;min-height:24px;padding:3px 8px;border-radius:999px;background:#fff4df;color:#a15c00;font-size:11px;font-weight:800;}
+.lotes-new-product-prompt .lotes-confirm-delete-icon{background:#fff4df;color:#f59e0b;}
+.lotes-new-product-prompt .lotes-confirm-accept{background:#f52549!important;color:#fff!important;}
+@media(max-width:700px){.lotes-new-product-prompt .lotes-confirm-delete-actions{grid-template-columns:1fr!important;}.lotes-new-product-prompt .lotes-confirm-delete-actions button{width:100%!important;}}

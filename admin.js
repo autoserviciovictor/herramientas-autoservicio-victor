@@ -35,6 +35,7 @@ const $ = (id) => document.getElementById(id);
 const MODULOS_PERMISO = [
   "inventario",
   "vencimientos",
+  "lotes",
   "anotar",
   "precios",
   "etiquetas",

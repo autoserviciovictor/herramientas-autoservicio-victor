@@ -14,6 +14,8 @@ let productosMaestro = null;
 let buscarTimer = null;
 let solicitudProductoActual = 0;
 let loteOriginalEdicion = null;
+let codigosProvisionales = new Set();
+let altaProvisionalNueva = false;
 
 function actualizarEncabezadoModal(titulo = 'Cargar producto', descripcion = 'Escaneá un código o buscá el producto manualmente.') {
   const tituloEl = $('lotesModalTitulo');
@@ -65,6 +67,54 @@ function agruparPorProducto(items) {
     p.lotes.sort((a, b) => String(a.vencimiento).localeCompare(String(b.vencimiento)));
   }
   return [...mapa.values()];
+}
+
+function confirmarAltaProductoNuevo(codigo) {
+  return new Promise((resolve) => {
+    document.getElementById('lotesProductoNuevoPrompt')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'lotesProductoNuevoPrompt';
+    modal.className = 'lotes-confirm-delete lotes-new-product-prompt';
+    modal.innerHTML = `
+      <div class="lotes-confirm-delete-backdrop"></div>
+      <section class="lotes-confirm-delete-dialog" role="dialog" aria-modal="true">
+        <div class="lotes-confirm-delete-icon" aria-hidden="true">+</div>
+        <h3>Producto no encontrado</h3>
+        <p>El código <strong>${esc(codigo)}</strong> todavía no está cargado en Productos.</p>
+        <div class="lotes-confirm-delete-actions">
+          <button type="button" class="lotes-confirm-cancel">Volver al escáner</button>
+          <button type="button" class="lotes-confirm-accept">Agregar producto nuevo</button>
+        </div>
+      </section>`;
+    const terminar=(valor)=>{modal.remove();resolve(valor);};
+    modal.querySelector('.lotes-confirm-delete-backdrop').onclick=()=>terminar(false);
+    modal.querySelector('.lotes-confirm-cancel').onclick=()=>terminar(false);
+    modal.querySelector('.lotes-confirm-accept').onclick=()=>terminar(true);
+    document.body.appendChild(modal);
+  });
+}
+
+function prepararAltaProvisional(codigo) {
+  altaProvisionalNueva = true;
+  producto = { codigo: String(codigo), articulo: '', provisional: true };
+  lotesProducto = [];
+  loteOriginalEdicion = null;
+  accion = 'nuevo';
+  loteReemplazo = '';
+  actualizarEncabezadoModal('Agregar producto nuevo', 'Cargá los datos del producto recibido. Quedará pendiente hasta que aparezca en el Excel maestro.');
+  $('lotesProductoNombre').textContent = 'Producto pendiente';
+  $('lotesProductoCodigo').textContent = `Código: ${codigo}`;
+  $('lotesDescripcionCampo')?.classList.remove('oculto');
+  if ($('lotesDescripcion')) $('lotesDescripcion').value = '';
+  $('lotesRubroCampo')?.classList.remove('oculto');
+  actualizarRubroVisual('');
+  $('lotesFecha').value = '';
+  $('lotesCantidad').value = '1';
+  $('lotesCorta').checked = false;
+  $('lotesExistentes').classList.add('oculto');
+  $('lotesForm').classList.remove('oculto');
+  modo('producto');
+  requestAnimationFrame(() => $('lotesDescripcion')?.focus());
 }
 
 function confirmarEliminarLotes({ titulo = 'Eliminar', producto = '', detalle = '', aviso = '' } = {}) {
@@ -148,6 +198,7 @@ function render() {
         return `<article class="lote-card lote-product-card ${p.cortaFecha ? 'is-short' : ''}" data-lote-producto="${esc(p.codigo)}" tabindex="0" role="button" aria-label="Ver lotes de ${esc(p.articulo)}">
           <div class="lote-card-top">
             <span class="lote-rubro">${esc(p.rubro)}</span>
+            ${codigosProvisionales.has(String(p.codigo)) ? '<span class="lote-pending">Producto pendiente</span>' : ''}
             ${p.cortaFecha ? '<span class="lote-short">Corta fecha</span>' : ''}
           </div>
           <h3>${esc(p.articulo)}</h3>
@@ -202,6 +253,7 @@ async function cargar() {
   try {
     const d = await json('/lotes');
     lotes = d.lotes || [];
+    codigosProvisionales = new Set((d.provisionales || []).map(String));
     render();
   } catch (e) {
     $('lotesLista').innerHTML = `<div class="lotes-empty">${esc(e.message)}</div>`;
@@ -240,6 +292,8 @@ async function abrir() {
   actualizarEncabezadoModal();
   producto = null;
   lotesProducto = [];
+  altaProvisionalNueva = false;
+  $('lotesDescripcionCampo')?.classList.add('oculto');
   if ($('lotesManualInput')) $('lotesManualInput').value = '';
   if ($('lotesSugerencias')) {
     $('lotesSugerencias').innerHTML = '';
@@ -300,15 +354,15 @@ async function seleccionarCodigo(codigo) {
   modo('producto');
 
   try {
-    const d = await json(`/producto-maestro/${encodeURIComponent(codigo)}`);
+    const d = await json(`/lotes/producto-resuelto/${encodeURIComponent(codigo)}`);
     if (solicitud !== solicitudProductoActual) return;
     await preparar(d.producto, solicitud);
   } catch (e) {
     if (solicitud !== solicitudProductoActual) return;
-    mostrarAvisoLotes('Producto no encontrado', '', () => {
-      abrir();
-      iniciarCamara();
-    });
+    const agregar = await confirmarAltaProductoNuevo(codigo);
+    if (solicitud !== solicitudProductoActual) return;
+    if (agregar) prepararAltaProvisional(codigo);
+    else { abrir(); iniciarCamara(); }
   }
 }
 function limpiarSeleccionLotes() {
@@ -342,6 +396,8 @@ async function preparar(p, solicitud = solicitudProductoActual) {
   if (solicitud !== solicitudProductoActual) return;
 
   producto = p;
+  altaProvisionalNueva = false;
+  $('lotesDescripcionCampo')?.classList.add('oculto');
   lotesProducto = d.lotes || [];
   loteOriginalEdicion = null;
 
@@ -437,7 +493,7 @@ async function preparar(p, solicitud = solicitudProductoActual) {
 }
 async function obtenerProductosMaestro() {
   if (productosMaestro) return productosMaestro;
-  const d = await json('/productos-maestro');
+  const d = await json('/lotes/productos-busqueda');
   productosMaestro = d.productos || [];
   return productosMaestro;
 }
@@ -455,7 +511,7 @@ function pintarSugerencias(items, q) {
   box.innerHTML = items.length
     ? items.map((p) => `<button class="manual-suggestion-item" type="button" data-codigo="${esc(p.codigo)}">
         <strong>${esc(p.articulo)}</strong>
-        <span>${esc(p.codigo)}</span>
+        <span>${esc(p.codigo)}${p.provisional ? ' · Producto pendiente' : ''}</span>
       </button>`).join('')
     : '<div class="manual-no-results">No se encontraron productos.</div>';
 
@@ -549,6 +605,22 @@ async function guardar() {
     return mostrarAvisoLotes('Completá fecha de vencimiento y una cantidad válida.');
   }
   if (!rubro) return mostrarAvisoLotes('Seleccioná Fiambrería o Lácteos.');
+
+  if (altaProvisionalNueva) {
+    const descripcion = ($('lotesDescripcion')?.value || '').trim();
+    if (!descripcion) return mostrarAvisoLotes('Ingresá la descripción del producto.');
+    try {
+      const alta = await json('/lotes/productos-provisionales', {
+        method: 'POST',
+        body: JSON.stringify({ codigo: producto.codigo, articulo: descripcion, rubro })
+      });
+      producto = alta.producto;
+      productosMaestro = null;
+      altaProvisionalNueva = false;
+    } catch (e) {
+      return mostrarAvisoLotes(e.message);
+    }
+  }
 
   const body = {
     codigo: producto.codigo,

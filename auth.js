@@ -22,6 +22,7 @@ const $ = (id) => document.getElementById(id);
 const MODULOS_DISPONIBLES = [
   "inventario",
   "vencimientos",
+  "lotes",
   "anotar",
   "precios",
   "etiquetas",
@@ -43,6 +44,7 @@ function permisosUsuario(usuario = usuarioActual) {
 
 function puedeVerModulo(modulo, usuario = usuarioActual) {
   if (["inicio", "ajustes"].includes(modulo)) return true;
+  if (modulo === "bano") modulo = "tareas";
   if (["admin", "catalogo"].includes(modulo)) return usuario?.rol === "administrador";
   return permisosUsuario(usuario)[modulo] === true;
 }
@@ -390,9 +392,16 @@ function actualizarInterfazUsuario() {
     $("desktopSesionNombre").textContent = nombre || "Usuario";
   if ($("desktopSesionRol")) $("desktopSesionRol").textContent = textoRol;
   const esAdministrador = usuarioActual?.rol === "administrador";
-  document.querySelectorAll(".module-card[data-modulo]").forEach((card) => {
-    card.classList.toggle("oculto", !puedeVerModulo(card.dataset.modulo));
-  });
+  document
+    .querySelectorAll(
+      ".module-card[data-modulo], .pro-global-nav[data-modulo], .pro-module-row[data-modulo]",
+    )
+    .forEach((elemento) => {
+      elemento.classList.toggle(
+        "oculto",
+        !puedeVerModulo(elemento.dataset.modulo),
+      );
+    });
   const adminModule = document.querySelector(".admin-module-card");
   if (adminModule) adminModule.classList.toggle("oculto", !esAdministrador);
   const adminPanel = $("pantallaAdmin");

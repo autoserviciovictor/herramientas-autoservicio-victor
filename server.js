@@ -107,7 +107,8 @@ const {
   actualizarVencimientoDb,
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
-const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLotesProductoDb } = require("./db-lotes");
+const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb } = require("./db-lotes");
+const { asegurarEsquemaProductosProvisionales, buscarProductoProvisionalDb, listarProductosProvisionalesPendientesDb, crearProductoProvisionalDb, conciliarProductosProvisionalesDb } = require("./db-productos-provisionales");
 const {
   asegurarEsquemaListasReposicion,
   conTransaccionListasReposicion,
@@ -496,6 +497,7 @@ function verificarPassword(password, guardado) {
 const MODULOS_PERMITIDOS = [
   "inventario",
   "vencimientos",
+  "lotes",
   "anotar",
   "precios",
   "etiquetas",
@@ -4688,6 +4690,18 @@ async function sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente) {
     RETURNING e.expiration_pk
   `, [json]);
 
+  // Control de Lotes también conserva sus datos operativos, pero adopta el nombre maestro.
+  const lotes = await cliente.query(`
+    WITH maestros AS (
+      SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, article TEXT)
+    )
+    UPDATE lot_records l
+    SET article=m.article, updated_at=NOW()
+    FROM maestros m
+    WHERE l.code=m.code AND l.article IS DISTINCT FROM m.article
+    RETURNING l.lot_pk
+  `, [json]);
+
   // Las listas de reposición son registros activos de la app, por eso también
   // deben mostrar el nombre maestro vigente sin alterar cantidades ni estado.
   const reposicion = await cliente.query(`
@@ -4705,6 +4719,7 @@ async function sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente) {
     inventario: inventario.rowCount || 0,
     vencimientos: vencimientos.rowCount || 0,
     reposicion: reposicion.rowCount || 0,
+    lotes: lotes.rowCount || 0,
   };
 }
 
@@ -4748,12 +4763,15 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     await asegurarEsquemaCatalogoPublico();
     await asegurarEsquemaVencimientos();
     await asegurarEsquemaListasReposicion();
+    await asegurarEsquemaLotes();
+    await asegurarEsquemaProductosProvisionales();
     const sincronizacion = await conTransaccionInventarioProductos(async (cliente) => {
       await reemplazarCatalogoDb(catalogo, cliente);
       const rubros = await sincronizarRubrosImportadosCatalogoDb(catalogo, cliente);
       const stockCatalogo = await sincronizarVisibilidadStockCatalogoDb(catalogo, cliente);
       const dependencias = await sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente);
-      return { rubros, stockCatalogo, dependencias };
+      const provisionalesConciliados = await conciliarProductosProvisionalesDb(catalogo, cliente);
+      return { rubros, stockCatalogo, dependencias, provisionalesConciliados };
     });
     // Productos afecta tanto el catálogo maestro como los nombres visibles del
     // Inventario. Invalidamos ambos cachés en el mismo instante de la importación.
@@ -4775,6 +4793,8 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
           inventario: Number(resumenSincronizacion?.dependencias?.inventario) || 0,
           vencimientos: Number(resumenSincronizacion?.dependencias?.vencimientos) || 0,
           reposicion: Number(resumenSincronizacion?.dependencias?.reposicion) || 0,
+          lotes: Number(resumenSincronizacion?.dependencias?.lotes) || 0,
+          provisionalesConciliados: Number(resumenSincronizacion?.provisionalesConciliados) || 0,
           productosAsignadosRubro: Number(resumenSincronizacion?.rubros?.productosAsignados) || 0,
           productosSinRubro: Number(resumenSincronizacion?.rubros?.productosSinRubro) || 0,
           productosActivos: Number(resumenSincronizacion?.stockCatalogo?.activos) || 0,
@@ -4872,7 +4892,7 @@ app.get("/producto/:codigo", requerirAlgunModulo("inventario"), async (req, res)
   }
 });
 
-app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar", "etiquetas"), async (req, res) => {
+app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", "lotes", "precios", "anotar", "etiquetas"), async (req, res) => {
   try {
     const productos = await obtenerProductosMaestros();
     const etag = `"${crypto.createHash("sha1").update(JSON.stringify(productos)).digest("hex")}"`;
@@ -4889,7 +4909,7 @@ app.get("/productos-maestro", requerirAlgunModulo("inventario", "vencimientos", 
   }
 });
 
-app.get("/producto-maestro/:codigo", requerirAlgunModulo("inventario", "vencimientos", "precios", "anotar", "etiquetas"), async (req, res) => {
+app.get("/producto-maestro/:codigo", requerirAlgunModulo("inventario", "vencimientos", "lotes", "precios", "anotar", "etiquetas"), async (req, res) => {
   try {
     const producto = await buscarProductoMaestroPorCodigo(req.params.codigo);
     if (!producto) {
@@ -6113,15 +6133,59 @@ app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
   }
 });
 
-app.get("/lotes", requerirAlgunModulo("vencimientos"), async (req, res) => {
-  try { const lotes = await listarLotesDb(); res.json({ ok:true, total:lotes.length, lotes }); }
-  catch(error){ console.error("Error en GET /lotes:",error); res.status(500).json({ok:false,mensaje:error.message||"Error al obtener lotes"}); }
+app.get("/lotes", requerirAlgunModulo("lotes"), async (req, res) => {
+  try {
+    const [lotes, provisionales] = await Promise.all([listarLotesDb(), listarProductosProvisionalesPendientesDb()]);
+    res.json({ ok:true, total:lotes.length, lotes, provisionales:provisionales.map(p=>p.codigo) });
+  } catch(error){ console.error("Error en GET /lotes:",error); res.status(500).json({ok:false,mensaje:error.message||"Error al obtener lotes"}); }
 });
-app.get("/lotes/producto/:codigo", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+app.get("/lotes/producto-resuelto/:codigo", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try {
+    const codigo=normalizarCodigo(req.params.codigo);
+    const maestro=await buscarProductoMaestroPorCodigo(codigo);
+    if(maestro) return res.json({ok:true,producto:{...maestro,provisional:false}});
+    const provisional=await buscarProductoProvisionalDb(codigo);
+    if(provisional) return res.json({ok:true,producto:{codigo:provisional.codigo,articulo:provisional.articulo,rubro:provisional.rubro,provisional:true}});
+    return res.status(404).json({ok:false,mensaje:"Producto no encontrado"});
+  } catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo buscar el producto"});}
+});
+app.get("/lotes/productos-busqueda", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try {
+    const [maestros,provisionales]=await Promise.all([obtenerProductosMaestros(),listarProductosProvisionalesPendientesDb()]);
+    const codigos=new Set(maestros.map(p=>String(p.codigo)));
+    const extras=provisionales.filter(p=>!codigos.has(String(p.codigo))).map(p=>({codigo:p.codigo,articulo:p.articulo,rubro:p.rubro,provisional:true}));
+    res.json({ok:true,productos:[...maestros,...extras]});
+  } catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudieron cargar los productos"});}
+});
+app.post("/lotes/productos-provisionales", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try {
+    const codigo=normalizarCodigo(req.body?.codigo), articulo=normalizarTexto(req.body?.articulo), rubro=normalizarTexto(req.body?.rubro);
+    if(!codigo||!articulo) return res.status(400).json({ok:false,mensaje:"Completá código de barras y descripción"});
+    if(!["Fiambrería","Lácteos"].includes(rubro)) return res.status(400).json({ok:false,mensaje:"Seleccioná un rubro"});
+    const maestro=await buscarProductoMaestroPorCodigo(codigo);
+    if(maestro) return res.json({ok:true,producto:{...maestro,provisional:false},yaExiste:true});
+    const producto=await crearProductoProvisionalDb({codigo,articulo,rubro,usuario:req.usuario?.usuario||""});
+    res.status(201).json({ok:true,producto:{codigo:producto.codigo,articulo:producto.articulo,rubro:producto.rubro,provisional:true}});
+  } catch(error){console.error("Error creando producto provisional:",error);res.status(500).json({ok:false,mensaje:error.message||"No se pudo agregar el producto"});}
+});
+app.get("/lotes/producto/:codigo", requerirAlgunModulo("lotes"), async (req,res)=>{
   try { const lotes=await listarLotesProductoDb(req.params.codigo); res.json({ok:true,lotes}); }
   catch(error){res.status(500).json({ok:false,mensaje:error.message||"Error al obtener lotes del producto"});}
 });
-app.delete("/lotes/producto/:codigo", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+app.delete("/lotes/:id", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try {
+    const lote=await eliminarLoteDb(req.params.id);
+    if(!lote) return res.status(404).json({ok:false,mensaje:"Lote no encontrado"});
+    if(lote.cortaFecha){
+      const vencimientos=await listarVencimientosDb();
+      const vinculado=vencimientos.find(v=>String(v.codigo)===String(lote.codigo)&&String(v.vencimiento)===String(lote.vencimiento));
+      if(vinculado){const eliminado=await eliminarVencimientoDb(vinculado.id);if(eliminado) await registrarHistorialVencimiento(req,"Eliminó",eliminado,"Eliminado desde Control de Lotes");}
+      invalidarCache("vencimientos");
+    }
+    res.json({ok:true,lote});
+  } catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo eliminar el lote"});}
+});
+app.delete("/lotes/producto/:codigo", requerirAlgunModulo("lotes"), async (req,res)=>{
   try {
     const codigo=String(req.params.codigo||"").trim();
     if(!codigo) return res.status(400).json({ok:false,mensaje:"Falta el código"});
@@ -6146,7 +6210,7 @@ app.delete("/lotes/producto/:codigo", requerirAlgunModulo("vencimientos"), async
     res.status(500).json({ok:false,mensaje:error.message||"No se pudo eliminar el producto de Control de Lotes"});
   }
 });
-app.post("/lotes", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+app.post("/lotes", requerirAlgunModulo("lotes"), async (req,res)=>{
   try {
     const codigo=String(req.body?.codigo||"").trim(), articulo=String(req.body?.articulo||"").trim(), rubro=String(req.body?.rubro||"").trim(), vencimiento=String(req.body?.vencimiento||"").trim(), cantidad=Number(req.body?.cantidad), cortaFecha=Boolean(req.body?.cortaFecha);
     if(!codigo||!articulo||!["Fiambrería","Lácteos"].includes(rubro)||!/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)||!Number.isInteger(cantidad)||cantidad<=0) return res.status(400).json({ok:false,mensaje:"Datos del lote incompletos o inválidos"});
@@ -6155,7 +6219,7 @@ app.post("/lotes", requerirAlgunModulo("vencimientos"), async (req,res)=>{
     res.status(201).json({ok:true,lote});
   } catch(error){ console.error("Error en POST /lotes:",error); res.status(500).json({ok:false,mensaje:error.message||"Error al guardar lote"}); }
 });
-app.put("/lotes/:id", requerirAlgunModulo("vencimientos"), async (req,res)=>{
+app.put("/lotes/:id", requerirAlgunModulo("lotes"), async (req,res)=>{
   try {
     const vencimiento=String(req.body?.vencimiento||"").trim(),cantidad=Number(req.body?.cantidad),cortaFecha=Boolean(req.body?.cortaFecha);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)||!Number.isInteger(cantidad)||cantidad<=0) return res.status(400).json({ok:false,mensaje:"Fecha o cantidad inválida"});
@@ -7008,6 +7072,8 @@ async function prepararPostgresEtapa9() {
   await asegurarEsquemaCatalogoPublico();
   await asegurarEsquemaCatalogoPedidos();
   await asegurarVencimientosPostgres();
+  await asegurarEsquemaLotes();
+  await asegurarEsquemaProductosProvisionales();
   await asegurarListasReposicionPostgres();
   await asegurarAuxiliaresPostgres();
   await reanudarProcesoPendienteAlIniciar();
