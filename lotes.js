@@ -16,6 +16,7 @@ let solicitudProductoActual = 0;
 let loteOriginalEdicion = null;
 let codigosProvisionales = new Set();
 let altaProvisionalNueva = false;
+let guardandoLote = false;
 
 function actualizarEncabezadoModal(titulo = 'Cargar producto', descripcion = 'Escaneá un código o buscá el producto manualmente.') {
   const tituloEl = $('lotesModalTitulo');
@@ -42,6 +43,93 @@ function fmt(f) {
   if (!f) return '—';
   const [y, m, d] = f.split('-');
   return `${d}/${m}/${y}`;
+}
+
+
+function abrirProgramadorAlerta(lote) {
+  return new Promise((resolve) => {
+    document.getElementById('lotesNotificarPrompt')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'lotesNotificarPrompt';
+    modal.className = 'lotes-notify-modal';
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const minFecha = `${yyyy}-${mm}-${dd}`;
+    modal.innerHTML = `
+      <div class="lotes-notify-backdrop"></div>
+      <section class="lotes-notify-dialog" role="dialog" aria-modal="true" aria-labelledby="lotesNotificarTitulo">
+        <div class="lotes-notify-head">
+          <div>
+            <span class="lotes-notify-eyebrow">RECORDATORIO</span>
+            <h3 id="lotesNotificarTitulo">¿Cuándo querés que te avise?</h3>
+            <p>Elegí dentro de cuántos días querés recibir la notificación de este lote.</p>
+          </div>
+          <button type="button" class="lotes-notify-close" aria-label="Cerrar">×</button>
+        </div>
+        <div class="lotes-notify-lote">
+          <span>Vencimiento</span>
+          <strong>${fmt(lote?.vencimiento)}</strong>
+          <small>${Number(lote?.cantidad) || 0} un.${lote?.cortaFecha ? ' · Corta fecha' : ''}</small>
+        </div>
+        <div class="lotes-notify-options" role="group" aria-label="Días para el aviso">
+          ${[1,3,7,15].map((dias) => `<button type="button" class="lotes-notify-option${dias === 7 ? ' is-selected' : ''}" data-notify-days="${dias}"><strong>${dias}</strong><span>${dias === 1 ? 'día' : 'días'}</span></button>`).join('')}
+        </div>
+        <button type="button" class="lotes-notify-custom-toggle">📅 Elegir una fecha específica</button>
+        <div class="lotes-notify-custom oculto">
+          <label for="lotesNotifyFecha">Fecha del aviso</label>
+          <input id="lotesNotifyFecha" type="date" min="${minFecha}">
+        </div>
+        <p class="lotes-notify-error" role="alert" aria-live="polite"></p>
+        <div class="lotes-notify-actions">
+          <button type="button" class="lotes-notify-modal-cancel">Cancelar</button>
+          <button type="button" class="lotes-notify-modal-save">Programar notificación</button>
+        </div>
+      </section>`;
+
+    let diasSeleccionados = 7;
+    let modoFecha = false;
+    const terminar = (valor) => { modal.remove(); resolve(valor); };
+    const opciones = [...modal.querySelectorAll('[data-notify-days]')];
+    const custom = modal.querySelector('.lotes-notify-custom');
+    const fecha = modal.querySelector('#lotesNotifyFecha');
+    const error = modal.querySelector('.lotes-notify-error');
+    const toggle = modal.querySelector('.lotes-notify-custom-toggle');
+
+    opciones.forEach((btn) => btn.addEventListener('click', () => {
+      diasSeleccionados = Number(btn.dataset.notifyDays);
+      modoFecha = false;
+      opciones.forEach((x) => x.classList.toggle('is-selected', x === btn));
+      custom.classList.add('oculto');
+      toggle.classList.remove('is-selected');
+      error.textContent = '';
+    }));
+    toggle.addEventListener('click', () => {
+      modoFecha = true;
+      opciones.forEach((x) => x.classList.remove('is-selected'));
+      custom.classList.remove('oculto');
+      toggle.classList.add('is-selected');
+      fecha.focus();
+    });
+    modal.querySelector('.lotes-notify-modal-save').addEventListener('click', () => {
+      if (modoFecha) {
+        const valor = String(fecha.value || '').trim();
+        if (!valor || valor < minFecha) {
+          error.textContent = 'Elegí una fecha válida desde hoy en adelante.';
+          fecha.focus();
+          return;
+        }
+        terminar({ fechaAviso: valor });
+        return;
+      }
+      terminar({ dias: diasSeleccionados });
+    });
+    modal.querySelector('.lotes-notify-backdrop').addEventListener('click', () => terminar(null));
+    modal.querySelector('.lotes-notify-close').addEventListener('click', () => terminar(null));
+    modal.querySelector('.lotes-notify-modal-cancel').addEventListener('click', () => terminar(null));
+    document.body.appendChild(modal);
+  });
 }
 
 function agruparPorProducto(items) {
@@ -244,82 +332,113 @@ function confirmarEliminarLoteIndividual(lote) {
   });
 }
 
+function diasHastaVencimientoLote(fecha) {
+  if (!fecha) return 99999;
+  // Misma regla usada por Vencimientos para que ambos módulos clasifiquen igual.
+  const hoy = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00');
+  const vence = new Date(String(fecha) + 'T00:00:00');
+  if (Number.isNaN(vence.getTime())) return 99999;
+  return Math.ceil((vence - hoy) / 86400000);
+}
+
+function bucketVencimientoLote(lote) {
+  const fecha = String(lote?.vencimiento || '').trim();
+  if (!fecha) return 'fuera';
+  const dias = diasHastaVencimientoLote(fecha);
+  if (dias === 99999) return 'fuera';
+  if (dias < 0) return 'vencidos';
+  if (dias <= 7) return '7';
+  if (dias <= 15) return '15';
+  return '16mas';
+}
+
+const lotesGruposAbiertos = new Set(['7', '15', '16mas', 'vencidos']);
+
 function render() {
   const q = ($('lotesBuscar')?.value || '').toLowerCase().trim();
   const rubro = document.querySelector('[data-lotes-rubro].activo')?.dataset.lotesRubro || 'todos';
 
   const productos = agruparPorProducto(lotes);
-  const filtrados = productos.filter((p) =>
+  const productosConBucket = productos.map((p) => ({
+    ...p,
+    bucketVencimiento: bucketVencimientoLote(p.lotes[0])
+  }));
+  const filtrados = productosConBucket.filter((p) =>
     (rubro === 'todos' || p.rubro === rubro) &&
     (!q || `${p.articulo} ${p.codigo}`.toLowerCase().includes(q))
   );
 
-  const unidades = lotes.reduce((s, x) => s + (Number(x.cantidad) || 0), 0);
-  const cortos = lotes.filter((x) => x.cortaFecha).length;
+  const resumenVencimientos = productosConBucket.reduce((resumen, p) => {
+    if (p.bucketVencimiento in resumen) resumen[p.bucketVencimiento] += 1;
+    return resumen;
+  }, { '7': 0, '15': 0, '16mas': 0, vencidos: 0 });
 
-  $('lotesMetricaActivos').textContent = lotes.length;
-  $('lotesMetricaUnidades').textContent = unidades.toLocaleString('es-AR');
-  $('lotesMetricaProductos').textContent = productos.length;
-  $('lotesMetricaCorta').textContent = cortos;
+  $('lotesMetrica7Dias').textContent = resumenVencimientos['7'];
+  $('lotesMetrica15Dias').textContent = resumenVencimientos['15'];
+  $('lotesMetrica16Mas').textContent = resumenVencimientos['16mas'];
+  $('lotesMetricaVencidos').textContent = resumenVencimientos.vencidos;
 
-  $('lotesLista').innerHTML = filtrados.length
-    ? filtrados.map((p) => {
-        const proximo = p.lotes[0];
-        const plural = p.lotes.length === 1 ? 'lote' : 'lotes';
-        return `<article class="lote-card lote-product-card ${p.cortaFecha ? 'is-short' : ''}" data-lote-producto="${esc(p.codigo)}" tabindex="0" role="button" aria-label="Ver lotes de ${esc(p.articulo)}">
-          <div class="lote-card-top">
-            <span class="lote-rubro">${esc(p.rubro)}</span>
-            ${codigosProvisionales.has(String(p.codigo)) ? '<span class="lote-pending">Producto pendiente</span>' : ''}
-            ${p.cortaFecha ? '<span class="lote-short">Corta fecha</span>' : ''}
-          </div>
-          <h3>${esc(p.articulo)}</h3>
-          <small>EAN ${esc(p.codigo)}</small>
-          <div class="lote-card-data">
-            <div><span>Lotes</span><b>${p.lotes.length} ${plural}</b></div>
-            <div><span>Stock total</span><b>${p.cantidadTotal} un.</b></div>
-          </div>
-          <div class="lote-card-footer">
-            <div class="lote-card-next">
-              <span>Próximo vencimiento</span>
-              <b>${fmt(proximo?.vencimiento)}</b>
-            </div>
-            <button class="lote-card-delete" type="button" data-eliminar-producto="${esc(p.codigo)}" aria-label="Eliminar ${esc(p.articulo)}">Eliminar</button>
-          </div>
-        </article>`;
-      }).join('')
-    : '<div class="lotes-empty">Todavía no hay productos cargados.</div>';
+  const grupos = [
+    ['7', 'PRÓXIMOS 7 DÍAS', 'Vencen entre hoy y 7 días'],
+    ['15', '8 A 15 DÍAS', 'Vencen entre 8 y 15 días'],
+    ['16mas', '16 DÍAS EN ADELANTE', 'Vencen dentro de 16 días o más'],
+    ['vencidos', 'VENCIDOS', 'Productos con fecha de vencimiento pasada']
+  ];
+
+  const cardProducto = (p) => {
+    const proximo = p.lotes[0];
+    const plural = p.lotes.length === 1 ? 'lote' : 'lotes';
+    return `<article class="lote-card lote-product-card ${p.cortaFecha ? 'is-short' : ''}" data-lote-producto="${esc(p.codigo)}" tabindex="0" role="button" aria-label="Ver lotes de ${esc(p.articulo)}">
+      <div class="lote-card-top"><span class="lote-rubro">${esc(p.rubro)}</span>${codigosProvisionales.has(String(p.codigo)) ? '<span class="lote-pending">Producto pendiente</span>' : ''}${p.cortaFecha ? '<span class="lote-short">Corta fecha</span>' : ''}</div>
+      <h3>${esc(p.articulo)}</h3><small>EAN ${esc(p.codigo)}</small>
+      <div class="lote-card-data"><div><span>Lotes</span><b>${p.lotes.length} ${plural}</b></div><div><span>Stock total</span><b>${p.cantidadTotal} un.</b></div></div>
+      <div class="lote-card-footer"><div class="lote-card-next"><span>Próximo vencimiento</span><b>${fmt(proximo?.vencimiento)}</b></div><button class="lote-card-delete" type="button" data-eliminar-producto="${esc(p.codigo)}" aria-label="Eliminar ${esc(p.articulo)}">Eliminar</button></div>
+    </article>`;
+  };
+
+  const html = grupos.map(([bucket, titulo, detalle]) => {
+    const items = filtrados.filter((p) => p.bucketVencimiento === bucket);
+    const abierto = lotesGruposAbiertos.has(bucket);
+    const icono = bucket === 'vencidos' ? 'icon-box' : 'icon-calendar';
+    return `<section class="lotes-venc-grupo lotes-venc-grupo--${bucket} ${abierto ? 'is-open' : 'is-closed'}" id="lotesGrupo-${bucket}" data-lotes-grupo="${bucket}">
+      <button class="lotes-venc-grupo-head" type="button" data-lotes-toggle-grupo="${bucket}" aria-expanded="${abierto}" aria-controls="lotesGrupoContenido-${bucket}">
+        <span class="lotes-venc-grupo-icon" aria-hidden="true"><svg class="app-icon"><use href="#${icono}"></use></svg></span>
+        <span class="lotes-venc-grupo-copy"><strong>${titulo}</strong><span>${detalle}</span></span>
+        <span class="lotes-venc-grupo-meta"><b>${items.length} producto${items.length === 1 ? '' : 's'}</b><i aria-hidden="true"><svg class="app-icon"><use href="#icon-chevron-down"></use></svg></i></span>
+      </button>
+      <div class="lotes-venc-grupo-grid" id="lotesGrupoContenido-${bucket}" ${abierto ? '' : 'hidden'}>${items.length ? items.map(cardProducto).join('') : '<div class="lotes-venc-grupo-empty">No hay productos en este grupo.</div>'}</div>
+    </section>`;
+  }).join('');
+
+  $('lotesLista').innerHTML = html;
+
+  document.querySelectorAll('[data-lotes-toggle-grupo]').forEach((head) => {
+    head.addEventListener('click', () => {
+      const bucket = head.dataset.lotesToggleGrupo;
+      if (lotesGruposAbiertos.has(bucket)) lotesGruposAbiertos.delete(bucket);
+      else lotesGruposAbiertos.add(bucket);
+      render();
+    });
+  });
 
   document.querySelectorAll('[data-lote-producto]').forEach((card) => {
     const abrirProducto = () => seleccionarCodigo(card.dataset.loteProducto);
     card.addEventListener('click', abrirProducto);
-    card.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && e.target === card) {
-        e.preventDefault();
-        abrirProducto();
-      }
-    });
+    card.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); abrirProducto(); } });
   });
-
   document.querySelectorAll('[data-eliminar-producto]').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       const codigo = btn.dataset.eliminarProducto;
       const p = productos.find((x) => String(x.codigo) === String(codigo));
       if (!p) return;
-      const confirmar = await confirmarEliminarProductoLotes(p);
-      if (!confirmar) return;
-      try {
-        btn.disabled = true;
-        await json(`/lotes/producto/${encodeURIComponent(codigo)}`, { method: 'DELETE' });
-        await cargar();
-      } catch (error) {
-        mostrarAvisoLotes(error.message);
-        btn.disabled = false;
-      }
+      const confirmar = await confirmarEliminarProductoLotes(p); if (!confirmar) return;
+      try { btn.disabled = true; await json(`/lotes/producto/${encodeURIComponent(codigo)}`, { method: 'DELETE' }); await cargar(); }
+      catch (error) { mostrarAvisoLotes(error.message); btn.disabled = false; }
     });
   });
 }
+
 async function cargar() {
   try {
     const d = await json('/lotes');
@@ -478,7 +597,7 @@ function mostrarModoEdicion(tipo, id = '') {
   }
 }
 async function preparar(p, solicitud = solicitudProductoActual) {
-  const d = await json(`/lotes/producto/${encodeURIComponent(p.codigo)}`);
+  const [d, alertasData] = await Promise.all([json(`/lotes/producto/${encodeURIComponent(p.codigo)}`), json(`/lotes/alertas/${encodeURIComponent(p.codigo)}`).catch(() => ({ alertas: [] }))]);
   if (solicitud !== solicitudProductoActual) return;
 
   producto = p;
@@ -487,6 +606,7 @@ async function preparar(p, solicitud = solicitudProductoActual) {
   $('lotesDescripcionCampo')?.classList.add('oculto');
   if ($('lotesCodigoAlta')) $('lotesCodigoAlta').value = '';
   lotesProducto = d.lotes || [];
+  const alertasPorLote = new Map((alertasData.alertas || []).map((a) => [String(a.loteId), a]));
   loteOriginalEdicion = null;
 
   $('lotesProductoNombre').textContent = p.articulo;
@@ -515,6 +635,11 @@ async function preparar(p, solicitud = solicitudProductoActual) {
             <button type="button" data-reemplazar-lote="${esc(x.id)}">Reemplazar</button>
             <button type="button" class="lote-delete-one-btn" data-eliminar-lote="${esc(x.id)}">Eliminar</button>
           </div>
+          <div class="lote-notify-row">
+            ${alertasPorLote.has(String(x.id))
+              ? `<span class="lote-notify-active">🔔 Aviso: ${fmt(alertasPorLote.get(String(x.id)).fechaAviso)}</span><button type="button" class="lote-notify-cancel" data-cancelar-alerta="${esc(x.id)}">Cancelar aviso</button>`
+              : `<button type="button" class="lote-notify-btn" data-programar-alerta="${esc(x.id)}">🔔 Notificarme</button>`}
+          </div>
         </div>`).join('')}
       <button class="lote-add-new" type="button" id="lotesAgregarNuevo">+ Agregar lote nuevo</button>`;
 
@@ -535,6 +660,30 @@ async function preparar(p, solicitud = solicitudProductoActual) {
     });
     document.querySelectorAll('[data-reemplazar-lote]').forEach((b) => {
       b.onclick = () => cargarLoteEnFormulario(b.dataset.reemplazarLote, 'reemplazar');
+    });
+
+    document.querySelectorAll('[data-programar-alerta]').forEach((b) => {
+      b.onclick = async () => {
+        const id = b.dataset.programarAlerta;
+        const lote = lotesProducto.find((x) => String(x.id) === String(id));
+        if (!lote) return;
+        const payload = await abrirProgramadorAlerta(lote);
+        if (!payload) return;
+        try {
+          b.disabled = true;
+          await json(`/lotes/${encodeURIComponent(id)}/alerta`, { method: 'POST', body: JSON.stringify(payload) });
+          await preparar(producto, solicitudProductoActual);
+        } catch (error) {
+          mostrarAvisoLotes(error.message);
+          b.disabled = false;
+        }
+      };
+    });
+    document.querySelectorAll('[data-cancelar-alerta]').forEach((b) => {
+      b.onclick = async () => {
+        try{ b.disabled=true; await json(`/lotes/${encodeURIComponent(b.dataset.cancelarAlerta)}/alerta`,{method:'DELETE'}); await preparar(producto,solicitudProductoActual); }
+        catch(error){mostrarAvisoLotes(error.message);b.disabled=false;}
+      };
     });
 
     document.querySelectorAll('[data-eliminar-lote]').forEach((b) => {
@@ -682,7 +831,13 @@ async function sincronizarVencimientoDesdeLote({ anterior = null, nuevo, rubro }
 }
 
 async function guardar() {
-  if (!producto) return;
+  // Bloqueo sincrónico: evita doble click/tap y dos handlers concurrentes.
+  if (guardandoLote || !producto) return;
+  guardandoLote = true;
+  const botonGuardar = $('btnLotesGuardar');
+  if (botonGuardar) botonGuardar.disabled = true;
+
+  try {
 
   const vencimiento = $('lotesFecha').value;
   const cantidad = Number($('lotesCantidad').value);
@@ -762,6 +917,10 @@ async function guardar() {
     loteReemplazo = '';
   } catch (e) {
     mostrarAvisoLotes(e.message);
+  }
+  } finally {
+    guardandoLote = false;
+    if (botonGuardar) botonGuardar.disabled = false;
   }
 }
 function inyectarAjustesVisuales() {
@@ -1150,6 +1309,18 @@ $('lotesManualInput')?.addEventListener('keydown', (e) => {
 });
 $('btnLotesGuardar')?.addEventListener('click', guardar);
 $('lotesBuscar')?.addEventListener('input', render);
+
+document.querySelectorAll('[data-lotes-vencimiento]').forEach((card) => {
+  const irAGrupo = () => {
+    const bucket = card.dataset.lotesVencimiento;
+    lotesGruposAbiertos.clear();
+    lotesGruposAbiertos.add(bucket);
+    render();
+    requestAnimationFrame(() => document.getElementById(`lotesGrupo-${bucket}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+  card.addEventListener('click', irAGrupo);
+  card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irAGrupo(); } });
+});
 
 document.querySelectorAll('[data-lotes-rubro]').forEach((b) => {
   b.onclick = () => {

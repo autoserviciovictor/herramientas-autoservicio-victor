@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="ui-unification.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="lotes.css?v=lotes-kpi-vencimientos-160926" />
+    <link rel="stylesheet" href="lotes.css?v=lotes-alertas-180926" />
 </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
@@ -1506,10 +1506,10 @@
         <section class="lotes-shell">
           <header class="lotes-header mobile-page-title-block"><div><span class="eyebrow">GESTIÓN DE MERCADERÍA</span><h1>Control de Lotes</h1><p>Fiambrería y Lácteos · control por lote y vencimiento.</p></div><button id="btnLotesCargaHeader" class="lotes-load" type="button">＋ Cargar mercadería</button></header>
           <section class="lotes-metrics" aria-label="Resumen de lotes">
-            <article class="lote-metric app-kpi-card app-kpi-blue"><i><svg class="app-icon"><use href="#icon-box"></use></svg></i><div><span>Lotes activos</span><strong id="lotesMetricaActivos">0</strong></div></article>
-            <article class="lote-metric app-kpi-card app-kpi-red"><i><svg class="app-icon"><use href="#icon-box"></use></svg></i><div><span>Unidades en stock</span><strong id="lotesMetricaUnidades">0</strong></div></article>
-            <article class="lote-metric app-kpi-card app-kpi-amber"><i><svg class="app-icon"><use href="#icon-tag"></use></svg></i><div><span>Productos</span><strong id="lotesMetricaProductos">0</strong></div></article>
-            <article class="lote-metric app-kpi-card app-kpi-green"><i><svg class="app-icon"><use href="#icon-calendar"></use></svg></i><div><span>Corta fecha</span><strong id="lotesMetricaCorta">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-blue" data-lotes-vencimiento="7" role="button" tabindex="0"><i><svg class="app-icon"><use href="#icon-calendar"></use></svg></i><div><span>Próximos 7 días</span><strong id="lotesMetrica7Dias">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-red" data-lotes-vencimiento="15" role="button" tabindex="0"><i><svg class="app-icon"><use href="#icon-calendar"></use></svg></i><div><span>8 a 15 días</span><strong id="lotesMetrica15Dias">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-amber" data-lotes-vencimiento="16mas" role="button" tabindex="0"><i><svg class="app-icon"><use href="#icon-calendar"></use></svg></i><div><span>16 días en adelante</span><strong id="lotesMetrica16Mas">0</strong></div></article>
+            <article class="lote-metric app-kpi-card app-kpi-green" data-lotes-vencimiento="vencidos" role="button" tabindex="0"><i><svg class="app-icon"><use href="#icon-box"></use></svg></i><div><span>Vencidos</span><strong id="lotesMetricaVencidos">0</strong></div></article>
           </section>
           <section class="lotes-toolbar"><label class="lotes-search"><svg class="app-icon"><use href="#icon-search"></use></svg><input id="lotesBuscar" type="search" placeholder="Buscar producto o código..." /></label><div class="lotes-filters"><button class="activo" data-lotes-rubro="todos" type="button">Todos</button><button data-lotes-rubro="Fiambrería" type="button">Fiambrería</button><button data-lotes-rubro="Lácteos" type="button">Lácteos</button><button id="btnLotesFiltros" class="lotes-filter-button" type="button" aria-label="Filtros"><svg class="app-icon"><use href="#icon-filter"></use></svg><span>Filtros</span></button></div></section>
           <section id="lotesLista" class="lotes-grid"><div class="lotes-empty">Cargando productos...</div></section>
@@ -4093,11 +4093,11 @@
     <script type="module" src="./catalogo-admin.js?v=mobile-fix-d30-110926"></script>
     <script type="module" src="./admin.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./notifications.js?v=1960-sin-aviso-permiso-160926"></script>
-    <script type="module" src="./notification-center.js?v=1960-d21-cierre-etapa6-010926"></script>
+    <script type="module" src="./notification-center.js?v=lotes-alertas-180926"></script>
     <script type="module" src="./prices.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./etiquetas.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./app.js?v=1960-d21-cierre-etapa6-010926"></script>
-    <script type="module" src="./lotes.js?v=1960-d21-cierre-etapa6-010926"></script>
+    <script type="module" src="./lotes.js?v=lotes-alertas-180926"></script>
     <script type="module" src="./tareas.js?v=1960-d21-cierre-etapa6-010926"></script>
 
     <script type="module" src="./horarios.js?v=1960-d21-cierre-etapa6-010926"></script>

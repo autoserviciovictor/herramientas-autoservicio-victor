@@ -107,7 +107,7 @@ const {
   actualizarVencimientoDb,
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
-const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb } = require("./db-lotes");
+const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb, listarAlertasProductoDb, guardarAlertaLoteDb, cancelarAlertaLoteDb, listarAlertasVencidasDb, marcarAlertaEnviadaDb } = require("./db-lotes");
 const { asegurarEsquemaProductosProvisionales, buscarProductoProvisionalDb, listarProductosProvisionalesPendientesDb, crearProductoProvisionalDb, conciliarProductosProvisionalesDb } = require("./db-productos-provisionales");
 const {
   asegurarEsquemaListasReposicion,
@@ -6133,6 +6133,30 @@ app.post("/notificaciones/prueba", requerirSesion, async (req, res) => {
   }
 });
 
+app.get("/lotes/alertas/:codigo", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try { res.json({ok:true,alertas:await listarAlertasProductoDb(req.params.codigo,req.usuario.usuario)}); }
+  catch(error){console.error("Error GET alertas lote:",error);res.status(500).json({ok:false,mensaje:error.message||"No se pudieron cargar las alertas"});}
+});
+app.post("/lotes/:id/alerta", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try {
+    const lote=(await listarLotesDb()).find(x=>String(x.id)===String(req.params.id));
+    if(!lote) return res.status(404).json({ok:false,mensaje:"El lote ya no existe"});
+    let fechaAviso=normalizarTexto(req.body?.fechaAviso);
+    const dias=Number(req.body?.dias);
+    if(!fechaAviso && Number.isInteger(dias) && dias>=0 && dias<=365){
+      const hoy=fechaArgentina().split('-').map(Number); const d=new Date(Date.UTC(hoy[0],hoy[1]-1,hoy[2]+dias));
+      fechaAviso=d.toISOString().slice(0,10);
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(fechaAviso)||diasDesdeHoyArgentina(fechaAviso)<0) return res.status(400).json({ok:false,mensaje:"Elegí una fecha de aviso válida"});
+    const alerta=await guardarAlertaLoteDb({id:`AL-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,loteId:lote.id,usuario:req.usuario.usuario,fechaAviso});
+    res.json({ok:true,alerta});
+  } catch(error){console.error("Error POST alerta lote:",error);res.status(500).json({ok:false,mensaje:error.message||"No se pudo programar la alerta"});}
+});
+app.delete("/lotes/:id/alerta", requerirAlgunModulo("lotes"), async (req,res)=>{
+  try { await cancelarAlertaLoteDb(req.params.id,req.usuario.usuario); res.json({ok:true}); }
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo cancelar la alerta"});}
+});
+
 app.get("/lotes", requerirAlgunModulo("lotes"), async (req, res) => {
   try {
     const [lotes, provisionales] = await Promise.all([listarLotesDb(), listarProductosProvisionalesPendientesDb()]);
@@ -6950,6 +6974,33 @@ app.delete("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   }
 });
 
+let procesandoAlertasLotes=false;
+async function procesarAlertasLotesProgramadas(){
+  if(procesandoAlertasLotes) return {omitida:true};
+  procesandoAlertasLotes=true;
+  try{
+    const alertas=await listarAlertasVencidasDb(fechaArgentina());
+    if(!alertas.length) return {procesadas:0};
+    const contexto=await contextoDestinatariosNotificaciones();
+    let procesadas=0;
+    for(const alerta of alertas){
+      const dias=diasDesdeHoyArgentina(alerta.vencimiento);
+      const unidades=Number(alerta.cantidad||0);
+      const estado=dias===null?'sin fecha':dias<0?`venció hace ${Math.abs(dias)} ${Math.abs(dias)===1?'día':'días'}`:dias===0?'vence hoy':`vence en ${dias} ${dias===1?'día':'días'}`;
+      const body=`${alerta.articulo} · ${estado} · ${unidades} ${unidades===1?'unidad':'unidades'}`;
+      const clave=`lote-alerta|${alerta.id}`;
+      await registrarCentroNotificacion({usuario:alerta.usuario,tipo:'vencimientos-lote',titulo:'Recordatorio de vencimiento',mensaje:body,url:'./?modulo=lotes',clave});
+      if(PUSH_CONFIGURED && categoriaNotificacionesActiva(contexto,alerta.usuario,'vencimientos')){
+        const resultado=await enviarPushAUsuario(contexto,alerta.usuario,{title:'Recordatorio de vencimiento',body,tag:`lote-alerta-${alerta.id}`,data:{url:'./?modulo=lotes'}});
+        if(entregaPushRequiereReintento(resultado)) continue;
+      }
+      await marcarAlertaEnviadaDb(alerta.id);
+      procesadas+=1;
+    }
+    return {procesadas};
+  }finally{procesandoAlertasLotes=false;}
+}
+
 const ejecucionesDiariasNotificaciones = new Set();
 function minutosArgentina() {
   const { hora, minuto } = horaMinutoArgentina();
@@ -6979,6 +7030,7 @@ async function ejecutarHorarioNotificacionPersistente(fecha, clave, tarea) {
 }
 
 async function ejecutarNotificacionesDiariasSiCorresponde() {
+  await procesarAlertasLotesProgramadas();
   const hoy = fechaArgentina();
   const ahora = minutosArgentina();
   const dentro = (desde, hasta = 24 * 60) => ahora >= desde && ahora < hasta;

@@ -716,3 +716,131 @@
     margin-bottom:4px !important;
   }
 }
+
+/* Agrupación canónica del listado de Control de Lotes por fecha de vencimiento */
+.lote-metric[data-lotes-vencimiento]{cursor:pointer}
+.lote-metric[data-lotes-vencimiento]:focus-visible{outline:3px solid #94b8ff;outline-offset:2px}
+.lotes-grid{display:block}
+.lotes-venc-grupo{margin:0 0 16px;scroll-margin-top:14px}
+.lotes-venc-grupo-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 9px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc}
+.lotes-venc-grupo-head div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.lotes-venc-grupo-head strong{font-size:13px;color:#111827}
+.lotes-venc-grupo-head span{font-size:10px;color:#64748b}
+.lotes-venc-grupo-head>b{flex:0 0 auto;font-size:11px;color:#536174;border:1px solid #d7dee8;background:#fff;border-radius:999px;padding:5px 9px}
+.lotes-venc-grupo-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.lotes-venc-grupo[data-lotes-grupo="7"] .lotes-venc-grupo-head{background:#fff5f7;border-color:#ffd6de}
+.lotes-venc-grupo[data-lotes-grupo="15"] .lotes-venc-grupo-head{background:#fff9ef;border-color:#ffe2ad}
+.lotes-venc-grupo[data-lotes-grupo="16mas"] .lotes-venc-grupo-head{background:#f4f8ff;border-color:#d7e5ff}
+.lotes-venc-grupo[data-lotes-grupo="vencidos"] .lotes-venc-grupo-head{background:#f7f5ff;border-color:#e4ddff}
+@media(max-width:700px){.lotes-venc-grupo{margin-bottom:13px}.lotes-venc-grupo-grid{grid-template-columns:1fr}.lotes-venc-grupo-head{padding:9px 10px}.lotes-venc-grupo-head strong{font-size:12px}.lotes-venc-grupo-head>b{font-size:10px}}
+
+/* Control de stock: separadores de vencimiento tipo acordeón */
+.lotes-venc-grupo-head{width:100%;font:inherit;text-align:left;cursor:pointer}
+.lotes-venc-grupo-head:focus-visible{outline:3px solid #94b8ff;outline-offset:2px}
+.lotes-venc-grupo-meta{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.lotes-venc-grupo-meta>b{font-size:11px;color:#536174;border:1px solid #d7dee8;background:#fff;border-radius:999px;padding:5px 9px;white-space:nowrap}
+.lotes-venc-grupo-meta>i{font-style:normal;font-size:18px;line-height:1;color:#64748b;transition:transform .18s ease}
+.lotes-venc-grupo.is-open .lotes-venc-grupo-meta>i{transform:rotate(180deg)}
+.lotes-venc-grupo-grid[hidden]{display:none!important}
+.lotes-venc-grupo-empty{grid-column:1/-1;padding:12px;text-align:center;font-size:12px;color:#64748b;background:#fff;border:1px dashed #d7dee8;border-radius:10px}
+@media(max-width:700px){.lotes-venc-grupo-meta>b{font-size:10px}.lotes-venc-grupo-meta{gap:7px}}
+
+/* 2026-09-18 · Separadores de Control de stock = diseño de Vencimientos */
+#pantallaLotes .lotes-venc-grupo{
+  min-width:0; overflow:hidden; margin:0 0 9px;
+  border:1px solid #e4e7ec; border-radius:11px; background:#fff;
+}
+#pantallaLotes .lotes-venc-grupo-head{
+  display:grid; grid-template-columns:34px minmax(0,1fr) auto;
+  gap:10px; align-items:center; width:100%; min-height:54px;
+  margin:0; padding:7px 11px; border:0; border-radius:0;
+  background:#fff4f5; color:#101828; text-align:left; font:inherit; cursor:pointer;
+}
+#pantallaLotes .lotes-venc-grupo--15 .lotes-venc-grupo-head{background:#fff9ef}
+#pantallaLotes .lotes-venc-grupo--16mas .lotes-venc-grupo-head{background:#f4f8ff}
+#pantallaLotes .lotes-venc-grupo--vencidos .lotes-venc-grupo-head{background:#faf7ff}
+#pantallaLotes .lotes-venc-grupo-icon{
+  display:grid; place-items:center; width:32px; height:32px; border-radius:9px;
+  background:#f32646; color:#fff;
+}
+#pantallaLotes .lotes-venc-grupo--15 .lotes-venc-grupo-icon{background:#f79009}
+#pantallaLotes .lotes-venc-grupo--16mas .lotes-venc-grupo-icon{background:#2970ff}
+#pantallaLotes .lotes-venc-grupo--vencidos .lotes-venc-grupo-icon{background:#7f56d9}
+#pantallaLotes .lotes-venc-grupo-icon .app-icon{width:17px;height:17px}
+#pantallaLotes .lotes-venc-grupo-copy{min-width:0;display:block}
+#pantallaLotes .lotes-venc-grupo-copy>strong{
+  display:block; margin:0; color:#101828; font-size:13.5px; line-height:1.15;
+  font-weight:850; letter-spacing:.01em; text-transform:uppercase;
+}
+#pantallaLotes .lotes-venc-grupo-copy>span{
+  display:block; margin-top:4px; color:#667085; font-size:13px; line-height:1.35; font-weight:600;
+}
+#pantallaLotes .lotes-venc-grupo-meta{display:grid;grid-template-columns:auto 24px;align-items:center;gap:7px}
+#pantallaLotes .lotes-venc-grupo-meta>b{
+  display:inline-flex;align-items:center;min-height:28px;padding:0 11px;border:1px solid currentColor;
+  border-radius:999px;background:rgba(255,255,255,.7);color:#df2944;font-size:12.5px;line-height:1;font-weight:850;white-space:nowrap;
+}
+#pantallaLotes .lotes-venc-grupo--15 .lotes-venc-grupo-meta>b{color:#b96c08}
+#pantallaLotes .lotes-venc-grupo--16mas .lotes-venc-grupo-meta>b{color:#2868c5}
+#pantallaLotes .lotes-venc-grupo--vencidos .lotes-venc-grupo-meta>b{color:#6944c8}
+#pantallaLotes .lotes-venc-grupo-meta>i{display:grid;place-items:center;width:24px;height:24px;color:#667085;transition:transform .15s ease}
+#pantallaLotes .lotes-venc-grupo-meta>i .app-icon{width:14px;height:14px}
+#pantallaLotes .lotes-venc-grupo.is-open .lotes-venc-grupo-meta>i{transform:rotate(180deg)}
+#pantallaLotes .lotes-venc-grupo-grid{padding:7px;background:#fff}
+@media(max-width:700px){
+  #pantallaLotes .lotes-venc-grupo-head{min-height:52px;grid-template-columns:34px minmax(0,1fr) auto;padding:7px 9px}
+  #pantallaLotes .lotes-venc-grupo-copy>strong{font-size:13.5px;line-height:1.2}
+  #pantallaLotes .lotes-venc-grupo-copy>span{font-size:12px;line-height:1.25}
+  #pantallaLotes .lotes-venc-grupo-meta>b{font-size:12px;padding:0 9px}
+  #pantallaLotes .lotes-venc-grupo-grid{padding:7px}
+}
+
+/* Alertas programables por lote */
+#lotesModal .lote-existing{flex-wrap:wrap}
+#lotesModal .lote-notify-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:9px;margin-top:7px;border-top:1px dashed #e4e9f0}
+#lotesModal .lote-notify-btn,#lotesModal .lote-notify-cancel{border:1px solid #d7dee8;background:#f8fafc;color:#334155;border-radius:8px;padding:7px 10px;font-weight:750}
+#lotesModal .lote-notify-btn{color:#2563eb;border-color:#bfdbfe;background:#eff6ff}
+#lotesModal .lote-notify-active{font-size:11px;font-weight:800;color:#166534;background:#ecfdf3;border:1px solid #bbf7d0;border-radius:999px;padding:6px 9px}
+#lotesModal .lote-notify-cancel{color:#b42318;border-color:#fecdd3;background:#fff7f8}
+
+/* Modal visual para programar recordatorios de lotes */
+.lotes-notify-modal{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:18px;font-family:inherit}
+.lotes-notify-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.48);backdrop-filter:blur(2px)}
+.lotes-notify-dialog{position:relative;width:min(430px,100%);max-height:calc(100dvh - 36px);overflow:auto;background:#fff;border:1px solid #e4e7ec;border-radius:20px;padding:20px;box-shadow:0 18px 50px rgba(15,23,42,.2)}
+.lotes-notify-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.lotes-notify-eyebrow{display:block;color:#f22445;font-size:11px;line-height:1;font-weight:900;letter-spacing:.12em;margin-bottom:7px}
+.lotes-notify-head h3{margin:0;color:#101828;font-size:22px;line-height:1.15;font-weight:900}
+.lotes-notify-head p{margin:7px 0 0;color:#667085;font-size:14px;line-height:1.4}
+.lotes-notify-close{flex:0 0 42px;width:42px;height:42px;border:1px solid #e4e7ec;border-radius:12px;background:#f9fafb;color:#667085;font-size:24px;line-height:1;cursor:pointer}
+.lotes-notify-lote{display:grid;grid-template-columns:1fr auto;gap:3px 12px;margin:18px 0 15px;padding:12px 14px;border:1px solid #e4e7ec;border-radius:12px;background:#f8fafc}
+.lotes-notify-lote span{color:#667085;font-size:12px;font-weight:700}.lotes-notify-lote strong{color:#101828;font-size:14px}.lotes-notify-lote small{grid-column:1/-1;color:#667085;font-size:12px}
+.lotes-notify-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.lotes-notify-option{min-width:0;min-height:66px;border:1px solid #d0d5dd;border-radius:12px;background:#fff;color:#344054;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+.lotes-notify-option strong{font-size:20px;line-height:1}.lotes-notify-option span{font-size:11px;font-weight:750}
+.lotes-notify-option.is-selected{border:2px solid #f22445;background:#fff4f6;color:#d91f3c}
+.lotes-notify-custom-toggle{width:100%;min-height:44px;margin-top:10px;border:1px solid #d0d5dd;border-radius:11px;background:#fff;color:#344054;font-weight:800;cursor:pointer}
+.lotes-notify-custom-toggle.is-selected{border-color:#f22445;color:#d91f3c;background:#fff7f8}
+.lotes-notify-custom{margin-top:10px}.lotes-notify-custom.oculto{display:none!important}
+.lotes-notify-custom label{display:block;margin-bottom:6px;color:#344054;font-size:12px;font-weight:800}
+.lotes-notify-custom input{box-sizing:border-box;width:100%;min-height:46px;padding:0 12px;border:1px solid #d0d5dd;border-radius:11px;background:#fff;color:#101828;font:inherit}
+.lotes-notify-error{min-height:18px;margin:7px 0 0;color:#d92d20;font-size:12px;font-weight:700}
+.lotes-notify-actions{display:grid;grid-template-columns:1fr 1.35fr;gap:9px;margin-top:10px}
+.lotes-notify-actions button{min-height:46px;border-radius:11px;font-weight:850;cursor:pointer}
+.lotes-notify-modal-cancel{border:1px solid #d0d5dd;background:#fff;color:#344054}
+.lotes-notify-modal-save{border:1px solid #f22445;background:#f22445;color:#fff}
+@media(max-width:480px){.lotes-notify-modal{padding:12px}.lotes-notify-dialog{padding:17px;border-radius:18px}.lotes-notify-head h3{font-size:20px}.lotes-notify-options{gap:6px}.lotes-notify-option{min-height:62px}.lotes-notify-actions{grid-template-columns:1fr}.lotes-notify-modal-save{grid-row:1}.lotes-notify-modal-cancel{grid-row:2}}
+
+/* Corrección 18/09 · el programador de recordatorios debe quedar por encima de Gestionar lotes.
+   Esta es la única regla de apilado del modal Notificarme; evita que backdrops/modales previos lo tapen. */
+#lotesNotificarPrompt.lotes-notify-modal{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:2147483000 !important;
+  isolation:isolate;
+}
+#lotesNotificarPrompt .lotes-notify-backdrop{
+  z-index:0;
+}
+#lotesNotificarPrompt .lotes-notify-dialog{
+  z-index:1;
+}

@@ -126,6 +126,26 @@ function render() {
     .join("");
 }
 
+function mostrarAlertaLotePendiente() {
+  if (document.getElementById("lotExpiryPopup")) return;
+  const n = notificaciones.find((x) => !x.leida && String(x.tipo || "").includes("vencimientos-lote"));
+  if (!n) return;
+  const vistoKey = `autoservicio_alerta_lote_popup:${n.id}`;
+  if (sessionStorage.getItem(vistoKey)) return;
+  sessionStorage.setItem(vistoKey, "1");
+  const overlay = document.createElement("div");
+  overlay.id = "lotExpiryPopup";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:30000;background:#0f172a99;display:grid;place-items:center;padding:18px";
+  overlay.innerHTML = `<div role="alertdialog" aria-modal="true" aria-labelledby="lotExpiryPopupTitle" style="width:min(390px,100%);background:#fff;border-radius:18px;padding:20px;box-shadow:0 24px 70px #0004"><div style="font-size:30px;margin-bottom:8px">🔔</div><strong id="lotExpiryPopupTitle" style="display:block;font-size:19px;margin-bottom:8px">${esc(n.titulo || "Recordatorio de vencimiento")}</strong><p style="margin:0 0 16px;color:#475569;line-height:1.45">${esc(n.mensaje || "")}</p><button type="button" style="width:100%;border:0;border-radius:10px;background:#f32646;color:#fff;padding:12px;font-weight:800">Entendido</button></div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector("button")?.addEventListener("click", async () => {
+    overlay.remove();
+    const actual = notificaciones.find((x) => x.id === n.id); if (actual) actual.leida = true;
+    render(); guardarCacheLocal();
+    try { await fetch(`${API_BASE_URL}/notificaciones/centro/${encodeURIComponent(n.id)}/leida`, { method: "PATCH" }); } catch {}
+  });
+}
+
 async function cargar({ forzar = false } = {}) {
   const ahora = Date.now();
   if (!forzar && notificaciones.length && ahora - ultimaCarga < CACHE_TTL) {
@@ -144,6 +164,7 @@ async function cargar({ forzar = false } = {}) {
         ultimaCarga = Date.now();
         guardarCacheLocal();
         render();
+        mostrarAlertaLotePendiente();
       }
     } catch {
       if (!notificaciones.length) recuperarCacheLocal();
