@@ -184,6 +184,8 @@ function prepararAltaProvisional(codigo = '') {
   modo('producto');
 
   requestAnimationFrame(() => {
+    const cuerpoModal = document.querySelector('#lotesModal .product-loader-body');
+    if (cuerpoModal) cuerpoModal.scrollTop = 0;
     (codigoInicial ? $('lotesDescripcion') : $('lotesCodigoAlta'))?.focus();
   });
 }

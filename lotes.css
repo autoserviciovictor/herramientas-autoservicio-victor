@@ -604,3 +604,22 @@
   border-color:#98a2b3;
   box-shadow:0 0 0 3px #f2f4f7;
 }
+
+
+/* Corrección mobile · modal de Control de Lotes desplazable */
+@media (max-width: 768px){
+  body.lotes-modal-open{ overflow:hidden !important; }
+  #lotesModal{ position:fixed !important; inset:0 !important; overflow:hidden !important; overscroll-behavior:none; }
+  #lotesModal .product-loader-dialog{
+    max-height:calc(100dvh - 16px) !important; height:auto !important;
+    display:flex !important; flex-direction:column !important; overflow:hidden !important;
+    margin:8px auto !important;
+  }
+  #lotesModal .product-loader-header{ flex:0 0 auto !important; }
+  #lotesModal .product-loader-body{
+    flex:1 1 auto !important; min-height:0 !important;
+    overflow-y:auto !important; overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y;
+    padding-bottom:max(24px, env(safe-area-inset-bottom)) !important;
+  }
+}
