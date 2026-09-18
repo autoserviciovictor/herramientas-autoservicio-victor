@@ -606,20 +606,54 @@
 }
 
 
-/* Corrección mobile · modal de Control de Lotes desplazable */
+/* Mobile: scroll real del modal + alta directa durante el escaneo */
 @media (max-width: 768px){
   body.lotes-modal-open{ overflow:hidden !important; }
-  #lotesModal{ position:fixed !important; inset:0 !important; overflow:hidden !important; overscroll-behavior:none; }
-  #lotesModal .product-loader-dialog{
-    max-height:calc(100dvh - 16px) !important; height:auto !important;
-    display:flex !important; flex-direction:column !important; overflow:hidden !important;
-    margin:8px auto !important;
+
+  #lotesModal{
+    position:fixed !important;
+    inset:0 !important;
+    overflow:hidden !important;
   }
-  #lotesModal .product-loader-header{ flex:0 0 auto !important; }
-  #lotesModal .product-loader-body{
-    flex:1 1 auto !important; min-height:0 !important;
-    overflow-y:auto !important; overflow-x:hidden !important;
-    -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y;
-    padding-bottom:max(24px, env(safe-area-inset-bottom)) !important;
+
+  #lotesModal .product-loader-dialog{
+    position:relative !important;
+    display:block !important;
+    width:calc(100% - 16px) !important;
+    max-width:none !important;
+    height:calc(100dvh - 16px) !important;
+    max-height:calc(100dvh - 16px) !important;
+    margin:8px auto !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    touch-action:pan-y;
+    padding-bottom:max(20px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #lotesModal .product-loader-head{
+    position:sticky !important;
+    top:0 !important;
+    z-index:30 !important;
+    background:#fff !important;
+  }
+
+  #btnLotesManualCamara,
+  #btnLotesNuevoProductoCamara{
+    width:calc(100% - 32px) !important;
+    margin-left:16px !important;
+    margin-right:16px !important;
+  }
+
+  #btnLotesNuevoProductoCamara{
+    margin-top:8px !important;
+    margin-bottom:16px !important;
+    min-height:48px !important;
+    border:1px solid #f32646 !important;
+    border-radius:12px !important;
+    color:#f32646 !important;
+    background:#fff !important;
+    font-weight:800 !important;
   }
 }

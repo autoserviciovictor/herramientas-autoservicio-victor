@@ -184,8 +184,6 @@ function prepararAltaProvisional(codigo = '') {
   modo('producto');
 
   requestAnimationFrame(() => {
-    const cuerpoModal = document.querySelector('#lotesModal .product-loader-body');
-    if (cuerpoModal) cuerpoModal.scrollTop = 0;
     (codigoInicial ? $('lotesDescripcion') : $('lotesCodigoAlta'))?.focus();
   });
 }
@@ -342,6 +340,7 @@ function modo(m) {
   const divider = $('lotesDivider');
   const manualToggle = $('btnLotesManual');
   const manualCamara = $('btnLotesManualCamara');
+  const nuevoProductoCamara = $('btnLotesNuevoProductoCamara');
 
   inicio?.classList.toggle('oculto', m === 'camara' || m === 'producto');
   camara?.classList.toggle('oculto', m !== 'camara');
@@ -351,6 +350,7 @@ function modo(m) {
   divider?.classList.toggle('oculto', m === 'manual');
   manualToggle?.classList.toggle('oculto', m === 'manual');
   manualCamara?.classList.toggle('oculto', m !== 'camara');
+  nuevoProductoCamara?.classList.toggle('oculto', m !== 'camara');
 
   if (m === 'manual') {
     const inputManual = $('lotesManualInput');
@@ -1134,6 +1134,7 @@ $('lotesBackdrop')?.addEventListener('click', cerrar);
 $('btnLotesCamara')?.addEventListener('click', escanear);
 $('btnLotesManual')?.addEventListener('click', () => modo('manual'));
 $('btnLotesNuevoProducto')?.addEventListener('click', iniciarAltaProvisionalDirecta);
+$('btnLotesNuevoProductoCamara')?.addEventListener('click', iniciarAltaProvisionalDirecta);
 $('btnLotesManualCamara')?.addEventListener('click', () => {
   detenerScanner();
   modo('manual');
