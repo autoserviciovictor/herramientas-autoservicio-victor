@@ -657,3 +657,62 @@
     font-weight:800 !important;
   }
 }
+
+/* ========================================================================== 
+   2026-09-18 · Control de stock · modal móvil canónico
+   Neutraliza las alturas legacy del loader: el escáner ocupa sólo su contenido
+   y el alta de producto conserva scroll real hasta el botón Guardar.
+   ========================================================================== */
+@media (max-width: 768px){
+  #lotesModal.product-loader-modal{
+    align-items:end !important;
+    overflow:hidden !important;
+  }
+
+  #lotesModal .lotes-dialog.product-loader-dialog{
+    box-sizing:border-box !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:calc(100dvh - 8px) !important;
+    margin:0 auto !important;
+    padding-bottom:env(safe-area-inset-bottom) !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+    overscroll-behavior-y:contain !important;
+    touch-action:pan-y !important;
+    border-radius:20px 20px 0 0 !important;
+  }
+
+  /* En inicio/cámara no se reserva el alto completo de la pantalla. */
+  #lotesModal .lotes-dialog.product-loader-dialog:not(:has(#lotesProducto:not(.oculto))){
+    height:auto !important;
+    min-height:0 !important;
+  }
+
+  /* En el formulario largo, el propio diálogo es el único contenedor de scroll. */
+  #lotesModal .lotes-dialog.product-loader-dialog:has(#lotesProducto:not(.oculto)){
+    height:auto !important;
+    max-height:calc(100dvh - 8px) !important;
+    overflow-y:auto !important;
+  }
+
+  #lotesModal #lotesProducto{
+    min-height:0 !important;
+    height:auto !important;
+    overflow:visible !important;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom)) !important;
+  }
+
+  #lotesModal #lotesForm{
+    min-height:0 !important;
+    height:auto !important;
+    overflow:visible !important;
+  }
+
+  #lotesModal #btnLotesGuardar{
+    display:block !important;
+    margin-bottom:4px !important;
+  }
+}
