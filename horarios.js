@@ -2405,6 +2405,11 @@ let moduloHorariosActivo = false;
 function activar() {
   if (!moduloHorariosActivo) moduloHorariosActivo = true;
 
+  // Horarios se carga como módulo global, pero sus APIs sólo deben consultarse
+  // cuando la pantalla está realmente activa. Esto evita avisos de error de
+  // Horarios sobre Inicio u otros módulos si el backend está iniciando o cae.
+  if (!contextoHorariosCargado) void cargarContextoHorarios();
+
   // La vista y sus clases deben existir antes del primer render. El diseño
   // moderno del calendario depende de horarios-vista-calendario y no debe
   // esperar a un segundo ingreso para quedar sincronizado.
@@ -2438,7 +2443,6 @@ function desactivar() {
 }
 
 configurarEventos();
-cargarContextoHorarios();
 window.HorariosModule = {
   activar,
   desactivar,
@@ -2453,7 +2457,7 @@ if (document.body.classList.contains("en-horarios")) activar();
 
 let fechaResumenProgramada = new Date().toDateString();
 setInterval(async () => {
-  if (document.hidden) return;
+  if (document.hidden || !moduloHorariosActivo) return;
   const actual = new Date().toDateString();
   if (actual !== fechaResumenProgramada) {
     fechaResumenProgramada = actual;
@@ -2464,7 +2468,7 @@ setInterval(async () => {
 }, 60000);
 
 document.addEventListener("visibilitychange", async () => {
-  if (document.hidden) return;
+  if (document.hidden || !moduloHorariosActivo) return;
   const actual = new Date().toDateString();
   if (actual !== fechaResumenProgramada) {
     fechaResumenProgramada = actual;
@@ -2509,5 +2513,5 @@ window.addEventListener("autoservicio:sesion", (event) => {
   datos.clear();
   resumenHoyDatos = new Map();
   resumenHoyClave = "";
-  if (event.detail?.usuario) void cargarContextoHorarios();
+  if (event.detail?.usuario && moduloHorariosActivo) void cargarContextoHorarios();
 });
