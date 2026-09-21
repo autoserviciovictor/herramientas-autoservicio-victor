@@ -2282,8 +2282,9 @@ body.en-horarios.horarios-vista-config .horarios-order-list.is-reordering .horar
 body.en-horarios.horarios-vista-config .horarios-order-item {
   min-height: 96px !important;
   padding: 10px 12px !important;
+  box-sizing: border-box !important;
   display: grid !important;
-  grid-template-columns: 34px minmax(0, 1fr) 190px 38px !important;
+  grid-template-columns: 34px minmax(0, 1fr) 170px 38px !important;
   grid-template-rows: auto auto !important;
   align-items: center !important;
   column-gap: 10px !important;
@@ -2350,10 +2351,12 @@ body.en-horarios.horarios-vista-config .horarios-order-item.is-disabled .horario
 body.en-horarios.horarios-vista-config .horarios-order-visibility {
   grid-column: 3 !important;
   grid-row: 1 !important;
-  width: 190px !important;
+  width: 100% !important;
   min-width: 0 !important;
+  max-width: 170px !important;
   height: 44px !important;
-  padding: 6px 8px 6px 12px !important;
+  padding: 6px 8px 6px 10px !important;
+  box-sizing: border-box !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -2397,7 +2400,7 @@ body.en-horarios.horarios-vista-config .horarios-order-visibility-label {
   text-transform: uppercase !important;
 }
 body.en-horarios.horarios-vista-config .horarios-order-visibility-value {
-  max-width: 124px !important;
+  max-width: 98px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   color: var(--horarios-muted) !important;
@@ -2731,6 +2734,8 @@ body.en-horarios.horarios-vista-config .horarios-order-break {
   grid-column: 2 / 4 !important;
   grid-row: 2 !important;
   width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 76px !important;
   align-items: end !important;
