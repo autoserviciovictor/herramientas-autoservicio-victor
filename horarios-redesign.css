@@ -2280,12 +2280,14 @@ body.en-horarios.horarios-vista-config .horarios-order-list.is-reordering .horar
 }
 
 body.en-horarios.horarios-vista-config .horarios-order-item {
-  min-height: 54px !important;
-  padding: 7px 8px 7px 10px !important;
+  min-height: 96px !important;
+  padding: 10px 12px !important;
   display: grid !important;
-  grid-template-columns: 34px minmax(0, 1fr) auto 38px !important;
+  grid-template-columns: 34px minmax(0, 1fr) 190px 38px !important;
+  grid-template-rows: auto auto !important;
   align-items: center !important;
-  gap: 10px !important;
+  column-gap: 10px !important;
+  row-gap: 8px !important;
   border: 1px solid var(--hcfg-border) !important;
   border-radius: 12px !important;
   background: var(--horarios-surface) !important;
@@ -2304,6 +2306,8 @@ body.en-horarios.horarios-vista-config .horarios-order-item.is-dragging {
   transform: scale(1.012) !important;
 }
 body.en-horarios.horarios-vista-config .horarios-order-index {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
   width: 30px !important;
   height: 30px !important;
   display: grid !important;
@@ -2315,6 +2319,8 @@ body.en-horarios.horarios-vista-config .horarios-order-index {
   font-weight: 850 !important;
 }
 body.en-horarios.horarios-vista-config .horarios-order-info {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
   min-width: 0 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2342,7 +2348,10 @@ body.en-horarios.horarios-vista-config .horarios-order-item.is-disabled .horario
   opacity: .62 !important;
 }
 body.en-horarios.horarios-vista-config .horarios-order-visibility {
-  min-width: 190px !important;
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  width: 190px !important;
+  min-width: 0 !important;
   height: 44px !important;
   padding: 6px 8px 6px 12px !important;
   display: inline-flex !important;
@@ -2438,6 +2447,8 @@ body.en-horarios.horarios-vista-config .horarios-order-visibility.is-disabled .h
   color: var(--horarios-muted) !important;
 }
 body.en-horarios.horarios-vista-config .horarios-order-drag-handle {
+  grid-column: 4 !important;
+  grid-row: 1 !important;
   width: 36px !important;
   height: 36px !important;
   padding: 0 !important;
@@ -2560,7 +2571,9 @@ body.en-horarios.horarios-vista-config #horariosOrdenEstado.is-pending {
   }
   body.en-horarios.horarios-vista-config .horarios-order-item {
     grid-template-columns: 32px minmax(0, 1fr) 88px 44px !important;
-    gap: 7px !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 7px !important;
+    row-gap: 8px !important;
   }
   body.en-horarios.horarios-vista-config .horarios-order-visibility {
     min-width: 88px !important;
@@ -2602,6 +2615,8 @@ body.en-horarios.horarios-vista-config #horariosOrdenEstado.is-pending {
     transform: translateX(16px) !important;
   }
   body.en-horarios.horarios-vista-config .horarios-order-drag-handle {
+  grid-column: 4 !important;
+  grid-row: 1 !important;
     width: 44px !important;
     height: 44px !important;
   }
@@ -2713,8 +2728,16 @@ body.en-horarios.horarios-vista-calendario .horarios-descanso-card small { color
 body.en-horarios.horarios-vista-calendario .horarios-descanso-card.is-unassigned { border-style: dashed !important; }
 
 body.en-horarios.horarios-vista-config .horarios-order-break {
-  display: grid !important; grid-template-columns: 118px 118px 76px !important; align-items: end !important; gap: 7px !important; margin-left: auto !important;
+  grid-column: 2 / 4 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 76px !important;
+  align-items: end !important;
+  gap: 8px !important;
+  margin: 0 !important;
 }
+
 body.en-horarios.horarios-vista-config .horarios-order-break label { display: flex !important; flex-direction: column !important; gap: 3px !important; }
 body.en-horarios.horarios-vista-config .horarios-order-break label span { color: var(--horarios-muted) !important; font-size: 9px !important; font-weight: 750 !important; }
 body.en-horarios.horarios-vista-config .horarios-order-break input {
