@@ -2692,3 +2692,62 @@ html[data-theme="dark"] .horarios-turno-tooltip {
   color: var(--pro-text, #f7f9fc);
   box-shadow: 0 14px 32px rgba(0, 0, 0, .34);
 }
+
+/* Horarios de descanso: configuración por persona y resumen diario. */
+body.en-horarios.horarios-vista-calendario .horarios-descansos-card {
+  width: 100% !important; margin: 10px 0 0 !important; padding: 14px !important;
+  border: 1px solid var(--horarios-border) !important; border-radius: 15px !important;
+  background: var(--horarios-surface) !important; box-shadow: var(--horarios-shadow) !important; box-sizing: border-box !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-descansos-grid {
+  display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 7px !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card {
+  min-width: 0 !important; min-height: 44px !important; padding: 7px 8px !important; display: flex !important;
+  align-items: center !important; gap: 7px !important; border: 1px solid var(--horarios-border) !important;
+  border-radius: 10px !important; background: var(--horarios-surface) !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card > div { min-width: 0 !important; display: flex !important; flex-direction: column !important; gap: 1px !important; }
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card strong { color: var(--horarios-text) !important; font-size: 11.5px !important; font-weight: 850 !important; }
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card small { color: var(--horarios-muted) !important; font-size: 10.5px !important; font-weight: 650 !important; }
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card.is-unassigned { border-style: dashed !important; }
+
+body.en-horarios.horarios-vista-config .horarios-order-break {
+  display: grid !important; grid-template-columns: 118px 118px 76px !important; align-items: end !important; gap: 7px !important; margin-left: auto !important;
+}
+body.en-horarios.horarios-vista-config .horarios-order-break label { display: flex !important; flex-direction: column !important; gap: 3px !important; }
+body.en-horarios.horarios-vista-config .horarios-order-break label span { color: var(--horarios-muted) !important; font-size: 9px !important; font-weight: 750 !important; }
+body.en-horarios.horarios-vista-config .horarios-order-break input {
+  width: 100% !important; height: 34px !important; padding: 0 7px !important; border: 1px solid var(--horarios-border) !important;
+  border-radius: 8px !important; background: var(--horarios-surface) !important; color: var(--horarios-text) !important; box-sizing: border-box !important;
+}
+body.en-horarios.horarios-vista-config .horarios-break-save {
+  height: 34px !important; padding: 0 10px !important; border: 1px solid #f43f5e !important; border-radius: 8px !important;
+  background: #fff !important; color: #e11d48 !important; font-size: 10px !important; font-weight: 850 !important; cursor: pointer !important;
+}
+body.en-horarios.horarios-vista-config .horarios-break-save:hover { background: #fff1f2 !important; }
+@media (max-width: 900px) {
+  body.en-horarios.horarios-vista-calendario .horarios-descansos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  body.en-horarios.horarios-vista-config .horarios-order-break { grid-template-columns: 1fr 1fr 72px !important; width: 100% !important; margin: 8px 0 0 !important; }
+}
+
+/* Legibilidad del resumen diario: tipografía más clara sin alterar la estructura. */
+body.en-horarios.horarios-vista-calendario .horarios-turno-hoy > header strong {
+  font-size: 14px !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-turno-hoy > header small {
+  font-size: 12px !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-trabajador-card strong,
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card strong {
+  font-size: 13.5px !important;
+  line-height: 1.25 !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-trabajador-card small,
+body.en-horarios.horarios-vista-calendario .horarios-descanso-card small {
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+body.en-horarios.horarios-vista-calendario .horarios-trabajador-avatar {
+  font-size: 12.5px !important;
+}

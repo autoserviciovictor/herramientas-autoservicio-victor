@@ -1362,6 +1362,24 @@ function tarjetaTrabajadorHoy(empleado, horario) {
   const inicial = String(empleado || "?").trim().charAt(0).toUpperCase() || "?";
   return `<div class="horarios-trabajador-card"><span class="horarios-trabajador-avatar">${esc(inicial)}</span><div><strong>${esc(empleado)}</strong><small>${esc(horario)}</small></div></div>`;
 }
+function renderDescansosHoy(personalHoy = []) {
+  const cont = $("horariosDescansosHoy");
+  if (!cont) return;
+  const unicos = [...new Set(personalHoy)];
+  if (!unicos.length) {
+    cont.innerHTML = '<div class="horarios-turno-vacio">No hay personal trabajando hoy.</div>';
+    return;
+  }
+  cont.innerHTML = unicos.map((empleado) => {
+    const info = empleadosInfo.get(empleado) || {};
+    const inicio = info.descansoInicio || "";
+    const fin = info.descansoFin || "";
+    const horario = inicio && fin ? `${inicio} - ${fin}` : "Sin descanso asignado";
+    const inicial = String(empleado || "?").trim().charAt(0).toUpperCase() || "?";
+    return `<div class="horarios-descanso-card ${inicio && fin ? "" : "is-unassigned"}"><span class="horarios-trabajador-avatar">${esc(inicial)}</span><div><strong>${esc(empleado)}</strong><small>${esc(horario)}</small></div></div>`;
+  }).join("");
+}
+
 function renderResumen() {
   const t = $("horariosDiaSeleccionado"),
     c = $("horariosResumenDia");
@@ -1375,10 +1393,12 @@ function renderResumen() {
 
   const manana = [];
   const tarde = [];
+  const personalHoy = [];
   empleados.forEach((empleado) => {
     const id = turnoDeHoyParaResumen(empleado, hoy);
     const segmentos = segmentosDeTurno(id);
     if (!segmentos.length) return;
+    personalHoy.push(empleado);
 
     const segmentosManana = segmentos.filter(
       (segmento) => Number(segmento.inicio.slice(0, 2)) < 14,
@@ -1413,6 +1433,7 @@ function renderResumen() {
       <header><span class="horarios-turno-icon" aria-hidden="true">☾</span><div><strong>Turno tarde</strong><small>${tarde.length} ${tarde.length === 1 ? "persona" : "personas"}</small></div></header>
       <div class="horarios-trabajadores-grid">${tarde.length ? tarde.join("") : vacio}</div>
     </section>`;
+  renderDescansosHoy(personalHoy);
   renderTarjetaMiHorario();
 }
 function normalizarIdentidadHorario(valor) {
@@ -2121,6 +2142,16 @@ function prepararArrastreOrdenConfig(cont) {
     );
   });
 
+  cont.addEventListener("click", async (event) => {
+    const boton = event.target.closest?.(".horarios-break-save");
+    if (!boton || !cont.contains(boton) || boton.disabled) return;
+    const fila = boton.closest(".horarios-order-item");
+    const nombre = boton.dataset.empleado || "";
+    const inicio = fila?.querySelector(".horarios-break-start")?.value || "";
+    const fin = fila?.querySelector(".horarios-break-end")?.value || "";
+    await guardarDescansoEmpleadoConfig(nombre, inicio, fin, boton);
+  });
+
   cont.addEventListener("pointerdown", (event) => {
     const handle = event.target.closest?.(".horarios-order-drag-handle");
     if (!handle || !cont.contains(handle)) return;
@@ -2202,6 +2233,11 @@ function renderOrdenConfig() {
       return `<article class="horarios-order-item ${visibleCalendario ? "" : "is-disabled"}" data-empleado="${escAttr(e)}">
         <span class="horarios-order-index">${i + 1}</span>
         <div class="horarios-order-info"><strong>${esc(e)}</strong><span>${info.rol === "supervisor" ? "Supervisor" : "Empleado"}</span></div>
+        <div class="horarios-order-break" data-empleado="${escAttr(e)}">
+          <label><span>Descanso desde</span><input class="horarios-break-start" type="time" value="${escAttr(info.descansoInicio || "")}" aria-label="Inicio del descanso de ${escAttr(e)}"></label>
+          <label><span>Hasta</span><input class="horarios-break-end" type="time" value="${escAttr(info.descansoFin || "")}" aria-label="Fin del descanso de ${escAttr(e)}"></label>
+          <button class="horarios-break-save" type="button" data-empleado="${escAttr(e)}">Guardar</button>
+        </div>
         <button class="horarios-order-visibility ${visibleCalendario ? "is-enabled" : "is-disabled"}" type="button" data-empleado="${escAttr(e)}" aria-pressed="${visibleCalendario ? "true" : "false"}" aria-label="${visibleCalendario ? `Ocultar a ${escAttr(e)} del calendario` : `Mostrar a ${escAttr(e)} en el calendario`}" title="${visibleCalendario ? "Ocultar del calendario" : "Volver a mostrar en el calendario"}">
           <span class="horarios-order-visibility-copy">
             <span class="horarios-order-visibility-label">Estado</span>
@@ -2215,6 +2251,35 @@ function renderOrdenConfig() {
     .join("");
   prepararArrastreOrdenConfig(cont);
   actualizarBotonGuardarOrden();
+}
+
+async function guardarDescansoEmpleadoConfig(nombre, inicio, fin, boton) {
+  if (!nombre || !puedeAdministrarConfiguracion()) return;
+  if ((inicio || fin) && (!inicio || !fin)) {
+    mensajeConfig("horariosOrdenMensaje", "Completá el inicio y el fin del descanso.", "error");
+    return;
+  }
+  if (inicio && fin && inicio >= fin) {
+    mensajeConfig("horariosOrdenMensaje", "El fin del descanso debe ser posterior al inicio.", "error");
+    return;
+  }
+  if (boton) boton.disabled = true;
+  try {
+    const r = await fetch(`${API_BASE_URL}/horarios/descanso`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sector: sectorActual, empleado: nombre, inicio, fin }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.mensaje || "No se pudo guardar el descanso");
+    const info = empleadosInfo.get(nombre);
+    if (info) { info.descansoInicio = inicio; info.descansoFin = fin; }
+    const infoSector = sectorSeleccionado()?.empleadosInfo?.find((x) => x.nombre === nombre);
+    if (infoSector) { infoSector.descansoInicio = inicio; infoSector.descansoFin = fin; }
+    renderResumen();
+    mensajeConfig("horariosOrdenMensaje", inicio && fin ? `Descanso de ${nombre}: ${inicio} - ${fin}.` : `Se quitó el descanso de ${nombre}.`);
+  } catch (e) {
+    mensajeConfig("horariosOrdenMensaje", e.message, "error");
+  } finally { if (boton) boton.disabled = false; }
 }
 
 async function actualizarVisibilidadEmpleadoConfig(nombre, visibleCalendario, boton) {

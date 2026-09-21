@@ -71,6 +71,8 @@ async function asegurarEsquemaHorarios() {
       sort_order INTEGER NOT NULL DEFAULT 0,
       updated_text TEXT NOT NULL DEFAULT '',
       calendar_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      break_start_time TEXT NOT NULL DEFAULT '',
+      break_end_time TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (sector_id, employee)
     )`);
@@ -86,6 +88,9 @@ async function asegurarEsquemaHorarios() {
       action TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+
+    await query(`ALTER TABLE schedule_personnel_order ADD COLUMN IF NOT EXISTS break_start_time TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE schedule_personnel_order ADD COLUMN IF NOT EXISTS break_end_time TEXT NOT NULL DEFAULT ''`);
 
     await query(`CREATE INDEX IF NOT EXISTS schedule_calendar_sector_month_idx ON schedule_calendar(sector_id, month_key)`);
     await query(`CREATE INDEX IF NOT EXISTS schedule_details_sector_month_idx ON schedule_details(sector_id, month_key)`);
@@ -295,7 +300,7 @@ async function reemplazarCalendarioDetallesPorAlcances(
 async function listarOrdenFilas(cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT sector_id,employee,sort_order,updated_text,calendar_enabled
+    `SELECT sector_id,employee,sort_order,updated_text,calendar_enabled,break_start_time,break_end_time
      FROM schedule_personnel_order ORDER BY sector_id,sort_order,employee`,
   );
   return r.rows.map((x) => [
@@ -304,6 +309,8 @@ async function listarOrdenFilas(cliente = null) {
     x.sort_order,
     x.updated_text,
     x.calendar_enabled ? "Sí" : "No",
+    x.break_start_time || "",
+    x.break_end_time || "",
   ]);
 }
 
@@ -312,11 +319,12 @@ async function reemplazarOrdenSector(sector, filas, cliente = null) {
     await conexion.query("DELETE FROM schedule_personnel_order WHERE sector_id=$1", [sector]);
     for (const f of filas) {
       await conexion.query(
-        `INSERT INTO schedule_personnel_order(sector_id,employee,sort_order,updated_text,calendar_enabled)
-         VALUES($1,$2,$3,$4,$5)`,
+        `INSERT INTO schedule_personnel_order(sector_id,employee,sort_order,updated_text,calendar_enabled,break_start_time,break_end_time)
+         VALUES($1,$2,$3,$4,$5,$6,$7)`,
         [
           f[0], f[1], Number(f[2]) || 0, f[3] || "",
           String(f[4] || "Sí").toLowerCase() !== "no",
+          f[5] || "", f[6] || "",
         ],
       );
     }
@@ -335,6 +343,21 @@ async function guardarVisibilidadOrden(sector, empleado, habilitado, actualizado
          calendar_enabled=EXCLUDED.calendar_enabled,
          updated_at=NOW()`,
       [sector, empleado, actualizado, habilitado],
+    );
+  });
+}
+
+async function guardarDescansoOrden(sector, empleado, inicio, fin, actualizado) {
+  return conTransaccionHorarios(async (cliente) => {
+    await cliente.query(
+      `INSERT INTO schedule_personnel_order(sector_id,employee,sort_order,updated_text,calendar_enabled,break_start_time,break_end_time)
+       VALUES($1,$2,COALESCE((SELECT MAX(sort_order)+1 FROM schedule_personnel_order WHERE sector_id=$1),1),$5,TRUE,$3,$4)
+       ON CONFLICT(sector_id,employee) DO UPDATE SET
+         updated_text=EXCLUDED.updated_text,
+         break_start_time=EXCLUDED.break_start_time,
+         break_end_time=EXCLUDED.break_end_time,
+         updated_at=NOW()`,
+      [sector, empleado, inicio || "", fin || "", actualizado || ""],
     );
   });
 }
@@ -362,5 +385,6 @@ module.exports = {
   listarOrdenFilas,
   reemplazarOrdenSector,
   guardarVisibilidadOrden,
+  guardarDescansoOrden,
   registrarAuditoriaFilas,
 };

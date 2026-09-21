@@ -28,6 +28,7 @@ const {
   listarOrdenFilas,
   reemplazarOrdenSector,
   guardarVisibilidadOrden,
+  guardarDescansoOrden,
   registrarAuditoriaFilas,
 } = require("./db-horarios");
 const {
@@ -2864,6 +2865,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
     const filasOrden = await listarOrdenFilas();
     const ordenPorSector = new Map();
     const habilitadosPorSector = new Map();
+    const descansosPorSector = new Map();
     filasOrden.forEach((f) => {
       const sec = normalizarTexto(f[0]),
         emp = normalizarTexto(f[1]),
@@ -2875,6 +2877,8 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
       }
       if (!habilitadosPorSector.has(sec)) habilitadosPorSector.set(sec, new Map());
       habilitadosPorSector.get(sec).set(emp, habilitadoCalendarioHorarios(f[4]));
+      if (!descansosPorSector.has(sec)) descansosPorSector.set(sec, new Map());
+      descansosPorSector.get(sec).set(emp, { inicio: normalizarTexto(f[5]), fin: normalizarTexto(f[6]) });
     });
 
     const respuesta = visibles.map((s) => {
@@ -2898,6 +2902,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
         });
       });
       const habilitados = habilitadosPorSector.get(s.id);
+      const descansos = descansosPorSector.get(s.id);
       const personalConfig = empleadosSector.map((u) => {
         const nombre = u.nombre || u.usuario;
         return {
@@ -2905,6 +2910,8 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
           rol: u.rol,
           usuario: u.usuario,
           habilitadoCalendario: habilitados?.get(nombre) !== false,
+          descansoInicio: descansos?.get(nombre)?.inicio || "",
+          descansoFin: descansos?.get(nombre)?.fin || "",
         };
       });
       return {
@@ -2996,10 +3003,10 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
     await ejecutarEnCola("horarios-global", async () => {
       await conTransaccionHorarios(async (clienteHorarios) => {
         const filasPrevias = await listarOrdenFilas(clienteHorarios);
-        const habilitadoPrevio = new Map(
+        const configuracionPrevia = new Map(
           filasPrevias
             .filter((f) => normalizarTexto(f[0]) === sector)
-            .map((f) => [normalizarTexto(f[1]), f[4] || "Sí"]),
+            .map((f) => [normalizarTexto(f[1]), { habilitado: f[4] || "Sí", descansoInicio: f[5] || "", descansoFin: f[6] || "" }]),
         );
         const ahora = fechaHoraArgentinaIso();
         const nuevas = orden.map((e, i) => [
@@ -3007,7 +3014,9 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
           e,
           i + 1,
           ahora,
-          habilitadoPrevio.get(e) || "Sí",
+          configuracionPrevia.get(e)?.habilitado || "Sí",
+          configuracionPrevia.get(e)?.descansoInicio || "",
+          configuracionPrevia.get(e)?.descansoFin || "",
         ]);
         await reemplazarOrdenSector(sector, nuevas, clienteHorarios);
       });
@@ -3017,6 +3026,32 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
     res
       .status(500)
       .json({ ok: false, mensaje: e.message || "No se pudo guardar el orden" });
+  }
+});
+
+
+app.put("/horarios/descanso", requerirAccesoHorarios, async (req, res) => {
+  try {
+    const sector = normalizarTexto(req.body?.sector);
+    const empleado = normalizarTexto(req.body?.empleado);
+    const inicio = normalizarTexto(req.body?.inicio);
+    const fin = normalizarTexto(req.body?.fin);
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({ ok: false, mensaje: "No tenés permiso para modificar los descansos de este sector" });
+    if (!empleado) return res.status(400).json({ ok: false, mensaje: "Empleado inválido" });
+    if ((inicio || fin) && (!inicio || !fin || !normalizarHoraHorario(inicio) || !normalizarHoraHorario(fin)))
+      return res.status(400).json({ ok: false, mensaje: "Completá correctamente el inicio y fin del descanso" });
+    if (inicio && fin && inicio >= fin)
+      return res.status(400).json({ ok: false, mensaje: "El fin del descanso debe ser posterior al inicio" });
+    const [sectores, usuarios] = await Promise.all([obtenerSectores(), obtenerUsuarios()]);
+    const permitidos = empleadosHorarioDelSector(sector, usuarios, sectores).map((u) => u.nombre || u.usuario);
+    if (!permitidos.includes(empleado))
+      return res.status(400).json({ ok: false, mensaje: "El usuario no pertenece al sector seleccionado" });
+    await asegurarHorariosPostgres();
+    await guardarDescansoOrden(sector, empleado, inicio, fin, fechaHoraArgentinaIso());
+    res.json({ ok: true, sector, empleado, inicio, fin });
+  } catch (e) {
+    res.status(500).json({ ok: false, mensaje: e.message || "No se pudo guardar el horario de descanso" });
   }
 });
 

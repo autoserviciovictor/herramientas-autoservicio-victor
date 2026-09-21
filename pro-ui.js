@@ -1,52 +1,18 @@
 const $ = (id) => document.getElementById(id);
-const THEME_KEY = "autoservicio-app-theme";
 const SETTINGS_TEXT_SIZE_KEY = "autoservicio-settings-text-size";
 const SETTINGS_SOUND_KEY = "autoservicio-settings-sound";
 const SETTINGS_VIBRATION_KEY = "autoservicio-settings-vibration";
 const SETTINGS_LAST_SYNC_KEY = "autoservicio-settings-last-sync";
 
-function preferredTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved === "dark" || saved === "light") return saved;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
-function applyTheme(theme) {
-  const dark = theme === "dark";
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  document.body.classList.toggle("pro-dark", dark);
-  localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-  document
-    .querySelectorAll(".pro-theme-label")
-    .forEach((el) => (el.textContent = dark ? "Modo claro" : "Modo oscuro"));
-  document
-    .querySelectorAll(".pro-theme-icon use")
-    .forEach((use) =>
-      use.setAttribute("href", dark ? "#icon-sun" : "#icon-moon"),
-    );
-  const headerTheme = $("proHeaderThemeToggle");
-  if (headerTheme) {
-    const nextLabel = dark ? "Activar modo claro" : "Activar modo oscuro";
-    headerTheme.setAttribute("aria-label", nextLabel);
-    headerTheme.setAttribute("title", dark ? "Modo claro" : "Modo oscuro");
-  }
-  document
-    .querySelectorAll(".pro-switch")
-    .forEach((el) => el.classList.toggle("activo", dark));
-  const settingsTheme = $("settingsThemeSelect");
-  if (settingsTheme && settingsTheme.value !== (dark ? "dark" : "light"))
-    settingsTheme.value = dark ? "dark" : "light";
-  syncSettingsSelectControl(settingsTheme);
+function forceLightTheme() {
+  // La aplicación funciona exclusivamente en tema claro.
+  // Se limpia una preferencia antigua para que instalaciones existentes
+  // no puedan reactivar el modo oscuro.
+  localStorage.removeItem("autoservicio-app-theme");
+  document.documentElement.dataset.theme = "light";
+  document.body.classList.remove("pro-dark");
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = dark ? "#09111f" : "#ffffff";
-}
-
-function toggleTheme() {
-  applyTheme(
-    document.documentElement.dataset.theme === "dark" ? "light" : "dark",
-  );
+  if (meta) meta.content = "#ffffff";
 }
 
 let drawerScrollY = 0;
@@ -376,17 +342,16 @@ function syncNotificationSettings() {
 async function resetUserPreferences() {
   const confirmed = await (window.AutoservicioDialog?.confirm?.({
     title: "Restablecer preferencias",
-    message: "Se restaurarán el tema, el tamaño de texto, el sonido y la vibración a sus valores predeterminados.",
+    message: "Se restaurarán el tamaño de texto, el sonido y la vibración a sus valores predeterminados.",
     confirmText: "Restablecer",
   }) ?? Promise.resolve(false));
   if (!confirmed) return;
 
-  localStorage.removeItem(THEME_KEY);
   localStorage.removeItem(SETTINGS_TEXT_SIZE_KEY);
   localStorage.removeItem(SETTINGS_SOUND_KEY);
   localStorage.removeItem(SETTINGS_VIBRATION_KEY);
 
-  applyTheme("light");
+  forceLightTheme();
   applyTextSize("medium");
   if ($("checkSonidos")) $("checkSonidos").checked = true;
   if ($("checkVibracion")) $("checkVibracion").checked = true;
@@ -399,11 +364,6 @@ function initUserSettings() {
   $("btnDesktopUserSettings")?.addEventListener("click", openUserSettings);
   initSettingsModernSelects();
 
-  const themeSelect = $("settingsThemeSelect");
-  if (themeSelect) {
-    themeSelect.value = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
-  }
 
   syncSettingsSelectControl($("settingsLanguageSelect"));
 
@@ -547,7 +507,7 @@ function bridgeNotifications() {
 }
 
 function init() {
-  applyTheme(preferredTheme());
+  forceLightTheme();
   portalizarFlujosProducto();
 
   const drawer = $("userDropdown");
@@ -558,7 +518,6 @@ function init() {
     });
     syncDrawerState();
   }
-  $("proHeaderThemeToggle")?.addEventListener("click", toggleTheme);
   initUserSettings();
   document
     .querySelector(".pro-drawer-close")

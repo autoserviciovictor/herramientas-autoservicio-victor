@@ -2440,6 +2440,14 @@ function mostrarAccionesVencimientos() {
 function actualizarAvisoVencimientoProducto(fechaSeleccionada = "") {
   const aviso = elementos.vencProductoDuplicadoAviso;
   if (!aviso) return;
+
+  const repetida = Boolean(
+    fechaSeleccionada && fechasVencimientoProductoActual.includes(fechaSeleccionada),
+  );
+  if (elementos.btnVencGuardar && !guardandoVencimiento) {
+    elementos.btnVencGuardar.disabled = repetida;
+  }
+
   if (!fechasVencimientoProductoActual.length) {
     aviso.textContent = "";
     aviso.classList.add("oculto");
@@ -2447,10 +2455,9 @@ function actualizarAvisoVencimientoProducto(fechaSeleccionada = "") {
   }
 
   const fechas = fechasVencimientoProductoActual.map(formatearFecha).join(", ");
-  const repetida = fechaSeleccionada && fechasVencimientoProductoActual.includes(fechaSeleccionada);
   aviso.textContent = repetida
-    ? `⚠ Este producto ya fue cargado con vencimiento ${formatearFecha(fechaSeleccionada)}. Elegí otra fecha.`
-    : `⚠ Este producto ya fue cargado con vencimiento: ${fechas}. Podés cargarlo nuevamente con una fecha diferente.`;
+    ? `⚠ Este producto ya fue cargado con fecha de vencimiento ${formatearFecha(fechaSeleccionada)}. No se puede volver a cargar con la misma fecha.`
+    : `⚠ Este producto ya fue cargado con fecha de vencimiento: ${fechas}. Solo podés cargarlo con una fecha diferente.`;
   aviso.classList.remove("oculto");
 }
 
@@ -2637,7 +2644,7 @@ async function guardarVencimientoActual() {
     reproducirConfirmacion("error");
   } finally {
     guardandoVencimiento = false;
-    if (elementos.btnVencGuardar) elementos.btnVencGuardar.disabled = false;
+    actualizarAvisoVencimientoProducto(elementos.vencFechaInput?.value || "");
   }
 }
 

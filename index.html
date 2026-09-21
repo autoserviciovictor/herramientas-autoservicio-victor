@@ -353,15 +353,6 @@
 
         <div class="pro-top-actions">
           <button
-            id="proHeaderThemeToggle"
-            class="pro-icon-action pro-theme-action"
-            type="button"
-            aria-label="Activar modo oscuro"
-            title="Modo oscuro"
-          >
-            <svg class="app-icon pro-theme-icon"><use href="#icon-moon"></use></svg>
-          </button>
-          <button
             id="proHeaderNotifications"
             class="pro-icon-action pro-notification-action"
             type="button"
@@ -1332,24 +1323,6 @@
             </header>
             <div class="user-settings-preferences">
               <div class="user-settings-preference-row">
-                <span class="user-settings-row-icon"><svg class="app-icon"><use href="#icon-sun"></use></svg></span>
-                <span id="settingsThemeLabel">Tema</span>
-                <div class="user-settings-modern-select" data-settings-select="settingsThemeSelect">
-                  <button class="user-settings-select-trigger" type="button" aria-labelledby="settingsThemeLabel settingsThemeValue" aria-haspopup="listbox" aria-expanded="false">
-                    <span id="settingsThemeValue" data-settings-select-value>Claro</span>
-                    <svg class="app-icon" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-                  </button>
-                  <div class="user-settings-select-menu" role="listbox" aria-label="Tema de la aplicación" hidden>
-                    <button type="button" role="option" data-value="light" aria-selected="true">Claro</button>
-                    <button type="button" role="option" data-value="dark" aria-selected="false">Oscuro</button>
-                  </div>
-                  <select id="settingsThemeSelect" class="user-settings-native-select" aria-hidden="true" tabindex="-1">
-                    <option value="light">Claro</option>
-                    <option value="dark">Oscuro</option>
-                  </select>
-                </div>
-              </div>
-              <div class="user-settings-preference-row">
                 <span class="user-settings-row-icon"><svg class="app-icon"><use href="#icon-globe"></use></svg></span>
                 <span id="settingsLanguageLabel">Idioma</span>
                 <div class="user-settings-modern-select" data-settings-select="settingsLanguageSelect">
@@ -2176,6 +2149,13 @@
                     class="horarios-summary-list"
                   ></div>
                 </article>
+              </section>
+
+              <section class="horarios-descansos-card" aria-label="Horarios de descanso de hoy">
+                <div class="horarios-card-heading">
+                  <div><span>Horarios de descanso</span><strong>Personal que trabaja hoy</strong></div>
+                </div>
+                <div id="horariosDescansosHoy" class="horarios-descansos-grid"></div>
               </section>
             </div>
 

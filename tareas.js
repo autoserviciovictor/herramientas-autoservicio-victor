@@ -1938,8 +1938,16 @@ function configBano() {
       fechaAncla: iso(new Date()),
       historial: [],
     });
+  const participantesGuardados = Array.isArray(cfg.participantes) ? cfg.participantes : [];
+  // La rotación nunca debe seguir mostrando cuentas que ya no existen o están inactivas.
+  // /tareas/usuarios entrega únicamente usuarios activos; cuando esa lista ya fue cargada,
+  // se usa como fuente de verdad para la vista y para los cálculos futuros.
+  const clavesActivas = new Set(usuariosTareas.map(claveParticipante).filter(Boolean));
+  const participantes = usuariosTareas.length
+    ? participantesGuardados.filter((p) => clavesActivas.has(claveParticipante(p)))
+    : participantesGuardados;
   return {
-    participantes: Array.isArray(cfg.participantes) ? cfg.participantes : [],
+    participantes,
     fechaAncla: cfg.fechaAncla || cfg.fechaInicio || iso(new Date()),
     historial: Array.isArray(cfg.historial) ? cfg.historial : [],
   };
@@ -2049,14 +2057,30 @@ function abrirPlanillaBano() {
   if (modal.parentElement !== document.body) document.body.appendChild(modal);
   const cfg = configBano(), hoy = inicioDia(new Date());
   const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
   const mesTitulo = $("banoPlanillaMes");
-  if (mesTitulo) mesTitulo.textContent = fmt(inicio, { month: "long", year: "numeric" });
   const filas = [];
-  for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+  const participantesVistos = new Set();
+  let ultimaFecha = new Date(finMes);
+  // La planilla conserva todos los turnos del mes y, si la cantidad de participantes
+  // supera la cantidad de días de limpieza disponibles, continúa lo mínimo necesario
+  // para que cada integrante activo aparezca al menos una vez.
+  for (let d = new Date(inicio), guardia = 0; guardia < 370; d.setDate(d.getDate() + 1), guardia++) {
     const fecha = new Date(d);
-    if (!esDiaLimpieza(fecha, cfg)) continue;
-    filas.push(`<div class="bano-planilla-row"><time>${esc(fmt(fecha, { weekday: "short", day: "2-digit", month: "2-digit" }))}</time><strong>${esc(responsableBano(fecha, cfg) || "Sin participante")}</strong></div>`);
+    if (esDiaLimpieza(fecha, cfg)) {
+      const indice = indiceBano(fecha, cfg);
+      const clave = indice >= 0 ? claveParticipante(cfg.participantes[indice]) : "";
+      if (clave) participantesVistos.add(clave);
+      filas.push(`<div class="bano-planilla-row"><time>${esc(fmt(fecha, { weekday: "short", day: "2-digit", month: "2-digit" }))}</time><strong>${esc(responsableBano(fecha, cfg) || "Sin participante")}</strong></div>`);
+      ultimaFecha = fecha;
+    }
+    if (fecha >= finMes && participantesVistos.size >= cfg.participantes.length) break;
+  }
+  if (mesTitulo) {
+    const mismoMes = ultimaFecha.getMonth() === inicio.getMonth() && ultimaFecha.getFullYear() === inicio.getFullYear();
+    mesTitulo.textContent = mismoMes
+      ? fmt(inicio, { month: "long", year: "numeric" })
+      : `${fmt(inicio, { month: "long" })} – ${fmt(ultimaFecha, { month: "long", year: "numeric" })}`;
   }
   contenido.innerHTML = filas.join("") || '<div class="tareas-empty"><strong>Sin turnos</strong><span>No hay limpiezas programadas este mes.</span></div>';
   contenido.scrollTop = 0;
@@ -2999,6 +3023,32 @@ async function activar() {
   return activacionTareasEnCurso;
 }
 
+async function depurarParticipantesBanoEliminados() {
+  if (!banoMemoria || !usuariosTareas.length) return;
+  const guardados = Array.isArray(banoMemoria.participantes)
+    ? banoMemoria.participantes.map(claveParticipante).filter(Boolean)
+    : [];
+  const activos = new Set(usuariosTareas.map(claveParticipante).filter(Boolean));
+  const vigentes = guardados.filter((clave) => activos.has(clave));
+  if (vigentes.length === guardados.length) return;
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/bano`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        participantes: vigentes,
+        fechaAncla: banoMemoria.fechaAncla || banoMemoria.fechaInicio || iso(new Date()),
+      }),
+    });
+    const data = await r.json();
+    if (r.ok && data.ok && data.config) {
+      banoMemoria = data.config;
+      guardarJSONUsuario(BANO_KEY, banoMemoria);
+      guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    }
+  } catch {}
+}
+
 async function activarBano() {
   banoActivo = true;
   await Promise.all([
@@ -3006,6 +3056,7 @@ async function activarBano() {
     cargarUsuariosTareas(),
     cargarBanoRemoto(),
   ]);
+  await depurarParticipantesBanoEliminados();
   if (banoActivo) cambiarVistaBano(banoVistaActual);
 }
 
