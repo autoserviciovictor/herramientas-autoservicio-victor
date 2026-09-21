@@ -2380,6 +2380,16 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
     overscroll-behavior: contain !important;
   }
 
+  /* Cuando aparece el teclado móvil, el modal debe caber dentro del viewport
+     visible. Esta regla es compartida por todos los cargadores de producto. */
+  .product-loader-modal:focus-within .product-loader-dialog {
+    max-height: calc(100dvh - 8px) !important;
+  }
+
+  .product-loader-modal:focus-within .product-loader-suggestions {
+    max-height: min(240px, 32dvh) !important;
+  }
+
   .product-loader-head {
     position: relative !important;
     padding: 16px 18px 13px !important;
