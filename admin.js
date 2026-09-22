@@ -1670,8 +1670,17 @@ function actualizarAccionBotonVolverGlobal() {
   boton.setAttribute("title", etiqueta);
 }
 
+function limpiarBusquedaHistorialVencimientos() {
+  clearTimeout(historialBusquedaTimer);
+  historialBusquedaTimer = null;
+  const buscador = $("adminHistorialBuscar");
+  if (buscador) buscador.value = "";
+  historialPagina = 1;
+}
+
 function abrirHistorialVencimientosUI() {
   if (!window.AutoservicioAuth?.esAdmin?.()) return;
+  limpiarBusquedaHistorialVencimientos();
   const shell = document.querySelector("#pantallaVencimientos > .venc-pro-shell");
   const historial = $("vencHistorialAdmin");
   shell?.classList.add("oculto");
@@ -1684,6 +1693,7 @@ function abrirHistorialVencimientosUI() {
 }
 
 function cerrarHistorialVencimientosUI() {
+  limpiarBusquedaHistorialVencimientos();
   const shell = document.querySelector("#pantallaVencimientos > .venc-pro-shell");
   const historial = $("vencHistorialAdmin");
   historial?.classList.add("oculto");
