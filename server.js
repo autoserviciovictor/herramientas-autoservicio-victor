@@ -1174,6 +1174,13 @@ app.use(
     index: "index.html",
     fallthrough: true,
     maxAge: ES_PRODUCCION ? "1h" : 0,
+    setHeaders(res, filePath) {
+      // El HTML no debe quedar cacheado entre deploys: referencia las versiones
+      // vigentes de CSS/JS. Los assets versionados sí pueden conservar caché.
+      if (path.extname(filePath).toLowerCase() === ".html") {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    },
   }),
 );
 
