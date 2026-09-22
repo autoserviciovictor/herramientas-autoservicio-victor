@@ -500,3 +500,20 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
     font-size:11px;
   }
 }
+
+/* Búsqueda principal debajo del banner — reemplaza la antigua tira informativa */
+.catalogo-search-section{background:#fff;border-bottom:1px solid var(--line);padding:14px 0}
+.catalogo-search-section__inner{display:flex;justify-content:center;align-items:center}
+
+@media (min-width:761px){
+  .catalogo-header__inner{grid-template-columns:minmax(250px,300px) minmax(300px,1fr);justify-content:space-between}
+  .catalogo-header__actions{grid-column:2}
+}
+
+@media (max-width:760px){
+  .catalogo-header__inner{grid-template-rows:64px;padding-bottom:10px}
+  .catalogo-search-section{width:100%;padding:0 14px 12px;border-bottom:0;background:#fff}
+  .catalogo-search-section__inner{width:100%;padding:0}
+  .catalogo-search-section .catalogo-header-search{display:grid;width:100%;max-width:100%;height:54px;margin:0;grid-template-columns:44px minmax(0,1fr) 58px;border:1px solid #d7dde5;border-radius:14px;overflow:hidden;background:#fff}
+  .catalogo-hero{margin-bottom:12px}
+}
