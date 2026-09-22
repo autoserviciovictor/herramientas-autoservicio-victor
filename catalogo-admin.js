@@ -296,6 +296,24 @@ function etiquetaUnidad(u) {
   return ({ unidad: "Unidad", kg: "Kg", pack: "Pack", cajon: "Cajón", bulto: "Bulto", litro: "Litro", metro: "Metro" })[u] || u || "Unidad";
 }
 
+function miniaturaProductoCatalogo(producto) {
+  const tieneConfirmada = producto?.estadoImagen === "confirmada";
+  const urlGuardada = String(producto?.imagen || "").trim();
+  if (!tieneConfirmada && !urlGuardada) {
+    return '<svg class="app-icon"><use href="#icon-box"></use></svg>';
+  }
+
+  const version = producto?.imagenRevisadaEn ? `?v=${encodeURIComponent(String(producto.imagenRevisadaEn))}` : "";
+  const urlInterna = `${API_BASE_URL}/catalogo/api/productos/${encodeURIComponent(producto.codigo)}/imagen${version}`;
+  const principal = tieneConfirmada ? urlInterna : urlGuardada;
+  const alternativa = tieneConfirmada && urlGuardada && urlGuardada !== principal ? urlGuardada : "";
+  const fallback = '<svg class="app-icon"><use href="#icon-box"></use></svg>';
+  const onerror = alternativa
+    ? `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${esc(alternativa)}';}else{this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.outerHTML='${fallback}';}`
+    : `this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.outerHTML='${fallback}';`;
+  return `<img src="${esc(principal)}" alt="" loading="lazy" decoding="async" onerror="${onerror}" />`;
+}
+
 function renderProductos() {
   const body = $("catalogProductosBody");
   if (!body) return;
@@ -305,7 +323,7 @@ function renderProductos() {
     body.innerHTML = estado.productos.map((p) => {
       const chip = !p.configurado ? '<span class="catalog-chip unconfigured">Sin configurar</span>' : p.visible ? '<span class="catalog-chip visible">Visible</span>' : '<span class="catalog-chip hidden">Oculto</span>';
       return `<tr data-code="${esc(p.codigo)}">
-        <td data-label="Producto"><div class="catalog-product-cell"><span class="catalog-product-thumb ${p.imagen ? "has-image" : ""}">${p.estadoImagen === "confirmada" ? `<img src="${API_BASE_URL}/catalogo/api/productos/${encodeURIComponent(p.codigo)}/imagen" alt="" loading="lazy" onerror="this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.remove()" />` : '<svg class="app-icon"><use href="#icon-box"></use></svg>'}</span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""} · ${esc(({confirmada:"Imagen confirmada",candidato:"Imagen candidata",buscando:"Buscando imagen",sin_resultado:"Sin resultado",error:"Error de imagen",sin_imagen:"Sin imagen"})[p.estadoImagen] || "Sin imagen")}</small></div></div></td>
+        <td data-label="Producto"><div class="catalog-product-cell"><span class="catalog-product-thumb ${(p.estadoImagen === "confirmada" || p.imagen) ? "has-image" : ""}">${miniaturaProductoCatalogo(p)}</span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""} · ${esc(({confirmada:"Imagen confirmada",candidato:"Imagen candidata",buscando:"Buscando imagen",sin_resultado:"Sin resultado",error:"Error de imagen",sin_imagen:"Sin imagen"})[p.estadoImagen] || "Sin imagen")}</small></div></div></td>
         <td data-label="Rubro">${p.rubro ? esc(p.rubro) : '<span class="catalog-chip unconfigured">Sin rubro</span>'}</td>
         <td data-label="Precio"><span class="catalog-price">${moneda(p.precio)}</span></td>
         <td data-label="Unidad">${esc(etiquetaUnidad(p.unidadVenta))}</td>
