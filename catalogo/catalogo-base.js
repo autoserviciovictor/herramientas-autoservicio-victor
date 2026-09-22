@@ -12,6 +12,8 @@ const CATALOGO_PEDIDO_CONFIG = Object.freeze({
 
 const CART_STORAGE_KEY = "autoservicio-victor-catalogo-carrito-v1";
 const CHECKOUT_STORAGE_KEY = "autoservicio-victor-catalogo-checkout-v1";
+const CUSTOMER_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-v1";
+const CUSTOMER_TOKEN_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-token-v1";
 const PAGE_SIZE = 32;
 const state = {
   rubros: [],
@@ -98,6 +100,9 @@ const els = {
   sortTrigger: $("catalogoSortTrigger"),
   sortMenu: $("catalogoSortMenu"),
   sortLabel: $("catalogoSortLabel"),
+  accountButton: $("catalogoAccountButton"), account: $("catalogoAccount"), accountClose: $("catalogoAccountClose"),
+  accountNombre: $("accountNombre"), accountTelefono: $("accountTelefono"), accountDireccion: $("accountDireccion"), accountReferencia: $("accountReferencia"),
+  accountGuardar: $("accountGuardar"), accountMensaje: $("accountMensaje"), accountPedidos: $("accountPedidos"), accountRecargar: $("accountRecargar"),
 };
 
 function escapeHtml(value = "") {
@@ -163,6 +168,51 @@ function categoryTone(name = "") {
   if (/carne|carnic/.test(n)) return "tone-red";
   if (/almacen|conserva|arroz|fideo|harina/.test(n)) return "tone-olive";
   return "tone-neutral";
+}
+
+function obtenerCustomerToken() {
+  let token = String(localStorage.getItem(CUSTOMER_TOKEN_STORAGE_KEY) || "");
+  if (!/^[a-zA-Z0-9_-]{20,100}$/.test(token)) {
+    token = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID().replaceAll("-", "") : `cliente_${Date.now()}_${Math.random().toString(36).slice(2, 16)}`;
+    localStorage.setItem(CUSTOMER_TOKEN_STORAGE_KEY, token);
+  }
+  return token;
+}
+
+function cargarDatosCliente() {
+  try { const x = JSON.parse(localStorage.getItem(CUSTOMER_STORAGE_KEY) || "{}"); return x && typeof x === "object" ? x : {}; } catch { return {}; }
+}
+function guardarDatosCliente(datos) { localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(datos)); }
+function aplicarDatosClienteAlCheckout() {
+  const d = cargarDatosCliente();
+  state.checkout = { ...state.checkout, nombre: d.nombre || state.checkout.nombre || "", telefono: d.telefono || state.checkout.telefono || "", direccion: d.direccion || state.checkout.direccion || "", referencia: d.referencia || state.checkout.referencia || "" };
+  guardarCheckout();
+}
+function abrirMiCuenta() {
+  cerrarDrawers();
+  const d = cargarDatosCliente();
+  els.accountNombre.value = d.nombre || ""; els.accountTelefono.value = d.telefono || ""; els.accountDireccion.value = d.direccion || ""; els.accountReferencia.value = d.referencia || "";
+  els.account.classList.add("is-open"); els.account.setAttribute("aria-hidden", "false"); els.overlay.hidden = false; document.body.classList.add("drawer-open");
+  cargarMisPedidos();
+}
+function cerrarMiCuenta() {
+  els.account?.classList.remove("is-open"); els.account?.setAttribute("aria-hidden", "true");
+  if (!els.cart.classList.contains("is-open") && !els.mobileCategories.classList.contains("is-open") && !els.checkout.classList.contains("is-open")) { els.overlay.hidden = true; document.body.classList.remove("drawer-open"); }
+}
+function guardarMiCuenta() {
+  const datos = { nombre: String(els.accountNombre.value || "").trim(), telefono: normalizarTelefono(els.accountTelefono.value), direccion: String(els.accountDireccion.value || "").trim(), referencia: String(els.accountReferencia.value || "").trim() };
+  if (datos.nombre.length < 3 || datos.telefono.replace(/\D/g, "").length < 8) { mensajeCheckout(els.accountMensaje, "Ingresá un nombre y teléfono válidos.", "error"); return; }
+  guardarDatosCliente(datos); aplicarDatosClienteAlCheckout(); mensajeCheckout(els.accountMensaje, "Datos guardados correctamente.", "ok");
+}
+async function cargarMisPedidos() {
+  if (!els.accountPedidos) return;
+  els.accountPedidos.innerHTML = '<p class="account-empty">Cargando pedidos…</p>';
+  try {
+    const data = await apiJson(`/catalogo/api/mis-pedidos?clienteToken=${encodeURIComponent(obtenerCustomerToken())}`);
+    const pedidos = Array.isArray(data.pedidos) ? data.pedidos : [];
+    if (!pedidos.length) { els.accountPedidos.innerHTML = '<p class="account-empty">Todavía no hay pedidos realizados desde este dispositivo.</p>'; return; }
+    els.accountPedidos.innerHTML = pedidos.map((p) => `<article class="account-order"><div class="account-order__top"><strong>${escapeHtml(p.numero)}</strong><span>${escapeHtml(p.estado)}</span></div><div class="account-order__meta"><span>${new Date(p.creadoEn).toLocaleString("es-AR")}</span><b>${formatMoney(p.total)}</b></div></article>`).join("");
+  } catch { els.accountPedidos.innerHTML = '<p class="account-empty">No pudimos cargar tus pedidos. Intentá nuevamente.</p>'; }
 }
 
 function cargarCheckout() {
@@ -337,7 +387,7 @@ function renderCheckoutReview() {
 
 function huellaPedidoActual() {
   const c = state.checkout || {};
-  return JSON.stringify({
+  return `pedido-v2|${JSON.stringify({
     nombre: String(c.nombre || "").trim(),
     telefono: String(c.telefono || "").trim(),
     entrega: c.entrega || "delivery",
@@ -348,7 +398,7 @@ function huellaPedidoActual() {
     items: state.carrito
       .map((item) => ({ codigo: String(item.codigo || ""), cantidad: Number(item.cantidad) || 0 }))
       .sort((a, b) => a.codigo.localeCompare(b.codigo)),
-  });
+  })}`;
 }
 
 function obtenerClientTokenPedido() {
@@ -371,6 +421,7 @@ function payloadPedidoCatalogo() {
   const c = state.checkout || {};
   return {
     clientToken: obtenerClientTokenPedido(),
+    customerToken: obtenerCustomerToken(),
     nombre: c.nombre || "",
     telefono: c.telefono || "",
     entrega: c.entrega || "delivery",
@@ -436,67 +487,36 @@ async function copiarPedido() {
 async function enviarPedidoWhatsApp() {
   if (state.enviandoPedido) return;
   const numero = telefonoWhatsappConfigurado();
-  if (!numero) {
-    mensajeCheckout(els.checkoutMensajePaso3, "Falta configurar el número de WhatsApp del autoservicio.", "error");
-    return;
-  }
-
+  if (!numero) { mensajeCheckout(els.checkoutMensajePaso3, "Falta configurar el número de WhatsApp del autoservicio.", "error"); return; }
   state.enviandoPedido = true;
-  if (els.checkoutEnviarWhatsapp) {
-    els.checkoutEnviarWhatsapp.disabled = true;
-    els.checkoutEnviarWhatsapp.textContent = "Preparando WhatsApp...";
-  }
+  if (els.checkoutEnviarWhatsapp) { els.checkoutEnviarWhatsapp.disabled = true; els.checkoutEnviarWhatsapp.textContent = "Registrando pedido..."; }
   mensajeCheckout(els.checkoutMensajePaso3, "");
-
-  let pedido = null;
-  let errorRegistro = null;
-
   try {
-    try {
-      pedido = await registrarPedidoCatalogo();
-    } catch (error) {
-      errorRegistro = error;
-      state.pedidoRegistrado = null;
-    }
-
-    const url = `https://wa.me/${numero}?text=${encodeURIComponent(generarMensajePedido())}`;
-
-    // Abrir WhatsApp aunque el guardado interno falle. El cliente no debe perder
-    // la posibilidad de enviar su pedido por un problema temporal de registro.
+    const pedido = await registrarPedidoCatalogo();
+    const mensaje = generarMensajePedido();
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+    fetch(`${API_BASE_URL}/catalogo/api/pedidos/${encodeURIComponent(pedido.numero)}/whatsapp-abierto`, { method: "POST", keepalive: true }).catch(() => {});
+    // El pedido ya quedó registrado. Cerramos definitivamente este carrito para
+    // que la próxima compra nazca como un pedido nuevo y no reutilice su token.
+    state.carrito = [];
+    guardarCarrito();
+    state.checkout = { ...cargarDatosCliente(), clientToken: "", clientTokenHuella: "" };
+    guardarCheckout();
+    renderCart();
+    mensajeCheckout(els.checkoutMensajePaso3, `Pedido ${pedido.numero} registrado correctamente. Abriendo WhatsApp...`, "ok");
     window.location.href = url;
-
-    if (pedido?.numero) {
-      fetch(`${API_BASE_URL}/catalogo/api/pedidos/${encodeURIComponent(pedido.numero)}/whatsapp-abierto`, {
-        method: "POST",
-        keepalive: true,
-      }).catch(() => {});
-    }
-
-    if (errorRegistro) {
-      mensajeCheckout(
-        els.checkoutMensajePaso3,
-        "WhatsApp se abrió correctamente. El pedido no pudo guardarse automáticamente en el sistema interno.",
-        "error",
-      );
-      console.error("No se pudo registrar el pedido antes de abrir WhatsApp:", errorRegistro);
-    } else if (pedido?.numero) {
-      mensajeCheckout(
-        els.checkoutMensajePaso3,
-        `Pedido ${pedido.numero} registrado correctamente. Abriendo WhatsApp...`,
-        "ok",
-      );
-    }
+  } catch (error) {
+    state.pedidoRegistrado = null;
+    mensajeCheckout(els.checkoutMensajePaso3, error?.message || "No se pudo registrar el pedido. No se abrió WhatsApp para evitar perderlo.", "error");
   } finally {
     state.enviandoPedido = false;
-    if (els.checkoutEnviarWhatsapp) {
-      els.checkoutEnviarWhatsapp.disabled = false;
-      els.checkoutEnviarWhatsapp.innerHTML = '<span aria-hidden="true">◉</span> Enviar pedido por WhatsApp';
-    }
+    if (els.checkoutEnviarWhatsapp) { els.checkoutEnviarWhatsapp.disabled = false; els.checkoutEnviarWhatsapp.innerHTML = '<span aria-hidden="true">◉</span> Enviar pedido por WhatsApp'; }
   }
 }
 
 function abrirCheckout() {
   if (!state.carrito.length) return;
+  aplicarDatosClienteAlCheckout();
   cerrarDrawers();
   state.pedidoRegistrado = null;
   if (els.checkoutOrderConfirmation) els.checkoutOrderConfirmation.hidden = true;
@@ -899,6 +919,8 @@ function abrirDrawer(tipo) {
 }
 
 function cerrarDrawers() {
+  els.account?.classList.remove("is-open");
+  els.account?.setAttribute("aria-hidden", "true");
   els.checkout?.classList.remove("is-open");
   els.checkout?.setAttribute("aria-hidden", "true");
   els.cart.classList.remove("is-open");
@@ -1002,6 +1024,10 @@ function bindEvents() {
       els.feedback.textContent = "No pudimos cargar más productos. Intentá nuevamente.";
     } finally { state.loading = false; }
   });
+  els.accountButton?.addEventListener("click", abrirMiCuenta);
+  els.accountClose?.addEventListener("click", cerrarMiCuenta);
+  els.accountGuardar?.addEventListener("click", guardarMiCuenta);
+  els.accountRecargar?.addEventListener("click", cargarMisPedidos);
   els.cartButton.addEventListener("click", () => {
     if (window.matchMedia("(min-width: 1100px)").matches) {
       els.cart?.scrollIntoView({ behavior: "smooth", block: "start" });

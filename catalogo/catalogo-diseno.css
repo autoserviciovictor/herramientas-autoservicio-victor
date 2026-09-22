@@ -525,3 +525,10 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
   .catalogo-rubro-card strong{font-size:14px;line-height:1.12;font-weight:900}
   .catalogo-rubro-card i{width:26px;height:26px;flex-basis:26px;font-size:16px}
 }
+
+/* Mi cuenta: datos persistentes e historial de pedidos */
+.catalogo-account{position:fixed;z-index:96;top:0;right:0;width:min(470px,100%);height:100dvh;background:#fff;transform:translateX(105%);transition:transform .22s ease;display:grid;grid-template-rows:auto minmax(0,1fr);box-shadow:-18px 0 48px rgba(16,24,40,.18)}
+.catalogo-account.is-open{transform:translateX(0)}
+.catalogo-account .drawer-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+.catalogo-account .drawer-header small{color:var(--red);font-size:9px;font-weight:900;letter-spacing:.14em}.catalogo-account .drawer-header h2{margin:4px 0 0;font-size:20px}.catalogo-account .icon-btn{font-size:28px}
+.account-body{overflow:auto;padding:20px 22px 28px}.account-section+ .account-section{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}.account-section h3{margin:0 0 5px;font-size:20px}.account-section>p,.account-orders__head p{margin:0 0 16px;color:#667085;font-size:12px;line-height:1.45}.account-save{width:100%;margin-top:14px;min-height:46px}.account-orders__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.account-orders__head .secondary-button{min-height:36px;padding:0 12px}.account-orders__list{display:grid;gap:10px}.account-order{padding:13px;border:1px solid #e3e7ed;border-radius:12px;background:#fff}.account-order__top,.account-order__meta{display:flex;justify-content:space-between;gap:12px;align-items:center}.account-order__top strong{font-size:13px}.account-order__top span{font-size:11px;font-weight:900;text-transform:capitalize;color:#344054}.account-order__meta{margin-top:7px;color:#667085;font-size:11px}.account-order__meta b{color:#111827;font-size:13px}.account-empty{padding:18px;border:1px dashed #d8dde5;border-radius:12px;text-align:center;color:#667085;font-size:12px}

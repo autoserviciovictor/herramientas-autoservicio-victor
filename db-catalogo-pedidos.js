@@ -29,6 +29,11 @@ function tokenCliente(valor) {
   return /^[a-zA-Z0-9_-]{12,100}$/.test(token) ? token : "";
 }
 
+function tokenCuenta(valor) {
+  const token = texto(valor, 100);
+  return /^[a-zA-Z0-9_-]{20,100}$/.test(token) ? token : "";
+}
+
 async function asegurarEsquemaCatalogoPedidos() {
   if (esquemaAsegurado) return;
   if (promesaEsquema) return promesaEsquema;
@@ -78,6 +83,8 @@ async function asegurarEsquemaCatalogoPedidos() {
     await query(`CREATE INDEX IF NOT EXISTS catalog_orders_created_idx ON catalog_orders(created_at DESC)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_orders_status_idx ON catalog_orders(status, created_at DESC)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_orders_phone_idx ON catalog_orders(customer_phone, created_at DESC)`);
+    await query(`ALTER TABLE catalog_orders ADD COLUMN IF NOT EXISTS customer_token TEXT NOT NULL DEFAULT ''`);
+    await query(`CREATE INDEX IF NOT EXISTS catalog_orders_customer_token_idx ON catalog_orders(customer_token, created_at DESC)`);
 
     await query(`CREATE TABLE IF NOT EXISTS catalog_order_items (
       order_item_id BIGSERIAL PRIMARY KEY,
@@ -144,6 +151,7 @@ function validarCabeceraPedido(pedido = {}) {
   const horario = texto(pedido.horario, 10);
   const pago = texto(pedido.pago, 40);
   const clientToken = tokenCliente(pedido.clientToken);
+  const customerToken = tokenCuenta(pedido.customerToken);
 
   if (nombre.length < 3) throw Object.assign(new Error("Ingresá nombre y apellido"), { status: 400 });
   if (tel.replace(/\D/g, "").length < 8) throw Object.assign(new Error("Ingresá un teléfono válido"), { status: 400 });
@@ -161,7 +169,7 @@ function validarCabeceraPedido(pedido = {}) {
     direccion: entrega === "delivery" ? direccion : "",
     referencia: entrega === "delivery" ? referencia : "",
     horario: entrega === "delivery" ? horario : "",
-    pago, clientToken,
+    pago, clientToken, customerToken,
   };
 }
 
@@ -265,13 +273,13 @@ async function crearPedidoCatalogoDb(pedido = {}) {
       `INSERT INTO catalog_orders(
         order_number, client_token, customer_name, customer_phone,
         delivery_type, delivery_address, delivery_reference, delivery_time,
-        payment_method, status, total, item_units, item_lines
-      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'recibido',$10,$11,$12)
+        payment_method, status, total, item_units, item_lines, customer_token
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'recibido',$10,$11,$12,$13)
       RETURNING order_id, created_at`,
       [
         numero, cabecera.clientToken, cabecera.nombre, cabecera.telefono,
         cabecera.entrega, cabecera.direccion, cabecera.referencia, cabecera.horario,
-        cabecera.pago, total, unidades, productos.length,
+        cabecera.pago, total, unidades, productos.length, cabecera.customerToken,
       ],
     );
     const orderId = Number(ins.rows[0].order_id);
@@ -310,6 +318,26 @@ async function crearPedidoCatalogoDb(pedido = {}) {
   } finally {
     cliente.release();
   }
+}
+
+
+async function listarPedidosClienteCatalogoDb(customerToken) {
+  await asegurarEsquemaCatalogoPedidos();
+  const token = tokenCuenta(customerToken);
+  if (!token) throw Object.assign(new Error("Identificador de cuenta inválido"), { status: 400 });
+  const r = await query(
+    `SELECT order_number,status,total,item_units,item_lines,delivery_type,created_at
+       FROM catalog_orders
+      WHERE customer_token=$1
+      ORDER BY created_at DESC
+      LIMIT 100`,
+    [token],
+  );
+  return r.rows.map((x) => ({
+    numero: String(x.order_number), estado: String(x.status), total: Number(x.total) || 0,
+    unidades: Number(x.item_units) || 0, productos: Number(x.item_lines) || 0,
+    entrega: String(x.delivery_type), creadoEn: x.created_at,
+  }));
 }
 
 async function marcarWhatsappAbiertoPedidoDb(numero) {
@@ -660,4 +688,5 @@ module.exports = {
   archivarPedidosDiasAnterioresDb,
   eliminarPedidoArchivadoCatalogoDb,
   obtenerResumenPedidosCatalogoDb,
+  listarPedidosClienteCatalogoDb,
 };

@@ -96,6 +96,7 @@ const {
   archivarPedidosDiasAnterioresDb,
   eliminarPedidoArchivadoCatalogoDb,
   obtenerResumenPedidosCatalogoDb,
+  listarPedidosClienteCatalogoDb,
 } = require("./db-catalogo-pedidos");
 const { buscarImagenProducto, obtenerImagenNormalizadaProducto, importarImagenManual, importarImagenArchivoManual } = require("./catalogo-imagenes");
 const { seleccionarImagenesImportables } = require("./catalogo-imagenes-importacion");
@@ -1119,6 +1120,16 @@ app.post("/catalogo/api/pedidos", limitarPedidosCatalogo, async (req, res) => {
       ok: false,
       mensaje: Number(error?.status) ? error.message : "No se pudo registrar el pedido",
     });
+  }
+});
+
+app.get("/catalogo/api/mis-pedidos", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const pedidos = await listarPedidosClienteCatalogoDb(req.query?.clienteToken);
+    res.json({ ok: true, pedidos });
+  } catch (error) {
+    res.status(Number(error?.status) || 500).json({ ok: false, mensaje: Number(error?.status) ? error.message : "No se pudieron consultar los pedidos" });
   }
 });
 
