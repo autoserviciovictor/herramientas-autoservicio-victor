@@ -7,7 +7,7 @@
   <meta name="description" content="Catálogo online de Autoservicio Victor. Brindamos calidad y atención.">
   <title>Catálogo online | Autoservicio Victor</title>
   <link rel="icon" href="./assets/favicon.png">
-  <link rel="stylesheet" href="./catalogo-diseno.css?v=mobile-search-below-hero-220926">
+  <link rel="stylesheet" href="./catalogo-diseno.css?v=rubros-fullbleed-220926">
 </head>
 <body>
   <div class="catalogo-app catalogo-final-design" id="catalogoApp">
@@ -88,13 +88,16 @@
 
           <div class="catalogo-products-main">
             <div class="catalogo-home" id="catalogoHome">
-              <div class="catalogo-promo-grid">
-                <button class="catalogo-promo catalogo-promo--meat" type="button" data-rubro-name="CARNICERIA"><span><strong>Carnes<br>de primera calidad</strong><small>Ver carnicería →</small></span></button>
-                <button class="catalogo-promo catalogo-promo--produce" type="button" data-rubro-name="VERDULERIA"><span><strong>Verduras y frutas<br>siempre frescas</strong><small>Ver verdulería →</small></span></button>
-                <button class="catalogo-promo catalogo-promo--clean" type="button" data-rubro-name="LIMPIEZA"><span><strong>Limpieza e higiene<br>para tu hogar</strong><small>Ver productos →</small></span></button>
-              </div>
+              <nav class="catalogo-featured-rubros" aria-label="Rubros destacados">
+                <button class="catalogo-rubro-card" type="button" data-rubro-name="CARNICERIA"><img src="./assets/rubro-carniceria.webp" alt="" loading="eager" decoding="async"><span><strong>Carnicería</strong><i aria-hidden="true">→</i></span></button>
+                <button class="catalogo-rubro-card" type="button" data-rubro-name="VERDULERIA"><img src="./assets/rubro-verduleria.webp" alt="" loading="eager" decoding="async"><span><strong>Verdulería y frutas</strong><i aria-hidden="true">→</i></span></button>
+                <button class="catalogo-rubro-card" type="button" data-rubro-name="LACTEOS"><img src="./assets/rubro-lacteos.webp" alt="" loading="lazy" decoding="async"><span><strong>Lácteos</strong><i aria-hidden="true">→</i></span></button>
+                <button class="catalogo-rubro-card" type="button" data-rubro-name="ALMACEN"><img src="./assets/rubro-almacen.webp" alt="" loading="lazy" decoding="async"><span><strong>Almacén</strong><i aria-hidden="true">→</i></span></button>
+                <button class="catalogo-rubro-card" type="button" data-rubro-name="BEBIDAS"><img src="./assets/rubro-bebidas.webp" alt="" loading="lazy" decoding="async"><span><strong>Bebidas</strong><i aria-hidden="true">→</i></span></button>
+                <button class="catalogo-rubro-card" type="button" data-rubro-name="LIMPIEZA"><img src="./assets/rubro-limpieza.webp" alt="" loading="lazy" decoding="async"><span><strong>Higiene y limpieza</strong><i aria-hidden="true">→</i></span></button>
+              </nav>
               <section class="catalogo-best-sellers" aria-labelledby="catalogoBestSellersTitle">
-                <div class="catalogo-section-head"><h2 id="catalogoBestSellersTitle"><span>★</span> Más vendidos</h2><button type="button" class="catalogo-link-button" data-show-products>Ver más <span aria-hidden="true">→</span></button></div>
+                <div class="catalogo-section-head"><h2 id="catalogoBestSellersTitle"><span>★</span> Más vendidos</h2><button type="button" class="catalogo-link-button" data-show-products><span class="catalogo-link-button__text">Ver más</span> <span class="catalogo-link-button__arrow" aria-hidden="true">→</span></button></div>
                 <div class="catalogo-grid catalogo-grid--home" id="catalogoBestSellersGrid"></div>
               </section>
             </div>

@@ -3260,16 +3260,43 @@ function extraerPresentacionCartel(texto = "") {
   return `${valor.replace(".", ",")} GR`;
 }
 
-function nombreProductoParaCartel(texto = "") {
-  const presentacion = extraerPresentacionCartel(texto);
-  if (!presentacion) return String(texto || "PRODUCTO").trim();
-  const escaped = presentacion.replace(",", "[.,]").replace(" LITROS", "\\s*(?:L|LT|LTS|LITROS?)").replace(" GR", "\\s*(?:G|GR|GRS)").replace(" KG", "\\s*(?:KG|KGS)");
-  try {
-    const limpio = String(texto || "").replace(new RegExp(escaped + "\\s*$", "i"), "").trim();
-    return limpio || String(texto || "PRODUCTO").trim();
-  } catch (_) {
-    return String(texto || "PRODUCTO").trim();
+function consolidarPresentacionCartel(texto = "") {
+  const fuente = String(texto || "").replace(/\s+/g, " ").trim();
+  if (!fuente) return "";
+
+  const patron = /(?:^|\s)(\d+(?:[.,]\d+)?)\s*(ML|CC|L|LT|LTS|LITROS?|G|GR|GRS|GRAMOS?|KG|KGS)\b/gi;
+  const coincidencias = [...fuente.matchAll(patron)];
+  if (coincidencias.length < 2) return fuente;
+
+  const canonica = (valor, unidad) => {
+    const numero = String(valor || "").replace(".", ",");
+    const u = String(unidad || "").toUpperCase();
+    if (["L", "LT", "LTS", "LITRO", "LITROS"].includes(u)) return `${numero} LITROS`;
+    if (["KG", "KGS"].includes(u)) return `${numero} KG`;
+    if (["G", "GR", "GRS", "GRAMO", "GRAMOS"].includes(u)) return `${numero} GR`;
+    return `${numero} ${u}`;
+  };
+
+  const grupos = new Map();
+  for (const match of coincidencias) {
+    const clave = canonica(match[1], match[2]);
+    if (!grupos.has(clave)) grupos.set(clave, []);
+    grupos.get(clave).push(match);
   }
+
+  let resultado = fuente;
+  for (const [clave, matches] of grupos) {
+    if (matches.length < 2) continue;
+    const patronDuplicado = new RegExp(`(?:^|\\s)${clave
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(",", "[.,]")
+      .replace(" LITROS", "\\s*(?:L|LT|LTS|LITROS?)")
+      .replace(" GR", "\\s*(?:G|GR|GRS|GRAMOS?)")
+      .replace(" KG", "\\s*(?:KG|KGS)")}`, "gi");
+    resultado = resultado.replace(patronDuplicado, "");
+    resultado = `${resultado.trim()} ${clave}`;
+  }
+  return resultado.replace(/\s+/g, " ").trim();
 }
 
 function tipoPromoCartelSeleccionado() {
@@ -3495,7 +3522,7 @@ function escaparXmlCartel(valor = "") {
 }
 
 function textoProductoCartel(item = {}) {
-  const articulo = String(item.articulo || item.nombreCartel || "PRODUCTO").replace(/\s+/g, " ").trim();
+  const articulo = consolidarPresentacionCartel(item.articulo || item.nombreCartel || "PRODUCTO");
   const presentacion = String(item.presentacion || extraerPresentacionCartel(articulo) || "").replace(/\s+/g, " ").trim();
   if (!presentacion) return articulo || "PRODUCTO";
 
@@ -3503,9 +3530,13 @@ function textoProductoCartel(item = {}) {
     String(valor)
       .toUpperCase()
       .replace(/,/g, ".")
-      .replace(/\bLITROS?\b|\bLTS?\b/g, "L")
-      .replace(/\bKGS?\b/g, "KG")
-      .replace(/\bGRS?\b|\bGRAMOS?\b/g, "GR")
+      .replace(/(\d)\s*(ML|CC|LITROS?|LTS?|L|KGS?|KG|GRS?|GRAMOS?|GR|G)\b/g, (_, numero, unidad) => {
+        const u = String(unidad).toUpperCase();
+        if (["L", "LT", "LTS", "LITRO", "LITROS"].includes(u)) return `${numero}L`;
+        if (["KG", "KGS"].includes(u)) return `${numero}KG`;
+        if (["G", "GR", "GRS", "GRAMO", "GRAMOS"].includes(u)) return `${numero}GR`;
+        return `${numero}${u}`;
+      })
       .replace(/\s+/g, " ")
       .trim();
 
