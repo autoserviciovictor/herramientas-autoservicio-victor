@@ -920,6 +920,11 @@ function bindEvents() {
   });
 
   els.searchForm.addEventListener("submit", (e) => { e.preventDefault(); buscar(els.search.value); });
+  const desktopSearchForm = $("catalogoDesktopSearchForm");
+  const desktopSearch = $("catalogoDesktopSearch");
+  if (desktopSearchForm && desktopSearch) {
+    desktopSearchForm.addEventListener("submit", (e) => { e.preventDefault(); buscar(desktopSearch.value); });
+  }
 
   const sortLabels = {
     relevancia: "Más relevantes",
