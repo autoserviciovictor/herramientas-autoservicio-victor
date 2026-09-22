@@ -1624,7 +1624,7 @@ body.en-horarios.horarios-vista-mio .mio-upcoming-item {
   min-height: 64px !important;
   padding: 7px 12px 7px 8px !important;
   display: grid !important;
-  grid-template-columns: 48px minmax(0, 1fr) auto !important;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto !important;
   align-items: center !important;
   gap: 12px !important;
   border: 1px solid var(--mio-border) !important;
@@ -2245,6 +2245,22 @@ body.en-horarios.horarios-vista-config .horarios-config-shift-info span {
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+}
+body.en-horarios.horarios-vista-config .horarios-config-use {
+  min-width: 68px !important;
+  padding: 5px 8px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+body.en-horarios.horarios-vista-config .horarios-config-use.en-uso {
+  color: #047857 !important; background: #ecfdf5 !important; border: 1px solid #a7f3d0 !important;
+}
+body.en-horarios.horarios-vista-config .horarios-config-use.sin-uso {
+  color: #64748b !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important;
 }
 body.en-horarios.horarios-vista-config .horarios-config-edit-shift {
   min-width: 92px !important;

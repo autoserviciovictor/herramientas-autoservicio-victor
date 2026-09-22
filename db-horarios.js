@@ -92,7 +92,22 @@ async function asegurarEsquemaHorarios() {
     await query(`ALTER TABLE schedule_personnel_order ADD COLUMN IF NOT EXISTS break_start_time TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE schedule_personnel_order ADD COLUMN IF NOT EXISTS break_end_time TEXT NOT NULL DEFAULT ''`);
 
+    await query(`CREATE TABLE IF NOT EXISTS schedule_shift_snapshots (
+      sector_id TEXT NOT NULL,
+      month_key CHAR(7) NOT NULL,
+      shift_id TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      color VARCHAR(7) NOT NULL DEFAULT '#64748b',
+      shift_type TEXT NOT NULL DEFAULT 'continuo',
+      second_start_time TEXT NOT NULL DEFAULT '',
+      second_end_time TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (sector_id, month_key, shift_id)
+    )`);
+
     await query(`CREATE INDEX IF NOT EXISTS schedule_calendar_sector_month_idx ON schedule_calendar(sector_id, month_key)`);
+    await query(`CREATE INDEX IF NOT EXISTS schedule_shift_snapshots_sector_month_idx ON schedule_shift_snapshots(sector_id, month_key)`);
     await query(`CREATE INDEX IF NOT EXISTS schedule_details_sector_month_idx ON schedule_details(sector_id, month_key)`);
     await query(`CREATE INDEX IF NOT EXISTS schedule_order_sector_idx ON schedule_personnel_order(sector_id, sort_order)`);
     await query(`CREATE INDEX IF NOT EXISTS schedule_audit_created_idx ON schedule_audit(created_at DESC)`);
@@ -227,6 +242,63 @@ async function reemplazarTurnosSector(sector, filas) {
       );
     }
   });
+}
+
+async function listarUsoTurnosSector(sector, cliente = null) {
+  const r = await ejecutarConsulta(
+    cliente,
+    `SELECT shift_value AS shift_id, COUNT(*)::int AS usos
+     FROM schedule_calendar WHERE sector_id=$1 GROUP BY shift_value`,
+    [sector],
+  );
+  return new Map(r.rows.map((x) => [x.shift_id, Number(x.usos) || 0]));
+}
+
+async function guardarSnapshotsTurnosMes(sector, mes, turnos, cliente) {
+  if (!cliente) throw new Error("Los snapshots de horarios requieren una transacción");
+  for (const t of turnos || []) {
+    if (!t?.id) continue;
+    await cliente.query(
+      `INSERT INTO schedule_shift_snapshots(sector_id,month_key,shift_id,start_time,end_time,color,shift_type,second_start_time,second_end_time)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT(sector_id,month_key,shift_id) DO NOTHING`,
+      [sector, mes, t.id, t.inicio || "", t.fin || "", t.color || "#64748b", t.tipo || "continuo", t.inicio2 || "", t.fin2 || ""],
+    );
+  }
+}
+
+async function obtenerSnapshotsTurnosMes(sector, mes, cliente = null) {
+  const r = await ejecutarConsulta(
+    cliente,
+    `SELECT shift_id,start_time,end_time,color,shift_type,second_start_time,second_end_time
+     FROM schedule_shift_snapshots WHERE sector_id=$1 AND month_key=$2 ORDER BY shift_id`,
+    [sector, mes],
+  );
+  return r.rows.map((x) => ({ id:x.shift_id, inicio:x.start_time, fin:x.end_time, color:x.color, tipo:x.shift_type, inicio2:x.second_start_time, fin2:x.second_end_time }));
+}
+
+async function congelarTurnosHistoricosAntesDeEditar(sector, mesActual, turnosActuales, cliente) {
+  if (!cliente) throw new Error("El congelado histórico requiere una transacción");
+  const porId = new Map((turnosActuales || []).map((t) => [t.id, t]));
+  const ids = [...porId.keys()];
+  if (!ids.length) return;
+  // Incluye copias del mismo turno en Administración/supervisión: los IDs de
+  // turno son globalmente estables en el calendario aunque la definición viva
+  // en el sector de origen.
+  const r = await cliente.query(
+    `SELECT DISTINCT sector_id, month_key, shift_value FROM schedule_calendar
+     WHERE month_key < $1 AND shift_value = ANY($2::text[])`,
+    [mesActual, ids],
+  );
+  for (const row of r.rows) {
+    const t = porId.get(row.shift_value);
+    if (!t) continue;
+    await cliente.query(
+      `INSERT INTO schedule_shift_snapshots(sector_id,month_key,shift_id,start_time,end_time,color,shift_type,second_start_time,second_end_time)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(sector_id,month_key,shift_id) DO NOTHING`,
+      [row.sector_id,row.month_key,t.id,t.inicio||"",t.fin||"",t.color||"#64748b",t.tipo||"continuo",t.inicio2||"",t.fin2||""],
+    );
+  }
 }
 
 async function listarCalendarioFilas(cliente = null) {
@@ -379,6 +451,10 @@ module.exports = {
   importarHorariosAtomico,
   listarTurnosFilas,
   reemplazarTurnosSector,
+  listarUsoTurnosSector,
+  guardarSnapshotsTurnosMes,
+  obtenerSnapshotsTurnosMes,
+  congelarTurnosHistoricosAntesDeEditar,
   listarCalendarioFilas,
   listarDetallesFilas,
   reemplazarCalendarioDetallesPorAlcances,

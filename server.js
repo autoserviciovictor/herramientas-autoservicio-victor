@@ -22,6 +22,10 @@ const {
   conTransaccionHorarios,
   listarTurnosFilas,
   reemplazarTurnosSector,
+  listarUsoTurnosSector,
+  guardarSnapshotsTurnosMes,
+  obtenerSnapshotsTurnosMes,
+  congelarTurnosHistoricosAntesDeEditar,
   listarCalendarioFilas,
   listarDetallesFilas,
   reemplazarCalendarioDetallesPorAlcances,
@@ -2290,7 +2294,9 @@ app.get("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
       return res
         .status(403)
         .json({ ok: false, mensaje: "No tenés acceso a ese sector" });
-    res.json({ ok: true, sector, turnos: await obtenerTurnosSector(sector) });
+    const turnos = await obtenerTurnosSector(sector);
+    const usos = await listarUsoTurnosSector(sector);
+    res.json({ ok: true, sector, turnos: turnos.map((t) => ({ ...t, enUso: (usos.get(t.id) || 0) > 0, usos: usos.get(t.id) || 0 })) });
   } catch (e) {
     res.status(500).json({
       ok: false,
@@ -2342,13 +2348,30 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
         mensaje: "Configuración de horarios inválida o con identificadores repetidos",
       });
     await asegurarHorariosPostgres();
+    const actuales = await obtenerTurnosSector(sector);
+    const idsNuevos = new Set(turnos.map((t) => t.id));
+    const eliminados = actuales.filter((t) => !idsNuevos.has(t.id));
+    if (eliminados.length) {
+      const usos = await listarUsoTurnosSector(sector);
+      const bloqueados = eliminados.filter((t) => (usos.get(t.id) || 0) > 0);
+      if (bloqueados.length)
+        return res.status(409).json({ ok:false, mensaje:`No se puede eliminar ${bloqueados.map((t)=>t.inicio+"-"+t.fin).join(", ")} porque está en uso en el calendario.` });
+    }
     await ejecutarEnCola("horarios-global", async () => {
       const ahora = fechaHoraArgentinaIso();
       const nuevas = turnos.map((t) => [sector,t.id,t.inicio,t.fin,t.color,"Sí",ahora,t.tipo,t.inicio2 || "",t.fin2 || ""]);
-      await reemplazarTurnosSector(sector, nuevas);
+      await conTransaccionHorarios(async (clienteHorarios) => {
+        await congelarTurnosHistoricosAntesDeEditar(sector, fechaArgentina().slice(0,7), actuales, clienteHorarios);
+        await clienteHorarios.query("DELETE FROM schedule_shifts WHERE sector_id=$1", [sector]);
+        for (const f of nuevas) await clienteHorarios.query(
+          `INSERT INTO schedule_shifts(sector_id,shift_id,start_time,end_time,color,active,updated_text,shift_type,second_start_time,second_end_time) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [f[0],f[1],f[2],f[3],f[4],String(f[5]).toLowerCase()!=="no",f[6]||"",f[7]||"continuo",f[8]||"",f[9]||""]
+        );
+      });
     });
     invalidarCache(`turnosHorarios:${sector}`);
-    res.json({ ok: true, turnos });
+    const usosFinales = await listarUsoTurnosSector(sector);
+    res.json({ ok: true, turnos: turnos.map((t) => ({ ...t, enUso:(usosFinales.get(t.id)||0)>0, usos:usosFinales.get(t.id)||0 })) });
   } catch (e) {
     res.status(500).json({
       ok: false,
@@ -2484,6 +2507,15 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
             turnos.push(turno);
             ids.add(turno.id);
           }
+      }
+    }
+    const mesActual = fechaArgentina().slice(0, 7);
+    if (mes < mesActual) {
+      const historicos = await obtenerSnapshotsTurnosMes(sector, mes);
+      if (historicos.length) {
+        const porId = new Map(turnos.map((t) => [t.id, t]));
+        for (const t of historicos) porId.set(t.id, t);
+        turnos = [...porId.values()];
       }
     }
     res.json({
@@ -2783,6 +2815,12 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
 
       const todas = [...mapaFilas.values()];
       const todosDetalles = [...mapaDetalles.values()];
+      // Congela la definición de los horarios usados en este mes. ON CONFLICT DO NOTHING
+      // garantiza que editar un horario en el futuro no reescriba meses ya guardados.
+      for (const alcance of alcancesEscritura.values()) {
+        const defs = await obtenerTurnosSector(alcance.sector);
+        await guardarSnapshotsTurnosMes(alcance.sector, alcance.mes, defs, clienteHorarios);
+      }
       await reemplazarCalendarioDetallesPorAlcances(
         todas,
         todosDetalles,

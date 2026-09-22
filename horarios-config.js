@@ -30,6 +30,8 @@ function normalizar(items) {
         inicio2: tipo === "cortado" ? hora24(x.inicio2) : "",
         fin2: tipo === "cortado" ? hora24(x.fin2) : "",
         color: /^#[0-9a-f]{6}$/i.test(x.color || "") ? x.color : "#64748b",
+        enUso: x.enUso === true,
+        usos: Number(x.usos) || 0,
       };
     })
     .filter(

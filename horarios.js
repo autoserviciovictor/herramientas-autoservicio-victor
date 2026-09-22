@@ -450,11 +450,20 @@ async function cargarCalendarioActual(forzar = false) {
       }),
     );
     if (Array.isArray(data.turnos) && data.turnos.length) {
-      window.AutoservicioHorariosConfig?.guardarLocal?.(
-        data.turnos,
-        sectorActual,
-      );
-      cargarTurnosConfigurados();
+      // Los turnos del calendario pueden incluir definiciones históricas o de
+      // supervisores. Se usan sólo para renderizar: nunca contaminan la
+      // configuración propia del sector.
+      TURNOS = data.turnos.map((t) => ({
+        ...t,
+        label: t.tipo === "cortado"
+          ? `${t.inicio} - ${t.fin} / ${t.inicio2} - ${t.fin2}`
+          : `${t.inicio} - ${t.fin}`,
+        clase: "turno-configurable",
+        estilo: `--turno-color:${t.color};--turno-fondo:${t.color}22;--turno-borde:${t.color}66`,
+      })).concat([
+        { id:"franco", label:"Franco", color:"#9ca3af", clase:"turno-franco", estilo:"background:#e5e7eb;color:#374151;border-color:#cbd5e1" },
+        { id:"vacaciones", label:"Vacaciones", color:"#22c55e", clase:"turno-vacaciones", estilo:"background:#dcfce7;color:#15803d;border-color:#86efac" },
+      ]);
     }
   } catch (error) {
     const respaldo = leerCacheHorarios("api", cacheKey)?.data;
@@ -1915,7 +1924,7 @@ function renderListaTurnosConfig() {
     ? items
         .map(
           (t) =>
-            `<article class="horarios-config-shift-row" data-id="${escAttr(t.id)}"><span class="horarios-config-shift-swatch" style="background:${escAttr(t.color)};color:${escAttr(contrasteTurno(t.color))}">${esc(t.tipo === "cortado" ? "C" : t.inicio.slice(0, 2))}</span><div class="horarios-config-shift-info"><strong>${esc(detalleTurnoConfig(t))}</strong><span>${esc(t.tipo === "cortado" ? "Horario cortado · " : "Turno continuo · ")}${esc(nombreColorTurno(t.color))}</span></div><button class="horarios-config-edit-shift" type="button"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button></article>`,
+            `<article class="horarios-config-shift-row" data-id="${escAttr(t.id)}"><span class="horarios-config-shift-swatch" style="background:${escAttr(t.color)};color:${escAttr(contrasteTurno(t.color))}">${esc(t.tipo === "cortado" ? "C" : t.inicio.slice(0, 2))}</span><div class="horarios-config-shift-info"><strong>${esc(detalleTurnoConfig(t))}</strong><span>${esc(t.tipo === "cortado" ? "Horario cortado · " : "Turno continuo · ")}${esc(nombreColorTurno(t.color))}</span></div><span class="horarios-config-use ${t.enUso ? "en-uso" : "sin-uso"}" title="${t.enUso ? `Asignado en ${Number(t.usos)||1} casilla(s) del calendario` : "No está asignado en el calendario"}">${t.enUso ? "En uso" : "Sin usar"}</span><button class="horarios-config-edit-shift" type="button"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg><span>Editar</span></button></article>`,
         )
         .join("")
     : '<div class="empty-state">Todavía no hay horarios configurados.</div>';
@@ -2024,10 +2033,11 @@ async function guardarTurnoConfig() {
 async function eliminarTurnoConfig() {
   const id = $("horariosTurnoOriginal").value;
   let items = window.AutoservicioHorariosConfig?.cargar?.(sectorActual) || [];
-  if (window.HorariosApp?.turnosEnUso?.().includes(id))
+  const turno = items.find((t) => t.id === id);
+  if (turno?.enUso)
     return mensajeConfig(
       "horariosConfigMensaje",
-      "No se puede eliminar porque está asignado en el mes visible.",
+      "No se puede eliminar porque está asignado en el calendario.",
       "error",
     );
   items = items.filter((t) => t.id !== id);
