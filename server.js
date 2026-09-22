@@ -4400,10 +4400,10 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
         mensaje:
           "El usuario debe tener entre 3 y 30 caracteres: letras, números, punto, guion o guion bajo",
       });
-    if (password.length < 8)
+    if (password.length < 6)
       return res.status(400).json({
         ok: false,
-        mensaje: "La contraseña debe tener al menos 8 caracteres",
+        mensaje: "La contraseña debe tener al menos 6 caracteres",
       });
     const usuarios = await obtenerUsuarios();
     if (usuarios.some((item) => item.usuario === usuario))
@@ -4521,10 +4521,10 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
           "No podés desactivar tu propia cuenta ni quitarte el rol de administrador",
       });
     }
-    if (password && password.length < 8)
+    if (password && password.length < 6)
       return res.status(400).json({
         ok: false,
-        mensaje: "La contraseña debe tener al menos 8 caracteres",
+        mensaje: "La contraseña debe tener al menos 6 caracteres",
       });
     const hash = password ? hashPassword(password) : actual.passwordHash;
     const sessionVersion = password

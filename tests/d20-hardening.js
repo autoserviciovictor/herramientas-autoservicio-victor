@@ -20,7 +20,7 @@ const html = read('index.html');
 assert(server.includes('"listas-global"'), 'Lista must use one global write queue');
 assert(!server.includes('`listas:${usuario}:${numeroLista}`'), 'Per-user list write lock must be removed');
 assert(server.includes('sessionVersion'), 'Sessions must have a revocation version');
-assert(server.includes('password.length < 8'), 'Backend password minimum must be 8');
+assert(server.includes('password.length < 6'), 'Backend password minimum must be 6');
 assert(server.includes('req.usuario?.permisos?.[m] === true'), 'Permissions must fail closed');
 assert(server.includes('"X-Content-Type-Options": "nosniff"'), 'API hardening headers must be enabled');
 assert(!server.includes('AUTO_MIGRATE_SHEETS'), 'Legacy automatic Sheets migration flag must be removed');

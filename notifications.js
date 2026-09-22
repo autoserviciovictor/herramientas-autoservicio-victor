@@ -322,8 +322,9 @@ function inicializarNotificaciones() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // No solicitamos ni mostramos avisos automáticos de permisos al ingresar.
-  // La activación manual sigue disponible desde Configuración.
+  // El permiso nativo debe salir de un gesto real del usuario. El botón Ingresar
+  // es el punto común para móvil/escritorio y evita prompts automáticos sin interacción.
+  $("btnLoginIngresar")?.addEventListener("click", solicitarPermisoNativoAlIngresar);
   inicializarNotificaciones();
 });
 
@@ -439,5 +440,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.AutoservicioAuth?.getUsuario?.()) void sincronizarPreferenciasCategorias();
 });
 window.addEventListener("autoservicio:sesion", (event) => {
-  if (event.detail?.usuario) void sincronizarPreferenciasCategorias();
+  if (!event.detail?.usuario) return;
+  void sincronizarPreferenciasCategorias();
+
+  // Si el permiso se concedió durante el ingreso, registramos la suscripción una vez
+  // que la sesión ya existe. Esto cubre el caso en que el prompt nativo termina antes
+  // que el login y evita quedar con permiso concedido pero sin dispositivo asociado.
+  if (!esDesarrolloLocal() && "Notification" in window && Notification.permission === "granted") {
+    void registrarSuscripcionConReintentos({
+      probar: localStorage.getItem(claveEstadoNotificaciones()) !== "activadas",
+    });
+  }
 });

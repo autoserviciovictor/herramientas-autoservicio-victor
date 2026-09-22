@@ -1084,8 +1084,8 @@ async function abrirNuevoUsuario() {
   $("adminUsuarioUsuario").disabled = false;
   $("adminUsuarioPassword").value = "";
   restablecerVisibilidadPasswordUsuario();
-  $("adminUsuarioPassword").placeholder = "Mínimo 8 caracteres";
-  if ($("adminUsuarioPasswordAyuda")) $("adminUsuarioPasswordAyuda").textContent = "Mínimo 8 caracteres.";
+  $("adminUsuarioPassword").placeholder = "Mínimo 6 caracteres";
+  if ($("adminUsuarioPasswordAyuda")) $("adminUsuarioPasswordAyuda").textContent = "Mínimo 6 caracteres.";
   if ($("btnAdminGuardarUsuario")) $("btnAdminGuardarUsuario").textContent = "Crear usuario";
   actualizarAccionesModalUsuario(false);
   $("adminUsuarioRol").value = "personal";
@@ -1295,17 +1295,17 @@ async function guardarUsuario() {
       "error",
     );
   }
-  if (!original && payload.password.length < 8) {
+  if (!original && payload.password.length < 6) {
     $("adminUsuarioPassword")?.focus();
     return mensajeUsuarioModal(
-      "La contraseña debe tener al menos 8 caracteres.",
+      "La contraseña debe tener al menos 6 caracteres.",
       "error",
     );
   }
-  if (original && payload.password && payload.password.length < 8) {
+  if (original && payload.password && payload.password.length < 6) {
     $("adminUsuarioPassword")?.focus();
     return mensajeUsuarioModal(
-      "La contraseña debe tener al menos 8 caracteres.",
+      "La contraseña debe tener al menos 6 caracteres.",
       "error",
     );
   }
