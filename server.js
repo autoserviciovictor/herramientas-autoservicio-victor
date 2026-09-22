@@ -6075,6 +6075,7 @@ app.post("/notificaciones/suscribir", requerirSesion, async (req, res) => {
 app.post("/notificaciones/diagnostico-cliente", requerirSesion, express.json({ limit: "8kb" }), (req, res) => {
   const fasesPermitidas = new Set([
     "vapid-obtenida",
+    "vapid-mismatch",
     "service-worker-ready",
     "get-subscription",
     "get-subscription-error",

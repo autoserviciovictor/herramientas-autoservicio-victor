@@ -10,12 +10,16 @@ function assert(cond, msg) {
 }
 
 assert(
-  notifications.includes("if (subscription && !forzarRenovacion) return subscription;"),
-  "Debe reutilizar una suscripción existente antes de renovarla",
+  notifications.includes("const claveSuscripcion = claveAplicacionSuscripcion(subscription);"),
+  "Debe comparar la clave VAPID real de la suscripción existente",
 );
 assert(
-  !notifications.includes("const requiereRenovar = Boolean("),
-  "No debe quedar la renovación destructiva basada sólo en localStorage/VAPID",
+  notifications.includes("claveSuscripcion === claveServidor"),
+  "Debe reutilizar la suscripción cuando pertenece a la clave VAPID actual",
+);
+assert(
+  notifications.includes('reportarDiagnosticoPushCliente("vapid-mismatch")'),
+  "Debe diagnosticar y renovar una suscripción creada con una clave VAPID anterior",
 );
 assert(
   notifications.includes("forzarRenovacion: true"),

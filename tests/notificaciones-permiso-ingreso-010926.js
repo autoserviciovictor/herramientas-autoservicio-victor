@@ -12,9 +12,9 @@ assert.match(notifications, /btnLoginIngresar[\s\S]*solicitarPermisoNativoAlIngr
 assert.doesNotMatch(notifications, /titulo: "Activar notificaciones"[\s\S]*confirmarTexto: "Activar notificaciones"/, 'No debe quedar un cartel intermedio propio antes del prompt de Chrome');
 assert.match(notifications, /window\.addEventListener\("autoservicio:sesion"[\s\S]*registrarSuscripcionConReintentos/, 'La suscripción push debe revalidarse cuando la sesión ya existe');
 
-const asset = './notifications.js?v=1960-notificaciones-password6-220926';
-assert.ok(index.includes(asset), 'index.html debe conservar el build D21 canónico de notifications.js');
-assert.ok(sw.includes(asset), 'service-worker.js debe precachear el mismo build D21 de notifications.js');
+const asset = './notifications.js?v=1960-push-vapid-repair-220926';
+assert.ok(index.includes(asset), 'index.html debe cargar el build vigente de notifications.js');
+assert.ok(sw.includes(asset), 'service-worker.js debe precachear el mismo build vigente de notifications.js');
 assert.ok(sw.includes('NOTIFICACIONES_PROMPT_NATIVO_V3_010926'), 'El service worker debe forzar el refresco V3 de notifications.js');
 
 console.log('Permiso de notificaciones al ingreso 01/09: OK');

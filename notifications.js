@@ -126,9 +126,18 @@ async function obtenerSuscripcionVigente(registro, publicKey, { forzarRenovacion
     throw error;
   }
 
-  // Nunca destruimos una suscripción existente sólo por comparar una clave guardada
-  // en localStorage. Primero la reutilizamos y dejamos que el servidor confirme si sirve.
-  if (subscription && !forzarRenovacion) return subscription;
+  // Reutilizamos la suscripción mientras pertenezca a la clave VAPID actual.
+  // Importante: comparamos contra applicationServerKey de la suscripción REAL de Chrome,
+  // no contra localStorage. Si Render cambió las claves VAPID, una suscripción antigua
+  // puede seguir existiendo localmente pero el proveedor Push la rechazará al enviar.
+  if (subscription && !forzarRenovacion) {
+    const claveSuscripcion = claveAplicacionSuscripcion(subscription);
+    const claveServidor = String(publicKey || "").trim();
+    if (!claveSuscripcion || claveSuscripcion === claveServidor) return subscription;
+
+    await reportarDiagnosticoPushCliente("vapid-mismatch");
+    forzarRenovacion = true;
+  }
 
   if (subscription && forzarRenovacion) {
     await reportarDiagnosticoPushCliente("unsubscribe-inicio");
