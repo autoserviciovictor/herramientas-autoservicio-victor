@@ -335,12 +335,33 @@ function renderCheckoutReview() {
     </div>`).join("");
 }
 
+function huellaPedidoActual() {
+  const c = state.checkout || {};
+  return JSON.stringify({
+    nombre: String(c.nombre || "").trim(),
+    telefono: String(c.telefono || "").trim(),
+    entrega: c.entrega || "delivery",
+    direccion: String(c.direccion || "").trim(),
+    referencia: String(c.referencia || "").trim(),
+    horario: String(c.horario || "").trim(),
+    pago: String(c.pago || "").trim(),
+    items: state.carrito
+      .map((item) => ({ codigo: String(item.codigo || ""), cantidad: Number(item.cantidad) || 0 }))
+      .sort((a, b) => a.codigo.localeCompare(b.codigo)),
+  });
+}
+
 function obtenerClientTokenPedido() {
   let token = String(state.checkout?.clientToken || "");
-  if (!/^[a-zA-Z0-9_-]{12,100}$/.test(token)) {
+  const huella = huellaPedidoActual();
+  const mismaOrden = String(state.checkout?.clientTokenHuella || "") === huella;
+
+  // El token identifica una orden concreta, no al navegador. Si cambian los
+  // datos o el carrito, debe nacer otro token para no reutilizar un pedido viejo.
+  if (!mismaOrden || !/^[a-zA-Z0-9_-]{12,100}$/.test(token)) {
     if (globalThis.crypto?.randomUUID) token = globalThis.crypto.randomUUID().replaceAll("-", "");
     else token = `cat_${Date.now()}_${Math.random().toString(36).slice(2, 14)}`;
-    state.checkout = { ...state.checkout, clientToken: token };
+    state.checkout = { ...state.checkout, clientToken: token, clientTokenHuella: huella };
     guardarCheckout();
   }
   return token;
