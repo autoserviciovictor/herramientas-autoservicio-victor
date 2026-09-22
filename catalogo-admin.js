@@ -296,22 +296,19 @@ function etiquetaUnidad(u) {
   return ({ unidad: "Unidad", kg: "Kg", pack: "Pack", cajon: "Cajón", bulto: "Bulto", litro: "Litro", metro: "Metro" })[u] || u || "Unidad";
 }
 
-function miniaturaProductoCatalogo(producto) {
-  const tieneConfirmada = producto?.estadoImagen === "confirmada";
-  const urlGuardada = String(producto?.imagen || "").trim();
-  if (!tieneConfirmada && !urlGuardada) {
+function miniaturaProductoCatalogo(p) {
+  if (p?.estadoImagen !== "confirmada") {
     return '<svg class="app-icon"><use href="#icon-box"></use></svg>';
   }
 
-  const version = producto?.imagenRevisadaEn ? `?v=${encodeURIComponent(String(producto.imagenRevisadaEn))}` : "";
-  const urlInterna = `${API_BASE_URL}/catalogo/api/productos/${encodeURIComponent(producto.codigo)}/imagen${version}`;
-  const principal = tieneConfirmada ? urlInterna : urlGuardada;
-  const alternativa = tieneConfirmada && urlGuardada && urlGuardada !== principal ? urlGuardada : "";
+  // Las miniaturas confirmadas siempre salen del almacenamiento propio.
+  // El endpoint también migra automáticamente las confirmadas antiguas que
+  // todavía estaban guardadas solo como URL, evitando hotlinks y lógica duplicada.
+  const version = p?.imagenRevisadaEn ? `?v=${encodeURIComponent(String(p.imagenRevisadaEn))}` : "";
+  const src = `${API_BASE_URL}/catalogo/api/productos/${encodeURIComponent(p.codigo)}/imagen${version}`;
   const fallback = '<svg class="app-icon"><use href="#icon-box"></use></svg>';
-  const onerror = alternativa
-    ? `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${esc(alternativa)}';}else{this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.outerHTML='${fallback}';}`
-    : `this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.outerHTML='${fallback}';`;
-  return `<img src="${esc(principal)}" alt="" loading="lazy" decoding="async" onerror="${onerror}" />`;
+  const onerror = `this.closest('.catalog-product-thumb')?.classList.remove('has-image');this.outerHTML='${fallback}';`;
+  return `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="${onerror}" />`;
 }
 
 function renderProductos() {

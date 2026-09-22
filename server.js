@@ -1070,14 +1070,18 @@ app.get("/catalogo/api/productos", async (req, res) => {
 
 app.get("/catalogo/api/productos/:codigo/imagen", async (req, res) => {
   try {
-    const imagen = await obtenerImagenCatalogoDb(req.params.codigo, "confirmada");
-    if (!imagen?.data) return res.status(404).end();
+    // Fuente única para imágenes del catálogo. Además de devolver las imágenes
+    // binarias actuales, migra en el primer acceso las imágenes confirmadas
+    // antiguas que todavía existen únicamente como URL. Así administración y
+    // catálogo público no dependen de hotlinks externos ni muestran miniaturas rotas.
+    const imagen = await obtenerImagenNormalizadaProducto(req.params.codigo, "confirmada");
+    if (!imagen?.buffer?.length) return res.status(404).end();
     res.set({
       "Content-Type": imagen.mime || "image/jpeg",
       "Cache-Control": "public, max-age=86400",
       "Content-Disposition": "inline",
     });
-    res.send(imagen.data);
+    res.send(imagen.buffer);
   } catch (error) {
     console.error("Error sirviendo imagen pública del catálogo:", error);
     res.status(404).end();
