@@ -318,7 +318,7 @@ function cargarTurnosConfigurados() {
         estilo: "background:#dbeafe;color:#1d4ed8;border-color:#93c5fd",
       },
     ]);
-  if (!TURNOS.some((t) => t.id === turnoPincel))
+  if (turnoPincel !== "__sin_asignar__" && !TURNOS.some((t) => t.id === turnoPincel))
     turnoPincel =
       TURNOS.find((t) => !["franco", "vacaciones"].includes(t.id))?.id ||
       "franco";
@@ -899,6 +899,9 @@ function dialogoHorarios({
   });
 }
 function actualizarSelectorTurnos() {
+  // "Sin asignar" es una opción válida del selector aunque no forme parte de TURNOS.
+  // No debemos reemplazarla automáticamente por el primer horario disponible.
+  if (turnoPincel === "__sin_asignar__") return;
   const opcion =
     TURNOS.find((t) => t.id === turnoPincel) ||
     TURNOS.find((t) => t.id !== "personalizado");

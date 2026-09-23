@@ -3663,14 +3663,33 @@ async function sectoresTareasPermitidos(usuario) {
 app.get("/tareas/contexto", requerirAlgunModulo("tareas"), async (req, res) => {
   try {
     const sectores = await sectoresTareasPermitidos(req.usuario);
+    let sectoresVisibles = sectores.map((s) => ({
+      id: s.id,
+      nombre: s.nombre,
+      color: s.color,
+    }));
+
+    // Los administradores deben poder seguir entrando a sectores que ya tienen
+    // tareas, incluso si el sector fue renombrado o quedó fuera de la lista activa.
+    // Esto evita que desaparezcan tareas históricas del selector.
+    if (rolGestionGlobal(req.usuario)) {
+      const tareas = await obtenerTareasServidor();
+      const conocidos = new Set(
+        sectoresVisibles.flatMap((s) => [normalizarTexto(s.id), normalizarTexto(s.nombre)]),
+      );
+      for (const tarea of tareas) {
+        const nombre = String(tarea?.sector || "").trim();
+        const clave = normalizarTexto(nombre);
+        if (!nombre || conocidos.has(clave)) continue;
+        sectoresVisibles.push({ id: nombre, nombre, color: "#718096" });
+        conocidos.add(clave);
+      }
+    }
+
     res.json({
       ok: true,
       rol: req.usuario.rol,
-      sectores: sectores.map((s) => ({
-        id: s.id,
-        nombre: s.nombre,
-        color: s.color,
-      })),
+      sectores: sectoresVisibles,
       puedeAsignar: rolGestionSector(req.usuario),
       puedeConfigurar: rolGestionSector(req.usuario),
     });
@@ -3697,9 +3716,11 @@ app.get("/tareas", requerirAlgunModulo("tareas"), async (req, res) => {
     // Las tareas pertenecen al sector: todo usuario activo del sector puede verlas,
     // aunque la asignación indique otro responsable. Los permisos de edición se
     // siguen resolviendo por rol en /tareas/contexto y en los endpoints de escritura.
-    const visibles = tareas.filter((t) =>
-      permitidos.has(normalizarTexto(t.sector)),
-    );
+    // Gestión global necesita ver todas las tareas existentes. Filtrarlas sólo por
+    // sectores activos hacía desaparecer tareas de sectores renombrados/inactivos.
+    const visibles = rolGestionGlobal(req.usuario)
+      ? tareas
+      : tareas.filter((t) => permitidos.has(normalizarTexto(t.sector)));
     res.json({ ok: true, tareas: visibles });
   } catch (e) {
     res.status(500).json({
