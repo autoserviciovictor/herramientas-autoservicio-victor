@@ -512,6 +512,7 @@ inicializar();
 
 window.addEventListener("autoservicio:sesion", () => {
   resumenInicioUltimaCarga = 0;
+  void mostrarAvisoProductosVencidosAlAbrir();
   if (document.body.dataset.screen === "inicio")
     actualizarResumenInicio({ forzar: true });
 
@@ -710,6 +711,119 @@ function fechaHoyLocalIso() {
   }
 }
 
+
+
+const AVISO_VENCIDOS_STORAGE_PREFIX = "autoservicio_aviso_vencidos_v1";
+let avisoVencidosEnCurso = false;
+
+function claveAvisoVencidosHoy() {
+  const usuario = String(window.AutoservicioAuth?.getUsuario?.()?.usuario || "sin-usuario")
+    .trim()
+    .toLowerCase();
+  return `${AVISO_VENCIDOS_STORAGE_PREFIX}:${usuario}:${fechaHoyLocalIso()}`;
+}
+
+function normalizarProductoVencidoParaAviso(item, origen) {
+  const codigo = String(item?.codigo || "").trim();
+  const articulo = String(item?.articulo || "Producto sin descripción").trim();
+  const vencimiento = String(item?.vencimiento || "").trim();
+  const cantidad = Math.max(0, Number(item?.cantidad) || 0);
+  return { codigo, articulo, vencimiento, cantidad, origen };
+}
+
+function combinarProductosVencidosParaAviso(items = []) {
+  const mapa = new Map();
+  items.forEach((item) => {
+    // Mismo producto + misma fecha en ambos módulos = una sola advertencia.
+    const identidad = item.codigo
+      ? `${item.codigo}|${item.vencimiento}`
+      : `${item.articulo.toLocaleLowerCase("es")}|${item.vencimiento}`;
+    const previo = mapa.get(identidad);
+    if (!previo) {
+      mapa.set(identidad, { ...item, origenes: new Set([item.origen]) });
+      return;
+    }
+    previo.origenes.add(item.origen);
+    // No sumamos cantidades entre módulos: podrían representar físicamente el mismo producto.
+    previo.cantidad = Math.max(previo.cantidad, item.cantidad);
+  });
+  return [...mapa.values()];
+}
+
+function cerrarAvisoProductosVencidos(modal) {
+  modal?.remove();
+  document.body.classList.remove("expiry-opening-alert-open");
+}
+
+function abrirAvisoProductosVencidos(items) {
+  document.getElementById("expiryOpeningAlert")?.remove();
+  const modal = document.createElement("div");
+  modal.id = "expiryOpeningAlert";
+  modal.className = "expiry-opening-alert";
+  modal.innerHTML = `
+    <style>
+      .expiry-opening-alert{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.58);backdrop-filter:blur(3px)}
+      .expiry-opening-alert__dialog{width:min(560px,100%);max-height:min(78vh,720px);overflow:auto;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.3);padding:24px}
+      .expiry-opening-alert__head{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}.expiry-opening-alert__icon{display:grid;place-items:center;flex:0 0 46px;height:46px;border-radius:14px;background:#fff1f2;color:#e11d48;font-size:24px;font-weight:900}
+      .expiry-opening-alert__head h2{margin:0 0 5px;font-size:22px;color:#111827}.expiry-opening-alert__head p{margin:0;color:#64748b;line-height:1.4}
+      .expiry-opening-alert__list{display:grid;gap:9px;margin:0 0 20px}.expiry-opening-alert__item{padding:12px 14px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}.expiry-opening-alert__item strong{display:block;color:#111827}.expiry-opening-alert__meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:12px;color:#64748b}
+      .expiry-opening-alert__action{width:100%;border:0;border-radius:12px;padding:13px 18px;background:#ef233c;color:#fff;font:inherit;font-weight:800;cursor:pointer}
+      @media(max-width:600px){.expiry-opening-alert{align-items:end;padding:12px}.expiry-opening-alert__dialog{border-radius:22px 22px 14px 14px;padding:20px;max-height:84vh}}
+    </style>
+    <section class="expiry-opening-alert__dialog" role="alertdialog" aria-modal="true" aria-labelledby="expiryOpeningAlertTitle">
+      <div class="expiry-opening-alert__head">
+        <span class="expiry-opening-alert__icon" aria-hidden="true">!</span>
+        <div><h2 id="expiryOpeningAlertTitle">Productos vencidos — retirar del sector</h2><p>${items.length === 1 ? "1 producto pasó a vencido hoy." : `${items.length} productos pasaron a vencidos hoy.`}</p></div>
+      </div>
+      <div class="expiry-opening-alert__list">${items.map((item) => {
+        const origen = [...item.origenes].map((x) => x === "lotes" ? "Control de lotes" : "Vencimientos").join(" · ");
+        return `<div class="expiry-opening-alert__item"><strong>${escapeHTML(item.articulo)}</strong><div class="expiry-opening-alert__meta">${item.codigo ? `<span>Código: ${escapeHTML(item.codigo)}</span>` : ""}<span>Vence: ${escapeHTML(item.vencimiento.split("-").reverse().join("/"))}</span>${item.cantidad ? `<span>Cantidad: ${item.cantidad}</span>` : ""}<span>${escapeHTML(origen)}</span></div></div>`;
+      }).join("")}</div>
+      <button type="button" class="expiry-opening-alert__action">Entendido</button>
+    </section>`;
+  document.body.appendChild(modal);
+  document.body.classList.add("expiry-opening-alert-open");
+  const cerrar = () => cerrarAvisoProductosVencidos(modal);
+  modal.querySelector(".expiry-opening-alert__action")?.addEventListener("click", cerrar);
+  modal.querySelector(".expiry-opening-alert__action")?.focus();
+}
+
+async function mostrarAvisoProductosVencidosAlAbrir() {
+  if (avisoVencidosEnCurso || !window.AutoservicioAuth?.getUsuario?.()) return;
+  const puedeVencimientos = window.AutoservicioAuth?.puedeVerModulo?.("vencimientos") === true;
+  const puedeLotes = window.AutoservicioAuth?.puedeVerModulo?.("lotes") === true;
+  if (!puedeVencimientos && !puedeLotes) return;
+
+  const clave = claveAvisoVencidosHoy();
+  if (localStorage.getItem(clave) === "1") return;
+  avisoVencidosEnCurso = true;
+  try {
+    const hoy = fechaHoyLocalIso();
+    const consultas = [];
+    if (puedeVencimientos) consultas.push(obtenerJsonResumen("/vencimientos").then((d) =>
+      (Array.isArray(d?.vencimientos) ? d.vencimientos : [])
+        .filter((x) => String(x?.vencimiento || "") === hoy)
+        .map((x) => normalizarProductoVencidoParaAviso(x, "vencimientos"))
+    ));
+    if (puedeLotes) consultas.push(obtenerJsonResumen("/lotes").then((d) =>
+      (Array.isArray(d?.lotes) ? d.lotes : [])
+        .filter((x) => String(x?.vencimiento || "") === hoy)
+        .map((x) => normalizarProductoVencidoParaAviso(x, "lotes"))
+    ));
+    const resultados = await Promise.allSettled(consultas);
+    const items = combinarProductosVencidosParaAviso(resultados.flatMap((r) => r.status === "fulfilled" ? r.value : []));
+    // Si una fuente habilitada falla, no marcamos el aviso como procesado: se reintentará
+    // en la próxima apertura para no ocultar vencimientos por un error de red.
+    if (resultados.every((r) => r.status === "fulfilled")) {
+      localStorage.setItem(clave, "1");
+      if (items.length) abrirAvisoProductosVencidos(items);
+    }
+  } catch (error) {
+    console.warn("No se pudo preparar el recordatorio de productos vencidos:", error);
+  } finally {
+    avisoVencidosEnCurso = false;
+  }
+}
 
 function numeroVisibleResumen(valor) {
   const numero = Number(valor);
