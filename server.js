@@ -5155,7 +5155,7 @@ function calcularEstadoVencimiento(fechaVencimiento) {
   const vence = new Date(String(fechaVencimiento) + "T00:00:00");
   if (Number.isNaN(vence.getTime())) return "Sin fecha";
   const dias = Math.ceil((vence - hoy) / 86400000);
-  if (dias < 0) return "Vencido";
+  if (dias <= 0) return "Vencido";
   if (dias <= 7) return "En 7 días";
   if (dias <= 15) return "En 15 días";
   if (dias <= 30) return "En 30 días";
@@ -5964,7 +5964,7 @@ async function procesarProductosVencidos() {
     let retryNeeded = false;
     for (const registro of vencimientos) {
       const dias = diasDesdeHoyArgentina(registro.vencimiento);
-      if (dias === null || dias >= 0) continue;
+      if (dias === null || dias > 0) continue;
       const clave = claveProductoVencido(registro);
       if (enviadas.has(clave)) continue;
       const resultado = await notificarVencimientoAUsuarios(
@@ -7082,7 +7082,7 @@ async function procesarAlertasLotesProgramadas(){
     for(const alerta of alertas){
       const dias=diasDesdeHoyArgentina(alerta.vencimiento);
       const unidades=Number(alerta.cantidad||0);
-      const estado=dias===null?'sin fecha':dias<0?`venció hace ${Math.abs(dias)} ${Math.abs(dias)===1?'día':'días'}`:dias===0?'vence hoy':`vence en ${dias} ${dias===1?'día':'días'}`;
+      const estado=dias===null?'sin fecha':dias<0?`venció hace ${Math.abs(dias)} ${Math.abs(dias)===1?'día':'días'}`:dias===0?'venció hoy':`vence en ${dias} ${dias===1?'día':'días'}`;
       const body=`${alerta.articulo} · ${estado} · ${unidades} ${unidades===1?'unidad':'unidades'}`;
       const clave=`lote-alerta|${alerta.id}`;
       await registrarCentroNotificacion({usuario:alerta.usuario,tipo:'vencimientos-lote',titulo:'Recordatorio de vencimiento',mensaje:body,url:'./?modulo=lotes',clave});

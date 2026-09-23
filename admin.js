@@ -451,7 +451,7 @@ function actualizarMetricasAdmin() {
     "adminHomeVencimientos",
     Number.isFinite(vencimientosHoy) ? vencimientosHoy.toLocaleString("es-AR") : "0",
   );
-  establecerTexto("adminHomeVencimientosDetalle", "Vencen hoy");
+  establecerTexto("adminHomeVencimientosDetalle", "Fecha de vencimiento hoy");
   establecerTexto("adminHomeUsuariosCardActivos", activos || 0);
   establecerTexto("adminHomeUsuariosCardInactivos", inactivos || 0);
   establecerTexto("adminHomeSectoresCardActivos", sectoresActivos || 0);

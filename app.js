@@ -1104,7 +1104,7 @@ function renderVencimientosHoyInicio(resumen = {}) {
     ? resumen.vencimientosHoyDetalle
     : [];
   if (!items.length) {
-    box.innerHTML = `<div class="pro-home-live-empty"><span class="pro-module-icon pro-orange"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span><div><strong>Sin vencimientos para hoy</strong><small>No hay productos registrados con vencimiento en la fecha de hoy.</small></div></div>`;
+    box.innerHTML = `<div class="pro-home-live-empty"><span class="pro-module-icon pro-orange"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span><div><strong>Sin productos vencidos hoy</strong><small>No hay productos registrados con fecha de vencimiento de hoy.</small></div></div>`;
     return;
   }
   box.innerHTML = items
@@ -2732,7 +2732,7 @@ async function cargarListadoVencimientos(opciones = {}) {
 
 function diasHastaVencimiento(fecha) {
   if (!fecha) return 99999;
-  const hoy = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  const hoy = new Date(fechaHoyLocalIso() + "T00:00:00");
   const vence = new Date(String(fecha) + "T00:00:00");
   if (Number.isNaN(vence.getTime())) return 99999;
   return Math.ceil((vence - hoy) / 86400000);
@@ -2757,7 +2757,7 @@ function tieneOferta(item) {
 function claseEstadoVencimiento(item) {
   const estado = String(item.estado || "").toLowerCase();
   const dias = diasHastaVencimiento(item.vencimiento);
-  if (estado.includes("vencido") || dias < 0) return "venc-vencido";
+  if (estado.includes("vencido") || dias <= 0) return "venc-vencido";
   if (dias <= 7) return "venc-7";
   if (dias <= 15) return "venc-15";
   // Todo producto vigente con 16 días o más pertenece al grupo azul.
@@ -2766,13 +2766,13 @@ function claseEstadoVencimiento(item) {
 
 function textoEstadoVencimiento(item) {
   const dias = diasHastaVencimiento(item.vencimiento);
-  if (dias < 0) {
+  if (dias <= 0) {
+    if (dias === 0) return "Vencido hoy";
     const vencidoHace = Math.abs(dias);
     return vencidoHace === 1
       ? "Vencido ayer"
       : `Vencido hace ${vencidoHace} días`;
   }
-  if (dias === 0) return "Vence hoy";
   if (dias === 1) return "Falta 1 día";
   return `Faltan ${dias} días`;
 }
@@ -2785,7 +2785,7 @@ function bucketVencimiento(item) {
   if (Number.isNaN(vence.getTime())) return "fuera";
 
   const dias = diasHastaVencimiento(fecha);
-  if (dias < 0) return "vencidos";
+  if (dias <= 0) return "vencidos";
   if (dias <= 7) return "7";
   if (dias <= 15) return "15";
 

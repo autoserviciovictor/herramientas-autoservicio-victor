@@ -335,7 +335,8 @@ function confirmarEliminarLoteIndividual(lote) {
 function diasHastaVencimientoLote(fecha) {
   if (!fecha) return 99999;
   // Misma regla usada por Vencimientos para que ambos módulos clasifiquen igual.
-  const hoy = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00');
+  const ahora = new Date();
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
   const vence = new Date(String(fecha) + 'T00:00:00');
   if (Number.isNaN(vence.getTime())) return 99999;
   return Math.ceil((vence - hoy) / 86400000);
@@ -346,7 +347,7 @@ function bucketVencimientoLote(lote) {
   if (!fecha) return 'fuera';
   const dias = diasHastaVencimientoLote(fecha);
   if (dias === 99999) return 'fuera';
-  if (dias < 0) return 'vencidos';
+  if (dias <= 0) return 'vencidos';
   if (dias <= 7) return '7';
   if (dias <= 15) return '15';
   return '16mas';
