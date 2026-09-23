@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1960-cache-refresh-230926";
+const CACHE_VERSION = "autoservicio-v1964-calculo-horas-solo-config-230926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
@@ -42,7 +42,7 @@ const APP_SHELL = [
   "./auth.js?v=1960-d21-cierre-etapa6-010926",
   "./notifications.js?v=1960-push-vapid-repair-220926",
   "./prices.js?v=1960-d21-cierre-etapa6-010926",
-  "./horarios.js?v=1960-horarios-sector-historico-220926",
+  "./horarios.js?v=1960-calculo-horas-230926",
   "./api-cache.js?v=1960-d21-cierre-etapa6-010926",
   "./tareas.js?v=1960-d21-cierre-etapa6-010926",
   "./manifest.webmanifest",

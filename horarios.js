@@ -1,5 +1,5 @@
 import "./ui.js?v=1960-d21-cierre-etapa6-010926";
-import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
+import { API_BASE_URL, APP_ASSET_BUILD } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";
 import {
   shiftSegments,
@@ -85,6 +85,271 @@ function puedeGestionarHorarios() {
     rolHorarios(),
   );
 }
+
+
+let promesaXlsxHorarios = null;
+function asegurarXlsxHorarios() {
+  if (globalThis.XLSX?.utils?.aoa_to_sheet && globalThis.XLSX?.writeFile)
+    return Promise.resolve(globalThis.XLSX);
+  if (!promesaXlsxHorarios) {
+    promesaXlsxHorarios = new Promise((resolve, reject) => {
+      const existente = document.querySelector('script[data-horarios-xlsx="1"]');
+      const completar = () => globalThis.XLSX?.utils?.aoa_to_sheet && globalThis.XLSX?.writeFile
+        ? resolve(globalThis.XLSX)
+        : reject(new Error("No se pudo cargar el generador de Excel"));
+      if (existente) {
+        existente.addEventListener("load", completar, { once: true });
+        existente.addEventListener("error", () => reject(new Error("No se pudo cargar el generador de Excel")), { once: true });
+        setTimeout(() => { if (globalThis.XLSX?.utils?.aoa_to_sheet) completar(); }, 0);
+        return;
+      }
+      const script = document.createElement("script");
+      script.dataset.horariosXlsx = "1";
+      script.src = `./xlsx.full.min.js?v=${APP_ASSET_BUILD}`;
+      script.onload = completar;
+      script.onerror = () => reject(new Error("No se pudo cargar el generador de Excel"));
+      document.head.appendChild(script);
+    }).finally(() => { promesaXlsxHorarios = null; });
+  }
+  return promesaXlsxHorarios;
+}
+
+function esRolAdministracionHorarios() {
+  return ["administrador", "administracion"].includes(rolHorarios());
+}
+
+function minutosHora(valor) {
+  const m = String(valor || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function minutosSegmento(inicio, fin, desdeMinuto = 0) {
+  let a = minutosHora(inicio), b = minutosHora(fin);
+  if (a == null || b == null) return 0;
+  if (b <= a) b += 24 * 60;
+  return Math.max(0, b - Math.max(a, desdeMinuto));
+}
+
+function minutosTurnoParaLiquidacion(turnoId, turnos, tipoDia) {
+  if (!turnoId || ["franco", "vacaciones", "ausente", "licencia"].includes(turnoId)) return 0;
+  const segmentos = shiftSegments(turnoId, turnos || []);
+  if (!segmentos.length) return 0;
+  const desde = tipoDia === "sabado" ? 14 * 60 : 0;
+  return segmentos.reduce((total, seg) => total + minutosSegmento(seg.inicio, seg.fin, desde), 0);
+}
+
+function textoHoras(minutos) {
+  const total = Math.max(0, Math.round(Number(minutos) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function parsearValorHora(valor) {
+  let texto = String(valor || "").trim().replace(/\s|\$/g, "");
+  if (!texto) return NaN;
+  if (texto.includes(",")) texto = texto.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(texto)) texto = texto.replace(/\./g, "");
+  const numero = Number(texto);
+  return Number.isFinite(numero) && numero > 0 ? numero : NaN;
+}
+
+function nombreHojaExcel(nombre, usados) {
+  const base = String(nombre || "Sector").replace(/[\\/?*\[\]:]/g, " ").trim().slice(0, 31) || "Sector";
+  let candidato = base, n = 2;
+  while (usados.has(candidato)) {
+    const sufijo = ` ${n++}`;
+    candidato = `${base.slice(0, 31 - sufijo.length)}${sufijo}`;
+  }
+  usados.add(candidato);
+  return candidato;
+}
+
+function agregarHojaHoras(XLSX, libro, nombre, filas) {
+  const encabezado = [["Sector", "Usuario", "Horas feriadas", "Horas extra", "Total horas", "Valor hora", "Monto a pagar"]];
+  const cuerpo = filas.map((r) => [r.sector, r.usuario, textoHoras(r.feriados), textoHoras(r.extras), textoHoras(r.feriados + r.extras), r.valorHora, r.monto]);
+  const totalF = filas.reduce((a, r) => a + r.feriados, 0);
+  const totalE = filas.reduce((a, r) => a + r.extras, 0);
+  const totalMonto = filas.reduce((a, r) => a + r.monto, 0);
+  const hoja = XLSX.utils.aoa_to_sheet(encabezado.concat(cuerpo, [["", "TOTAL", textoHoras(totalF), textoHoras(totalE), textoHoras(totalF + totalE), "", totalMonto]]));
+  hoja["!cols"] = [{ wch: 22 }, { wch: 28 }, { wch: 17 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
+  const rango = XLSX.utils.decode_range(hoja["!ref"]);
+  for (let r = 1; r <= rango.e.r; r++) {
+    const valorHora = hoja[XLSX.utils.encode_cell({ r, c: 5 })];
+    const monto = hoja[XLSX.utils.encode_cell({ r, c: 6 })];
+    if (valorHora?.t === "n") valorHora.z = '$ #,##0.00';
+    if (monto?.t === "n") monto.z = '$ #,##0.00';
+  }
+  XLSX.utils.book_append_sheet(libro, hoja, nombre);
+}
+
+function cerrarModalCalcularHoras() {
+  const modal = $("horariosCalcularHorasModal");
+  if (!modal) return;
+  modal.classList.add("oculto");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("horarios-modal-abierto");
+}
+
+function formatearValorHoraInput(input) {
+  if (!input) return;
+  const digitos = String(input.value || "").replace(/\D/g, "");
+  input.dataset.valor = digitos;
+  input.value = digitos ? `$ ${Number(digitos).toLocaleString("es-AR")}` : "";
+}
+
+function asegurarModalCalcularHoras() {
+  let modal = $("horariosCalcularHorasModal");
+  if (modal) return modal;
+  modal = document.createElement("div");
+  modal.id = "horariosCalcularHorasModal";
+  modal.className = "horarios-calculo-modal oculto";
+  modal.setAttribute("aria-hidden", "true");
+  modal.innerHTML = `
+    <div class="horarios-calculo-modal-card" role="dialog" aria-modal="true" aria-labelledby="horariosCalculoTitulo">
+      <button type="button" class="horarios-calculo-cerrar" aria-label="Cerrar">×</button>
+      <div class="horarios-calculo-icono" aria-hidden="true">$</div>
+      <div class="horarios-calculo-encabezado">
+        <small>LIQUIDACIÓN MENSUAL</small>
+        <h3 id="horariosCalculoTitulo">Calcular horas extras y feriadas</h3>
+        <p>Ingresá el valor de la hora. Se aplicará el mismo importe a todos los empleados.</p>
+      </div>
+      <label class="horarios-calculo-campo">
+        <span>Valor de la hora</span>
+        <input id="horariosValorHora" type="text" inputmode="numeric" autocomplete="off" placeholder="$ 0" />
+      </label>
+      <div class="horarios-calculo-reglas">
+        <span>Feriados: día completo</span>
+        <span>Sábados: desde las 14:00</span>
+        <span>Domingos: día completo</span>
+      </div>
+      <div class="horarios-calculo-acciones">
+        <button id="horariosCancelarCalculo" type="button" class="horarios-calculo-btn-secundario">Cancelar</button>
+        <button id="horariosGenerarExcel" type="button" class="horarios-calculo-btn-principal">Generar Excel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  const input = $("horariosValorHora");
+  input?.addEventListener("input", () => formatearValorHoraInput(input));
+  $("horariosCancelarCalculo")?.addEventListener("click", cerrarModalCalcularHoras);
+  modal.querySelector(".horarios-calculo-cerrar")?.addEventListener("click", cerrarModalCalcularHoras);
+  modal.addEventListener("click", (e) => { if (e.target === modal) cerrarModalCalcularHoras(); });
+  $("horariosGenerarExcel")?.addEventListener("click", async () => {
+    const valorHora = parsearValorHora(input?.dataset.valor || input?.value || "");
+    if (!Number.isFinite(valorHora)) {
+      input?.classList.add("is-error");
+      input?.focus();
+      return;
+    }
+    input?.classList.remove("is-error");
+    cerrarModalCalcularHoras();
+    await calcularYDescargarHoras(valorHora);
+  });
+  return modal;
+}
+
+function abrirModalCalcularHoras() {
+  if (!esRolAdministracionHorarios()) return;
+  const modal = asegurarModalCalcularHoras();
+  const input = $("horariosValorHora");
+  if (input) { input.value = ""; input.dataset.valor = ""; input.classList.remove("is-error"); }
+  modal.classList.remove("oculto");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("horarios-modal-abierto");
+  setTimeout(() => input?.focus(), 30);
+}
+
+async function calcularYDescargarHoras(valorHora) {
+  if (!esRolAdministracionHorarios()) return;
+  if (!Number.isFinite(valorHora) || valorHora <= 0) return;
+  const boton = $("btnCalcularHoras");
+  if (boton) { boton.disabled = true; boton.classList.add("is-loading"); boton.querySelector("span:last-child") && (boton.querySelector("span:last-child").textContent = "Calculando…"); }
+  try {
+    if (!contextoHorariosCargado) await cargarContextoHorarios();
+    const mes = mesClave();
+    const sectores = sectoresHorarios.filter((s) => s?.activo !== false);
+    const resultados = [];
+    for (const sector of sectores) {
+      const data = await fetchHorariosUnico(
+        `${API_BASE_URL}/horarios/calendario?sector=${encodeURIComponent(sector.id)}&mes=${mes}`,
+        `liquidacion:${sector.id}:${mes}:${Date.now()}`,
+        { forzar: true },
+      );
+      const celdas = new Map((data.celdas || []).map((c) => [`${String(c.empleado)}::${Number(c.dia)}`, String(c.turno || "")]));
+      const personal = (sector.empleadosInfo || []).filter((x) => x?.habilitadoCalendario !== false);
+      for (const info of personal) {
+        const usuario = String(info.nombre || info.usuario || "").trim();
+        if (!usuario) continue;
+        let feriados = 0, extras = 0;
+        const dias = new Date(fechaVista.getFullYear(), fechaVista.getMonth() + 1, 0).getDate();
+        for (let dia = 1; dia <= dias; dia++) {
+          const turno = celdas.get(`${usuario}::${dia}`) || "";
+          if (!turno) continue;
+          const fecha = new Date(fechaVista.getFullYear(), fechaVista.getMonth(), dia);
+          const feriado = obtenerFeriadoDia(dia, fechaVista);
+          if (feriado) {
+            feriados += minutosTurnoParaLiquidacion(turno, data.turnos || [], "feriado");
+          } else if (fecha.getDay() === 6) {
+            extras += minutosTurnoParaLiquidacion(turno, data.turnos || [], "sabado");
+          } else if (fecha.getDay() === 0) {
+            extras += minutosTurnoParaLiquidacion(turno, data.turnos || [], "domingo");
+          }
+        }
+        resultados.push({
+          sector: sector.nombre || sector.id,
+          usuario,
+          feriados,
+          extras,
+          valorHora,
+          monto: ((feriados + extras) / 60) * valorHora,
+        });
+      }
+    }
+    const XLSX = await asegurarXlsxHorarios();
+    const libro = XLSX.utils.book_new();
+    const usados = new Set();
+    agregarHojaHoras(XLSX, libro, nombreHojaExcel("Resumen", usados), resultados);
+    for (const sector of sectores) {
+      const nombre = sector.nombre || sector.id;
+      const filas = resultados.filter((r) => r.sector === nombre);
+      if (filas.length) agregarHojaHoras(XLSX, libro, nombreHojaExcel(nombre, usados), filas);
+    }
+    XLSX.writeFile(libro, `horas-feriadas-extras-${mes}.xlsx`);
+    avisoHorarios(`Excel de horas generado para ${nombreMesControlCalendario()}.`, "ok");
+  } catch (error) {
+    console.error("Horarios: error al calcular horas", error);
+    avisoHorarios(error.message || "No se pudo generar el Excel de horas.", "error");
+  } finally {
+    if (boton) { boton.disabled = false; boton.classList.remove("is-loading"); boton.querySelector("span:last-child") && (boton.querySelector("span:last-child").textContent = "Calcular horas"); }
+  }
+}
+
+function actualizarBotonCalcularHoras() {
+  let boton = $("btnCalcularHoras");
+  if (!esRolAdministracionHorarios()) {
+    boton?.remove();
+    return;
+  }
+
+  if (!boton) {
+    boton = document.createElement("button");
+    boton.id = "btnCalcularHoras";
+    boton.type = "button";
+    boton.className = "horarios-calcular-horas-btn";
+    boton.innerHTML = `<span class="horarios-calcular-horas-icono" aria-hidden="true">▦</span><span>Calcular horas</span>`;
+    boton.addEventListener("click", abrirModalCalcularHoras);
+  }
+
+  // El botón pertenece exclusivamente a la vista Configuración.
+  // Nunca debe insertarse en la navegación mensual del calendario.
+  if (vistaActual !== "config") {
+    boton.remove();
+    return;
+  }
+
+  const destino = document.querySelector("#horariosConfigView .horarios-config-sector-row");
+  if (destino && boton.parentElement !== destino) destino.appendChild(boton);
+}
+
 function normalizarSectorHorarios(valor) {
   return String(valor || "")
     .trim()
@@ -1120,6 +1385,7 @@ function crearControlesEdicionCalendario() {
   actualizarSelectorTurnos();
   actualizarPermisos();
   actualizarAcciones();
+  actualizarBotonCalcularHoras();
 }
 async function entrarModoEdicion(evento) {
   if (!puedeEditar()) return false;
@@ -1826,6 +2092,7 @@ function renderTodo() {
   if (vistaActual === "config") renderConfiguracionHorarios();
   actualizarPermisos();
   actualizarAcciones();
+  actualizarBotonCalcularHoras();
 }
 
 const COLORES_TURNOS = [
@@ -2386,6 +2653,7 @@ function renderConfiguracionHorarios() {
   renderSelectorSector();
   renderListaTurnosConfig();
   renderOrdenConfig();
+  actualizarBotonCalcularHoras();
 }
 
 function configurarEventos() {
@@ -2394,6 +2662,7 @@ function configurarEventos() {
   crearControlesEdicionCalendario();
   crearSelectorSector();
   organizarControlesCalendario();
+  actualizarBotonCalcularHoras();
   $("btnHorariosMesAnterior")?.addEventListener("click", () => cambiarMes(-1));
   $("btnHorariosMesSiguiente")?.addEventListener("click", () => cambiarMes(1));
   $("btnHorariosHoyToolbar")?.addEventListener("click", irAHoy);
@@ -2416,10 +2685,12 @@ function configurarEventos() {
     if (e.target.id === "horariosTurnoModal") cerrarTurnoConfig();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modoEdicion) salirModoEdicion();
+    if (e.key === "Escape" && !$("horariosCalcularHorasModal")?.classList.contains("oculto")) cerrarModalCalcularHoras();
+    else if (e.key === "Escape" && modoEdicion) salirModoEdicion();
   });
   window.addEventListener("autoservicio:sesion", async () => {
     actualizarPermisos();
+    actualizarBotonCalcularHoras();
     if (vistaActual === "config" && !puedeAdministrarConfiguracion()) {
       restaurarOrdenConfigInicial();
       await cambiarVista("equipo");
