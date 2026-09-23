@@ -791,10 +791,16 @@ function aplicarTurnoASeleccion(turno) {
     const [e, d] = k.split("::");
     const dataKey = clave(e, Number(d));
     const anterior = datos.get(dataKey) || "";
-    if (anterior === turno) return;
-    datos.set(dataKey, turno);
-    // Al reemplazar una asignación se descartan sus notas previas para evitar
-    // guardar metadatos que ya no corresponden al turno visible.
+    const sinAsignar = turno === "__sin_asignar__";
+    if (sinAsignar) {
+      if (!anterior) return;
+      datos.delete(dataKey);
+    } else {
+      if (anterior === turno) return;
+      datos.set(dataKey, turno);
+    }
+    // Al reemplazar o quitar una asignación se descartan sus notas previas para
+    // evitar guardar metadatos que ya no corresponden al turno visible.
     detalles.delete(k);
   });
   seleccion.clear();
@@ -1007,7 +1013,15 @@ function opcionesSelectorTurnos() {
     ausente: "#ef4444",
     licencia: "#f59e0b",
   };
-  return TURNOS.filter((t) => t.id !== "personalizado").map((t) => ({
+  return [
+    {
+      value: "__sin_asignar__",
+      label: "Sin asignar",
+      color: "#ffffff",
+      badge: "—",
+      description: "Dejar la casilla sin horario asignado",
+    },
+    ...TURNOS.filter((t) => t.id !== "personalizado").map((t) => ({
     value: t.id,
     label: t.label,
     color: t.color || coloresEspeciales[t.id] || "#ffffff",
@@ -1015,7 +1029,8 @@ function opcionesSelectorTurnos() {
     description:
       descripciones[t.id] ||
       (t.tipo === "cortado" ? "Horario cortado" : "Horario continuo"),
-  }));
+    })),
+  ];
 }
 async function abrirSelectorTurnos(evento) {
   evento?.preventDefault?.();
