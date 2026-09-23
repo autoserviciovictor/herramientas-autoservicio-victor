@@ -763,12 +763,12 @@ function abrirAvisoProductosVencidos(items) {
   modal.innerHTML = `
     <style>
       .expiry-opening-alert{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.58);backdrop-filter:blur(3px)}
-      .expiry-opening-alert__dialog{width:min(560px,100%);max-height:min(78vh,720px);overflow:auto;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.3);padding:24px}
-      .expiry-opening-alert__head{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}.expiry-opening-alert__icon{display:grid;place-items:center;flex:0 0 46px;height:46px;border-radius:14px;background:#fff1f2;color:#e11d48;font-size:24px;font-weight:900}
+      .expiry-opening-alert__dialog{width:min(560px,100%);max-height:min(82vh,720px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.3);padding:0}
+      .expiry-opening-alert__head{position:relative;z-index:2;flex:0 0 auto;display:flex;gap:14px;align-items:flex-start;margin:0;padding:24px 24px 18px;background:#fff}.expiry-opening-alert__icon{display:grid;place-items:center;flex:0 0 46px;height:46px;border-radius:14px;background:#fff1f2;color:#e11d48;font-size:24px;font-weight:900}
       .expiry-opening-alert__head h2{margin:0 0 5px;font-size:22px;color:#111827}.expiry-opening-alert__head p{margin:0;color:#64748b;line-height:1.4}
-      .expiry-opening-alert__list{display:grid;gap:9px;margin:0 0 20px}.expiry-opening-alert__item{padding:12px 14px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}.expiry-opening-alert__item strong{display:block;color:#111827}.expiry-opening-alert__meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:12px;color:#64748b}
-      .expiry-opening-alert__action{width:100%;border:0;border-radius:12px;padding:13px 18px;background:#ef233c;color:#fff;font:inherit;font-weight:800;cursor:pointer}
-      @media(max-width:600px){.expiry-opening-alert{align-items:end;padding:12px}.expiry-opening-alert__dialog{border-radius:22px 22px 14px 14px;padding:20px;max-height:84vh}}
+      .expiry-opening-alert__list{min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;gap:9px;margin:0;padding:0 24px 20px;background:#fff}.expiry-opening-alert__item{padding:12px 14px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}.expiry-opening-alert__item strong{display:block;color:#111827}.expiry-opening-alert__meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:12px;color:#64748b}
+      .expiry-opening-alert__footer{position:relative;z-index:2;flex:0 0 auto;padding:0 24px 24px;background:#fff}.expiry-opening-alert__action{width:100%;border:0;border-radius:12px;padding:13px 18px;background:#ef233c;color:#fff;font:inherit;font-weight:800;cursor:pointer}
+      @media(max-width:600px){.expiry-opening-alert{place-items:center;padding:16px}.expiry-opening-alert__dialog{width:100%;max-height:86vh;border-radius:22px}.expiry-opening-alert__head{padding:20px 20px 16px}.expiry-opening-alert__list{padding:0 20px 16px}.expiry-opening-alert__footer{padding:0 20px 20px}}
     </style>
     <section class="expiry-opening-alert__dialog" role="alertdialog" aria-modal="true" aria-labelledby="expiryOpeningAlertTitle">
       <div class="expiry-opening-alert__head">
@@ -779,7 +779,7 @@ function abrirAvisoProductosVencidos(items) {
         const origen = [...item.origenes].map((x) => x === "lotes" ? "Control de lotes" : "Vencimientos").join(" · ");
         return `<div class="expiry-opening-alert__item"><strong>${escapeHTML(item.articulo)}</strong><div class="expiry-opening-alert__meta">${item.codigo ? `<span>Código: ${escapeHTML(item.codigo)}</span>` : ""}<span>Vence: ${escapeHTML(item.vencimiento.split("-").reverse().join("/"))}</span>${item.cantidad ? `<span>Cantidad: ${item.cantidad}</span>` : ""}<span>${escapeHTML(origen)}</span></div></div>`;
       }).join("")}</div>
-      <button type="button" class="expiry-opening-alert__action">Entendido</button>
+      <div class="expiry-opening-alert__footer"><button type="button" class="expiry-opening-alert__action">Entendido</button></div>
     </section>`;
   document.body.appendChild(modal);
   document.body.classList.add("expiry-opening-alert-open");
