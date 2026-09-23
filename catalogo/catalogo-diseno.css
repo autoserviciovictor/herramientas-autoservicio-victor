@@ -532,3 +532,38 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
 .catalogo-account .drawer-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 14px;border-bottom:1px solid var(--line)}
 .catalogo-account .drawer-header small{color:var(--red);font-size:9px;font-weight:900;letter-spacing:.14em}.catalogo-account .drawer-header h2{margin:4px 0 0;font-size:20px}.catalogo-account .icon-btn{font-size:28px}
 .account-body{overflow:auto;padding:20px 22px 28px}.account-section+ .account-section{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}.account-section h3{margin:0 0 5px;font-size:20px}.account-section>p,.account-orders__head p{margin:0 0 16px;color:#667085;font-size:12px;line-height:1.45}.account-save{width:100%;margin-top:14px;min-height:46px}.account-orders__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.account-orders__head .secondary-button{min-height:36px;padding:0 12px}.account-orders__list{display:grid;gap:10px}.account-order{padding:13px;border:1px solid #e3e7ed;border-radius:12px;background:#fff}.account-order__top,.account-order__meta{display:flex;justify-content:space-between;gap:12px;align-items:center}.account-order__top strong{font-size:13px}.account-order__top span{font-size:11px;font-weight:900;text-transform:capitalize;color:#344054}.account-order__meta{margin-top:7px;color:#667085;font-size:11px}.account-order__meta b{color:#111827;font-size:13px}.account-empty{padding:18px;border:1px dashed #d8dde5;border-radius:12px;text-align:center;color:#667085;font-size:12px}
+
+/* Ajuste D24: carrito móvil cubre toda la pantalla y oculta la barra flotante */
+@media (max-width: 767px) {
+  body.drawer-open .catalogo-mobile-cartbar {
+    display: none !important;
+  }
+
+  .catalogo-cart {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    z-index: 120 !important;
+    overflow: hidden !important;
+  }
+
+  .catalogo-cart.is-open {
+    display: grid !important;
+  }
+
+  .catalogo-cart .cart-items {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
