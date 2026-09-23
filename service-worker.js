@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1960-horarios-sector-historico-220926";
+const CACHE_VERSION = "autoservicio-v1960-cache-refresh-230926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
@@ -118,7 +118,7 @@ async function conTiempoLimite(promesa, milisegundos) {
 async function navegacionSegura(request) {
   const cache = await caches.open(CACHE_VERSION);
   try {
-    const respuesta = await conTiempoLimite(fetch(request), 4500);
+    const respuesta = await conTiempoLimite(fetch(request, { cache: "no-store" }), 4500);
     if (respuesta?.ok) await cache.put(OFFLINE_DOCUMENT, respuesta.clone());
     return respuesta;
   } catch {
@@ -147,8 +147,10 @@ self.addEventListener("fetch", (event) => {
       (async () => {
         const cache = await caches.open(CACHE_VERSION);
         try {
-          const esEtiquetas = url.pathname.endsWith("/etiquetas.js");
-          const respuesta = await fetch(request, esEtiquetas ? { cache: "reload" } : undefined);
+          // Siempre consultamos la red sin reutilizar el HTTP cache del navegador.
+          // El Cache Storage del SW queda únicamente como respaldo offline.
+          // Esto evita que un JS/CSS viejo siga ejecutándose después de subir cambios a Git.
+          const respuesta = await fetch(request, { cache: "no-store" });
           if (respuesta?.ok) await cache.put(request, respuesta.clone());
           return respuesta;
         } catch {
