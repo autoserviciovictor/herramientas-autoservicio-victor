@@ -3601,11 +3601,14 @@ async function guardarCartelOfertaActual() {
     copiaId: `${String(datos.id)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     guardadoEn: ahora,
   };
-  const nuevaBandeja = [...bandeja, registro].slice(0, CARTEL_OFERTA_MAX);
-  guardarBandejaCartelesOferta(nuevaBandeja);
-  // Render explícito para que la nueva copia aparezca inmediatamente aun cuando
-  // después haya que esperar la actualización de la oferta en el servidor.
-  renderBandejaCartelesOferta();
+  // Siempre anexamos una nueva posición. No se deduplica por id de producto:
+  // cada pulsación de Guardar cartel representa una copia física en la hoja.
+  const nuevaBandeja = bandeja.concat(registro);
+  const guardados = guardarBandejaCartelesOferta(nuevaBandeja);
+  if (guardados.length !== bandeja.length + 1) {
+    mostrarErrorCartelOferta("No se pudo agregar el cartel a la hoja. Intentá nuevamente.");
+    return;
+  }
   try {
     const original = vencimientosCache.find((x) => String(x.id) === datos.id) || cartelOfertaItemActual;
     if (original && !tieneOferta(original)) await actualizarOfertaVencimiento(datos.id, true);
