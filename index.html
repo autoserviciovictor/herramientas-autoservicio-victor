@@ -31,7 +31,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     <link rel="stylesheet" href="design-tokens.css?v=1960-d21-cierre-etapa6-010926" />
-    <link rel="stylesheet" href="style.css?v=1960-d21-cierre-etapa6-010926" />
+    <link rel="stylesheet" href="style.css?v=1980-vencimientos-fixes-240926" />
     <link rel="stylesheet" href="design-components.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="app-shell.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="desktop-layout.css?v=1960-d21-cierre-etapa6-010926" />
@@ -1793,17 +1793,19 @@
 
               <label class="venc-form-field venc-qty-box">
                 <span>Stock salón</span>
-                <div class="venc-input-with-unit">
+                <div class="venc-stepper" data-venc-stepper>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="-1" data-venc-target="vencSalonInput" aria-label="Restar una unidad de stock salón">−</button>
                   <input type="number" id="vencSalonInput" min="0" step="1" value="0" inputmode="numeric" aria-label="Stock salón" />
-                  <span>un.</span>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="1" data-venc-target="vencSalonInput" aria-label="Sumar una unidad de stock salón">+</button>
                 </div>
               </label>
 
               <label class="venc-form-field venc-qty-box">
                 <span>Stock depósito</span>
-                <div class="venc-input-with-unit">
+                <div class="venc-stepper" data-venc-stepper>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="-1" data-venc-target="vencDepositoInput" aria-label="Restar una unidad de stock depósito">−</button>
                   <input type="number" id="vencDepositoInput" min="0" step="1" value="0" inputmode="numeric" aria-label="Stock depósito" />
-                  <span>un.</span>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="1" data-venc-target="vencDepositoInput" aria-label="Sumar una unidad de stock depósito">+</button>
                 </div>
               </label>
 
@@ -3919,6 +3921,7 @@
               </div>
             </header>
 
+            <div class="venc-edit-body">
             <div class="venc-edit-grid">
               <label class="venc-edit-field">
                 <span>Producto</span>
@@ -3944,16 +3947,18 @@
               </div>
               <label class="venc-edit-field venc-edit-qty-reference venc-edit-stock-salon">
                 <span>Stock salón</span>
-                <div class="venc-input-with-unit">
+                <div class="venc-stepper" data-venc-stepper>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="-1" data-venc-target="vencEditSalonInput" aria-label="Restar una unidad de stock salón">−</button>
                   <input type="number" id="vencEditSalonInput" min="0" step="1" inputmode="numeric" aria-label="Stock salón" />
-                  <span>un.</span>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="1" data-venc-target="vencEditSalonInput" aria-label="Sumar una unidad de stock salón">+</button>
                 </div>
               </label>
               <label class="venc-edit-field venc-edit-qty-reference venc-edit-stock-deposito">
                 <span>Stock depósito</span>
-                <div class="venc-input-with-unit">
+                <div class="venc-stepper" data-venc-stepper>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="-1" data-venc-target="vencEditDepositoInput" aria-label="Restar una unidad de stock depósito">−</button>
                   <input type="number" id="vencEditDepositoInput" min="0" step="1" inputmode="numeric" aria-label="Stock depósito" />
-                  <span>un.</span>
+                  <button type="button" class="venc-stepper-btn" data-venc-step="1" data-venc-target="vencEditDepositoInput" aria-label="Sumar una unidad de stock depósito">+</button>
                 </div>
               </label>
               <div class="venc-edit-field venc-stock-total">
@@ -3989,6 +3994,7 @@
               <div>
                 <button id="btnVencGuardarEdicion" class="save-btn" type="button">Guardar cambios</button>
               </div>
+            </div>
             </div>
           </div>
 
@@ -4094,7 +4100,7 @@
     <script type="module" src="./notification-center.js?v=lotes-alertas-180926"></script>
     <script type="module" src="./prices.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./etiquetas.js?v=1960-d21-cierre-etapa6-010926"></script>
-    <script type="module" src="./app.js?v=1975-carteles-una-hoja-a4-240926"></script>
+    <script type="module" src="./app.js?v=1980-vencimientos-fixes-240926"></script>
     <script type="module" src="./lotes.js?v=lotes-alertas-180926"></script>
     <script type="module" src="./tareas.js?v=1960-d21-cierre-etapa6-010926"></script>
 

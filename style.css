@@ -15212,14 +15212,10 @@ html[data-theme="dark"] .admin-import-preview-modal .modal-actions{ border-color
 
 /* Correcciones 31-08 ronda 2: selección de vencidos y confirmación compacta */
 #pantallaVencimientos .venc-product-card.is-selected { outline:2px solid var(--venc-red); outline-offset:-2px; }
-.venc-modal-card:has(#vencModalEliminar:not(.oculto)) { width:min(500px,calc(100vw - 48px)) !important; }
-.venc-modal-card:has(#vencModalEliminar:not(.oculto)) #vencModalEliminar .modal-actions { justify-content:flex-end; }
-.venc-modal-card:has(#vencModalEliminar:not(.oculto)) #vencModalEliminar .modal-actions button { flex:0 0 auto !important; min-width:110px; width:auto !important; }
 @media (max-width:700px) {
   #pantallaVencimientos .venc-select-control { display:none !important; }
   #pantallaVencimientos .venc-product-card.is-expired { -webkit-touch-callout:none; user-select:none; }
   #pantallaVencimientos .venc-product-card.is-selected { outline-width:3px; }
-  .venc-modal-card:has(#vencModalEliminar:not(.oculto)) { width:calc(100vw - 28px) !important; }
 }
 
 
@@ -16271,3 +16267,162 @@ html[data-theme="dark"] #pantallaBano .bano-reassign-btn:not(.is-hero):hover{
   .etiquetas-scan-feedback strong{font-size:15px;}
   .etiquetas-scan-feedback span{font-size:12px;}
 }
+
+/* 24/09/2026 · Vencimientos: stepper de stock + total compacto + cabecera fija. */
+.venc-stepper{
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) 44px;
+  min-height:48px;
+  overflow:hidden;
+  border:1px solid var(--pro-border,#dfe5ec);
+  border-radius:10px;
+  background:var(--pro-panel,#fff);
+}
+.venc-stepper input{
+  width:100%; min-width:0; height:46px; padding:0 6px !important;
+  border:0 !important; border-radius:0 !important; background:transparent !important;
+  box-shadow:none !important; text-align:center; font-weight:800;
+  appearance:textfield; -moz-appearance:textfield;
+}
+.venc-stepper input::-webkit-outer-spin-button,.venc-stepper input::-webkit-inner-spin-button{appearance:none;margin:0;}
+.venc-stepper-btn{
+  display:grid; place-items:center; min-width:0; padding:0; border:0; background:var(--pro-panel-2,#f8fafc);
+  color:var(--pro-text,#101828); font-size:22px; font-weight:800; cursor:pointer; touch-action:manipulation;
+}
+.venc-stepper-btn:first-child{border-right:1px solid var(--pro-border,#dfe5ec);}
+.venc-stepper-btn:last-child{border-left:1px solid var(--pro-border,#dfe5ec);}
+.venc-stepper-btn:active{background:color-mix(in srgb,var(--pro-red,#ff234f) 10%,var(--pro-panel-2,#f8fafc)); color:var(--pro-red,#ff234f);}
+.venc-stock-total{
+  display:flex !important; align-items:center; justify-content:space-between; gap:12px;
+  min-height:58px; padding:11px 13px;
+}
+.venc-stock-total>span,.venc-stock-total>strong{display:block !important;margin:0 !important;}
+.venc-stock-total>strong{font-size:16px !important;text-align:right;white-space:nowrap;}
+html[data-theme="dark"] .venc-stepper{background:var(--pro-panel,#132238);border-color:var(--pro-border,#30445e);}
+html[data-theme="dark"] .venc-stepper-btn{background:var(--pro-panel-2,#192d46);color:var(--pro-text,#f7f9fc);}
+
+@media (max-width:700px){
+  /* Salón y depósito permanecen juntos también en móvil. */
+  .product-loader-specific .venc-form-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:10px !important;}
+  .product-loader-specific .venc-form-grid>.venc-form-field:not(.venc-qty-box),
+  .product-loader-specific .venc-stock-total{grid-column:1 / -1 !important;}
+  .product-loader-specific .venc-qty-box{grid-column:auto !important;min-width:0;}
+  .venc-edit-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:10px !important;}
+  .venc-edit-grid>.venc-edit-field:not(.venc-edit-stock-salon):not(.venc-edit-stock-deposito),
+  .venc-edit-grid>.venc-stock-total{grid-column:1 / -1 !important;}
+  .venc-edit-stock-salon{grid-column:1 !important;min-width:0;}
+  .venc-edit-stock-deposito{grid-column:2 !important;min-width:0;}
+  .venc-stepper{grid-template-columns:38px minmax(0,1fr) 38px;}
+
+  /* El propio modal hace scroll, pero la cabecera tapa por completo el contenido que pasa debajo. */
+  .venc-scan-sheet .venc-scan-head{position:sticky !important;top:0 !important;z-index:30 !important;background:var(--pro-panel,#fff) !important;}
+  html[data-theme="dark"] .venc-edit-head,html[data-theme="dark"] .venc-scan-sheet .venc-scan-head{background:var(--pro-panel,#132238) !important;}
+}
+
+/* 24/09/2026 · Vencimientos: cabecera realmente fija, stepper limpio y confirmación móvil ancha. */
+@media (max-width:900px){
+  .venc-modal-card{
+    overflow:hidden !important;
+    padding:0 !important;
+  }
+  .venc-modal-editar{
+    display:flex;
+    flex-direction:column;
+    max-height:calc(92dvh - env(safe-area-inset-top));
+    min-height:0;
+  }
+  .venc-modal-editar.oculto{display:none !important;}
+  .venc-edit-head{
+    position:relative !important;
+    top:auto !important;
+    flex:0 0 auto;
+    margin:0 !important;
+    padding:20px 60px 14px 16px !important;
+    background:var(--pro-panel,#fff) !important;
+    border-bottom:1px solid var(--pro-border,#e3e8ef) !important;
+    z-index:2 !important;
+  }
+  .venc-edit-body{
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:none;
+    padding:15px 16px calc(18px + env(safe-area-inset-bottom));
+    background:var(--pro-panel,#fff);
+  }
+  .venc-edit-body::-webkit-scrollbar{display:none;}
+  .venc-modal-card .modal-close{
+    position:absolute !important;
+    top:14px !important;
+    right:14px !important;
+    z-index:40 !important;
+  }
+  .venc-modal-eliminar{
+    width:100% !important;
+    box-sizing:border-box;
+    margin:0 !important;
+    padding:58px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+    background:var(--pro-panel,#fff) !important;
+  }
+  .venc-modal-eliminar .modal-actions{
+    width:100% !important;
+  }
+  html[data-theme="dark"] .venc-edit-head,
+  html[data-theme="dark"] .venc-edit-body,
+  html[data-theme="dark"] .venc-modal-eliminar{background:var(--pro-panel,#132238) !important;}
+}
+
+/* 24/09/2026 · Vencimientos — reglas canónicas finales.
+   No duplicar estas reglas en bloques anteriores. */
+.venc-edit-field .venc-stepper > input,
+.venc-edit-field .venc-stepper > input:hover,
+.venc-edit-field .venc-stepper > input:active,
+.venc-edit-field .venc-stepper > input:focus,
+.venc-edit-field .venc-stepper > input:focus-visible,
+.venc-form-field .venc-stepper > input,
+.venc-form-field .venc-stepper > input:hover,
+.venc-form-field .venc-stepper > input:active,
+.venc-form-field .venc-stepper > input:focus,
+.venc-form-field .venc-stepper > input:focus-visible{
+  border:0 !important;
+  border-radius:0 !important;
+  outline:0 !important;
+  box-shadow:none !important;
+  background:transparent !important;
+  -webkit-appearance:none !important;
+  appearance:textfield !important;
+}
+@media (max-width:900px){
+  /* La confirmación de borrado es un bottom-sheet de borde a borde. */
+  .venc-edit-overlay:has(#vencModalEliminar:not(.oculto)){
+    padding:0 !important;
+    align-items:flex-end !important;
+    justify-content:stretch !important;
+  }
+  .venc-edit-overlay:has(#vencModalEliminar:not(.oculto)) .venc-modal-card{
+    width:100vw !important;
+    max-width:100vw !important;
+    margin:0 !important;
+    padding:0 !important;
+    border-left:0 !important;
+    border-right:0 !important;
+    border-bottom:0 !important;
+    border-radius:18px 18px 0 0 !important;
+  }
+  .venc-edit-overlay:has(#vencModalEliminar:not(.oculto)) .venc-modal-eliminar{
+    width:100% !important;
+    margin:0 !important;
+    padding:58px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+  }
+  .venc-edit-overlay:has(#vencModalEliminar:not(.oculto)) .venc-modal-eliminar .modal-actions{
+    width:100% !important;
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:9px !important;
+  }
+  .venc-edit-overlay:has(#vencModalEliminar:not(.oculto)) .venc-modal-eliminar .modal-actions button{
+    width:100% !important;
+    min-width:0 !important;
+  }
+}
+

@@ -1722,6 +1722,11 @@ function configurarEventos() {
   [elementos.vencSalonInput, elementos.vencDepositoInput].forEach((input) =>
     input?.addEventListener("input", actualizarTotalVencimiento),
   );
+  document.addEventListener("click", (event) => {
+    const boton = event.target.closest("[data-venc-step][data-venc-target]");
+    if (!boton) return;
+    ajustarStockVencimientoDesdeBoton(boton);
+  });
   elementos.vencFechaInput?.addEventListener("change", () =>
     actualizarAvisoVencimientoProducto(elementos.vencFechaInput.value || ""),
   );
@@ -2682,13 +2687,27 @@ function stockVencimientoDesdeInputs(salonInput, depositoInput) {
   return { salon, deposito, cantidad: salon + deposito };
 }
 
+function formatearStockTotalVencimiento(cantidad) {
+  const total = stockUbicacionVencimiento(cantidad);
+  return `${total} ${total === 1 ? "unidad" : "unidades"}`;
+}
+
+function ajustarStockVencimientoDesdeBoton(boton) {
+  const input = document.getElementById(boton?.dataset?.vencTarget || "");
+  if (!input) return;
+  const paso = Number(boton.dataset.vencStep) || 0;
+  input.value = Math.max(0, stockUbicacionVencimiento(input.value) + paso);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus({ preventScroll: true });
+}
+
 function actualizarTotalVencimiento() {
   const stock = stockVencimientoDesdeInputs(
     elementos.vencSalonInput,
     elementos.vencDepositoInput,
   );
   if (elementos.vencTotalTexto)
-    elementos.vencTotalTexto.textContent = `${stock.cantidad} un.`;
+    elementos.vencTotalTexto.textContent = formatearStockTotalVencimiento(stock.cantidad);
   return stock;
 }
 
@@ -3881,87 +3900,83 @@ async function imprimirHojaCartelesOferta() {
     mostrarErrorCartelOferta("Guardá al menos 1 cartel antes de imprimir.");
     return;
   }
-  const logoImpresion = await logoCartelOfertaDataUri();
-  const posiciones = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
-    const item = items[index];
-    return item ? htmlCartelOfertaImpresion(item, index, logoImpresion) : `<div class="poster-svg poster-slot-${index + 1} empty" aria-hidden="true"></div>`;
-  }).join("");
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title></title><style>
-@page{size:A4 landscape;margin:0!important}
-*{box-sizing:border-box}
-html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:hidden!important}
-body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;position:relative!important}
-.sheet{position:absolute!important;left:0!important;top:17.5mm!important;width:296mm!important;height:174mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
-.poster-svg{position:absolute!important;width:135mm!important;height:78mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
-/* Separación mínima visible ya validada. El bloque 2x2 se centra como una
-   unidad dentro de la hoja A4 horizontal, sin alterar tamaño ni separación. */
-.poster-slot-1{left:13.625mm!important;top:9.625mm!important}
-.poster-slot-2{left:147.375mm!important;top:9.625mm!important}
-.poster-slot-3{left:13.625mm!important;top:86.375mm!important}
-.poster-slot-4{left:147.375mm!important;top:86.375mm!important}
-.poster-svg.empty{visibility:hidden!important}
-.poster-svg svg{display:block!important;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
-@media print{html,body{overflow:hidden!important}.sheet{position:absolute!important;overflow:hidden!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
-</style></head><body><main class="sheet">${posiciones}</main></body></html>`;
 
-  // Imprimir desde un iframe temporal evita sacar al usuario de la aplicación
-  // y evita dejar abierta una pestaña about:blank.
-  document.getElementById("cartelOfertaPrintFrame")?.remove();
-  const frame = document.createElement("iframe");
-  frame.id = "cartelOfertaPrintFrame";
-  frame.setAttribute("aria-hidden", "true");
-  frame.style.position = "fixed";
-  frame.style.right = "0";
-  frame.style.bottom = "0";
-  frame.style.width = "1px";
-  frame.style.height = "1px";
-  frame.style.border = "0";
-  frame.style.opacity = "0";
-  frame.style.pointerEvents = "none";
-  document.body.appendChild(frame);
-
-  const doc = frame.contentDocument;
-  const win = frame.contentWindow;
-  if (!doc || !win) {
-    frame.remove();
-    mostrarErrorCartelOferta("No se pudo preparar la impresión. Intentá nuevamente.");
+  // Abrimos el documento de impresión directamente desde el gesto del usuario.
+  // Edge/Chromium puede imprimir en blanco un iframe, especialmente si está
+  // fuera del viewport. Una ventana de impresión dedicada evita esa condición
+  // y mantiene el documento A4 aislado del CSS de la aplicación.
+  const printWindow = window.open("", "cartelesOfertaPrint", "popup=yes,width=1123,height=794");
+  if (!printWindow) {
+    mostrarErrorCartelOferta("El navegador bloqueó la ventana de impresión. Permití ventanas emergentes e intentá nuevamente.");
     return;
   }
 
-  doc.open();
-  doc.write(html);
-  doc.close();
+  try {
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Preparando carteles...</title></head><body style="font-family:Arial,sans-serif;padding:24px">Preparando carteles para imprimir...</body></html>`);
+    printWindow.document.close();
 
-  let impresionSolicitada = false;
-  const abrirDialogo = () => {
-    if (impresionSolicitada || !document.body.contains(frame)) return;
-    impresionSolicitada = true;
+    const logoImpresion = await logoCartelOfertaDataUri();
+    const posiciones = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
+      const item = items[index];
+      return item
+        ? htmlCartelOfertaImpresion(item, index, logoImpresion)
+        : `<div class="poster-svg poster-slot-${index + 1} empty" aria-hidden="true"></div>`;
+    }).join("");
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Carteles de oferta</title><style>
+@page{size:A4 landscape;margin:0}
+*{box-sizing:border-box}
+html,body{width:297mm;height:210mm;margin:0!important;padding:0!important;background:#fff!important}
+body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;overflow:hidden!important}
+.sheet{position:relative!important;width:297mm!important;height:210mm!important;margin:0!important;padding:0!important;overflow:hidden!important}
+.poster-svg{position:absolute!important;width:135mm!important;height:78mm!important;margin:0!important;padding:0!important;overflow:hidden!important}
+.poster-slot-1{left:13.5mm!important;top:27.125mm!important}
+.poster-slot-2{left:148.5mm!important;top:27.125mm!important}
+.poster-slot-3{left:13.5mm!important;top:105.125mm!important}
+.poster-slot-4{left:148.5mm!important;top:105.125mm!important}
+.poster-svg.empty{visibility:hidden!important}
+.poster-svg svg{display:block!important;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
+@media print{
+  html,body,.sheet{width:297mm!important;height:210mm!important;overflow:hidden!important}
+  .poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}
+}
+</style></head><body><main class="sheet">${posiciones}</main></body></html>`;
+
+    const doc = printWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
     try {
-      win.focus();
-      win.print();
-    } catch (error) {
-      console.warn("No se pudo abrir el diálogo de impresión de carteles:", error);
-      frame.remove();
-      mostrarErrorCartelOferta("No se pudo abrir el diálogo de impresión. Intentá nuevamente.");
-    }
-  };
-  win.addEventListener("afterprint", () => setTimeout(() => frame.remove(), 250), { once: true });
+      if (doc.fonts?.ready) await doc.fonts.ready;
+    } catch (_) {}
 
-  const imagenes = Array.from(doc.images || []);
-  if (!imagenes.length || imagenes.every((img) => img.complete)) {
-    setTimeout(abrirDialogo, 100);
-  } else {
-    let pendientes = imagenes.filter((img) => !img.complete).length;
-    const listo = () => {
-      pendientes -= 1;
-      if (pendientes <= 0) setTimeout(abrirDialogo, 100);
-    };
-    imagenes.forEach((img) => {
-      if (img.complete) return;
-      img.addEventListener("load", listo, { once: true });
-      img.addEventListener("error", listo, { once: true });
-    });
-    setTimeout(abrirDialogo, 1400);
+    const imagenes = Array.from(doc.images || []);
+    await Promise.all(imagenes.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+        setTimeout(resolve, 1500);
+      });
+    }));
+
+    await new Promise((resolve) => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(resolve)));
+    printWindow.focus();
+    printWindow.print();
+
+    // Edge dispara afterprint al cerrar la vista previa. Cerramos solamente
+    // nuestra ventana auxiliar, nunca la aplicación principal.
+    printWindow.addEventListener("afterprint", () => {
+      setTimeout(() => {
+        if (!printWindow.closed) printWindow.close();
+      }, 150);
+    }, { once: true });
+  } catch (error) {
+    console.error("Error al preparar los carteles para impresión:", error);
+    if (!printWindow.closed) printWindow.close();
+    mostrarErrorCartelOferta("No se pudieron preparar los carteles para imprimir. Intentá nuevamente.");
   }
 }
 
@@ -4062,7 +4077,7 @@ function actualizarTotalEdicionVencimiento() {
     elementos.vencEditDepositoInput,
   );
   if (elementos.vencEditTotalTexto)
-    elementos.vencEditTotalTexto.textContent = `${stock.cantidad} un.`;
+    elementos.vencEditTotalTexto.textContent = formatearStockTotalVencimiento(stock.cantidad);
   return stock;
 }
 
