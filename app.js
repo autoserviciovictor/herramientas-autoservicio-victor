@@ -3889,19 +3889,19 @@ async function imprimirHojaCartelesOferta() {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title></title><style>
 @page{size:A4 landscape;margin:0!important}
 *{box-sizing:border-box}
-html,body{margin:0!important;padding:0!important;width:296mm!important;height:209mm!important;min-width:296mm!important;background:#fff!important;overflow:hidden!important}
+html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:hidden!important}
 body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;position:relative!important}
-.sheet{position:absolute!important;left:0!important;top:0!important;width:296mm!important;height:209mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
+.sheet{position:absolute!important;left:0!important;top:17.5mm!important;width:296mm!important;height:174mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
 .poster-svg{position:absolute!important;width:135mm!important;height:78mm!important;margin:0!important;padding:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
 /* Separación mínima visible ya validada. El bloque 2x2 se centra como una
    unidad dentro de la hoja A4 horizontal, sin alterar tamaño ni separación. */
-.poster-slot-1{left:13.625mm!important;top:27.125mm!important}
-.poster-slot-2{left:147.375mm!important;top:27.125mm!important}
-.poster-slot-3{left:13.625mm!important;top:103.875mm!important}
-.poster-slot-4{left:147.375mm!important;top:103.875mm!important}
+.poster-slot-1{left:13.625mm!important;top:9.625mm!important}
+.poster-slot-2{left:147.375mm!important;top:9.625mm!important}
+.poster-slot-3{left:13.625mm!important;top:86.375mm!important}
+.poster-slot-4{left:147.375mm!important;top:86.375mm!important}
 .poster-svg.empty{visibility:hidden!important}
 .poster-svg svg{display:block!important;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
-@media print{html,body{width:296mm!important;height:209mm!important;overflow:hidden!important}.sheet{position:absolute!important;overflow:hidden!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
+@media print{html,body{overflow:hidden!important}.sheet{position:absolute!important;overflow:hidden!important}.poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}}
 </style></head><body><main class="sheet">${posiciones}</main></body></html>`;
 
   // Imprimir desde un iframe temporal evita sacar al usuario de la aplicación

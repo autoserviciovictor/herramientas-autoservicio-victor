@@ -5346,6 +5346,10 @@ async function desactivarSuscripcionPush(endpoint) {
 
 const PREFERENCIAS_NOTIFICACIONES_DEFECTO = Object.freeze({
   vencimientos: true,
+  vencimientosAlmacen: true,
+  vencimientosBebidas: true,
+  vencimientosFiambreria: true,
+  vencimientosLacteos: true,
   tareas: true,
   bano: true,
 });
@@ -5353,6 +5357,10 @@ const PREFERENCIAS_NOTIFICACIONES_DEFECTO = Object.freeze({
 function normalizarPreferenciasNotificaciones(valor = {}) {
   return {
     vencimientos: valor?.vencimientos !== false,
+    vencimientosAlmacen: valor?.vencimientosAlmacen !== false,
+    vencimientosBebidas: valor?.vencimientosBebidas !== false,
+    vencimientosFiambreria: valor?.vencimientosFiambreria !== false,
+    vencimientosLacteos: valor?.vencimientosLacteos !== false,
     tareas: valor?.tareas !== false,
     bano: valor?.bano !== false,
   };
@@ -5383,6 +5391,25 @@ function categoriaNotificacionesActiva(contexto, usuarioClave, categoria) {
   const clave = normalizarUsuario(usuarioClave);
   const prefs = contexto.preferenciasPorUsuario.get(clave) || PREFERENCIAS_NOTIFICACIONES_DEFECTO;
   return prefs?.[categoria] !== false;
+}
+
+
+function clavePreferenciaRubroVencimiento(rubro) {
+  const normalizado = normalizarRubroVencimiento(rubro);
+  if (normalizado === "Almacén") return "vencimientosAlmacen";
+  if (normalizado === "Bebida") return "vencimientosBebidas";
+  if (normalizado === "Fiambrería") return "vencimientosFiambreria";
+  if (normalizado === "Lácteos") return "vencimientosLacteos";
+  return "";
+}
+
+function rubroVencimientosActivo(contexto, usuarioClave, rubro) {
+  if (!categoriaNotificacionesActiva(contexto, usuarioClave, "vencimientos")) return false;
+  const claveRubro = clavePreferenciaRubroVencimiento(rubro);
+  if (!claveRubro) return false;
+  const clave = normalizarUsuario(usuarioClave);
+  const prefs = contexto.preferenciasPorUsuario.get(clave) || PREFERENCIAS_NOTIFICACIONES_DEFECTO;
+  return prefs?.[claveRubro] !== false;
 }
 
 function usuariosCategoriaNotificaciones(contexto, categoria, modulo = "") {
@@ -5838,10 +5865,11 @@ async function procesarNotificacionBano(tipo) {
   return { enviados, usuarios: usuarios.length, retryNeeded };
 }
 
-async function destinatariosVencimientos() {
+async function destinatariosVencimientos(rubro = "") {
   const contexto = await contextoDestinatariosNotificaciones();
-  // La categoría activa es la única condición funcional para recibir Vencimientos.
-  const usuarios = usuariosCategoriaNotificaciones(contexto, "vencimientos");
+  const usuarios = usuariosCategoriaNotificaciones(contexto, "vencimientos").filter((usuario) =>
+    rubro ? rubroVencimientosActivo(contexto, usuario.usuario, rubro) : true,
+  );
   const suscripciones = suscripcionesCategoriaNotificaciones(
     contexto,
     "vencimientos",
@@ -5902,7 +5930,7 @@ async function notificarVencimientoAUsuarios(registro, payload, clave, tipo) {
   clavesNotificacionEnProceso.add(clave);
   try {
     const enviadas = await clavesNotificacionesEnviadas();
-    const { contexto, usuarios } = await destinatariosVencimientos();
+    const { contexto, usuarios } = await destinatariosVencimientos(registro.rubro);
     let enviados = 0;
     let retryNeeded = false;
     let usuariosProcesados = 0;
@@ -7106,8 +7134,13 @@ async function procesarAlertasLotesProgramadas(){
       const estado=dias===null?'sin fecha':dias<0?`venció hace ${Math.abs(dias)} ${Math.abs(dias)===1?'día':'días'}`:dias===0?'venció hoy':`vence en ${dias} ${dias===1?'día':'días'}`;
       const body=`${alerta.articulo} · ${estado} · ${unidades} ${unidades===1?'unidad':'unidades'}`;
       const clave=`lote-alerta|${alerta.id}`;
+      if (!rubroVencimientosActivo(contexto, alerta.usuario, alerta.rubro)) {
+        await marcarAlertaEnviadaDb(alerta.id);
+        procesadas += 1;
+        continue;
+      }
       await registrarCentroNotificacion({usuario:alerta.usuario,tipo:'vencimientos-lote',titulo:'Recordatorio de vencimiento',mensaje:body,url:'./?modulo=lotes',clave});
-      if(PUSH_CONFIGURED && categoriaNotificacionesActiva(contexto,alerta.usuario,'vencimientos')){
+      if(PUSH_CONFIGURED){
         const resultado=await enviarPushAUsuario(contexto,alerta.usuario,{title:'Recordatorio de vencimiento',body,tag:`lote-alerta-${alerta.id}`,data:{url:'./?modulo=lotes'}});
         if(entregaPushRequiereReintento(resultado)) continue;
       }

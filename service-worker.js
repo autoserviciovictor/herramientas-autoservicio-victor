@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1974-carteles-centrados-a4-240926";
+const CACHE_VERSION = "autoservicio-v1977-notificaciones-rubros-visual-240926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
@@ -16,12 +16,12 @@ const APP_SHELL = [
   "./tareas-redesign.css?v=1960-d21-cierre-etapa6-010926",
   "./admin-official.css?v=1960-d21-cierre-etapa6-010926",
   "./login-redesign.css?v=1960-d21-cierre-etapa6-010926",
-  "./settings-user.css?v=1960-d21-cierre-etapa6-010926",
+  "./settings-user.css?v=1977-notificaciones-rubros-visual-240926",
   "./ui-unification.css?v=1960-d21-cierre-etapa6-010926",
   "./design-components.css?v=1960-d21-cierre-etapa6-010926",
   "./app-shell.css?v=1960-d21-cierre-etapa6-010926",
   "./desktop-layout.css?v=1960-d21-cierre-etapa6-010926",
-  "./app.js?v=1974-carteles-centrados-a4-240926",
+  "./app.js?v=1975-carteles-una-hoja-a4-240926",
   "./config.js?v=1960-d21-cierre-etapa6-010926",
   "./excel.js?v=1960-d21-cierre-etapa6-010926",
   "./scanner.js?v=1960-d21-cierre-etapa6-010926",
@@ -32,7 +32,7 @@ const APP_SHELL = [
   "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926",
   "./modules/tareas/task-view.js?v=1960-d21-cierre-etapa6-010926",
   "./modules/horarios/schedule-format.js?v=1960-d21-cierre-etapa6-010926",
-  "./pwa.js?v=1974-carteles-centrados-a4-240926",
+  "./pwa.js?v=1975-carteles-una-hoja-a4-240926",
   "./dialog.js?v=1960-d21-cierre-etapa6-010926",
   "./notification-center.js?v=lotes-alertas-180926",
   "./pro-ui.js?v=1960-d21-cierre-etapa6-010926",
@@ -40,7 +40,7 @@ const APP_SHELL = [
   "./horarios-config.js?v=1960-horarios-sector-historico-220926",
   "./admin.js?v=1960-password6-fix-220926",
   "./auth.js?v=1960-d21-cierre-etapa6-010926",
-  "./notifications.js?v=1960-push-vapid-repair-220926",
+  "./notifications.js?v=1976-notificaciones-vencimientos-rubros-240926",
   "./prices.js?v=1960-d21-cierre-etapa6-010926",
   "./horarios.js?v=1960-calculo-horas-230926",
   "./api-cache.js?v=1960-d21-cierre-etapa6-010926",

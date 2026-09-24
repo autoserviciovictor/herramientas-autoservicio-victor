@@ -30,7 +30,14 @@ async function asegurarEsquemaAuxiliares() {
     await query(`CREATE TABLE IF NOT EXISTS notification_preferences (
       user_key TEXT PRIMARY KEY, expirations_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       tasks_enabled BOOLEAN NOT NULL DEFAULT TRUE, bathroom_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      expirations_almacen_enabled BOOLEAN NOT NULL DEFAULT TRUE, expirations_bebidas_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      expirations_fiambreria_enabled BOOLEAN NOT NULL DEFAULT TRUE, expirations_lacteos_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+
+    await query(`ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS expirations_almacen_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    await query(`ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS expirations_bebidas_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    await query(`ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS expirations_fiambreria_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    await query(`ALTER TABLE notification_preferences ADD COLUMN IF NOT EXISTS expirations_lacteos_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
 
     await query(`CREATE TABLE IF NOT EXISTS label_lists (
       user_key TEXT PRIMARY KEY, items JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -117,21 +124,21 @@ async function desactivarSuscripcionPushDb(endpoint){ await query(`UPDATE push_s
 
 async function obtenerPreferenciasNotificacionesDb(usuario){
   const clave=texto(usuario).toLowerCase();
-  const r=await query(`SELECT expirations_enabled,tasks_enabled,bathroom_enabled FROM notification_preferences WHERE user_key=$1`,[clave]);
+  const r=await query(`SELECT expirations_enabled,tasks_enabled,bathroom_enabled,expirations_almacen_enabled,expirations_bebidas_enabled,expirations_fiambreria_enabled,expirations_lacteos_enabled FROM notification_preferences WHERE user_key=$1`,[clave]);
   const x=r.rows[0];
-  return x?{vencimientos:x.expirations_enabled!==false,tareas:x.tasks_enabled!==false,bano:x.bathroom_enabled!==false}:null;
+  return x?{vencimientos:x.expirations_enabled!==false,vencimientosAlmacen:x.expirations_almacen_enabled!==false,vencimientosBebidas:x.expirations_bebidas_enabled!==false,vencimientosFiambreria:x.expirations_fiambreria_enabled!==false,vencimientosLacteos:x.expirations_lacteos_enabled!==false,tareas:x.tasks_enabled!==false,bano:x.bathroom_enabled!==false}:null;
 }
 async function listarPreferenciasNotificacionesDb(){
-  const r=await query(`SELECT user_key,expirations_enabled,tasks_enabled,bathroom_enabled FROM notification_preferences`);
-  return r.rows.map(x=>({usuario:x.user_key,vencimientos:x.expirations_enabled!==false,tareas:x.tasks_enabled!==false,bano:x.bathroom_enabled!==false}));
+  const r=await query(`SELECT user_key,expirations_enabled,tasks_enabled,bathroom_enabled,expirations_almacen_enabled,expirations_bebidas_enabled,expirations_fiambreria_enabled,expirations_lacteos_enabled FROM notification_preferences`);
+  return r.rows.map(x=>({usuario:x.user_key,vencimientos:x.expirations_enabled!==false,vencimientosAlmacen:x.expirations_almacen_enabled!==false,vencimientosBebidas:x.expirations_bebidas_enabled!==false,vencimientosFiambreria:x.expirations_fiambreria_enabled!==false,vencimientosLacteos:x.expirations_lacteos_enabled!==false,tareas:x.tasks_enabled!==false,bano:x.bathroom_enabled!==false}));
 }
 async function guardarPreferenciasNotificacionesDb(usuario,prefs){
   const clave=texto(usuario).toLowerCase();
-  await query(`INSERT INTO notification_preferences(user_key,expirations_enabled,tasks_enabled,bathroom_enabled,updated_at)
-    VALUES($1,$2,$3,$4,NOW())
-    ON CONFLICT(user_key) DO UPDATE SET expirations_enabled=EXCLUDED.expirations_enabled,tasks_enabled=EXCLUDED.tasks_enabled,bathroom_enabled=EXCLUDED.bathroom_enabled,updated_at=NOW()`,
-    [clave,prefs?.vencimientos!==false,prefs?.tareas!==false,prefs?.bano!==false]);
-  return {usuario:clave,vencimientos:prefs?.vencimientos!==false,tareas:prefs?.tareas!==false,bano:prefs?.bano!==false};
+  await query(`INSERT INTO notification_preferences(user_key,expirations_enabled,tasks_enabled,bathroom_enabled,expirations_almacen_enabled,expirations_bebidas_enabled,expirations_fiambreria_enabled,expirations_lacteos_enabled,updated_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+    ON CONFLICT(user_key) DO UPDATE SET expirations_enabled=EXCLUDED.expirations_enabled,tasks_enabled=EXCLUDED.tasks_enabled,bathroom_enabled=EXCLUDED.bathroom_enabled,expirations_almacen_enabled=EXCLUDED.expirations_almacen_enabled,expirations_bebidas_enabled=EXCLUDED.expirations_bebidas_enabled,expirations_fiambreria_enabled=EXCLUDED.expirations_fiambreria_enabled,expirations_lacteos_enabled=EXCLUDED.expirations_lacteos_enabled,updated_at=NOW()`,
+    [clave,prefs?.vencimientos!==false,prefs?.tareas!==false,prefs?.bano!==false,prefs?.vencimientosAlmacen!==false,prefs?.vencimientosBebidas!==false,prefs?.vencimientosFiambreria!==false,prefs?.vencimientosLacteos!==false]);
+  return {usuario:clave,vencimientos:prefs?.vencimientos!==false,vencimientosAlmacen:prefs?.vencimientosAlmacen!==false,vencimientosBebidas:prefs?.vencimientosBebidas!==false,vencimientosFiambreria:prefs?.vencimientosFiambreria!==false,vencimientosLacteos:prefs?.vencimientosLacteos!==false,tareas:prefs?.tareas!==false,bano:prefs?.bano!==false};
 }
 
 async function obtenerListaEtiquetasDb(usuario){

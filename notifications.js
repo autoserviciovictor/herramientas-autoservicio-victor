@@ -345,7 +345,7 @@ function claveCategoriasUsuario() {
   const clave = String(usuario?.usuario || usuario?.nombre || "anonimo").trim().toLowerCase();
   return `${CATEGORIAS_KEY_BASE}:${clave || "anonimo"}`;
 }
-const CATEGORIAS_DEFECTO = Object.freeze({ vencimientos: true, tareas: true, bano: true });
+const CATEGORIAS_DEFECTO = Object.freeze({ vencimientos: true, vencimientosAlmacen: true, vencimientosBebidas: true, vencimientosFiambreria: true, vencimientosLacteos: true, tareas: true, bano: true });
 
 function preferenciasCategorias() {
   try {
@@ -361,6 +361,10 @@ function preferenciasCategorias() {
 function guardarPreferenciasLocales(prefs) {
   const normalizadas = {
     vencimientos: prefs?.vencimientos !== false,
+    vencimientosAlmacen: prefs?.vencimientosAlmacen !== false,
+    vencimientosBebidas: prefs?.vencimientosBebidas !== false,
+    vencimientosFiambreria: prefs?.vencimientosFiambreria !== false,
+    vencimientosLacteos: prefs?.vencimientosLacteos !== false,
     tareas: prefs?.tareas !== false,
     bano: prefs?.bano !== false,
   };
@@ -383,12 +387,21 @@ async function guardarPreferenciasRemotas(prefs) {
 function aplicarPreferenciasEnControles(prefs = preferenciasCategorias()) {
   const mapa = {
     settingsNotifVencimientos: "vencimientos",
+    settingsNotifVencAlmacen: "vencimientosAlmacen",
+    settingsNotifVencBebidas: "vencimientosBebidas",
+    settingsNotifVencFiambreria: "vencimientosFiambreria",
+    settingsNotifVencLacteos: "vencimientosLacteos",
     settingsNotifTareas: "tareas",
     settingsNotifBano: "bano",
   };
   Object.entries(mapa).forEach(([id, clave]) => {
     const input = $(id);
     if (input) input.checked = prefs[clave] !== false;
+  });
+  const vencimientosActivos = prefs.vencimientos !== false;
+  ["settingsNotifVencAlmacen", "settingsNotifVencBebidas", "settingsNotifVencFiambreria", "settingsNotifVencLacteos"].forEach((id) => {
+    const input = $(id);
+    if (input) input.disabled = !vencimientosActivos;
   });
 }
 
@@ -413,6 +426,10 @@ async function sincronizarPreferenciasCategorias() {
 function iniciarPreferenciasCategorias() {
   const mapa = {
     settingsNotifVencimientos: "vencimientos",
+    settingsNotifVencAlmacen: "vencimientosAlmacen",
+    settingsNotifVencBebidas: "vencimientosBebidas",
+    settingsNotifVencFiambreria: "vencimientosFiambreria",
+    settingsNotifVencLacteos: "vencimientosLacteos",
     settingsNotifTareas: "tareas",
     settingsNotifBano: "bano",
   };

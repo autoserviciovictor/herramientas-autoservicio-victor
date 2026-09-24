@@ -766,3 +766,20 @@ html[data-theme="dark"] .user-settings-select-menu button[aria-selected="true"] 
   #pantallaAjustes .user-settings-profile-copy small { font-size: 13px !important; }
   #pantallaAjustes .user-settings-quick-panel .user-settings-panel-head p { font-size: 13px !important; }
 }
+
+/* Notificaciones de Vencimientos por rubro */
+.user-settings-notification-subgroup {
+  margin: 4px 0 10px 14px;
+  padding: 4px 12px;
+  border: 1px solid var(--settings-row-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--settings-row-border) 18%, transparent);
+}
+.user-settings-list-row--sub { min-height: 40px !important; padding: 5px 0; }
+.user-settings-list-row--sub + .user-settings-list-row--sub { border-top: 1px solid var(--settings-row-border); }
+.user-settings-list-row--sub strong { font-weight: 650; font-size: 13px !important; }
+.user-settings-list-row--sub:has(input:disabled) { opacity: .48; }
+@media (max-width: 600px) {
+  .user-settings-notification-subgroup { margin-left: 10px; padding: 3px 10px; }
+  .user-settings-list-row--sub { min-height: 38px !important; }
+}
