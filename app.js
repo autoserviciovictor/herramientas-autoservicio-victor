@@ -3592,11 +3592,20 @@ async function guardarCartelOfertaActual() {
     mostrarErrorCartelOferta("La hoja ya tiene 4 carteles. Quitá uno antes de agregar otro.");
     return;
   }
-  // Cada pulsación de Guardar crea una copia nueva, incluso si el producto ya está
-  // en la hoja. Así se puede imprimir el mismo cartel varias veces en un A4.
-  const registro = { ...datos, guardadoEn: new Date().toISOString() };
-  bandeja.push(registro);
-  guardarBandejaCartelesOferta(bandeja);
+  // IMPORTANTE: una posición de impresión es una COPIA, no un producto único.
+  // Por eso jamás buscamos/reemplazamos por datos.id: el mismo producto puede
+  // ocupar las 4 posiciones de la hoja si el usuario pulsa Guardar 4 veces.
+  const ahora = new Date().toISOString();
+  const registro = {
+    ...datos,
+    copiaId: `${String(datos.id)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    guardadoEn: ahora,
+  };
+  const nuevaBandeja = [...bandeja, registro].slice(0, CARTEL_OFERTA_MAX);
+  guardarBandejaCartelesOferta(nuevaBandeja);
+  // Render explícito para que la nueva copia aparezca inmediatamente aun cuando
+  // después haya que esperar la actualización de la oferta en el servidor.
+  renderBandejaCartelesOferta();
   try {
     const original = vencimientosCache.find((x) => String(x.id) === datos.id) || cartelOfertaItemActual;
     if (original && !tieneOferta(original)) await actualizarOfertaVencimiento(datos.id, true);
