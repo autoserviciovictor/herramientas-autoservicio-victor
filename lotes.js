@@ -282,6 +282,9 @@ function confirmarEliminarLotes({ titulo = 'Eliminar', producto = '', detalle = 
     const modal = document.createElement('div');
     modal.id = 'lotesConfirmDelete';
     modal.className = 'lotes-confirm-delete';
+    // Este modal se abre desde Gestionar lotes: debe quedar siempre por encima
+    // del editor principal y de su backdrop, sin importar otros stacking contexts.
+    modal.style.setProperty('z-index', '2147483000', 'important');
     modal.innerHTML = `
       <div class="lotes-confirm-delete-backdrop"></div>
       <section class="lotes-confirm-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="lotesConfirmDeleteTitle">
@@ -302,7 +305,11 @@ function confirmarEliminarLotes({ titulo = 'Eliminar', producto = '', detalle = 
       resolve(valor);
     };
     const teclado = (e) => { if (e.key === 'Escape') terminar(false); };
-    modal.querySelector('.lotes-confirm-delete-backdrop').onclick = () => terminar(false);
+    const confirmBackdrop = modal.querySelector('.lotes-confirm-delete-backdrop');
+    const confirmDialog = modal.querySelector('.lotes-confirm-delete-dialog');
+    confirmBackdrop?.style.setProperty('z-index', '0', 'important');
+    confirmDialog?.style.setProperty('z-index', '1', 'important');
+    confirmBackdrop.onclick = () => terminar(false);
     modal.querySelector('.lotes-confirm-delete-close').onclick = () => terminar(false);
     modal.querySelector('.lotes-confirm-cancel').onclick = () => terminar(false);
     modal.querySelector('.lotes-confirm-accept').onclick = () => terminar(true);

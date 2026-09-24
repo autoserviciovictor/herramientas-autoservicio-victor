@@ -3537,7 +3537,9 @@ function prepararPantallaCartelOferta() {
     $("cartelPrecioDescuento").value = existente.precioDescuento || (existente.tipo === "porcentaje" ? existente.precioOferta || "" : "");
     $("cartelPrecioPromo").value = existente.precioPromo || "";
     $("cartelValidoHasta").value = existente.vencimiento || item.vencimiento || "";
-    $("btnCartelGuardar").textContent = "Actualizar cartel";
+    // Si ya existe una copia de este producto, reutilizamos sus valores como ayuda,
+    // pero Guardar siempre agrega una nueva copia en la primera posición disponible.
+    $("btnCartelGuardar").textContent = "Guardar cartel";
   } else {
     $("btnCartelGuardar").textContent = "Guardar cartel";
   }
@@ -3586,14 +3588,14 @@ async function guardarCartelOfertaActual() {
     return;
   }
   const bandeja = leerBandejaCartelesOferta();
-  const indice = bandeja.findIndex((x) => String(x.id) === datos.id);
-  if (indice < 0 && bandeja.length >= CARTEL_OFERTA_MAX) {
+  if (bandeja.length >= CARTEL_OFERTA_MAX) {
     mostrarErrorCartelOferta("La hoja ya tiene 4 carteles. Quitá uno antes de agregar otro.");
     return;
   }
+  // Cada pulsación de Guardar crea una copia nueva, incluso si el producto ya está
+  // en la hoja. Así se puede imprimir el mismo cartel varias veces en un A4.
   const registro = { ...datos, guardadoEn: new Date().toISOString() };
-  if (indice >= 0) bandeja[indice] = registro;
-  else bandeja.push(registro);
+  bandeja.push(registro);
   guardarBandejaCartelesOferta(bandeja);
   try {
     const original = vencimientosCache.find((x) => String(x.id) === datos.id) || cartelOfertaItemActual;
@@ -3601,8 +3603,8 @@ async function guardarCartelOfertaActual() {
   } catch (error) {
     console.warn("No se pudo marcar la oferta del vencimiento:", error);
   }
-  $("btnCartelGuardar").textContent = "Actualizar cartel";
-  mostrarMensaje(indice >= 0 ? "Cartel actualizado" : "Cartel guardado para imprimir", "ok");
+  $("btnCartelGuardar").textContent = "Guardar cartel";
+  mostrarMensaje("Cartel agregado a la hoja para imprimir", "ok");
   reproducirConfirmacion("guardado");
 }
 
@@ -3617,18 +3619,21 @@ function renderBandejaCartelesOferta() {
   const slots = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
     const item = items[index];
     if (!item) return `<div class="offer-queue-slot is-empty"><span>${index + 1}</span><b>Espacio disponible</b><small>Elegí otro producto en Vencimientos</small></div>`;
-    return `<div class="offer-queue-slot"><span>${index + 1}</span><div><b>${escapeHTML(item.articulo)}</b><small>${escapeHTML(item.descripcion)} · vence ${escapeHTML(formatearFecha(item.vencimiento))}</small></div><button type="button" data-cartel-quitar="${escapeHTML(String(item.id))}" aria-label="Quitar ${escapeHTML(item.articulo)}">×</button></div>`;
+    return `<div class="offer-queue-slot"><span>${index + 1}</span><div><b>${escapeHTML(item.articulo)}</b><small>${escapeHTML(item.descripcion)} · vence ${escapeHTML(formatearFecha(item.vencimiento))}</small></div><button type="button" data-cartel-quitar-indice="${index}" aria-label="Quitar ${escapeHTML(item.articulo)}">×</button></div>`;
   });
   box.innerHTML = slots.join("");
 }
 
 function manejarAccionBandejaCarteles(event) {
-  const btn = event.target.closest("[data-cartel-quitar]");
+  const btn = event.target.closest("[data-cartel-quitar-indice]");
   if (!btn) return;
-  const id = btn.dataset.cartelQuitar || "";
-  const items = leerBandejaCartelesOferta().filter((x) => String(x.id) !== id);
+  const indice = Number(btn.dataset.cartelQuitarIndice);
+  const items = leerBandejaCartelesOferta();
+  if (!Number.isInteger(indice) || indice < 0 || indice >= items.length) return;
+  // Quitamos solamente esta copia; otras copias del mismo producto permanecen.
+  items.splice(indice, 1);
   guardarBandejaCartelesOferta(items);
-  if (String(cartelOfertaItemActual?.id || "") === id) $("btnCartelGuardar").textContent = "Guardar cartel";
+  $("btnCartelGuardar").textContent = "Guardar cartel";
 }
 
 function escaparXmlCartel(valor = "") {
