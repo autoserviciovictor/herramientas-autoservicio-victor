@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1967-carteles-repetidos-240926";
+const CACHE_VERSION = "autoservicio-v1974-carteles-centrados-a4-240926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
@@ -21,7 +21,7 @@ const APP_SHELL = [
   "./design-components.css?v=1960-d21-cierre-etapa6-010926",
   "./app-shell.css?v=1960-d21-cierre-etapa6-010926",
   "./desktop-layout.css?v=1960-d21-cierre-etapa6-010926",
-  "./app.js?v=1967-carteles-repetidos-240926",
+  "./app.js?v=1974-carteles-centrados-a4-240926",
   "./config.js?v=1960-d21-cierre-etapa6-010926",
   "./excel.js?v=1960-d21-cierre-etapa6-010926",
   "./scanner.js?v=1960-d21-cierre-etapa6-010926",
@@ -32,7 +32,7 @@ const APP_SHELL = [
   "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926",
   "./modules/tareas/task-view.js?v=1960-d21-cierre-etapa6-010926",
   "./modules/horarios/schedule-format.js?v=1960-d21-cierre-etapa6-010926",
-  "./pwa.js?v=1967-carteles-repetidos-240926",
+  "./pwa.js?v=1974-carteles-centrados-a4-240926",
   "./dialog.js?v=1960-d21-cierre-etapa6-010926",
   "./notification-center.js?v=lotes-alertas-180926",
   "./pro-ui.js?v=1960-d21-cierre-etapa6-010926",
