@@ -3,7 +3,63 @@ const norm=s=>String(s??'').trim();const mins=s=>{const m=norm(s).match(/(\d{1,2
 function loadXLSX(){if(window.XLSX)return Promise.resolve();return new Promise((ok,no)=>{const s=document.createElement('script');s.src='./xlsx.full.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
 function excelDate(v){if(v instanceof Date)return v;if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);return d?new Date(d.y,d.m-1,d.d):null}const x=norm(v).match(/(\d{4})-(\d{2})-(\d{2})|(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);if(!x)return null;return x[1]?new Date(+x[1],+x[2]-1,+x[3]):new Date(+x[6],+x[5]-1,+x[4])}
 function keyDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-function parseReport(ws){const a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});let days=[];for(const r of a.slice(0,8)){const nums=r.map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=31);if(nums.length>days.length)days=nums}let year=2026,month=8;for(const r of a.slice(0,6))for(const c of r){const d=excelDate(c);if(d){year=d.getFullYear();month=d.getMonth();break}}const out=[];for(let i=0;i<a.length;i++){const r=a[i].map(norm);const ni=r.findIndex(x=>/^Nombre:?$/i.test(x));if(ni<0)continue;const name=norm(r[ni+1]);if(!name)continue;const idIdx=r.findIndex(x=>/^ID:?$/i.test(x));const id=idIdx>=0?norm(r[idIdx+1]):'';for(let rr=i+1;rr<Math.min(i+4,a.length);rr++){const vals=a[rr];for(let c=1;c<vals.length&&c<=days.length;c++){const txt=norm(vals[c]);if(!txt)continue;const times=(txt.match(/\d{1,2}:\d{2}/g)||[]);if(!times.length)continue;const d=new Date(year,month,days[c-1]);out.push({id,name,date:keyDate(d),punches:times,manual:false})}}}return out}
+function parseReport(ws){
+  const a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+  if(!a.length)return[];
+
+  // El reloj genera el .xls con los días en una fila (1, 2, 3...) y las
+  // fichadas en esas mismas columnas. Conservamos el índice real de columna:
+  // algunos reportes empiezan el día 1 en A y otros pueden traer columnas extra.
+  let dayCols=[];
+  for(const r of a.slice(0,10)){
+    const cols=[];
+    r.forEach((v,c)=>{const n=Number(v);if(Number.isInteger(n)&&n>=1&&n<=31)cols.push({col:c,day:n})});
+    if(cols.length>dayCols.length)dayCols=cols;
+  }
+  if(!dayCols.length)return[];
+
+  let year=new Date().getFullYear(),month=0;
+  outer:for(const r of a.slice(0,8))for(const c of r){
+    const d=excelDate(c);
+    if(d){year=d.getFullYear();month=d.getMonth();break outer}
+  }
+
+  const nextValue=(r,from)=>{for(let c=from+1;c<r.length;c++){const v=norm(r[c]);if(v)return v}return''};
+  const isEmployeeHeader=r=>r.some(v=>/^ID:?$/i.test(norm(v)))&&r.some(v=>/^Nombre:?$/i.test(norm(v)));
+  const out=[];
+
+  for(let i=0;i<a.length;i++){
+    const raw=a[i],r=raw.map(norm);
+    if(!isEmployeeHeader(r))continue;
+    const ni=r.findIndex(x=>/^Nombre:?$/i.test(x));
+    const idIdx=r.findIndex(x=>/^ID:?$/i.test(x));
+    const name=nextValue(raw,ni);
+    const id=idIdx>=0?nextValue(raw,idIdx):'';
+    if(!name)continue;
+
+    // Junta las líneas de fichadas hasta el encabezado del empleado siguiente.
+    // Normalmente es una sola fila, pero esto tolera reportes partidos en dos.
+    const punchesByDay=new Map();
+    for(let rr=i+1;rr<a.length&&!isEmployeeHeader(a[rr].map(norm));rr++){
+      for(const {col,day} of dayCols){
+        const txt=norm(a[rr][col]);
+        if(!txt)continue;
+        const times=txt.match(/(?:[01]?\d|2[0-3]):[0-5]\d/g)||[];
+        if(times.length){
+          if(!punchesByDay.has(day))punchesByDay.set(day,[]);
+          punchesByDay.get(day).push(...times);
+        }
+      }
+    }
+    for(const {day} of dayCols){
+      const punches=punchesByDay.get(day)||[];
+      if(!punches.length)continue;
+      const d=new Date(year,month,day);
+      out.push({id,name,date:keyDate(d),punches,manual:false});
+    }
+  }
+  return out;
+}
 async function calendars(){state.cal.clear();if(!state.period)return;let sectores=[];try{const d=await fetch('/admin/sectores').then(r=>r.json());sectores=d.sectores||d.items||d.data||[]}catch{};const ids=[...new Set(sectores.map(s=>s.id||s.sector||s.nombre).filter(Boolean))];const months=new Set(state.rows.map(r=>r.date.slice(0,7)));for(const sector of ids)for(const mes of months){try{const d=await fetch(`/horarios/calendario?sector=${encodeURIComponent(sector)}&mes=${mes}`).then(r=>r.json());if(!d.ok)continue;const turns=new Map((d.turnos||[]).map(t=>[String(t.id),t]));for(const c of d.celdas||[]){const t=turns.get(String(c.turno));state.cal.set(`${norm(c.empleado).toLowerCase()}|${mes}-${String(c.dia).padStart(2,'0')}`,scheduleText(t))}}catch{}}}
 function scheduleText(t){if(!t)return'';for(const k of ['horario','texto','nombre'])if(t[k]&&/\d{1,2}:\d{2}/.test(t[k]))return t[k];const vals=Object.values(t).filter(v=>typeof v==='string'&&/\d{1,2}:\d{2}/.test(v));return vals.join(' / ')}
 function calc(r){const sch=state.cal.get(`${r.name.toLowerCase()}|${r.date}`)||'';const st=(sch.match(/\d{1,2}:\d{2}/g)||[]).map(mins);const pt=r.punches.map(mins).filter(x=>x!=null);let worked=0;for(let i=0;i+1<pt.length;i+=2)worked+=Math.max(0,pt[i+1]-pt[i]);const complete=pt.length>0&&pt.length%2===0;let late=0,early=0,extra=0;if(st.length>=2&&pt.length){for(let i=0;i<Math.min(st.length,pt.length);i+=2){late+=Math.max(0,pt[i]-st[i]);if(pt[i+1]!=null&&st[i+1]!=null){early+=Math.max(0,st[i+1]-pt[i+1]);extra+=Math.max(0,st[i]-pt[i])+Math.max(0,pt[i+1]-st[i+1])}}}const d=new Date(r.date+'T12:00:00');let cien=0,fer=0;if(state.holidays.has(r.date))fer=worked;else if(d.getDay()===0)cien=worked;else if(d.getDay()===6){for(let i=0;i+1<pt.length;i+=2)cien+=Math.max(0,pt[i+1]-Math.max(pt[i],14*60))}if(cien)extra=Math.max(0,extra-cien);return{sch,worked,complete,late,early,extra,cien,fer}}
