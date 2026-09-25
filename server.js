@@ -3230,8 +3230,7 @@ async function reconciliarSupervisorAnterior(
   if (!usuario || usuario.rol === "administrador") return;
   const asignados = sectores
     .filter((s) => s.supervisor === clave && s.activo)
-    .map((s) => s.id)
-    .slice(0, 2);
+    .map((s) => s.id);
   if (!asignados.length && usuario.rol === "supervisor")
     await actualizarFilaUsuario(usuario, {
       rol: "personal",
@@ -3263,8 +3262,6 @@ async function asignarSupervisorASector(usuarioClave, sectorId) {
   const actuales = sectores.filter(
     (s) => s.supervisor === clave && s.id !== sectorId,
   );
-  if (actuales.length >= 2)
-    throw new Error("Este supervisor ya tiene dos sectores asignados");
   const anterior = normalizarUsuario(sector.supervisor);
   if (anterior && anterior !== clave)
     await reconciliarSupervisorAnterior(anterior, sector.id);
@@ -3277,7 +3274,7 @@ async function asignarSupervisorASector(usuarioClave, sectorId) {
         sectorId,
       ].filter(Boolean),
     ),
-  ].slice(0, 2);
+  ];
   await actualizarFilaUsuario(usuario, {
     rol: "supervisor",
     sector: ids[0] || sectorId,
@@ -3307,8 +3304,6 @@ async function sincronizarUsuarioSupervisor(
     ),
   ];
   if (!ids.length) throw new Error("Asigná al menos un sector al supervisor");
-  if (ids.length > 2)
-    throw new Error("Un supervisor puede tener como máximo dos sectores");
   for (const id of ids) {
     const destino = sectores.find((s) => s.id === id && s.activo);
     if (!destino)
@@ -4463,11 +4458,6 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
         ok: false,
         mensaje: "Asigná al menos un sector al supervisor",
       });
-    if ([...new Set([sector, ...sectoresCargo].filter(Boolean))].length > 2)
-      return res.status(400).json({
-        ok: false,
-        mensaje: "Un supervisor puede tener como máximo dos sectores",
-      });
     if (sectoresCargo.length) {
       const sectores = await obtenerSectores();
       if (
@@ -4582,11 +4572,6 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       return res.status(400).json({
         ok: false,
         mensaje: "Asigná al menos un sector al supervisor",
-      });
-    if ([...new Set([sector, ...sectoresCargo].filter(Boolean))].length > 2)
-      return res.status(400).json({
-        ok: false,
-        mensaje: "Un supervisor puede tener como máximo dos sectores",
       });
     if (sectoresCargo.length) {
       const sectores = await obtenerSectores();
