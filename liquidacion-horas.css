@@ -1,0 +1,72 @@
+.liq-screen{max-width:1180px!important;margin:0 auto!important;padding:18px 18px 34px!important;box-sizing:border-box}.liq-page-title{display:flex;align-items:center;gap:12px;margin:0 0 10px}.liq-page-title h1{font-size:25px;line-height:1.15;margin:0;color:#111827;font-weight:850}.liq-title-icon,.liq-badge{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#f51f45;color:#fff;font-weight:800;flex:0 0 auto}.liq-import-card,.liq-workspace{background:#fff;border:1px solid #dfe5ee;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.035)}.liq-import-card{padding:12px 14px 14px;background:linear-gradient(100deg,#fff5f6 0,#fff 72%)}.liq-section-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:#111827;margin-bottom:10px}.liq-section-title .liq-badge{width:26px;height:26px}.liq-import-grid{display:grid;grid-template-columns:1.7fr .8fr;gap:12px}.liq-upload,.liq-period{border:1px solid #dfe5ee;border-radius:9px;background:#fff;padding:12px}.liq-upload{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}.liq-upload-row{display:flex;gap:14px;align-items:center;padding:0 10px}.liq-excel-icon,.liq-mini-excel{background:#0b9b55;color:#fff;border-radius:5px;font-weight:900;display:grid;place-items:center}.liq-excel-icon{width:43px;height:50px;font-size:24px}.liq-upload-copy{flex:1}.liq-upload-copy strong,.liq-upload-copy small,.liq-file-meta strong,.liq-file-meta small{display:block}.liq-upload-copy small,.liq-file-meta small{color:#64748b;margin-top:3px;font-size:11px}.liq-upload-copy .liq-btn{width:100%;margin-top:10px}.liq-selected-file{display:flex;align-items:center;gap:10px;border:1px solid #e3e8ef;border-radius:8px;background:#f8fafc;padding:10px}.liq-selected-file.oculto{display:none}.liq-mini-excel{width:30px;height:34px}.liq-file-meta{min-width:0;flex:1}.liq-file-meta strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.liq-selected-file>button{border:0;background:transparent;font-size:18px;cursor:pointer;color:#475569}.liq-btn{border:1px solid #d4dce7;background:#fff;border-radius:7px;padding:9px 14px;font-weight:750;cursor:pointer}.liq-btn-primary{background:#f51f45;border-color:#f51f45;color:#fff}.liq-period strong{display:block;margin-bottom:8px}.liq-period-line{display:flex;gap:12px;align-items:center;padding:8px 0;border-top:1px solid #eef1f5}.liq-period-line b{margin-left:auto}.liq-found{margin-top:4px;padding:9px 10px;border-radius:7px;background:#e4f8e9;color:#087443;font-weight:700;font-size:11px}.liq-config-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.liq-config-btn{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:1px solid #ff9aac;border-radius:9px;background:linear-gradient(90deg,#fff4f5,#fffafa);color:#e5163b;text-align:left;cursor:pointer}.liq-config-btn b{font-size:14px}.liq-config-btn small{display:block;color:#64748b;margin-top:2px}.liq-config-btn .arrow{margin-left:auto;font-size:22px}.liq-workspace{overflow:hidden}.liq-tabs{display:flex;border-bottom:1px solid #e2e8f0;overflow:auto;padding-left:8px}.liq-tab{padding:11px 14px;border:0;background:none;font-weight:750;color:#334155;cursor:pointer;white-space:nowrap}.liq-tab.active{color:#f51f45;border-bottom:2px solid #f51f45}.liq-pane{padding:10px}.liq-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}.liq-toolbar input,.liq-toolbar select,.liq-field input{border:1px solid #d9e0ea;border-radius:7px;padding:9px 10px;background:#fff;color:#334155}.liq-toolbar input{width:220px}.liq-toolbar select{min-width:150px}.liq-legend{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11px;color:#475569}.liq-legend .ok{color:#0a9b55}.liq-legend .bad{color:#f51f45}.liq-legend .mod{color:#f2a900}.liq-employee{border:1px solid #dfe5ee;border-radius:9px;overflow:hidden;margin-bottom:9px}.liq-employee-head{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff}.liq-avatar{width:32px;height:32px;border-radius:8px;background:#ffe8ec;color:#e5163b;display:grid;place-items:center;font-weight:800}.liq-employee-head .meta{flex:1}.liq-employee-head small{display:block;color:#64748b}.liq-summary-inline{font-size:11px;color:#475569}.liq-table-wrap{overflow:auto}.liq-table{width:100%;border-collapse:collapse;font-size:11px}.liq-table th,.liq-table td{padding:8px 9px;border-top:1px solid #e8edf3;text-align:left;white-space:nowrap}.liq-table th{background:#f8fafc;color:#475569}.liq-status{font-weight:700}.liq-status.bad{color:#e5163b}.liq-status.ok{color:#087443}.liq-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.liq-summary-card{border:1px solid #dfe5ee;border-radius:9px;padding:13px;background:#fff}.liq-summary-card small{color:#64748b}.liq-summary-card strong{display:block;font-size:20px;margin-top:4px}.liq-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:9999;display:grid;place-items:center;padding:20px}.liq-modal-overlay.oculto{display:none}.liq-modal{width:min(480px,100%);background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden}.liq-modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:16px;border-bottom:1px solid #e5e7eb}.liq-modal-head h2{margin:0;font-size:17px}.liq-modal-head p{margin:4px 0 0;color:#64748b;font-size:11px}.liq-modal-body{padding:16px}.liq-modal-actions{display:flex;gap:8px;padding:12px 16px;border-top:1px solid #e5e7eb}.liq-modal-actions>*{flex:1}.liq-field{display:block;margin-bottom:12px}.liq-field span{display:block;font-size:11px;font-weight:700;margin-bottom:5px}.liq-field input{width:100%;box-sizing:border-box}.liq-holiday-add{display:flex;gap:8px}.liq-holiday-add input{flex:1}.liq-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.liq-chip{padding:7px 10px;border:1px solid #d9e0ea;border-radius:7px;background:#f8fafc}.liq-empty{text-align:center;padding:38px;color:#64748b}.liq-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.liq-money{color:#087443}
+@media(max-width:700px){.liq-screen{padding:12px 10px 24px!important;max-width:none!important}.liq-page-title{margin:0 0 10px}.liq-page-title h1{font-size:21px}.liq-title-icon{display:none}.liq-import-card{padding:10px}.liq-section-title{font-size:13px}.liq-import-grid,.liq-config-row,.liq-summary-grid{grid-template-columns:1fr}.liq-upload{grid-template-columns:1fr;padding:9px}.liq-upload-row{padding:0;align-items:center}.liq-excel-icon{width:36px;height:42px;font-size:20px}.liq-upload-copy .liq-btn{background:#f51f45;color:#fff;border-color:#f51f45}.liq-period{padding:10px}.liq-config-row{gap:7px;margin:8px 0}.liq-config-btn{padding:10px}.liq-config-btn small{display:none}.liq-tabs{padding:4px;background:#f5f7fa;border:0;border-radius:18px;margin:8px}.liq-tab{flex:1;padding:7px 6px;font-size:11px;border-radius:15px}.liq-tab.active{background:#f51f45;color:#fff;border:0}.liq-toolbar{flex-wrap:wrap}.liq-toolbar input,.liq-toolbar select{display:none}.liq-legend{display:none}.liq-pane{padding:8px}.liq-employee-head{border:1px solid #dfe5ee;border-radius:8px}.liq-table-wrap{overflow:visible}.liq-table,.liq-table thead,.liq-table tbody,.liq-table tr,.liq-table td{display:block}.liq-table thead{display:none}.liq-table tr{border-top:1px solid #e5e7eb;padding:8px}.liq-table td{border:0;padding:4px 2px;white-space:normal}.liq-table td:before{font-weight:700;color:#475569;margin-right:6px}.liq-table td:nth-child(1):before{content:'Fecha: '}.liq-table td:nth-child(2):before{content:'Horario programado: '}.liq-table td:nth-child(3):before{content:'Fichadas (reloj): '}.liq-table td:nth-child(4):before{content:'Horas: '}.liq-table td:nth-child(5):before{content:'Estado: '}.liq-table td:nth-child(6):before{content:'Incidencias: '}.liq-table td:nth-child(7) .liq-btn{width:100%;margin-top:4px}.liq-summary-inline{display:none}.liq-modal-overlay{align-items:end;padding:0}.liq-modal{width:100%;border-radius:18px 18px 0 0;max-height:82vh;overflow:auto}.liq-modal:before{content:'';display:block;width:42px;height:4px;border-radius:4px;background:#94a3b8;margin:8px auto 0}.liq-modal-head{padding-top:12px}.liq-edit-grid{grid-template-columns:1fr}}
+
+/* ===== Ajuste visual final · referencia Administración ===== */
+#adminTab-liquidacion.liq-screen{max-width:none!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box}
+#adminTab-liquidacion .liq-page-title{margin:0 0 12px;padding:0 2px;gap:11px}
+#adminTab-liquidacion .liq-page-title h1{font-size:27px;letter-spacing:-.035em;line-height:1.12;font-weight:800}
+#adminTab-liquidacion .liq-title-icon{width:34px;height:34px;border-radius:9px;box-shadow:0 5px 12px rgba(239,51,64,.14)}
+#adminTab-liquidacion .liq-import-card{padding:14px 16px 16px;border-radius:16px;box-shadow:var(--admin-shadow,0 8px 24px rgba(29,39,55,.055));background:linear-gradient(105deg,#fff1f3 0,#fff7f8 48%,#fff 100%)}
+#adminTab-liquidacion .liq-section-title{font-size:17px;margin-bottom:12px}
+#adminTab-liquidacion .liq-section-title .liq-badge{width:30px;height:30px;border-radius:8px}
+#adminTab-liquidacion .liq-import-grid{grid-template-columns:minmax(0,2fr) minmax(310px,.78fr);gap:16px}
+#adminTab-liquidacion .liq-upload,#adminTab-liquidacion .liq-period{min-height:112px;border-radius:11px;padding:14px}
+#adminTab-liquidacion .liq-upload{grid-template-columns:minmax(360px,1.15fr) minmax(280px,.85fr);gap:14px}
+#adminTab-liquidacion .liq-upload-row{padding:0 14px;gap:18px}
+#adminTab-liquidacion .liq-excel-icon{width:48px;height:56px;border-radius:7px;font-size:25px}
+#adminTab-liquidacion .liq-upload-copy strong,#adminTab-liquidacion .liq-period>strong{font-size:12.5px}
+#adminTab-liquidacion .liq-upload-copy small{font-size:10.5px}
+#adminTab-liquidacion .liq-upload-copy .liq-btn{height:38px;margin-top:10px}
+#adminTab-liquidacion .liq-selected-file{min-height:54px;padding:11px 12px}
+#adminTab-liquidacion .liq-period-line{min-height:35px;font-size:12px}
+#adminTab-liquidacion .liq-found{font-size:10.5px;padding:10px 11px}
+#adminTab-liquidacion .liq-config-row{gap:14px;margin:12px 0}
+#adminTab-liquidacion .liq-config-btn{min-height:62px;padding:11px 16px;border-radius:11px}
+#adminTab-liquidacion .liq-config-btn .liq-badge{width:36px;height:36px;border-radius:9px}
+#adminTab-liquidacion .liq-config-btn b{font-size:13px}
+#adminTab-liquidacion .liq-config-btn small{font-size:10px}
+#adminTab-liquidacion .liq-workspace{border-radius:14px;min-height:290px;box-shadow:var(--admin-shadow,0 8px 24px rgba(29,39,55,.055))}
+#adminTab-liquidacion .liq-tabs{height:47px;align-items:stretch;padding-left:10px}
+#adminTab-liquidacion .liq-tab{padding:0 17px;font-size:12px}
+#adminTab-liquidacion .liq-pane{padding:14px 16px 16px}
+#adminTab-liquidacion .liq-toolbar{gap:10px;margin-bottom:14px}
+#adminTab-liquidacion .liq-toolbar input,#adminTab-liquidacion .liq-toolbar select{height:40px;font-size:11px}
+#adminTab-liquidacion .liq-toolbar input{width:245px}
+#adminTab-liquidacion .liq-toolbar select{min-width:155px}
+#adminTab-liquidacion .liq-legend{font-size:10.5px;gap:8px}
+#adminTab-liquidacion .liq-empty{min-height:120px;display:grid;place-items:center;padding:24px}
+#adminTab-liquidacion .liq-employee{border-radius:11px;margin-bottom:12px}
+#adminTab-liquidacion .liq-employee-head{min-height:54px;padding:9px 14px}
+#adminTab-liquidacion .liq-avatar{width:36px;height:36px;border-radius:9px}
+#adminTab-liquidacion .liq-employee-head .meta b{font-size:12.5px}
+#adminTab-liquidacion .liq-employee-head small{font-size:10px}
+#adminTab-liquidacion .liq-table{font-size:10.5px;table-layout:auto}
+#adminTab-liquidacion .liq-table th{font-size:9.5px;font-weight:800;color:#536074}
+#adminTab-liquidacion .liq-table th,#adminTab-liquidacion .liq-table td{padding:9px 10px}
+#adminTab-liquidacion .liq-table .liq-btn{padding:6px 11px;font-size:10px}
+#adminTab-liquidacion .liq-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+#adminTab-liquidacion .liq-summary-card{padding:16px;border-radius:11px}
+#adminTab-liquidacion .liq-summary-card strong{font-size:22px}
+@media (max-width:900px){
+  #adminTab-liquidacion.liq-screen{padding:0!important;width:100%!important}
+  #adminTab-liquidacion .liq-page-title{padding:2px 0 0;margin-bottom:12px}
+  #adminTab-liquidacion .liq-page-title h1{font-size:22px}
+  #adminTab-liquidacion .liq-import-card{border-radius:12px;padding:10px}
+  #adminTab-liquidacion .liq-import-grid,#adminTab-liquidacion .liq-upload{grid-template-columns:1fr}
+  #adminTab-liquidacion .liq-upload,#adminTab-liquidacion .liq-period{min-height:0}
+  #adminTab-liquidacion .liq-config-btn{min-height:54px}
+  #adminTab-liquidacion .liq-workspace{min-height:0}
+  #adminTab-liquidacion .liq-tabs{height:auto}
+  #adminTab-liquidacion .liq-pane{padding:8px}
+}
+@media(max-width:700px){
+ #adminTab-liquidacion .liq-table td:nth-child(1):before{content:'Fecha: '}
+ #adminTab-liquidacion .liq-table td:nth-child(2):before{content:'Día: '}
+ #adminTab-liquidacion .liq-table td:nth-child(3):before{content:'Horario programado: '}
+ #adminTab-liquidacion .liq-table td:nth-child(4):before{content:'Fichadas (reloj): '}
+ #adminTab-liquidacion .liq-table td:nth-child(5):before{content:'Horario corregido: '}
+ #adminTab-liquidacion .liq-table td:nth-child(6):before{content:'Horas: '}
+ #adminTab-liquidacion .liq-table td:nth-child(7):before{content:'Estado: '}
+ #adminTab-liquidacion .liq-table td:nth-child(8):before{content:'Incidencias: '}
+ #adminTab-liquidacion .liq-table td:nth-child(9) .liq-btn{width:100%;margin-top:4px}
+}

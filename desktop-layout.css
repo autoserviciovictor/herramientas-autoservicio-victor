@@ -734,3 +734,17 @@ body.en-precios #pantallaPrecios .precio-desktop-load-btn:focus-visible {
     overflow-y: visible !important;
   }
 }
+
+/* Liquidación de Horas: comparte exactamente la caja canónica de Administración. */
+@media (min-width:901px){
+  body.en-admin #adminTab-liquidacion{
+    width:min(var(--primary-module-max-width),calc(100% - (var(--ds-page-edge,var(--app-shell-desktop-edge,36px))*2))) !important;
+    max-width:var(--primary-module-max-width) !important;
+    min-width:0 !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    padding:26px var(--primary-module-inline-padding) 50px !important;
+    box-sizing:border-box !important;
+    transform:none !important;
+  }
+}

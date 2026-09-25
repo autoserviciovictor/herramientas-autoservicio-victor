@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="horarios-redesign.css?v=1983-sin-calculo-horas-250926" />
     <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-cierre-etapa6-010926" />
+    <link rel="stylesheet" href="liquidacion-horas.css?v=2" />
     <link rel="stylesheet" href="catalogo-admin-diseno.css?v=desktop-toolbar-d31-110926" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1977-notificaciones-rubros-visual-240926" />
@@ -3624,6 +3625,11 @@
               <div class="admin-module-access-stats"><div><strong id="adminHomeProductosCard">—</strong><span>Productos</span></div><div><strong id="adminHomeVersionCard">—</strong><span>Versión</span></div></div>
               <button type="button" data-admin-open="sistema">Configurar sistema <span>›</span></button>
             </article>
+            <article class="admin-module-access-card tone-red">
+              <header><span class="admin-module-access-icon"><svg class="app-icon"><use href="#icon-clock"></use></svg></span><div><h2>Liquidación de Horas</h2><p>Importá fichadas, compará el calendario y revisá extras, 100%, feriados y tardanzas.</p></div></header>
+              <div class="admin-module-access-stats"><div><strong>Excel</strong><span>Reporte de asistencia</span></div><div><strong>Calendario</strong><span>Comparación automática</span></div></div>
+              <button type="button" data-admin-open="liquidacion">Abrir liquidación <span>›</span></button>
+            </article>
           </section>
 
           <section class="admin-home-bottom-grid">
@@ -3642,6 +3648,21 @@
           </section>
         </section>
 
+        <section id="adminTab-liquidacion" class="admin-tab-panel admin-official-panel liq-screen oculto">
+          <header class="liq-page-title"><span class="liq-title-icon">▣</span><h1>Liquidación de Horas</h1></header>
+          <section class="liq-import-card">
+            <div class="liq-section-title"><span class="liq-badge">▣</span>Importar reporte de asistencia</div>
+            <div class="liq-import-grid">
+              <div class="liq-upload">
+                <div class="liq-upload-row"><span class="liq-excel-icon">X</span><div class="liq-upload-copy"><strong>Subí el archivo Excel</strong><small>Formato .xls o .xlsx generado por el reloj.</small><button id="liqFileBtn" class="liq-btn" type="button">Seleccionar archivo</button></div><input id="liqFile" type="file" accept=".xls,.xlsx" hidden></div>
+                <div id="liqSelectedFile" class="liq-selected-file oculto"><span class="liq-mini-excel">X</span><div class="liq-file-meta"><strong id="liqFileName">—</strong><small id="liqFileSize">—</small></div><button id="liqFileRemove" type="button" aria-label="Quitar archivo">⌫</button></div>
+              </div>
+              <div class="liq-period"><strong>Período detectado en el archivo</strong><div class="liq-period-line"><span>▣</span><b id="liqPeriod">—</b></div><div id="liqFound" class="liq-found oculto">● &nbsp; Hoja “Reporte de Asistencia” encontrada</div></div>
+            </div>
+          </section>
+          <div class="liq-config-row"><button id="liqHolidayBtn" class="liq-config-btn" type="button"><span class="liq-badge">▣</span><span><b>Feriados del período</b><small>Seleccioná las fechas que se considerarán feriado.</small></span><span class="arrow">›</span></button><button id="liqValuesBtn" class="liq-config-btn" type="button"><span class="liq-badge">$</span><span><b>Valores de horas</b><small>Configurá los valores para el cálculo.</small></span><span class="arrow">›</span></button></div>
+          <section class="liq-workspace"><nav class="liq-tabs"><button type="button" class="liq-tab active" data-liq-tab="review">Revisión de fichadas</button><button type="button" class="liq-tab" data-liq-tab="summary">Resumen por empleado</button><button type="button" class="liq-tab" data-liq-tab="detail">Detalle de cálculo</button></nav><div id="liqReviewPane" class="liq-pane"><div class="liq-toolbar"><input id="liqSearch" type="search" placeholder="⌕  Buscar empleado..."><select id="liqSectorFilter"><option value="">Todos los sectores</option></select><select id="liqStatusFilter"><option value="">Todos los estados</option><option value="complete">Completos</option><option value="incomplete">Incompletos</option><option value="modified">Modificados</option></select><div class="liq-legend"><span class="ok">●</span> Completo <span class="bad">●</span> Incompleto <span class="mod">●</span> Modificado</div></div><div id="liqEmployees"><div class="liq-empty">Importá el reporte de asistencia para comenzar.</div></div></div><div id="liqSummary" class="liq-pane oculto"></div><div id="liqDetail" class="liq-pane oculto"><div class="liq-empty">Importá el reporte para ver el detalle del cálculo.</div></div></section>
+        </section>
         <section id="adminTab-usuarios" class="admin-tab-panel admin-official-panel oculto">
           <header class="admin-page-heading admin-page-heading-actions app-reference-heading">
             <div><span class="app-page-eyebrow">GESTIÓN DEL SISTEMA</span><h1>Usuarios</h1><p>Gestioná los usuarios del sistema, roles y permisos de acceso.</p></div>
@@ -4091,12 +4112,18 @@
       </div>
     </div>
 
+
+      <div id="liqHolidayModal" class="liq-modal-overlay oculto" aria-hidden="true"><section class="liq-modal"><header class="liq-modal-head"><div><h2>Feriados del período</h2><p>Seleccioná las fechas que se considerarán feriado para el cálculo.</p></div><button type="button" class="liq-btn" data-liq-close="liqHolidayModal">×</button></header><div class="liq-modal-body"><label class="liq-field"><span>Agregar fecha</span><div class="liq-holiday-add"><input id="liqHolidayDate" type="date"><button id="liqHolidayAdd" class="liq-btn liq-btn-primary" type="button">Agregar</button></div></label><div id="liqHolidayChips" class="liq-chips"></div></div><footer class="liq-modal-actions"><button type="button" class="liq-btn" data-liq-close="liqHolidayModal">Cancelar</button><button id="liqHolidaySave" type="button" class="liq-btn liq-btn-primary">Guardar cambios</button></footer></section></div>
+      <div id="liqValuesModal" class="liq-modal-overlay oculto" aria-hidden="true"><section class="liq-modal"><header class="liq-modal-head"><div><h2>Valores de horas</h2><p>Configurá los valores para el cálculo de la liquidación.</p></div><button type="button" class="liq-btn" data-liq-close="liqValuesModal">×</button></header><div class="liq-modal-body"><label class="liq-field"><span>Valor hora extra</span><input id="liqExtra" type="number" min="0" step="1"></label><label class="liq-field"><span>Valor hora al 100%</span><input id="liqCien" type="number" min="0" step="1"></label><label class="liq-field"><span>Valor hora feriada</span><input id="liqFeriado" type="number" min="0" step="1"></label></div><footer class="liq-modal-actions"><button type="button" class="liq-btn" data-liq-close="liqValuesModal">Cancelar</button><button id="liqValuesSave" type="button" class="liq-btn liq-btn-primary">Guardar cambios</button></footer></section></div>
+      <div id="liqEditModal" class="liq-modal-overlay oculto" aria-hidden="true"><section class="liq-modal"><header class="liq-modal-head"><div><h2>Completar fichadas</h2><p id="liqEditTitle">—</p></div><button type="button" class="liq-btn" data-liq-close="liqEditModal">×</button></header><div class="liq-modal-body"><input id="liqEditIndex" type="hidden"><label class="liq-field"><span>Fichadas del día</span><input id="liqEditPunches" type="text" placeholder="08:00 / 14:00 / 16:00 / 18:00"><small>Podés completar o corregir entrada y salida. Separá las fichadas con /.</small></label></div><footer class="liq-modal-actions"><button type="button" class="liq-btn" data-liq-close="liqEditModal">Cancelar</button><button id="liqEditSave" type="button" class="liq-btn liq-btn-primary">Guardar corrección</button></footer></section></div>
+
     <script src="./dialog.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script src="./pwa.js?v=1975-carteles-una-hoja-a4-240926" defer></script>
     <script type="module" src="./auth.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script src="./horarios-config.js?v=1960-horarios-sector-historico-220926"></script>
     <script type="module" src="./catalogo-admin.js?v=thumb-storage-fix-220926"></script>
     <script type="module" src="./admin.js?v=1960-password6-fix-220926"></script>
+    <script type="module" src="./liquidacion-horas.js?v=2"></script>
     <script type="module" src="./notifications.js?v=1976-notificaciones-vencimientos-rubros-240926"></script>
     <script type="module" src="./notification-center.js?v=lotes-alertas-180926"></script>
     <script type="module" src="./prices.js?v=1960-d21-cierre-etapa6-010926"></script>

@@ -1653,12 +1653,13 @@ async function cargarTodo() {
 }
 
 function cambiarTab(tab) {
-  const destino = ["inicio", "usuarios", "sectores", "sistema"].includes(tab) ? tab : "inicio";
+  const destino = ["inicio", "usuarios", "sectores", "sistema", "liquidacion"].includes(tab) ? tab : "inicio";
   document.querySelectorAll(".admin-tab-panel").forEach((p) => p.classList.toggle("oculto", p.id !== `adminTab-${destino}`));
   document.body.dataset.adminView = destino;
   sessionStorage.setItem("autoservicio_admin_vista", destino);
   if (destino === "usuarios") renderUsuarios();
   if (destino === "sectores") renderSectores();
+  if (destino === "liquidacion") window.LiquidacionHoras?.render?.();
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
