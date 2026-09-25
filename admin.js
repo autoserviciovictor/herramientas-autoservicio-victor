@@ -1082,6 +1082,7 @@ async function abrirNuevoUsuario() {
   $("adminUsuarioOriginal").value = "";
   $("adminUsuarioNombre").value = "";
   $("adminUsuarioUsuario").value = "";
+  $("adminUsuarioIdReloj").value = "";
   $("adminUsuarioUsuario").disabled = false;
   $("adminUsuarioPassword").value = "";
   restablecerVisibilidadPasswordUsuario();
@@ -1120,6 +1121,7 @@ function abrirEditarUsuario(clave) {
   $("adminUsuarioOriginal").value = u.usuario;
   $("adminUsuarioNombre").value = u.nombre;
   $("adminUsuarioUsuario").value = u.usuario;
+  $("adminUsuarioIdReloj").value = u.idReloj || "";
   $("adminUsuarioUsuario").disabled = true;
   $("adminUsuarioPassword").value = "";
   restablecerVisibilidadPasswordUsuario();
@@ -1160,6 +1162,7 @@ function estadoUsuarioModal() {
   return JSON.stringify({
     nombre: $("adminUsuarioNombre")?.value || "",
     usuario: $("adminUsuarioUsuario")?.value || "",
+    idReloj: $("adminUsuarioIdReloj")?.value || "",
     rol: $("adminUsuarioRol")?.value || "",
     sector: $("adminUsuarioSector")?.value || "",
     sector2: $("adminUsuarioSectorSecundario")?.value || "",
@@ -1278,6 +1281,7 @@ async function guardarUsuario() {
   const payload = {
     nombre: $("adminUsuarioNombre").value.trim(),
     usuario: $("adminUsuarioUsuario").value.trim(),
+    idReloj: $("adminUsuarioIdReloj").value.trim(),
     password: $("adminUsuarioPassword").value,
     rol: $("adminUsuarioRol").value,
     permisos: leerPermisosModal(),

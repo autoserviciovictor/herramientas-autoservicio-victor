@@ -588,6 +588,7 @@ async function obtenerUsuarios() {
       sectores: Array.isArray(fila.managed_sectors) ? fila.managed_sectors.map(normalizarTexto).filter(Boolean) : [],
       sessionVersion: Math.max(1, Number.parseInt(fila.session_version, 10) || 1),
       googleEmail: normalizarEmail(fila.google_email),
+      idReloj: normalizarTexto(fila.clock_id),
     })).filter((u) => u.usuario);
   });
 }
@@ -2970,6 +2971,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
           nombre,
           rol: u.rol,
           usuario: u.usuario,
+          idReloj: u.idReloj || "",
           habilitadoCalendario: habilitados?.get(nombre) !== false,
           descansoInicio: descansos?.get(nombre)?.inicio || "",
           descansoFin: descansos?.get(nombre)?.fin || "",
@@ -4431,6 +4433,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
     const rolEntrada = normalizarTexto(req.body?.rol).toLowerCase();
     const rol = normalizarRol(rolEntrada);
     const sector = normalizarTexto(req.body?.sector);
+    const idReloj = normalizarTexto(req.body?.idReloj);
     const sectoresCargo = [
       ...new Set(
         (Array.isArray(req.body?.sectores) ? req.body.sectores : [])
@@ -4482,6 +4485,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
         mensaje: "La contraseña debe tener al menos 6 caracteres",
       });
     const usuarios = await obtenerUsuarios();
+    if (idReloj && usuarios.some((item) => item.idReloj === idReloj)) return res.status(409).json({ ok:false, mensaje:"Ese ID de reloj ya está asignado a otro usuario" });
     if (usuarios.some((item) => item.usuario === usuario))
       return res
         .status(409)
@@ -4489,7 +4493,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
     await guardarUsuarioDb({
       usuario, nombre, passwordHash: hashPassword(password), rol, activo: true,
       creado: fechaHoraArgentinaIso(), permisos, sector, sectores: sectoresCargo,
-      sessionVersion: 1, googleEmail: "",
+      sessionVersion: 1, googleEmail: "", idReloj,
     });
     invalidarCache("usuarios");
     await sincronizarUsuarioSupervisor(
@@ -4511,6 +4515,7 @@ app.post("/admin/usuarios", requerirAdministrador, async (req, res) => {
         permisos,
         sector,
         sectores: sectoresCargo,
+        idReloj,
       },
     });
   } catch (error) {
@@ -4540,6 +4545,8 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
       req.body?.sector === undefined
         ? actual.sector || ""
         : normalizarTexto(req.body.sector);
+    const idReloj = req.body?.idReloj === undefined ? (actual.idReloj || "") : normalizarTexto(req.body.idReloj);
+    if (idReloj && usuarios.some((item) => item.usuario !== clave && item.idReloj === idReloj)) return res.status(409).json({ ok:false, mensaje:"Ese ID de reloj ya está asignado a otro usuario" });
     const sectoresCargo =
       req.body?.sectores === undefined
         ? actual.sectores || []
@@ -4604,7 +4611,7 @@ app.put("/admin/usuarios/:usuario", requerirAdministrador, async (req, res) => {
     await guardarUsuarioDb({
       ...actual, usuario: clave, nombre, passwordHash: hash, rol, activo,
       permisos, sector, sectores: sectoresCargo, sessionVersion,
-      googleEmail: actual.googleEmail || "",
+      googleEmail: actual.googleEmail || "", idReloj,
     });
     invalidarCache("usuarios");
     await sincronizarUsuarioSupervisor(

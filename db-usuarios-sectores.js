@@ -63,10 +63,13 @@ async function asegurarEsquemaUsuariosSectores() {
         managed_sectors TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
         session_version INTEGER NOT NULL DEFAULT 1 CHECK (session_version >= 1),
         google_email TEXT NOT NULL DEFAULT '',
+        clock_id TEXT NOT NULL DEFAULT '',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS clock_id TEXT NOT NULL DEFAULT ''`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS users_clock_id_unique ON users (clock_id) WHERE clock_id <> ''`);
     await query(
       `CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique
        ON users (LOWER(google_email)) WHERE google_email <> ''`,
@@ -108,7 +111,7 @@ async function listarUsuariosDb(cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
     `SELECT username, name, password_hash, role, active, created_text, permissions,
-            sector_id, managed_sectors, session_version, google_email
+            sector_id, managed_sectors, session_version, google_email, clock_id
      FROM users ORDER BY name, username`,
   );
   return r.rows;
@@ -128,8 +131,8 @@ async function guardarUsuarioDb(usuario, cliente = null) {
     cliente,
     `INSERT INTO users
       (username, name, password_hash, role, active, created_text, permissions,
-       sector_id, managed_sectors, session_version, google_email, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::text[],$10,$11,NOW())
+       sector_id, managed_sectors, session_version, google_email, clock_id, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::text[],$10,$11,$12,NOW())
      ON CONFLICT (username) DO UPDATE SET
        name=EXCLUDED.name,
        password_hash=EXCLUDED.password_hash,
@@ -141,6 +144,7 @@ async function guardarUsuarioDb(usuario, cliente = null) {
        managed_sectors=EXCLUDED.managed_sectors,
        session_version=EXCLUDED.session_version,
        google_email=EXCLUDED.google_email,
+       clock_id=EXCLUDED.clock_id,
        updated_at=NOW()`,
     [
       usuario.usuario,
@@ -154,6 +158,7 @@ async function guardarUsuarioDb(usuario, cliente = null) {
       usuario.sectores || [],
       Math.max(1, Number(usuario.sessionVersion) || 1),
       usuario.googleEmail || "",
+      usuario.idReloj || "",
     ],
   );
 }
