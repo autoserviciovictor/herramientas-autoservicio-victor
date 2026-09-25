@@ -466,6 +466,8 @@ async function cargarCalendarioActual(forzar = false) {
       })).concat([
         { id:"franco", label:"Franco", color:"#9ca3af", clase:"turno-franco", estilo:"background:#e5e7eb;color:#374151;border-color:#cbd5e1" },
         { id:"vacaciones", label:"Vacaciones", color:"#22c55e", clase:"turno-vacaciones", estilo:"background:#dcfce7;color:#15803d;border-color:#86efac" },
+        { id:"ausente", label:"Ausente", color:"#ef4444", clase:"turno-ausente", estilo:"background:#fee2e2;color:#dc2626;border-color:#fca5a5" },
+        { id:"licencia", label:"Licencia", color:"#3b82f6", clase:"turno-licencia", estilo:"background:#dbeafe;color:#1d4ed8;border-color:#93c5fd" },
       ]);
     }
   } catch (error) {
@@ -1001,12 +1003,7 @@ function ubicarSelectorSectorSegunVista(vista = vistaActual) {
 }
 
 function opcionesSelectorTurnos() {
-  const iniciales = {
-    franco: "F",
-    vacaciones: "V",
-    ausente: "A",
-    licencia: "L",
-  };
+  const iniciales = { franco: "F", vacaciones: "V", ausente: "A", licencia: "L" };
   const descripciones = {
     franco: "Día libre",
     vacaciones: "Vacaciones",
@@ -1017,8 +1014,23 @@ function opcionesSelectorTurnos() {
     franco: "#9ca3af",
     vacaciones: "#22c55e",
     ausente: "#ef4444",
-    licencia: "#f59e0b",
+    licencia: "#3b82f6",
   };
+  const especialesOrden = ["ausente", "franco", "vacaciones", "licencia"];
+  const porId = new Map(TURNOS.map((t) => [t.id, t]));
+  const convertir = (t) => ({
+    value: t.id,
+    label: t.label,
+    color: t.color || coloresEspeciales[t.id] || "#ffffff",
+    badge: iniciales[t.id] || (t.tipo === "cortado" ? "C" : ""),
+    description: descripciones[t.id] || (t.tipo === "cortado" ? "Horario cortado" : "Horario continuo"),
+  });
+
+  const especiales = especialesOrden.map((id) => porId.get(id)).filter(Boolean).map(convertir);
+  const horarios = TURNOS.filter((t) =>
+    t.id !== "personalizado" && !especialesOrden.includes(t.id)
+  ).map(convertir);
+
   return [
     {
       value: "__sin_asignar__",
@@ -1027,17 +1039,11 @@ function opcionesSelectorTurnos() {
       badge: "—",
       description: "Dejar la casilla sin horario asignado",
     },
-    ...TURNOS.filter((t) => t.id !== "personalizado").map((t) => ({
-    value: t.id,
-    label: t.label,
-    color: t.color || coloresEspeciales[t.id] || "#ffffff",
-    badge: iniciales[t.id] || (t.tipo === "cortado" ? "C" : ""),
-    description:
-      descripciones[t.id] ||
-      (t.tipo === "cortado" ? "Horario cortado" : "Horario continuo"),
-    })),
+    ...especiales,
+    ...horarios,
   ];
 }
+
 async function abrirSelectorTurnos(evento) {
   evento?.preventDefault?.();
   evento?.stopPropagation?.();
