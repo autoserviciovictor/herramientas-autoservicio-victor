@@ -509,6 +509,7 @@ const MODULOS_PERMITIDOS = [
   "etiquetas",
   "horarios",
   "tareas",
+  "catalogo",
 ];
 function normalizarRol(valor) {
   const rol = normalizarTexto(valor).toLowerCase();
@@ -629,10 +630,10 @@ async function requerirSesion(req, res, next) {
 
 function requerirAdministrador(req, res, next) {
   const autorizar = () => {
-    if (req.usuario?.rol !== "administrador")
+    if (!["administrador", "administracion"].includes(req.usuario?.rol))
       return res
         .status(403)
-        .json({ ok: false, mensaje: "Acceso exclusivo para administradores" });
+        .json({ ok: false, mensaje: "Acceso exclusivo para Administración" });
     req.admin = req.usuario;
     return next();
   };
@@ -643,7 +644,7 @@ function requerirAdministrador(req, res, next) {
 function requerirAlgunModulo(...modulos) {
   const permitidos = modulos.filter((m) => MODULOS_PERMITIDOS.includes(m));
   return (req, res, next) => {
-    if (req.usuario?.rol === "administrador") return next();
+    if (["administrador", "administracion"].includes(req.usuario?.rol)) return next();
     if (permitidos.some((m) => req.usuario?.permisos?.[m] === true)) return next();
     return res.status(403).json({
       ok: false,
@@ -2109,7 +2110,7 @@ async function obtenerSectores() {
 }
 function usuarioPuedeVerHorarios(usuario) {
   return (
-    usuario?.rol === "administrador" || usuario?.permisos?.horarios === true
+    ["administrador", "administracion"].includes(usuario?.rol) || usuario?.permisos?.horarios === true
   );
 }
 function sectoresACargo(usuario) {
@@ -4102,10 +4103,14 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
     const config = await conTransaccionTareasBano(async (cliente) => {
       const actual = await leerBanoServidor(cliente);
       actual.historial = completarHistorialBano(actual);
-      const participantes = participantesOrdenFijo(
-        actual.participantes,
-        req.body?.participantes || [],
-      );
+      const solicitados = Array.isArray(req.body?.participantes) ? req.body.participantes : [];
+      const actuales = Array.isArray(actual.participantes) ? actual.participantes : [];
+      const intentoVaciadoAccidental = actuales.length > 0 && solicitados.length === 0 && req.body?.vaciarExplicitamente !== true;
+      // Protección de datos: una petición vacía accidental no puede borrar toda la rotación.
+      // Para quitar al último participante la UI debe enviar vaciarExplicitamente=true.
+      const participantes = intentoVaciadoAccidental
+        ? participantesOrdenFijo(actuales, actuales)
+        : participantesOrdenFijo(actuales, solicitados);
       const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
       await guardarConfiguracionBanoServidor(
         { participantes, fechaAncla },

@@ -375,8 +375,37 @@ async function leerBanoDb(cliente = null) {
     ejecutarConsulta(cliente, `SELECT work_date,responsible_key,confirmed_by,confirmed_time,verified_by,verified_time FROM bathroom_rotation_history ORDER BY work_date DESC, updated_at DESC`),
   ]);
   const config = rc.rows[0] || {};
+  let participantes = Array.isArray(config.participants) ? config.participants : [];
+
+  // Recuperación defensiva: versiones anteriores podían dejar vacía la configuración
+  // aunque el historial de la rotación siguiera intacto. Si ocurre, reconstruimos la
+  // lista usando la primera aparición cronológica de cada responsable y la persistimos
+  // nuevamente. No se usan confirmed_by/verified_by porque pueden ser supervisores.
+  if (!participantes.length && rh.rows.length) {
+    const vistos = new Set();
+    participantes = [...rh.rows]
+      .sort((a, b) => String(a.work_date || "").localeCompare(String(b.work_date || "")))
+      .map((x) => String(x.responsible_key || "").trim())
+      .filter((clave) => clave && !vistos.has(clave) && vistos.add(clave));
+
+    if (participantes.length) {
+      const fechaAncla = config.anchor_date || new Date().toISOString().slice(0, 10);
+      await ejecutarConsulta(
+        cliente,
+        `INSERT INTO bathroom_rotation_config(config_id,participants,anchor_date,updated_text,updated_by,updated_at)
+         VALUES(1,$1::jsonb,$2,'Recuperación automática desde historial','sistema',NOW())
+         ON CONFLICT(config_id) DO UPDATE SET
+           participants=EXCLUDED.participants,
+           updated_text=EXCLUDED.updated_text,
+           updated_by=EXCLUDED.updated_by,
+           updated_at=NOW()`,
+        [JSON.stringify(participantes), fechaAncla],
+      );
+    }
+  }
+
   return {
-    participantes: Array.isArray(config.participants) ? config.participants : [],
+    participantes,
     fechaAncla: config.anchor_date || new Date().toISOString().slice(0,10),
     historial: rh.rows.map((x) => ({
       fecha: x.work_date,

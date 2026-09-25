@@ -41,6 +41,7 @@ const MODULOS_PERMISO = [
   "etiquetas",
   "horarios",
   "tareas",
+  "catalogo",
 ];
 function permisosCompatibles(permisos, rol = "personal") {
   if (rol === "administrador")
@@ -323,7 +324,7 @@ function ocultarPanelAdmin() {
 }
 
 function mostrarPanel() {
-  if (!window.AutoservicioAuth?.esAdmin()) {
+  if (!window.AutoservicioAuth?.puedeAdministrar?.()) {
     window.AutoservicioNavigate?.("inicio");
     return;
   }
@@ -1705,7 +1706,7 @@ function cerrarHistorialVencimientosUI() {
 }
 
 function abrirAdmin() {
-  if (window.AutoservicioAuth?.esAdmin()) mostrarPanel();
+  if (window.AutoservicioAuth?.puedeAdministrar?.()) mostrarPanel();
   else ocultarPanelAdmin();
 }
 
@@ -2488,10 +2489,11 @@ document.addEventListener("DOMContentLoaded", () => {
   ocultarPanelAdmin();
   window.addEventListener("autoservicio:sesion", (event) => {
     const esAdmin = event.detail?.rol === "administrador";
+    const puedeAdministrar = ["administrador", "administracion"].includes(event.detail?.rol);
     $("btnVencHistorialHeader")?.classList.toggle("oculto", !esAdmin);
     $("btnVencHistorialMobile")?.classList.toggle("oculto", !esAdmin);
     establecerTexto("adminHomeNombre", event.detail?.nombre || event.detail?.usuario || "Administrador");
-    if (!esAdmin) { ocultarPanelAdmin(); cerrarHistorialVencimientosUI(); }
+    if (!puedeAdministrar) { ocultarPanelAdmin(); cerrarHistorialVencimientosUI(); }
   });
 });
 

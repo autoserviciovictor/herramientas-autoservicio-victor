@@ -28,6 +28,7 @@ const MODULOS_DISPONIBLES = [
   "etiquetas",
   "horarios",
   "tareas",
+  "catalogo",
 ];
 
 function permisosUsuario(usuario = usuarioActual) {
@@ -45,7 +46,16 @@ function permisosUsuario(usuario = usuarioActual) {
 function puedeVerModulo(modulo, usuario = usuarioActual) {
   if (["inicio", "ajustes"].includes(modulo)) return true;
   if (modulo === "bano") modulo = "tareas";
-  if (["admin", "catalogo"].includes(modulo)) return usuario?.rol === "administrador";
+  if (modulo === "admin") return ["administrador", "administracion"].includes(usuario?.rol);
+  if (modulo === "catalogo") return permisosUsuario(usuario).catalogo === true;
+  return permisosUsuario(usuario)[modulo] === true;
+}
+
+function puedeAccederModulo(modulo, usuario = usuarioActual) {
+  if (["inicio", "ajustes"].includes(modulo)) return true;
+  if (modulo === "bano") modulo = "tareas";
+  if (["administrador", "administracion"].includes(usuario?.rol)) return true;
+  if (modulo === "admin" || modulo === "catalogo") return false;
   return permisosUsuario(usuario)[modulo] === true;
 }
 
@@ -392,6 +402,7 @@ function actualizarInterfazUsuario() {
     $("desktopSesionNombre").textContent = nombre || "Usuario";
   if ($("desktopSesionRol")) $("desktopSesionRol").textContent = textoRol;
   const esAdministrador = usuarioActual?.rol === "administrador";
+  const puedeAdministrar = ["administrador", "administracion"].includes(usuarioActual?.rol);
   document
     .querySelectorAll("[data-modulo]")
     .forEach((elemento) => {
@@ -408,9 +419,9 @@ function actualizarInterfazUsuario() {
       }
     });
   const adminModule = document.querySelector(".admin-module-card");
-  if (adminModule) adminModule.classList.toggle("oculto", !esAdministrador);
+  if (adminModule) adminModule.classList.toggle("oculto", !puedeAdministrar);
   const adminPanel = $("pantallaAdmin");
-  if (adminPanel && !esAdministrador) {
+  if (adminPanel && !puedeAdministrar) {
     const estabaActivo = adminPanel.classList.contains("activa");
     adminPanel.classList.remove("activa");
     adminPanel.hidden = true;
@@ -680,7 +691,9 @@ window.AutoservicioAuth = {
   getToken: () => token,
   getUsuario: () => usuarioActual,
   esAdmin: () => usuarioActual?.rol === "administrador",
+  puedeAdministrar: () => ["administrador", "administracion"].includes(usuarioActual?.rol),
   puedeVerModulo,
+  puedeAccederModulo,
   getPermisos: () => permisosUsuario(),
   cerrarSesion,
   sincronizarOffline: sincronizarColaOffline,

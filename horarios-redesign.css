@@ -2029,18 +2029,11 @@ body.en-horarios.horarios-vista-config .horarios-config-sector-slot {
   width: min(320px, 100%) !important;
   flex: 0 1 320px !important;
 }
-body.en-horarios.horarios-vista-config .horarios-config-sector-row .horarios-calcular-horas-btn {
-  min-height: 46px !important;
-  padding: 0 18px !important;
-  margin: 0 !important;
-  flex: 0 0 auto !important;
-}
 @media (max-width: 640px) {
   body.en-horarios.horarios-vista-config .horarios-config-sector-row {
     align-items: stretch !important;
   }
-  body.en-horarios.horarios-vista-config .horarios-config-sector-slot,
-  body.en-horarios.horarios-vista-config .horarios-config-sector-row .horarios-calcular-horas-btn {
+  body.en-horarios.horarios-vista-config .horarios-config-sector-slot {
     width: 100% !important;
     flex: 1 1 100% !important;
   }
@@ -2813,82 +2806,4 @@ body.en-horarios.horarios-vista-calendario .horarios-descanso-card small {
 }
 body.en-horarios.horarios-vista-calendario .horarios-trabajador-avatar {
   font-size: 12.5px !important;
-}
-
-/* Liquidación de horas · botón y modal propio de AutoservicioAPP (23/09/2026). */
-body.en-horarios.horarios-vista-config .horarios-config-sector-row .horarios-calcular-horas-btn {
-  min-height: 58px !important;
-  padding: 0 20px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 9px !important;
-  border: 1px solid #16a34a !important;
-  border-radius: 14px !important;
-  background: #16a34a !important;
-  color: #fff !important;
-  box-shadow: 0 7px 18px rgba(22, 163, 74, .18) !important;
-  font: inherit !important;
-  font-size: 13px !important;
-  font-weight: 850 !important;
-  cursor: pointer !important;
-  transition: transform .15s ease, box-shadow .15s ease, background .15s ease !important;
-}
-body.en-horarios.horarios-vista-config .horarios-config-sector-row .horarios-calcular-horas-btn:hover {
-  background: #15803d !important;
-  border-color: #15803d !important;
-  box-shadow: 0 9px 22px rgba(22, 163, 74, .24) !important;
-  transform: translateY(-1px) !important;
-}
-body.en-horarios .horarios-calcular-horas-btn:disabled { opacity: .7 !important; cursor: wait !important; transform: none !important; }
-body.en-horarios .horarios-calcular-horas-icono {
-  width: 28px !important; height: 28px !important; display: grid !important; place-items: center !important;
-  border-radius: 8px !important; background: rgba(255,255,255,.17) !important; font-size: 16px !important; line-height: 1 !important;
-}
-body.horarios-modal-abierto { overflow: hidden !important; }
-.horarios-calculo-modal {
-  position: fixed; inset: 0; z-index: 12000; padding: 20px; display: grid; place-items: center;
-  background: rgba(15, 23, 42, .48); backdrop-filter: blur(3px);
-}
-.horarios-calculo-modal.oculto { display: none !important; }
-.horarios-calculo-modal-card {
-  position: relative; width: min(100%, 510px); padding: 28px; box-sizing: border-box;
-  border: 1px solid var(--horarios-border, #e2e8f0); border-radius: 20px;
-  background: var(--horarios-surface, #fff); color: var(--horarios-text, #0f172a);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .24);
-}
-.horarios-calculo-cerrar {
-  position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border: 0; border-radius: 9px;
-  background: #f1f5f9; color: #475569; font-size: 22px; line-height: 1; cursor: pointer;
-}
-.horarios-calculo-icono {
-  width: 46px; height: 46px; margin-bottom: 16px; display: grid; place-items: center; border-radius: 13px;
-  background: #dcfce7; color: #15803d; font-size: 22px; font-weight: 900;
-}
-.horarios-calculo-encabezado small { color: #16a34a; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
-.horarios-calculo-encabezado h3 { margin: 5px 42px 7px 0; font-size: 21px; line-height: 1.2; font-weight: 900; }
-.horarios-calculo-encabezado p { margin: 0 0 20px; color: var(--horarios-muted, #64748b); font-size: 13px; line-height: 1.45; }
-.horarios-calculo-campo { display: flex; flex-direction: column; gap: 7px; }
-.horarios-calculo-campo span { font-size: 12px; font-weight: 850; }
-.horarios-calculo-campo input {
-  width: 100%; height: 48px; box-sizing: border-box; padding: 0 14px; border: 1px solid var(--horarios-border, #dbe3ec);
-  border-radius: 11px; outline: 0; background: var(--horarios-surface, #fff); color: var(--horarios-text, #0f172a);
-  font: inherit; font-size: 17px; font-weight: 850;
-}
-.horarios-calculo-campo input:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.12); }
-.horarios-calculo-campo input.is-error { border-color: #e11d48; box-shadow: 0 0 0 3px rgba(225,29,72,.10); }
-.horarios-calculo-reglas { margin: 14px 0 22px; display: flex; flex-wrap: wrap; gap: 6px; }
-.horarios-calculo-reglas span { padding: 6px 9px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 10.5px; font-weight: 750; }
-.horarios-calculo-acciones { display: flex; justify-content: flex-end; gap: 9px; }
-.horarios-calculo-acciones button { min-height: 42px; padding: 0 16px; border-radius: 10px; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; }
-.horarios-calculo-btn-secundario { border: 1px solid var(--horarios-border, #dbe3ec); background: var(--horarios-surface, #fff); color: var(--horarios-text, #334155); }
-.horarios-calculo-btn-principal { border: 1px solid #16a34a; background: #16a34a; color: #fff; }
-.horarios-calculo-btn-principal:hover { background: #15803d; border-color: #15803d; }
-html[data-theme="dark"] .horarios-calculo-cerrar,
-html[data-theme="dark"] .horarios-calculo-reglas span { background: #263b52; color: #d8e2ee; }
-html[data-theme="dark"] .horarios-calculo-icono { background: rgba(22,163,74,.18); color: #86efac; }
-@media (max-width: 640px) {
-  .horarios-calculo-modal { padding: 12px; }
-  .horarios-calculo-modal-card { padding: 22px 18px 18px; border-radius: 17px; }
-  .horarios-calculo-acciones { display: grid; grid-template-columns: 1fr 1fr; }
 }

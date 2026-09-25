@@ -5,14 +5,14 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1982-carteles-print-window-240924";
+const CACHE_VERSION = "autoservicio-v1983-sin-calculo-horas-250926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./design-tokens.css?v=1960-d21-cierre-etapa6-010926",
   "./style.css?v=1960-d21-cierre-etapa6-010926",
-  "./horarios-redesign.css?v=1960-horarios-sector-historico-220926",
+  "./horarios-redesign.css?v=1983-sin-calculo-horas-250926",
   "./tareas-redesign.css?v=1960-d21-cierre-etapa6-010926",
   "./admin-official.css?v=1960-d21-cierre-etapa6-010926",
   "./login-redesign.css?v=1960-d21-cierre-etapa6-010926",
@@ -42,7 +42,7 @@ const APP_SHELL = [
   "./auth.js?v=1960-d21-cierre-etapa6-010926",
   "./notifications.js?v=1976-notificaciones-vencimientos-rubros-240926",
   "./prices.js?v=1960-d21-cierre-etapa6-010926",
-  "./horarios.js?v=1960-calculo-horas-230926",
+  "./horarios.js?v=1983-sin-calculo-horas-250926",
   "./api-cache.js?v=1960-d21-cierre-etapa6-010926",
   "./tareas.js?v=1960-d21-cierre-etapa6-010926",
   "./manifest.webmanifest",

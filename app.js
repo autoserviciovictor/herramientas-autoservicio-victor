@@ -1405,7 +1405,7 @@ async function inicializar() {
   // recargar no solo conservamos la vista: también volvemos a ejecutar la carga
   // de datos que corresponde a Inventario, Vencimientos, Administración, etc.
   await entrarPantalla(pantallaInicial, { forzar: true, desdeHistorial: true });
-  if (pantallaInicial === "admin" && window.AutoservicioAuth?.esAdmin?.()) {
+  if (pantallaInicial === "admin" && window.AutoservicioAuth?.puedeAdministrar?.()) {
     const vistaAdmin = sessionStorage.getItem("autoservicio_admin_vista") || "inicio";
     await window.AdminModule?.abrirTab?.(vistaAdmin);
   }
@@ -1420,10 +1420,10 @@ async function entrarPantalla(nombre, opciones = {}) {
   const pantallaAnterior = pantallaActualApp;
   const moduloAnterior = moduloDePantalla(pantallaAnterior);
   let moduloNuevo = moduloDePantalla(nombre);
-  if (!window.AutoservicioAuth?.puedeVerModulo?.(moduloNuevo)) {
+  if (!window.AutoservicioAuth?.puedeAccederModulo?.(moduloNuevo)) {
     window.AutoservicioDialog?.alert?.({
       title: "Sin permiso",
-      message: "Este módulo no está habilitado para tu usuario.",
+      message: "No tenés acceso a este módulo.",
     });
     nombre = "inicio";
     moduloNuevo = "inicio";
@@ -1505,7 +1505,7 @@ async function entrarPantalla(nombre, opciones = {}) {
   if (nombre === "tareas") window.TareasModule?.activar?.();
   if (nombre === "bano") await window.BanoModule?.activar?.();
   if (nombre === "catalogo") await window.CatalogoAdminModule?.activar?.();
-  if (nombre === "admin" && !window.AutoservicioAuth?.esAdmin()) {
+  if (nombre === "admin" && !window.AutoservicioAuth?.puedeAdministrar?.()) {
     cambiarPantalla("inicio");
   }
 }
@@ -4323,7 +4323,7 @@ window.addEventListener("autoservicio:sesion", async (event) => {
 
     const destino = history.state?.pantalla || pantallaActualApp || "inicio";
     await entrarPantalla(destino, { forzar: true, desdeHistorial: true });
-    if (destino === "admin" && window.AutoservicioAuth?.esAdmin?.()) {
+    if (destino === "admin" && window.AutoservicioAuth?.puedeAdministrar?.()) {
       const vistaAdmin = sessionStorage.getItem("autoservicio_admin_vista") || "inicio";
       await window.AdminModule?.abrirTab?.(vistaAdmin);
     }

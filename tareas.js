@@ -13,6 +13,7 @@ const KEY = "autoservicio_tareas_v3";
 const OLD_KEYS = ["autoservicio_tareas_v2", "autoservicio_tareas_v1"];
 const BANO_KEY = "autoservicio_bano_config_v1";
 const BANO_HISTORY_KEY = "autoservicio_bano_historial_v1";
+const BANO_PARTICIPANTES_BACKUP_KEY = "autoservicio_bano_participantes_backup_v1";
 const PENDING_KEY = "autoservicio_tareas_pendientes_v1";
 const TASK_ORDER_PENDING_KEY = "autoservicio_tareas_orden_pendiente_v1";
 const LEGACY_TASK_ORDER_KEYS = ["autoservicio_tareas_orden_v1", "autoservicio_tareas_orden_v2"];
@@ -1939,12 +1940,17 @@ function configBano() {
       historial: [],
     });
   const participantesGuardados = Array.isArray(cfg.participantes) ? cfg.participantes : [];
-  // La rotación nunca debe seguir mostrando cuentas que ya no existen o están inactivas.
-  // /tareas/usuarios entrega únicamente usuarios activos; cuando esa lista ya fue cargada,
-  // se usa como fuente de verdad para la vista y para los cálculos futuros.
-  const clavesActivas = new Set(usuariosTareas.map(claveParticipante).filter(Boolean));
+  // Compatibilidad con configuraciones históricas: algunas versiones guardaron el nombre
+  // visible del responsable (por ejemplo, "Sofia") y las actuales guardan el usuario.
+  // Resolver ambos formatos evita que una rotación válida se interprete como eliminada.
   const participantes = usuariosTareas.length
-    ? participantesGuardados.filter((p) => clavesActivas.has(claveParticipante(p)))
+    ? participantesGuardados
+        .map((p) => {
+          const clave = claveParticipante(p).trim();
+          const u = usuarioParticipante(clave);
+          return u ? claveParticipante(u) : "";
+        })
+        .filter((clave, indice, lista) => clave && lista.indexOf(clave) === indice)
     : participantesGuardados;
   return {
     participantes,
@@ -1958,8 +1964,18 @@ async function cargarBanoRemoto() {
       data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo cargar la rotación");
-    banoMemoria = data.config || {};
+    const configRemota = data.config || {};
+    const remotos = Array.isArray(configRemota.participantes) ? configRemota.participantes.filter(Boolean) : [];
+    const backup = leerJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, []);
+    // Una lectura remota vacía nunca debe borrar silenciosamente una lista válida local.
+    // El vaciado real sólo se acepta cuando fue solicitado explícitamente desde Configuración.
+    if (!remotos.length && Array.isArray(backup) && backup.length) {
+      configRemota.participantes = backup.slice();
+    }
+    banoMemoria = configRemota;
     guardarJSONUsuario(BANO_KEY, banoMemoria);
+    if (Array.isArray(banoMemoria.participantes) && banoMemoria.participantes.length)
+      guardarJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, banoMemoria.participantes);
     guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
   } catch {
@@ -2499,6 +2515,7 @@ async function guardarConfigBano(participantesForzados = null, opciones = {}) {
         body: JSON.stringify({
           participantes,
           fechaAncla: anterior.fechaAncla || iso(new Date()),
+          vaciarExplicitamente: participantes.length === 0 && opciones.vaciarExplicitamente === true,
         }),
       }),
       data = await r.json();
@@ -2506,6 +2523,10 @@ async function guardarConfigBano(participantesForzados = null, opciones = {}) {
       throw new Error(data.mensaje || "No se pudo guardar");
     banoMemoria = data.config;
     guardarJSONUsuario(BANO_KEY, banoMemoria);
+    if (Array.isArray(banoMemoria.participantes) && banoMemoria.participantes.length)
+      guardarJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, banoMemoria.participantes);
+    else if (participantes.length === 0 && opciones.vaciarExplicitamente === true)
+      guardarJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, []);
     guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
     renderParticipantesConfig(banoMemoria.participantes);
@@ -2549,7 +2570,10 @@ async function eliminarParticipanteBano(clave) {
   if (ok !== true) return;
 
   const participantes = (cfg.participantes || []).filter((p) => claveParticipante(p) !== clave);
-  await guardarConfigBano(participantes, { silencioso: true });
+  await guardarConfigBano(participantes, {
+    silencioso: true,
+    vaciarExplicitamente: participantes.length === 0,
+  });
 }
 
 async function cambiarSectorConfig() {
@@ -3026,11 +3050,20 @@ async function activar() {
 async function depurarParticipantesBanoEliminados() {
   if (!banoMemoria || !usuariosTareas.length) return;
   const guardados = Array.isArray(banoMemoria.participantes)
-    ? banoMemoria.participantes.map(claveParticipante).filter(Boolean)
+    ? banoMemoria.participantes.map(claveParticipante).map((x) => x.trim()).filter(Boolean)
     : [];
-  const activos = new Set(usuariosTareas.map(claveParticipante).filter(Boolean));
-  const vigentes = guardados.filter((clave) => activos.has(clave));
-  if (vigentes.length === guardados.length) return;
+
+  // Antes de eliminar participantes, resolvemos tanto por usuario como por nombre.
+  // Esto migra configuraciones antiguas al identificador actual sin borrar la lista.
+  const vigentes = guardados
+    .map((clave) => {
+      const u = usuarioParticipante(clave);
+      return u ? claveParticipante(u) : "";
+    })
+    .filter((clave, indice, lista) => clave && lista.indexOf(clave) === indice);
+  const sinCambios = vigentes.length === guardados.length &&
+    vigentes.every((clave, indice) => clave === guardados[indice]);
+  if (sinCambios) return;
   try {
     const r = await fetch(`${API_BASE_URL}/tareas/bano`, {
       method: "PUT",

@@ -136,7 +136,7 @@ function syncUser() {
     $("settingsProfileAccount").textContent = account;
   }
 
-  const adminVisible = role === "administrador";
+  const adminVisible = ["administrador", "administracion"].includes(role);
   document
     .querySelectorAll(".pro-admin-nav-label,.pro-admin-nav")
     .forEach((el) => el.classList.toggle("oculto", !adminVisible));
