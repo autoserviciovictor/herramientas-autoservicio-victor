@@ -4127,12 +4127,9 @@ app.put("/tareas/bano", async (req, res) => {
       actual.historial = completarHistorialBano(actual);
       const solicitados = Array.isArray(req.body?.participantes) ? req.body.participantes : [];
       const actuales = Array.isArray(actual.participantes) ? actual.participantes : [];
-      const intentoVaciadoAccidental = actuales.length > 0 && solicitados.length === 0 && req.body?.vaciarExplicitamente !== true;
-      // Protección de datos: una petición vacía accidental no puede borrar toda la rotación.
-      // Para quitar al último participante la UI debe enviar vaciarExplicitamente=true.
-      const participantes = intentoVaciadoAccidental
-        ? participantesOrdenFijo(actuales, actuales)
-        : participantesOrdenFijo(actuales, solicitados);
+      // La lista enviada por Configuración es autoritativa, incluso si está vacía.
+      // Nunca repoblar participantes automáticamente desde usuarios, sectores o caché.
+      const participantes = participantesOrdenFijo(actuales, solicitados);
       const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
       await guardarConfiguracionBanoServidor(
         { participantes, fechaAncla },
@@ -4700,6 +4697,27 @@ app.delete(
           mensaje: "No se puede eliminar el último administrador",
         });
       await eliminarUsuarioConSupervisionDb(clave);
+      // Una eliminación real de la app sí retira a esa persona de los turnos futuros
+      // del baño. Cambios de rol, sector, permisos o visibilidad de módulos no pasan
+      // por esta ruta y por lo tanto jamás alteran la rotación.
+      await conTransaccionTareasBano(async (cliente) => {
+        const configBano = await leerBanoServidor(cliente);
+        const clavesEliminadas = new Set(
+          [clave, actual.usuario, actual.nombre].map(normalizarIdentidadBano).filter(Boolean),
+        );
+        const anteriores = Array.isArray(configBano.participantes) ? configBano.participantes : [];
+        const participantes = anteriores.filter(
+          (p) => !clavesEliminadas.has(normalizarIdentidadBano(p)),
+        );
+        if (participantes.length !== anteriores.length) {
+          const fechaAncla = fechaAnclaParaConservarTurno(configBano, participantes);
+          await guardarConfiguracionBanoServidor(
+            { participantes, fechaAncla },
+            req.usuario,
+            cliente,
+          );
+        }
+      });
       invalidarCache("usuarios", "sectores");
       await registrarHistorialAdministracion(req, "Eliminó usuario", "Usuario", actual.nombre || clave, `Cuenta @${clave} eliminada`);
       res.json({ ok: true, mensaje: "Usuario eliminado" });

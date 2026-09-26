@@ -13,7 +13,6 @@ const KEY = "autoservicio_tareas_v3";
 const OLD_KEYS = ["autoservicio_tareas_v2", "autoservicio_tareas_v1"];
 const BANO_KEY = "autoservicio_bano_config_v1";
 const BANO_HISTORY_KEY = "autoservicio_bano_historial_v1";
-const BANO_PARTICIPANTES_BACKUP_KEY = "autoservicio_bano_participantes_backup_v1";
 const PENDING_KEY = "autoservicio_tareas_pendientes_v1";
 const TASK_ORDER_PENDING_KEY = "autoservicio_tareas_orden_pendiente_v1";
 const LEGACY_TASK_ORDER_KEYS = ["autoservicio_tareas_orden_v1", "autoservicio_tareas_orden_v2"];
@@ -1979,18 +1978,10 @@ async function cargarBanoRemoto() {
       data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo cargar la rotación");
-    const configRemota = data.config || {};
-    const remotos = Array.isArray(configRemota.participantes) ? configRemota.participantes.filter(Boolean) : [];
-    const backup = leerJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, []);
-    // Una lectura remota vacía nunca debe borrar silenciosamente una lista válida local.
-    // El vaciado real sólo se acepta cuando fue solicitado explícitamente desde Configuración.
-    if (!remotos.length && Array.isArray(backup) && backup.length) {
-      configRemota.participantes = backup.slice();
-    }
-    banoMemoria = configRemota;
+    // PostgreSQL es la única fuente de verdad de la rotación. Una lista vacía
+    // es una configuración válida y jamás se reconstruye desde caché/localStorage.
+    banoMemoria = data.config || {};
     guardarJSONUsuario(BANO_KEY, banoMemoria);
-    if (Array.isArray(banoMemoria.participantes) && banoMemoria.participantes.length)
-      guardarJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, banoMemoria.participantes);
     guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
   } catch {
@@ -2091,7 +2082,7 @@ function abrirPlanillaBano() {
   const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
   const mesTitulo = $("banoPlanillaMes");
-  const filas = [];
+  const turnosPlanilla = [];
   const participantesVistos = new Set();
   let ultimaFecha = new Date(finMes);
   // La planilla conserva todos los turnos del mes y, si la cantidad de participantes
@@ -2103,7 +2094,7 @@ function abrirPlanillaBano() {
       const indice = indiceBano(fecha, cfg);
       const clave = indice >= 0 ? claveParticipante(cfg.participantes[indice]) : "";
       if (clave) participantesVistos.add(clave);
-      filas.push(`<div class="bano-planilla-row"><time>${esc(fmt(fecha, { weekday: "short", day: "2-digit", month: "2-digit" }))}</time><strong>${esc(responsableBano(fecha, cfg) || "Sin participante")}</strong></div>`);
+      turnosPlanilla.push({ fecha, responsable: responsableBano(fecha, cfg) || "Sin participante" });
       ultimaFecha = fecha;
     }
     if (fecha >= finMes && participantesVistos.size >= cfg.participantes.length) break;
@@ -2114,6 +2105,14 @@ function abrirPlanillaBano() {
       ? fmt(inicio, { month: "long", year: "numeric" })
       : `${fmt(inicio, { month: "long" })} – ${fmt(ultimaFecha, { month: "long", year: "numeric" })}`;
   }
+  // La planilla se muestra como una rueda: el turno de hoy (o el próximo si hoy
+  // no corresponde limpieza) queda primero. Los turnos ya pasados bajan al final.
+  const futuros = turnosPlanilla.filter((x) => inicioDia(x.fecha) >= hoy);
+  const pasados = turnosPlanilla.filter((x) => inicioDia(x.fecha) < hoy);
+  const ordenados = [...futuros, ...pasados];
+  const filas = ordenados.map(({ fecha, responsable }) =>
+    `<div class="bano-planilla-row"><time>${esc(fmt(fecha, { weekday: "short", day: "2-digit", month: "2-digit" }))}</time><strong>${esc(responsable)}</strong></div>`
+  );
   contenido.innerHTML = filas.join("") || '<div class="tareas-empty"><strong>Sin turnos</strong><span>No hay limpiezas programadas este mes.</span></div>';
   contenido.scrollTop = 0;
   modal.classList.remove("oculto");
@@ -2539,10 +2538,6 @@ async function guardarConfigBano(participantesForzados = null, opciones = {}) {
       throw new Error(data.mensaje || "No se pudo guardar");
     banoMemoria = data.config;
     guardarJSONUsuario(BANO_KEY, banoMemoria);
-    if (Array.isArray(banoMemoria.participantes) && banoMemoria.participantes.length)
-      guardarJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, banoMemoria.participantes);
-    else if (participantes.length === 0 && opciones.vaciarExplicitamente === true)
-      guardarJSONUsuario(BANO_PARTICIPANTES_BACKUP_KEY, []);
     guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
     renderParticipantesConfig(banoMemoria.participantes);
