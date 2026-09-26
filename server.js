@@ -4078,7 +4078,32 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
     });
   }
 });
-app.get("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
+// La rotación del baño es global: todos los roles/sectores con acceso a Tareas
+// reciben el mismo directorio de usuarios activos para resolver y configurar
+// participantes. No reutilizar /tareas/usuarios porque ese endpoint es sectorial.
+app.get("/tareas/bano/usuarios", async (req, res) => {
+  try {
+    const usuarios = await obtenerUsuarios();
+    res.json({
+      ok: true,
+      usuarios: usuarios
+        .filter((u) => u.activo)
+        .map((u) => ({
+          usuario: u.usuario,
+          nombre: u.nombre,
+          sector: u.sector,
+          sectores: u.sectores || [],
+        })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron cargar los participantes del baño",
+    });
+  }
+});
+
+app.get("/tareas/bano", async (req, res) => {
   try {
     const config = await leerBanoServidor();
     config.historial = completarHistorialBano(config);
@@ -4090,7 +4115,7 @@ app.get("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
     });
   }
 });
-app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
+app.put("/tareas/bano", async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res.status(403).json({
@@ -4129,7 +4154,7 @@ app.put("/tareas/bano", requerirAlgunModulo("tareas"), async (req, res) => {
     });
   }
 });
-app.post("/tareas/bano/reasignar", requerirAlgunModulo("tareas"), async (req, res) => {
+app.post("/tareas/bano/reasignar", async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res.status(403).json({
@@ -4218,7 +4243,7 @@ app.post("/tareas/bano/reasignar", requerirAlgunModulo("tareas"), async (req, re
   }
 });
 
-app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, res) => {
+app.post("/tareas/bano/confirmar", async (req, res) => {
   try {
     const fecha = normalizarTexto(req.body?.fecha) || fechaArgentina();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > fechaArgentina())
@@ -4258,7 +4283,7 @@ app.post("/tareas/bano/confirmar", requerirAlgunModulo("tareas"), async (req, re
   }
 });
 
-app.post("/tareas/bano/verificar", requerirAlgunModulo("tareas"), async (req, res) => {
+app.post("/tareas/bano/verificar", async (req, res) => {
   try {
     if (!rolGestionSector(req.usuario))
       return res.status(403).json({

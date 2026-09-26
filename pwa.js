@@ -6,7 +6,7 @@ const textoInstalacion = document.getElementById("estadoInstalacionApp");
 const iosModal = document.getElementById("iosInstallModal");
 const iosWarning = document.getElementById("iosInstallBrowserWarning");
 const installCard = document.getElementById("pwaInstallCard");
-const SW_RUNTIME_REVISION = "1975-carteles-una-hoja-a4-240926";
+const SW_RUNTIME_REVISION = "1980-carteles-borde-gap-1mm-real-260926";
 const SW_RELOAD_KEY = `autoservicio-sw-reload-${SW_RUNTIME_REVISION}`;
 
 function estaInstalada() {

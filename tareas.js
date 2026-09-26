@@ -28,6 +28,7 @@ let vistaActual = "tareas";
 let ordenTareasPendiente = null;
 let sectorSeleccionado = "";
 let usuariosTareas = [];
+let usuariosBano = [];
 let asignarDisponibles = [];
 let solicitudResponsables = 0;
 let tareasMemoria = [];
@@ -1553,6 +1554,18 @@ async function cargarUsuariosTareas() {
       : [];
   }
 }
+async function cargarUsuariosBano() {
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/bano/usuarios`),
+      data = await r.json();
+    if (r.ok && data.ok && Array.isArray(data.usuarios)) {
+      usuariosBano = data.usuarios;
+      return;
+    }
+  } catch {}
+  // Si falla la consulta global, conservar lo ya cargado. Nunca sustituir la
+  // lista del baño por una lista sectorial ni por el usuario de la sesión.
+}
 function normalClave(v) {
   return String(v || "")
     .trim()
@@ -1943,15 +1956,17 @@ function configBano() {
   // Compatibilidad con configuraciones históricas: algunas versiones guardaron el nombre
   // visible del responsable (por ejemplo, "Sofia") y las actuales guardan el usuario.
   // Resolver ambos formatos evita que una rotación válida se interprete como eliminada.
-  const participantes = usuariosTareas.length
-    ? participantesGuardados
-        .map((p) => {
-          const clave = claveParticipante(p).trim();
-          const u = usuarioParticipante(clave);
-          return u ? claveParticipante(u) : "";
-        })
-        .filter((clave, indice, lista) => clave && lista.indexOf(clave) === indice)
-    : participantesGuardados;
+  // La rotación del baño es global. Nunca filtrar participantes por el sector
+  // o el rol de quien inició sesión. Si un usuario no puede resolverse en el
+  // directorio actual, conservar igualmente su clave guardada.
+  const participantes = participantesGuardados
+    .map((p) => {
+      const clave = claveParticipante(p).trim();
+      if (!clave) return "";
+      const u = usuarioParticipante(clave);
+      return u ? claveParticipante(u) : clave;
+    })
+    .filter((clave, indice, lista) => clave && lista.indexOf(clave) === indice);
   return {
     participantes,
     fechaAncla: cfg.fechaAncla || cfg.fechaInicio || iso(new Date()),
@@ -1992,9 +2007,10 @@ function claveParticipante(valor) {
   return String(valor || "");
 }
 function usuarioParticipante(clave) {
+  const lista = usuariosBano.length ? usuariosBano : usuariosTareas;
   return (
-    usuariosTareas.find((u) => u.usuario === clave) ||
-    usuariosTareas.find((u) => (u.nombre || u.usuario) === clave) ||
+    lista.find((u) => u.usuario === clave) ||
+    lista.find((u) => (u.nombre || u.usuario) === clave) ||
     null
   );
 }
@@ -2449,7 +2465,7 @@ function renderParticipantesConfig(seleccionados) {
       ? $("banoBuscarUsuarioMobile")?.value || ""
       : $("banoBuscarUsuario")?.value || "",
   );
-  const lista = usuariosTareas.filter(
+  const lista = (usuariosBano.length ? usuariosBano : usuariosTareas).filter(
     (u) =>
       !q ||
       normalClave(
@@ -2558,7 +2574,7 @@ async function guardarConfigBano(participantesForzados = null, opciones = {}) {
 
 async function eliminarParticipanteBano(clave) {
   const cfg = configBano();
-  const usuario = usuariosTareas.find((u) => claveParticipante(u) === clave);
+  const usuario = (usuariosBano.length ? usuariosBano : usuariosTareas).find((u) => claveParticipante(u) === clave);
   const nombre = usuario?.nombre || usuario?.usuario || clave || "este usuario";
   const ok = await window.AutoservicioDialog?.confirm?.({
     title: "Eliminar participante",
@@ -3048,38 +3064,9 @@ async function activar() {
 }
 
 async function depurarParticipantesBanoEliminados() {
-  if (!banoMemoria || !usuariosTareas.length) return;
-  const guardados = Array.isArray(banoMemoria.participantes)
-    ? banoMemoria.participantes.map(claveParticipante).map((x) => x.trim()).filter(Boolean)
-    : [];
-
-  // Antes de eliminar participantes, resolvemos tanto por usuario como por nombre.
-  // Esto migra configuraciones antiguas al identificador actual sin borrar la lista.
-  const vigentes = guardados
-    .map((clave) => {
-      const u = usuarioParticipante(clave);
-      return u ? claveParticipante(u) : "";
-    })
-    .filter((clave, indice, lista) => clave && lista.indexOf(clave) === indice);
-  const sinCambios = vigentes.length === guardados.length &&
-    vigentes.every((clave, indice) => clave === guardados[indice]);
-  if (sinCambios) return;
-  try {
-    const r = await fetch(`${API_BASE_URL}/tareas/bano`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        participantes: vigentes,
-        fechaAncla: banoMemoria.fechaAncla || banoMemoria.fechaInicio || iso(new Date()),
-      }),
-    });
-    const data = await r.json();
-    if (r.ok && data.ok && data.config) {
-      banoMemoria = data.config;
-      guardarJSONUsuario(BANO_KEY, banoMemoria);
-      guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
-    }
-  } catch {}
+  // Intencionalmente no depuramos automáticamente la rotación. La lista del
+  // baño sólo cambia mediante una edición explícita en Configuración.
+  return;
 }
 
 async function activarBano() {
@@ -3087,6 +3074,7 @@ async function activarBano() {
   await Promise.all([
     cargarContextoTareas(),
     cargarUsuariosTareas(),
+    cargarUsuariosBano(),
     cargarBanoRemoto(),
   ]);
   await depurarParticipantesBanoEliminados();
@@ -3130,6 +3118,7 @@ function limpiarMemoriaPorCambioSesion() {
   tareasMemoria = [];
   banoMemoria = null;
   usuariosTareas = [];
+  usuariosBano = [];
   asignarDisponibles = [];
   sectorSeleccionado = "";
   contextoTareas = {

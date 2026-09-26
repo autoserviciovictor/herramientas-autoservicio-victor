@@ -540,7 +540,7 @@ function moduloDePantalla(nombre = pantallaActualApp) {
     ["inventario", "productos", "cargados", "editarProducto"].includes(nombre)
   )
     return "inventario";
-  if (nombre === "bano") return "tareas";
+  if (nombre === "bano") return "bano";
   if (nombre === "cartelOferta" || nombre === "lotes") return "vencimientos";
   return nombre;
 }
@@ -645,10 +645,8 @@ function reiniciarEstadoModulo(modulo) {
   if (modulo === "anotar") reiniciarReposicion?.();
   if (modulo === "precios") window.PreciosModule?.reiniciar?.();
   if (modulo === "horarios") window.HorariosModule?.reiniciar?.();
-  if (modulo === "tareas") {
-    if (pantallaActualApp === "bano") window.BanoModule?.reiniciar?.();
-    else window.TareasModule?.reiniciar?.();
-  }
+  if (modulo === "tareas") window.TareasModule?.reiniciar?.();
+  if (modulo === "bano") window.BanoModule?.reiniciar?.();
   if (modulo === "admin") window.AdminModule?.reiniciar?.();
   window.scrollTo({ top: 0, behavior: "auto" });
 }
@@ -1171,12 +1169,12 @@ function diasEntreIsoResumen(desde, hasta) {
 
 async function actualizarResponsableBanoInicio() {
   const estado = $("proBathroomStatus");
-  if (!estado || window.AutoservicioAuth?.puedeVerModulo?.("tareas") === false) return;
+  if (!estado || window.AutoservicioAuth?.puedeVerModulo?.("bano") === false) return;
   estado.textContent = TEXTO_BANO_INICIO_DEFAULT;
   try {
     const [bano, usuarios] = await Promise.all([
       obtenerJsonResumen("/tareas/bano"),
-      obtenerJsonResumen("/tareas/usuarios"),
+      obtenerJsonResumen("/tareas/bano/usuarios"),
     ]);
     const cfg = bano?.config || {};
     const participantes = Array.isArray(cfg.participantes)
@@ -3901,21 +3899,18 @@ async function imprimirHojaCartelesOferta() {
     return;
   }
 
-  // Abrimos el documento de impresión directamente desde el gesto del usuario.
-  // Edge/Chromium puede imprimir en blanco un iframe, especialmente si está
-  // fuera del viewport. Una ventana de impresión dedicada evita esa condición
-  // y mantiene el documento A4 aislado del CSS de la aplicación.
-  const printWindow = window.open("", "cartelesOfertaPrint", "popup=yes,width=1123,height=794");
-  if (!printWindow) {
-    mostrarErrorCartelOferta("El navegador bloqueó la ventana de impresión. Permití ventanas emergentes e intentá nuevamente.");
-    return;
-  }
+  // La impresión se prepara dentro de un iframe invisible y aislado.
+  // Así ninguna regla @media print del resto de la aplicación puede ocultar,
+  // redimensionar o sobrescribir los carteles y tampoco se abre una pestaña.
+  let frame = null;
+  let limpiado = false;
+  const limpiar = () => {
+    if (limpiado) return;
+    limpiado = true;
+    frame?.remove();
+  };
 
   try {
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Preparando carteles...</title></head><body style="font-family:Arial,sans-serif;padding:24px">Preparando carteles para imprimir...</body></html>`);
-    printWindow.document.close();
-
     const logoImpresion = await logoCartelOfertaDataUri();
     const posiciones = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
       const item = items[index];
@@ -3924,58 +3919,111 @@ async function imprimirHojaCartelesOferta() {
         : `<div class="poster-svg poster-slot-${index + 1} empty" aria-hidden="true"></div>`;
     }).join("");
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Carteles de oferta</title><style>
-@page{size:A4 landscape;margin:0}
-*{box-sizing:border-box}
-html,body{width:297mm;height:210mm;margin:0!important;padding:0!important;background:#fff!important}
-body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;overflow:hidden!important}
-.sheet{position:relative!important;width:297mm!important;height:210mm!important;margin:0!important;padding:0!important;overflow:hidden!important}
-.poster-svg{position:absolute!important;width:135mm!important;height:78mm!important;margin:0!important;padding:0!important;overflow:hidden!important}
-.poster-slot-1{left:13.5mm!important;top:27.125mm!important}
-.poster-slot-2{left:148.5mm!important;top:27.125mm!important}
-.poster-slot-3{left:13.5mm!important;top:105.125mm!important}
-.poster-slot-4{left:148.5mm!important;top:105.125mm!important}
-.poster-svg.empty{visibility:hidden!important}
-.poster-svg svg{display:block!important;width:135mm!important;height:78mm!important;max-width:none!important;max-height:none!important}
-@media print{
-  html,body,.sheet{width:297mm!important;height:210mm!important;overflow:hidden!important}
-  .poster-svg{break-inside:avoid!important;page-break-inside:avoid!important}
-}
-</style></head><body><main class="sheet">${posiciones}</main></body></html>`;
+    const documentoImpresion = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Carteles de oferta</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body {
+    width: 297mm;
+    height: 210mm;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #offerPostersPrintSheet {
+    position: relative;
+    width: 297mm;
+    height: 210mm;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+  }
+  .poster-svg {
+    position: absolute;
+    width: 135mm;
+    height: 78mm;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* El SVG deja 1 mm transparente a cada lado del borde visible.
+     Para obtener 1 mm REAL entre bordes visibles, los contenedores de 135 x 78 mm
+     se solapan exactamente 1 mm: 2 mm internos - 1 mm de solape = 1 mm visible.
+     Estas cuatro posiciones son la única fuente de separación en impresión. */
+  .poster-slot-1 { left: 13.5mm; top: 27mm; }
+  .poster-slot-2 { left: 147.5mm; top: 27mm; }
+  .poster-slot-3 { left: 13.5mm; top: 104mm; }
+  .poster-slot-4 { left: 147.5mm; top: 104mm; }
+  .poster-svg.empty { visibility: hidden; }
+  .poster-svg svg {
+    display: block;
+    width: 135mm;
+    height: 78mm;
+    max-width: none;
+    max-height: none;
+  }
+  @media print {
+    html, body, #offerPostersPrintSheet {
+      width: 297mm !important;
+      height: 210mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <main id="offerPostersPrintSheet">${posiciones}</main>
+</body>
+</html>`;
 
-    const doc = printWindow.document;
+    frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "1px";
+    frame.style.height = "1px";
+    frame.style.border = "0";
+    frame.style.opacity = "0";
+    frame.style.pointerEvents = "none";
+    document.body.appendChild(frame);
+
+    const win = frame.contentWindow;
+    const doc = frame.contentDocument || win?.document;
+    if (!win || !doc) throw new Error("No se pudo crear el documento de impresión");
+
     doc.open();
-    doc.write(html);
+    doc.write(documentoImpresion);
     doc.close();
 
     try {
       if (doc.fonts?.ready) await doc.fonts.ready;
     } catch (_) {}
 
-    const imagenes = Array.from(doc.images || []);
-    await Promise.all(imagenes.map((img) => {
-      if (img.complete) return Promise.resolve();
-      return new Promise((resolve) => {
-        img.addEventListener("load", resolve, { once: true });
-        img.addEventListener("error", resolve, { once: true });
-        setTimeout(resolve, 1500);
-      });
-    }));
+    await new Promise((resolve) => win.requestAnimationFrame(() => win.requestAnimationFrame(resolve)));
 
-    await new Promise((resolve) => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(resolve)));
-    printWindow.focus();
-    printWindow.print();
+    win.addEventListener("afterprint", limpiar, { once: true });
+    win.focus();
+    win.print();
 
-    // Edge dispara afterprint al cerrar la vista previa. Cerramos solamente
-    // nuestra ventana auxiliar, nunca la aplicación principal.
-    printWindow.addEventListener("afterprint", () => {
-      setTimeout(() => {
-        if (!printWindow.closed) printWindow.close();
-      }, 150);
-    }, { once: true });
+    // Respaldo: algunos navegadores no emiten afterprint al cancelar.
+    setTimeout(limpiar, 30000);
   } catch (error) {
+    limpiar();
     console.error("Error al preparar los carteles para impresión:", error);
-    if (!printWindow.closed) printWindow.close();
     mostrarErrorCartelOferta("No se pudieron preparar los carteles para imprimir. Intentá nuevamente.");
   }
 }
