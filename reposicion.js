@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1990-ios-scan-zoom-280926";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,

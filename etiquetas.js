@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1990-ios-scan-zoom-280926";
 import { obtenerJsonCacheado } from "./api-cache.js?v=1960-d21-cierre-etapa6-010926";
 import { ordenarPorBusqueda } from "./search.js?v=1960-d21-cierre-etapa6-010926";
 import { escapeHTML as esc } from "./shared/dom-utils.js?v=1960-d21-cierre-etapa6-010926";

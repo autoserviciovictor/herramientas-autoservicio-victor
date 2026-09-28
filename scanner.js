@@ -234,12 +234,11 @@ async function mejorarEnfoque(videoId, sesion) {
       const min = Number(capabilities.zoom.min ?? 1);
       const max = Number(capabilities.zoom.max ?? min);
       if (max > min) {
-        // No forzar zoom en iPhone: acercar digitalmente no reduce la distancia
-        // mínima de enfoque y puede empeorar la lectura de códigos cercanos.
-        // En Android y otros equipos se conserva la configuración anterior.
-        advanced.push({
-          zoom: esDispositivoIOS() ? min : Math.min(max, Math.max(min, 1.45)),
-        });
+        // En iPhone priorizamos la lente con mejor enfoque cercano y aplicamos
+        // un zoom moderado. Así el código ocupa más píxeles sin obligar al usuario
+        // a acercar el teléfono hasta perder foco.
+        const zoomObjetivo = esDispositivoIOS() ? 1.65 : 1.45;
+        advanced.push({ zoom: Math.min(max, Math.max(min, zoomObjetivo)) });
       }
     }
     if (advanced.length) await track.applyConstraints({ advanced });
@@ -248,8 +247,29 @@ async function mejorarEnfoque(videoId, sesion) {
   }
 }
 
+function crearLectorCodigos() {
+  const ZXing = globalThis.ZXing;
+  try {
+    const formatos = [
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.UPC_A,
+      ZXing.BarcodeFormat.UPC_E,
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.ITF,
+    ].filter(Boolean);
+    const hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formatos);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    return new ZXing.BrowserMultiFormatReader(hints, 80);
+  } catch (_) {
+    return new ZXing.BrowserMultiFormatReader();
+  }
+}
+
 async function intentarIniciar(videoId, callbackCodigo, constraints, sesion) {
-  const lector = new ZXing.BrowserMultiFormatReader();
+  const lector = crearLectorCodigos();
   lectorCodigo = lector;
   await lector.decodeFromConstraints(constraints, videoId, (resultado) => {
     if (

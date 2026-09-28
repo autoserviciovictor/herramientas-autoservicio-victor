@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1983-sin-calculo-horas-250926";
+const CACHE_VERSION = "autoservicio-v1990-ios-scan-zoom-280926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",
@@ -24,7 +24,7 @@ const APP_SHELL = [
   "./app.js?v=1975-carteles-una-hoja-a4-240926",
   "./config.js?v=1960-d21-cierre-etapa6-010926",
   "./excel.js?v=1960-d21-cierre-etapa6-010926",
-  "./scanner.js?v=1960-d21-cierre-etapa6-010926",
+  "./scanner.js?v=1990-ios-scan-zoom-280926",
   "./etiquetas.js?v=1960-d21-cierre-etapa6-010926",
   "./product-loader.js?v=1960-d21-cierre-etapa6-010926",
   "./reposicion.js?v=1960-d21-cierre-etapa6-010926",

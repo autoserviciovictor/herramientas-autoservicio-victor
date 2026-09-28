@@ -1,7 +1,7 @@
 import {
   iniciarScanner as iniciarScannerCompartido,
   detenerScanner as detenerScannerCompartido,
-} from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
+} from "./scanner.js?v=1990-ios-scan-zoom-280926";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,

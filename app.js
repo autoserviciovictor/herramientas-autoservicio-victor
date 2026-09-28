@@ -1,3 +1,15 @@
+// Bloqueo global de zoom táctil solicitado para la app (especialmente iPhone/iPad).
+// Se mantiene en un único punto para evitar listeners duplicados por módulo.
+if (!globalThis.__autoservicioZoomBloqueado) {
+  globalThis.__autoservicioZoomBloqueado = true;
+  ["gesturestart", "gesturechange", "gestureend"].forEach((evento) => {
+    document.addEventListener(evento, (ev) => ev.preventDefault(), { passive: false });
+  });
+  document.addEventListener("touchmove", (ev) => {
+    if (ev.touches?.length > 1) ev.preventDefault();
+  }, { passive: false });
+}
+
 import { API_BASE_URL, APP_VERSION_LABEL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 import {
   cargarProductosDesdeServidor,
@@ -22,7 +34,7 @@ import {
   actualizarOfertaVencimiento,
 } from "./excel.js?v=1960-d21-cierre-etapa6-010926";
 
-import { iniciarScanner, detenerScanner } from "./scanner.js?v=1960-d21-cierre-etapa6-010926";
+import { iniciarScanner, detenerScanner } from "./scanner.js?v=1990-ios-scan-zoom-280926";
 import {
   PRODUCT_LOADER_CAMERA_ERROR,
   establecerModoCargaProducto,
