@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1990-ios-scan-zoom-280926";
+const CACHE_VERSION = "autoservicio-v1992-liquidacion-cache-fix-280926";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",

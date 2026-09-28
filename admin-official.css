@@ -4772,3 +4772,8 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail-summary strong
   #pantallaAdmin .admin-user-card-meta strong { font-size: 12px !important; }
   #pantallaAdmin .admin-user-card-meta small { font-size: 11px !important; }
 }
+
+/* Acceso al Catálogo dentro de Administración */
+#adminTab-inicio .admin-module-access-card.tone-blue .admin-module-access-icon{background:#eaf3ff;color:#2878e6}
+#adminTab-inicio .admin-module-access-card.tone-blue>button{border-color:#8db9f5;background:#f6faff;color:#216acb}
+#adminTab-inicio .admin-module-access-card.tone-blue>button:hover{background:#edf6ff;border-color:#6aa4ef}
