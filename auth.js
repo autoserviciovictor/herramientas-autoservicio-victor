@@ -2,16 +2,25 @@ import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 
 const TOKEN_KEY = "autoservicio_session_token";
 const USER_KEY = "autoservicio_session_user";
-const REMEMBER_USER_KEY = "autoservicio_login_usuario_recordado";
+const DEVICE_KEY = "autoservicio_device_id";
 const originalFetch = window.fetch.bind(window);
-const storageSesion = sessionStorage.getItem(TOKEN_KEY)
-  ? sessionStorage
-  : localStorage;
-let token = storageSesion.getItem(TOKEN_KEY) || "";
+let token = localStorage.getItem(TOKEN_KEY) || "";
 let usuarioActual = null;
 try {
-  usuarioActual = JSON.parse(storageSesion.getItem(USER_KEY) || "null");
+  usuarioActual = JSON.parse(localStorage.getItem(USER_KEY) || "null");
 } catch {}
+
+
+function obtenerDeviceId() {
+  let id = localStorage.getItem(DEVICE_KEY) || "";
+  if (!id) {
+    id = globalThis.crypto?.randomUUID?.() ||
+      `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+const deviceId = obtenerDeviceId();
 
 let googleLoginClientId = "";
 let googleCredentialPendiente = "";
@@ -434,16 +443,15 @@ function actualizarInterfazUsuario() {
   );
 }
 
-function guardarSesion(nuevoToken, usuario, recordar = false) {
+function guardarSesion(nuevoToken, usuario) {
   token = nuevoToken;
   usuarioActual = usuario;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
-  const destino = recordar ? localStorage : sessionStorage;
-  destino.setItem(TOKEN_KEY, token);
-  destino.setItem(USER_KEY, JSON.stringify(usuario));
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(usuario));
   googleCredentialPendiente = "";
   document.querySelector(".login-v2-auth")?.classList.remove("google-link-pending");
   actualizarInterfazUsuario();
@@ -506,7 +514,6 @@ function cargarGoogleIdentityScript() {
 async function procesarGoogleCredential(respuesta) {
   const credential = String(respuesta?.credential || "").trim();
   if (!credential) return;
-  const recordar = Boolean($("loginRecordarme")?.checked);
   const contenedor = $("googleSignInButton");
 
   if (contenedor) {
@@ -519,7 +526,7 @@ async function procesarGoogleCredential(respuesta) {
     const r = await originalFetch(`${API_BASE_URL}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ credential }),
+      body: JSON.stringify({ credential, deviceId }),
     });
     const data = await r.json().catch(() => ({}));
 
@@ -537,7 +544,7 @@ async function procesarGoogleCredential(respuesta) {
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo ingresar con Google");
 
-    guardarSesion(data.token, data.usuario, recordar);
+    guardarSesion(data.token, data.usuario);
   } catch (error) {
     actualizarEstadoLogin(error.message || "No se pudo ingresar con Google", "error");
   } finally {
@@ -605,7 +612,6 @@ async function inicializarGoogleLogin() {
 async function iniciarSesion() {
   const usuario = $("loginUsuario")?.value.trim();
   const password = $("loginPassword")?.value || "";
-  const recordar = Boolean($("loginRecordarme")?.checked);
   const boton = $("btnLoginIngresar");
   const estado = $("loginEstado");
   if (!usuario || !password) {
@@ -628,14 +634,13 @@ async function iniciarSesion() {
         usuario,
         password,
         googleCredential: googleCredentialPendiente || undefined,
+        deviceId,
       }),
     });
     const data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo ingresar");
-    guardarSesion(data.token, data.usuario, recordar);
-    if (recordar) localStorage.setItem(REMEMBER_USER_KEY, usuario);
-    else localStorage.removeItem(REMEMBER_USER_KEY);
+    guardarSesion(data.token, data.usuario);
     if ($("loginPassword")) $("loginPassword").value = "";
   } catch (error) {
     if (estado) {
@@ -658,10 +663,7 @@ async function validarSesion() {
     const data = await r.json();
     if (!r.ok || !data.ok) throw new Error();
     usuarioActual = data.usuario;
-    (sessionStorage.getItem(TOKEN_KEY) ? sessionStorage : localStorage).setItem(
-      USER_KEY,
-      JSON.stringify(usuarioActual),
-    );
+    localStorage.setItem(USER_KEY, JSON.stringify(usuarioActual));
     actualizarInterfazUsuario();
     ocultarLogin();
   } catch {
@@ -703,11 +705,8 @@ window.AutoservicioAuth = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  const usuarioRecordado = localStorage.getItem(REMEMBER_USER_KEY) || "";
   if ($("loginUsuario") && usuarioRecordado)
     $("loginUsuario").value = usuarioRecordado;
-  if ($("loginRecordarme"))
-    $("loginRecordarme").checked = Boolean(usuarioRecordado);
   $("btnLoginIngresar")?.addEventListener("click", iniciarSesion);
   $("btnGoogleFallback")?.addEventListener("click", async () => {
     await inicializarGoogleLogin().catch(() => {});

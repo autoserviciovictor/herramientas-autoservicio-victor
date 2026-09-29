@@ -62,6 +62,7 @@ async function asegurarEsquemaUsuariosSectores() {
         sector_id TEXT NOT NULL DEFAULT '',
         managed_sectors TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
         session_version INTEGER NOT NULL DEFAULT 1 CHECK (session_version >= 1),
+        active_device_id TEXT NOT NULL DEFAULT '',
         google_email TEXT NOT NULL DEFAULT '',
         clock_id TEXT NOT NULL DEFAULT '',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -69,6 +70,7 @@ async function asegurarEsquemaUsuariosSectores() {
       )
     `);
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS clock_id TEXT NOT NULL DEFAULT ''`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_device_id TEXT NOT NULL DEFAULT ''`);
     await query(`CREATE UNIQUE INDEX IF NOT EXISTS users_clock_id_unique ON users (clock_id) WHERE clock_id <> ''`);
     await query(
       `CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique
@@ -111,7 +113,7 @@ async function listarUsuariosDb(cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
     `SELECT username, name, password_hash, role, active, created_text, permissions,
-            sector_id, managed_sectors, session_version, google_email, clock_id
+            sector_id, managed_sectors, session_version, active_device_id, google_email, clock_id
      FROM users ORDER BY name, username`,
   );
   return r.rows;
@@ -160,6 +162,14 @@ async function guardarUsuarioDb(usuario, cliente = null) {
       usuario.googleEmail || "",
       usuario.idReloj || "",
     ],
+  );
+}
+
+async function actualizarDispositivoSesionUsuarioDb(usuario, deviceId, cliente = null) {
+  await ejecutarConsulta(
+    cliente,
+    `UPDATE users SET active_device_id=$2, updated_at=NOW() WHERE username=$1`,
+    [usuario, deviceId],
   );
 }
 
@@ -282,6 +292,7 @@ module.exports = {
   listarUsuariosDb,
   listarSectoresDb,
   guardarUsuarioDb,
+  actualizarDispositivoSesionUsuarioDb,
   guardarSectorDb,
   eliminarUsuarioDb,
   eliminarUsuarioConSupervisionDb,
