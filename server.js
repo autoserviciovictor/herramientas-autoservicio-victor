@@ -13,7 +13,6 @@ const {
   listarUsuariosDb,
   listarSectoresDb,
   guardarUsuarioDb,
-  actualizarDispositivoSesionUsuarioDb,
   guardarSectorDb,
   eliminarUsuarioConSupervisionDb,
   eliminarSectorConHorariosDb,
@@ -162,6 +161,7 @@ const GOOGLE_LOGIN_DOMAIN = normalizarTexto(process.env.GOOGLE_LOGIN_DOMAIN).toL
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n") || ""
 const ADMIN_KEY = normalizarTexto(process.env.ADMIN_KEY);
 const ADMIN_TOKEN_SECRET = normalizarTexto(process.env.ADMIN_TOKEN_SECRET);
+const USER_SESSION_DAYS = Math.max(1, Math.min(30, Number(process.env.USER_SESSION_DAYS) || 7));
 const VAPID_PUBLIC_KEY = normalizarTexto(process.env.VAPID_PUBLIC_KEY);
 const VAPID_PRIVATE_KEY = normalizarTexto(process.env.VAPID_PRIVATE_KEY);
 const VAPID_SUBJECT = normalizarTexto(
@@ -457,9 +457,7 @@ function verificarTokenAdmin(token) {
     const payload = JSON.parse(
       Buffer.from(cuerpo, "base64url").toString("utf8"),
     );
-    // Las sesiones nuevas no vencen por tiempo: se invalidan al iniciar sesión
-    // desde otro dispositivo, al desactivar el usuario o al cambiar su contraseña.
-    if (payload.exp && Date.now() >= payload.exp) return null;
+    if (!payload.exp || Date.now() >= payload.exp) return null;
     return payload;
   } catch {
     return null;
@@ -589,7 +587,6 @@ async function obtenerUsuarios() {
       sector: normalizarTexto(fila.sector_id),
       sectores: Array.isArray(fila.managed_sectors) ? fila.managed_sectors.map(normalizarTexto).filter(Boolean) : [],
       sessionVersion: Math.max(1, Number.parseInt(fila.session_version, 10) || 1),
-      activeDeviceId: normalizarTexto(fila.active_device_id),
       googleEmail: normalizarEmail(fila.google_email),
       idReloj: normalizarTexto(fila.clock_id),
     })).filter((u) => u.usuario);
@@ -614,12 +611,6 @@ async function requerirSesion(req, res, next) {
       return res.status(401).json({
         ok: false,
         mensaje: "La sesión fue invalidada. Volvé a iniciar sesión.",
-      });
-    const dispositivoToken = normalizarTexto(sesion.did);
-    if (!dispositivoToken || dispositivoToken !== usuario.activeDeviceId)
-      return res.status(401).json({
-        ok: false,
-        mensaje: "La sesión se cerró porque la cuenta se inició en otro dispositivo.",
       });
     req.usuario = {
       usuario: usuario.usuario,
@@ -954,33 +945,28 @@ function datosSesionUsuario(usuario) {
   };
 }
 
-async function responderSesion(res, usuario, deviceId, extra = {}) {
+function responderSesion(res, usuario, extra = {}) {
   if (!ADMIN_TOKEN_SECRET)
     return res
       .status(503)
       .json({ ok: false, mensaje: "Configurá ADMIN_TOKEN_SECRET en Render" });
 
-  const dispositivo = normalizarTexto(deviceId);
-  if (!dispositivo)
-    return res.status(400).json({ ok: false, mensaje: "No se pudo identificar este dispositivo" });
-
-  await actualizarDispositivoSesionUsuarioDb(usuario.usuario, dispositivo);
-  invalidarCache("usuarios");
-  usuario.activeDeviceId = dispositivo;
-
+  const ahora = Date.now();
+  const exp = ahora + USER_SESSION_DAYS * 24 * 60 * 60 * 1000;
   const token = firmarTokenAdmin({
     usuario: usuario.usuario,
     nombre: usuario.nombre,
     rol: usuario.rol,
     sv: usuario.sessionVersion,
-    did: dispositivo,
-    iat: Date.now(),
+    iat: ahora,
+    exp,
   });
 
   return res.json({
     ok: true,
     token,
     usuario: datosSesionUsuario(usuario),
+    expira: new Date(exp).toISOString(),
     ...extra,
   });
 }
@@ -1240,7 +1226,7 @@ app.post("/auth/google", limitarLogin, async (req, res) => {
         .json({ ok: false, mensaje: "Este usuario está desactivado" });
 
     limpiarLimiteLogin(req);
-    return responderSesion(res, usuario, req.body?.deviceId, { metodo: "google" });
+    return responderSesion(res, usuario, { metodo: "google" });
   } catch (error) {
     console.error("Error en /auth/google:", error);
     return res.status(error?.status || 500).json({
@@ -1304,7 +1290,7 @@ app.post("/auth/login", limitarLogin, async (req, res) => {
     }
 
     limpiarLimiteLogin(req);
-    return responderSesion(res, usuario, req.body?.deviceId, {
+    return responderSesion(res, usuario, {
       metodo: "usuario",
       googleVinculado,
     });
