@@ -173,6 +173,8 @@ if (PUSH_CONFIGURED)
 const ADMIN_USERNAME = normalizarTexto(
   process.env.ADMIN_USERNAME || "admin",
 ).toLowerCase();
+const OPENAI_API_KEY = normalizarTexto(process.env.OPENAI_API_KEY);
+const OPENAI_INVOICE_MODEL = normalizarTexto(process.env.OPENAI_INVOICE_MODEL || "gpt-5.6-luna");
 const ES_PRODUCCION = process.env.NODE_ENV === "production";
 const ALLOWED_ORIGINS = normalizarTexto(process.env.ALLOWED_ORIGINS)
   .split(",")
@@ -1619,6 +1621,67 @@ async function obtenerResumenDashboard(usuario) {
     tareasHoyDetalle,
   };
 }
+
+
+// Compras y Facturas — lectura automática de comprobantes.
+// La clave queda exclusivamente en el servidor; nunca se expone al navegador.
+app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24mb" }), async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ error: "La lectura automática no está configurada. Falta OPENAI_API_KEY en el servidor." });
+    }
+    const { nombre, tipo, base64 } = req.body || {};
+    const mime = normalizarTexto(tipo).toLowerCase();
+    const archivoBase64 = normalizarTexto(base64);
+    if (!archivoBase64 || !["application/pdf", "image/jpeg", "image/png"].includes(mime)) {
+      return res.status(400).json({ error: "Archivo inválido. Usá PDF, JPG o PNG." });
+    }
+    if (archivoBase64.length > 20_000_000) {
+      return res.status(413).json({ error: "La factura es demasiado grande para analizarla." });
+    }
+
+    const instrucciones = `Leé este comprobante argentino de compra con máxima precisión. Devolvé únicamente datos visibles o deducibles de forma inequívoca. No inventes valores. Si un campo no se puede leer, usá cadena vacía o 0. En items, transcribí todos los renglones de productos/servicios que puedas identificar. precio_unitario debe ser el precio neto/unitario indicado en el comprobante; subtotal debe ser el importe de la línea. IVA es la alícuota numérica (21, 10.5, 27, 0). Fechas en YYYY-MM-DD. Separá punto de venta y número. comprobante debe ser Factura, Nota de crédito, Nota de débito o Remito. condicion_fiscal: Responsable Inscripto, Monotributo, Exento, Consumidor Final o vacío. condicion_pago: Contado, Cuenta corriente, Transferencia, Tarjeta, Cheque o vacío. moneda: Pesos o Dólares. Incluí descuentos, otros_impuestos y total tal como figuren. En observaciones indicá brevemente campos importantes que no pudieron leerse con seguridad.`;
+
+    const contenidoArchivo = mime === "application/pdf"
+      ? { type: "input_file", filename: normalizarTexto(nombre) || "factura.pdf", file_data: `data:application/pdf;base64,${archivoBase64}`, detail: "high" }
+      : { type: "input_image", image_url: `data:${mime};base64,${archivoBase64}`, detail: "high" };
+
+    const schema = {
+      type: "object", additionalProperties: false,
+      properties: {
+        proveedor: {type:"string"}, razon_social:{type:"string"}, cuit:{type:"string"}, condicion_fiscal:{type:"string"},
+        comprobante:{type:"string"}, punto_venta:{type:"string"}, numero:{type:"string"}, fecha:{type:"string"}, vencimiento:{type:"string"},
+        condicion_pago:{type:"string"}, moneda:{type:"string"}, descuentos:{type:"number"}, otros_impuestos:{type:"number"}, total:{type:"number"},
+        items:{type:"array",items:{type:"object",additionalProperties:false,properties:{codigo:{type:"string"},descripcion:{type:"string"},cantidad:{type:"number"},precio_unitario:{type:"number"},iva:{type:"number"},subtotal:{type:"number"}},required:["codigo","descripcion","cantidad","precio_unitario","iva","subtotal"]}},
+        observaciones:{type:"string"}
+      },
+      required:["proveedor","razon_social","cuit","condicion_fiscal","comprobante","punto_venta","numero","fecha","vencimiento","condicion_pago","moneda","descuentos","otros_impuestos","total","items","observaciones"]
+    };
+
+    const respuesta = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: OPENAI_INVOICE_MODEL, store: false,
+        input: [{ role: "user", content: [{ type: "input_text", text: instrucciones }, contenidoArchivo] }],
+        text: { format: { type: "json_schema", name: "factura_extraida", strict: true, schema } }
+      })
+    });
+    const data = await respuesta.json();
+    if (!respuesta.ok) {
+      console.error("Error OpenAI al leer factura:", data?.error?.message || respuesta.status);
+      return res.status(502).json({ error: `No se pudo analizar la factura: ${normalizarTexto(data?.error?.message) || `HTTP ${respuesta.status}`}` });
+    }
+    const texto = data?.output?.flatMap((o) => o?.content || []).find((c) => c?.type === "output_text")?.text;
+    if (!texto) return res.status(502).json({ error: "El analizador no devolvió datos de la factura." });
+    let factura;
+    try { factura = JSON.parse(texto); } catch { return res.status(502).json({ error: "La respuesta de lectura no tuvo un formato válido." }); }
+    return res.json({ ok: true, factura });
+  } catch (error) {
+    console.error("Error extrayendo factura:", error);
+    return res.status(500).json({ error: `No se pudo procesar la factura: ${normalizarTexto(error?.message) || "error interno"}` });
+  }
+});
 
 app.get("/dashboard/resumen", requerirSesion, async (req, res) => {
   try {

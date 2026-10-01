@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "autoservicio_compras_facturas_v1";
 let items = [];
@@ -5,6 +6,9 @@ let archivoActual = null;
 let previewUrl = "";
 let previewZoom = 1;
 let adjuntos = [];
+let pdfRenderToken = 0;
+const PDFJS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+const PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
 
 const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(Number(n) || 0);
 const numero = (v) => Math.max(0, Number(String(v ?? 0).replace(",", ".")) || 0);
@@ -45,19 +49,141 @@ function calcularTotales() {
   if ($("comprasTotal")) $("comprasTotal").textContent=money(total);
   return { subtotal, neto21, iva21, descuentos, otros, total };
 }
+function archivoABase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.readAsDataURL(file);
+  });
+}
+function setEstadoArchivo(texto, tipo = "ok") {
+  const estado = $("comprasArchivoEstado");
+  if (!estado) return;
+  estado.classList.remove("oculto", "analizando", "error", "ok");
+  estado.classList.add(tipo);
+  estado.textContent = texto;
+}
+function setValor(id, valor) {
+  const el = $(id); if (!el || valor === undefined || valor === null || valor === "") return;
+  el.value = valor;
+}
+function seleccionarOpcion(id, valor) {
+  const el = $(id); if (!el || !valor) return;
+  const buscado = String(valor).trim().toLowerCase();
+  const opcion = [...el.options].find(o => o.value.toLowerCase() === buscado || o.textContent.trim().toLowerCase() === buscado);
+  if (opcion) el.value = opcion.value;
+}
+function aplicarFacturaExtraida(f) {
+  if (!f || typeof f !== "object") return;
+  setValor("comprasProveedor", f.proveedor || f.razon_social);
+  setValor("comprasRazonSocial", f.razon_social || f.proveedor);
+  setValor("comprasCuit", f.cuit);
+  seleccionarOpcion("comprasCondicionFiscal", f.condicion_fiscal);
+  seleccionarOpcion("comprasComprobante", f.comprobante);
+  setValor("comprasPuntoVenta", f.punto_venta);
+  setValor("comprasNumero", f.numero);
+  setValor("comprasFecha", f.fecha);
+  setValor("comprasVencimiento", f.vencimiento);
+  seleccionarOpcion("comprasCondicionPago", f.condicion_pago);
+  seleccionarOpcion("comprasMoneda", f.moneda);
+  if ($("comprasDescuentos")) $("comprasDescuentos").value = numero(f.descuentos);
+  if ($("comprasOtrosImpuestos")) $("comprasOtrosImpuestos").value = numero(f.otros_impuestos);
+  if (f.observaciones) setValor("comprasObservaciones", f.observaciones);
+  const detectados = Array.isArray(f.items) ? f.items.filter(it => it && (it.descripcion || it.codigo || numero(it.subtotal) > 0)) : [];
+  if (detectados.length) {
+    items = detectados.map(it => ({
+      codigo: String(it.codigo || ""), descripcion: String(it.descripcion || ""),
+      cantidad: numero(it.cantidad) || 1, precio: numero(it.precio_unitario), iva: numero(it.iva)
+    }));
+    renderItems();
+  } else calcularTotales();
+}
+async function extraerFactura(file) {
+  if (!$("comprasAutoDetectar")?.checked) return;
+  setEstadoArchivo(`Analizando ${file.name}…`, "analizando");
+  try {
+    const base64 = await archivoABase64(file);
+    const apiBase = String(window.API_BASE_URL || "").replace(/\/$/, "");
+    const respuesta = await fetch(`${apiBase}/compras/facturas/extraer`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre: file.name, tipo: file.type, base64 })
+    });
+    const tipoRespuesta = respuesta.headers.get("content-type") || "";
+    const data = tipoRespuesta.includes("application/json") ? await respuesta.json().catch(() => ({})) : {};
+    if (!respuesta.ok) {
+      const detalle = data.error || data.mensaje || `El servidor respondió HTTP ${respuesta.status}`;
+      throw new Error(detalle);
+    }
+    aplicarFacturaExtraida(data.factura);
+    const cantidad = Array.isArray(data.factura?.items) ? data.factura.items.length : 0;
+    setEstadoArchivo(`✓ Datos detectados${cantidad ? ` · ${cantidad} ítem${cantidad === 1 ? "" : "s"}` : ""}. Revisá la información antes de guardar.`, "ok");
+  } catch (error) {
+    console.error("Lectura automática de factura:", error);
+    setEstadoArchivo(`⚠ ${error.message || "No se pudo leer automáticamente"}. Podés completar los datos manualmente.`, "error");
+  }
+}
+async function renderizarPdf(file) {
+  const preview = $("comprasPreview");
+  if (!preview) return;
+  const token = ++pdfRenderToken;
+  preview.className = "compras-preview-empty compras-pdf-canvas-wrap";
+  preview.innerHTML = '<span class="compras-pdf-loading">Preparando vista previa del PDF…</span>';
+  try {
+    const pdfjsLib = await import(PDFJS_URL);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    if (token !== pdfRenderToken || archivoActual !== file) return;
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const anchoDisponible = Math.max(220, preview.clientWidth - 18);
+    const altoDisponible = Math.max(220, preview.clientHeight - 18);
+    const escala = Math.min(2, anchoDisponible / baseViewport.width, altoDisponible / baseViewport.height);
+    const viewport = page.getViewport({ scale: Math.max(.5, escala) });
+    const canvas = document.createElement("canvas");
+    canvas.className = "compras-pdf-canvas";
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(viewport.width * ratio);
+    canvas.height = Math.floor(viewport.height * ratio);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+    const ctx = canvas.getContext("2d");
+    await page.render({ canvasContext: ctx, viewport, transform: ratio === 1 ? null : [ratio, 0, 0, ratio, 0, 0] }).promise;
+    if (token !== pdfRenderToken || archivoActual !== file) return;
+    preview.innerHTML = "";
+    preview.appendChild(canvas);
+  } catch (error) {
+    console.error("Vista previa PDF:", error);
+    if (token !== pdfRenderToken) return;
+    preview.innerHTML = '<svg class="app-icon"><use href="#icon-clipboard"></use></svg><span>No se pudo dibujar la vista previa del PDF. El análisis automático igualmente continuará.</span>';
+  }
+}
 function setArchivo(file) {
   if (!file) return;
   if (!/^(application\/pdf|image\/(jpeg|png))$/.test(file.type)) { alert("Formato no permitido. Usá PDF, JPG o PNG."); return; }
   archivoActual = file;
-  if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = URL.createObjectURL(file); previewZoom=1;
-  const preview=$("comprasPreview"); preview.className="compras-preview-empty";
-  preview.innerHTML = file.type === "application/pdf" ? `<embed src="${previewUrl}" type="application/pdf">` : `<img src="${previewUrl}" alt="Vista previa de factura">`;
-  $("comprasArchivoEstado").classList.remove("oculto");
-  $("comprasArchivoEstado").textContent = `✓ ${file.name} · ${(file.size/1024/1024).toFixed(2)} MB`;
-  // La extracción OCR requiere un servicio específico. No se inventan datos: se conserva el archivo y se habilita la revisión manual.
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(file); previewZoom=1;
+  const preview=$("comprasPreview");
+  if (file.type === "application/pdf") {
+    renderizarPdf(file);
+  } else {
+    preview.className="compras-preview-empty";
+    preview.innerHTML=`<img src="${previewUrl}" alt="Vista previa de factura">`;
+  }
+  setEstadoArchivo(`✓ ${file.name} · ${(file.size/1024/1024).toFixed(2)} MB`, "ok");
+  extraerFactura(file);
 }
-function ajustarZoom(delta=0, reset=false){ previewZoom=reset?1:Math.min(2.5,Math.max(.5,previewZoom+delta)); const el=$("comprasPreview")?.querySelector("img,embed"); if(el) el.style.transform=`scale(${previewZoom})`; }
-function limpiarArchivo(){ archivoActual=null; if(previewUrl) URL.revokeObjectURL(previewUrl); previewUrl=""; const p=$("comprasPreview"); if(p) p.innerHTML='<svg class="app-icon"><use href="#icon-clipboard"></use></svg><span>Importá una factura para verla aquí</span>'; $("comprasArchivoEstado")?.classList.add("oculto"); if($("comprasArchivo")) $("comprasArchivo").value=""; }
+function ajustarZoom(delta=0, reset=false){
+  previewZoom=reset?1:Math.min(2.5,Math.max(.5,previewZoom+delta));
+  const preview=$("comprasPreview");
+  const img=preview?.querySelector("img");
+  if(img) img.style.transform=`scale(${previewZoom})`;
+  const pdfCanvas=preview?.querySelector("canvas.compras-pdf-canvas");
+  if(pdfCanvas) pdfCanvas.style.transform=`scale(${previewZoom})`;
+}
+function limpiarArchivo(){ pdfRenderToken++; archivoActual=null; if(previewUrl) URL.revokeObjectURL(previewUrl); previewUrl=""; const p=$("comprasPreview"); if(p) p.innerHTML='<svg class="app-icon"><use href="#icon-clipboard"></use></svg><span>Importá una factura para verla aquí</span>'; $("comprasArchivoEstado")?.classList.add("oculto"); if($("comprasArchivo")) $("comprasArchivo").value=""; }
 function valor(id){ return $(id)?.value?.trim?.() ?? $(id)?.value ?? ""; }
 function hoy(){ return new Date().toISOString().slice(0,10); }
 function resetForm(){ ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimiento","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""}); if($("comprasFecha"))$("comprasFecha").value=hoy(); if($("comprasDescuentos"))$("comprasDescuentos").value=0; if($("comprasOtrosImpuestos"))$("comprasOtrosImpuestos").value=0; items=[itemVacio()]; adjuntos=[]; limpiarArchivo(); renderItems(); renderAdjuntos(); }
