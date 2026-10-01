@@ -1514,7 +1514,14 @@ async function entrarPantalla(nombre, opciones = {}) {
   if (nombre === "horarios") window.HorariosModule?.activar?.();
   if (nombre === "tareas") window.TareasModule?.activar?.();
   if (nombre === "bano") await window.BanoModule?.activar?.();
-  if (nombre === "catalogo") await window.CatalogoAdminModule?.activar?.();
+  if (nombre === "catalogo") {
+    const botonVolver = $("adminHeaderBackBtn");
+    if (botonVolver) {
+      botonVolver.setAttribute("aria-label", "Volver a Administración");
+      botonVolver.setAttribute("title", "Volver a Administración");
+    }
+    await window.CatalogoAdminModule?.activar?.();
+  }
   if (nombre === "admin" && !window.AutoservicioAuth?.puedeAdministrar?.()) {
     cambiarPantalla("inicio");
   }
@@ -1798,6 +1805,12 @@ function configurarEventos() {
     event.preventDefault();
     event.stopImmediatePropagation();
     volverDesdeCartelOferta();
+  }, true);
+  $("adminHeaderBackBtn")?.addEventListener("click", (event) => {
+    if (document.body.dataset.screen !== "catalogo") return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void entrarPantalla("admin");
   }, true);
   $("btnCartelGuardar")?.addEventListener("click", guardarCartelOfertaActual);
   $("btnCartelImprimirHoja")?.addEventListener("click", imprimirHojaCartelesOferta);

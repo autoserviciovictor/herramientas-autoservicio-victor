@@ -472,7 +472,8 @@ html[data-theme="dark"] .history-user-stat em small{color:#eef1f5;}
   /* Regreso de Usuarios / Sectores / Sistema al Inicio de Administración. */
   body[data-screen="admin"][data-admin-view]:not([data-admin-view="inicio"]) #adminHeaderBackBtn,
 body[data-screen="vencimientos"].venc-historial-open #adminHeaderBackBtn,
-  body[data-screen="cartelOferta"] #adminHeaderBackBtn{
+  body[data-screen="cartelOferta"] #adminHeaderBackBtn,
+  body[data-screen="catalogo"] #adminHeaderBackBtn{
     display:grid !important;
     place-items:center !important;
     position:absolute !important;

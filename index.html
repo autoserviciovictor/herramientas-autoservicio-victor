@@ -39,6 +39,7 @@
     <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="liquidacion-horas.css?v=9-save-always-visible-290926" />
+    <link rel="stylesheet" href="compras-facturas.css?v=compras-v13-visual-final" />
     <link rel="stylesheet" href="catalogo-admin-diseno.css?v=desktop-toolbar-d31-110926" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1977-notificaciones-rubros-visual-240926" />
@@ -3622,6 +3623,11 @@
               <div class="admin-module-access-stats"><div><strong id="adminHomeCatalogoProductos">Productos</strong><span>Gestión centralizada</span></div><div><strong>Rubros</strong><span>Organización del catálogo</span></div></div>
               <button type="button" data-modulo="catalogo">Abrir catálogo <span>›</span></button>
             </article>
+            <article class="admin-module-access-card tone-red admin-compras-access-card">
+              <header><span class="admin-module-access-icon"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><div><h2>Compras y Facturas</h2><p>Registrá comprobantes, proveedores, productos, impuestos y controlá el gasto del autoservicio.</p></div></header>
+              <div class="admin-module-access-stats"><div><strong id="adminComprasFacturasMes">0</strong><span>Facturas del mes</span></div><div><strong id="adminComprasGastoMes">$ 0</strong><span>Gasto del mes</span></div></div>
+              <button type="button" data-admin-open="compras">Abrir compras y facturas <span>›</span></button>
+            </article>
           </section>
 
           <section class="admin-home-bottom-grid">
@@ -3637,6 +3643,71 @@
                 <button id="adminQuickAyuda" type="button"><span class="admin-quick-icon tone-violet"><svg class="app-icon"><use href="#icon-shield"></use></svg></span><span><strong>Centro de ayuda</strong><small>Accede a una guía rápida de las funciones administrativas.</small></span><b>›</b></button>
               </div>
             </article>
+          </section>
+        </section>
+
+        <section id="adminTab-compras" class="admin-tab-panel admin-official-panel compras-screen oculto">
+          <header class="compras-hero">
+            <div class="compras-hero-title"><span class="compras-title-icon"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><div><h1>Nueva Factura</h1><p>Cargá una factura, importá una imagen o PDF y registrá todos los datos del comprobante.</p></div></div>
+            <button id="comprasVerHistorial" class="compras-history-btn" type="button"><svg class="app-icon"><use href="#icon-list"></use></svg>Ver historial de facturas</button>
+          </header>
+
+          <div id="comprasEditor" class="compras-editor-grid">
+            <article class="compras-card compras-import-card">
+              <header class="compras-card-title"><span class="green"><svg class="app-icon"><use href="#icon-upload"></use></svg></span><div><h2>Importar factura</h2><p>Arrastrá una imagen o un PDF de la factura aquí.</p></div></header>
+              <button id="comprasDropzone" class="compras-dropzone" type="button"><span><svg class="app-icon"><use href="#icon-upload"></use></svg></span><b>Seleccionar archivo</b><small>o arrastrá el archivo aquí</small></button>
+              <input id="comprasArchivo" type="file" accept="application/pdf,image/jpeg,image/png" hidden>
+              <small class="compras-formats">Formatos permitidos: PDF, JPG, PNG</small>
+              <label class="compras-auto-check"><input id="comprasAutoDetectar" type="checkbox" checked><span>Detectar y cargar datos automáticamente</span></label>
+              <div id="comprasArchivoEstado" class="compras-file-state oculto"></div>
+            </article>
+
+            <article class="compras-card compras-data-card">
+              <header class="compras-card-title"><span class="red"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><div><h2>Datos del comprobante</h2></div></header>
+              <div class="compras-form-grid">
+                <label class="span-2"><span>Proveedor <b>*</b></span><div class="compras-inline"><input id="comprasProveedor" type="text" placeholder="Seleccionar proveedor"><button id="comprasBuscarProveedor" type="button" aria-label="Buscar proveedor"><svg class="app-icon"><use href="#icon-search"></use></svg></button><button id="comprasNuevoProveedor" type="button" aria-label="Nuevo proveedor">+</button></div></label>
+                <label><span>CUIT / DNI</span><input id="comprasCuit" type="text" placeholder="XX-XXXXXXXX-X"></label>
+                <label class="span-2"><span>Condición Fiscal</span><select id="comprasCondicionFiscal"><option>Responsable Inscripto</option><option>Monotributo</option><option>Exento</option><option>Consumidor Final</option></select></label>
+                <label><span>Razón social / Apellido y Nombre</span><input id="comprasRazonSocial" type="text"></label>
+                <label><span>Comprobante <b>*</b></span><select id="comprasComprobante"><option>Factura</option><option>Nota de crédito</option><option>Nota de débito</option><option>Remito</option></select></label>
+                <label><span>Punto de venta</span><input id="comprasPuntoVenta" type="text" inputmode="numeric" placeholder="00000"></label>
+                <label><span>Número</span><input id="comprasNumero" type="text" inputmode="numeric" placeholder="00000000"></label>
+                <label><span>Fecha <b>*</b></span><input id="comprasFecha" type="date"></label>
+                <label><span>Condición de pago</span><select id="comprasCondicionPago"><option>Contado</option><option>Cuenta corriente</option><option>Transferencia</option><option>Tarjeta</option><option>Cheque</option></select></label>
+                <label><span>Moneda</span><select id="comprasMoneda"><option>Pesos</option><option>Dólares</option></select></label>
+                <label><span>Clasificación / Rubro</span><select id="comprasRubro"><option value="">Seleccionar rubro</option><option>Mercadería</option><option>Servicios</option><option>Impuestos</option><option>Mantenimiento</option><option>Otros</option></select></label>
+                <label><span>Vencimiento</span><input id="comprasVencimiento" type="date"></label>
+              </div>
+            </article>
+
+            <article class="compras-card compras-preview-card">
+              <header><svg class="app-icon"><use href="#icon-eye"></use></svg><h2>Vista de la factura</h2></header>
+              <div id="comprasPreview" class="compras-preview-empty"><svg class="app-icon"><use href="#icon-clipboard"></use></svg><span>Importá una factura para verla aquí</span></div>
+              <div class="compras-preview-actions"><button id="comprasZoomOut" type="button">−</button><button id="comprasZoomIn" type="button">+</button><button id="comprasPreviewReset" type="button"><svg class="app-icon"><use href="#icon-refresh"></use></svg></button><button id="comprasQuitarArchivo" class="danger" type="button"><svg class="app-icon"><use href="#icon-trash"></use></svg></button></div>
+            </article>
+
+            <article class="compras-card compras-items-card">
+              <header class="compras-items-head"><div class="compras-card-title"><span class="red"><svg class="app-icon"><use href="#icon-cart"></use></svg></span><div><h2>Ítems del comprobante</h2></div></div><button id="comprasEditarItems" type="button"><svg class="app-icon"><use href="#icon-edit"></use></svg>Editar ítems detectados</button></header>
+              <div class="compras-table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Cantidad</th><th>Precio unitario</th><th>% IVA</th><th>Subtotal</th><th>Acciones</th></tr></thead><tbody id="comprasItemsBody"></tbody></table></div>
+              <button id="comprasAgregarItem" class="compras-add-item" type="button">+ Agregar ítem</button>
+            </article>
+
+            <article class="compras-card compras-totals-card">
+              <header><span class="green">$</span><h2>Totales del comprobante</h2></header>
+              <dl><div><dt>Subtotal (sin impuestos)</dt><dd id="comprasSubtotal">$ 0,00</dd></div><div><dt>Descuentos</dt><dd><input id="comprasDescuentos" type="number" min="0" step="0.01" value="0"></dd></div><div><dt>Neto gravado 21%</dt><dd id="comprasNeto21">$ 0,00</dd></div><div><dt>IVA 21%</dt><dd id="comprasIva21">$ 0,00</dd></div><div><dt>Otros impuestos</dt><dd><input id="comprasOtrosImpuestos" type="number" min="0" step="0.01" value="0"></dd></div></dl>
+              <div class="compras-total-final"><span>TOTAL</span><strong id="comprasTotal">$ 0,00</strong></div>
+            </article>
+
+            <article class="compras-card compras-observaciones"><header><span class="amber"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><h2>Observaciones</h2></header><textarea id="comprasObservaciones" placeholder="Agregar observaciones..."></textarea></article>
+            <article class="compras-card compras-adjuntos"><header><span class="violet"><svg class="app-icon"><use href="#icon-upload"></use></svg></span><h2>Archivos adicionales</h2></header><button id="comprasAdjuntoBtn" type="button">+ Agregar archivo</button><input id="comprasAdjunto" type="file" multiple hidden><div id="comprasAdjuntosLista"></div></article>
+            <div class="compras-bottom-actions"><button id="comprasCancelar" type="button" class="secondary"><span class="compras-cancel-x" aria-hidden="true">×</span>Cancelar</button><button id="comprasGuardar" type="button" class="primary"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg>Guardar factura</button></div>
+          </div>
+
+          <section id="comprasHistorial" class="compras-history-view oculto">
+            <header class="compras-history-head"><div><h2>Historial de facturas</h2><p>Consultá los comprobantes registrados y el gasto acumulado.</p></div><button id="comprasNuevaFactura" type="button">+ Nueva factura</button></header>
+            <div class="compras-history-kpis"><article><small>Facturas registradas</small><strong id="comprasHistCantidad">0</strong></article><article><small>Gasto acumulado</small><strong id="comprasHistTotal">$ 0</strong></article></div>
+            <div class="compras-history-toolbar"><input id="comprasHistBuscar" type="search" placeholder="Buscar proveedor, CUIT o número..."><input id="comprasHistMes" type="month"></div>
+            <div class="compras-card compras-history-table"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Comprobante</th><th>Número</th><th>Rubro</th><th>Total</th><th></th></tr></thead><tbody id="comprasHistBody"></tbody></table></div>
           </section>
         </section>
 
@@ -4252,6 +4323,7 @@
         </div>
       </div>
     </div>
+    <script type="module" src="./compras-facturas.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script type="module" src="./pro-ui.js?v=1960-d21-cierre-etapa6-010926"></script>
   </body>
 </html>

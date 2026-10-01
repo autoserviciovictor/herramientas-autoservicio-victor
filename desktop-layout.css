@@ -417,6 +417,7 @@ body.en-admin #adminTab-inicio,
 body.en-admin #adminTab-usuarios,
 body.en-admin #adminTab-sectores,
 body.en-admin #adminTab-sistema,
+body.en-admin #adminTab-compras,
 body.en-cartel-oferta #pantallaCartelOferta > .offer-poster-shell,
 body.en-etiquetas #pantallaEtiquetas > .etiquetas-shell {
     width: min(
@@ -465,6 +466,10 @@ body.en-etiquetas #pantallaEtiquetas > .etiquetas-shell {
   body.en-admin #adminTab-usuarios,
   body.en-admin #adminTab-sectores,
   body.en-admin #adminTab-sistema {
+    padding-top: 15px !important;
+    padding-bottom: 50px !important;
+  }
+  body.en-admin #adminTab-compras {
     padding-top: 15px !important;
     padding-bottom: 50px !important;
   }
