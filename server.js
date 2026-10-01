@@ -1640,7 +1640,18 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
       return res.status(413).json({ error: "La factura es demasiado grande para analizarla." });
     }
 
-    const instrucciones = `Leé este comprobante argentino de compra con máxima precisión. Devolvé únicamente datos visibles o deducibles de forma inequívoca. No inventes valores. Si un campo no se puede leer, usá cadena vacía o 0. En items, transcribí todos los renglones de productos/servicios que puedas identificar. precio_unitario debe ser el precio neto/unitario indicado en el comprobante; subtotal debe ser el importe de la línea. IVA es la alícuota numérica (21, 10.5, 27, 0). Fechas en YYYY-MM-DD. Separá punto de venta y número. comprobante debe ser Factura, Nota de crédito, Nota de débito o Remito. condicion_fiscal: Responsable Inscripto, Monotributo, Exento, Consumidor Final o vacío. condicion_pago: Contado, Cuenta corriente, Transferencia, Tarjeta, Cheque o vacío. moneda: Pesos o Dólares. Incluí descuentos, otros_impuestos y total tal como figuren. En observaciones indicá brevemente campos importantes que no pudieron leerse con seguridad.`;
+    const instrucciones = `Leé este comprobante argentino de compra con máxima precisión y transcribí lo impreso, sin reconstruir importes. REGLAS CRÍTICAS:
+1) El proveedor/emisor es quien EMITE la factura (encabezado, junto a su CUIT/domicilio). Nunca uses localidad, provincia ni datos del cliente/comprador como proveedor. "SEÑOR/ES", "CLIENTE" o "RECEPTOR" identifican al comprador, no al proveedor.
+2) Conservá exactamente los importes impresos a 2 decimales. No recalcules, no redondees ni corrijas precio_unitario, subtotal de línea, netos, IVA o total aunque matemáticamente difieran por centavos.
+3) En items transcribí código, descripción, cantidad, precio unitario, alícuota IVA y subtotal NETO DE LA LÍNEA tal como aparecen. Si el comprobante muestra además subtotal con IVA, no lo uses como subtotal neto.
+4) subtotal/neto_gravado/iva_total/total deben venir de los totales explícitamente impresos. En alicuotas_iva devolvé cada alícuota explícitamente discriminada con su neto e IVA; si no se discrimina, devolvé []. Los cálculos sirven solo para detectar una posible inconsistencia; nunca para reemplazar el valor leído.
+5) Si un campo no es legible o no es inequívoco, devolvé vacío/0 y agregá su nombre a campos_revision. No completes con una palabra cercana.
+6) Fechas YYYY-MM-DD. Separá punto de venta y número preservando ceros a la izquierda. En comprobante CONSERVÁ la letra si está impresa: Factura A/B/C, Nota de crédito A/B/C, Nota de débito A/B/C o Remito. condicion_fiscal: Responsable Inscripto, Monotributo, Exento, Consumidor Final o vacío. condicion_pago: Contado, Cuenta corriente, Transferencia, Tarjeta, Cheque o vacío. moneda: Pesos o Dólares.
+7) Para tickets/fotos, prestá especial atención a encabezado, CUIT del emisor, número, fecha, renglones y bloque final de neto/IVA/TOTAL.
+8) El campo vencimiento es EXCLUSIVAMENTE vencimiento comercial/de pago. Nunca pongas allí el vencimiento de CAE/CAEA. Si solo aparece VTO junto a CAE/CAEA, vencimiento debe ser vacío.
+9) No infieras condicion_pago. Texto como "Pesos $..." o "FORMA DE PAGO" sin medio explícito NO significa transferencia ni contado: devolvé vacío.
+10) No asumas IVA 21%. En Factura C o cuando no se discrimine alícuota, usá 0 en el item salvo que esté inequívocamente impresa. Si se imprimen neto e IVA, transcribilos aunque el cálculo difiera por centavos.
+11) campos_revision debe contener solo nombres de campos realmente dudosos. observaciones puede explicar brevemente por qué.`;
 
     const contenidoArchivo = mime === "application/pdf"
       ? { type: "input_file", filename: normalizarTexto(nombre) || "factura.pdf", file_data: `data:application/pdf;base64,${archivoBase64}`, detail: "high" }
@@ -1651,11 +1662,13 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
       properties: {
         proveedor: {type:"string"}, razon_social:{type:"string"}, cuit:{type:"string"}, condicion_fiscal:{type:"string"},
         comprobante:{type:"string"}, punto_venta:{type:"string"}, numero:{type:"string"}, fecha:{type:"string"}, vencimiento:{type:"string"},
-        condicion_pago:{type:"string"}, moneda:{type:"string"}, descuentos:{type:"number"}, otros_impuestos:{type:"number"}, total:{type:"number"},
+        condicion_pago:{type:"string"}, moneda:{type:"string"}, descuentos:{type:"number"}, otros_impuestos:{type:"number"},
+        subtotal:{type:"number"}, neto_gravado:{type:"number"}, neto_gravado_21:{type:"number"}, iva_total:{type:"number"}, iva_21:{type:"number"}, total:{type:"number"},
+        alicuotas_iva:{type:"array",items:{type:"object",additionalProperties:false,properties:{tasa:{type:"number"},neto:{type:"number"},iva:{type:"number"}},required:["tasa","neto","iva"]}},
         items:{type:"array",items:{type:"object",additionalProperties:false,properties:{codigo:{type:"string"},descripcion:{type:"string"},cantidad:{type:"number"},precio_unitario:{type:"number"},iva:{type:"number"},subtotal:{type:"number"}},required:["codigo","descripcion","cantidad","precio_unitario","iva","subtotal"]}},
-        observaciones:{type:"string"}
+        observaciones:{type:"string"}, campos_revision:{type:"array",items:{type:"string"}}
       },
-      required:["proveedor","razon_social","cuit","condicion_fiscal","comprobante","punto_venta","numero","fecha","vencimiento","condicion_pago","moneda","descuentos","otros_impuestos","total","items","observaciones"]
+      required:["proveedor","razon_social","cuit","condicion_fiscal","comprobante","punto_venta","numero","fecha","vencimiento","condicion_pago","moneda","descuentos","otros_impuestos","subtotal","neto_gravado","neto_gravado_21","iva_total","iva_21","total","alicuotas_iva","items","observaciones","campos_revision"]
     };
 
     const respuesta = await fetch("https://api.openai.com/v1/responses", {

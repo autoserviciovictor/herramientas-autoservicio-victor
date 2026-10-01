@@ -7,6 +7,9 @@ let previewUrl = "";
 let previewZoom = 1;
 let adjuntos = [];
 let pdfRenderToken = 0;
+let importesDetectados = null;
+let alicuotasDetectadas = [];
+let camposRevision = [];
 const PDFJS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
 const PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
 
@@ -15,8 +18,12 @@ const numero = (v) => Math.max(0, Number(String(v ?? 0).replace(",", ".")) || 0)
 const facturas = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; } };
 const guardarFacturas = (lista) => localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
 
-function itemVacio() { return { codigo: "", descripcion: "", cantidad: 1, precio: 0, iva: 21 }; }
-function calcularItem(it) { return numero(it.cantidad) * numero(it.precio); }
+function itemVacio() { return { codigo: "", descripcion: "", cantidad: 1, precio: 0, iva: 0, subtotalDetectado: null }; }
+function calcularItem(it) {
+  if (it && it.subtotalDetectado !== null && it.subtotalDetectado !== undefined) return numero(it.subtotalDetectado);
+  return numero(it.cantidad) * numero(it.precio);
+}
+function invalidarImportesDetectados() { importesDetectados = null; alicuotasDetectadas = []; }
 function renderItems() {
   const body = $("comprasItemsBody"); if (!body) return;
   if (!items.length) items = [itemVacio()];
@@ -31,24 +38,46 @@ function renderItems() {
   body.querySelectorAll("input,select").forEach((el) => el.addEventListener("input", () => {
     const tr = el.closest("tr"), i = Number(tr.dataset.i), k = el.dataset.k;
     items[i][k] = ["cantidad","precio","iva"].includes(k) ? numero(el.value) : el.value;
+    if (["cantidad","precio","iva"].includes(k)) items[i].subtotalDetectado = null;
+    invalidarImportesDetectados();
     tr.querySelector("[data-subtotal]").textContent = money(calcularItem(items[i])); calcularTotales();
   }));
-  body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { items.splice(Number(b.dataset.del),1); renderItems(); }));
+  body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { items.splice(Number(b.dataset.del),1); invalidarImportesDetectados(); renderItems(); }));
   calcularTotales();
 }
 function calcularTotales() {
-  const subtotal = items.reduce((s,it)=>s+calcularItem(it),0);
-  const neto21 = items.filter(it=>numero(it.iva)===21).reduce((s,it)=>s+calcularItem(it),0);
-  const iva21 = neto21 * .21;
+  const subtotalCalculado = items.reduce((s,it)=>s+calcularItem(it),0);
+  const basesPorIva = new Map();
+  items.forEach(it => { const tasa=numero(it.iva); basesPorIva.set(tasa,(basesPorIva.get(tasa)||0)+calcularItem(it)); });
   const descuentos = numero($("comprasDescuentos")?.value);
   const otros = numero($("comprasOtrosImpuestos")?.value);
-  const total = Math.max(0, subtotal - descuentos + items.reduce((s,it)=>s+calcularItem(it)*(numero(it.iva)/100),0) + otros);
+  const ivaCalculado = [...basesPorIva].reduce((s,[tasa,base])=>s+base*(tasa/100),0);
+  const totalCalculado = Math.max(0, subtotalCalculado - descuentos + ivaCalculado + otros);
+  const subtotal = importesDetectados?.subtotal ?? subtotalCalculado;
+  const neto = importesDetectados?.neto ?? [...basesPorIva].filter(([t])=>t>0).reduce((s,[,b])=>s+b,0);
+  const iva = importesDetectados?.iva ?? ivaCalculado;
+  const total = importesDetectados?.total ?? totalCalculado;
+  const tasas = [...basesPorIva.keys()].filter(t=>t>0).sort((a,b)=>a-b);
+  const tasaUnica = tasas.length===1 ? tasas[0] : null;
   if ($("comprasSubtotal")) $("comprasSubtotal").textContent=money(subtotal);
-  if ($("comprasNeto21")) $("comprasNeto21").textContent=money(neto21);
-  if ($("comprasIva21")) $("comprasIva21").textContent=money(iva21);
+  if ($("comprasNeto21")) $("comprasNeto21").textContent=money(neto);
+  if ($("comprasIva21")) $("comprasIva21").textContent=money(iva);
+  if ($("comprasNetoLabel")) $("comprasNetoLabel").textContent=tasaUnica ? `Neto gravado ${tasaUnica}%` : "Neto gravado";
+  if ($("comprasIvaLabel")) $("comprasIvaLabel").textContent=tasaUnica ? `IVA ${tasaUnica}%` : "IVA total";
+  const alicuotasWrap = $("comprasAlicuotas");
+  if (alicuotasWrap) {
+    alicuotasWrap.innerHTML = alicuotasDetectadas.length > 1 ? alicuotasDetectadas.map(a => `<div><dt>Neto gravado ${numero(a.tasa)}%</dt><dd>${money(a.neto)}</dd></div><div><dt>IVA ${numero(a.tasa)}%</dt><dd>${money(a.iva)}</dd></div>`).join("") : "";
+  }
+  const comprobante = valor("comprasComprobante");
+  const noDiscrimina = /(?:Factura|crédito|débito) C/i.test(comprobante) || (!tasas.length && iva===0);
+  const variasAlicuotas = alicuotasDetectadas.length > 1;
+  $("comprasNetoFila")?.classList.toggle("oculto", noDiscrimina || variasAlicuotas);
+  $("comprasIvaFila")?.classList.toggle("oculto", noDiscrimina || variasAlicuotas);
+  alicuotasWrap?.classList.toggle("oculto", noDiscrimina || !variasAlicuotas);
   if ($("comprasTotal")) $("comprasTotal").textContent=money(total);
-  return { subtotal, neto21, iva21, descuentos, otros, total };
+  return { subtotal, neto21: neto, iva21: iva, descuentos, otros, total };
 }
+
 function archivoABase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -76,6 +105,8 @@ function seleccionarOpcion(id, valor) {
 }
 function aplicarFacturaExtraida(f) {
   if (!f || typeof f !== "object") return;
+  camposRevision = Array.isArray(f.campos_revision) ? f.campos_revision.filter(Boolean) : [];
+  alicuotasDetectadas = Array.isArray(f.alicuotas_iva) ? f.alicuotas_iva.filter(a => numero(a?.tasa)>0 && (numero(a?.neto)>0 || numero(a?.iva)>0)) : [];
   setValor("comprasProveedor", f.proveedor || f.razon_social);
   setValor("comprasRazonSocial", f.razon_social || f.proveedor);
   setValor("comprasCuit", f.cuit);
@@ -90,15 +121,25 @@ function aplicarFacturaExtraida(f) {
   if ($("comprasDescuentos")) $("comprasDescuentos").value = numero(f.descuentos);
   if ($("comprasOtrosImpuestos")) $("comprasOtrosImpuestos").value = numero(f.otros_impuestos);
   if (f.observaciones) setValor("comprasObservaciones", f.observaciones);
+  calcularTotales();
   const detectados = Array.isArray(f.items) ? f.items.filter(it => it && (it.descripcion || it.codigo || numero(it.subtotal) > 0)) : [];
   if (detectados.length) {
     items = detectados.map(it => ({
       codigo: String(it.codigo || ""), descripcion: String(it.descripcion || ""),
-      cantidad: numero(it.cantidad) || 1, precio: numero(it.precio_unitario), iva: numero(it.iva)
+      cantidad: numero(it.cantidad) || 1, precio: numero(it.precio_unitario), iva: numero(it.iva),
+      subtotalDetectado: Number.isFinite(Number(it.subtotal)) ? numero(it.subtotal) : null
     }));
-    renderItems();
-  } else calcularTotales();
+  }
+  const subtotalLineas = detectados.reduce((a,it)=>a+numero(it.subtotal),0);
+  importesDetectados = {
+    subtotal: numero(f.subtotal || f.neto_gravado || subtotalLineas),
+    neto: numero(f.neto_gravado || f.neto_gravado_21 || subtotalLineas),
+    iva: numero(f.iva_total || f.iva_21),
+    total: numero(f.total)
+  };
+  renderItems();
 }
+
 async function extraerFactura(file) {
   if (!$("comprasAutoDetectar")?.checked) return;
   setEstadoArchivo(`Analizando ${file.name}…`, "analizando");
@@ -117,7 +158,8 @@ async function extraerFactura(file) {
     }
     aplicarFacturaExtraida(data.factura);
     const cantidad = Array.isArray(data.factura?.items) ? data.factura.items.length : 0;
-    setEstadoArchivo(`✓ Datos detectados${cantidad ? ` · ${cantidad} ítem${cantidad === 1 ? "" : "s"}` : ""}. Revisá la información antes de guardar.`, "ok");
+    const revision = camposRevision.length ? ` · Revisar: ${camposRevision.join(", ")}` : "";
+    setEstadoArchivo(`✓ Datos detectados${cantidad ? ` · ${cantidad} ítem${cantidad === 1 ? "" : "s"}` : ""}${revision}. Revisá la información antes de guardar.`, "ok");
   } catch (error) {
     console.error("Lectura automática de factura:", error);
     setEstadoArchivo(`⚠ ${error.message || "No se pudo leer automáticamente"}. Podés completar los datos manualmente.`, "error");
@@ -186,7 +228,7 @@ function ajustarZoom(delta=0, reset=false){
 function limpiarArchivo(){ pdfRenderToken++; archivoActual=null; if(previewUrl) URL.revokeObjectURL(previewUrl); previewUrl=""; const p=$("comprasPreview"); if(p) p.innerHTML='<svg class="app-icon"><use href="#icon-clipboard"></use></svg><span>Importá una factura para verla aquí</span>'; $("comprasArchivoEstado")?.classList.add("oculto"); if($("comprasArchivo")) $("comprasArchivo").value=""; }
 function valor(id){ return $(id)?.value?.trim?.() ?? $(id)?.value ?? ""; }
 function hoy(){ return new Date().toISOString().slice(0,10); }
-function resetForm(){ ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimiento","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""}); if($("comprasFecha"))$("comprasFecha").value=hoy(); if($("comprasDescuentos"))$("comprasDescuentos").value=0; if($("comprasOtrosImpuestos"))$("comprasOtrosImpuestos").value=0; items=[itemVacio()]; adjuntos=[]; limpiarArchivo(); renderItems(); renderAdjuntos(); }
+function resetForm(){ importesDetectados=null; alicuotasDetectadas=[]; camposRevision=[]; ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimiento","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""}); if($("comprasFecha"))$("comprasFecha").value=hoy(); if($("comprasDescuentos"))$("comprasDescuentos").value=0; if($("comprasOtrosImpuestos"))$("comprasOtrosImpuestos").value=0; items=[itemVacio()]; adjuntos=[]; limpiarArchivo(); renderItems(); renderAdjuntos(); }
 function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimiento:valor("comprasVencimiento"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
 function guardar(){ const r=construirRegistro(); if(!r.proveedor){ alert("Completá el proveedor antes de guardar."); $("comprasProveedor")?.focus(); return; } if(!r.fecha){ alert("Completá la fecha del comprobante."); return; } if(!items.some(it=>it.descripcion || numero(it.precio)>0)){ alert("Agregá al menos un ítem al comprobante."); return; } const lista=facturas(); lista.unshift(r); guardarFacturas(lista); actualizarResumen(); renderHistorial(); alert("Factura guardada correctamente."); resetForm(); }
 function renderAdjuntos(){ const c=$("comprasAdjuntosLista"); if(c) c.innerHTML=adjuntos.map(f=>`<small style="display:block;margin-top:6px;color:#697386">• ${f.name}</small>`).join(""); }
@@ -195,7 +237,7 @@ function renderHistorial(){ const q=(valor("comprasHistBuscar")||"").toLowerCase
 function mostrarHistorial(ver){ $("comprasEditor")?.classList.toggle("oculto",ver); $("comprasHistorial")?.classList.toggle("oculto",!ver); $("comprasVerHistorial")?.classList.toggle("oculto",ver); if(ver)renderHistorial(); }
 function init(){ if(!$("adminTab-compras"))return; $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); actualizarResumen();
   $("comprasDropzone")?.addEventListener("click",()=>$("comprasArchivo")?.click()); $("comprasArchivo")?.addEventListener("change",e=>setArchivo(e.target.files?.[0])); const dz=$("comprasDropzone"); ["dragenter","dragover"].forEach(ev=>dz?.addEventListener(ev,e=>{e.preventDefault();dz.classList.add("dragover")})); ["dragleave","drop"].forEach(ev=>dz?.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove("dragover")})); dz?.addEventListener("drop",e=>setArchivo(e.dataTransfer.files?.[0]));
-  $("comprasAgregarItem")?.addEventListener("click",()=>{items.push(itemVacio());renderItems()}); $("comprasEditarItems")?.addEventListener("click",()=>$("comprasItemsBody")?.querySelector("input")?.focus()); ["comprasDescuentos","comprasOtrosImpuestos"].forEach(id=>$(id)?.addEventListener("input",calcularTotales)); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",limpiarArchivo); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",guardar); $("comprasCancelar")?.addEventListener("click",()=>{if(confirm("¿Cancelar la carga actual?"))resetForm()}); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarHistorial(false)); $("comprasHistBuscar")?.addEventListener("input",renderHistorial); $("comprasHistMes")?.addEventListener("change",renderHistorial); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
+  $("comprasAgregarItem")?.addEventListener("click",()=>{items.push(itemVacio());invalidarImportesDetectados();renderItems()}); $("comprasEditarItems")?.addEventListener("click",()=>$("comprasItemsBody")?.querySelector("input")?.focus()); ["comprasDescuentos","comprasOtrosImpuestos","comprasComprobante"].forEach(id=>$(id)?.addEventListener("input",()=>{ invalidarImportesDetectados(); calcularTotales(); })); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",limpiarArchivo); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",guardar); $("comprasCancelar")?.addEventListener("click",()=>{if(confirm("¿Cancelar la carga actual?"))resetForm()}); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarHistorial(false)); $("comprasHistBuscar")?.addEventListener("input",renderHistorial); $("comprasHistMes")?.addEventListener("change",renderHistorial); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
 }
 window.ComprasFacturas={render(){actualizarResumen();renderItems();},actualizarResumen};
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();

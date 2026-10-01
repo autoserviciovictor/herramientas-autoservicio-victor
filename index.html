@@ -3669,11 +3669,11 @@
                 <label><span>CUIT / DNI</span><input id="comprasCuit" type="text" placeholder="XX-XXXXXXXX-X"></label>
                 <label class="span-2"><span>Condición Fiscal</span><select id="comprasCondicionFiscal"><option>Responsable Inscripto</option><option>Monotributo</option><option>Exento</option><option>Consumidor Final</option></select></label>
                 <label><span>Razón social / Apellido y Nombre</span><input id="comprasRazonSocial" type="text"></label>
-                <label><span>Comprobante <b>*</b></span><select id="comprasComprobante"><option>Factura</option><option>Nota de crédito</option><option>Nota de débito</option><option>Remito</option></select></label>
+                <label><span>Comprobante <b>*</b></span><select id="comprasComprobante"><option value="">Seleccionar</option><option>Factura A</option><option>Factura B</option><option>Factura C</option><option>Factura</option><option>Nota de crédito A</option><option>Nota de crédito B</option><option>Nota de crédito C</option><option>Nota de crédito</option><option>Nota de débito A</option><option>Nota de débito B</option><option>Nota de débito C</option><option>Nota de débito</option><option>Remito</option></select></label>
                 <label><span>Punto de venta</span><input id="comprasPuntoVenta" type="text" inputmode="numeric" placeholder="00000"></label>
                 <label><span>Número</span><input id="comprasNumero" type="text" inputmode="numeric" placeholder="00000000"></label>
                 <label><span>Fecha <b>*</b></span><input id="comprasFecha" type="date"></label>
-                <label><span>Condición de pago</span><select id="comprasCondicionPago"><option>Contado</option><option>Cuenta corriente</option><option>Transferencia</option><option>Tarjeta</option><option>Cheque</option></select></label>
+                <label><span>Condición de pago</span><select id="comprasCondicionPago"><option value="">Sin especificar</option><option>Contado</option><option>Cuenta corriente</option><option>Transferencia</option><option>Tarjeta</option><option>Cheque</option></select></label>
                 <label><span>Moneda</span><select id="comprasMoneda"><option>Pesos</option><option>Dólares</option></select></label>
                 <label><span>Clasificación / Rubro</span><select id="comprasRubro"><option value="">Seleccionar rubro</option><option>Mercadería</option><option>Servicios</option><option>Impuestos</option><option>Mantenimiento</option><option>Otros</option></select></label>
                 <label><span>Vencimiento</span><input id="comprasVencimiento" type="date"></label>
@@ -3694,7 +3694,7 @@
 
             <article class="compras-card compras-totals-card">
               <header><span class="green">$</span><h2>Totales del comprobante</h2></header>
-              <dl><div><dt>Subtotal (sin impuestos)</dt><dd id="comprasSubtotal">$ 0,00</dd></div><div><dt>Descuentos</dt><dd><input id="comprasDescuentos" type="number" min="0" step="0.01" value="0"></dd></div><div><dt>Neto gravado 21%</dt><dd id="comprasNeto21">$ 0,00</dd></div><div><dt>IVA 21%</dt><dd id="comprasIva21">$ 0,00</dd></div><div><dt>Otros impuestos</dt><dd><input id="comprasOtrosImpuestos" type="number" min="0" step="0.01" value="0"></dd></div></dl>
+              <dl><div><dt>Subtotal (sin impuestos)</dt><dd id="comprasSubtotal">$ 0,00</dd></div><div><dt>Descuentos</dt><dd><input id="comprasDescuentos" type="number" min="0" step="0.01" value="0"></dd></div><div id="comprasNetoFila"><dt id="comprasNetoLabel">Neto gravado</dt><dd id="comprasNeto21">$ 0,00</dd></div><div id="comprasIvaFila"><dt id="comprasIvaLabel">IVA</dt><dd id="comprasIva21">$ 0,00</dd></div><div id="comprasAlicuotas"></div><div><dt>Otros impuestos</dt><dd><input id="comprasOtrosImpuestos" type="number" min="0" step="0.01" value="0"></dd></div></dl>
               <div class="compras-total-final"><span>TOTAL</span><strong id="comprasTotal">$ 0,00</strong></div>
             </article>
 
