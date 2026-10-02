@@ -44,3 +44,15 @@
 @media(max-width:700px){#adminTab-liquidacion .liq-tab{font-size:12px}#adminTab-liquidacion .liq-toolbar input{min-width:155px;width:155px}#adminTab-liquidacion .liq-toolbar select{min-width:155px}}
 
 /* Acciones de guardado de Liquidación: aisladas de reglas globales de button:disabled. */
+
+/* Historial compartido de períodos de Liquidación de Horas */
+.liq-hero-actions{display:flex;align-items:stretch;gap:9px}
+.liq-save-period-btn,.liq-history-btn{border-radius:12px;padding:0 16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.liq-save-period-btn{border:1px solid #f51f45;background:#f51f45;color:#fff;box-shadow:0 7px 18px rgba(245,31,69,.16)}
+.liq-history-btn{border:1px solid #dfe6ef;background:#fff;color:#26364e}
+.liq-save-period-btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.liq-history-modal{width:min(720px,100%)}
+.liq-history-list{display:grid;gap:9px;max-height:58vh;overflow:auto}
+.liq-history-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(130px,.8fr) auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid #e3eaf2;border-radius:11px;background:#fff}
+.liq-history-row strong,.liq-history-row small{display:block}.liq-history-row strong{font-size:13px;color:#13203a}.liq-history-row small{font-size:10.5px;color:#64748b;margin-top:3px}.liq-history-open{height:34px;padding:0 13px;border:1px solid #dbe3ec;border-radius:8px;background:#fff;color:#172033;font-weight:750;cursor:pointer}
+@media(max-width:700px){.liq-hero-actions{margin-left:auto}.liq-history-btn,.liq-save-period-btn{padding:0 10px;font-size:10px}.liq-history-row{grid-template-columns:1fr auto}.liq-history-row>div:nth-child(2){grid-column:1/2}.liq-period-pill{display:none}}
