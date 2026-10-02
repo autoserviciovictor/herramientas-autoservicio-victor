@@ -74,3 +74,15 @@
 #liqHistoryModal{z-index:10020}
 #liqSaveConfirmModal{z-index:10040}
 #liqDeleteConfirmModal{z-index:10060}
+
+/* Historial de períodos: más espacio, autoría visible y acciones claras. */
+.liq-history-modal{width:min(980px,calc(100vw - 36px));min-height:430px;max-height:min(78vh,720px);display:flex;flex-direction:column}
+.liq-history-modal>.liq-modal-body{flex:1;min-height:0;padding-bottom:18px}
+.liq-history-list{max-height:none;height:100%;min-height:285px;overflow:auto;align-content:start}
+.liq-history-row{grid-template-columns:minmax(210px,1.35fr) minmax(145px,.8fr) minmax(145px,.8fr) auto;gap:18px;padding:14px 16px}
+.liq-history-user>span{display:block;margin-bottom:3px;color:#8a96a8;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.liq-history-open{min-width:76px;height:40px;padding:0 16px;font-size:11px}
+.liq-history-delete{width:42px;height:42px;border-radius:10px;font-size:0}
+.liq-history-delete svg{width:21px;height:21px;display:block;fill:currentColor}
+.liq-history-delete:hover{background:#ffe1e8;border-color:#ffb8c6;transform:translateY(-1px)}
+@media(max-width:760px){.liq-history-modal{min-height:390px}.liq-history-row{grid-template-columns:1fr auto;gap:10px}.liq-history-user{grid-column:1}.liq-history-actions{grid-column:2;grid-row:1/4}.liq-history-open,.liq-history-delete{width:74px}}

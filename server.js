@@ -114,7 +114,7 @@ const {
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
 const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb, listarAlertasProductoDb, guardarAlertaLoteDb, cancelarAlertaLoteDb, listarAlertasVencidasDb, marcarAlertaEnviadaDb } = require("./db-lotes");
-const { asegurarEsquemaLiquidacionHoras, guardarPeriodoLiquidacionDb, listarPeriodosLiquidacionDb, obtenerPeriodoLiquidacionDb, eliminarPeriodoLiquidacionDb } = require("./db-liquidacion-horas");
+const { asegurarEsquemaLiquidacionHoras, guardarPeriodoLiquidacionDb, actualizarPeriodoLiquidacionDb, listarPeriodosLiquidacionDb, obtenerPeriodoLiquidacionDb, eliminarPeriodoLiquidacionDb } = require("./db-liquidacion-horas");
 const { asegurarEsquemaProductosProvisionales, buscarProductoProvisionalDb, listarProductosProvisionalesPendientesDb, crearProductoProvisionalDb, conciliarProductosProvisionalesDb } = require("./db-productos-provisionales");
 const {
   asegurarEsquemaListasReposicion,
@@ -2181,6 +2181,19 @@ app.delete("/admin/liquidacion-horas/periodos/:id", requerirAdministrador, async
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudo eliminar el período" });
+  }
+});
+app.put("/admin/liquidacion-horas/periodos/:id", requerirAdministrador, async (req, res) => {
+  try {
+    const snapshot=req.body?.snapshot||{};
+    const periodo=Array.isArray(snapshot.period)?snapshot.period:[];
+    if(!periodo[0]||!periodo[1]||!Array.isArray(snapshot.rows)||!snapshot.rows.length)
+      return res.status(400).json({ok:false,mensaje:"No hay una liquidación válida para guardar"});
+    const actualizado=await actualizarPeriodoLiquidacionDb({id:req.params.id,desde:periodo[0],hasta:periodo[1],archivo:snapshot.fileMeta?.name||'',editadoPor:req.usuario?.usuario||'',snapshot});
+    if(!actualizado) return res.status(404).json({ok:false,mensaje:"Período no encontrado"});
+    res.json({ok:true,periodo:actualizado});
+  } catch (error) {
+    res.status(500).json({ok:false,mensaje:error.message||"No se pudo actualizar el período"});
   }
 });
 app.post("/admin/liquidacion-horas/periodos", requerirAdministrador, async (req, res) => {
