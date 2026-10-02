@@ -37,9 +37,14 @@ async function listarPeriodosLiquidacionDb(){
   const r=await query(`SELECT period_id,start_date,end_date,file_name,saved_by,created_at,'{}'::jsonb AS snapshot FROM payroll_hour_periods ORDER BY start_date DESC,end_date DESC,created_at DESC`);
   return r.rows.map(fila);
 }
+async function eliminarPeriodoLiquidacionDb(id){
+  await asegurarEsquemaLiquidacionHoras();
+  const r=await query(`DELETE FROM payroll_hour_periods WHERE period_id=$1 RETURNING period_id`,[texto(id)]);
+  return r.rowCount>0;
+}
 async function obtenerPeriodoLiquidacionDb(id){
   await asegurarEsquemaLiquidacionHoras();
   const r=await query(`SELECT * FROM payroll_hour_periods WHERE period_id=$1 LIMIT 1`,[texto(id)]);
   return r.rows[0]?fila(r.rows[0]):null;
 }
-module.exports={asegurarEsquemaLiquidacionHoras,guardarPeriodoLiquidacionDb,listarPeriodosLiquidacionDb,obtenerPeriodoLiquidacionDb};
+module.exports={asegurarEsquemaLiquidacionHoras,guardarPeriodoLiquidacionDb,listarPeriodosLiquidacionDb,obtenerPeriodoLiquidacionDb,eliminarPeriodoLiquidacionDb};

@@ -114,7 +114,6 @@ const {
   eliminarVencimientoDb,
 } = require("./db-vencimientos");
 const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb, listarAlertasProductoDb, guardarAlertaLoteDb, cancelarAlertaLoteDb, listarAlertasVencidasDb, marcarAlertaEnviadaDb } = require("./db-lotes");
-const { asegurarEsquemaLiquidacionHoras, guardarPeriodoLiquidacionDb, listarPeriodosLiquidacionDb, obtenerPeriodoLiquidacionDb } = require("./db-liquidacion-horas");
 const { asegurarEsquemaProductosProvisionales, buscarProductoProvisionalDb, listarProductosProvisionalesPendientesDb, crearProductoProvisionalDb, conciliarProductosProvisionalesDb } = require("./db-productos-provisionales");
 const {
   asegurarEsquemaListasReposicion,
@@ -2154,40 +2153,6 @@ async function registrarHistorialAdministracion(req, accion, entidad, identifica
     console.error("No se pudo registrar el historial de Administración:", error);
   }
 }
-
-
-// Historial compartido de Liquidación de Horas. Se guarda una foto inmutable del período
-// para que cambios posteriores de horarios/configuración no alteren liquidaciones históricas.
-app.get("/admin/liquidacion-horas/periodos", requerirAdministrador, async (req, res) => {
-  try {
-    await asegurarEsquemaLiquidacionHoras();
-    res.json({ ok: true, periodos: await listarPeriodosLiquidacionDb() });
-  } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo obtener el historial de liquidaciones" });
-  }
-});
-app.get("/admin/liquidacion-horas/periodos/:id", requerirAdministrador, async (req, res) => {
-  try {
-    const periodo = await obtenerPeriodoLiquidacionDb(req.params.id);
-    if (!periodo) return res.status(404).json({ ok: false, mensaje: "Período no encontrado" });
-    res.json({ ok: true, periodo });
-  } catch (error) {
-    res.status(500).json({ ok: false, mensaje: error.message || "No se pudo abrir el período" });
-  }
-});
-app.post("/admin/liquidacion-horas/periodos", requerirAdministrador, async (req, res) => {
-  try {
-    const snapshot=req.body?.snapshot||{};
-    const periodo=Array.isArray(snapshot.period)?snapshot.period:[];
-    if(!periodo[0]||!periodo[1]||!Array.isArray(snapshot.rows)||!snapshot.rows.length)
-      return res.status(400).json({ok:false,mensaje:"No hay una liquidación válida para guardar"});
-    const id=`LH-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
-    const guardado=await guardarPeriodoLiquidacionDb({id,desde:periodo[0],hasta:periodo[1],archivo:snapshot.fileMeta?.name||'',guardadoPor:req.usuario?.usuario||'',snapshot});
-    res.json({ok:true,periodo:guardado});
-  } catch (error) {
-    res.status(500).json({ok:false,mensaje:error.message||"No se pudo guardar el período"});
-  }
-});
 
 app.get("/admin/historial-administracion", requerirAdministrador, async (req, res) => {
   try {

@@ -56,3 +56,21 @@
 .liq-history-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(130px,.8fr) auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid #e3eaf2;border-radius:11px;background:#fff}
 .liq-history-row strong,.liq-history-row small{display:block}.liq-history-row strong{font-size:13px;color:#13203a}.liq-history-row small{font-size:10.5px;color:#64748b;margin-top:3px}.liq-history-open{height:34px;padding:0 13px;border:1px solid #dbe3ec;border-radius:8px;background:#fff;color:#172033;font-weight:750;cursor:pointer}
 @media(max-width:700px){.liq-hero-actions{margin-left:auto}.liq-history-btn,.liq-save-period-btn{padding:0 10px;font-size:10px}.liq-history-row{grid-template-columns:1fr auto}.liq-history-row>div:nth-child(2){grid-column:1/2}.liq-period-pill{display:none}}
+
+/* Confirmaciones e historial de períodos: interfaz propia, sin confirm/alert nativos. */
+.liq-confirm-modal{width:min(500px,100%)}
+.liq-confirm-icon{width:46px;height:46px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;background:#e9fbf2;color:#0aa568;font-size:23px;font-weight:900}
+.liq-confirm-icon-danger{background:#fff0f3;color:#f51f45}
+.liq-confirm-text{margin:0;text-align:center;color:#26364e;font-size:13px;line-height:1.55;font-weight:650}
+.liq-btn-danger{border:1px solid #f51f45;background:#f51f45;color:#fff}
+.liq-btn-danger:disabled,.liq-btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.liq-history-actions{display:flex;align-items:center;gap:7px;justify-content:flex-end}
+.liq-history-delete{width:34px;height:34px;border:1px solid #ffd6de;border-radius:8px;background:#fff2f5;color:#f51f45;display:grid;place-items:center;cursor:pointer;font-size:14px}
+.liq-history-delete:hover{background:#ffe7ec}
+@media(max-width:700px){.liq-history-actions{grid-column:2;grid-row:1/3;flex-direction:column}.liq-history-open{width:64px}.liq-history-delete{width:64px}}
+
+/* Jerarquía explícita de modales de períodos.
+   El historial queda debajo y las confirmaciones siempre se muestran por encima. */
+#liqHistoryModal{z-index:10020}
+#liqSaveConfirmModal{z-index:10040}
+#liqDeleteConfirmModal{z-index:10060}
