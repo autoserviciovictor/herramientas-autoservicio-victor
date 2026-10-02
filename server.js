@@ -1626,6 +1626,18 @@ async function obtenerResumenDashboard(usuario) {
 
 // Compras y Facturas — lectura automática de comprobantes.
 // La clave queda exclusivamente en el servidor; nunca se expone al navegador.
+// Cache efímera: evita volver a enviar exactamente la misma factura a la IA
+// durante pruebas, recargas o reintentos. No se persisten archivos en disco.
+const cacheLecturaFacturas = new Map();
+const FACTURA_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const FACTURA_CACHE_MAX = 40;
+function guardarCacheLecturaFactura(clave, factura) {
+  cacheLecturaFacturas.set(clave, { factura, ts: Date.now() });
+  if (cacheLecturaFacturas.size > FACTURA_CACHE_MAX) {
+    const masVieja = [...cacheLecturaFacturas.entries()].sort((a,b) => a[1].ts - b[1].ts)[0]?.[0];
+    if (masVieja) cacheLecturaFacturas.delete(masVieja);
+  }
+}
 app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24mb" }), async (req, res) => {
   try {
     if (!OPENAI_API_KEY) {
@@ -1640,6 +1652,14 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
     if (archivoBase64.length > 20_000_000) {
       return res.status(413).json({ error: "La factura es demasiado grande para analizarla." });
     }
+
+    const claveCache = crypto.createHash("sha256").update(mime).update("|").update(archivoBase64).digest("hex");
+    const cache = cacheLecturaFacturas.get(claveCache);
+    if (cache && Date.now() - cache.ts < FACTURA_CACHE_TTL_MS) {
+      return res.json({ ok: true, factura: cache.factura, cache: true, tiempo_ms: 0 });
+    }
+    if (cache) cacheLecturaFacturas.delete(claveCache);
+    const inicioIA = Date.now();
 
     const instrucciones = `Leé este comprobante argentino de compra con máxima precisión y transcribí lo impreso, sin reconstruir importes. REGLAS CRÍTICAS:
 1) El proveedor/emisor es quien EMITE la factura (encabezado, junto a su CUIT/domicilio). Nunca uses localidad, provincia ni datos del cliente/comprador como proveedor. "SEÑOR/ES", "CLIENTE" o "RECEPTOR" identifican al comprador, no al proveedor.
@@ -1690,7 +1710,10 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
     if (!texto) return res.status(502).json({ error: "El analizador no devolvió datos de la factura." });
     let factura;
     try { factura = JSON.parse(texto); } catch { return res.status(502).json({ error: "La respuesta de lectura no tuvo un formato válido." }); }
-    return res.json({ ok: true, factura });
+    const tiempoMs = Date.now() - inicioIA;
+    guardarCacheLecturaFactura(claveCache, factura);
+    console.log(`[Facturas] IA ${mime} ${Math.round(archivoBase64.length * 0.75 / 1024)} KB: ${tiempoMs} ms`);
+    return res.json({ ok: true, factura, cache: false, tiempo_ms: tiempoMs });
   } catch (error) {
     console.error("Error extrayendo factura:", error);
     return res.status(500).json({ error: `No se pudo procesar la factura: ${normalizarTexto(error?.message) || "error interno"}` });

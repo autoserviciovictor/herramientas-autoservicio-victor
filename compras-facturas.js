@@ -1,6 +1,8 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "autoservicio_compras_facturas_v1";
+const FACTURA_IA_CACHE_KEY = "autoservicio_factura_ia_cache_v1";
+const FACTURA_IA_CACHE_MAX = 20;
 let items = [];
 let archivoActual = null;
 let previewUrl = "";
@@ -105,6 +107,26 @@ function archivoABase64(file) {
     reader.readAsDataURL(file);
   });
 }
+async function huellaArchivo(file) {
+  if (!window.crypto?.subtle) return `${file.name}|${file.size}|${file.lastModified}`;
+  const bytes = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function leerCacheFactura(clave) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(FACTURA_IA_CACHE_KEY) || "{}");
+    return cache?.[clave]?.factura || null;
+  } catch { return null; }
+}
+function guardarCacheFactura(clave, factura) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(FACTURA_IA_CACHE_KEY) || "{}");
+    cache[clave] = { factura, ts: Date.now() };
+    const entradas = Object.entries(cache).sort((a,b) => (b[1]?.ts || 0) - (a[1]?.ts || 0)).slice(0, FACTURA_IA_CACHE_MAX);
+    localStorage.setItem(FACTURA_IA_CACHE_KEY, JSON.stringify(Object.fromEntries(entradas)));
+  } catch (error) { console.warn("Cache de lectura de factura:", error); }
+}
 function setEstadoArchivo(texto, tipo = "ok") {
   const estado = $("comprasArchivoEstado");
   if (!estado) return;
@@ -189,8 +211,23 @@ async function extraerFactura(file) {
   const token = ++facturaAnalisisToken;
   setEstadoArchivo(`Analizando ${file.name}…`, "analizando");
   try {
+    // La vista previa y la lectura IA son independientes. Si este mismo archivo ya
+    // fue analizado en este navegador, reutilizamos el resultado y evitamos otra
+    // subida + otra llamada a IA.
+    const claveCache = await huellaArchivo(file);
+    if (token !== facturaAnalisisToken || archivoActual !== file) return;
+    const facturaCacheada = leerCacheFactura(claveCache);
+    if (facturaCacheada) {
+      aplicarFacturaExtraida(facturaCacheada);
+      $("comprasArchivoEstado")?.classList.add("oculto");
+      if ($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent=`Factura cargada · ${file.type === "application/pdf" ? "PDF" : "Imagen"} · ${(file.size/1024/1024).toFixed(2)} MB`;
+      return;
+    }
+
     const base64 = await archivoABase64(file);
+    if (token !== facturaAnalisisToken || archivoActual !== file) return;
     const apiBase = String(API_BASE_URL || window.API_BASE_URL || "").replace(/\/$/, "");
+    const inicioPeticion = performance.now();
     const respuesta = await fetch(`${apiBase}/compras/facturas/extraer`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre: file.name, tipo: file.type, base64 })
@@ -203,6 +240,8 @@ async function extraerFactura(file) {
     }
     if (token !== facturaAnalisisToken || archivoActual !== file) return;
     aplicarFacturaExtraida(data.factura);
+    guardarCacheFactura(claveCache, data.factura);
+    console.info(`[Facturas] análisis completado en ${Math.round(performance.now() - inicioPeticion)} ms${data.cache ? " (cache servidor)" : ""}`);
     $("comprasArchivoEstado")?.classList.add("oculto");
     if ($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent=`Factura cargada · ${file.type === "application/pdf" ? "PDF" : "Imagen"} · ${(file.size/1024/1024).toFixed(2)} MB`;
   } catch (error) {
