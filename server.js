@@ -525,13 +525,16 @@ function normalizarRol(valor) {
       : "personal";
 }
 function permisosPorDefecto() {
-  return Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, true]));
+  return { ...Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, true])), confirmarLimpiezaBano: false };
+}
+function permisosAdministrador() {
+  return { ...Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, true])), confirmarLimpiezaBano: true };
 }
 function permisosDenegados() {
-  return Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, false]));
+  return { ...Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, false])), confirmarLimpiezaBano: false };
 }
 function normalizarPermisos(valor, rol = "personal") {
-  if (rol === "administrador") return permisosPorDefecto();
+  if (rol === "administrador") return permisosAdministrador();
 
   // Compatibilidad con usuarios históricos que tenían la celda vacía:
   // se conservan sus módulos actuales. En cambio, JSON inválido u objetos
@@ -553,9 +556,10 @@ function normalizarPermisos(valor, rol = "personal") {
   if (!entrada || typeof entrada !== "object" || Array.isArray(entrada))
     return permisosDenegados();
 
-  return Object.fromEntries(
-    MODULOS_PERMITIDOS.map((m) => [m, entrada[m] === true]),
-  );
+  return {
+    ...Object.fromEntries(MODULOS_PERMITIDOS.map((m) => [m, entrada[m] === true])),
+    confirmarLimpiezaBano: entrada.confirmarLimpiezaBano === true,
+  };
 }
 // PostgreSQL es la fuente canónica de datos. Las marcas de migración se validan
 // al iniciar para impedir que la aplicación opere sobre una base incompleta.
@@ -4436,10 +4440,10 @@ app.post("/tareas/bano/confirmar", async (req, res) => {
 
 app.post("/tareas/bano/verificar", async (req, res) => {
   try {
-    if (!rolGestionSector(req.usuario))
+    if (!rolGestionSector(req.usuario) && req.usuario?.permisos?.confirmarLimpiezaBano !== true)
       return res.status(403).json({
         ok: false,
-        mensaje: "Solo supervisores o administración pueden confirmar la limpieza",
+        mensaje: "No tenés permiso para confirmar la limpieza de otros usuarios",
       });
     const fecha = normalizarTexto(req.body?.fecha);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha))

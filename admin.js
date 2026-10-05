@@ -32,6 +32,7 @@ async function asegurarXLSX() {
 }
 
 const $ = (id) => document.getElementById(id);
+const PERMISO_CONFIRMAR_LIMPIEZA_BANO = "confirmarLimpiezaBano";
 const MODULOS_PERMISO = [
   "inventario",
   "vencimientos",
@@ -45,25 +46,31 @@ const MODULOS_PERMISO = [
 ];
 function permisosCompatibles(permisos, rol = "personal") {
   if (rol === "administrador")
-    return Object.fromEntries(MODULOS_PERMISO.map((m) => [m, true]));
+    return { ...Object.fromEntries(MODULOS_PERMISO.map((m) => [m, true])), [PERMISO_CONFIRMAR_LIMPIEZA_BANO]: true };
   const valor = permisos && typeof permisos === "object" ? permisos : {};
-  return Object.fromEntries(
-    MODULOS_PERMISO.map((m) => [m, valor[m] !== false]),
-  );
+  return {
+    ...Object.fromEntries(MODULOS_PERMISO.map((m) => [m, valor[m] !== false])),
+    [PERMISO_CONFIRMAR_LIMPIEZA_BANO]: valor[PERMISO_CONFIRMAR_LIMPIEZA_BANO] === true,
+  };
 }
 function leerPermisosModal() {
-  return Object.fromEntries(
-    MODULOS_PERMISO.map((m) => [
-      m,
-      Boolean(document.querySelector(`[data-permiso-modulo="${m}"]`)?.checked),
-    ]),
-  );
+  return {
+    ...Object.fromEntries(
+      MODULOS_PERMISO.map((m) => [
+        m,
+        Boolean(document.querySelector(`[data-permiso-modulo="${m}"]`)?.checked),
+      ]),
+    ),
+    [PERMISO_CONFIRMAR_LIMPIEZA_BANO]: Boolean($("adminPermisoConfirmarLimpiezaBano")?.checked),
+  };
 }
 function aplicarPermisosModal(permisos, rol = "personal") {
   const valores = permisosCompatibles(permisos, rol);
   document.querySelectorAll("[data-permiso-modulo]").forEach((input) => {
     input.checked = valores[input.dataset.permisoModulo] !== false;
   });
+  if ($("adminPermisoConfirmarLimpiezaBano"))
+    $("adminPermisoConfirmarLimpiezaBano").checked = valores[PERMISO_CONFIRMAR_LIMPIEZA_BANO] === true;
   actualizarEstadoPermisosPorRol();
 }
 function actualizarEstadoPermisosPorRol() {
@@ -73,6 +80,11 @@ function actualizarEstadoPermisosPorRol() {
     input.disabled = esAdmin;
     if (esAdmin) input.checked = true;
   });
+  const permisoBano = $("adminPermisoConfirmarLimpiezaBano");
+  if (permisoBano) {
+    permisoBano.disabled = esAdmin;
+    if (esAdmin) permisoBano.checked = true;
+  }
   $("adminPermisosAdminAviso")?.classList.toggle("oculto", !esAdmin);
   $("adminUsuarioPermisos")?.classList.toggle("es-admin", esAdmin);
   actualizarResumenPermisosUsuario();

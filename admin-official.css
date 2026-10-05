@@ -4778,3 +4778,89 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail-summary strong
 #adminTab-inicio .admin-module-access-card.tone-blue .admin-module-access-icon{background:#eaf3ff;color:#2878e6}
 #adminTab-inicio .admin-module-access-card.tone-blue>button{border-color:#8db9f5;background:#f6faff;color:#216acb}
 #adminTab-inicio .admin-module-access-card.tone-blue>button:hover{background:#edf6ff;border-color:#6aa4ef}
+
+/* Permisos especiales: bloque independiente de Módulos visibles. */
+#adminUsuarioModal .admin-special-permissions{
+  grid-column:1 / -1 !important;
+  display:grid !important;
+  gap:6px !important;
+  margin-top:2px !important;
+  padding-top:12px !important;
+  border-top:1px solid #edf0f4 !important;
+}
+#adminUsuarioModal .admin-special-permission-row{
+  position:relative !important;
+  display:grid !important;
+  grid-template-columns:34px minmax(0,1fr) 38px !important;
+  align-items:center !important;
+  gap:10px !important;
+  min-height:58px !important;
+  padding:9px 11px !important;
+  border:1px solid #e2e7ee !important;
+  border-radius:10px !important;
+  background:#fff !important;
+  cursor:pointer !important;
+}
+#adminUsuarioModal .admin-special-permission-icon{
+  width:32px !important;height:32px !important;border-radius:9px !important;
+  display:grid !important;place-items:center !important;background:#fff0f3 !important;color:#f02246 !important;
+}
+#adminUsuarioModal .admin-special-permission-icon .app-icon{width:16px !important;height:16px !important;}
+#adminUsuarioModal .admin-special-permission-copy{display:grid !important;gap:2px !important;min-width:0 !important;}
+#adminUsuarioModal .admin-special-permission-copy strong{font-size:10.5px !important;color:#253041 !important;line-height:1.25 !important;}
+#adminUsuarioModal .admin-special-permission-copy small{font-size:8.5px !important;color:#8a94a3 !important;line-height:1.3 !important;}
+#adminUsuarioModal .admin-special-permission-row>input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}
+#adminUsuarioModal .admin-special-permission-switch{
+  width:36px !important;height:20px !important;border-radius:999px !important;background:#d9dee6 !important;position:relative !important;transition:.18s ease !important;
+}
+#adminUsuarioModal .admin-special-permission-switch::after{
+  content:"" !important;position:absolute !important;top:3px !important;left:3px !important;width:14px !important;height:14px !important;border-radius:50% !important;background:#fff !important;box-shadow:0 1px 3px rgba(0,0,0,.18) !important;transition:.18s ease !important;
+}
+#adminUsuarioModal .admin-special-permission-row:has(input:checked){border-color:#ffc6d0 !important;background:#fffafb !important;}
+#adminUsuarioModal .admin-special-permission-row:has(input:checked) .admin-special-permission-switch{background:#f02246 !important;}
+#adminUsuarioModal .admin-special-permission-row:has(input:checked) .admin-special-permission-switch::after{transform:translateX(16px) !important;}
+#adminUsuarioModal .admin-special-permission-row:has(input:disabled){opacity:.65 !important;cursor:default !important;}
+html[data-theme="dark"] #adminUsuarioModal .admin-special-permissions{border-top-color:#303744 !important;}
+html[data-theme="dark"] #adminUsuarioModal .admin-special-permission-row{background:#1d232d !important;border-color:#353d49 !important;}
+html[data-theme="dark"] #adminUsuarioModal .admin-special-permission-copy strong{color:#eef2f7 !important;}
+
+/* Ajuste de legibilidad — Permisos especiales del usuario */
+#adminUsuarioModal #adminPermisosEspecialesLabel{
+  font-size:13px !important;
+  font-weight:600 !important;
+  line-height:1.35 !important;
+  margin-bottom:2px !important;
+}
+#adminUsuarioModal .admin-special-permission-row{
+  min-height:68px !important;
+  padding:11px 12px !important;
+}
+#adminUsuarioModal .admin-special-permission-copy{
+  gap:4px !important;
+}
+#adminUsuarioModal .admin-special-permission-copy strong{
+  font-size:13.5px !important;
+  font-weight:600 !important;
+  line-height:1.3 !important;
+}
+#adminUsuarioModal .admin-special-permission-copy small{
+  font-size:11.5px !important;
+  line-height:1.4 !important;
+}
+
+/* Corrección visual — permiso especial de limpieza de baño
+   El checkbox real queda completamente fuera del render para evitar que
+   estilos globales del navegador/app dibujen una tilde sobre el texto. */
+#adminUsuarioModal .admin-special-permission-row > input#adminPermisoConfirmarLimpiezaBano{
+  display:none !important;
+  appearance:none !important;
+  -webkit-appearance:none !important;
+}
+#adminUsuarioModal .admin-special-permission-copy small{
+  color:#778294 !important;
+  font-size:11.5px !important;
+  line-height:1.4 !important;
+}
+html[data-theme="dark"] #adminUsuarioModal .admin-special-permission-copy small{
+  color:#aeb7c4 !important;
+}
