@@ -432,7 +432,46 @@ function cerrarGuardadoExitoso(){
   modal.classList.remove("visible");
   setTimeout(()=>modal.classList.add("oculto"),180);
 }
-function guardar(){ const r=construirRegistro(); if(!r.proveedor){ alert("Completá el proveedor antes de guardar."); $("comprasProveedor")?.focus(); return; } if(!r.fecha){ alert("Completá la fecha del comprobante."); return; } const lista=facturas(); lista.unshift(r); guardarFacturas(lista); actualizarResumen(); renderHistorial(); resetForm(); mostrarGuardadoExitoso(); }
+async function guardar(){
+  const r=construirRegistro();
+  if(!r.proveedor){
+    if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Falta el proveedor",message:"Completá el proveedor antes de guardar.",confirmText:"Aceptar"});
+    else alert("Completá el proveedor antes de guardar.");
+    $("comprasProveedor")?.focus();
+    return;
+  }
+  if(!r.fecha){
+    if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Falta la fecha",message:"Completá la fecha del comprobante.",confirmText:"Aceptar"});
+    else alert("Completá la fecha del comprobante.");
+    return;
+  }
+
+  let confirmado=true;
+  if(window.AppDialog?.confirm){
+    confirmado=await window.AppDialog.confirm({
+      title:"Guardar factura",
+      message:`¿Querés guardar la factura ${r.comprobante || ""} ${r.numero || ""} de ${r.proveedor}?`,
+      confirmText:"Guardar factura",
+      cancelText:"Cancelar",
+      tone:"primary"
+    });
+  }
+  if(!confirmado) return;
+
+  try{
+    const lista=facturas();
+    lista.unshift(r);
+    guardarFacturas(lista);
+    actualizarResumen();
+    renderHistorial();
+    resetForm();
+    mostrarGuardadoExitoso();
+  }catch(error){
+    console.error("No se pudo guardar la factura",error);
+    if(window.AppDialog?.alert) await window.AppDialog.alert({title:"No se pudo guardar",message:"Ocurrió un error al guardar la factura. Intentá nuevamente.",confirmText:"Aceptar"});
+    else alert("No se pudo guardar la factura. Intentá nuevamente.");
+  }
+}
 function renderAdjuntos(){ const c=$("comprasAdjuntosLista"); if(c) c.innerHTML=adjuntos.map(f=>`<small style="display:block;margin-top:6px;color:#697386">• ${f.name}</small>`).join(""); }
 function actualizarResumen(){
   const lista=facturas(), mes=hoy().slice(0,7), delMes=lista.filter(f=>String(f.fecha||f.creadoEn).slice(0,7)===mes), gasto=delMes.reduce((s,f)=>s+numero(f.total),0);
@@ -480,7 +519,7 @@ function init(){ if(!$("adminTab-compras"))return; $("comprasFecha").value ||= h
     const el=$(id); if(!el) return;
     el.addEventListener("input",()=>{ totalesManuales.add(id); if (id !== "comprasTotal") { importesDetectados = null; totalesManuales.delete("comprasTotal"); } calcularTotales(); });
     el.addEventListener("blur",()=>{ el.value=importeAR(el.value); });
-  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",guardar); $("comprasCancelar")?.addEventListener("click",()=>resetForm()); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarHistorial(false)); $("comprasHistBuscar")?.addEventListener("input",renderHistorial); $("comprasHistMes")?.addEventListener("change",renderHistorial); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasGuardadoAceptar")?.addEventListener("click",cerrarGuardadoExitoso); $("comprasGuardadoModal")?.querySelector(".compras-save-modal-backdrop")?.addEventListener("click",cerrarGuardadoExitoso);
+  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",(e)=>{e.preventDefault(); guardar();}); $("comprasCancelar")?.addEventListener("click",()=>resetForm()); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarHistorial(false)); $("comprasHistBuscar")?.addEventListener("input",renderHistorial); $("comprasHistMes")?.addEventListener("change",renderHistorial); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasGuardadoAceptar")?.addEventListener("click",cerrarGuardadoExitoso); $("comprasGuardadoModal")?.querySelector(".compras-save-modal-backdrop")?.addEventListener("click",cerrarGuardadoExitoso);
 }
 window.ComprasFacturas={render(){actualizarResumen();renderItems();},actualizarResumen,limpiar:()=>resetForm()};
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
