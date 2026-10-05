@@ -25,11 +25,14 @@ async function asegurarEsquemaVencimientos() {
       deposit_quantity INTEGER NOT NULL DEFAULT 0 CHECK(deposit_quantity >= 0),
       offer BOOLEAN NOT NULL DEFAULT FALSE,
       category TEXT NOT NULL DEFAULT 'Sin clasificar',
+      source_lot_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
     await query(`ALTER TABLE expiration_records ADD COLUMN IF NOT EXISTS salon_quantity INTEGER NOT NULL DEFAULT 0 CHECK(salon_quantity >= 0)`);
     await query(`ALTER TABLE expiration_records ADD COLUMN IF NOT EXISTS deposit_quantity INTEGER NOT NULL DEFAULT 0 CHECK(deposit_quantity >= 0)`);
+    await query(`ALTER TABLE expiration_records ADD COLUMN IF NOT EXISTS source_lot_id TEXT`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS expiration_records_source_lot_idx ON expiration_records(source_lot_id) WHERE source_lot_id IS NOT NULL AND source_lot_id <> ''`);
     await query(`UPDATE expiration_records
       SET salon_quantity=quantity, deposit_quantity=0
       WHERE quantity > 0 AND salon_quantity=0 AND deposit_quantity=0`);
@@ -92,6 +95,7 @@ function filaVencimiento(row) {
     cantidad: (Number(row.salon_quantity) || 0) + (Number(row.deposit_quantity) || 0),
     oferta: row.offer ? "Sí" : "No",
     rubro: texto(row.category) || "Sin clasificar",
+    loteId: texto(row.source_lot_id),
   };
 }
 
@@ -149,7 +153,7 @@ async function importarVencimientosAtomico(vencimientos, claveMigracion) {
 async function listarVencimientosDb(cliente = null) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
+    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category,source_lot_id
      FROM expiration_records
      ORDER BY COALESCE(legacy_row,2147483647), expiration_pk`,
   );
@@ -159,7 +163,7 @@ async function listarVencimientosDb(cliente = null) {
 async function buscarVencimientoPorIdDb(id, cliente = null, { bloquear = false } = {}) {
   const r = await ejecutarConsulta(
     cliente,
-    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
+    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category,source_lot_id
      FROM expiration_records WHERE record_id=$1${bloquear ? " FOR UPDATE" : ""}`,
     [texto(id)],
   );
@@ -188,9 +192,9 @@ async function crearVencimientoDb(registro, cliente = null) {
     );
     const r = await c.query(
       `INSERT INTO expiration_records(
-         legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category
-       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category`,
+         legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category,source_lot_id
+       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category,source_lot_id`,
       [
         Number(siguiente.rows[0]?.siguiente) || 2,
         texto(registro?.id),
@@ -203,6 +207,7 @@ async function crearVencimientoDb(registro, cliente = null) {
         enteroNoNegativo(registro?.deposito),
         ofertaABoolean(registro?.oferta),
         texto(registro?.rubro) || "Sin clasificar",
+        texto(registro?.loteId) || null,
       ],
     );
     return filaVencimiento(r.rows[0]);
@@ -223,9 +228,9 @@ async function actualizarVencimientoDb(id, cambios, cliente = null) {
     if (duplicado.rowCount) throw errorVencimientoDuplicado(actual.codigo, nuevoVencimiento);
     const r = await c.query(
       `UPDATE expiration_records SET
-         expiry_date=$2, quantity=$3, salon_quantity=$4, deposit_quantity=$5, offer=$6, category=$7, updated_at=NOW()
+         expiry_date=$2, quantity=$3, salon_quantity=$4, deposit_quantity=$5, offer=$6, category=$7, source_lot_id=$8, updated_at=NOW()
        WHERE expiration_pk=$1
-       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category`,
+       RETURNING expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category,source_lot_id`,
       [
         actual.vencimientoPk,
         nuevoVencimiento,
@@ -235,12 +240,25 @@ async function actualizarVencimientoDb(id, cambios, cliente = null) {
         cambios?.deposito === undefined ? actual.deposito : enteroNoNegativo(cambios.deposito),
         cambios?.oferta === undefined ? ofertaABoolean(actual.oferta) : ofertaABoolean(cambios.oferta),
         cambios?.rubro === undefined ? actual.rubro : (texto(cambios.rubro) || "Sin clasificar"),
+        cambios?.loteId === undefined ? (actual.loteId || null) : (texto(cambios.loteId) || null),
       ],
     );
     return filaVencimiento(r.rows[0]);
   };
   if (cliente) return ejecutar(cliente);
   return conTransaccionVencimientos(ejecutar);
+}
+
+async function buscarVencimientoPorLoteIdDb(loteId, cliente = null) {
+  const id = texto(loteId);
+  if (!id) return null;
+  const r = await ejecutarConsulta(
+    cliente,
+    `SELECT expiration_pk,legacy_row,record_id,load_date,code,article,expiry_date,quantity,salon_quantity,deposit_quantity,offer,category,source_lot_id
+     FROM expiration_records WHERE source_lot_id=$1 LIMIT 1`,
+    [id],
+  );
+  return r.rows[0] ? filaVencimiento(r.rows[0]) : null;
 }
 
 async function eliminarVencimientoDb(id, cliente = null) {
@@ -261,6 +279,7 @@ module.exports = {
   importarVencimientosAtomico,
   listarVencimientosDb,
   buscarVencimientoPorIdDb,
+  buscarVencimientoPorLoteIdDb,
   crearVencimientoDb,
   actualizarVencimientoDb,
   eliminarVencimientoDb,

@@ -112,6 +112,7 @@ const {
   crearVencimientoDb,
   actualizarVencimientoDb,
   eliminarVencimientoDb,
+  buscarVencimientoPorLoteIdDb,
 } = require("./db-vencimientos");
 const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb, listarAlertasProductoDb, guardarAlertaLoteDb, cancelarAlertaLoteDb, listarAlertasVencidasDb, marcarAlertaEnviadaDb } = require("./db-lotes");
 const { asegurarEsquemaLiquidacionHoras, guardarPeriodoLiquidacionDb, actualizarPeriodoLiquidacionDb, listarPeriodosLiquidacionDb, obtenerPeriodoLiquidacionDb, eliminarPeriodoLiquidacionDb } = require("./db-liquidacion-horas");
@@ -6544,8 +6545,9 @@ app.delete("/lotes/:id", requerirAlgunModulo("lotes"), async (req,res)=>{
     const lote=await eliminarLoteDb(req.params.id);
     if(!lote) return res.status(404).json({ok:false,mensaje:"Lote no encontrado"});
     if(lote.cortaFecha){
-      const vencimientos=await listarVencimientosDb();
-      const vinculado=vencimientos.find(v=>String(v.codigo)===String(lote.codigo)&&String(v.vencimiento)===String(lote.vencimiento));
+      const vinculadoPorId=await buscarVencimientoPorLoteIdDb(lote.id);
+      const vencimientos=vinculadoPorId ? [] : await listarVencimientosDb();
+      const vinculado=vinculadoPorId || vencimientos.find(v=>!v.loteId&&String(v.codigo)===String(lote.codigo)&&String(v.vencimiento)===String(lote.vencimiento));
       if(vinculado){const eliminado=await eliminarVencimientoDb(vinculado.id);if(eliminado) await registrarHistorialVencimiento(req,"Eliminó",eliminado,"Eliminado desde Control de Lotes");}
       invalidarCache("vencimientos");
     }
@@ -6560,8 +6562,9 @@ app.delete("/lotes/producto/:codigo", requerirAlgunModulo("lotes"), async (req,r
     for(const lote of eliminados){
       if(!lote.cortaFecha) continue;
       try {
-        const vencimientos=await listarVencimientosDb();
-        const vinculado=vencimientos.find((v)=>String(v.codigo)===String(lote.codigo)&&String(v.vencimiento)===String(lote.vencimiento));
+        const vinculadoPorId=await buscarVencimientoPorLoteIdDb(lote.id);
+        const vencimientos=vinculadoPorId ? [] : await listarVencimientosDb();
+        const vinculado=vinculadoPorId || vencimientos.find((v)=>!v.loteId&&String(v.codigo)===String(lote.codigo)&&String(v.vencimiento)===String(lote.vencimiento));
         if(vinculado){
           const eliminado=await eliminarVencimientoDb(vinculado.id);
           if(eliminado){
@@ -6659,6 +6662,7 @@ app.post("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) 
       cantidad,
       oferta: normalizarOfertaVencimiento(req.body.oferta),
       rubro,
+      loteId: normalizarTexto(req.body.loteId),
     };
     const guardado = await crearVencimientoDb(registroBase);
     const registro = {
@@ -6762,6 +6766,7 @@ app.put("/vencimientos/:id", requerirAlgunModulo("vencimientos"), async (req, re
       deposito: stock.deposito,
       cantidad,
       rubro,
+      loteId: req.body.loteId === undefined ? registro.loteId : normalizarTexto(req.body.loteId),
       oferta:
         req.body.oferta === undefined
           ? registro.oferta

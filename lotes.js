@@ -324,7 +324,7 @@ function confirmarEliminarProductoLotes(p) {
   return confirmarEliminarLotes({
     titulo: 'Eliminar producto',
     producto: p.articulo,
-    aviso: `Se eliminarán ${n} lote${n === 1 ? '' : 's'} de Control de Lotes. Los registros de Vencimientos permanecerán sin cambios.`
+    aviso: `Se eliminarán ${n} lote${n === 1 ? '' : 's'} de Control de Lotes. Los lotes marcados como Corta fecha también se eliminarán de Vencimientos.`
   });
 }
 
@@ -334,7 +334,7 @@ function confirmarEliminarLoteIndividual(lote) {
     producto: producto?.articulo || lote?.articulo || '',
     detalle: `Vencimiento: ${fmt(lote?.vencimiento)} · Cantidad: ${Number(lote?.cantidad || 0)} un.`,
     aviso: lote?.cortaFecha
-      ? 'Este lote está marcado como Corta fecha. Su registro en Vencimientos permanecerá sin cambios.'
+      ? 'Este lote está marcado como Corta fecha. También se eliminará su registro vinculado de Vencimientos.'
       : 'Se eliminará solamente este lote de Control de Lotes.'
   });
 }
@@ -822,7 +822,8 @@ async function sincronizarVencimientoDesdeLote({ anterior = null, nuevo, rubro }
     deposito: 0,
     cantidad: nuevo.cantidad,
     oferta: false,
-    rubro
+    rubro,
+    loteId: nuevo.id
   };
 
   if (registro) {
