@@ -30,8 +30,41 @@ const numero = (v) => {
   return Math.max(0, Number(s) || 0);
 };
 const importeAR = (v) => `$ ${new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numero(v))}`;
-const facturas = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; } };
-const guardarFacturas = (lista) => localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+function limpiarDatoPersistente(valorDato) {
+  if (Array.isArray(valorDato)) return valorDato.map(limpiarDatoPersistente);
+  if (!valorDato || typeof valorDato !== "object") {
+    if (typeof valorDato === "string" && (valorDato.startsWith("data:") || valorDato.length > 250000)) return undefined;
+    return valorDato;
+  }
+  const limpio = {};
+  for (const [clave, valorCampo] of Object.entries(valorDato)) {
+    const k = clave.toLowerCase();
+    // Nunca persistir binarios, previews, base64 ni URLs temporales de archivos.
+    if (["base64","dataurl","data_url","preview","previewurl","preview_url","contenido","bytes","buffer","blob"].includes(k)) continue;
+    const v = limpiarDatoPersistente(valorCampo);
+    if (v !== undefined) limpio[clave] = v;
+  }
+  return limpio;
+}
+const facturas = () => {
+  try {
+    const lista = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(lista) ? lista.map(limpiarDatoPersistente) : [];
+  } catch { return []; }
+};
+function guardarFacturas(lista) {
+  const listaLiviana = (Array.isArray(lista) ? lista : []).map(limpiarDatoPersistente);
+  const contenido = JSON.stringify(listaLiviana);
+  try {
+    localStorage.setItem(STORAGE_KEY, contenido);
+  } catch (error) {
+    if (error?.name !== "QuotaExceededError") throw error;
+    // La caché de IA es prescindible y puede ocupar varios MB. Liberarla no
+    // elimina facturas guardadas y permite conservar el historial real.
+    try { localStorage.removeItem(FACTURA_IA_CACHE_KEY); } catch {}
+    localStorage.setItem(STORAGE_KEY, contenido);
+  }
+}
 const hoy = () => {
   const ahora = new Date();
   const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
@@ -143,7 +176,14 @@ function guardarCacheFactura(clave, factura) {
     cache[clave] = { factura, ts: Date.now() };
     const entradas = Object.entries(cache).sort((a,b) => (b[1]?.ts || 0) - (a[1]?.ts || 0)).slice(0, FACTURA_IA_CACHE_MAX);
     localStorage.setItem(FACTURA_IA_CACHE_KEY, JSON.stringify(Object.fromEntries(entradas)));
-  } catch (error) { console.warn("Cache de lectura de factura:", error); }
+  } catch (error) {
+    // La caché solo acelera lecturas repetidas: si el navegador no tiene espacio,
+    // se descarta sin afectar la carga ni el guardado de la factura.
+    if (error?.name === "QuotaExceededError") {
+      try { localStorage.removeItem(FACTURA_IA_CACHE_KEY); } catch {}
+    }
+    console.warn("Cache de lectura de factura:", error);
+  }
 }
 function setEstadoArchivo(texto, tipo = "ok") {
   const estado = $("comprasArchivoEstado");
