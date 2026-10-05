@@ -269,3 +269,6 @@ body.precio-scan-open {
     box-sizing: border-box !important;
   }
 }
+
+/* Fecha y hora fija en la cabecera de escritorio */
+.app-header-datetime{display:flex;align-items:center;gap:9px;min-width:190px;padding:8px 13px;border:1px solid #e6ebf2;border-radius:11px;background:#f8fafc;color:#334155;box-sizing:border-box}.app-header-datetime>.app-icon{width:18px;height:18px;color:#50617a}.app-header-datetime div{display:flex;flex-direction:column;line-height:1.2}.app-header-datetime strong{font-size:11px;font-weight:700}.app-header-datetime span{font-size:11px;margin-top:2px}@media(max-width:760px){.app-header-datetime{display:none}}

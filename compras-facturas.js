@@ -20,7 +20,16 @@ const PDFJS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min
 const PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
 
 const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(Number(n) || 0);
-const numero = (v) => Math.max(0, Number(String(v ?? 0).replace(",", ".")) || 0);
+const numero = (v) => {
+  if (typeof v === "number") return Math.max(0, Number.isFinite(v) ? v : 0);
+  let s = String(v ?? "").trim().replace(/\s/g, "").replace(/\$/g, "");
+  if (!s) return 0;
+  // Formato argentino: 378.400,00 -> 378400.00. También conserva valores API 378400.00.
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, "");
+  return Math.max(0, Number(s) || 0);
+};
+const importeAR = (v) => `$ ${new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numero(v))}`;
 const facturas = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; } };
 const guardarFacturas = (lista) => localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
 const hoy = () => {
@@ -61,10 +70,16 @@ function renderItems() {
 function valorImporte(id) { return numero($(id)?.value); }
 function ponerImporteAutomatico(id, valor, permitirVacio = false) {
   const el = $(id); if (!el || totalesManuales.has(id)) return;
-  if (permitirVacio && !(numero(valor) > 0)) { el.value = ""; return; }
-  el.value = (Number(valor) || 0).toFixed(2);
+  if (permitirVacio && !(numero(valor) > 0)) { el.value = importeAR(0); return; }
+  el.value = importeAR(valor);
 }
 function calcularTotales() {
+  // Todos los conceptos monetarios deben permanecer visibles, incluso cuando
+  // la factura no discrimina ese impuesto o percepción.
+  ["comprasDescuentos","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos"].forEach(id => {
+    const el = $(id);
+    if (el && !String(el.value || "").trim()) el.value = importeAR(0);
+  });
   const subtotalCalculado = items.reduce((s,it)=>s+calcularItem(it),0);
   const basesPorIva = new Map();
   items.forEach(it => { const tasa=numero(it.iva); basesPorIva.set(tasa,(basesPorIva.get(tasa)||0)+calcularItem(it)); });
@@ -72,14 +87,17 @@ function calcularTotales() {
   const alicuota = (tasa) => alicuotasDetectadas.find(a => Math.abs(numero(a?.tasa)-tasa)<0.01);
 
   const subtotalAuto = importesDetectados?.subtotal ?? subtotalCalculado;
-  const neto21Auto = alicuota(21)?.neto ?? basesPorIva.get(21) ?? 0;
-  const neto105Auto = alicuota(10.5)?.neto ?? basesPorIva.get(10.5) ?? 0;
-  const totalNetoAuto = importesDetectados?.neto ?? ((neto21Auto + neto105Auto) || subtotalAuto);
-  const totalIvaAuto = importesDetectados?.iva ?? ivaCalculado;
+  // Las tarjetas 21 % y 10,5 % muestran el MONTO DEL IVA de cada alícuota,
+  // no la base/neto gravado. Si no existe esa alícuota, se muestra $ 0,00.
+  const iva21Auto = alicuota(21)?.iva ?? ((basesPorIva.get(21) ?? 0) * 0.21);
+  const iva105Auto = alicuota(10.5)?.iva ?? ((basesPorIva.get(10.5) ?? 0) * 0.105);
+  const totalNetoAuto = importesDetectados?.neto ?? subtotalAuto;
+  const ivaPorAlicuotas = iva21Auto + iva105Auto;
+  const totalIvaAuto = importesDetectados?.iva ?? (ivaPorAlicuotas || ivaCalculado);
 
   ponerImporteAutomatico("comprasSubtotal", subtotalAuto);
-  ponerImporteAutomatico("comprasNeto21", neto21Auto, true);
-  ponerImporteAutomatico("comprasNeto105", neto105Auto, true);
+  ponerImporteAutomatico("comprasNeto21", iva21Auto, true);
+  ponerImporteAutomatico("comprasNeto105", iva105Auto, true);
   ponerImporteAutomatico("comprasTotalNeto", totalNetoAuto);
 
   const subtotal = valorImporte("comprasSubtotal");
@@ -181,11 +199,11 @@ function aplicarFacturaExtraida(f) {
   setValor("comprasVencimiento", f.vencimiento);
   seleccionarOpcion("comprasCondicionPago", f.condicion_pago);
   seleccionarOpcion("comprasMoneda", f.moneda);
-  if ($("comprasDescuentos")) $("comprasDescuentos").value = numero(f.descuentos) || "";
-  if ($("comprasOtrosImpuestos")) $("comprasOtrosImpuestos").value = numero(f.otros_impuestos) || "";
-  if ($("comprasIibb")) $("comprasIibb").value = numero(f.iibb || f.ingresos_brutos) || "";
-  if ($("comprasSuss")) $("comprasSuss").value = numero(f.suss) || "";
-  if ($("comprasGanancias")) $("comprasGanancias").value = numero(f.ganancias) || "";
+  if ($("comprasDescuentos")) $("comprasDescuentos").value = importeAR(f.descuentos);
+  if ($("comprasOtrosImpuestos")) $("comprasOtrosImpuestos").value = importeAR(f.otros_impuestos);
+  if ($("comprasIibb")) $("comprasIibb").value = importeAR(f.iibb || f.ingresos_brutos);
+  if ($("comprasSuss")) $("comprasSuss").value = importeAR(f.suss);
+  if ($("comprasGanancias")) $("comprasGanancias").value = importeAR(f.ganancias);
   if (f.observaciones) setValor("comprasObservaciones", f.observaciones);
   calcularTotales();
   const detectados = Array.isArray(f.items) ? f.items.filter(it => it && (it.descripcion || it.codigo || numero(it.subtotal) > 0)) : [];
@@ -198,12 +216,36 @@ function aplicarFacturaExtraida(f) {
   }
   const subtotalLineas = detectados.reduce((a,it)=>a+numero(it.subtotal),0);
   importesDetectados = {
-    subtotal: numero(f.subtotal || f.neto_gravado || subtotalLineas),
-    neto: numero(f.neto_gravado || f.neto_gravado_21 || subtotalLineas),
+    subtotal: numero(f.subtotal || f.neto_gravado || subtotalLineas || f.total),
+    neto: numero(f.neto_gravado || f.neto_gravado_21 || subtotalLineas || f.subtotal || f.total),
     iva: numero(f.iva_total || f.iva_21),
     total: numero(f.total)
   };
+
+  // El módulo ya no muestra el detalle de ítems. Antes la actualización de los
+  // importes dependía de renderItems(), pero esa función sale inmediatamente
+  // cuando no existe comprasItemsBody. Actualizamos los totales directamente
+  // después de guardar los importes detectados para que siempre se reflejen.
+  calcularTotales();
   renderItems();
+}
+
+function setEstadoDropzoneFactura(estado, file = archivoActual) {
+  const dz = $("comprasDropzone");
+  if (!dz) return;
+  dz.classList.remove("is-uploading", "is-uploaded", "is-upload-error");
+  if (estado) dz.classList.add(`is-${estado}`);
+  if (!file) return;
+  const tipoArchivo = file.type === "application/pdf" ? "PDF" : "Imagen";
+  const tamanoArchivo = `${(file.size/1024/1024).toFixed(2)} MB`;
+  const nombre = $("comprasArchivoNombre");
+  const meta = $("comprasArchivoMeta");
+  if (nombre) nombre.textContent = file.name;
+  if (meta) {
+    if (estado === "uploading") meta.textContent = `Subiendo factura… · ${tipoArchivo} · ${tamanoArchivo}`;
+    else if (estado === "uploaded") meta.textContent = `Factura subida correctamente · ${tipoArchivo} · ${tamanoArchivo}`;
+    else if (estado === "upload-error") meta.textContent = `No se pudo subir la factura · ${tipoArchivo} · ${tamanoArchivo}`;
+  }
 }
 
 async function extraerFactura(file) {
@@ -220,7 +262,7 @@ async function extraerFactura(file) {
     if (facturaCacheada) {
       aplicarFacturaExtraida(facturaCacheada);
       $("comprasArchivoEstado")?.classList.add("oculto");
-      if ($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent=`Factura cargada · ${file.type === "application/pdf" ? "PDF" : "Imagen"} · ${(file.size/1024/1024).toFixed(2)} MB`;
+      setEstadoDropzoneFactura("uploaded", file);
       return;
     }
 
@@ -243,12 +285,12 @@ async function extraerFactura(file) {
     guardarCacheFactura(claveCache, data.factura);
     console.info(`[Facturas] análisis completado en ${Math.round(performance.now() - inicioPeticion)} ms${data.cache ? " (cache servidor)" : ""}`);
     $("comprasArchivoEstado")?.classList.add("oculto");
-    if ($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent=`Factura cargada · ${file.type === "application/pdf" ? "PDF" : "Imagen"} · ${(file.size/1024/1024).toFixed(2)} MB`;
+    setEstadoDropzoneFactura("uploaded", file);
   } catch (error) {
     if (token !== facturaAnalisisToken || archivoActual !== file) return;
     console.error("Lectura automática de factura:", error);
     setEstadoArchivo(`⚠ ${error.message || "No se pudo leer automáticamente"}. Podés completar los datos manualmente.`, "error");
-    if ($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent=`No se pudo leer · ${file.type === "application/pdf" ? "PDF" : "Imagen"}`;
+    setEstadoDropzoneFactura("upload-error", file);
   }
 }
 async function dibujarPaginaPdf() {
@@ -336,15 +378,13 @@ function setArchivo(file) {
       preview.style.height = `${Math.round(anchoDisponible * (img.naturalHeight / img.naturalWidth)) + 18}px`;
     }, { once:true });
   }
-  const dz=$("comprasDropzone"); dz?.classList.add("is-loaded");
-  if ($("comprasArchivoNombre")) $("comprasArchivoNombre").textContent=file.name;
-  const tipoArchivo = file.type === "application/pdf" ? "PDF" : "Imagen";
-  const tamanoArchivo = `${(file.size/1024/1024).toFixed(2)} MB`;
+  const dz=$("comprasDropzone");
+  dz?.classList.add("is-loaded");
+  setEstadoDropzoneFactura("uploading", file);
   if ($("comprasAutoDetectar")?.checked) {
-    if ($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent=`Analizando factura… · ${tipoArchivo} · ${tamanoArchivo}`;
     extraerFactura(file);
-  } else if ($("comprasArchivoMeta")) {
-    $("comprasArchivoMeta").textContent=`Factura cargada · ${tipoArchivo} · ${tamanoArchivo}`;
+  } else {
+    setEstadoDropzoneFactura("uploaded", file);
   }
 }
 function ajustarZoom(delta=0, reset=false){
@@ -365,7 +405,7 @@ function ajustarZoom(delta=0, reset=false){
 function limpiarArchivo(soloArchivo=false){
   pdfRenderToken++; facturaAnalisisToken++; pdfDocumentoActual=null; pdfPaginaActual=null; archivoActual=null; if(previewUrl) URL.revokeObjectURL(previewUrl); previewUrl=""; previewZoom=1;
   const p=$("comprasPreview"); if(p){p.className="compras-preview-empty";p.style.height="";p.closest(".compras-preview-card")?.classList.remove("has-document");p.innerHTML='<svg class="app-icon"><use href="#icon-clipboard"></use></svg><span>Importá una factura para verla aquí</span>';}
-  $("comprasDropzone")?.classList.remove("is-loaded");
+  $("comprasDropzone")?.classList.remove("is-loaded", "is-uploading", "is-uploaded", "is-upload-error");
   if($("comprasArchivoNombre")) $("comprasArchivoNombre").textContent="";
   if($("comprasArchivoMeta")) $("comprasArchivoMeta").textContent="";
   $("comprasArchivoEstado")?.classList.add("oculto"); if($("comprasArchivo")) $("comprasArchivo").value="";
@@ -380,9 +420,35 @@ function resetForm(limpiarArchivoTambien=true){
   items=[itemVacio()]; adjuntos=[]; if(limpiarArchivoTambien) limpiarArchivo(true); renderItems(); renderAdjuntos(); calcularTotales();
 }
 function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimiento:valor("comprasVencimiento"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
-function guardar(){ const r=construirRegistro(); if(!r.proveedor){ alert("Completá el proveedor antes de guardar."); $("comprasProveedor")?.focus(); return; } if(!r.fecha){ alert("Completá la fecha del comprobante."); return; } if(!items.some(it=>it.descripcion || numero(it.precio)>0)){ alert("Agregá al menos un ítem al comprobante."); return; } const lista=facturas(); lista.unshift(r); guardarFacturas(lista); actualizarResumen(); renderHistorial(); alert("Factura guardada correctamente."); resetForm(); }
+function mostrarGuardadoExitoso(){
+  const modal=$("comprasGuardadoModal");
+  if(!modal) return;
+  modal.classList.remove("oculto");
+  requestAnimationFrame(()=>modal.classList.add("visible"));
+}
+function cerrarGuardadoExitoso(){
+  const modal=$("comprasGuardadoModal");
+  if(!modal) return;
+  modal.classList.remove("visible");
+  setTimeout(()=>modal.classList.add("oculto"),180);
+}
+function guardar(){ const r=construirRegistro(); if(!r.proveedor){ alert("Completá el proveedor antes de guardar."); $("comprasProveedor")?.focus(); return; } if(!r.fecha){ alert("Completá la fecha del comprobante."); return; } const lista=facturas(); lista.unshift(r); guardarFacturas(lista); actualizarResumen(); renderHistorial(); resetForm(); mostrarGuardadoExitoso(); }
 function renderAdjuntos(){ const c=$("comprasAdjuntosLista"); if(c) c.innerHTML=adjuntos.map(f=>`<small style="display:block;margin-top:6px;color:#697386">• ${f.name}</small>`).join(""); }
-function actualizarResumen(){ const lista=facturas(), mes=hoy().slice(0,7), delMes=lista.filter(f=>String(f.fecha||f.creadoEn).slice(0,7)===mes); const gasto=delMes.reduce((s,f)=>s+numero(f.total),0); if($("adminComprasFacturasMes"))$("adminComprasFacturasMes").textContent=delMes.length; if($("adminComprasGastoMes"))$("adminComprasGastoMes").textContent=money(gasto); }
+function actualizarResumen(){
+  const lista=facturas(), mes=hoy().slice(0,7), delMes=lista.filter(f=>String(f.fecha||f.creadoEn).slice(0,7)===mes), gasto=delMes.reduce((s,f)=>s+numero(f.total),0);
+  if($("adminComprasFacturasMes"))$("adminComprasFacturasMes").textContent=delMes.length;
+  if($("adminComprasGastoMes"))$("adminComprasGastoMes").textContent=money(gasto);
+  if($("comprasKpiFacturas"))$("comprasKpiFacturas").textContent=delMes.length;
+  if($("comprasKpiCompras"))$("comprasKpiCompras").textContent=money(gasto);
+  const proveedores=new Map();
+  lista.forEach(f=>{const k=(f.cuit||f.proveedor||"").trim();if(!k)return;const a=proveedores.get(k)||{nombre:f.proveedor||f.razonSocial||"—",cuit:f.cuit||"—",cantidad:0,total:0};a.cantidad++;a.total+=numero(f.total);proveedores.set(k,a);});
+  if($("comprasKpiProveedores"))$("comprasKpiProveedores").textContent=proveedores.size;
+  const ultima=lista.slice().sort((a,b)=>String(b.fecha||b.creadoEn||"").localeCompare(String(a.fecha||a.creadoEn||"")))[0];
+  if($("comprasKpiUltima"))$("comprasKpiUltima").textContent=ultima?.fecha?ultima.fecha.split("-").reverse().join("/"):"—";
+  if($("comprasKpiUltimaMeta"))$("comprasKpiUltimaMeta").textContent=ultima?ultima.proveedor||"último comprobante":"sin registros";
+  const ub=$("comprasUltimasBody"); if(ub) ub.innerHTML=lista.slice(0,4).map(f=>`<tr><td>${f.fecha?f.fecha.split("-").reverse().join("/"):"—"}</td><td>${f.proveedor||"—"}</td><td>${f.comprobante||"—"}</td><td>${f.numero||"—"}</td><td><strong>${money(f.total)}</strong></td><td><div class="compras-mini-actions"><button class="compras-mini-action" type="button" data-mini-view="${f.id}" aria-label="Ver factura"><svg class="app-icon"><use href="#icon-eye"></use></svg></button><button class="compras-mini-action pink" type="button" data-mini-copy="${f.id}" aria-label="Duplicar factura"><svg class="app-icon"><use href="#icon-copy"></use></svg></button></div></td></tr>`).join("")||'<tr><td colspan="6" class="compras-mini-empty">Todavía no hay facturas guardadas.</td></tr>';
+  const pb=$("comprasProveedoresBody"); if(pb) pb.innerHTML=[...proveedores.values()].slice(0,4).map((p,i)=>`<tr><td>${String(i+1).padStart(3,"0")}</td><td>${p.nombre}</td><td>${p.cuit}</td><td>${p.cantidad}</td><td><strong>${money(p.total)}</strong></td><td><div class="compras-mini-actions"><span class="compras-mini-action" aria-hidden="true">▥</span><span aria-hidden="true">›</span></div></td></tr>`).join("")||'<tr><td colspan="6" class="compras-mini-empty">Los proveedores aparecerán al guardar facturas.</td></tr>';
+}
 function renderHistorial(){ const q=(valor("comprasHistBuscar")||"").toLowerCase(), mes=valor("comprasHistMes"); let lista=facturas().filter(f=>(!mes||String(f.fecha||"").startsWith(mes))&&(!q||`${f.proveedor} ${f.cuit} ${f.numero} ${f.rubro}`.toLowerCase().includes(q))); if($("comprasHistCantidad"))$("comprasHistCantidad").textContent=lista.length; if($("comprasHistTotal"))$("comprasHistTotal").textContent=money(lista.reduce((s,f)=>s+numero(f.total),0)); const body=$("comprasHistBody"); if(!body)return; body.innerHTML=lista.length?lista.map(f=>`<tr><td>${f.fecha||"—"}</td><td><strong>${f.proveedor||"—"}</strong></td><td>${f.comprobante||"—"}</td><td>${[f.puntoVenta,f.numero].filter(Boolean).join("-")||"—"}</td><td>${f.rubro||"—"}</td><td><strong>${money(f.total)}</strong></td><td><button type="button" data-remove="${f.id}" aria-label="Eliminar" style="border:0;background:#fff0f2;color:#f42545;border-radius:7px;padding:6px;cursor:pointer"><svg class="app-icon" style="width:15px;height:15px"><use href="#icon-trash"></use></svg></button></td></tr>`).join(""):'<tr><td colspan="7" class="compras-history-empty">Todavía no hay facturas registradas.</td></tr>'; body.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{if(!confirm("¿Eliminar esta factura del historial?"))return; guardarFacturas(facturas().filter(f=>f.id!==b.dataset.remove)); renderHistorial(); actualizarResumen();})); }
 function mostrarHistorial(ver){ $("comprasEditor")?.classList.toggle("oculto",ver); $("comprasHistorial")?.classList.toggle("oculto",!ver); $("comprasVerHistorial")?.classList.toggle("oculto",ver); if(ver)renderHistorial(); }
 function init(){ if(!$("adminTab-compras"))return; $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
@@ -410,7 +476,11 @@ function init(){ if(!$("adminTab-compras"))return; $("comprasFecha").value ||= h
     const file = e.dataTransfer?.files?.[0];
     if (file) setArchivo(file);
   });
-  $("comprasAgregarItem")?.addEventListener("click",()=>{items.push(itemVacio());invalidarImportesDetectados();renderItems()}); $("comprasEditarItems")?.addEventListener("click",()=>$("comprasItemsBody")?.querySelector("input")?.focus()); ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(id=>$(id)?.addEventListener("input",()=>{ totalesManuales.add(id); if (id !== "comprasTotal") { importesDetectados = null; totalesManuales.delete("comprasTotal"); } calcularTotales(); })); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",guardar); $("comprasCancelar")?.addEventListener("click",()=>{if(confirm("¿Cancelar la carga actual?"))resetForm()}); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarHistorial(false)); $("comprasHistBuscar")?.addEventListener("input",renderHistorial); $("comprasHistMes")?.addEventListener("change",renderHistorial); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
+  $("comprasAgregarItem")?.addEventListener("click",()=>{items.push(itemVacio());invalidarImportesDetectados();renderItems()}); $("comprasEditarItems")?.addEventListener("click",()=>$("comprasItemsBody")?.querySelector("input")?.focus()); ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(id=>{
+    const el=$(id); if(!el) return;
+    el.addEventListener("input",()=>{ totalesManuales.add(id); if (id !== "comprasTotal") { importesDetectados = null; totalesManuales.delete("comprasTotal"); } calcularTotales(); });
+    el.addEventListener("blur",()=>{ el.value=importeAR(el.value); });
+  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",guardar); $("comprasCancelar")?.addEventListener("click",()=>resetForm()); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarHistorial(true)); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarHistorial(false)); $("comprasHistBuscar")?.addEventListener("input",renderHistorial); $("comprasHistMes")?.addEventListener("change",renderHistorial); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasGuardadoAceptar")?.addEventListener("click",cerrarGuardadoExitoso); $("comprasGuardadoModal")?.querySelector(".compras-save-modal-backdrop")?.addEventListener("click",cerrarGuardadoExitoso);
 }
 window.ComprasFacturas={render(){actualizarResumen();renderItems();},actualizarResumen,limpiar:()=>resetForm()};
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();

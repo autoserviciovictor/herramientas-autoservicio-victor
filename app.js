@@ -4404,3 +4404,15 @@ window.addEventListener("autoservicio:sesion", async (event) => {
     console.warn("No se pudo restaurar la pantalla después de validar la sesión:", error);
   }
 });
+
+
+// Fecha y hora global de la aplicación (escritorio).
+function actualizarFechaHoraCabecera(){
+  const fecha=document.getElementById("appHeaderDate"), hora=document.getElementById("appHeaderTime");
+  if(!fecha||!hora)return;
+  const ahora=new Date();
+  fecha.textContent=new Intl.DateTimeFormat("es-AR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(ahora).replace(/^./,c=>c.toUpperCase());
+  hora.textContent=new Intl.DateTimeFormat("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false}).format(ahora);
+}
+actualizarFechaHoraCabecera();
+setInterval(actualizarFechaHoraCabecera,30000);
