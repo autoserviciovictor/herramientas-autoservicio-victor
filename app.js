@@ -3988,8 +3988,8 @@ async function imprimirHojaCartelesOferta() {
   }
   #offerPostersPrintSheet {
     position: relative;
-    width: 296.5mm;
-    height: 209mm;
+    width: 280mm;
+    height: 175mm;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -4005,14 +4005,17 @@ async function imprimirHojaCartelesOferta() {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+  /* Reservamos espacio para los márgenes mínimos y los encabezados
+     del diálogo de impresión de Chromium. La hoja ocupa menos que el
+     área imprimible y no genera una segunda página en blanco. */
   /* El SVG deja 1 mm transparente a cada lado del borde visible.
      Para obtener 1 mm REAL entre bordes visibles, los contenedores de 135 x 78 mm
      se solapan exactamente 1 mm: 2 mm internos - 1 mm de solape = 1 mm visible.
      Estas cuatro posiciones son la única fuente de separación en impresión. */
-  .poster-slot-1 { left: 13.5mm; top: 27mm; }
-  .poster-slot-2 { left: 147.5mm; top: 27mm; }
-  .poster-slot-3 { left: 13.5mm; top: 104mm; }
-  .poster-slot-4 { left: 147.5mm; top: 104mm; }
+  .poster-slot-1 { left: 5mm; top: 10mm; }
+  .poster-slot-2 { left: 139mm; top: 10mm; }
+  .poster-slot-3 { left: 5mm; top: 87mm; }
+  .poster-slot-4 { left: 139mm; top: 87mm; }
   .poster-svg.empty { visibility: hidden; }
   .poster-svg svg {
     display: block;
@@ -4030,8 +4033,8 @@ async function imprimirHojaCartelesOferta() {
       overflow: hidden !important;
     }
     #offerPostersPrintSheet {
-      width: 296.5mm !important;
-      height: 209mm !important;
+      width: 280mm !important;
+      height: 175mm !important;
       break-after: avoid !important;
       page-break-after: avoid !important;
     }
