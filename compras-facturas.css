@@ -977,11 +977,13 @@ html[data-theme="dark"] .compras-screen{--cf-text:#f2f5f8;--cf-muted:#a8b2c2;--c
   #adminTab-compras .compras-total-highlight>span{
     position:static!important;
     display:block!important;
+    width:100%!important;
     margin:0!important;
     padding:0!important;
+    text-align:left!important;
     align-self:flex-start!important;
-    font-size:16px!important;
-    line-height:20px!important;
+    font-size:22px!important;
+    line-height:26px!important;
     font-weight:900!important;
     color:#f42545!important;
     transform:none!important;
@@ -1006,4 +1008,128 @@ html[data-theme="dark"] .compras-screen{--cf-text:#f2f5f8;--cf-muted:#a8b2c2;--c
     transform:none!important;
   }
 }
-\n/* v50: IVA visible + confirmacion de guardado integrada a la app */\n#adminTab-compras .compras-total-cards{grid-template-columns:repeat(5,minmax(0,1fr)) 1.22fr!important}\n#adminTab-compras .compras-total-cards .compras-total-highlight{grid-column:6!important;grid-row:1 / span 2!important}\n#adminTab-compras .compras-total-icon.tone-green{background:#def8ea;color:#0aa968}\n#adminTab-compras .compras-save-modal{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;opacity:0;transition:opacity .18s ease}\n#adminTab-compras .compras-save-modal.oculto{display:none}\n#adminTab-compras .compras-save-modal.visible{opacity:1}\n#adminTab-compras .compras-save-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.34);backdrop-filter:blur(2px)}\n#adminTab-compras .compras-save-modal-box{position:relative;width:min(390px,calc(100vw - 36px));background:#fff;border:1px solid #e5eaf1;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.2);padding:28px 30px 24px;text-align:center;transform:translateY(8px) scale(.98);transition:transform .18s ease}\n#adminTab-compras .compras-save-modal.visible .compras-save-modal-box{transform:none}\n#adminTab-compras .compras-save-modal-icon{width:54px;height:54px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:#e5f8ef;color:#08a35d;font-size:28px;font-weight:900}\n#adminTab-compras .compras-save-modal-box h3{margin:0;color:#111827;font-size:21px;font-weight:900}\n#adminTab-compras .compras-save-modal-box p{margin:7px 0 20px;color:#667085;font-size:13px}\n#adminTab-compras .compras-save-modal-box button{min-width:150px;height:42px;border:0;border-radius:9px;background:#f42545;color:#fff;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 7px 18px rgba(244,37,69,.2)}\n@media(max-width:1350px){#adminTab-compras .compras-total-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important}#adminTab-compras .compras-total-cards .compras-total-highlight{grid-column:3!important;grid-row:2 / span 2!important}}\n@media(max-width:760px){#adminTab-compras .compras-total-cards{grid-template-columns:1fr!important}#adminTab-compras .compras-total-cards .compras-total-highlight{grid-column:1!important;grid-row:auto!important}}\n
+
+/* Filtros del historial: adaptables sin afectar los paneles del editor. */
+#comprasHistorial .compras-history-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+#comprasHistorial .compras-history-toolbar input[type="search"]{flex:1 1 230px;min-width:180px}
+#comprasHistorial .compras-history-toolbar select,#comprasHistorial .compras-history-toolbar input{min-height:36px}
+#comprasHistorial .compras-hist-date{display:flex;align-items:center;gap:6px;font-size:12px}
+#comprasHistorial #comprasHistLimpiar{border:1px solid #d9e1eb;background:white;color:#455468;border-radius:8px;padding:9px 12px;cursor:pointer}
+
+/* Navegación exclusiva: formulario e historial nunca se muestran simultáneamente.
+   Estas reglas prevalecen sobre los display:grid de los estilos anteriores. */
+#adminTab-compras #comprasHistorial.oculto,
+#adminTab-compras #comprasEditor.oculto{display:none!important}
+#adminTab-compras.compras-mostrando-historial > .compras-hero{display:none!important}
+#adminTab-compras.compras-mostrando-historial #comprasHistorial{display:grid;align-content:start}
+#adminTab-compras .compras-history-head{padding:8px 0 12px}
+
+/* Pantalla independiente de proveedores y listado diario a ancho completo. */
+#adminTab-compras .compras-hero-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+#adminTab-compras .compras-lower-grid{grid-template-columns:minmax(0,1fr)!important}
+#adminTab-compras #comprasProveedoresVista.oculto{display:none!important}
+#adminTab-compras.compras-mostrando-historial #comprasProveedoresVista:not(.oculto){display:grid;align-content:start;gap:14px}
+/* Filtros de proveedores: una sola fila en escritorio, sin reglas flex antiguas. */
+#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar{display:grid;grid-template-columns:minmax(0,2.5fr) minmax(150px,1fr) minmax(150px,1fr) auto;align-items:center;gap:10px}
+#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar > input,
+#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar > select{width:100%;min-width:0;min-height:40px;flex:none;margin:0}
+#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar > button{width:auto;flex:none;margin:0}
+@media(max-width:900px){#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar > input[type=search]{grid-column:1/-1}}
+@media(max-width:600px){#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar{grid-template-columns:minmax(0,1fr)}#adminTab-compras .compras-providers-view .compras-history-toolbar.compras-modern-toolbar > *{grid-column:1/-1;width:100%}}
+#adminTab-compras .compras-providers-view .compras-history-toolbar button,#adminTab-compras .compras-provider-detail-head button{border:1px solid #d9e1eb;background:#fff;color:#455468;border-radius:8px;padding:9px 12px;cursor:pointer}
+#adminTab-compras .compras-provider-detail-btn{border:0;border-radius:8px;padding:8px 11px;background:#fff0f3;color:#f42545;font-weight:700;cursor:pointer;white-space:nowrap}
+#adminTab-compras .compras-provider-detail{padding:16px;overflow:auto}
+#adminTab-compras .compras-provider-detail.oculto{display:none!important}
+#adminTab-compras .compras-provider-detail-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px}
+#adminTab-compras .compras-provider-detail-head h3{font-size:17px;margin:0 0 5px}
+#adminTab-compras .compras-provider-detail-head p{font-size:12px;color:#64748b;margin:0}
+#adminTab-compras .compras-providers-view .compras-history-table{overflow-x:auto}
+@media(max-width:750px){#adminTab-compras .compras-hero-actions{justify-content:flex-start}}
+
+/* Pantallas de historial y proveedores: diseño final, estilos aislados. */
+#adminTab-compras .compras-modern-view{gap:13px;max-width:none;width:100%;padding:8px 0 24px}
+#adminTab-compras .compras-modern-view .compras-history-head{margin-bottom:1px;min-height:57px}
+#adminTab-compras .compras-view-heading{display:flex;align-items:center;gap:15px}
+#adminTab-compras .compras-view-icon{width:49px;height:49px;display:grid;place-items:center;border-radius:11px;background:#fa214c;color:#fff;font-size:25px;box-shadow:0 7px 15px #f4254540}
+#adminTab-compras .compras-modern-view .compras-history-head h2{font-size:23px;font-weight:850;color:#152136}
+#adminTab-compras .compras-modern-view .compras-history-head p{font-size:12px}
+#adminTab-compras .compras-modern-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+#adminTab-compras .compras-modern-kpis article{display:flex;align-items:center;gap:12px;min-height:82px;border:1px solid #e0e7f0;border-radius:11px;padding:12px 15px;min-width:0}
+#adminTab-compras .compras-modern-kpis .tone-blue{background:linear-gradient(105deg,#fff,#edf5ff)}
+#adminTab-compras .compras-modern-kpis .tone-green{background:linear-gradient(105deg,#fff,#eafbf3)}
+#adminTab-compras .compras-modern-kpis .tone-purple{background:linear-gradient(105deg,#fff,#f5efff)}
+#adminTab-compras .compras-modern-kpis .tone-amber{background:linear-gradient(105deg,#fff,#fff8e9)}
+#adminTab-compras .compras-modern-kpis .kpi-symbol{flex:0 0 46px;height:46px;display:grid;place-items:center;border-radius:9px;background:#e1efff;color:#1673ed;font-size:24px}
+#adminTab-compras .compras-modern-kpis .tone-green .kpi-symbol{background:#d8f9e9;color:#09b76d}
+#adminTab-compras .compras-modern-kpis .tone-purple .kpi-symbol{background:#eee3ff;color:#8b45f4}
+#adminTab-compras .compras-modern-kpis .tone-amber .kpi-symbol{background:#fff0cd;color:#f59b16}
+#adminTab-compras .compras-modern-kpis article div{min-width:0}
+#adminTab-compras .compras-modern-kpis small{font-size:11px;color:#607087;line-height:1.3}
+#adminTab-compras .compras-modern-kpis strong{font-size:20px;margin-top:4px;overflow-wrap:anywhere;line-height:1.15;color:#111b2c}
+#adminTab-compras #comprasProvTop{font-size:13px}
+#adminTab-compras .compras-modern-toolbar{display:flex;flex-wrap:nowrap;align-items:center;gap:9px;background:#fff;border:1px solid #e1e7f0;border-radius:10px;padding:9px}
+#adminTab-compras .compras-modern-toolbar input,#adminTab-compras .compras-modern-toolbar select{min-width:0;min-height:39px;height:39px;border:1px solid #dce4ef;border-radius:7px;background:#fff;color:#34445d;padding:0 10px;font-size:12px}
+#adminTab-compras .compras-modern-toolbar input[type=search]{flex:1 1 260px}
+#adminTab-compras .compras-modern-toolbar label{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;color:#485771}
+#adminTab-compras .compras-modern-toolbar input[type=date]{width:135px}
+#adminTab-compras .compras-modern-toolbar select{flex:0 1 170px}
+#adminTab-compras .compras-modern-toolbar button{white-space:nowrap;border:1px solid #dce4ef;border-radius:7px;background:#fff;color:#45556c;min-height:39px;padding:0 12px;font-weight:650;cursor:pointer}
+#adminTab-compras .compras-modern-table{padding:10px 12px 0;border-radius:12px;background:#fff;overflow:hidden;border:1px solid #e1e7f0}
+#adminTab-compras .compras-modern-table .compras-table-scroll{overflow-x:auto}
+#adminTab-compras .compras-modern-table table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
+#adminTab-compras .compras-modern-table th{background:#f2f5f9;color:#53647e;font-size:11px;font-weight:750;padding:12px 10px;text-align:left}
+#adminTab-compras .compras-modern-table td{padding:11px 10px;color:#30415b;border-bottom:1px solid #edf0f5}
+#adminTab-compras .compras-modern-table td strong{color:#152238}
+#adminTab-compras .compras-fiscal-tag{display:inline-block;border-radius:5px;background:#e5f0ff;color:#2675e9;padding:4px 6px;font-size:10px;font-weight:650}
+#adminTab-compras .compras-note-cell{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+#adminTab-compras .compras-row-action{border:0;border-radius:6px;padding:6px 9px;color:#516783;background:#f0f4f9;cursor:pointer}
+#adminTab-compras .compras-row-action.danger{color:#f02a4d;background:#fff0f3}
+#adminTab-compras .compras-table-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 4px;color:#53647e;font-size:11px}
+#adminTab-compras .compras-page-buttons{display:flex;gap:5px;flex-wrap:wrap}
+#adminTab-compras .compras-page-buttons button{border:1px solid #dce4ef;background:#fff;border-radius:6px;min-width:29px;height:29px;cursor:pointer;color:#34445d}
+#adminTab-compras .compras-page-buttons button.active{background:#fa214c;border-color:#fa214c;color:#fff}
+@media(max-width:1100px){#adminTab-compras .compras-modern-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#adminTab-compras .compras-modern-toolbar{flex-wrap:wrap}#adminTab-compras .compras-modern-toolbar input[type=search]{flex-basis:100%}}
+@media(max-width:600px){#adminTab-compras .compras-modern-kpis{grid-template-columns:1fr}#adminTab-compras .compras-modern-view .compras-history-head{flex-wrap:wrap}#adminTab-compras .compras-modern-toolbar>*{flex:1 1 100%}#adminTab-compras .compras-table-footer{flex-wrap:wrap}}
+
+/* Alineación de registros: encabezados y celdas comparten el mismo eje.
+   Se aplica solo a las tablas de facturas y proveedores. */
+#adminTab-compras .compras-mini-table table,
+#adminTab-compras .compras-modern-table table,
+#adminTab-compras #comprasProvDetalle table{width:100%;border-collapse:collapse}
+#adminTab-compras .compras-mini-table th,
+#adminTab-compras .compras-mini-table td,
+#adminTab-compras .compras-modern-table th,
+#adminTab-compras .compras-modern-table td,
+#adminTab-compras #comprasProvDetalle th,
+#adminTab-compras #comprasProvDetalle td{vertical-align:middle;text-align:center!important}
+/* En las listas de facturas el proveedor queda a la izquierda; en la pantalla de proveedores se centra con el resto de las columnas. */
+#adminTab-compras .compras-mini-table th:nth-child(2),
+#adminTab-compras .compras-mini-table td:nth-child(2),
+#adminTab-compras #comprasHistorial .compras-modern-table th:nth-child(3),
+#adminTab-compras #comprasHistorial .compras-modern-table td:nth-child(3){text-align:left!important}
+#adminTab-compras .compras-mini-table .compras-mini-actions{display:flex;justify-content:center;align-items:center;gap:5px}
+#adminTab-compras .compras-modern-table td:last-child button{vertical-align:middle}
+#adminTab-compras #comprasProvDetalle th,
+#adminTab-compras #comprasProvDetalle td{padding:10px 12px!important;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+#adminTab-compras #comprasProvDetalle th:nth-child(3),
+#adminTab-compras #comprasProvDetalle td:nth-child(3){min-width:140px}
+#adminTab-compras #comprasProvDetalle .compras-table-wrap{overflow-x:auto}
+
+/* Papelera del historial: SVG centrado y legible. */
+#adminTab-compras #comprasHistorial .compras-row-action.danger{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;color:#e11d48;background:#fff0f3;border:1px solid #ffe0e7;border-radius:8px;line-height:1}
+#adminTab-compras #comprasHistorial .compras-row-action.danger svg{display:block;width:17px;height:17px;flex:none;stroke:currentColor}
+#adminTab-compras #comprasHistorial .compras-row-action.danger:hover{background:#ffe1e9;color:#be123c}
+
+/* Ficha de proveedores: formulario aislado de los estilos de facturas */
+.compras-provider-header-actions{display:flex;gap:10px;align-items:center}.compras-provider-header-actions #comprasProvNuevo{background:#f5224c;color:white;border:0;border-radius:9px;padding:12px 18px;font-weight:700;cursor:pointer}
+.compras-ficha-overlay{position:fixed;inset:0;z-index:99999;background:#1420369c;display:flex;align-items:center;justify-content:center;padding:20px}.compras-ficha-overlay.oculto{display:none!important}.compras-ficha-modal{background:#fff;border-radius:18px;width:min(900px,100%);max-height:92vh;overflow:auto;box-shadow:0 25px 70px #0003;padding:24px;color:#172238}.compras-ficha-modal>header,.compras-ficha-modal form>footer,.compras-ficha-bancos-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.compras-ficha-modal h2{font-size:22px;font-weight:800;margin:0 0 18px}.compras-ficha-modal>header button{border:0;background:#f2f5fa;border-radius:8px;font-size:24px;width:36px;height:36px;cursor:pointer}.compras-ficha-grid,.compras-cuenta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.compras-ficha-grid label,.compras-cuenta-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700}.compras-ficha-grid .full{grid-column:1/-1}.compras-ficha-modal input:not([type=radio]),.compras-ficha-modal select,.compras-ficha-modal textarea{box-sizing:border-box;width:100%;border:1px solid #dce3ed;border-radius:9px;padding:10px;background:white;color:#172238;font:inherit}.compras-ficha-bancos{margin-top:20px;border-top:1px solid #e5eaf1;padding-top:16px}.compras-ficha-bancos h3{margin:0 0 12px}.compras-ficha-bancos-head button,.compras-quitar-cuenta{background:#f5f7fb;border:1px solid #dce3ed;border-radius:8px;padding:8px 12px;cursor:pointer}.compras-cuenta{border:1px solid #e1e7ef;border-radius:12px;padding:14px;margin:12px 0}.compras-cuenta-principal{display:inline-flex;gap:7px;align-items:center;margin:12px 16px 0 0;font-size:13px}.compras-ficha-modal form>footer{position:sticky;bottom:-24px;background:white;padding:16px 0 0;margin-top:12px}.compras-ficha-modal form>footer button{border:1px solid #dce3ed;background:#fff;padding:11px 20px;border-radius:9px;cursor:pointer}.compras-ficha-modal form>footer button[type=submit]{background:#f5224c;color:#fff;border:0}.compras-datos-ficha{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.compras-datos-ficha>div{display:flex;flex-direction:column;gap:4px}.compras-datos-ficha small{color:#69778c}.compras-banco-detalle{padding:9px 12px;border:1px solid #e2e7ee;border-radius:8px;margin:8px 0;overflow-wrap:anywhere}@media(max-width:650px){.compras-ficha-grid,.compras-cuenta-grid,.compras-datos-ficha{grid-template-columns:1fr}.compras-provider-header-actions{flex-wrap:wrap}}
+
+/* Acciones de proveedores: iconos vectoriales uniformes, sin reglas heredadas conflictivas. */
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions{display:flex;align-items:center;justify-content:center;gap:9px;white-space:nowrap}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions .compras-row-action{display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;width:34px;height:34px;padding:0;border:1px solid transparent;border-radius:9px;line-height:1;transition:background-color .15s,border-color .15s,transform .15s;cursor:pointer}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions .compras-provider-view-action{color:#2563eb;background:#eaf3ff;border-color:#d6e7ff}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions .compras-provider-edit-action{color:#475569;background:#f1f5f9;border-color:#e2e8f0}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions .compras-provider-view-action:hover{background:#dbeafe;border-color:#93c5fd;transform:translateY(-1px)}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions .compras-provider-edit-action:hover{background:#e2e8f0;border-color:#cbd5e1;transform:translateY(-1px)}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions .compras-row-action:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+#adminTab-compras #comprasProveedoresVista .compras-provider-row-actions svg{display:block;width:17px;height:17px;flex:none;stroke:currentColor}
