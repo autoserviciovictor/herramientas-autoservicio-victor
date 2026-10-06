@@ -4211,3 +4211,14 @@ body.bano-planilla-abierta { overflow:hidden; }
     justify-self:end !important;
   }
 }
+
+/* Duración editable: campos nativos, sin menú flotante. */
+#tareaModal .duration-column input[type="number"] {
+  width: 100%; min-width: 0; height: 46px; padding: 0 12px;
+  border: 1px solid #d5dfed; border-radius: 10px;
+  background: #fff; color: #17233a; font: inherit; font-weight: 650;
+  box-sizing: border-box;
+}
+#tareaModal .duration-column input[type="number"]:focus {
+  outline: 2px solid #b5cafa; outline-offset: 1px;
+}

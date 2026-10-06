@@ -3046,18 +3046,20 @@
               </span>
               <label class="duration-column"
                 ><span>Horas</span
-                ><select
+                ><input
                   id="tareaDuracionHoras"
+                  type="number" min="0" max="8" step="1" inputmode="numeric"
                   aria-label="Horas de duración"
-                ></select
+                />
               ></label>
               <span class="duration-separator">:</span>
               <label class="duration-column"
                 ><span>Minutos</span
-                ><select
+                ><input
                   id="tareaDuracionMinutos"
+                  type="number" min="0" max="59" step="1" inputmode="numeric"
                   aria-label="Minutos de duración"
-                ></select
+                />
               ></label>
             </div>
             <input id="tareaDuracion" type="hidden" value="00:10" />

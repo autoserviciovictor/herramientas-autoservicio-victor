@@ -182,8 +182,6 @@ function prepararSelectoresVisualesTareas() {
   [
     'configEstadoFiltro',
     'configDiaFiltro',
-    'tareaDuracionHoras',
-    'tareaDuracionMinutos',
   ].forEach(configurarSelectVisualTareas);
 }
 
@@ -593,21 +591,18 @@ function prepararSelectorDuracion() {
   const horas = $("tareaDuracionHoras"),
     mins = $("tareaDuracionMinutos");
   if (!horas || !mins) return;
-  horas.innerHTML = Array.from(
-    { length: 9 },
-    (_, i) => `<option value="${i}">${i} h</option>`,
-  ).join("");
-  mins.innerHTML = Array.from(
-    { length: 60 },
-    (_, i) => `<option value="${i}">${String(i).padStart(2, "0")} min</option>`,
-  ).join("");
   const sync = () => {
-    $("tareaDuracion").value =
-      `${String(horas.value).padStart(2, "0")}:${String(mins.value).padStart(2, "0")}`;
+    const h = Number(horas.value), m = Number(mins.value);
+    const valido = /^\d{1,2}$/.test(horas.value) && /^\d{1,2}$/.test(mins.value)
+      && h >= 0 && h <= 8 && m >= 0 && m <= 59 && h * 60 + m > 0;
+    $("tareaDuracion").value = valido
+      ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}` : "";
     actualizarEstadoGuardarTarea();
   };
-  horas.onchange = sync;
-  mins.onchange = sync;
+  horas.addEventListener("input", sync);
+  mins.addEventListener("input", sync);
+  horas.addEventListener("change", sync);
+  mins.addEventListener("change", sync);
   prepararSelectoresVisualesTareas();
 }
 function establecerDuracionSelector(total) {
@@ -617,8 +612,7 @@ function establecerDuracionSelector(total) {
   $("tareaDuracionHoras").value = String(h);
   $("tareaDuracionMinutos").value = String(m);
   $("tareaDuracion").value = duracionAInput(n);
-  sincronizarSelectVisualTareas($("tareaDuracionHoras"));
-  sincronizarSelectVisualTareas($("tareaDuracionMinutos"));
+
 }
 
 function migrar() {
@@ -1441,6 +1435,7 @@ function abrir(t = null) {
   document.body.classList.add("tareas-modal-open");
 }
 function cerrar() {
+  cerrarSelectsVisualesTareas();
   $("tareaModal").classList.add("oculto");
   $("tareaModal").setAttribute("aria-hidden", "true");
   document.body.classList.remove("tareas-modal-open");
