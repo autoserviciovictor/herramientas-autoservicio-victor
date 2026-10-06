@@ -245,7 +245,6 @@ function aplicarFacturaExtraida(f) {
   if ($("comprasSuss")) $("comprasSuss").value = importeAR(f.suss);
   if ($("comprasGanancias")) $("comprasGanancias").value = importeAR(f.ganancias);
   if (f.observaciones) setValor("comprasObservaciones", f.observaciones);
-  calcularTotales();
   const detectados = Array.isArray(f.items) ? f.items.filter(it => it && (it.descripcion || it.codigo || numero(it.subtotal) > 0)) : [];
   if (detectados.length) {
     items = detectados.map(it => ({
@@ -256,8 +255,10 @@ function aplicarFacturaExtraida(f) {
   }
   const subtotalLineas = detectados.reduce((a,it)=>a+numero(it.subtotal),0);
   importesDetectados = {
-    subtotal: numero(f.subtotal || f.neto_gravado || subtotalLineas || f.total),
-    neto: numero(f.neto_gravado || f.neto_gravado_21 || subtotalLineas || f.subtotal || f.total),
+    // El subtotal sin impuestos es el neto impreso, no el total con IVA.
+    // Si el neto no se leyó pero sí el total y el IVA, se infiere solo la base.
+    subtotal: numero(f.neto_gravado || f.neto_gravado_21 || f.subtotal || (numero(f.total) > numero(f.iva_total || f.iva_21) ? numero(f.total) - numero(f.iva_total || f.iva_21) : 0) || subtotalLineas),
+    neto: numero(f.neto_gravado || f.neto_gravado_21 || f.subtotal || (numero(f.total) > numero(f.iva_total || f.iva_21) ? numero(f.total) - numero(f.iva_total || f.iva_21) : 0) || subtotalLineas),
     iva: numero(f.iva_total || f.iva_21),
     total: numero(f.total)
   };
@@ -288,6 +289,26 @@ function setEstadoDropzoneFactura(estado, file = archivoActual) {
   }
 }
 
+// Reducir fotos grandes antes de enviarlas acelera la transferencia y la lectura
+// sin alterar el archivo original ni la vista previa. Las fotos pequeñas y los
+// PDF se envían intactos para no perder precisión en textos diminutos.
+async function prepararArchivoAnalisis(file) {
+  if (!/^image\/(jpeg|png)$/.test(file.type) || file.size < 650_000) return file;
+  const imagen = await createImageBitmap(file);
+  try {
+    const maxLado = 2200;
+    const escala = Math.min(1, maxLado / Math.max(imagen.width, imagen.height));
+    if (escala === 1 && file.size < 1_500_000) return file;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(imagen.width * escala);
+    canvas.height = Math.round(imagen.height * escala);
+    canvas.getContext("2d", { alpha: false }).drawImage(imagen, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.88));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.(png|jpe?g)$/i, ".jpg"), { type: "image/jpeg" });
+  } finally { imagen.close(); }
+}
+
 async function extraerFactura(file) {
   if (!$("comprasAutoDetectar")?.checked) return;
   const token = ++facturaAnalisisToken;
@@ -306,13 +327,15 @@ async function extraerFactura(file) {
       return;
     }
 
-    const base64 = await archivoABase64(file);
+    const archivoAnalisis = await prepararArchivoAnalisis(file);
+    if (token !== facturaAnalisisToken || archivoActual !== file) return;
+    const base64 = await archivoABase64(archivoAnalisis);
     if (token !== facturaAnalisisToken || archivoActual !== file) return;
     const apiBase = String(API_BASE_URL || window.API_BASE_URL || "").replace(/\/$/, "");
     const inicioPeticion = performance.now();
     const respuesta = await fetch(`${apiBase}/compras/facturas/extraer`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: file.name, tipo: file.type, base64 })
+      body: JSON.stringify({ nombre: archivoAnalisis.name, tipo: archivoAnalisis.type, base64 })
     });
     const tipoRespuesta = respuesta.headers.get("content-type") || "";
     const data = tipoRespuesta.includes("application/json") ? await respuesta.json().catch(() => ({})) : {};
