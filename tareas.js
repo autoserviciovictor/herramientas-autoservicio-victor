@@ -1657,7 +1657,7 @@ function actualizarEstadoGuardarAsignacion() {
   const boton = $("btnGuardarAsignar");
   if (!boton) return;
   const valido = Boolean(
-    asignarUsuarioSeleccionado &&
+    (asignarUsuarioSeleccionado || asignacionEditando?.porUsuario) &&
       $("asignarTurno")?.value &&
       (asignarTareasSeleccionadas.size || asignacionEditando?.porUsuario),
   );
@@ -1706,7 +1706,7 @@ function cargarTareasUsuarioAsignacion() {
       (t) => (t.sector || "General") === sectorSeleccionado && t.activo !== false,
     );
 
-  if (!turno || !responsable) {
+  if (!turno || (!responsable && !asignacionEditando?.porUsuario)) {
     asignarDisponibles = [];
     asignarTareasSeleccionadas = new Set();
     $("asignarTareasCantidad").textContent = "Seleccioná un usuario";
@@ -1717,9 +1717,11 @@ function cargarTareasUsuarioAsignacion() {
     return;
   }
 
+  const responsableOrigen = asignacionEditando?.porUsuario
+    ? asignacionEditando.responsable : responsable;
   const yaAsignadas = todasSector.filter((t) =>
     (asignacion(t, fecha, turno)?.responsables || []).some(
-      (r) => normalClave(r) === normalClave(responsable),
+      (r) => normalClave(r) === normalClave(responsableOrigen),
     ),
   );
   asignarDisponibles = [
@@ -1792,7 +1794,7 @@ function renderTareasAsignables() {
       (t) => !q || normalClave(t.nombre).includes(q),
     );
   const dia = fmt(fechaSeleccionada, { weekday: "long" });
-  $("asignarTareasCantidad").textContent = asignarUsuarioSeleccionado
+  $("asignarTareasCantidad").textContent = (asignarUsuarioSeleccionado || asignacionEditando?.porUsuario)
     ? `${lista.length} para ${dia}`
     : "Seleccioná un usuario";
   $("asignarTareasLista").innerHTML = lista.length
@@ -1866,11 +1868,13 @@ function cerrarAsignar() {
 async function guardarAsignacion() {
   const turno = $("asignarTurno").value,
     responsable = asignarUsuarioSeleccionado.trim(),
+    responsableAnterior = asignacionEditando?.porUsuario
+      ? asignacionEditando.responsable : "",
     ids = [...asignarTareasSeleccionadas],
     fecha = iso(fechaSeleccionada);
   if (
     !turno ||
-    !responsable ||
+    (!responsable && !responsableAnterior) ||
     (!ids.length && !asignacionEditando?.porUsuario)
   ) {
     window.AutoservicioDialog?.alert?.({
@@ -1891,7 +1895,9 @@ async function guardarAsignacion() {
           ids,
           fecha,
           turno,
-          responsable,
+          responsable: responsable || responsableAnterior,
+          responsableAnterior,
+          eliminarResponsable: !responsable,
           reemplazar: true,
         }),
       }),
@@ -2863,13 +2869,29 @@ function bind() {
     }
     actualizarEstadoGuardarAsignacion();
   };
+  $("asignarUsuarios").onclick = (e) => {
+    const tarjeta = e.target.closest(".assign-user-card");
+    if (!tarjeta || !asignacionEditando?.porUsuario) return;
+    const input = tarjeta.querySelector('input[type="radio"]');
+    if (input && normalClave(input.value) === normalClave(asignarUsuarioSeleccionado)) {
+      e.preventDefault();
+      asignarUsuarioSeleccionado = "";
+      sincronizarEstadoSeleccionAsignacion();
+      actualizarCantidadResponsables();
+      actualizarTituloAsignacionUsuario();
+      renderTareasAsignables();
+    }
+  };
   $("asignarUsuarios").onchange = (e) => {
     const input = e.target.closest('input[type="radio"]');
     if (!input) return;
     asignarUsuarioSeleccionado = input.value || "";
     sincronizarEstadoSeleccionAsignacion();
     actualizarCantidadResponsables();
-    cargarTareasUsuarioAsignacion();
+    if (asignacionEditando?.porUsuario) {
+      actualizarTituloAsignacionUsuario();
+      renderTareasAsignables();
+    } else cargarTareasUsuarioAsignacion();
   };
   $("asignarModal").onclick = (e) => {
     if (e.target.id === "asignarModal") cerrarAsignar();

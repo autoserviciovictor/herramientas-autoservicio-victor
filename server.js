@@ -4091,7 +4091,9 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
       fecha = normalizarTexto(req.body?.fecha),
       turno = normalizarTexto(req.body?.turno),
       responsable = normalizarTexto(req.body?.responsable),
-      reemplazar = Boolean(req.body?.reemplazar);
+      reemplazar = Boolean(req.body?.reemplazar),
+      responsableAnterior = normalizarTexto(req.body?.responsableAnterior),
+      eliminarResponsable = Boolean(req.body?.eliminarResponsable);
     if (
       (!ids.length && !reemplazar) ||
       !fecha ||
@@ -4137,7 +4139,8 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
           const restantes = (asig.responsables || [])
             .map(normalizarTexto)
             .filter(
-              (r) => r && normalizarUsuario(r) !== normalizarUsuario(responsable),
+              (r) => r && normalizarUsuario(r) !== normalizarUsuario(responsableAnterior || responsable) &&
+                (!responsableAnterior || normalizarUsuario(r) !== normalizarUsuario(responsable)),
             );
           if (restantes.length) asig.responsables = [...new Set(restantes)];
           else {
@@ -4147,7 +4150,7 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
           }
         }
       }
-      for (const tarea of seleccionadas) {
+      for (const tarea of (eliminarResponsable ? [] : seleccionadas)) {
         tarea.asignaciones = tarea.asignaciones || {};
         tarea.asignaciones[fecha] = tarea.asignaciones[fecha] || {};
         const anterior = tarea.asignaciones[fecha][turno] || {};
