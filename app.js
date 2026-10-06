@@ -3393,7 +3393,14 @@ function leerBandejaCartelesOferta() {
 
 function guardarBandejaCartelesOferta(items) {
   const seguros = Array.isArray(items) ? items.slice(0, CARTEL_OFERTA_MAX) : [];
-  localStorage.setItem(claveBandejaCartelesOferta(), JSON.stringify(seguros));
+  // Confirmar la escritura: localStorage puede rechazarla por cuota o políticas
+  // de almacenamiento. No informamos éxito si la bandeja no se guardó.
+  const clave = claveBandejaCartelesOferta();
+  localStorage.setItem(clave, JSON.stringify(seguros));
+  const comprobacion = JSON.parse(localStorage.getItem(clave) || "null");
+  if (!Array.isArray(comprobacion) || comprobacion.length !== seguros.length) {
+    throw new Error("No se pudo verificar el guardado de los carteles.");
+  }
   renderBandejaCartelesOferta();
   return seguros;
 }
@@ -3513,9 +3520,15 @@ function datosConfiguradorCartelOferta() {
 
 function mostrarErrorCartelOferta(mensaje = "") {
   const el = $("cartelOfertaError");
-  if (!el) return;
-  el.textContent = mensaje;
-  el.classList.toggle("oculto", !mensaje);
+  if (el) {
+    el.textContent = mensaje;
+    el.classList.toggle("oculto", !mensaje);
+  }
+  const estado = $("cartelOfertaGuardarEstado");
+  if (estado) {
+    estado.textContent = mensaje;
+    estado.classList.toggle("oculto", !mensaje);
+  }
 }
 
 function actualizarConfiguradorCartelOferta() {
@@ -3608,7 +3621,10 @@ function volverDesdeCartelOferta() {
 
 async function guardarCartelOfertaActual() {
   const datos = datosConfiguradorCartelOferta();
-  if (!datos.id) return;
+  if (!datos.id) {
+    mostrarErrorCartelOferta("No se encontró el producto seleccionado. Volvé a Vencimientos y abrí nuevamente el cartel.");
+    return;
+  }
   if (datos.precioActual <= 0) {
     mostrarErrorCartelOferta("Ingresá el precio actual del producto.");
     $("cartelPrecioActual")?.focus();
@@ -3646,7 +3662,14 @@ async function guardarCartelOfertaActual() {
   // Siempre anexamos una nueva posición. No se deduplica por id de producto:
   // cada pulsación de Guardar cartel representa una copia física en la hoja.
   const nuevaBandeja = bandeja.concat(registro);
-  const guardados = guardarBandejaCartelesOferta(nuevaBandeja);
+  let guardados;
+  try {
+    guardados = guardarBandejaCartelesOferta(nuevaBandeja);
+  } catch (error) {
+    console.error("Error al guardar cartel de oferta:", error);
+    mostrarErrorCartelOferta("No se pudo guardar el cartel en este equipo. Revisá el espacio de almacenamiento disponible e intentá nuevamente.");
+    return;
+  }
   if (guardados.length !== bandeja.length + 1) {
     mostrarErrorCartelOferta("No se pudo agregar el cartel a la hoja. Intentá nuevamente.");
     return;
@@ -3658,6 +3681,7 @@ async function guardarCartelOfertaActual() {
     console.warn("No se pudo marcar la oferta del vencimiento:", error);
   }
   $("btnCartelGuardar").textContent = "Guardar cartel";
+  mostrarErrorCartelOferta("");
   mostrarMensaje("Cartel agregado a la hoja para imprimir", "ok");
   reproducirConfirmacion("guardado");
 }
@@ -3953,8 +3977,8 @@ async function imprimirHojaCartelesOferta() {
   @page { size: A4 landscape; margin: 0; }
   * { box-sizing: border-box; }
   html, body {
-    width: 297mm;
-    height: 210mm;
+    width: 100%;
+    height: auto;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -3964,8 +3988,8 @@ async function imprimirHojaCartelesOferta() {
   }
   #offerPostersPrintSheet {
     position: relative;
-    width: 297mm;
-    height: 210mm;
+    width: 296.5mm;
+    height: 209mm;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -3998,12 +4022,18 @@ async function imprimirHojaCartelesOferta() {
     max-height: none;
   }
   @media print {
-    html, body, #offerPostersPrintSheet {
-      width: 297mm !important;
-      height: 210mm !important;
+    html, body {
+      width: auto !important;
+      height: auto !important;
       margin: 0 !important;
       padding: 0 !important;
       overflow: hidden !important;
+    }
+    #offerPostersPrintSheet {
+      width: 296.5mm !important;
+      height: 209mm !important;
+      break-after: avoid !important;
+      page-break-after: avoid !important;
     }
   }
 </style>
