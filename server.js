@@ -1674,7 +1674,7 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
 5) Si un campo no es legible o no es inequívoco, devolvé vacío/0 y agregá su nombre a campos_revision. No completes con una palabra cercana.
 6) Fechas YYYY-MM-DD. Separá punto de venta y número preservando ceros a la izquierda. En comprobante CONSERVÁ la letra si está impresa: Factura A/B/C, Nota de crédito A/B/C, Nota de débito A/B/C o Remito. condicion_fiscal: Responsable Inscripto, Monotributo, Exento, Consumidor Final o vacío. condicion_pago: Contado, Cuenta corriente, Transferencia, Tarjeta, Cheque o vacío. moneda: Pesos o Dólares.
 7) Para tickets/fotos, prestá especial atención a encabezado, CUIT del emisor, número, fecha, renglones y bloque final de neto/IVA/TOTAL.
-8) El campo vencimiento es EXCLUSIVAMENTE vencimiento comercial/de pago. Nunca pongas allí el vencimiento de CAE/CAEA. Si solo aparece VTO junto a CAE/CAEA, vencimiento debe ser vacío.
+8) Revisá especialmente el PIE de página y los recuadros finales del comprobante. vencimiento es EXCLUSIVAMENTE fecha comercial/de pago. vencimiento_cae es EXCLUSIVAMENTE vencimiento de CAE/CAEA (por ejemplo Vto. CAE). Son campos distintos; si falta uno devolvé cadena vacía. Nunca copies la fecha del CAE al vencimiento de pago.
 9) No infieras condicion_pago. Texto como "Pesos $..." o "FORMA DE PAGO" sin medio explícito NO significa transferencia ni contado: devolvé vacío.
 10) No asumas IVA 21%. En Factura C o cuando no se discrimine alícuota, usá 0 en el item salvo que esté inequívocamente impresa. Si se imprimen neto e IVA, transcribilos aunque el cálculo difiera por centavos.
 11) campos_revision debe contener solo nombres de campos realmente dudosos. observaciones puede explicar brevemente por qué.`;
@@ -1687,13 +1687,13 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
       type: "object", additionalProperties: false,
       properties: {
         proveedor: {type:"string"}, razon_social:{type:"string"}, cuit:{type:"string"}, condicion_fiscal:{type:"string"},
-        comprobante:{type:"string"}, punto_venta:{type:"string"}, numero:{type:"string"}, fecha:{type:"string"}, vencimiento:{type:"string"},
+        comprobante:{type:"string"}, punto_venta:{type:"string"}, numero:{type:"string"}, fecha:{type:"string"}, vencimiento:{type:"string"}, vencimiento_cae:{type:"string"},
         condicion_pago:{type:"string"}, moneda:{type:"string"}, descuentos:{type:"number"}, otros_impuestos:{type:"number"},
         subtotal:{type:"number"}, neto_gravado:{type:"number"}, neto_gravado_21:{type:"number"}, iva_total:{type:"number"}, iva_21:{type:"number"}, total:{type:"number"},
         alicuotas_iva:{type:"array",items:{type:"object",additionalProperties:false,properties:{tasa:{type:"number"},neto:{type:"number"},iva:{type:"number"}},required:["tasa","neto","iva"]}},
         observaciones:{type:"string"}, campos_revision:{type:"array",items:{type:"string"}}
       },
-      required:["proveedor","razon_social","cuit","condicion_fiscal","comprobante","punto_venta","numero","fecha","vencimiento","condicion_pago","moneda","descuentos","otros_impuestos","subtotal","neto_gravado","neto_gravado_21","iva_total","iva_21","total","alicuotas_iva","observaciones","campos_revision"]
+      required:["proveedor","razon_social","cuit","condicion_fiscal","comprobante","punto_venta","numero","fecha","vencimiento","vencimiento_cae","condicion_pago","moneda","descuentos","otros_impuestos","subtotal","neto_gravado","neto_gravado_21","iva_total","iva_21","total","alicuotas_iva","observaciones","campos_revision"]
     };
 
     const respuesta = await fetch("https://api.openai.com/v1/responses", {
