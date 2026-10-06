@@ -237,6 +237,7 @@ function aplicarFacturaExtraida(f) {
   setValor("comprasNumero", f.numero);
   setValor("comprasFecha", f.fecha);
   setValor("comprasVencimiento", f.vencimiento);
+  setValor("comprasVencimientoCae", f.vencimiento_cae);
   seleccionarOpcion("comprasCondicionPago", f.condicion_pago);
   seleccionarOpcion("comprasMoneda", f.moneda);
   if ($("comprasDescuentos")) $("comprasDescuentos").value = importeAR(f.descuentos);
@@ -283,7 +284,7 @@ function setEstadoDropzoneFactura(estado, file = archivoActual) {
   const meta = $("comprasArchivoMeta");
   if (nombre) nombre.textContent = file.name;
   if (meta) {
-    if (estado === "uploading") meta.textContent = `Subiendo factura… · ${tipoArchivo} · ${tamanoArchivo}`;
+    if (estado === "uploading") meta.textContent = `Analizando datos… · ${tipoArchivo} · ${tamanoArchivo}`;
     else if (estado === "uploaded") meta.textContent = `Factura subida correctamente · ${tipoArchivo} · ${tamanoArchivo}`;
     else if (estado === "upload-error") meta.textContent = `No se pudo subir la factura · ${tipoArchivo} · ${tamanoArchivo}`;
   }
@@ -443,7 +444,8 @@ function setArchivo(file) {
   }
   const dz=$("comprasDropzone");
   dz?.classList.add("is-loaded");
-  setEstadoDropzoneFactura("uploading", file);
+  setEstadoDropzoneFactura("uploaded", file);
+  // La vista previa ya está disponible; el análisis no bloquea el formulario.
   if ($("comprasAutoDetectar")?.checked) {
     extraerFactura(file);
   } else {
@@ -476,13 +478,13 @@ function limpiarArchivo(soloArchivo=false){
 }
 function resetForm(limpiarArchivoTambien=true){
   importesDetectados=null; alicuotasDetectadas=[]; camposRevision=[]; totalesManuales.clear();
-  ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimiento","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""});
+  ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimiento","comprasVencimientoCae","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""});
   const defaults={comprasCondicionFiscal:"Responsable Inscripto",comprasComprobante:"",comprasCondicionPago:"",comprasMoneda:"Pesos",comprasRubro:""};
   Object.entries(defaults).forEach(([id,v])=>{if($(id)){ $(id).value=v; sincronizarSelector($(id)); }});
   if($("comprasFecha"))$("comprasFecha").value=hoy(); ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(id=>{if($(id))$(id).value="";});
   items=[itemVacio()]; adjuntos=[]; if(limpiarArchivoTambien) limpiarArchivo(true); renderItems(); renderAdjuntos(); calcularTotales();
 }
-function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimiento:valor("comprasVencimiento"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
+function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimiento:valor("comprasVencimiento"), vencimientoCae:valor("comprasVencimientoCae"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
 // Identidad fiscal del comprobante: los formatos con guiones, espacios o ceros
 // iniciales no deben permitir registrar nuevamente la misma factura.
 function normalizarIdentificadorFiscal(valor) {
