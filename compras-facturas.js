@@ -138,16 +138,16 @@ function calcularTotales() {
   const neto21 = valorImporte("comprasNeto21");
   const neto105 = valorImporte("comprasNeto105");
   const iibb = valorImporte("comprasIibb");
-  const suss = valorImporte("comprasSuss");
+  const percepcionIva = valorImporte("comprasSuss");
   const ganancias = valorImporte("comprasGanancias");
   const otros = valorImporte("comprasOtrosImpuestos");
   const totalNeto = valorImporte("comprasTotalNeto");
   const totalIva = totalIvaAuto;
-  const totalAuto = Math.max(0, totalNeto - descuentos + totalIva + iibb + suss + ganancias + otros);
+  const totalAuto = Math.max(0, totalNeto - descuentos + totalIva + iibb + percepcionIva + ganancias + otros);
   ponerImporteAutomatico("comprasTotal", importesDetectados?.total ?? totalAuto);
   const total = valorImporte("comprasTotal");
 
-  return { subtotal, neto21, neto105, totalNeto, iva21: totalIva, totalIva, descuentos, iibb, suss, ganancias, otros, total };
+  return { subtotal, neto21, neto105, totalNeto, iva21: totalIva, totalIva, descuentos, iibb, percepcionIva, suss: percepcionIva, ganancias, otros, total };
 }
 
 function archivoABase64(file) {
@@ -236,14 +236,13 @@ function aplicarFacturaExtraida(f) {
   setValor("comprasPuntoVenta", f.punto_venta);
   setValor("comprasNumero", f.numero);
   setValor("comprasFecha", f.fecha);
-  setValor("comprasVencimiento", f.vencimiento);
   setValor("comprasVencimientoCae", f.vencimiento_cae);
   seleccionarOpcion("comprasCondicionPago", f.condicion_pago);
   seleccionarOpcion("comprasMoneda", f.moneda);
   if ($("comprasDescuentos")) $("comprasDescuentos").value = importeAR(f.descuentos);
   if ($("comprasOtrosImpuestos")) $("comprasOtrosImpuestos").value = importeAR(f.otros_impuestos);
   if ($("comprasIibb")) $("comprasIibb").value = importeAR(f.iibb || f.ingresos_brutos);
-  if ($("comprasSuss")) $("comprasSuss").value = importeAR(f.suss);
+  if ($("comprasSuss")) $("comprasSuss").value = importeAR(f.percepcion_iva ?? f.percepcionIva ?? f.suss);
   if ($("comprasGanancias")) $("comprasGanancias").value = importeAR(f.ganancias);
   if (f.observaciones) setValor("comprasObservaciones", f.observaciones);
   const detectados = Array.isArray(f.items) ? f.items.filter(it => it && (it.descripcion || it.codigo || numero(it.subtotal) > 0)) : [];
@@ -484,13 +483,13 @@ function limpiarArchivo(soloArchivo=false){
 }
 function resetForm(limpiarArchivoTambien=true){
   importesDetectados=null; alicuotasDetectadas=[]; camposRevision=[]; totalesManuales.clear();
-  ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimiento","comprasVencimientoCae","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""});
+  ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimientoCae","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""});
   const defaults={comprasCondicionFiscal:"Responsable Inscripto",comprasComprobante:"",comprasCondicionPago:"",comprasMoneda:"Pesos",comprasRubro:""};
   Object.entries(defaults).forEach(([id,v])=>{if($(id)){ $(id).value=v; sincronizarSelector($(id)); }});
   if($("comprasFecha"))$("comprasFecha").value=hoy(); ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(id=>{if($(id))$(id).value="";});
   items=[itemVacio()]; adjuntos=[]; if(limpiarArchivoTambien) limpiarArchivo(true); renderItems(); renderAdjuntos(); calcularTotales();
 }
-function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimiento:valor("comprasVencimiento"), vencimientoCae:valor("comprasVencimientoCae"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
+function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimientoCae:valor("comprasVencimientoCae"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
 // Identidad fiscal del comprobante: los formatos con guiones, espacios o ceros
 // iniciales no deben permitir registrar nuevamente la misma factura.
 function normalizarIdentificadorFiscal(valor) {
