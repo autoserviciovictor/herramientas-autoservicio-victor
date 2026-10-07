@@ -1680,8 +1680,10 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
 11) campos_revision debe contener solo nombres de campos realmente dudosos. observaciones puede explicar brevemente por qué.`;
 
     const contenidoArchivo = mime === "application/pdf"
-      ? { type: "input_file", filename: normalizarTexto(nombre) || "factura.pdf", file_data: `data:application/pdf;base64,${archivoBase64}`, detail: "high" }
-      : { type: "input_image", image_url: `data:${mime};base64,${archivoBase64}`, detail: "high" };
+      ? { type: "input_file", filename: normalizarTexto(nombre) || "factura.pdf", file_data: `data:application/pdf;base64,${archivoBase64}` }
+      // auto evita forzar siempre el modo visual más costoso. El archivo ya llega
+      // normalizado desde el navegador y el modelo puede subir detalle si hace falta.
+      : { type: "input_image", image_url: `data:${mime};base64,${archivoBase64}`, detail: "auto" };
 
     const schema = {
       type: "object", additionalProperties: false,

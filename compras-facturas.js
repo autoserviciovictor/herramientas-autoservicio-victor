@@ -284,8 +284,8 @@ function setEstadoDropzoneFactura(estado, file = archivoActual) {
   const meta = $("comprasArchivoMeta");
   if (nombre) nombre.textContent = file.name;
   if (meta) {
-    if (estado === "uploading") meta.textContent = `Analizando datos… · ${tipoArchivo} · ${tamanoArchivo}`;
-    else if (estado === "uploaded") meta.textContent = `Factura subida correctamente · ${tipoArchivo} · ${tamanoArchivo}`;
+    if (estado === "uploading") meta.textContent = `Archivo recibido · Extrayendo datos de la factura… · ${tipoArchivo} · ${tamanoArchivo}`;
+    else if (estado === "uploaded") meta.textContent = `Datos de la factura cargados · ${tipoArchivo} · ${tamanoArchivo}`;
     else if (estado === "upload-error") meta.textContent = `No se pudo subir la factura · ${tipoArchivo} · ${tamanoArchivo}`;
   }
 }
@@ -294,18 +294,21 @@ function setEstadoDropzoneFactura(estado, file = archivoActual) {
 // sin alterar el archivo original ni la vista previa. Las fotos pequeñas y los
 // PDF se envían intactos para no perder precisión en textos diminutos.
 async function prepararArchivoAnalisis(file) {
-  if (!/^image\/(jpeg|png)$/.test(file.type) || file.size < 650_000) return file;
+  if (!/^image\/(jpeg|png)$/.test(file.type)) return file;
   const imagen = await createImageBitmap(file);
   try {
-    const maxLado = 2200;
+    // Las fotos de celular pueden pesar muy poco por compresión y aun así tener
+    // 3000/4000 px. Reducimos por dimensiones (no por peso) para que la IA tenga
+    // menos imagen que procesar sin perder legibilidad del comprobante.
+    const maxLado = 1800;
     const escala = Math.min(1, maxLado / Math.max(imagen.width, imagen.height));
-    if (escala === 1 && file.size < 1_500_000) return file;
+    if (escala === 1 && file.type === "image/jpeg") return file;
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(imagen.width * escala);
-    canvas.height = Math.round(imagen.height * escala);
+    canvas.width = Math.max(1, Math.round(imagen.width * escala));
+    canvas.height = Math.max(1, Math.round(imagen.height * escala));
     canvas.getContext("2d", { alpha: false }).drawImage(imagen, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.88));
-    if (!blob || blob.size >= file.size) return file;
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.82));
+    if (!blob) return file;
     return new File([blob], file.name.replace(/\.(png|jpe?g)$/i, ".jpg"), { type: "image/jpeg" });
   } finally { imagen.close(); }
 }
@@ -313,12 +316,18 @@ async function prepararArchivoAnalisis(file) {
 async function extraerFactura(file) {
   if (!$("comprasAutoDetectar")?.checked) return;
   const token = ++facturaAnalisisToken;
-  setEstadoArchivo(`Analizando ${file.name}…`, "analizando");
+  setEstadoDropzoneFactura("uploading", file);
+  setEstadoArchivo(`Extrayendo datos de ${file.name}…`, "analizando");
   try {
     // La vista previa y la lectura IA son independientes. Si este mismo archivo ya
     // fue analizado en este navegador, reutilizamos el resultado y evitamos otra
     // subida + otra llamada a IA.
-    const claveCache = await huellaArchivo(file);
+    // Hash y preparación de imagen se hacen en paralelo: no hay motivo para
+    // esperar uno antes de empezar el otro.
+    const [claveCache, archivoAnalisis] = await Promise.all([
+      huellaArchivo(file),
+      prepararArchivoAnalisis(file)
+    ]);
     if (token !== facturaAnalisisToken || archivoActual !== file) return;
     const facturaCacheada = leerCacheFactura(claveCache);
     if (facturaCacheada) {
@@ -328,8 +337,6 @@ async function extraerFactura(file) {
       return;
     }
 
-    const archivoAnalisis = await prepararArchivoAnalisis(file);
-    if (token !== facturaAnalisisToken || archivoActual !== file) return;
     const base64 = await archivoABase64(archivoAnalisis);
     if (token !== facturaAnalisisToken || archivoActual !== file) return;
     const apiBase = String(API_BASE_URL || window.API_BASE_URL || "").replace(/\/$/, "");
@@ -444,8 +451,7 @@ function setArchivo(file) {
   }
   const dz=$("comprasDropzone");
   dz?.classList.add("is-loaded");
-  setEstadoDropzoneFactura("uploaded", file);
-  // La vista previa ya está disponible; el análisis no bloquea el formulario.
+  // La vista previa está lista, pero la extracción todavía no terminó.
   if ($("comprasAutoDetectar")?.checked) {
     extraerFactura(file);
   } else {
