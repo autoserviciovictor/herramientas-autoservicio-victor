@@ -1827,6 +1827,7 @@
             </button>
           </header>
 
+          <div class="etiquetas-controles-fila">
           <section class="etiquetas-toolbar-card">
             <div class="etiquetas-search-wrap">
               <label for="etiquetasBuscarInput">Agregar producto</label>
@@ -1844,6 +1845,27 @@
               <span>Etiquetas</span><strong id="etiquetasTotalCount">0</strong>
             </div>
           </section>
+
+          <section id="etiquetasPanelUsuarios" class="etiquetas-toolbar-card" hidden>
+            <div class="etiquetas-search-wrap">
+              <label for="etiquetasUsuarioSeleccionado">Ver etiquetas de otro usuario (administración)</label>
+              <div class="etiquetas-search-row">
+                <div class="etiquetas-usuario-picker" id="etiquetasUsuarioPicker">
+                  <select id="etiquetasUsuarioSeleccionado" aria-label="Seleccionar usuario" class="etiquetas-usuario-native" tabindex="-1" aria-hidden="true">
+                    <option value="">Mi lista de etiquetas</option>
+                  </select>
+                  <button id="etiquetasUsuarioTrigger" class="etiquetas-usuario-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="etiquetasUsuarioOpciones">
+                    <span id="etiquetasUsuarioTexto">Mi lista de etiquetas</span><span class="etiquetas-usuario-chevron" aria-hidden="true"></span>
+                  </button>
+                  <div id="etiquetasUsuarioOpciones" class="etiquetas-usuario-opciones" role="listbox" aria-label="Usuarios disponibles" hidden></div>
+                </div>
+                <button id="btnEtiquetasActualizarUsuario" type="button">Actualizar</button>
+              </div>
+              <small id="etiquetasEstadoConsulta" role="status" aria-live="polite"></small>
+            </div>
+          </section>
+
+          </div>
 
           <section class="etiquetas-list-card">
             <header>

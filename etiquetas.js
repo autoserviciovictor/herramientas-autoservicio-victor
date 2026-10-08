@@ -9,6 +9,9 @@ let catalogo = [];
 let catalogoCargado = false;
 let cargandoCatalogo = null;
 let items = [];
+let listaConsultada = null;
+let usuarioConsultado = "";
+let consultaSecuencia = 0;
 let scannerAbierto = false;
 let bloqueoLecturaHasta = 0;
 let temporizadorFeedbackScanner = null;
@@ -83,6 +86,7 @@ async function guardarListaServidor({ inmediato = true } = {}) {
 }
 
 function guardarListaUsuario() {
+  if (usuarioConsultado) return;
   guardarListaLocal();
   void guardarListaServidor({ inmediato: true });
 }
@@ -143,6 +147,7 @@ async function sincronizarListaDesdeServidor() {
 }
 
 function vaciarListaUsuario() {
+  if (usuarioConsultado) return;
   items = [];
   if (claveUsuarioActiva) {
     try { localStorage.removeItem(claveUsuarioActiva); } catch {}
@@ -208,6 +213,7 @@ function buscar(texto, limite = 8) {
 }
 
 function agregarProducto(producto) {
+  if (usuarioConsultado) return;
   if (!producto) return;
   const p = normalizarProducto(producto);
   const existente = items.find((item) => item.codigo && item.codigo === p.codigo);
@@ -218,6 +224,7 @@ function agregarProducto(producto) {
 }
 
 function cambiarCantidad(index, delta) {
+  if (usuarioConsultado) return;
   const item = items[index];
   if (!item) return;
   item.cantidad = Math.max(1, Number(item.cantidad || 1) + delta);
@@ -226,32 +233,38 @@ function cambiarCantidad(index, delta) {
 }
 
 function quitar(index) {
+  if (usuarioConsultado) return;
   items.splice(index, 1);
   guardarListaUsuario();
   render();
 }
 
+function itemsVisibles() { return usuarioConsultado ? (listaConsultada || []) : items; }
+
 function totalEtiquetas() {
-  return items.reduce((acc, item) => acc + Math.max(1, Number(item.cantidad || 1)), 0);
+  return itemsVisibles().reduce((acc, item) => acc + Math.max(1, Number(item.cantidad || 1)), 0);
 }
 
 function render() {
+  const visibles = itemsVisibles();
+  const externa = Boolean(usuarioConsultado);
   const lista = $("etiquetasLista");
   const productosCount = $("etiquetasProductosCount");
   const totalCount = $("etiquetasTotalCount");
   const imprimir = $("btnEtiquetasImprimir");
   const vaciar = $("btnEtiquetasVaciar");
-  if (productosCount) productosCount.textContent = String(items.length);
+  if (productosCount) productosCount.textContent = String(visibles.length);
   if (totalCount) totalCount.textContent = String(totalEtiquetas());
   if (imprimir) {
-    imprimir.disabled = items.length === 0;
+    imprimir.disabled = visibles.length === 0;
     const total = totalEtiquetas();
     imprimir.textContent = total ? `Imprimir hoja A4 (${total} etiqueta${total === 1 ? "" : "s"})` : "Imprimir hoja A4";
   }
-  if (vaciar) vaciar.disabled = items.length === 0;
+  if (vaciar) vaciar.disabled = externa || visibles.length === 0;
+  ["btnEtiquetasEscanear", "etiquetasFab", "btnEtiquetasBuscar", "etiquetasBuscarInput"].forEach(id => { const el = $(id); if (el) el.disabled = externa; });
   if (!lista) return;
 
-  if (!items.length) {
+  if (!visibles.length) {
     lista.innerHTML = `<div class="etiquetas-empty"><span><svg class="app-icon"><use href="#icon-tag"></use></svg></span><strong>La hoja está vacía</strong><small>Escaneá o buscá productos para empezar.</small></div>`;
     return;
   }
@@ -259,7 +272,7 @@ function render() {
   lista.innerHTML = `
     <div class="etiquetas-table-head" aria-hidden="true">
       <span>#</span><span>Descripción</span><span>Código de barras</span><span>Precio</span><span>Etiquetas</span><span>Acciones</span>
-    </div>` + items.map((item, index) => `
+    </div>` + visibles.map((item, index) => `
     <article class="etiquetas-item">
       <span class="etiquetas-item-index">${index + 1}</span>
       <div class="etiquetas-item-copy"><strong>${esc(item.articulo)}</strong><small>Código: ${esc(item.codigo || "Sin código")}</small></div>
@@ -273,6 +286,7 @@ function render() {
       <button class="etiquetas-remove" type="button" data-etiqueta-quitar="${index}" aria-label="Eliminar ${esc(item.articulo)}">×</button>
     </article>`).join("");
 
+  if (externa) lista.querySelectorAll(".etiquetas-qty button, .etiquetas-remove").forEach((b) => { b.disabled = true; b.title = "Lista de otro usuario: solo lectura"; });
   lista.querySelectorAll("[data-etiqueta-restar]").forEach((b) => b.addEventListener("click", () => cambiarCantidad(Number(b.dataset.etiquetaRestar), -1)));
   lista.querySelectorAll("[data-etiqueta-sumar]").forEach((b) => b.addEventListener("click", () => cambiarCantidad(Number(b.dataset.etiquetaSumar), 1)));
   lista.querySelectorAll("[data-etiqueta-quitar]").forEach((b) => b.addEventListener("click", () => quitar(Number(b.dataset.etiquetaQuitar))));
@@ -301,6 +315,7 @@ function renderSugerencias(lista) {
 }
 
 async function agregarDesdeEntrada(valor) {
+  if (usuarioConsultado) return false;
   await cargarCatalogo();
   const q = String(valor || "").trim();
   if (!q) return null;
@@ -406,6 +421,7 @@ function renderSugerenciasScanner(resultados) {
 
 
 async function abrirScanner() {
+  if (usuarioConsultado) return;
   if (scannerAbierto) return;
   const modal = $("etiquetasScannerModal");
   modal?.classList.remove("oculto");
@@ -416,6 +432,7 @@ async function abrirScanner() {
 }
 
 async function abrirScannerDirecto() {
+  if (usuarioConsultado) return;
   if (scannerAbierto) return;
   const modal = $("etiquetasScannerModal");
   modal?.classList.remove("oculto");
@@ -483,7 +500,7 @@ function construirHojaImpresion() {
   sheet.className = "etiquetas-print-sheet";
   const fecha = fechaImpresion();
   const etiquetas = [];
-  items.forEach((item) => {
+  itemsVisibles().forEach((item) => {
     const cantidad = Math.max(1, Number(item.cantidad || 1));
     for (let i = 0; i < cantidad; i += 1) etiquetas.push(item);
   });
@@ -494,12 +511,139 @@ function construirHojaImpresion() {
 
 
 function imprimir() {
-  if (!items.length) return;
+  if (!itemsVisibles().length) return;
   construirHojaImpresion();
   requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
 }
 
+function esAdministradorEtiquetas() {
+  return ["administrador", "administracion"].includes(String(window.AutoservicioAuth?.getUsuario?.()?.rol || "").toLowerCase());
+}
+
+function cerrarPickerEtiquetas() {
+  const trigger = $("etiquetasUsuarioTrigger");
+  const opciones = $("etiquetasUsuarioOpciones");
+  if (!trigger || !opciones) return;
+  opciones.hidden = true;
+  trigger.setAttribute("aria-expanded", "false");
+}
+
+function pintarPickerEtiquetas() {
+  const selector = $("etiquetasUsuarioSeleccionado");
+  const opciones = $("etiquetasUsuarioOpciones");
+  const texto = $("etiquetasUsuarioTexto");
+  if (!selector || !opciones || !texto) return;
+  texto.textContent = selector.selectedOptions[0]?.textContent || "Mi lista de etiquetas";
+  opciones.replaceChildren();
+  [...selector.options].forEach((opcion) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "etiquetas-usuario-opcion";
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", String(opcion.value === selector.value));
+    item.dataset.value = opcion.value;
+    item.textContent = opcion.textContent;
+    item.addEventListener("click", () => {
+      const cambio = selector.value !== opcion.value;
+      selector.value = opcion.value;
+      cerrarPickerEtiquetas();
+      pintarPickerEtiquetas();
+      $("etiquetasUsuarioTrigger")?.focus();
+      if (cambio) selector.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    opciones.appendChild(item);
+  });
+}
+
+function iniciarPickerEtiquetas() {
+  const trigger = $("etiquetasUsuarioTrigger");
+  const opciones = $("etiquetasUsuarioOpciones");
+  const picker = $("etiquetasUsuarioPicker");
+  if (!trigger || !opciones || !picker) return;
+  trigger.addEventListener("click", () => {
+    const abrir = opciones.hidden;
+    cerrarPickerEtiquetas();
+    if (abrir) {
+      pintarPickerEtiquetas();
+      opciones.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+    }
+  });
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (opciones.hidden) trigger.click();
+      const items = [...opciones.querySelectorAll('[role="option"]')];
+      const seleccionado = items.findIndex((item) => item.getAttribute("aria-selected") === "true");
+      items[event.key === "ArrowDown" ? Math.min(items.length - 1, seleccionado + 1) : Math.max(0, seleccionado - 1)]?.focus();
+    }
+  });
+  opciones.addEventListener("keydown", (event) => {
+    const items = [...opciones.querySelectorAll('[role="option"]')];
+    const actual = items.indexOf(document.activeElement);
+    if (event.key === "Escape") { event.preventDefault(); cerrarPickerEtiquetas(); trigger.focus(); }
+    else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      items[Math.max(0, Math.min(items.length - 1, actual + (event.key === "ArrowDown" ? 1 : -1)))]?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      items[event.key === "Home" ? 0 : items.length - 1]?.focus();
+    }
+  });
+  document.addEventListener("pointerdown", (event) => { if (!picker.contains(event.target)) cerrarPickerEtiquetas(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !opciones.hidden) { cerrarPickerEtiquetas(); trigger.focus(); } });
+  pintarPickerEtiquetas();
+}
+
+async function cargarSelectorUsuarios() {
+  const panel = $("etiquetasPanelUsuarios");
+  const selector = $("etiquetasUsuarioSeleccionado");
+  if (!panel || !selector) return;
+  panel.hidden = !esAdministradorEtiquetas();
+  if (panel.hidden) { cerrarPickerEtiquetas(); usuarioConsultado = ""; listaConsultada = null; render(); return; }
+  try {
+    const r = await fetch(`${API_BASE_URL}/etiquetas/usuarios`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    const seleccionado = selector.value;
+    selector.replaceChildren(new Option("Mi lista de etiquetas", ""));
+    (data.usuarios || []).forEach((u) => selector.add(new Option(u.nombre ? `${u.nombre} (${u.usuario})` : u.usuario, u.usuario)));
+    if ([...selector.options].some(o => o.value === seleccionado)) selector.value = seleccionado;
+    pintarPickerEtiquetas();
+    $("etiquetasEstadoConsulta").textContent = "";
+  } catch (error) {
+    $("etiquetasEstadoConsulta").textContent = "No se pudo cargar la lista de usuarios. Reintentá.";
+  }
+}
+
+async function seleccionarListaEtiquetas() {
+  const seleccion = $("etiquetasUsuarioSeleccionado")?.value || "";
+  const secuencia = ++consultaSecuencia;
+  usuarioConsultado = seleccion;
+  listaConsultada = [];
+  const estado = $("etiquetasEstadoConsulta");
+  if (!seleccion) { estado.textContent = ""; render(); return; }
+  estado.textContent = "Cargando etiquetas del usuario…";
+  render();
+  try {
+    const r = await fetch(`${API_BASE_URL}/etiquetas/lista/usuario/${encodeURIComponent(seleccion)}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (secuencia !== consultaSecuencia || usuarioConsultado !== seleccion) return;
+    listaConsultada = normalizarItemsGuardados(data.items);
+    estado.textContent = data.existe ? "Lista compartida (solo lectura). Imprimir no borra las etiquetas del empleado." : "Este usuario todavía no tiene una lista guardada en el servidor.";
+    render();
+  } catch (error) {
+    if (secuencia !== consultaSecuencia) return;
+    listaConsultada = [];
+    estado.textContent = "No se pudo consultar la lista. No se muestran datos locales de otro usuario.";
+    render();
+  }
+}
+
 async function activar() {
+  await cargarSelectorUsuarios();
+  if (usuarioConsultado) await seleccionarListaEtiquetas();
   await sincronizarListaDesdeServidor();
   await cargarCatalogo().catch(() => {});
   render();
@@ -511,6 +655,9 @@ function desactivar() {
 }
 
 function init() {
+  iniciarPickerEtiquetas();
+  $("etiquetasUsuarioSeleccionado")?.addEventListener("change", seleccionarListaEtiquetas);
+  $("btnEtiquetasActualizarUsuario")?.addEventListener("click", async () => { await cargarSelectorUsuarios(); await seleccionarListaEtiquetas(); });
   $("btnEtiquetasEscanear")?.addEventListener("click", abrirScanner);
   // El FAB existe solo en móvil: abre el visor directamente, sin el paso "Usar cámara".
   $("etiquetasFab")?.addEventListener("click", abrirScannerDirecto);
@@ -543,7 +690,7 @@ function init() {
   });
   $("etiquetasCodigoManual")?.addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnEtiquetasCodigoManual")?.click(); });
   window.addEventListener("afterprint", () => document.getElementById("etiquetasPrintSheet")?.remove());
-  window.addEventListener("autoservicio:sesion", (event) => cargarListaUsuario(event.detail));
+  window.addEventListener("autoservicio:sesion", (event) => { usuarioConsultado = ""; listaConsultada = null; ++consultaSecuencia; void cargarSelectorUsuarios(); void cargarListaUsuario(event.detail); });
   window.addEventListener("focus", () => void sincronizarListaDesdeServidor());
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") void sincronizarListaDesdeServidor();

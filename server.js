@@ -6343,6 +6343,32 @@ app.patch("/notificaciones/centro-leidas", requerirSesion, async (req, res) => {
   }
 });
 
+// Solo administración puede consultar listas ajenas; nunca se permite editarlas por esta ruta.
+app.get("/etiquetas/usuarios", requerirAdministrador, async (req, res) => {
+  try {
+    const usuarios = (await obtenerUsuarios()).filter(u => u.activo && u.usuario !== req.usuario.usuario)
+      .map(u => ({ usuario: u.usuario, nombre: u.nombre || u.usuario }));
+    res.json({ ok: true, usuarios });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: "No se pudieron consultar los usuarios" });
+  }
+});
+
+app.get("/etiquetas/lista/usuario/:usuario", requerirAdministrador, async (req, res) => {
+  try {
+    const usuario = normalizarUsuario(req.params.usuario);
+    const usuarios = await obtenerUsuarios();
+    if (!usuario || !usuarios.some(u => u.usuario === usuario && u.activo))
+      return res.status(404).json({ ok: false, mensaje: "Usuario no encontrado" });
+    await asegurarAuxiliaresPostgres();
+    const guardada = await obtenerListaEtiquetasDb(usuario);
+    res.json({ ok: true, existe: Boolean(guardada), items: guardada?.items || [], actualizado: guardada?.actualizado || null });
+  } catch (error) {
+    console.error("Error al consultar etiquetas de usuario:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudo consultar la lista" });
+  }
+});
+
 app.get("/etiquetas/lista", requerirAlgunModulo("etiquetas"), async (req, res) => {
   try {
     await asegurarAuxiliaresPostgres();
