@@ -513,7 +513,7 @@ function construirHojaImpresion() {
     const cantidad = Math.max(1, Number(item.cantidad || 1));
     for (let i = 0; i < cantidad; i += 1) etiquetas.push(item);
   });
-  sheet.innerHTML = etiquetas.map((item) => `<article class="etiqueta-print-item"><strong>${esc(item.articulo)}</strong><div class="etiqueta-print-price">${esc(formatearPrecio(item.precio))}</div><div class="etiqueta-print-meta"><b>${esc(item.codigo || "Sin código")}</b><span>${esc(fecha)}</span></div></article>`).join("");
+  sheet.innerHTML = etiquetas.map((item) => `<article class="etiqueta-print-item"><strong>${esc(item.articulo)}</strong><div class="etiqueta-print-price">${esc(formatearPrecioImpresion(item.precio))}</div><div class="etiqueta-print-meta"><b>${esc(item.codigo || "Sin código")}</b><span>${esc(fecha)}</span></div></article>`).join("");
   document.body.appendChild(sheet);
   return sheet;
 }

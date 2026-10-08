@@ -15778,15 +15778,84 @@ html[data-theme="dark"] .etiquetas-search-field input,html[data-theme="dark"] .e
 html[data-theme="dark"] .etiquetas-sugerencias{background:var(--pro-panel,#10233a);border-color:var(--pro-border,#30445e)}
 html[data-theme="dark"] .etiquetas-sugerencias button{color:var(--pro-text,#f7f9fc);border-color:var(--pro-border,#30445e)}
 @media(max-width:700px){.etiquetas-shell{width:100%;padding:14px 14px 90px}.etiquetas-page-header{justify-content:flex-end;margin-bottom:12px}.etiquetas-page-header>div{display:none!important}.etiquetas-primary-btn{width:100%}.etiquetas-toolbar-card{grid-template-columns:1fr;gap:12px;padding:14px}.etiquetas-search-row{display:grid;grid-template-columns:1fr auto}.etiquetas-resumen{grid-template-columns:1fr auto;min-width:0}.etiquetas-list-card{padding:12px}.etiquetas-list-card>header{align-items:flex-start}.etiquetas-list-card>header p{display:none}.etiquetas-item{grid-template-columns:26px minmax(0,1fr) 32px;gap:8px}.etiquetas-qty{grid-column:2/4;justify-self:start}.etiquetas-remove{grid-column:3;grid-row:1}.etiquetas-actions{position:sticky;bottom:10px;z-index:20}.etiquetas-print-btn{width:100%;box-shadow:0 10px 28px rgba(0,0,0,.22)}.etiquetas-sugerencias{width:calc(100vw - 28px)}}
-@media print{
-  @page{size:A4 portrait;margin:10mm 9mm}
-  body>*:not(#etiquetasPrintSheet){display:none!important}
-  html,body{background:#fff!important;margin:0!important;padding:0!important;width:auto!important;height:auto!important;overflow:visible!important}
-  #etiquetasPrintSheet.etiquetas-print-sheet{display:grid!important;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(31mm,auto);column-gap:8mm;row-gap:3mm;width:100%;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
-  .etiqueta-print-item{break-inside:avoid;display:flex;flex-direction:column;justify-content:flex-start;padding:2mm 1mm 1.5mm;border:0;background:#fff;min-width:0}
-  .etiqueta-print-item strong{font-size:13.5pt;line-height:1.18;font-weight:700;overflow-wrap:anywhere;margin-bottom:auto}
-  .etiqueta-print-meta{display:grid;grid-template-columns:1fr auto;align-items:end;gap:4mm;margin-top:4mm;font-size:8.5pt;white-space:nowrap}
-  .etiqueta-print-meta b{font-weight:700;overflow:hidden;text-overflow:ellipsis}.etiqueta-print-meta span{font-weight:400}
+/* Impresión de Etiquetas: plantilla única, calibrada contra sistema(3).pdf.
+   3 columnas x 9 filas, 60 x 30 mm. No afecta los controles de pantalla. */
+@media print {
+  @page { size: A4 portrait; margin: 4mm 0; }
+  body > *:not(#etiquetasPrintSheet) { display: none !important; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; width: auto !important; height: auto !important; overflow: visible !important; }
+  #etiquetasPrintSheet.etiquetas-print-sheet {
+    display: grid !important;
+    grid-template-columns: repeat(3, 60mm) !important;
+    grid-auto-rows: 30mm !important;
+    gap: 0 !important;
+    width: 180mm !important;
+    /* Corrección física: desplaza la grilla completa 3 mm hacia la derecha. */
+    margin: 0 0 0 3mm !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  /* Negro puro en nombre, precio, código y fecha, incluso si heredan estilos de pantalla. */
+  #etiquetasPrintSheet,
+  #etiquetasPrintSheet * {
+    color: #000000 !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-item {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    height: 30mm !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 1.9mm 1.6mm 1.2mm !important;
+    border: 0 !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-item strong {
+    font: 700 12pt/1.30 Arial, Helvetica, sans-serif !important;
+    letter-spacing: 0 !important;
+    word-spacing: 0 !important;
+    margin: 0 !important;
+    overflow-wrap: break-word !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-price {
+    font: 700 14pt/1 Arial, Helvetica, sans-serif !important;
+    margin-top: auto !important;
+    padding: 0 !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-meta {
+    display: block !important;
+    position: relative !important;
+    height: 3.7mm !important;
+    min-height: 3.7mm !important;
+    margin-top: 2mm !important;
+    font: 700 8pt/1.1 Arial, Helvetica, sans-serif !important;
+    white-space: nowrap !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-meta b {
+    position: absolute !important;
+    left: 3mm !important;
+    top: 0 !important;
+    max-width: 26mm !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-weight: 700 !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-meta span {
+    position: absolute !important;
+    left: 30mm !important;
+    top: 0 !important;
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+  }
 }
 
 /* ==================== ETIQUETAS · DISEÑO FINAL 04/09/2026 ====================
@@ -15838,11 +15907,7 @@ html[data-theme="dark"] #pantallaEtiquetas .etiquetas-item-index,html[data-theme
   #pantallaEtiquetas .etiquetas-remove{grid-column:3;grid-row:1}
 }
 
-@media print{
-  .etiqueta-print-item strong{font-size:11.5pt!important;line-height:1.14!important;font-weight:700!important;margin-bottom:0!important}
-  .etiqueta-print-price{margin-top:auto;padding-top:3mm;font-size:15.5pt;line-height:1;font-weight:700}
-  .etiqueta-print-meta{margin-top:3mm!important}
-}
+
 
 
 /* Etiquetas · cierre UI + impresión directa 04/09/2026.
@@ -15891,20 +15956,7 @@ html[data-theme="dark"] #pantallaEtiquetas .etiquetas-item-index,html[data-theme
   #pantallaEtiquetas .etiquetas-print-btn{min-width:0!important;width:100%!important}
 }
 
-@media print{
-  .etiqueta-print-item strong{
-    font-family:Arial,Helvetica,sans-serif!important;
-    font-size:11.5pt!important;
-    line-height:1.32!important;
-    letter-spacing:.035em!important;
-    word-spacing:.015em!important;
-    font-weight:700!important;
-    margin:0 0 1mm!important;
-    overflow-wrap:break-word!important;
-  }
-  .etiqueta-print-price{margin-top:auto!important;padding-top:2.5mm!important;font-size:15.5pt!important;line-height:1.05!important;font-weight:700!important}
-  .etiqueta-print-meta{margin-top:2.6mm!important;line-height:1.15!important}
-}
+
 
 
 /* ================= ETIQUETAS · MÓVIL CANÓNICO 04/09/2026 =================
@@ -16455,58 +16507,37 @@ html[data-theme="dark"] .venc-stepper-btn{background:var(--pro-panel-2,#192d46);
 #pantallaEtiquetas #etiquetasPanelUsuarios,#pantallaEtiquetas #etiquetasPanelUsuarios .etiquetas-search-wrap,#pantallaEtiquetas #etiquetasPanelUsuarios .etiquetas-search-row{overflow:visible}
 
 
-/* Etiquetas: plantilla de impresión alineada con sistema.pdf (08/10/2026).
-   Bloque único canónico para impresión; no afecta la interfaz de pantalla. */
-@media print {
-  @page { size: A4 portrait; margin: 4mm 3mm; }
-  #etiquetasPrintSheet.etiquetas-print-sheet {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    grid-auto-rows: 30mm !important;
-    column-gap: 2mm !important;
-    row-gap: 0 !important;
-    width: 100% !important;
-    font-family: Arial, Helvetica, sans-serif !important;
-    color: #000 !important;
+/* Etiquetas: acciones de lista en cabecera (sin afectar la hoja impresa). */
+@media screen {
+  #pantallaEtiquetas .etiquetas-list-card > header { flex-wrap: wrap; }
+  #pantallaEtiquetas .etiquetas-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-left: auto;
   }
-  #etiquetasPrintSheet .etiqueta-print-item {
-    display: flex !important;
-    flex-direction: column !important;
-    box-sizing: border-box !important;
-    height: 30mm !important;
-    min-height: 0 !important;
-    padding: 1.3mm 1.1mm 1mm !important;
-    break-inside: avoid !important;
-    overflow: hidden !important;
-  }
-  #etiquetasPrintSheet .etiqueta-print-item strong {
-    font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 10.5pt !important;
-    font-weight: 400 !important;
-    line-height: 1.15 !important;
-    letter-spacing: 0 !important;
-    word-spacing: 0 !important;
+  #pantallaEtiquetas .etiquetas-header-actions > button {
+    width: auto !important;
+    min-width: 0 !important;
+    height: 40px !important;
+    min-height: 40px !important;
     margin: 0 !important;
-    overflow-wrap: break-word !important;
+    box-shadow: none;
+    white-space: nowrap;
   }
-  #etiquetasPrintSheet .etiqueta-print-price {
-    font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 12.5pt !important;
-    font-weight: 400 !important;
-    line-height: 1.1 !important;
-    margin-top: auto !important;
-    padding-top: 0 !important;
+  #pantallaEtiquetas .etiquetas-header-actions .etiquetas-print-btn {
+    padding: 0 18px;
   }
-  #etiquetasPrintSheet .etiqueta-print-meta {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto !important;
-    align-items: end !important;
-    gap: 1mm !important;
-    font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 7.5pt !important;
-    line-height: 1.1 !important;
-    margin-top: 1.5mm !important;
-    white-space: nowrap !important;
+}
+@media screen and (max-width: 700px) {
+  #pantallaEtiquetas .etiquetas-header-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
   }
-  #etiquetasPrintSheet .etiqueta-print-meta b { font-weight: 400 !important; }
+  #pantallaEtiquetas .etiquetas-header-actions > button {
+    flex: 1 1 auto;
+  }
 }

@@ -1873,16 +1873,15 @@
                 <h2>Productos para imprimir</h2>
                 <p>La fecha se toma automáticamente al momento de imprimir.</p>
               </div>
-              <button id="btnEtiquetasVaciar" type="button" class="etiquetas-secondary-btn">Vaciar lista</button>
+              <div class="etiquetas-header-actions">
+                <button id="btnEtiquetasVaciar" type="button" class="etiquetas-secondary-btn">Vaciar lista</button>
+                <button id="btnEtiquetasImprimir" type="button" class="etiquetas-print-btn" disabled>
+                  Imprimir hoja A4
+                </button>
+              </div>
             </header>
             <div id="etiquetasLista" class="etiquetas-lista" aria-live="polite"></div>
           </section>
-
-          <div class="etiquetas-actions">
-            <button id="btnEtiquetasImprimir" type="button" class="etiquetas-print-btn" disabled>
-              Imprimir hoja A4
-            </button>
-          </div>
         </section>
 
         <button id="etiquetasFab" class="inventory-fab etiquetas-fab" type="button" aria-label="Escanear producto" aria-haspopup="dialog" aria-expanded="false" title="Escanear producto">
