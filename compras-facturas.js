@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "./config.js?v=1960-d21-cierre-etapa6-010926";
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "autoservicio_compras_facturas_v1";
-const FACTURA_IA_CACHE_KEY = "autoservicio_factura_ia_cache_v1";
+const FACTURA_IA_CACHE_KEY = "autoservicio_factura_ia_cache_v2"; // v2 invalida lecturas antiguas incompletas
 const FACTURA_IA_CACHE_MAX = 20;
 let items = [];
 let archivoActual = null;
@@ -15,6 +15,7 @@ let facturaAnalisisToken = 0;
 let importesDetectados = null;
 let alicuotasDetectadas = [];
 let camposRevision = [];
+let facturaEditandoId = null;
 const totalesManuales = new Set();
 const PDFJS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
 const PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
@@ -26,10 +27,23 @@ const numero = (v) => {
   if (!s) return 0;
   // Formato argentino: 378.400,00 -> 378400.00. También conserva valores API 378400.00.
   if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(?:\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
   else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, "");
   return Math.max(0, Number(s) || 0);
 };
 const importeAR = (v) => `$ ${new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numero(v))}`;
+function formatearImporteMientrasEscribe(el) {
+  if (!el) return;
+  let crudo = String(el.value ?? "").replace(/\$/g, "").replace(/\s/g, "").replace(/\./g, "");
+  crudo = crudo.replace(/[^0-9,]/g, "");
+  const primeraComa = crudo.indexOf(",");
+  let entero = primeraComa >= 0 ? crudo.slice(0, primeraComa) : crudo;
+  let decimales = primeraComa >= 0 ? crudo.slice(primeraComa + 1).replace(/,/g, "").slice(0, 2) : null;
+  entero = entero.replace(/^0+(?=\d)/, "") || "0";
+  const enteroFormateado = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  el.value = `$ ${enteroFormateado}${decimales !== null ? `,${decimales}` : ""}`;
+  try { el.setSelectionRange(el.value.length, el.value.length); } catch {}
+}
 function limpiarDatoPersistente(valorDato) {
   if (Array.isArray(valorDato)) return valorDato.map(limpiarDatoPersistente);
   if (!valorDato || typeof valorDato !== "object") {
@@ -46,24 +60,32 @@ function limpiarDatoPersistente(valorDato) {
   }
   return limpio;
 }
-const facturas = () => {
-  try {
-    const lista = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    return Array.isArray(lista) ? lista.map(limpiarDatoPersistente) : [];
-  } catch { return []; }
-};
-function guardarFacturas(lista) {
-  const listaLiviana = (Array.isArray(lista) ? lista : []).map(limpiarDatoPersistente);
-  const contenido = JSON.stringify(listaLiviana);
-  try {
-    localStorage.setItem(STORAGE_KEY, contenido);
-  } catch (error) {
-    if (error?.name !== "QuotaExceededError") throw error;
-    // La caché de IA es prescindible y puede ocupar varios MB. Liberarla no
-    // elimina facturas guardadas y permite conservar el historial real.
-    try { localStorage.removeItem(FACTURA_IA_CACHE_KEY); } catch {}
-    localStorage.setItem(STORAGE_KEY, contenido);
+let facturasMemoria = [];
+let proveedoresMemoria = [];
+const COMPRAS_IDB = "autoservicio_compras_cache_v1";
+const COMPRAS_IDB_STORE = "snapshots";
+function abrirComprasIdb(){return new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(new Error("IndexedDB no disponible"));const r=indexedDB.open(COMPRAS_IDB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(COMPRAS_IDB_STORE))r.result.createObjectStore(COMPRAS_IDB_STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error("No se pudo abrir IndexedDB"));});}
+async function leerSnapshotCompras(){const db=await abrirComprasIdb();return new Promise((resolve,reject)=>{const tx=db.transaction(COMPRAS_IDB_STORE,"readonly"),r=tx.objectStore(COMPRAS_IDB_STORE).get("datos");r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);tx.oncomplete=()=>db.close();});}
+async function guardarSnapshotCompras(){const db=await abrirComprasIdb();return new Promise((resolve,reject)=>{const tx=db.transaction(COMPRAS_IDB_STORE,"readwrite");tx.objectStore(COMPRAS_IDB_STORE).put({facturas:facturasMemoria,proveedores:proveedoresMemoria,ts:Date.now()},"datos");tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>{db.close();reject(tx.error)};});}
+const facturas = () => facturasMemoria.map(limpiarDatoPersistente);
+async function apiCompras(ruta,opciones={}){
+  const respuesta=await fetch(`${API_BASE_URL}${ruta}`,{...opciones,headers:{"Content-Type":"application/json",...(opciones.headers||{})}});
+  const data=await respuesta.json().catch(()=>({}));
+  if(!respuesta.ok)throw new Error(data?.mensaje||`HTTP ${respuesta.status}`);
+  return data;
+}
+async function guardarFacturaServidor(factura){await apiCompras(`/admin/compras/facturas/${encodeURIComponent(factura.id)}`,{method:"PUT",body:JSON.stringify(limpiarDatoPersistente(factura))});}
+async function guardarFacturas(lista) {facturasMemoria=(Array.isArray(lista)?lista:[]).map(limpiarDatoPersistente);await guardarSnapshotCompras().catch(()=>{});}
+async function cargarDatosCompras(){
+  let legadoFacturas=[],legadoProveedores=[];
+  try{const a=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");if(Array.isArray(a))legadoFacturas=a.map(limpiarDatoPersistente);}catch{}
+  try{const a=JSON.parse(localStorage.getItem(PROVEEDORES_KEY)||"[]");if(Array.isArray(a))legadoProveedores=a;}catch{}
+  try{const snap=await leerSnapshotCompras();if(snap){facturasMemoria=Array.isArray(snap.facturas)?snap.facturas:[];proveedoresMemoria=Array.isArray(snap.proveedores)?snap.proveedores:[];}}catch{}
+  if(legadoFacturas.length||legadoProveedores.length){
+    try{await apiCompras("/admin/compras/migrar",{method:"POST",body:JSON.stringify({facturas:legadoFacturas,proveedores:legadoProveedores})});localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(PROVEEDORES_KEY);}catch(error){console.warn("Compras: se conserva la copia local hasta completar la migración",error);}
   }
+  try{const data=await apiCompras("/admin/compras/datos");facturasMemoria=Array.isArray(data.facturas)?data.facturas.map(limpiarDatoPersistente):[];proveedoresMemoria=Array.isArray(data.proveedores)?data.proveedores:[];await guardarSnapshotCompras().catch(()=>{});}
+  catch(error){if(!facturasMemoria.length&&legadoFacturas.length)facturasMemoria=legadoFacturas;if(!proveedoresMemoria.length&&legadoProveedores.length)proveedoresMemoria=legadoProveedores;console.warn("Compras: usando respaldo local/offline",error);}
 }
 const hoy = () => {
   const ahora = new Date();
@@ -142,8 +164,11 @@ function calcularTotales() {
   const ganancias = valorImporte("comprasGanancias");
   const otros = valorImporte("comprasOtrosImpuestos");
   const totalNeto = valorImporte("comprasTotalNeto");
-  const totalIva = totalIvaAuto;
-  const totalAuto = Math.max(0, totalNeto - descuentos + totalIva + iibb + percepcionIva + ganancias + otros);
+  // Las tarjetas de IVA son editables. El total debe tomar siempre los valores
+  // que están actualmente en pantalla, también cuando se edita una factura.
+  const totalIva = neto21 + neto105;
+  const baseParaTotal = subtotal;
+  const totalAuto = Math.max(0, baseParaTotal - descuentos + totalIva + iibb + percepcionIva + ganancias + otros);
   ponerImporteAutomatico("comprasTotal", importesDetectados?.total ?? totalAuto);
   const total = valorImporte("comprasTotal");
 
@@ -223,11 +248,40 @@ function seleccionarOpcion(id, valor) {
   const opcion = [...el.options].find(o => o.value.toLowerCase() === buscado || o.textContent.trim().toLowerCase() === buscado);
   if (opcion) { el.value = opcion.value; sincronizarSelector(el); }
 }
+function buscarFichaProveedor(datos={}) {
+  const cuit = cuitProveedor(datos.cuit || datos.cuit_dni);
+  const nombres = [datos.proveedor, datos.razon_social, datos.razonSocial, datos.nombreComercial]
+    .map(nombreProveedor).filter(Boolean);
+  const fichas = proveedoresGuardados();
+  if (cuit) {
+    const porCuit = fichas.find(p => cuitProveedor(p.cuit) === cuit);
+    if (porCuit) return porCuit;
+  }
+  return fichas.find(p => [p.razonSocial, p.nombreComercial].map(nombreProveedor).filter(Boolean)
+    .some(n => nombres.includes(n))) || null;
+}
+function autocompletarDesdeProveedor(datos={}) {
+  const ficha = buscarFichaProveedor(datos);
+  if (!ficha) return false;
+  // Los datos maestros del proveedor prevalecen cuando el reconocimiento no pudo leerlos.
+  if (ficha.nombreComercial || ficha.razonSocial) setValor("comprasProveedor", ficha.nombreComercial || ficha.razonSocial);
+  if (ficha.razonSocial) setValor("comprasRazonSocial", ficha.razonSocial);
+  if (ficha.cuit) setValor("comprasCuit", ficha.cuit);
+  if (ficha.condicionFiscal) seleccionarOpcion("comprasCondicionFiscal", ficha.condicionFiscal);
+  if (ficha.condicionPago) seleccionarOpcion("comprasCondicionPago", ficha.condicionPago);
+  if (ficha.rubro) seleccionarOpcion("comprasRubro", ficha.rubro);
+  return true;
+}
 function aplicarFacturaExtraida(f) {
   if (!f || typeof f !== "object") return;
   totalesManuales.clear();
   camposRevision = Array.isArray(f.campos_revision) ? f.campos_revision.filter(Boolean) : [];
   alicuotasDetectadas = Array.isArray(f.alicuotas_iva) ? f.alicuotas_iva.filter(a => numero(a?.tasa)>0 && (numero(a?.neto)>0 || numero(a?.iva)>0)) : [];
+  // Algunos comprobantes imprimen el IVA 21% claramente pero el analizador lo
+  // devuelve en iva_21/iva_total sin crear alicuotas_iva. No perder ese monto.
+  if (!alicuotasDetectadas.some(a => Math.abs(numero(a?.tasa) - 21) < 0.01) && numero(f.iva_21) > 0) {
+    alicuotasDetectadas.push({ tasa: 21, neto: numero(f.neto_gravado_21), iva: numero(f.iva_21) });
+  }
   setValor("comprasProveedor", f.proveedor || f.razon_social);
   setValor("comprasRazonSocial", f.razon_social || f.proveedor);
   setValor("comprasCuit", f.cuit);
@@ -239,6 +293,8 @@ function aplicarFacturaExtraida(f) {
   setValor("comprasVencimientoCae", f.vencimiento_cae);
   seleccionarOpcion("comprasCondicionPago", f.condicion_pago);
   seleccionarOpcion("comprasMoneda", f.moneda);
+  // Si el proveedor ya existe, completar CUIT, razón social y preferencias guardadas.
+  autocompletarDesdeProveedor(f);
   if ($("comprasDescuentos")) $("comprasDescuentos").value = importeAR(f.descuentos);
   if ($("comprasOtrosImpuestos")) $("comprasOtrosImpuestos").value = importeAR(f.otros_impuestos);
   if ($("comprasIibb")) $("comprasIibb").value = importeAR(f.iibb || f.ingresos_brutos);
@@ -481,7 +537,20 @@ function limpiarArchivo(soloArchivo=false){
   $("comprasArchivoEstado")?.classList.add("oculto"); if($("comprasArchivo")) $("comprasArchivo").value="";
   if(!soloArchivo) resetForm(false);
 }
-function resetForm(limpiarArchivoTambien=true){
+function actualizarModoEdicion(){
+  const editando=Boolean(facturaEditandoId);
+  const titulo=document.querySelector("#comprasEditor .compras-hero-title h1");
+  const subtitulo=document.querySelector("#comprasEditor .compras-hero-title p");
+  if(titulo) titulo.textContent=editando?"Editar Factura":"Nueva Factura";
+  if(subtitulo) subtitulo.textContent=editando?"Modificá los datos del comprobante y guardá los cambios.":"Cargá una factura, importá una imagen o PDF y registrá todos los datos del comprobante.";
+  const guardarBtn=$("comprasGuardar");
+  if(guardarBtn) guardarBtn.innerHTML=`<svg class="app-icon"><use href="#icon-save"></use></svg>${editando?"Guardar cambios":"Guardar factura"}`;
+  const cancelarBtn=$("comprasCancelar");
+  if(cancelarBtn) cancelarBtn.innerHTML=editando?`Cancelar edición`:`<svg class="app-icon"><use href="#icon-trash"></use></svg>Limpiar`;
+}
+function resetForm(limpiarArchivoTambien=true, conservarModoEdicion=false){
+  if(!conservarModoEdicion) facturaEditandoId=null;
+  actualizarModoEdicion();
   importesDetectados=null; alicuotasDetectadas=[]; camposRevision=[]; totalesManuales.clear();
   ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimientoCae","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""});
   const defaults={comprasCondicionFiscal:"Responsable Inscripto",comprasComprobante:"",comprasCondicionPago:"",comprasMoneda:"Pesos",comprasRubro:""};
@@ -489,7 +558,7 @@ function resetForm(limpiarArchivoTambien=true){
   if($("comprasFecha"))$("comprasFecha").value=hoy(); ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(id=>{if($(id))$(id).value="";});
   items=[itemVacio()]; adjuntos=[]; if(limpiarArchivoTambien) limpiarArchivo(true); renderItems(); renderAdjuntos(); calcularTotales();
 }
-function construirRegistro(){ const t=calcularTotales(); return { id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimientoCae:valor("comprasVencimientoCae"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
+function construirRegistro(base={}){ const t=calcularTotales(); return { ...base, id: base.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, creadoEn:base.creadoEn || new Date().toISOString(), proveedor:valor("comprasProveedor"), cuit:valor("comprasCuit"), razonSocial:valor("comprasRazonSocial"), condicionFiscal:valor("comprasCondicionFiscal"), comprobante:valor("comprasComprobante"), puntoVenta:valor("comprasPuntoVenta"), numero:valor("comprasNumero"), fecha:valor("comprasFecha"), condicionPago:valor("comprasCondicionPago"), moneda:valor("comprasMoneda"), rubro:valor("comprasRubro"), vencimientoCae:valor("comprasVencimientoCae"), observaciones:valor("comprasObservaciones"), items:items.map(x=>({...x})), ...t, archivo: archivoActual ? {nombre:archivoActual.name,tipo:archivoActual.type,tamano:archivoActual.size} : null, adjuntos:adjuntos.map(f=>({nombre:f.name,tipo:f.type,tamano:f.size})) }; }
 // Identidad fiscal del comprobante: los formatos con guiones, espacios o ceros
 // iniciales no deben permitir registrar nuevamente la misma factura.
 function normalizarIdentificadorFiscal(valor) {
@@ -525,7 +594,9 @@ async function avisarFacturaDuplicada() {
   resetForm();
 }
 async function guardar(){
-  const r=construirRegistro();
+  const listaActual=facturas();
+  const original=facturaEditandoId?listaActual.find(f=>String(f.id)===String(facturaEditandoId)):null;
+  const r=construirRegistro(original||{});
   if(!r.proveedor){
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Falta el proveedor",message:"Completá el proveedor antes de guardar.",confirmText:"Aceptar"});
     else alert("Completá el proveedor antes de guardar.");
@@ -539,7 +610,7 @@ async function guardar(){
   }
 
   // Verificar antes de pedir confirmación; al aceptar el aviso se limpia el formulario.
-  if (facturas().some(f => esFacturaDuplicada(r, f))) {
+  if (listaActual.some(f => String(f.id)!==String(facturaEditandoId||"") && esFacturaDuplicada(r, f))) {
     await avisarFacturaDuplicada();
     return;
   }
@@ -547,9 +618,9 @@ async function guardar(){
   let confirmado=true;
   if(window.AppDialog?.confirm){
     confirmado=await window.AppDialog.confirm({
-      title:"Guardar factura",
-      message:`¿Querés guardar la factura ${r.comprobante || ""} ${r.numero || ""} de ${r.proveedor}?`,
-      confirmText:"Guardar factura",
+      title:facturaEditandoId?"Guardar cambios":"Guardar factura",
+      message:facturaEditandoId?`¿Querés guardar los cambios de la factura ${r.comprobante || ""} ${r.numero || ""} de ${r.proveedor}?`:`¿Querés guardar la factura ${r.comprobante || ""} ${r.numero || ""} de ${r.proveedor}?`,
+      confirmText:facturaEditandoId?"Guardar cambios":"Guardar factura",
       cancelText:"Cancelar",
       tone:"primary"
     });
@@ -559,21 +630,28 @@ async function guardar(){
   try{
     const lista=facturas();
     // Revalidar después del diálogo, por si el historial cambió mientras estaba abierto.
-    if (lista.some(f => esFacturaDuplicada(r, f))) {
+    if (lista.some(f => String(f.id)!==String(facturaEditandoId||"") && esFacturaDuplicada(r, f))) {
       await avisarFacturaDuplicada();
       return;
     }
-    lista.unshift(r);
-    guardarFacturas(lista);
-    // El comprobante ya fue persistido: crear la ficha únicamente si falta.
+    const eraEdicion=Boolean(facturaEditandoId);
+    if(eraEdicion){
+      const indice=lista.findIndex(f=>String(f.id)===String(facturaEditandoId));
+      if(indice<0) throw new Error("La factura que se estaba editando ya no existe.");
+      lista[indice]=r;
+    } else lista.unshift(r);
+    await guardarFacturaServidor(r);
+    await guardarFacturas(lista);
+    // El comprobante ya fue persistido en PostgreSQL: crear/actualizar la ficha únicamente si corresponde.
     // Una falla de almacenamiento de proveedores no debe anunciar que falló la factura.
-    try { registrarProveedorDeFactura(r); }
+    try { await registrarProveedorDeFactura(r); }
     catch (error) { console.warn("Factura guardada; no se pudo crear la ficha del proveedor", error); }
     actualizarResumen();
     renderHistorial();
     resetForm();
-    if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Factura guardada",message:"La factura se guardó correctamente.",confirmText:"Aceptar"});
-    else alert("La factura se guardó correctamente.");
+    if(eraEdicion) mostrarVistaCompras("historial");
+    if(window.AppDialog?.alert) await window.AppDialog.alert({title:eraEdicion?"Cambios guardados":"Factura guardada",message:eraEdicion?"Los cambios de la factura se guardaron correctamente.":"La factura se guardó correctamente.",confirmText:"Aceptar"});
+    else alert(eraEdicion?"Los cambios de la factura se guardaron correctamente.":"La factura se guardó correctamente.");
   }catch(error){
     console.error("No se pudo guardar la factura",error);
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:"No se pudo guardar",message:"Ocurrió un error al guardar la factura. Intentá nuevamente.",confirmText:"Aceptar"});
@@ -617,6 +695,25 @@ function paginasCompras(id,info,total,pagina,cambiar){
     if(n===pagina)boton.classList.add("active");boton.addEventListener("click",()=>cambiar(n));botones.appendChild(boton);
   }
 }
+function cargarFacturaParaEditar(id){
+  const f=facturas().find(x=>String(x.id)===String(id));
+  if(!f)return;
+  facturaEditandoId=f.id;
+  resetForm(true,true);
+  facturaEditandoId=f.id;
+  const campos={comprasProveedor:f.proveedor,comprasCuit:f.cuit,comprasRazonSocial:f.razonSocial,comprasCondicionFiscal:f.condicionFiscal,comprasComprobante:f.comprobante,comprasPuntoVenta:f.puntoVenta,comprasNumero:f.numero,comprasFecha:f.fecha,comprasCondicionPago:f.condicionPago,comprasMoneda:f.moneda,comprasRubro:f.rubro,comprasVencimientoCae:f.vencimientoCae,comprasObservaciones:f.observaciones,comprasSubtotal:f.subtotal,comprasDescuentos:f.descuentos,comprasNeto21:f.neto21,comprasNeto105:f.neto105,comprasIibb:f.iibb,comprasSuss:f.suss,comprasGanancias:f.ganancias,comprasOtrosImpuestos:f.otrosImpuestos,comprasTotalNeto:f.totalNeto,comprasTotal:f.total};
+  for(const [idCampo,dato] of Object.entries(campos)){const el=$(idCampo);if(!el)continue;el.value=dato??"";sincronizarSelector(el);}
+  items=Array.isArray(f.items)&&f.items.length?f.items.map(x=>({...x})):[itemVacio()];
+  renderItems();
+  ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(idCampo=>{if($(idCampo)&&campos[idCampo]!==undefined)$(idCampo).value=importeAR(campos[idCampo]);});
+  const contador=document.querySelector("#adminTab-compras .compras-char-count");if(contador)contador.textContent=`${String(f.observaciones||"").length} / 500`;
+  actualizarModoEdicion();
+  mostrarVistaCompras("editor");
+}
+function cancelarEdicionOLimpiar(){
+  if(facturaEditandoId){resetForm();mostrarVistaCompras("historial");}
+  else resetForm();
+}
 function renderHistorial(){
   const q=(valor("comprasHistBuscar")||"").trim().toLocaleLowerCase("es"),tipo=valor("comprasHistTipo"),desde=valor("comprasHistDesde"),hasta=valor("comprasHistHasta"),proveedor=valor("comprasHistProveedor");
   const todas=facturas(),selector=$("comprasHistProveedor"),seleccion=selector?.value||"";
@@ -625,19 +722,26 @@ function renderHistorial(){
   const total=lista.reduce((s,f)=>s+numero(f.total),0);$("comprasHistCantidad").textContent=lista.length;$("comprasHistTotal").textContent=money(total);$("comprasHistPromedio").textContent=money(lista.length?total/lista.length:0);
   const mesActual=hoy().slice(0,7);$("comprasHistUltimoMes").textContent=money(todas.filter(f=>String(f.fecha||"").startsWith(mesActual)).reduce((s,f)=>s+numero(f.total),0));
   paginaHistorial=Math.min(paginaHistorial,Math.max(1,Math.ceil(lista.length/porPaginaCompras)));
-  const body=$("comprasHistBody");body.innerHTML=lista.slice((paginaHistorial-1)*porPaginaCompras,paginaHistorial*porPaginaCompras).map(f=>`<tr><td>${escaparHtml(f.creadoEn?new Date(f.creadoEn).toLocaleString("es-AR"):"—")}</td><td>${fechaCorta(f.fecha)}</td><td><strong>${escaparHtml(f.proveedor||"—")}</strong></td><td>${escaparHtml(f.comprobante||"—")}</td><td>${escaparHtml(f.numero||"—")}</td><td>${escaparHtml(f.puntoVenta||"—")}</td><td><span class="compras-fiscal-tag">${escaparHtml(f.condicionFiscal||"—")}</span></td><td><strong>${money(f.total)}</strong></td><td class="compras-note-cell" title="${escaparHtml(f.observaciones||"")}">${escaparHtml(f.observaciones||"—")}</td><td><button class="compras-row-action danger" type="button" data-remove="${escaparHtml(f.id)}" title="Eliminar factura" aria-label="Eliminar factura"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button></td></tr>`).join("")||'<tr><td colspan="10" class="compras-history-empty">No hay facturas para los filtros seleccionados.</td></tr>';
+  const body=$("comprasHistBody");body.innerHTML=lista.slice((paginaHistorial-1)*porPaginaCompras,paginaHistorial*porPaginaCompras).map(f=>`<tr><td>${escaparHtml(f.creadoEn?new Date(f.creadoEn).toLocaleString("es-AR"):"—")}</td><td>${fechaCorta(f.fecha)}</td><td><strong>${escaparHtml(f.proveedor||"—")}</strong></td><td>${escaparHtml(f.comprobante||"—")}</td><td>${escaparHtml(f.numero||"—")}</td><td>${escaparHtml(f.puntoVenta||"—")}</td><td><span class="compras-fiscal-tag">${escaparHtml(f.condicionFiscal||"—")}</span></td><td><strong>${money(f.total)}</strong></td><td class="compras-note-cell" title="${escaparHtml(f.observaciones||"")}">${escaparHtml(f.observaciones||"—")}</td><td><div class="compras-history-actions"><button class="compras-row-action edit" type="button" data-edit="${escaparHtml(f.id)}" title="Editar factura" aria-label="Editar factura"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button class="compras-row-action danger" type="button" data-remove="${escaparHtml(f.id)}" title="Eliminar factura" aria-label="Eliminar factura"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button></div></td></tr>`).join("")||'<tr><td colspan="10" class="compras-history-empty">No hay facturas para los filtros seleccionados.</td></tr>';
   paginasCompras("comprasHistPaginas","comprasHistPaginacionInfo",lista.length,paginaHistorial,n=>{paginaHistorial=n;renderHistorial();});
-  body.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",async()=>{const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Eliminar factura",message:"¿Eliminar esta factura del historial?",confirmText:"Eliminar",cancelText:"Cancelar"}):confirm("¿Eliminar esta factura del historial?");if(!ok)return;guardarFacturas(facturas().filter(f=>String(f.id)!==b.dataset.remove));renderHistorial();actualizarResumen();}));
+  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>cargarFacturaParaEditar(b.dataset.edit)));
+  body.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",async()=>{const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Eliminar factura",message:"¿Eliminar esta factura del historial?",confirmText:"Eliminar",cancelText:"Cancelar"}):confirm("¿Eliminar esta factura del historial?");if(!ok)return;try{await apiCompras(`/admin/compras/facturas/${encodeURIComponent(b.dataset.remove)}`,{method:"DELETE"});await guardarFacturas(facturas().filter(f=>String(f.id)!==b.dataset.remove));renderHistorial();actualizarResumen();}catch(error){console.error("No se pudo eliminar la factura",error);alert("No se pudo eliminar la factura.");}}));
 }
 
 function escaparHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);}
 const PROVEEDORES_KEY="autoservicio_proveedores_fichas_v1";
-const proveedoresGuardados=()=>{try{const a=JSON.parse(localStorage.getItem(PROVEEDORES_KEY)||"[]");return Array.isArray(a)?a:[]}catch{return []}};
-const guardarProveedores=a=>localStorage.setItem(PROVEEDORES_KEY,JSON.stringify(a));
+const proveedoresGuardados=()=>proveedoresMemoria;
+async function guardarProveedores(a, proveedorActualizado=null){
+  // El servidor confirma primero. La memoria local nunca se modifica antes de
+  // saber que PostgreSQL aceptó el cambio; así un error no deja "proveedores fantasma".
+  if(proveedorActualizado)await apiCompras(`/admin/compras/proveedores/${encodeURIComponent(proveedorActualizado.id)}`,{method:"PUT",body:JSON.stringify(proveedorActualizado)});
+  proveedoresMemoria=Array.isArray(a)?a.map(p=>({...p})):[];
+  await guardarSnapshotCompras().catch(()=>{});
+}
 // Comparación consistente con los registros históricos y las fichas manuales.
 const cuitProveedor = valor => String(valor ?? "").replace(/\D/g, "");
 const nombreProveedor = valor => String(valor ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("es");
-function registrarProveedorDeFactura(factura) {
+async function registrarProveedorDeFactura(factura) {
  const cuit = cuitProveedor(factura.cuit);
  const razonSocial = String(factura.razonSocial || factura.proveedor || "").trim();
  const nombreComercial = String(factura.proveedor || "").trim();
@@ -654,18 +758,22 @@ function registrarProveedorDeFactura(factura) {
  if (ficha) {
    // Completar exclusivamente datos vacíos; nunca sobrescribir la edición manual.
    let cambio = false;
-   for (const [campo, dato] of Object.entries({cuit, razonSocial, nombreComercial, condicionFiscal: factura.condicionFiscal || ""})) {
+   for (const [campo, dato] of Object.entries({cuit, razonSocial, nombreComercial, condicionFiscal: factura.condicionFiscal || "", condicionPago: factura.condicionPago || "", rubro: factura.rubro || ""})) {
      if (!ficha[campo] && dato) { ficha[campo] = dato; cambio = true; }
    }
-   if (cambio) guardarProveedores(fichas);
+   // Rubro y condición de pago son preferencias operativas: la última selección de la factura queda como predeterminada.
+   for (const [campo, dato] of Object.entries({condicionPago: factura.condicionPago || "", rubro: factura.rubro || ""})) {
+     if (dato && ficha[campo] !== dato) { ficha[campo] = dato; cambio = true; }
+   }
+   if (cambio) await guardarProveedores(fichas, ficha);
    return;
  }
  const codigo = String(Math.max(0, ...fichas.map(p => Number(p.codigo) || 0)) + 1).padStart(3, "0");
  fichas.push({id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
    codigo, razonSocial, nombreComercial, cuit,
-   condicionFiscal: factura.condicionFiscal || "", cuentas: [],
+   condicionFiscal: factura.condicionFiscal || "", condicionPago: factura.condicionPago || "", rubro: factura.rubro || "", cuentas: [],
    creadoEn: new Date().toISOString(), origen: "factura"});
- guardarProveedores(fichas);
+ await guardarProveedores(fichas, fichas[fichas.length-1]);
 }
 let proveedorEditando=null;
 function abrirFichaProveedor(id=null){
@@ -683,24 +791,66 @@ function agregarCuentaBancaria(cuenta={}){
  div.querySelector(".compras-quitar-cuenta").addEventListener("click",()=>div.remove());cont.append(div);
  if(cont.children.length===1&&!cont.querySelector('input[type="radio"]:checked'))div.querySelector('input[type="radio"]').checked=true;
 }
-function guardarFichaProveedor(e){e.preventDefault();const form=e.currentTarget;const data=Object.fromEntries(new FormData(form).entries());
+async function guardarFichaProveedor(e){e.preventDefault();const form=e.currentTarget;const data=Object.fromEntries(new FormData(form).entries());
  data.razonSocial=(data.razonSocial||"").trim();data.cuit=(data.cuit||"").replace(/\D/g,"");
  if(!data.razonSocial){form.elements.razonSocial.focus();return;}
  const todos=proveedoresGuardados();if(data.cuit&&todos.some(p=>p.id!==proveedorEditando&&p.cuit===data.cuit)){alert("Ya existe un proveedor registrado con ese CUIT.");return;}
  data.cuentas=[...$("comprasCuentasBancarias").children].map(div=>{const cuenta={};div.querySelectorAll("[data-banco]").forEach(el=>cuenta[el.dataset.banco]=el.value.trim());cuenta.principal=div.querySelector('input[type="radio"]').checked;return cuenta}).filter(c=>Object.entries(c).some(([k,v])=>k!=="principal"&&v));
  if(data.cuentas.length&&!data.cuentas.some(c=>c.principal))data.cuentas[0].principal=true;
  data.id=proveedorEditando||crypto.randomUUID();data.codigo=proveedorEditando?(todos.find(p=>p.id===proveedorEditando)?.codigo||""):String(Math.max(0,...todos.map(p=>Number(p.codigo)||0))+1).padStart(3,"0");
- const i=todos.findIndex(p=>p.id===data.id);if(i<0)todos.push(data);else todos[i]=data;
- try{guardarProveedores(todos)}catch{alert("No se pudieron guardar los datos del proveedor.");return;}
+ const siguiente=todos.map(p=>({...p}));
+ const i=siguiente.findIndex(p=>p.id===data.id);if(i<0)siguiente.push(data);else siguiente[i]=data;
+ try{
+   await guardarProveedores(siguiente,data);
+ }catch(error){
+   // Si el PUT falló no incorporamos el registro a memoria. Intentamos además
+   // resincronizar para cubrir el caso excepcional de una respuesta perdida
+   // después de que el servidor sí haya confirmado la escritura.
+   try{
+     const remoto=await apiCompras("/admin/compras/datos");
+     facturasMemoria=Array.isArray(remoto.facturas)?remoto.facturas.map(limpiarDatoPersistente):facturasMemoria;
+     proveedoresMemoria=Array.isArray(remoto.proveedores)?remoto.proveedores:proveedoresMemoria;
+     await guardarSnapshotCompras().catch(()=>{});
+     const confirmado=proveedoresMemoria.some(p=>String(p.id)===String(data.id));
+     if(confirmado){
+       $("comprasFichaProveedorModal").classList.add("oculto");renderProveedores();actualizarResumen();return;
+     }
+   }catch{}
+   console.error("No se pudo guardar el proveedor",error);
+   alert(`No se pudieron guardar los datos del proveedor.${error?.message?`\n\n${error.message}`:""}`);
+   return;
+ }
  $("comprasFichaProveedorModal").classList.add("oculto");renderProveedores();actualizarResumen();
 }
 function agruparProveedores(){
- const grupos=new Map();
- proveedoresGuardados().forEach(p=>{const clave=p.cuit?`c:${p.cuit.replace(/\D/g,"")}`:`n:${p.razonSocial.toLocaleLowerCase("es")}`;grupos.set(clave,{...p,clave,nombre:p.nombreComercial||p.razonSocial,fiscal:p.condicionFiscal||"—",facturas:[],total:0,ultima:""});});
- facturas().forEach(f=>{const cuit=String(f.cuit||"").replace(/\D/g,""),nombre=String(f.proveedor||f.razonSocial||"").trim();if(!cuit&&!nombre)return;const clave=cuit?`c:${cuit}`:`n:${nombre.toLocaleLowerCase("es")}`;
- if(!grupos.has(clave))grupos.set(clave,{clave,nombre:nombre||"—",razonSocial:f.razonSocial||nombre,cuit:cuit||"—",fiscal:f.condicionFiscal||"—",facturas:[],total:0,ultima:""});
- const p=grupos.get(clave);p.facturas.push(f);p.total+=numero(f.total);if(String(f.fecha||"")>p.ultima)p.ultima=String(f.fecha||"");
- });return [...grupos.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+ const grupos=[];
+ const coincideProveedor=(grupo,datos={})=>{
+   const cuit=cuitProveedor(datos.cuit);
+   if(cuit&&cuitProveedor(grupo.cuit)===cuit)return true;
+   const nombresDatos=[datos.proveedor,datos.razonSocial,datos.razon_social,datos.nombreComercial].map(nombreProveedor).filter(Boolean);
+   if(!nombresDatos.length)return false;
+   return [grupo.nombre,grupo.razonSocial,grupo.nombreComercial].map(nombreProveedor).filter(Boolean).some(n=>nombresDatos.includes(n));
+ };
+ proveedoresGuardados().forEach(p=>{
+   const existente=grupos.find(g=>coincideProveedor(g,p));
+   if(existente){
+     // Una ficha enriquecida (por ejemplo al agregar CUIT) sigue siendo el mismo proveedor.
+     Object.assign(existente,{...p,nombre:p.nombreComercial||p.razonSocial||existente.nombre,fiscal:p.condicionFiscal||existente.fiscal||"—"});
+     return;
+   }
+   grupos.push({...p,nombre:p.nombreComercial||p.razonSocial||"—",fiscal:p.condicionFiscal||"—",facturas:[],total:0,ultima:""});
+ });
+ facturas().forEach(f=>{
+   const cuit=cuitProveedor(f.cuit),nombre=String(f.proveedor||f.razonSocial||"").trim();
+   if(!cuit&&!nombre)return;
+   let p=grupos.find(g=>coincideProveedor(g,f));
+   if(!p){
+     p={nombre:nombre||"—",razonSocial:f.razonSocial||nombre,cuit:cuit||"—",fiscal:f.condicionFiscal||"—",facturas:[],total:0,ultima:""};
+     grupos.push(p);
+   }
+   p.facturas.push(f);p.total+=numero(f.total);if(String(f.fecha||"")>p.ultima)p.ultima=String(f.fecha||"");
+ });
+ return grupos.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
 }
 function renderProveedores(){
   const grupos=agruparProveedores(),q=(valor("comprasProvBuscar")||"").trim().toLocaleLowerCase("es"),fiscal=valor("comprasProvFiscal"),orden=valor("comprasProvOrden")||"nombre";
@@ -725,7 +875,7 @@ function mostrarVistaCompras(vista="editor"){
   if(vista==="proveedores"){ $("comprasProvDetalle")?.classList.add("oculto");renderProveedores(); }
   pantalla.scrollIntoView({block:"start",behavior:"instant"});
 }
-function init(){ if(!$("adminTab-compras"))return; $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
+async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompras(); $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
   $("comprasProvNuevo")?.addEventListener("click",()=>abrirFichaProveedor());
   $("comprasFichaProveedorCerrar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
   $("comprasFichaProveedorCancelar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
@@ -757,9 +907,15 @@ function init(){ if(!$("adminTab-compras"))return; $("comprasFecha").value ||= h
   });
   $("comprasAgregarItem")?.addEventListener("click",()=>{items.push(itemVacio());invalidarImportesDetectados();renderItems()}); $("comprasEditarItems")?.addEventListener("click",()=>$("comprasItemsBody")?.querySelector("input")?.focus()); ["comprasSubtotal","comprasDescuentos","comprasNeto21","comprasNeto105","comprasIibb","comprasSuss","comprasGanancias","comprasOtrosImpuestos","comprasTotalNeto","comprasTotal"].forEach(id=>{
     const el=$(id); if(!el) return;
-    el.addEventListener("input",()=>{ totalesManuales.add(id); if (id !== "comprasTotal") { importesDetectados = null; totalesManuales.delete("comprasTotal"); } calcularTotales(); });
+    el.addEventListener("input",()=>{
+      formatearImporteMientrasEscribe(el);
+      totalesManuales.add(id);
+      if (id !== "comprasTotal") { importesDetectados = null; totalesManuales.delete("comprasTotal"); }
+      calcularTotales();
+    });
+    el.addEventListener("focus",()=>{ if (!String(el.value || "").trim()) el.value="$ 0"; });
     el.addEventListener("blur",()=>{ el.value=importeAR(el.value); });
-  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",(e)=>{e.preventDefault(); guardar();}); $("comprasCancelar")?.addEventListener("click",()=>resetForm()); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasNuevaFactura")?.addEventListener("click",()=>mostrarVistaCompras("editor")); $("comprasVerProveedores")?.addEventListener("click",()=>mostrarVistaCompras("proveedores")); $("comprasProveedoresVolver")?.addEventListener("click",()=>mostrarVistaCompras("editor")); $("comprasProvBuscar")?.addEventListener("input",()=>{paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvLimpiar")?.addEventListener("click",()=>{$("comprasProvBuscar").value="";$("comprasProvFiscal").value="";$("comprasProvOrden").value="nombre";paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvCerrarDetalle")?.addEventListener("click",()=>$("comprasProvDetalle")?.classList.add("oculto")); $("comprasProvFiscal")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasProvOrden")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasHistProveedor")?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();});$("comprasHistBuscar")?.addEventListener("input",()=>{paginaHistorial=1;renderHistorial();}); $("comprasHistMes")?.addEventListener("change",renderHistorial); ["comprasHistTipo","comprasHistDesde","comprasHistHasta"].forEach(id=>$(id)?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();})); $("comprasHistLimpiar")?.addEventListener("click",()=>{["comprasHistBuscar","comprasHistTipo","comprasHistDesde","comprasHistHasta","comprasHistProveedor"].forEach(id=>{if($(id))$(id).value="";});renderHistorial();}); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
+  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",(e)=>{e.preventDefault(); guardar();}); $("comprasCancelar")?.addEventListener("click",cancelarEdicionOLimpiar); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasNuevaFactura")?.addEventListener("click",()=>{resetForm();mostrarVistaCompras("editor");}); $("comprasVerProveedores")?.addEventListener("click",()=>mostrarVistaCompras("proveedores")); $("comprasProveedoresVolver")?.addEventListener("click",()=>mostrarVistaCompras("editor")); $("comprasProvBuscar")?.addEventListener("input",()=>{paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvLimpiar")?.addEventListener("click",()=>{$("comprasProvBuscar").value="";$("comprasProvFiscal").value="";$("comprasProvOrden").value="nombre";paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvCerrarDetalle")?.addEventListener("click",()=>$("comprasProvDetalle")?.classList.add("oculto")); $("comprasProvFiscal")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasProvOrden")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasHistProveedor")?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();});$("comprasHistBuscar")?.addEventListener("input",()=>{paginaHistorial=1;renderHistorial();}); $("comprasHistMes")?.addEventListener("change",renderHistorial); ["comprasHistTipo","comprasHistDesde","comprasHistHasta"].forEach(id=>$(id)?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();})); $("comprasHistLimpiar")?.addEventListener("click",()=>{["comprasHistBuscar","comprasHistTipo","comprasHistDesde","comprasHistHasta","comprasHistProveedor"].forEach(id=>{if($(id))$(id).value="";});renderHistorial();}); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
 }
 window.ComprasFacturas={render(){actualizarResumen();renderItems();},actualizarResumen,limpiar:()=>resetForm()};
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();

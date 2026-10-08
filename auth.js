@@ -71,7 +71,11 @@ function esApi(url) {
 }
 
 const OFFLINE_QUEUE_KEY = "autoservicio_offline_queue_v1";
-const OFFLINE_CACHE_PREFIX = "autoservicio_api_cache_v1:";
+const OFFLINE_CACHE_PREFIX = "autoservicio_api_cache_v1:"; // solo migración de versiones anteriores
+const OFFLINE_CACHE_INDEX_PREFIX = "autoservicio_api_cache_index_v1:"; // solo migración
+const OFFLINE_CACHE_STORAGE = "autoservicio-api-offline-v2";
+const OFFLINE_CACHE_MAX_ITEM_BYTES = 512 * 1024;
+const OFFLINE_CACHE_MAX_ENTRIES = 30;
 let sincronizandoOffline = false;
 
 function leerColaOfflineCompleta() {
@@ -96,15 +100,10 @@ function leerColaOfflineCompleta() {
   }
 }
 function leerColaOffline(usuario = usuarioActual?.usuario) {
-  const clave = String(usuario || "")
-    .trim()
-    .toLowerCase();
+  const clave = String(usuario || "").trim().toLowerCase();
   if (!clave) return [];
   return leerColaOfflineCompleta().filter(
-    (op) =>
-      String(op.usuario || "")
-        .trim()
-        .toLowerCase() === clave,
+    (op) => String(op.usuario || "").trim().toLowerCase() === clave,
   );
 }
 function guardarColaOfflineCompleta(cola) {
@@ -117,40 +116,149 @@ function guardarColaOfflineCompleta(cola) {
   );
 }
 function reemplazarColaUsuario(usuario, operaciones) {
-  const clave = String(usuario || "")
-    .trim()
-    .toLowerCase();
+  const clave = String(usuario || "").trim().toLowerCase();
   const otras = leerColaOfflineCompleta().filter(
-    (op) =>
-      String(op.usuario || "")
-        .trim()
-        .toLowerCase() !== clave,
+    (op) => String(op.usuario || "").trim().toLowerCase() !== clave,
   );
   guardarColaOfflineCompleta([...otras, ...operaciones]);
 }
-function cacheOfflineKey(ruta, usuario = usuarioActual?.usuario) {
-  return `${OFFLINE_CACHE_PREFIX}${String(usuario || "anon")
-    .trim()
-    .toLowerCase()}:${ruta}`;
+function usuarioCacheOffline(usuario = usuarioActual?.usuario) {
+  return String(usuario || "anon").trim().toLowerCase();
 }
-function limpiarCacheOfflineUsuario(usuario) {
-  const prefijo = `${OFFLINE_CACHE_PREFIX}${String(usuario || "")
-    .trim()
-    .toLowerCase()}:`;
+function cacheOfflineKeyLegada(ruta, usuario = usuarioActual?.usuario) {
+  return `${OFFLINE_CACHE_PREFIX}${usuarioCacheOffline(usuario)}:${ruta}`;
+}
+function cacheOfflineIndexKeyLegada(usuario = usuarioActual?.usuario) {
+  return `${OFFLINE_CACHE_INDEX_PREFIX}${usuarioCacheOffline(usuario)}`;
+}
+function cacheOfflineRequest(ruta, usuario = usuarioActual?.usuario) {
+  const base = typeof location !== "undefined" ? location.origin : "https://autoservicio.local";
+  const u = new URL("/__autoservicio_offline_api__", base);
+  u.searchParams.set("usuario", usuarioCacheOffline(usuario));
+  u.searchParams.set("ruta", ruta);
+  return new Request(u.toString());
+}
+function bytesTexto(texto) {
+  try { return new Blob([String(texto || "")]).size; }
+  catch { return String(texto || "").length * 2; }
+}
+function cacheStorageOfflineDisponible() {
+  return typeof caches !== "undefined" && typeof caches.open === "function";
+}
+async function limitarCacheOffline(cache, usuario = usuarioActual?.usuario) {
+  const claveUsuario = usuarioCacheOffline(usuario);
+  const entradas = [];
+  for (const request of await cache.keys()) {
+    const u = new URL(request.url);
+    if (u.searchParams.get("usuario") !== claveUsuario) continue;
+    const response = await cache.match(request);
+    entradas.push({ request, usado: Number(response?.headers.get("X-Cache-Usado")) || 0 });
+  }
+  entradas.sort((a, b) => b.usado - a.usado);
+  await Promise.all(entradas.slice(OFFLINE_CACHE_MAX_ENTRIES).map((x) => cache.delete(x.request)));
+}
+async function guardarCacheOffline(ruta, texto, usuario = usuarioActual?.usuario) {
+  const contenido = String(texto || "");
+  if (!ruta || !contenido || bytesTexto(contenido) > OFFLINE_CACHE_MAX_ITEM_BYTES) return false;
+
+  if (cacheStorageOfflineDisponible()) {
+    try {
+      const cache = await caches.open(OFFLINE_CACHE_STORAGE);
+      await cache.put(
+        cacheOfflineRequest(ruta, usuario),
+        new Response(contenido, {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Cache-Usado": String(Date.now()),
+          },
+        }),
+      );
+      await limitarCacheOffline(cache, usuario);
+      // Una copia legada solo se elimina después de confirmar la escritura nueva.
+      try { localStorage.removeItem(cacheOfflineKeyLegada(ruta, usuario)); } catch {}
+      return true;
+    } catch {}
+  }
+
+  // Compatibilidad para navegadores sin Cache Storage: conserva el respaldo anterior,
+  // pero nunca elimina otros datos funcionales para hacer espacio.
+  try {
+    localStorage.setItem(cacheOfflineKeyLegada(ruta, usuario), contenido);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function leerCacheOffline(ruta, usuario = usuarioActual?.usuario) {
+  if (cacheStorageOfflineDisponible()) {
+    try {
+      const cache = await caches.open(OFFLINE_CACHE_STORAGE);
+      const request = cacheOfflineRequest(ruta, usuario);
+      const response = await cache.match(request);
+      if (response) {
+        const contenido = await response.text();
+        // Actualiza LRU sin cambiar el contenido.
+        await cache.put(
+          request,
+          new Response(contenido, {
+            headers: { "Content-Type": "application/json", "X-Cache-Usado": String(Date.now()) },
+          }),
+        );
+        return contenido;
+      }
+    } catch {}
+  }
+
+  // Migración perezosa: si todavía existe una copia V1, se usa y se intenta mover.
+  let legado = null;
+  try { legado = localStorage.getItem(cacheOfflineKeyLegada(ruta, usuario)); } catch {}
+  if (!legado) return null;
+  await guardarCacheOffline(ruta, legado, usuario);
+  return legado;
+}
+async function migrarCacheOfflineLegada(usuario = usuarioActual?.usuario) {
+  if (!cacheStorageOfflineDisponible()) return;
+  const claveUsuario = usuarioCacheOffline(usuario);
+  const prefijo = `${OFFLINE_CACHE_PREFIX}${claveUsuario}:`;
+  const claves = Object.keys(localStorage).filter((key) => key.startsWith(prefijo));
+  for (const key of claves) {
+    const ruta = key.slice(prefijo.length);
+    const contenido = localStorage.getItem(key);
+    if (ruta && contenido) await guardarCacheOffline(ruta, contenido, usuario);
+  }
+  // El índice V1 ya no es necesario cuando no quedan respuestas V1 de este usuario.
+  if (!Object.keys(localStorage).some((key) => key.startsWith(prefijo))) {
+    try { localStorage.removeItem(cacheOfflineIndexKeyLegada(usuario)); } catch {}
+  }
+}
+async function limpiarCacheOfflineUsuario(usuario) {
+  const claveUsuario = usuarioCacheOffline(usuario);
+  if (cacheStorageOfflineDisponible()) {
+    try {
+      const cache = await caches.open(OFFLINE_CACHE_STORAGE);
+      const requests = await cache.keys();
+      await Promise.all(requests.filter((request) => {
+        try { return new URL(request.url).searchParams.get("usuario") === claveUsuario; }
+        catch { return false; }
+      }).map((request) => cache.delete(request)));
+    } catch {}
+  }
+  const prefijo = `${OFFLINE_CACHE_PREFIX}${claveUsuario}:`;
   Object.keys(localStorage).forEach((key) => {
     if (key.startsWith(prefijo)) localStorage.removeItem(key);
   });
+  localStorage.removeItem(cacheOfflineIndexKeyLegada(usuario));
 }
-function limpiarCacheOfflineLegada() {
+function limpiarCacheOfflineLegadaSinUsuario() {
   Object.keys(localStorage).forEach((key) => {
     if (
       key.startsWith(OFFLINE_CACHE_PREFIX) &&
       key.slice(OFFLINE_CACHE_PREFIX.length).startsWith("/")
-    )
-      localStorage.removeItem(key);
+    ) localStorage.removeItem(key);
   });
 }
-limpiarCacheOfflineLegada();
+limpiarCacheOfflineLegadaSinUsuario();
+if (usuarioActual?.usuario) migrarCacheOfflineLegada(usuarioActual.usuario).catch(() => {});
 function rutaApi(input) {
   try {
     const u = new URL(
@@ -314,14 +422,14 @@ window.fetch = async (input, init = {}) => {
       respuesta
         .clone()
         .text()
-        .then((text) => localStorage.setItem(cacheOfflineKey(ruta), text))
+        .then((text) => guardarCacheOffline(ruta, text))
         .catch(() => {});
     }
     return respuesta;
   } catch (error) {
     if (!esApi(input)) throw error;
     if (method === "GET") {
-      const cache = localStorage.getItem(cacheOfflineKey(ruta));
+      const cache = await leerCacheOffline(ruta);
       if (cache)
         return new Response(cache, {
           status: 200,
@@ -449,6 +557,7 @@ function guardarSesion(nuevoToken, usuario, recordar = false) {
   actualizarInterfazUsuario();
   requestAnimationFrame(() => actualizarInterfazUsuario());
   ocultarLogin();
+  migrarCacheOfflineLegada(usuarioActual?.usuario).catch(() => {});
   sincronizarColaOffline();
 }
 

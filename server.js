@@ -116,6 +116,7 @@ const {
 } = require("./db-vencimientos");
 const { asegurarEsquemaLotes, listarLotesDb, listarLotesProductoDb, crearLoteDb, reemplazarLoteDb, eliminarLoteDb, eliminarLotesProductoDb, listarAlertasProductoDb, guardarAlertaLoteDb, cancelarAlertaLoteDb, listarAlertasVencidasDb, marcarAlertaEnviadaDb } = require("./db-lotes");
 const { asegurarEsquemaLiquidacionHoras, guardarPeriodoLiquidacionDb, actualizarPeriodoLiquidacionDb, listarPeriodosLiquidacionDb, obtenerPeriodoLiquidacionDb, eliminarPeriodoLiquidacionDb } = require("./db-liquidacion-horas");
+const { asegurarEsquemaCompras, listarFacturasComprasDb, guardarFacturaCompraDb, eliminarFacturaCompraDb, listarProveedoresComprasDb, guardarProveedorCompraDb, migrarComprasDb } = require("./db-compras");
 const { asegurarEsquemaProductosProvisionales, buscarProductoProvisionalDb, listarProductosProvisionalesPendientesDb, crearProductoProvisionalDb, conciliarProductosProvisionalesDb } = require("./db-productos-provisionales");
 const {
   asegurarEsquemaListasReposicion,
@@ -1629,12 +1630,35 @@ async function obtenerResumenDashboard(usuario) {
 }
 
 
+// Compras y proveedores — PostgreSQL es la fuente principal.
+app.get("/admin/compras/datos", requerirAdministrador, async (req,res)=>{
+  try{await asegurarEsquemaCompras();res.json({ok:true,facturas:await listarFacturasComprasDb(),proveedores:await listarProveedoresComprasDb()});}
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudieron cargar compras"});}
+});
+app.post("/admin/compras/migrar", requerirAdministrador, express.json({limit:"12mb"}), async (req,res)=>{
+  try{await migrarComprasDb({facturas:Array.isArray(req.body?.facturas)?req.body.facturas:[],proveedores:Array.isArray(req.body?.proveedores)?req.body.proveedores:[]});res.json({ok:true});}
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudieron migrar compras"});}
+});
+app.put("/admin/compras/facturas/:id", requerirAdministrador, express.json({limit:"2mb"}), async (req,res)=>{
+  try{const factura={...(req.body||{}),id:req.params.id};await guardarFacturaCompraDb(factura);res.json({ok:true,factura});}
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo guardar la factura"});}
+});
+app.delete("/admin/compras/facturas/:id", requerirAdministrador, async (req,res)=>{
+  try{await eliminarFacturaCompraDb(req.params.id);res.json({ok:true});}
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo eliminar la factura"});}
+});
+app.put("/admin/compras/proveedores/:id", requerirAdministrador, express.json({limit:"1mb"}), async (req,res)=>{
+  try{const proveedor={...(req.body||{}),id:req.params.id};await guardarProveedorCompraDb(proveedor);res.json({ok:true,proveedor});}
+  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo guardar el proveedor"});}
+});
+
 // Compras y Facturas — lectura automática de comprobantes.
 // La clave queda exclusivamente en el servidor; nunca se expone al navegador.
 // Cache efímera: evita volver a enviar exactamente la misma factura a la IA
 // durante pruebas, recargas o reintentos. No se persisten archivos en disco.
 const cacheLecturaFacturas = new Map();
 const FACTURA_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const FACTURA_PARSER_VERSION = "2026-10-07-v2";
 const FACTURA_CACHE_MAX = 40;
 function guardarCacheLecturaFactura(clave, factura) {
   cacheLecturaFacturas.set(clave, { factura, ts: Date.now() });
@@ -1658,7 +1682,7 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
       return res.status(413).json({ error: "La factura es demasiado grande para analizarla." });
     }
 
-    const claveCache = crypto.createHash("sha256").update(mime).update("|").update(archivoBase64).digest("hex");
+    const claveCache = crypto.createHash("sha256").update(FACTURA_PARSER_VERSION).update("|").update(mime).update("|").update(archivoBase64).digest("hex");
     const cache = cacheLecturaFacturas.get(claveCache);
     if (cache && Date.now() - cache.ts < FACTURA_CACHE_TTL_MS) {
       return res.json({ ok: true, factura: cache.factura, cache: true, tiempo_ms: 0 });
@@ -1720,6 +1744,30 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
     if (!texto) return res.status(502).json({ error: "El analizador no devolvió datos de la factura." });
     let factura;
     try { factura = JSON.parse(texto); } catch { return res.status(502).json({ error: "La respuesta de lectura no tuvo un formato válido." }); }
+
+    // Rescate determinista: a veces el modelo lee correctamente los importes y
+    // los menciona en observaciones, pero deja el campo estructurado en 0. Antes
+    // de cachear, recuperamos únicamente conceptos inequívocamente etiquetados.
+    const obs = normalizarTexto(factura.observaciones);
+    const importeObservacion = (...patrones) => {
+      for (const patron of patrones) {
+        const m = obs.match(patron);
+        if (!m?.[1]) continue;
+        const n = Number(String(m[1]).replace(/\./g, "").replace(",", "."));
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return 0;
+    };
+    if (!(Number(factura.iibb) > 0)) factura.iibb = importeObservacion(/(?:perc(?:epci[oó]n)?\.?\s*)?iibb(?:\s+nqn)?\s+(?:de\s+)?\$?\s*([0-9.]+,[0-9]{2})/i);
+    if (!(Number(factura.percepcion_iva) > 0)) factura.percepcion_iva = importeObservacion(/perc(?:epci[oó]n)?\.?\s*iva\s+(?:de\s+)?\$?\s*([0-9.]+,[0-9]{2})/i);
+    if (!(Number(factura.iva_21) > 0)) factura.iva_21 = importeObservacion(/(?:total\s+)?iva\s*21\s*%\s+(?:de\s+)?\$?\s*([0-9.]+,[0-9]{2})/i);
+    if (!(Number(factura.iva_total) > 0) && Number(factura.iva_21) > 0) factura.iva_total = Number(factura.iva_21);
+
+    // Si "otros impuestos" era exactamente la suma de IIBB + percepción IVA,
+    // era una agrupación errónea: una vez separados, no debe duplicarse el total.
+    const separados = Number(factura.iibb || 0) + Number(factura.percepcion_iva || 0);
+    if (separados > 0 && Math.abs(Number(factura.otros_impuestos || 0) - separados) < 0.02) factura.otros_impuestos = 0;
+
     const tiempoMs = Date.now() - inicioIA;
     guardarCacheLecturaFactura(claveCache, factura);
     console.log(`[Facturas] IA ${mime} ${Math.round(archivoBase64.length * 0.75 / 1024)} KB: ${tiempoMs} ms`);

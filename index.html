@@ -39,7 +39,7 @@
     <link rel="stylesheet" href="tareas-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="admin-official.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="liquidacion-horas.css?v=16-historial-autoria-021026" />
-    <link rel="stylesheet" href="compras-facturas.css?v=v42-reference-match" />
+    <link rel="stylesheet" href="compras-facturas.css?v=v38-editar-factura" />
     <link rel="stylesheet" href="catalogo-admin-diseno.css?v=desktop-toolbar-d31-110926" />
     <link rel="stylesheet" href="login-redesign.css?v=1960-d21-cierre-etapa6-010926" />
     <link rel="stylesheet" href="settings-user.css?v=1977-notificaciones-rubros-visual-240926" />
@@ -3719,7 +3719,7 @@
             <article class="compras-card compras-observaciones compras-observaciones-wide"><header><span class="compras-section-icon">▤</span><h2>Observaciones</h2></header><div class="compras-observaciones-row"><textarea id="comprasObservaciones" maxlength="500" placeholder="Ingresá observaciones sobre la factura (opcional)..."></textarea><span class="compras-char-count">0 / 500</span><button id="comprasCancelar" type="button" class="secondary"><svg class="app-icon"><use href="#icon-trash"></use></svg>Limpiar</button><button id="comprasGuardar" type="button" class="primary"><svg class="app-icon"><use href="#icon-save"></use></svg>Guardar factura</button></div></article>
 
             <section class="compras-lower-grid">
-              <article class="compras-card compras-mini-table"><header><div class="compras-mini-title"><span class="compras-section-icon red"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><h2>Últimas facturas cargadas</h2></div><button id="comprasVerTodasInferior" type="button">Ver todas</button></header><div id="comprasProvDatosFicha"></div><div class="compras-table-wrap"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Comprobante</th><th>Número</th><th>Total</th><th>Acciones</th></tr></thead><tbody id="comprasUltimasBody"></tbody></table></div></article>
+              <article class="compras-card compras-mini-table"><header><div class="compras-mini-title"><span class="compras-section-icon red"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><h2>Últimas facturas cargadas</h2></div><button id="comprasVerTodasInferior" type="button">Ver todas</button></header><div class="compras-table-wrap"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Comprobante</th><th>Número</th><th>Total</th><th>Acciones</th></tr></thead><tbody id="comprasUltimasBody"></tbody></table></div></article>
 
             </section>
           </div>
@@ -4241,7 +4241,7 @@
       <div id="liqEditModal" class="liq-modal-overlay oculto" aria-hidden="true"><section class="liq-modal"><header class="liq-modal-head"><div><h2>Completar fichadas</h2><p id="liqEditTitle">—</p></div><button type="button" class="liq-btn" data-liq-close="liqEditModal">×</button></header><div class="liq-modal-body"><input id="liqEditIndex" type="hidden"><div class="liq-edit-help">Modificá cada fichada de forma individual. Para horario continuo usá Entrada 1 y Salida 1. Para horario cortado también podés completar Entrada 2 y Salida 2.</div><div class="liq-edit-grid"><label class="liq-field"><span>Entrada 1</span><input id="liqEditEntrada1" type="time" step="60"></label><label class="liq-field"><span>Salida 1</span><input id="liqEditSalida1" type="time" step="60"></label><label class="liq-field"><span>Entrada 2</span><input id="liqEditEntrada2" type="time" step="60"></label><label class="liq-field"><span>Salida 2</span><input id="liqEditSalida2" type="time" step="60"></label></div></div><footer class="liq-modal-actions"><button type="button" class="liq-btn" data-liq-close="liqEditModal">Cancelar</button><button id="liqEditSave" type="button" class="liq-btn liq-btn-primary">Guardar corrección</button></footer></section></div>
 
     <script src="./dialog.js?v=1960-d21-cierre-etapa6-010926"></script>
-    <script src="./pwa.js?v=1975-carteles-una-hoja-a4-240926" defer></script>
+    <script src="./pwa.js?v=1996-carteles-a4-sin-hoja-vacia-061026" defer></script>
     <script type="module" src="./auth.js?v=1960-d21-cierre-etapa6-010926"></script>
     <script src="./horarios-config.js?v=1960-horarios-sector-historico-220926"></script>
     <script type="module" src="./catalogo-admin.js?v=thumb-storage-fix-220926"></script>
@@ -4362,7 +4362,46 @@
         </div>
       </div>
     </div>
-    <script type="module" src="./compras-facturas.js?v=v37-dashboard-final"></script>
+    <script type="module" src="./compras-facturas.js?v=v38-editar-factura"></script>
     <script type="module" src="./pro-ui.js?v=1960-d21-cierre-etapa6-010926"></script>
-  <div id="comprasFichaProveedorModal" class="compras-ficha-overlay oculto"><section class="compras-ficha-modal" role="dialog" aria-modal="true" aria-labelledby="comprasFichaProveedorTitulo"><header><h2 id="comprasFichaProveedorTitulo">Nuevo proveedor</h2><button id="comprasFichaProveedorCerrar" type="button" aria-label="Cerrar">×</button></header><form id="comprasFichaProveedorForm"><div class="compras-ficha-grid"><label>Razón social / Nombre y apellido *<input name="razonSocial" required></label><label>Nombre comercial<input name="nombreComercial"></label><label>CUIT / DNI<input name="cuit" inputmode="numeric"></label><label>Condición fiscal<select name="condicionFiscal"><option value="">Seleccionar</option><option>Responsable Inscripto</option><option>Monotributo</option><option>Exento</option><option>Consumidor Final</option><option>IVA Responsable</option></select></label><label>Dirección<input name="direccion"></label><label>Localidad<input name="localidad"></label><label>Provincia<input name="provincia"></label><label>Teléfono<input name="telefono" type="tel"></label><label>Correo electrónico<input name="email" type="email"></label><label>Contacto / Vendedor<input name="contacto"></label><label class="full">Observaciones<textarea name="observaciones" rows="2"></textarea></label></div><div class="compras-ficha-bancos"><div class="compras-ficha-bancos-head"><h3>Datos bancarios</h3><button id="comprasAgregarCuenta" type="button">+ Agregar cuenta</button></div><div id="comprasCuentasBancarias"></div></div><footer><button id="comprasFichaProveedorCancelar" type="button">Cancelar</button><button type="submit">Guardar proveedor</button></footer></form></section></div></body>
+  <div id="comprasFichaProveedorModal" class="compras-ficha-overlay oculto">
+    <section class="compras-ficha-modal" role="dialog" aria-modal="true" aria-labelledby="comprasFichaProveedorTitulo">
+      <header class="compras-ficha-header">
+        <div class="compras-ficha-title-wrap"><span class="compras-ficha-title-icon" aria-hidden="true">▣</span><div><h2 id="comprasFichaProveedorTitulo">Nuevo proveedor</h2><p>Información general, comercial y bancaria del proveedor.</p></div></div>
+        <button id="comprasFichaProveedorCerrar" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <form id="comprasFichaProveedorForm">
+        <div class="compras-ficha-content">
+          <section class="compras-ficha-section">
+            <div class="compras-ficha-section-title"><span>01</span><div><h3>Identificación</h3><p>Datos fiscales y comerciales principales.</p></div></div>
+            <div class="compras-ficha-grid">
+              <label>Razón social / Nombre y apellido *<input name="razonSocial" required placeholder="Nombre registrado"></label>
+              <label>Nombre comercial<input name="nombreComercial" placeholder="Nombre de fantasía"></label>
+              <label>CUIT / DNI<input name="cuit" inputmode="numeric" placeholder="Sin guiones"></label>
+              <label>Condición fiscal<select name="condicionFiscal"><option value="">Seleccionar</option><option>Responsable Inscripto</option><option>Monotributo</option><option>Exento</option><option>Consumidor Final</option><option>IVA Responsable</option></select></label>
+              <label>Clasificación / Rubro<input name="rubro" placeholder="Ej. Almacén, bebidas, limpieza"></label>
+              <label>Condición de pago<select name="condicionPago"><option value="">Sin especificar</option><option>Contado</option><option>Cuenta corriente</option><option>Transferencia</option><option>Cheque</option></select></label>
+            </div>
+          </section>
+          <section class="compras-ficha-section">
+            <div class="compras-ficha-section-title"><span>02</span><div><h3>Contacto y ubicación</h3><p>Datos útiles para comunicarse con el proveedor.</p></div></div>
+            <div class="compras-ficha-grid">
+              <label>Dirección<input name="direccion" placeholder="Calle y número"></label><label>Localidad<input name="localidad"></label>
+              <label>Provincia<input name="provincia"></label><label>Teléfono<input name="telefono" type="tel" placeholder="Teléfono de contacto"></label>
+              <label>Correo electrónico<input name="email" type="email" placeholder="correo@ejemplo.com"></label><label>Contacto / Vendedor<input name="contacto" placeholder="Nombre del contacto"></label>
+            </div>
+          </section>
+          <section class="compras-ficha-section compras-ficha-notes">
+            <div class="compras-ficha-section-title"><span>03</span><div><h3>Notas</h3><p>Información adicional para futuras compras.</p></div></div>
+            <label>Observaciones<textarea name="observaciones" rows="3" placeholder="Agregá aclaraciones, días de reparto, acuerdos u otros datos útiles..."></textarea></label>
+          </section>
+          <section class="compras-ficha-section compras-ficha-bancos">
+            <div class="compras-ficha-bancos-head"><div class="compras-ficha-section-title"><span>04</span><div><h3>Datos bancarios</h3><p>Cuentas disponibles para pagos y transferencias.</p></div></div><button id="comprasAgregarCuenta" type="button">+ Agregar cuenta</button></div>
+            <div id="comprasCuentasBancarias"></div>
+          </section>
+        </div>
+        <footer><button id="comprasFichaProveedorCancelar" type="button">Cancelar</button><button type="submit">Guardar proveedor</button></footer>
+      </form>
+    </section>
+  </div></body>
 </html>

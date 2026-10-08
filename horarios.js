@@ -27,19 +27,53 @@ const detalles = new Map();
 let resumenHoyDatos = new Map();
 let resumenHoyClave = "";
 const HORARIOS_CACHE_TTL = 30000;
+const HORARIOS_CACHE_MAX_ENTRADAS = 24;
+const HORARIOS_CACHE_MAX_EDAD = 7 * 24 * 60 * 60 * 1000;
+const HORARIOS_CACHE_PREFIJO = "autoservicio_horarios_cache_v1040:";
 const horariosPeticiones = new Map();
+function cacheHorariosUsuario() {
+  return String(usuarioHorarios()?.usuario || "anon").trim().toLowerCase();
+}
 function cacheHorariosKey(tipo, extra = "") {
-  const usuario = String(usuarioHorarios()?.usuario || "anon")
-    .trim()
-    .toLowerCase();
-  return `autoservicio_horarios_cache_v1040:${usuario}:${tipo}:${extra}`;
+  return `${HORARIOS_CACHE_PREFIJO}${cacheHorariosUsuario()}:${tipo}:${extra}`;
+}
+function entradasCacheHorariosUsuario() {
+  const prefijo = `${HORARIOS_CACHE_PREFIJO}${cacheHorariosUsuario()}:`;
+  const ahora = Date.now();
+  const entradas = [];
+  for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+    const key = localStorage.key(i);
+    if (!key?.startsWith(prefijo)) continue;
+    try {
+      const valor = JSON.parse(localStorage.getItem(key) || "null");
+      const ts = Number(valor?.ts) || 0;
+      if (!ts || ahora - ts > HORARIOS_CACHE_MAX_EDAD) {
+        localStorage.removeItem(key);
+        continue;
+      }
+      entradas.push({ key, ts });
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+  return entradas;
+}
+function limitarCacheHorarios() {
+  const entradas = entradasCacheHorariosUsuario().sort((a, b) => b.ts - a.ts);
+  for (const entrada of entradas.slice(HORARIOS_CACHE_MAX_ENTRADAS)) {
+    localStorage.removeItem(entrada.key);
+  }
 }
 function leerCacheHorarios(tipo, extra = "") {
   try {
-    const x = JSON.parse(
-      localStorage.getItem(cacheHorariosKey(tipo, extra)) || "null",
-    );
-    return x && x.data ? x : null;
+    const key = cacheHorariosKey(tipo, extra);
+    const x = JSON.parse(localStorage.getItem(key) || "null");
+    if (!x?.data) return null;
+    if (!Number(x.ts) || Date.now() - Number(x.ts) > HORARIOS_CACHE_MAX_EDAD) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return x;
   } catch {
     return null;
   }
@@ -50,6 +84,7 @@ function guardarCacheHorarios(tipo, extra, data) {
       cacheHorariosKey(tipo, extra),
       JSON.stringify({ ts: Date.now(), data }),
     );
+    limitarCacheHorarios();
   } catch {}
 }
 async function fetchHorariosUnico(url, key, { forzar = false } = {}) {

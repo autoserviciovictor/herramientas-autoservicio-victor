@@ -3383,23 +3383,41 @@ function claveBandejaCartelesOferta() {
 }
 
 function leerBandejaCartelesOferta() {
-  try {
-    const data = JSON.parse(localStorage.getItem(claveBandejaCartelesOferta()) || "[]");
-    return Array.isArray(data) ? data.slice(0, CARTEL_OFERTA_MAX) : [];
-  } catch (_) {
-    return [];
+  const clave = claveBandejaCartelesOferta();
+  for (const almacenamiento of [localStorage, sessionStorage]) {
+    try {
+      const data = JSON.parse(almacenamiento.getItem(clave) || "[]");
+      if (Array.isArray(data) && data.length) return data.slice(0, CARTEL_OFERTA_MAX);
+    } catch (_) {}
   }
+  return [];
 }
 
 function guardarBandejaCartelesOferta(items) {
   const seguros = Array.isArray(items) ? items.slice(0, CARTEL_OFERTA_MAX) : [];
-  // Confirmar la escritura: localStorage puede rechazarla por cuota o políticas
-  // de almacenamiento. No informamos éxito si la bandeja no se guardó.
   const clave = claveBandejaCartelesOferta();
-  localStorage.setItem(clave, JSON.stringify(seguros));
-  const comprobacion = JSON.parse(localStorage.getItem(clave) || "null");
-  if (!Array.isArray(comprobacion) || comprobacion.length !== seguros.length) {
-    throw new Error("No se pudo verificar el guardado de los carteles.");
+  const contenido = JSON.stringify(seguros);
+
+  // La bandeja es temporal para impresión. Priorizamos persistencia entre recargas,
+  // pero si localStorage está lleno (por ejemplo por facturas/cache), usamos
+  // sessionStorage para no bloquear el guardado de carteles.
+  let almacenamientoUsado = null;
+  for (const almacenamiento of [localStorage, sessionStorage]) {
+    try {
+      almacenamiento.setItem(clave, contenido);
+      const comprobacion = JSON.parse(almacenamiento.getItem(clave) || "null");
+      if (Array.isArray(comprobacion) && comprobacion.length === seguros.length) {
+        almacenamientoUsado = almacenamiento;
+        break;
+      }
+    } catch (_) {}
+  }
+  if (!almacenamientoUsado) throw new Error("No se pudo guardar la bandeja de carteles.");
+
+  // Evita que una copia vieja en la sesión prevalezca cuando localStorage volvió
+  // a estar disponible.
+  if (almacenamientoUsado === localStorage) {
+    try { sessionStorage.removeItem(clave); } catch (_) {}
   }
   renderBandejaCartelesOferta();
   return seguros;
@@ -3667,7 +3685,7 @@ async function guardarCartelOfertaActual() {
     guardados = guardarBandejaCartelesOferta(nuevaBandeja);
   } catch (error) {
     console.error("Error al guardar cartel de oferta:", error);
-    mostrarErrorCartelOferta("No se pudo guardar el cartel en este equipo. Revisá el espacio de almacenamiento disponible e intentá nuevamente.");
+    mostrarErrorCartelOferta("No se pudo guardar el cartel. Recargá la aplicación e intentá nuevamente.");
     return;
   }
   if (guardados.length !== bandeja.length + 1) {

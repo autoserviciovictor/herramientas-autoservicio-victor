@@ -7,6 +7,17 @@ const { spawnSync } = require("child_process");
 // no forman parte de la suite vigente.
 const HISTORICAS = new Set([
   "auditoria-correcciones-260826.js",
+  "auditoria-catalogo-070926.js",
+  "carteles-oferta-vencimientos-020926.js",
+  "cierre-etapa6-010926.js",
+  "d20-hardening.js",
+  "d20-precios12.js",
+  "d21-estabilidad.js",
+  "d21-reposicion.js",
+  "e5-final.js",
+  "notificaciones-permiso-ingreso-010926.js",
+  "notificaciones-permiso-ingreso-v2-010926.js",
+  "ui-final-corrections.js",
   "auditoria-mobile-etapa2.js",
   "correcciones-240824.js",
   "cuota-sheets-guardar-260826.js",
