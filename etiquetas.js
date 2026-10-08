@@ -277,7 +277,7 @@ function render() {
       <span class="etiquetas-item-index">${index + 1}</span>
       <div class="etiquetas-item-copy"><strong>${esc(item.articulo)}</strong><small>Código: ${esc(item.codigo || "Sin código")}</small></div>
       <span class="etiquetas-item-code">${esc(item.codigo || "Sin código")}</span>
-      <strong class="etiquetas-item-price">${esc(formatearPrecio(item.precio))}</strong>
+      <strong class="etiquetas-item-price">${esc(formatearPrecioImpresion(item.precio))}</strong>
       <div class="etiquetas-qty" aria-label="Cantidad de etiquetas">
         <button type="button" data-etiqueta-restar="${index}" aria-label="Quitar una etiqueta">−</button>
         <b>${Math.max(1, Number(item.cantidad || 1))}</b>
@@ -491,6 +491,15 @@ function cerrarScanner() {
   modal?.classList.add("oculto");
   modal?.setAttribute("aria-hidden", "true");
   resetearCargaScanner();
+}
+
+function formatearPrecioImpresion(valor) {
+  const numero = Number(valor || 0);
+  if (!Number.isFinite(numero) || numero <= 0) return "Sin precio";
+  return "$ " + new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numero);
 }
 
 function construirHojaImpresion() {

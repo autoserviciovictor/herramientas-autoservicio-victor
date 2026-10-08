@@ -16453,3 +16453,60 @@ html[data-theme="dark"] .venc-stepper-btn{background:var(--pro-panel-2,#192d46);
 #pantallaEtiquetas .etiquetas-usuario-opcion:hover,#pantallaEtiquetas .etiquetas-usuario-opcion:focus-visible{background:#fff0f3;outline:none}
 #pantallaEtiquetas .etiquetas-usuario-opcion[aria-selected="true"]{background:#ffe8ed;color:#d71a43;font-weight:700}
 #pantallaEtiquetas #etiquetasPanelUsuarios,#pantallaEtiquetas #etiquetasPanelUsuarios .etiquetas-search-wrap,#pantallaEtiquetas #etiquetasPanelUsuarios .etiquetas-search-row{overflow:visible}
+
+
+/* Etiquetas: plantilla de impresión alineada con sistema.pdf (08/10/2026).
+   Bloque único canónico para impresión; no afecta la interfaz de pantalla. */
+@media print {
+  @page { size: A4 portrait; margin: 4mm 3mm; }
+  #etiquetasPrintSheet.etiquetas-print-sheet {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-rows: 30mm !important;
+    column-gap: 2mm !important;
+    row-gap: 0 !important;
+    width: 100% !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    color: #000 !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-item {
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    height: 30mm !important;
+    min-height: 0 !important;
+    padding: 1.3mm 1.1mm 1mm !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-item strong {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10.5pt !important;
+    font-weight: 400 !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0 !important;
+    word-spacing: 0 !important;
+    margin: 0 !important;
+    overflow-wrap: break-word !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-price {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 12.5pt !important;
+    font-weight: 400 !important;
+    line-height: 1.1 !important;
+    margin-top: auto !important;
+    padding-top: 0 !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-meta {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: end !important;
+    gap: 1mm !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 7.5pt !important;
+    line-height: 1.1 !important;
+    margin-top: 1.5mm !important;
+    white-space: nowrap !important;
+  }
+  #etiquetasPrintSheet .etiqueta-print-meta b { font-weight: 400 !important; }
+}
