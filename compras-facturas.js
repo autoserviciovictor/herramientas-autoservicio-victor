@@ -485,7 +485,7 @@ async function renderizarPdf(file) {
 }
 function setArchivo(file) {
   if (!file) return;
-  if (!/^(application\/pdf|image\/(jpeg|png))$/.test(file.type)) { alert("Formato no permitido. Usá PDF, JPG o PNG."); return; }
+  if (!/^(application\/pdf|image\/(jpeg|png))$/.test(file.type)) { void avisarCompras("Formato no permitido", "Usá PDF, JPG o PNG."); return; }
   archivoActual = file;
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = URL.createObjectURL(file); previewZoom=1;
@@ -589,7 +589,7 @@ async function avisarFacturaDuplicada() {
     confirmText: "Aceptar"
   };
   if (window.AppDialog?.alert) await window.AppDialog.alert(opciones);
-  else alert(`${opciones.title}\n\n${opciones.message}`);
+  else await avisarCompras(opciones.title, opciones.message);
   // Tras aceptar, descartar los datos del comprobante duplicado y su archivo.
   resetForm();
 }
@@ -599,13 +599,13 @@ async function guardar(){
   const r=construirRegistro(original||{});
   if(!r.proveedor){
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Falta el proveedor",message:"Completá el proveedor antes de guardar.",confirmText:"Aceptar"});
-    else alert("Completá el proveedor antes de guardar.");
+    else await avisarCompras("Falta el proveedor", "Completá el proveedor antes de guardar.");
     $("comprasProveedor")?.focus();
     return;
   }
   if(!r.fecha){
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Falta la fecha",message:"Completá la fecha del comprobante.",confirmText:"Aceptar"});
-    else alert("Completá la fecha del comprobante.");
+    else await avisarCompras("Falta la fecha", "Completá la fecha del comprobante.");
     return;
   }
 
@@ -651,11 +651,11 @@ async function guardar(){
     resetForm();
     if(eraEdicion) mostrarVistaCompras("historial");
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:eraEdicion?"Cambios guardados":"Factura guardada",message:eraEdicion?"Los cambios de la factura se guardaron correctamente.":"La factura se guardó correctamente.",confirmText:"Aceptar"});
-    else alert(eraEdicion?"Los cambios de la factura se guardaron correctamente.":"La factura se guardó correctamente.");
+    else await avisarCompras(eraEdicion?"Cambios guardados":"Factura guardada",eraEdicion?"Los cambios de la factura se guardaron correctamente.":"La factura se guardó correctamente.");
   }catch(error){
     console.error("No se pudo guardar la factura",error);
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:"No se pudo guardar",message:"Ocurrió un error al guardar la factura. Intentá nuevamente.",confirmText:"Aceptar"});
-    else alert("No se pudo guardar la factura. Intentá nuevamente.");
+    else await avisarCompras("No se pudo guardar", "No se pudo guardar la factura. Intentá nuevamente.");
   }
 }
 function renderAdjuntos(){ const c=$("comprasAdjuntosLista"); if(c) c.innerHTML=adjuntos.map(f=>`<small style="display:block;margin-top:6px;color:#697386">• ${f.name}</small>`).join(""); }
@@ -725,7 +725,7 @@ function renderHistorial(){
   const body=$("comprasHistBody");body.innerHTML=lista.slice((paginaHistorial-1)*porPaginaCompras,paginaHistorial*porPaginaCompras).map(f=>`<tr><td>${escaparHtml(f.creadoEn?new Date(f.creadoEn).toLocaleString("es-AR"):"—")}</td><td>${fechaCorta(f.fecha)}</td><td><strong>${escaparHtml(f.proveedor||"—")}</strong></td><td>${escaparHtml(f.comprobante||"—")}</td><td>${escaparHtml(f.numero||"—")}</td><td>${escaparHtml(f.puntoVenta||"—")}</td><td><span class="compras-fiscal-tag">${escaparHtml(f.condicionFiscal||"—")}</span></td><td><strong>${money(f.total)}</strong></td><td class="compras-note-cell" title="${escaparHtml(f.observaciones||"")}">${escaparHtml(f.observaciones||"—")}</td><td><div class="compras-history-actions"><button class="compras-row-action edit" type="button" data-edit="${escaparHtml(f.id)}" title="Editar factura" aria-label="Editar factura"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button class="compras-row-action danger" type="button" data-remove="${escaparHtml(f.id)}" title="Eliminar factura" aria-label="Eliminar factura"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button></div></td></tr>`).join("")||'<tr><td colspan="10" class="compras-history-empty">No hay facturas para los filtros seleccionados.</td></tr>';
   paginasCompras("comprasHistPaginas","comprasHistPaginacionInfo",lista.length,paginaHistorial,n=>{paginaHistorial=n;renderHistorial();});
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>cargarFacturaParaEditar(b.dataset.edit)));
-  body.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",async()=>{const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Eliminar factura",message:"¿Eliminar esta factura del historial?",confirmText:"Eliminar",cancelText:"Cancelar"}):confirm("¿Eliminar esta factura del historial?");if(!ok)return;try{await apiCompras(`/admin/compras/facturas/${encodeURIComponent(b.dataset.remove)}`,{method:"DELETE"});await guardarFacturas(facturas().filter(f=>String(f.id)!==b.dataset.remove));renderHistorial();actualizarResumen();}catch(error){console.error("No se pudo eliminar la factura",error);alert("No se pudo eliminar la factura.");}}));
+  body.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",async()=>{const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Eliminar factura",message:"¿Eliminar esta factura del historial?",confirmText:"Eliminar",cancelText:"Cancelar"}):confirm("¿Eliminar esta factura del historial?");if(!ok)return;try{await apiCompras(`/admin/compras/facturas/${encodeURIComponent(b.dataset.remove)}`,{method:"DELETE"});await guardarFacturas(facturas().filter(f=>String(f.id)!==b.dataset.remove));renderHistorial();actualizarResumen();}catch(error){console.error("No se pudo eliminar la factura",error);await avisarCompras("No se pudo eliminar", "No se pudo eliminar la factura.");}}));
 }
 
 function escaparHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);}
@@ -775,6 +775,24 @@ async function registrarProveedorDeFactura(factura) {
    creadoEn: new Date().toISOString(), origen: "factura"});
  await guardarProveedores(fichas, fichas[fichas.length-1]);
 }
+async function avisarCompras(titulo, mensaje) {
+  if (window.AppDialog?.alert) {
+    await window.AppDialog.alert({title: titulo, message: mensaje, confirmText: "Aceptar"});
+    return;
+  }
+  // Respaldo visual sin diálogos nativos si el componente global aún no cargó.
+  const capa = document.createElement("div");
+  capa.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px";
+  const panel = document.createElement("div");
+  panel.style.cssText = "background:var(--surface,#fff);color:var(--text,#222);border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 16px 48px #0004";
+  const h = document.createElement("h3"); h.textContent = titulo;
+  const m = document.createElement("p"); m.textContent = mensaje; m.style.whiteSpace = "pre-line";
+  const boton = document.createElement("button"); boton.type = "button"; boton.textContent = "Aceptar";
+  boton.style.cssText = "display:block;margin:20px 0 0 auto;padding:10px 24px;border:0;border-radius:10px;background:#bc1743;color:white;cursor:pointer";
+  panel.append(h,m,boton); capa.append(panel); document.body.append(capa);
+  await new Promise(resolve => { boton.addEventListener("click", resolve, {once:true}); boton.focus(); });
+  capa.remove();
+}
 let proveedorEditando=null;
 function abrirFichaProveedor(id=null){
  const p=proveedoresGuardados().find(x=>x.id===id);proveedorEditando=p?.id||null;
@@ -794,7 +812,13 @@ function agregarCuentaBancaria(cuenta={}){
 async function guardarFichaProveedor(e){e.preventDefault();const form=e.currentTarget;const data=Object.fromEntries(new FormData(form).entries());
  data.razonSocial=(data.razonSocial||"").trim();data.cuit=(data.cuit||"").replace(/\D/g,"");
  if(!data.razonSocial){form.elements.razonSocial.focus();return;}
- const todos=proveedoresGuardados();if(data.cuit&&todos.some(p=>p.id!==proveedorEditando&&p.cuit===data.cuit)){alert("Ya existe un proveedor registrado con ese CUIT.");return;}
+ const todos=proveedoresGuardados();if(data.cuit&&todos.some(p=>p.id!==proveedorEditando&&cuitProveedor(p.cuit)===data.cuit)){
+   const campo=form.elements.namedItem("cuit");
+   campo?.setAttribute("aria-invalid","true");
+   await avisarCompras("Proveedor duplicado","Ya existe un proveedor registrado con ese CUIT/DNI.");
+   campo?.focus();
+   return;
+ }
  data.cuentas=[...$("comprasCuentasBancarias").children].map(div=>{const cuenta={};div.querySelectorAll("[data-banco]").forEach(el=>cuenta[el.dataset.banco]=el.value.trim());cuenta.principal=div.querySelector('input[type="radio"]').checked;return cuenta}).filter(c=>Object.entries(c).some(([k,v])=>k!=="principal"&&v));
  if(data.cuentas.length&&!data.cuentas.some(c=>c.principal))data.cuentas[0].principal=true;
  data.id=proveedorEditando||crypto.randomUUID();data.codigo=proveedorEditando?(todos.find(p=>p.id===proveedorEditando)?.codigo||""):String(Math.max(0,...todos.map(p=>Number(p.codigo)||0))+1).padStart(3,"0");
@@ -817,7 +841,7 @@ async function guardarFichaProveedor(e){e.preventDefault();const form=e.currentT
      }
    }catch{}
    console.error("No se pudo guardar el proveedor",error);
-   alert(`No se pudieron guardar los datos del proveedor.${error?.message?`\n\n${error.message}`:""}`);
+   await avisarCompras("No se pudo guardar el proveedor",`No se pudieron guardar los datos del proveedor.${error?.message?`\n\n${error.message}`:""}`);
    return;
  }
  $("comprasFichaProveedorModal").classList.add("oculto");renderProveedores();actualizarResumen();
