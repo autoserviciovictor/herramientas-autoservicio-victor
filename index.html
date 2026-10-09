@@ -3679,6 +3679,11 @@
             <div class="compras-hero-actions"><button id="comprasVerProveedores" class="compras-history-btn" type="button"><svg class="app-icon"><use href="#icon-box"></use></svg>Proveedores</button><button id="comprasVerHistorial" class="compras-history-btn" type="button"><svg class="app-icon"><use href="#icon-list"></use></svg>Ver historial de facturas</button></div>
           </header>
 
+          <section class="compras-lote-panel" aria-label="Importación masiva de facturas">
+            <div class="compras-lote-head"><div><h2>Importación masiva</h2><p>Seleccioná varias facturas. El servidor las analiza y quedan pendientes hasta que confirmes cada una.</p></div><label class="compras-lote-upload">+ Importar facturas<input id="comprasLoteArchivos" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" multiple hidden></label></div>
+            <div id="comprasLoteEstado" class="compras-lote-estado" aria-live="polite">Cargando pendientes…</div>
+            <div id="comprasLoteLista" class="compras-lote-lista"></div>
+          </section>
           <div id="comprasEditor" class="compras-editor-grid compras-dashboard-editor">
             <section class="compras-kpi-grid" aria-label="Resumen de compras">
               <article class="compras-kpi tone-red"><span class="compras-kpi-mark"><svg class="app-icon"><use href="#icon-clipboard"></use></svg></span><div><small>Total Facturas (mes)</small><strong id="comprasKpiFacturas">0</strong><em id="comprasKpiFacturasTrend">este mes</em></div></article>
@@ -4357,7 +4362,7 @@
         </div>
       </div>
     </div>
-    <script type="module" src="./compras-facturas.js?v=v38-editar-factura"></script>
+    <script type="module" src="./compras-facturas.js?v=v39-lotes-persistentes"></script>
     <script type="module" src="./pro-ui.js?v=1960-d21-cierre-etapa6-010926"></script>
   <div id="comprasFichaProveedorModal" class="compras-ficha-overlay oculto">
     <section class="compras-ficha-modal" role="dialog" aria-modal="true" aria-labelledby="comprasFichaProveedorTitulo">

@@ -16,6 +16,9 @@ let importesDetectados = null;
 let alicuotasDetectadas = [];
 let camposRevision = [];
 let facturaEditandoId = null;
+let facturaPendienteId = null;
+let colaPendientesActual = [];
+let cargaLoteEnCurso = false;
 const totalesManuales = new Set();
 const PDFJS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
 const PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
@@ -272,6 +275,62 @@ function autocompletarDesdeProveedor(datos={}) {
   if (ficha.rubro) seleccionarOpcion("comprasRubro", ficha.rubro);
   return true;
 }
+// Bandeja persistente: la cola y el resultado de la IA viven en PostgreSQL.
+const escaparLote = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+async function actualizarBandejaFacturas(){
+  const lista=$("comprasLoteLista"), estado=$("comprasLoteEstado"); if(!lista||!estado)return;
+  try{
+    const data=await apiCompras("/admin/compras/pendientes");
+    colaPendientesActual=data.pendientes||[];
+    const total=colaPendientesActual.length, listas=colaPendientesActual.filter(x=>x.estado==="listo").length, errores=colaPendientesActual.filter(x=>x.estado==="error").length, procesando=colaPendientesActual.filter(x=>["en_cola","procesando"].includes(x.estado)).length;
+    estado.textContent=`${total} pendiente(s) · ${listas} para revisar · ${procesando} procesándose · ${errores} con error`;
+    lista.innerHTML = colaPendientesActual.length ? colaPendientesActual.map(x => {
+      const id = escaparLote(x.id);
+      const descripcion = x.estado === "listo" ? "Lista para revisar" : x.estado === "procesando" ? "Analizando…" : x.estado === "en_cola" ? "En cola" : "Error: " + escaparLote(x.error || "No se pudo leer");
+      const revisar = x.estado === "listo" ? `<button type="button" data-lote-revisar="${id}">Revisar</button>` : "";
+      const reintentar = x.estado === "error" ? `<button type="button" data-lote-reintentar="${id}">Reintentar</button>` : "";
+      return `<div class="compras-lote-fila"><div><strong>${escaparLote(x.nombre)}</strong><small>${escaparLote(x.factura?.proveedor || "")} ${escaparLote(x.factura?.numero || "")} · ${descripcion}</small></div><div class="compras-lote-acciones">${revisar}${reintentar}<button type="button" data-lote-quitar="${id}">Quitar</button></div></div>`;
+    }).join("") : '<p class="compras-lote-vacio">Todavía no hay facturas pendientes.</p>';
+  }catch(e){estado.textContent=`No se pudo consultar la bandeja: ${e.message}`;}
+}
+async function subirLoteFacturas(archivos){
+  if(cargaLoteEnCurso)return;
+  const files=[...archivos]; if(!files.length)return;
+  cargaLoteEnCurso=true;
+  const estado=$("comprasLoteEstado"); let correctos=0, errores=[];
+  try{
+    for(let i=0;i<files.length;i++){
+      const f=files[i];estado.textContent=`Enviando ${i+1} de ${files.length}: ${f.name}`;
+      if(!/^(application\/pdf|image\/(jpeg|png))$/.test(f.type)||f.size>14*1024*1024){errores.push(`${f.name}: formato no admitido o supera 14 MB`);continue;}
+      try{
+        const optimizado=await prepararArchivoAnalisis(f);
+        const [base64,textoPdf]=await Promise.all([archivoABase64(optimizado),extraerTextoPdfFactura(optimizado)]);
+        await apiCompras("/admin/compras/pendientes",{method:"POST",body:JSON.stringify({nombre:f.name,tipo:optimizado.type,base64,textoPdf})});
+        correctos++;
+      }catch(e){errores.push(`${f.name}: ${e.message}`);}
+      await actualizarBandejaFacturas();
+    }
+  }finally{cargaLoteEnCurso=false;await actualizarBandejaFacturas();}
+  if(errores.length)await avisarCompras("Importación masiva",`${correctos} archivo(s) enviados. ${errores.length} no se pudieron agregar:\n${errores.slice(0,8).join("\n")}`);
+}
+async function accionPendiente(e){
+  const btn=e.target.closest("button");if(!btn)return;
+  const id=btn.dataset.loteRevisar||btn.dataset.loteQuitar||btn.dataset.loteReintentar;if(!id)return;
+  if(btn.dataset.loteRevisar){
+    const item=colaPendientesActual.find(x=>x.id===id);if(!item?.factura)return;
+    if(facturaPendienteId && facturaPendienteId!==id){const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Cambiar factura",message:"Los cambios no guardados de la factura actual se perderán. ¿Continuar?",confirmText:"Continuar",cancelText:"Cancelar"}):confirm("¿Descartar cambios no guardados?");if(!ok)return;}
+    resetForm();facturaPendienteId=id;aplicarFacturaExtraida(item.factura);
+    mostrarVistaCompras("editor");$("comprasProveedor")?.focus();
+    $("comprasLoteEstado").textContent=`Revisando ${item.nombre}. Guardá la factura para quitarla de pendientes.`;
+    return;
+  }
+  if(btn.dataset.loteQuitar){
+    const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Quitar pendiente",message:"¿Quitar esta factura de la bandeja? No se registrará como compra.",confirmText:"Quitar",cancelText:"Cancelar"}):confirm("¿Quitar esta factura pendiente?");if(!ok)return;
+    await apiCompras(`/admin/compras/pendientes/${encodeURIComponent(id)}`,{method:"DELETE"});
+    if(facturaPendienteId===id)facturaPendienteId=null;
+  }else if(btn.dataset.loteReintentar){await apiCompras(`/admin/compras/pendientes/${encodeURIComponent(id)}/reintentar`,{method:"POST"});}
+  await actualizarBandejaFacturas();
+}
 function aplicarFacturaExtraida(f) {
   if (!f || typeof f !== "object") return;
   totalesManuales.clear();
@@ -392,13 +451,15 @@ async function extraerFactura(file) {
       return;
     }
 
-    const base64 = await archivoABase64(archivoAnalisis);
+    const [base64, textoPdf] = await Promise.all([
+      archivoABase64(archivoAnalisis), extraerTextoPdfFactura(archivoAnalisis)
+    ]);
     if (token !== facturaAnalisisToken || archivoActual !== file) return;
     const apiBase = String(API_BASE_URL || window.API_BASE_URL || "").replace(/\/$/, "");
     const inicioPeticion = performance.now();
     const respuesta = await fetch(`${apiBase}/compras/facturas/extraer`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: archivoAnalisis.name, tipo: archivoAnalisis.type, base64 })
+      body: JSON.stringify({ nombre: archivoAnalisis.name, tipo: archivoAnalisis.type, base64, textoPdf })
     });
     const tipoRespuesta = respuesta.headers.get("content-type") || "";
     const data = tipoRespuesta.includes("application/json") ? await respuesta.json().catch(() => ({})) : {};
@@ -454,6 +515,30 @@ async function dibujarPaginaPdf() {
   preview.scrollLeft = 0;
 }
 
+// Extrae texto localmente con PDF.js (ya utilizado para la vista previa).
+// Si la extracción falla, el servidor sigue leyendo el PDF original.
+async function extraerTextoPdfFactura(file) {
+  if (file?.type !== "application/pdf") return "";
+  try {
+    const pdfjsLib = await import(PDFJS_URL);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+    const pdf = pdfDocumentoActual && archivoActual === file
+      ? pdfDocumentoActual
+      : await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    if (pdf.numPages > 5) return "";
+    const partes = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const pagina = await pdf.getPage(i);
+      const contenido = await pagina.getTextContent();
+      // Los saltos de línea conservan mejor las columnas que unir todo con espacios.
+      partes.push(contenido.items.map(item => `${item.str || ""}${item.hasEOL ? "\n" : " "}`).join(""));
+    }
+    return partes.join("\n\n").slice(0, 55001);
+  } catch (error) {
+    console.warn("[Facturas] No se pudo extraer texto del PDF; se usará el archivo original.", error);
+    return "";
+  }
+}
 async function renderizarPdf(file) {
   const preview = $("comprasPreview");
   if (!preview) return;
@@ -549,7 +634,7 @@ function actualizarModoEdicion(){
   if(cancelarBtn) cancelarBtn.innerHTML=editando?`Cancelar edición`:`<svg class="app-icon"><use href="#icon-trash"></use></svg>Limpiar`;
 }
 function resetForm(limpiarArchivoTambien=true, conservarModoEdicion=false){
-  if(!conservarModoEdicion) facturaEditandoId=null;
+  if(!conservarModoEdicion){ facturaEditandoId=null; facturaPendienteId=null; }
   actualizarModoEdicion();
   importesDetectados=null; alicuotasDetectadas=[]; camposRevision=[]; totalesManuales.clear();
   ["comprasProveedor","comprasCuit","comprasRazonSocial","comprasPuntoVenta","comprasNumero","comprasVencimientoCae","comprasObservaciones"].forEach(id=>{if($(id))$(id).value=""});
@@ -642,6 +727,12 @@ async function guardar(){
     } else lista.unshift(r);
     await guardarFacturaServidor(r);
     await guardarFacturas(lista);
+    if(facturaPendienteId){
+      const pendienteConfirmado=facturaPendienteId;facturaPendienteId=null;
+      try{await apiCompras(`/admin/compras/pendientes/${encodeURIComponent(pendienteConfirmado)}`,{method:"DELETE"});}
+      catch(error){console.warn("Factura guardada; no se pudo quitar el pendiente",error);}
+      void actualizarBandejaFacturas();
+    }
     // El comprobante ya fue persistido en PostgreSQL: crear/actualizar la ficha únicamente si corresponde.
     // Una falla de almacenamiento de proveedores no debe anunciar que falló la factura.
     try { await registrarProveedorDeFactura(r); }
@@ -899,7 +990,7 @@ function mostrarVistaCompras(vista="editor"){
   if(vista==="proveedores"){ $("comprasProvDetalle")?.classList.add("oculto");renderProveedores(); }
   pantalla.scrollIntoView({block:"start",behavior:"instant"});
 }
-async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompras(); $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
+async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompras(); $("comprasLoteArchivos")?.addEventListener("change",e=>{const fs=[...e.target.files];e.target.value="";void subirLoteFacturas(fs);});$("comprasLoteLista")?.addEventListener("click",e=>{void accionPendiente(e).catch(error=>avisarCompras("Pendientes",error.message));});void actualizarBandejaFacturas();setInterval(()=>{if(document.visibilityState==="visible"&&!cargaLoteEnCurso)void actualizarBandejaFacturas();},6000); $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
   $("comprasProvNuevo")?.addEventListener("click",()=>abrirFichaProveedor());
   $("comprasFichaProveedorCerrar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
   $("comprasFichaProveedorCancelar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));

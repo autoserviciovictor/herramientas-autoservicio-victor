@@ -1658,7 +1658,7 @@ app.put("/admin/compras/proveedores/:id", requerirAdministrador, express.json({l
 // durante pruebas, recargas o reintentos. No se persisten archivos en disco.
 const cacheLecturaFacturas = new Map();
 const FACTURA_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-const FACTURA_PARSER_VERSION = "2026-10-07-v2";
+const FACTURA_PARSER_VERSION = "2026-10-09-texto-pdf-v1";
 const FACTURA_CACHE_MAX = 40;
 function guardarCacheLecturaFactura(clave, factura) {
   cacheLecturaFacturas.set(clave, { factura, ts: Date.now() });
@@ -1667,12 +1667,24 @@ function guardarCacheLecturaFactura(clave, factura) {
     if (masVieja) cacheLecturaFacturas.delete(masVieja);
   }
 }
-app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24mb" }), async (req, res) => {
+// Solo elegimos la vía de texto cuando el PDF contiene información fiscal y
+// totales reconocibles. En PDFs escaneados o con extracción dudosa mantenemos
+// el archivo original para que el modelo pueda interpretar su disposición visual.
+function textoFacturaPdfConfiable(textoRecibido) {
+  const texto = typeof textoRecibido === "string" ? textoRecibido.replace(/\u0000/g, "").trim() : "";
+  const normalizado = texto.replace(/\s+/g, " ");
+  if (texto.length < 280 || texto.length > 55000) return "";
+  const identificacion = /\b(?:CUIT|C\.?U\.?I\.?T\.?)\s*:?\s*\d{2}[-\s]?\d{8}[-\s]?\d\b/i.test(normalizado);
+  const comprobante = /\b(?:factura|remito|nota\s+de\s+(?:cr[eé]dito|d[eé]bito)|ticket)\b/i.test(normalizado);
+  const total = /\btotal\b/i.test(normalizado) && /\d[.,]\d{2}\b/.test(normalizado);
+  return identificacion && comprobante && total ? texto : "";
+}
+async function analizarFacturaRequest(req, res) {
   try {
     if (!OPENAI_API_KEY) {
       return res.status(503).json({ error: "La lectura automática no está configurada. Falta OPENAI_API_KEY en el servidor." });
     }
-    const { nombre, tipo, base64 } = req.body || {};
+    const { nombre, tipo, base64, textoPdf: textoPdfRecibido } = req.body || {};
     const mime = normalizarTexto(tipo).toLowerCase();
     const archivoBase64 = normalizarTexto(base64);
     if (!archivoBase64 || !["application/pdf", "image/jpeg", "image/png"].includes(mime)) {
@@ -1707,11 +1719,15 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
 14) Antes de responder, verificá visualmente el bloque de totales una segunda vez. Si están impresos subtotal, IIBB, percepción IVA, IVA y total, transcribí cada uno por separado exactamente como figura.
 15) campos_revision debe contener solo nombres de campos realmente dudosos. observaciones puede explicar brevemente por qué.`;
 
+    const textoPdf = mime === "application/pdf" ? textoFacturaPdfConfiable(textoPdfRecibido) : "";
     const contenidoArchivo = mime === "application/pdf"
       ? { type: "input_file", filename: normalizarTexto(nombre) || "factura.pdf", file_data: `data:application/pdf;base64,${archivoBase64}` }
-      // auto evita forzar siempre el modo visual más costoso. El archivo ya llega
-      // normalizado desde el navegador y el modelo puede subir detalle si hace falta.
       : { type: "input_image", image_url: `data:${mime};base64,${archivoBase64}`, detail: "auto" };
+    // En documentos digitales evitamos transferir/renderizar páginas completas.
+    // Conservamos saltos de línea para facilitar la lectura de totales e impuestos.
+    const contenidoTexto = textoPdf
+      ? { type: "input_text", text: `Texto extraído directamente del PDF (transcribí solo los valores explícitos; si el orden de las columnas es ambiguo, marcá el campo para revisión):\n\n${textoPdf}` }
+      : null;
 
     const schema = {
       type: "object", additionalProperties: false,
@@ -1726,24 +1742,40 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
       required:["proveedor","razon_social","cuit","condicion_fiscal","comprobante","punto_venta","numero","fecha","vencimiento_cae","condicion_pago","moneda","descuentos","iibb","percepcion_iva","ganancias","otros_impuestos","subtotal","neto_gravado","neto_gravado_21","iva_total","iva_21","total","alicuotas_iva","observaciones","campos_revision"]
     };
 
-    const respuesta = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: OPENAI_INVOICE_MODEL, store: false,
-        input: [{ role: "user", content: [{ type: "input_text", text: instrucciones }, contenidoArchivo] }],
-        text: { format: { type: "json_schema", name: "factura_extraida", strict: true, schema } }
-      })
-    });
-    const data = await respuesta.json();
+    const consultarIA = async (usarTexto) => {
+      const respuesta = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: OPENAI_INVOICE_MODEL, store: false,
+          input: [{ role: "user", content: [{ type: "input_text", text: instrucciones }, usarTexto ? contenidoTexto : contenidoArchivo] }],
+          text: { format: { type: "json_schema", name: "factura_extraida", strict: true, schema } }
+        })
+      });
+      return { respuesta, data: await respuesta.json() };
+    };
+    let { respuesta, data } = await consultarIA(Boolean(contenidoTexto));
+    let modoLectura = contenidoTexto ? "texto" : "visual";
+    // Si la extracción textual perdió los datos esenciales, se reintenta con el
+    // PDF completo sin exponer resultados incompletos ni guardarlos en caché.
+    const extraerRespuesta = (datos) => {
+      const contenido = datos?.output?.flatMap((o) => o?.content || []).find((c) => c?.type === "output_text")?.text;
+      if (!contenido) return null;
+      try { return JSON.parse(contenido); } catch { return null; }
+    };
+    let factura = respuesta.ok ? extraerRespuesta(data) : null;
+    const incompleta = (f) => !f || !(Number(f.total) > 0) || !String(f.proveedor || f.razon_social || "").trim() || !String(f.fecha || "").trim();
+    if (contenidoTexto && ( !respuesta.ok || incompleta(factura))) {
+      console.log("[Facturas] Extracción de texto insuficiente; reintento visual del PDF.");
+      ({ respuesta, data } = await consultarIA(false));
+      modoLectura = "visual-respaldo";
+      factura = respuesta.ok ? extraerRespuesta(data) : null;
+    }
     if (!respuesta.ok) {
       console.error("Error OpenAI al leer factura:", data?.error?.message || respuesta.status);
       return res.status(502).json({ error: `No se pudo analizar la factura: ${normalizarTexto(data?.error?.message) || `HTTP ${respuesta.status}`}` });
     }
-    const texto = data?.output?.flatMap((o) => o?.content || []).find((c) => c?.type === "output_text")?.text;
-    if (!texto) return res.status(502).json({ error: "El analizador no devolvió datos de la factura." });
-    let factura;
-    try { factura = JSON.parse(texto); } catch { return res.status(502).json({ error: "La respuesta de lectura no tuvo un formato válido." }); }
+    if (!factura) return res.status(502).json({ error: "El analizador no devolvió datos válidos de la factura." });
 
     // Rescate determinista: a veces el modelo lee correctamente los importes y
     // los menciona en observaciones, pero deja el campo estructurado en 0. Antes
@@ -1770,13 +1802,16 @@ app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24m
 
     const tiempoMs = Date.now() - inicioIA;
     guardarCacheLecturaFactura(claveCache, factura);
-    console.log(`[Facturas] IA ${mime} ${Math.round(archivoBase64.length * 0.75 / 1024)} KB: ${tiempoMs} ms`);
+    console.log(`[Facturas] IA ${mime} (${modoLectura}) ${Math.round(archivoBase64.length * 0.75 / 1024)} KB: ${tiempoMs} ms`);
     return res.json({ ok: true, factura, cache: false, tiempo_ms: tiempoMs });
   } catch (error) {
     console.error("Error extrayendo factura:", error);
     return res.status(500).json({ error: `No se pudo procesar la factura: ${normalizarTexto(error?.message) || "error interno"}` });
   }
-});
+}
+app.post("/compras/facturas/extraer", requerirSesion, express.json({ limit: "24mb" }), analizarFacturaRequest);
+// La cola se almacena en PostgreSQL y se procesa en el servidor, aun sin navegador abierto.
+require("./compras-pendientes").instalarColaFacturas({ app, requerirAdministrador, analizarFacturaRequest });
 
 app.get("/dashboard/resumen", requerirSesion, async (req, res) => {
   try {
