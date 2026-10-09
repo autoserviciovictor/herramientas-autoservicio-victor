@@ -3665,7 +3665,7 @@
             <article class="admin-surface-card admin-quick-card">
               <header><div><span class="admin-section-symbol"><svg class="app-icon"><use href="#icon-refresh"></use></svg></span><h2>Acciones rápidas</h2></div></header>
               <div class="admin-quick-list">
-                <button id="adminQuickImportar" type="button"><span class="admin-quick-icon tone-blue"><svg class="app-icon"><use href="#icon-box"></use></svg></span><span><strong>Importar catálogo</strong><small>Actualiza los productos desde un archivo XLSX.</small></span><b>›</b></button>
+                <button id="adminQuickImportar" type="button"><span class="admin-quick-icon tone-blue"><svg class="app-icon"><use href="#icon-box"></use></svg></span><span><strong>Importar catálogo</strong><small>Actualiza los productos desde un archivo XLS o XLSX.</small></span><b>›</b></button>
                 <button id="adminQuickActualizar" type="button"><span class="admin-quick-icon tone-amber"><svg class="app-icon"><use href="#icon-refresh"></use></svg></span><span><strong>Actualizar datos</strong><small>Sincroniza la información del sistema.</small></span><b>›</b></button>
                 <button id="adminQuickAyuda" type="button"><span class="admin-quick-icon tone-violet"><svg class="app-icon"><use href="#icon-shield"></use></svg></span><span><strong>Centro de ayuda</strong><small>Accede a una guía rápida de las funciones administrativas.</small></span><b>›</b></button>
               </div>
@@ -3856,9 +3856,9 @@
                 <div class="admin-system-last-update"><span class="status-dot ok"></span><div><strong>Última actualización exitosa</strong><small id="adminUltimaActualizacion">Información sincronizada con el servidor</small></div><button id="btnAdminVerHistorialSistema" class="admin-system-history-btn" type="button">Ver historial <b>›</b></button></div>
               </article>
               <article class="admin-import-card admin-system-import-card">
-                <div class="admin-import-head"><span class="admin-system-action-icon tone-violet"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><strong>Importar catálogo del sistema</strong><span>Importa o reemplaza el catálogo de productos y reglas desde un archivo Excel (.xlsx).</span></div></div>
-                <input id="adminImportarArchivo" aria-label="Archivo Excel para importar" type="file" accept=".xlsx" class="oculto" />
-                <div class="admin-import-layout"><div id="adminImportDropzone" class="admin-dropzone" tabindex="0" role="button" aria-label="Seleccionar o soltar archivo XLSX"><svg class="app-icon"><use href="#icon-box"></use></svg><strong>Arrastra y suelta tu archivo aquí</strong><span>Formato permitido: .xlsx</span></div><div class="admin-import-side"><button id="btnAdminImportarArchivo" type="button"><svg class="app-icon"><use href="#icon-clipboard"></use></svg> Seleccionar archivo</button><small>Tamaño máximo recomendado: 20 MB</small></div></div>
+                <div class="admin-import-head"><span class="admin-system-action-icon tone-violet"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div><strong>Importar catálogo del sistema</strong><span>Importa o reemplaza el catálogo de productos y reglas desde un archivo Excel (.xls o .xlsx).</span></div></div>
+                <input id="adminImportarArchivo" aria-label="Archivo Excel para importar" type="file" accept=".xls,.xlsx" class="oculto" />
+                <div class="admin-import-layout"><div id="adminImportDropzone" class="admin-dropzone" tabindex="0" role="button" aria-label="Seleccionar o soltar archivo XLS o XLSX"><svg class="app-icon"><use href="#icon-box"></use></svg><strong>Arrastra y suelta tu archivo aquí</strong><span>Formatos permitidos: .xls y .xlsx</span></div><div class="admin-import-side"><button id="btnAdminImportarArchivo" type="button"><svg class="app-icon"><use href="#icon-clipboard"></use></svg> Seleccionar archivo</button><small>Tamaño máximo recomendado: 20 MB</small></div></div>
                 <div id="adminImportarEstado" class="admin-import-status" aria-live="polite"></div>
               </article>
             </div>
@@ -4019,55 +4019,29 @@
           aria-modal="true"
           aria-labelledby="adminImportarPreviewTitulo"
         >
-          <button
-            id="btnAdminCerrarImportacion"
-            class="modal-close"
-            type="button"
-          >
-            ×
-          </button>
-          <div class="modal-kicker">Vista previa</div>
-          <h2 id="adminImportarPreviewTitulo">Confirmar importación</h2>
-          <p class="admin-import-preview-file">
-            Archivo: <strong id="adminImportarPreviewArchivo">—</strong>
-          </p>
-          <div class="admin-import-preview-grid">
-            <div>
-              <span>Productos válidos</span
-              ><strong id="adminImportarPreviewProcesados">0</strong>
+          <header class="admin-import-dialog-header">
+            <div class="admin-import-brand-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M13 5h16l8 8v29H13z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M29 5v9h8M7 18h23v20H7z" stroke="currentColor" stroke-width="2.5"/><text x="18" y="32" text-anchor="middle" font-size="13" font-weight="900" fill="currentColor">X</text></svg></div>
+            <div class="admin-import-dialog-heading"><div class="modal-kicker">IMPORTACIÓN DE PRODUCTOS</div><h2 id="adminImportarPreviewTitulo">Confirmar importación</h2><p class="admin-import-preview-file"><strong id="adminImportarPreviewArchivo">—</strong></p></div>
+            <div id="adminImportarPreviewValidaciones" class="admin-import-validations" aria-live="polite"></div>
+            <button id="btnAdminCerrarImportacion" class="modal-close" type="button" aria-label="Cerrar">×</button>
+          </header>
+          <div class="admin-import-dialog-body">
+            <div class="admin-import-preview-grid">
+              <div class="admin-import-stat-products"><span class="admin-import-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4v10l-9 4-9-4z"/><path d="m3 7 9 4 9-4M12 11v10"/></svg></span><div><strong id="adminImportarPreviewProcesados">0</strong><span>Productos válidos</span><small>Se importarán al catálogo</small></div></div>
+              <div class="admin-import-stat-total"><span class="admin-import-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><div><strong id="adminImportarPreviewTotal">0</strong><span>Total resultante</span><small>Productos del catálogo</small></div></div>
+              <div class="admin-import-stat-rubros"><span class="admin-import-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11V4a1 1 0 0 1 1-1h7l10 10-8 8L3 11Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span><div><strong id="adminImportarPreviewRubros">0</strong><span>Rubros detectados</span><small>Listos para asignar</small></div></div>
             </div>
-            <div>
-              <span>Total resultante</span
-              ><strong id="adminImportarPreviewTotal">0</strong>
-            </div>
+            <section class="admin-import-issues-section">
+              <div class="admin-import-issues-head"><div><h3>Observaciones del archivo</h3><p>Revisá los registros que requieren atención antes de continuar.</p></div></div>
+              <div id="adminImportarPreviewAdvertencias" class="admin-import-issues"></div>
+            </section>
+            <div class="admin-import-warning admin-import-safe"><span class="admin-import-notice-icon" aria-hidden="true">✓</span><div><strong>Inventario protegido</strong><span>Stock, Salón y Depósito no se modificarán. La columna Sub Total será ignorada.</span></div></div>
+            <div class="admin-import-warning admin-import-replace"><span class="admin-import-notice-icon" aria-hidden="true">!</span><div><strong>Reemplazo de catálogo</strong><span>Al confirmar, el catálogo de Productos será reemplazado completamente por este archivo.</span></div></div>
           </div>
-          <div
-            id="adminImportarPreviewValidaciones"
-            class="admin-import-validations"
-          ></div>
-          <div class="admin-import-preview-notices">
-            <div class="admin-import-warning admin-import-replace">
-              <span class="admin-import-notice-icon" aria-hidden="true">!</span>
-              <div><strong>Reemplazo de catálogo</strong><span>Al confirmar, el catálogo de Productos será reemplazado completamente por este archivo.</span></div>
-            </div>
-            <div
-              id="adminImportarPreviewAdvertencias"
-              class="admin-import-warning admin-import-review"
-            ></div>
-            <div class="admin-import-warning admin-import-safe">
-              <span class="admin-import-notice-icon" aria-hidden="true">✓</span>
-              <div><strong>Inventario protegido</strong><span>Stock, Salón y Depósito no se modificarán. La columna Sub Total será ignorada.</span></div>
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button
-              id="btnAdminConfirmarImportacion"
-              type="button"
-              class="save-btn"
-            >
-              Reemplazar catálogo
-            </button>
-          </div>
+          <footer class="modal-actions admin-import-footer">
+            <button id="btnAdminDescargarIncidencias" type="button" class="admin-import-download">↓ Descargar incidencias</button>
+            <div class="admin-import-footer-right"><button id="btnAdminCancelarImportacion" type="button" class="admin-import-cancel" onclick="document.getElementById('btnAdminCerrarImportacion').click()">Cancelar</button><button id="btnAdminConfirmarImportacion" type="button" class="save-btn">Reemplazar catálogo</button></div>
+          </footer>
         </div>
       </div>
 

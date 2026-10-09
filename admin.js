@@ -1886,15 +1886,10 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
     : [];
   const cajaValidaciones = $("adminImportarPreviewValidaciones");
   if (cajaValidaciones) {
-    cajaValidaciones.innerHTML = validaciones
-      .map(
-        (item) => `
-      <div class="admin-import-validation ${item.ok ? "ok" : "error"}">
-        <span aria-hidden="true">${item.ok ? "✓" : "✕"}</span>
-        <strong>${escaparHtml(item.texto)}</strong>
-      </div>`,
-      )
-      .join("");
+    const errores = validaciones.filter(item => !item.ok);
+    cajaValidaciones.innerHTML = errores.length
+      ? errores.map(item => `<div class="admin-import-validation error"><span>!</span><div><strong>Archivo no válido</strong><small>${escaparHtml(item.texto)}</small></div></div>`).join("")
+      : '<div class="admin-import-validation ok"><span>✓</span><div><strong>Archivo válido</strong><small>Formato, hoja y columnas reconocidos correctamente.</small></div></div>';
   }
 
   const importacionValida =
@@ -1908,44 +1903,35 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
       : "Archivo no válido";
   }
 
-  const advertencias = [];
-  if (resumen.duplicadosArchivo)
-    advertencias.push(
-      `${resumen.duplicadosArchivo} código(s) duplicado(s) exacto(s) dentro del archivo; se conservará la última aparición`,
-    );
-  if (resumen.sinCodigo)
-    advertencias.push(`${resumen.sinCodigo} fila(s) sin código`);
-  if (resumen.sinArticulo)
-    advertencias.push(`${resumen.sinArticulo} fila(s) sin artículo`);
-  if (resumen.codigosInvalidos)
-    advertencias.push(`${resumen.codigosInvalidos} código(s) inválido(s)`);
-  if (resumen.preciosInvalidos)
-    advertencias.push(
-      `${resumen.preciosInvalidos} precio(s) inválido(s); se guardarán vacíos`,
-    );
-  if (resumen.stocksInvalidos)
-    advertencias.push(
-      `${resumen.stocksInvalidos} stock(s) inválido(s); se tomarán como 0 y quedarán fuera del catálogo`,
-    );
-  if (resumen.productosSinStock)
-    advertencias.push(
-      `${resumen.productosSinStock} producto(s) con stock 0 o negativo quedarán desactivados`,
-    );
-  if (resumen.productosSinRubro)
-    advertencias.push(
-      `${resumen.productosSinRubro} producto(s) no quedaron asociados a un rubro del Excel`,
-    );
-
+  const rubros = $("adminImportarPreviewRubros");
+  if (rubros) rubros.textContent = resumen.rubrosDetectados ?? 0;
+  const incidencias = resumen.incidencias || {};
+  const categorias = [
+    ["duplicados", "Códigos duplicados", "Se conserva la última aparición", resumen.duplicadosArchivo],
+    ["sinCodigo", "Filas sin código", "No se incorporarán al catálogo", resumen.sinCodigo],
+    ["invalidos", "Códigos inválidos", "No se incorporarán al catálogo", resumen.codigosInvalidos],
+    ["sinArticulo", "Filas sin artículo", "No se incorporarán al catálogo", resumen.sinArticulo],
+    ["precios", "Precios inválidos", "Se guardarán sin precio", resumen.preciosInvalidos],
+    ["stocks", "Valores de stock inválidos", "Se tratarán como cero", resumen.stocksInvalidos],
+    ["sinRubro", "Productos sin rubro", "Revisar clasificación", resumen.productosSinRubro],
+  ].filter(([clave, , , total]) => Number(total) > 0);
   const cajaAdvertencias = $("adminImportarPreviewAdvertencias");
   if (cajaAdvertencias) {
-    cajaAdvertencias.innerHTML = advertencias.length
-      ? `<strong>Revisar:</strong><ul>${advertencias.map((texto) => `<li>${escaparHtml(texto)}</li>`).join("")}</ul>`
-      : "<strong>Archivo correcto:</strong> no se detectaron filas problemáticas.";
-    cajaAdvertencias.classList.toggle(
-      "sin-advertencias",
-      advertencias.length === 0,
-    );
+    cajaAdvertencias.innerHTML = categorias.length ? categorias.map(([clave, titulo, nota, total]) => `
+      <details class="admin-import-issue" data-categoria="${clave}">
+        <summary><span class="admin-import-issue-symbol" aria-hidden="true">!</span><span class="admin-import-issue-title">${escaparHtml(titulo)}<small>${escaparHtml(nota)}</small></span><b>${total}</b><span class="admin-import-detail-button" aria-hidden="true"><span class="admin-import-detail-closed">Ver detalle</span><span class="admin-import-detail-open">Ocultar detalle</span></span></summary>
+        <div class="admin-import-table-scroll"><table><thead><tr><th>Fila Excel</th><th>Código</th><th>Producto</th><th>Detalle</th></tr></thead><tbody>${(incidencias[clave] || []).map(item => `<tr data-busqueda="${escaparHtml([item.fila,item.codigo,item.articulo,item.motivo].join(" ").toLowerCase())}"><td>${item.fila}</td><td>${escaparHtml(item.codigo || "—")}</td><td>${escaparHtml(item.articulo || "—")}</td><td>${escaparHtml(item.motivo)}</td></tr>`).join("")}</tbody></table></div>
+      </details>`).join("") : '<p class="admin-import-no-issues">✓ No se detectaron incidencias que requieran revisión.</p>';
+    cajaAdvertencias.querySelector("details")?.setAttribute("open", "");
   }
+  const descargar = $("btnAdminDescargarIncidencias");
+  if (descargar) { descargar.disabled = !categorias.length; descargar.onclick = () => {
+    const lineas = [["Categoría", "Fila Excel", "Código", "Producto", "Detalle"], ...categorias.flatMap(([clave,titulo]) => (incidencias[clave] || []).map(item => [titulo,item.fila,item.codigo,item.articulo,item.motivo]))];
+    const csv = "\uFEFF" + lineas.map(fila => fila.map(valor => `"${String(valor ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+    const enlace = document.createElement("a"); enlace.href = url; enlace.download = "incidencias-importacion.csv"; enlace.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }; }
 
   const modal = $("adminImportarPreviewModal");
   modal?.classList.remove("oculto");
@@ -1968,6 +1954,8 @@ function normalizarRubroImportacion(valor) {
 
 function extraerProductosImportacion(filas, columnas) {
   const mapa = new Map();
+  const origenCodigo = new Map();
+  const incidencias = { duplicados: [], sinCodigo: [], sinArticulo: [], invalidos: [], precios: [], stocks: [], sinRubro: [] };
   const rubrosDetectados = new Set();
   let rubroActual = "";
   const estadisticas = {
@@ -1987,6 +1975,7 @@ function extraerProductosImportacion(filas, columnas) {
 
   for (let i = columnas.fila + 1; i < filas.length; i++) {
     const fila = filas[i] || [];
+    const numeroFila = i + 1;
     const tieneDatos = fila.some(
       (valor) =>
         valor !== null && valor !== undefined && String(valor).trim() !== "",
@@ -2001,6 +1990,11 @@ function extraerProductosImportacion(filas, columnas) {
     const articulo = String(
       leerCampoImportacion(fila, columnas.rangos.articulo) ?? "",
     ).trim();
+    // El reporte de Inventario Valuado termina con una fila TOTALES y
+    // otras celdas de resumen. No son artículos ni incidencias de productos.
+    if (/^totales?\s*:?$/i.test(articulo) || /^totales?\s*:?$/i.test(String(codigoOriginal ?? "").trim())) {
+      break;
+    }
     const precioOriginal = columnas.rangos.precio
       ? leerCampoImportacion(fila, columnas.rangos.precio)
       : "";
@@ -2036,16 +2030,19 @@ function extraerProductosImportacion(filas, columnas) {
     }
 
     if (!codigo) {
+      incidencias.sinCodigo.push({ fila: numeroFila, codigo: String(codigoOriginal ?? ""), articulo, motivo: "Sin código: se omite" });
       estadisticas.sinCodigo++;
       estadisticas.filasIgnoradas++;
       continue;
     }
     if (!articulo) {
+      incidencias.sinArticulo.push({ fila: numeroFila, codigo, articulo, motivo: "Sin nombre de artículo: se omite" });
       estadisticas.sinArticulo++;
       estadisticas.filasIgnoradas++;
       continue;
     }
     if (!/^\d+$/.test(codigo)) {
+      incidencias.invalidos.push({ fila: numeroFila, codigo, articulo, motivo: "El código contiene caracteres no numéricos: se omite" });
       estadisticas.codigosInvalidos++;
       estadisticas.filasIgnoradas++;
       continue;
@@ -2054,18 +2051,29 @@ function extraerProductosImportacion(filas, columnas) {
       columnas.rangos.precio &&
       String(precioOriginal ?? "").trim() !== "" &&
       precio === null
-    )
+    ) {
+      incidencias.precios.push({ fila: numeroFila, codigo, articulo, motivo: `Precio inválido: ${String(precioOriginal)}` });
       estadisticas.preciosInvalidos++;
+    }
     if (
       columnas.rangos.stock &&
       String(stockOriginal ?? "").trim() !== "" &&
       stockParseado === null
-    )
+    ) {
+      incidencias.stocks.push({ fila: numeroFila, codigo, articulo, motivo: `Stock inválido: ${String(stockOriginal)}` });
       estadisticas.stocksInvalidos++;
+    }
     const clave = claveCodigoImportacion(codigo);
-    if (mapa.has(clave)) estadisticas.duplicadosArchivo++;
+    if (mapa.has(clave)) {
+      estadisticas.duplicadosArchivo++;
+      incidencias.duplicados.push({ fila: numeroFila, codigo, articulo, motivo: `Duplicado de fila ${origenCodigo.get(clave)}; se conserva fila ${numeroFila}` });
+    }
+    origenCodigo.set(clave, numeroFila);
 
-    if (!rubroActual) estadisticas.productosSinRubro++;
+    if (!rubroActual) {
+      estadisticas.productosSinRubro++;
+      incidencias.sinRubro.push({ fila: numeroFila, codigo, articulo, motivo: "Sin rubro asignado" });
+    }
 
     // Los códigos numéricos con y sin ceros iniciales representan el mismo
     // producto (por ejemplo 00663 y 663). Se conserva la última aparición,
@@ -2076,7 +2084,7 @@ function extraerProductosImportacion(filas, columnas) {
   estadisticas.productosConStock = productos.filter((producto) => Number(producto.stock) > 0).length;
   estadisticas.productosSinStock = productos.length - estadisticas.productosConStock;
   estadisticas.rubrosDetectados = rubrosDetectados.size;
-  return { productos, ...estadisticas };
+  return { productos, ...estadisticas, incidencias };
 }
 
 async function importarArchivoCatalogo(archivo) {
@@ -2084,7 +2092,7 @@ async function importarArchivoCatalogo(archivo) {
   const estado = $("adminImportarEstado");
   estado.textContent = "Validando archivo…";
 
-  const extensionValida = /\.xlsx$/i.test(archivo.name || "");
+  const extensionValida = /\.(?:xls|xlsx)$/i.test(archivo.name || "");
   const datos = await archivo.arrayBuffer();
   const libro = window.XLSX.read(datos, { type: "array", raw: true });
   const hojaNombre =
@@ -2110,6 +2118,7 @@ async function importarArchivoCatalogo(archivo) {
     ? extraerProductosImportacion(filas, columnas)
     : {
         productos: [],
+        incidencias: { duplicados: [], sinCodigo: [], sinArticulo: [], invalidos: [], precios: [], stocks: [], sinRubro: [] },
         filasVacias: 0,
         sinCodigo: 0,
         sinArticulo: 0,
@@ -2127,7 +2136,7 @@ async function importarArchivoCatalogo(archivo) {
     extraidos.productos.length >= IMPORTACION_MIN_PRODUCTOS;
 
   const validaciones = [
-    { ok: extensionValida, texto: "Formato XLSX válido" },
+    { ok: extensionValida, texto: "Formato Excel (.xls o .xlsx) válido" },
     {
       ok: hojaEncontrada,
       texto: `Hoja ${IMPORTACION_HOJA_ESPERADA} encontrada`,
@@ -2193,23 +2202,36 @@ async function importarArchivoCatalogo(archivo) {
 }
 
 function construirResumenImportacionFinal(r) {
-  const advertencias = [];
-  if (r.duplicadosArchivo)
-    advertencias.push(
-      `${r.duplicadosArchivo} duplicado(s) exacto(s) resuelto(s) dentro del archivo`,
-    );
-  if (r.filasIgnoradas)
-    advertencias.push(`${r.filasIgnoradas} fila(s) ignorada(s)`);
-  if (r.preciosInvalidos)
-    advertencias.push(`${r.preciosInvalidos} precio(s) inválido(s)`);
-  if (r.stocksInvalidos)
-    advertencias.push(`${r.stocksInvalidos} stock(s) inválido(s) tratados como 0`);
-  const detalleAdvertencias = advertencias.length
-    ? `<br><span>Advertencias: ${advertencias.join(" · ")}.</span>`
-    : "";
+  const total = Number(r.totalCatalogo ?? r.procesados ?? 0);
+  const duplicados = Number(r.duplicadosArchivo) || 0;
+  const ignoradas = Number(r.filasIgnoradas) || 0;
+  const precios = Number(r.preciosInvalidos) || 0;
+  const stocks = Number(r.stocksInvalidos) || 0;
   const sync = r.sincronizacion || {};
-  const detalleSync = `<span>Sincronización automática: ${Number(sync.inventario) || 0} nombre(s) actualizados en Inventario · ${Number(sync.vencimientos) || 0} en Vencimientos · ${Number(sync.reposicion) || 0} en Reposición.</span><span>Catálogo público por stock: ${Number(sync.productosActivos) || 0} activo(s) con stock mayor a 0 · ${Number(sync.productosDesactivados) || 0} desactivado(s) con stock 0 o negativo.</span><span>Precios, nombres y rubros se sincronizan automáticamente por código.</span>`;
-  return `<strong>Catálogo reemplazado y sincronizado</strong><span>Se guardaron ${r.totalCatalogo || r.procesados || 0} productos.</span>${detalleAdvertencias}${detalleSync}<span>Las cantidades de Inventario, vencimientos y listas no fueron modificadas.</span>`;
+  const numero = (n) => n.toLocaleString("es-AR");
+  const advertencias = [
+    duplicados && `${numero(duplicados)} código(s) duplicado(s) resuelto(s)`,
+    ignoradas && `${numero(ignoradas)} fila(s) ignorada(s)`,
+    precios && `${numero(precios)} precio(s) inválido(s)`,
+    stocks && `${numero(stocks)} stock(s) inválido(s) tratado(s) como cero`,
+  ].filter(Boolean);
+  const sincronizacion = [
+    `${numero(Number(sync.inventario) || 0)} nombre(s) actualizados en Inventario`,
+    `${numero(Number(sync.vencimientos) || 0)} en Vencimientos`,
+    `${numero(Number(sync.reposicion) || 0)} en Reposición`,
+  ];
+  const detalle = [
+    ...advertencias,
+    `Sincronización: ${sincronizacion.join(" · ")}`,
+    `Catálogo por disponibilidad: ${numero(Number(sync.productosActivos) || 0)} activos y ${numero(Number(sync.productosDesactivados) || 0)} desactivados`,
+    "Los precios, nombres y rubros se sincronizaron por código.",
+  ];
+  return `<section class="admin-import-result" role="status">
+    <div class="admin-import-result-head"><span class="admin-import-result-check" aria-hidden="true">✓</span><div><strong>Catálogo actualizado correctamente</strong><p>La importación y sincronización finalizaron.</p></div></div>
+    <div class="admin-import-result-metrics"><div><strong>${numero(total)}</strong><span>Productos guardados</span></div><div><strong>${numero(ignoradas)}</strong><span>Filas ignoradas</span></div></div>
+    <details class="admin-import-result-details"><summary><span><strong>Resultados y advertencias</strong><small>${advertencias.length ? advertencias.join(" · ") : "Sin advertencias del archivo"}</small></span><span class="admin-import-result-toggle"><span class="admin-import-result-show">Ver detalle</span><span class="admin-import-result-hide">Ocultar detalle</span></span></summary><ul>${detalle.map((texto) => `<li>${escaparHtml(texto)}</li>`).join("")}</ul></details>
+    <div class="admin-import-result-protected"><span aria-hidden="true">✓</span> Las cantidades de Inventario, vencimientos y listas no fueron modificadas.</div>
+  </section>`;
 }
 
 async function confirmarImportacionCatalogo() {

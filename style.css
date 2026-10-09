@@ -16541,3 +16541,156 @@ html[data-theme="dark"] .venc-stepper-btn{background:var(--pro-panel-2,#192d46);
     flex: 1 1 auto;
   }
 }
+
+/* Importación · revisión detallada de incidencias (2026-10-09) */
+.admin-import-preview-modal{width:min(960px,calc(100vw - 36px));max-width:960px;max-height:min(92dvh,940px);padding:30px 34px;border-radius:22px;box-shadow:0 24px 75px #10182835}
+.admin-import-preview-modal h2{font-size:clamp(1.4rem,2vw,1.85rem);font-weight:800;letter-spacing:-.035em}
+.admin-import-preview-modal .modal-kicker{color:#667085;font-size:.69rem;letter-spacing:.09em}
+.admin-import-preview-file{margin:8px 0 20px;padding:0;border:0;font-size:.86rem;overflow-wrap:anywhere}
+.admin-import-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.admin-import-preview-grid>div{padding:17px 18px;border:1px solid #e7eaf0;border-radius:14px;background:#f8f9fc}
+.admin-import-preview-grid span{display:block;color:#667085;font-size:.77rem;font-weight:650}
+.admin-import-preview-grid strong{display:block;margin-top:7px;font-size:1.65rem;font-weight:850;color:#111827}
+.admin-import-validations{display:block;margin-bottom:17px}
+.admin-import-validation{min-height:44px;padding:11px 14px;font-size:.82rem}
+.admin-import-preview-notices{gap:14px}
+.admin-import-issues-section{min-width:0}
+.admin-import-issues-head{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:5px 0 12px}
+.admin-import-issues-head h3{margin:0;font-size:1rem;font-weight:800;color:#101828}
+.admin-import-issues-head p{margin:4px 0 0;color:#667085;font-size:.78rem}
+.admin-import-issues-head input{width:min(310px,100%);min-width:0;padding:11px 13px;border:1px solid #d8dee8;border-radius:10px;background:#fff;color:#111827;font:inherit;font-size:.82rem}
+.admin-import-issues{display:grid;gap:9px}
+.admin-import-issue{border:1px solid #e1e6ee;border-radius:12px;background:#fff;overflow:hidden}
+.admin-import-issue summary{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none;color:#172033}
+.admin-import-issue summary::-webkit-details-marker{display:none}
+.admin-import-issue-title{flex:1;font-weight:780;font-size:.88rem}
+.admin-import-issue-title small{display:block;margin-top:4px;font-size:.74rem;color:#667085;font-weight:450}
+.admin-import-issue summary b{min-width:35px;padding:4px 8px;border-radius:8px;background:#fff0f2;color:#c82143;text-align:center;font-size:.82rem}
+.admin-import-chevron{color:#667085;font-size:1.1rem;transition:transform .2s}
+.admin-import-issue[open] .admin-import-chevron{transform:rotate(180deg)}
+.admin-import-table-scroll{overflow:auto;max-height:230px;border-top:1px solid #e6eaf0}
+.admin-import-issue table{width:100%;border-collapse:collapse;text-align:left;font-size:.76rem}
+.admin-import-issue th{position:sticky;top:0;background:#f6f8fb;color:#475467;font-weight:800}
+.admin-import-issue td,.admin-import-issue th{padding:10px 12px;border-bottom:1px solid #edf0f4;vertical-align:top}
+.admin-import-issue td:first-child{font-weight:750;white-space:nowrap}
+.admin-import-issue tr[hidden]{display:none}
+.admin-import-no-issues{padding:14px;border-radius:10px;background:#eaf7ef;color:#176b3a;font-weight:650}
+.admin-import-preview-modal .admin-import-replace{order:2;background:#fff8f8;border-color:#f6d5da}
+.admin-import-preview-modal .admin-import-safe{order:1;background:#f0faf5;border-color:#cce9d8}
+.admin-import-preview-modal .admin-import-footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-import-footer button{min-height:44px;padding:10px 15px;border-radius:10px;font:inherit;font-size:.83rem;font-weight:750;cursor:pointer}
+.admin-import-download,.admin-import-cancel{background:#fff;border:1px solid #d8dee8;color:#344054}
+.admin-import-download:disabled{opacity:.5;cursor:default}
+.admin-import-footer .save-btn{margin-left:auto;min-height:46px!important;box-shadow:none!important}
+html[data-theme="dark"] .admin-import-preview-grid>div,html[data-theme="dark"] .admin-import-issue{background:#1b3148;border-color:#36516b}
+html[data-theme="dark"] .admin-import-issues-head h3,html[data-theme="dark"] .admin-import-issue summary{color:#f5f7fa}
+html[data-theme="dark"] .admin-import-issues-head input,html[data-theme="dark"] .admin-import-download,html[data-theme="dark"] .admin-import-cancel{background:#1b3148;color:#f5f7fa;border-color:#36516b}
+html[data-theme="dark"] .admin-import-issue th{background:#263e56;color:#f5f7fa}
+html[data-theme="dark"] .admin-import-issue td{border-color:#36516b;color:#f5f7fa}
+@media(max-width:640px){.admin-import-preview-modal{width:calc(100% - 16px);max-height:calc(100dvh - 16px);padding:22px 16px}.admin-import-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-import-issues-head{align-items:stretch;flex-direction:column;gap:10px}.admin-import-issues-head input{width:100%}.admin-import-footer button{flex:1 1 auto}.admin-import-footer .save-btn{width:100%;margin-left:0}}
+
+/* Importación: modal profesional, referencia visual octubre 2026 */
+#adminImportarPreviewModal .admin-import-preview-modal{display:flex;flex-direction:column;width:min(1060px,calc(100vw - 40px));max-width:1060px;height:min(90dvh,1000px);max-height:min(90dvh,1000px);padding:0;overflow:hidden;border-radius:22px;background:#fff;color:#101828;box-shadow:0 30px 95px #10182840}
+.admin-import-dialog-header{position:relative;display:flex;align-items:center;gap:24px;padding:32px 34px 24px;flex-shrink:0;background:#fff}
+.admin-import-brand-icon{width:76px;height:76px;flex:0 0 76px;display:grid;place-items:center;border-radius:16px;background:#eaf8f2;color:#087c4a}
+.admin-import-brand-icon svg{width:47px;height:47px}
+.admin-import-dialog-heading{min-width:0;flex:1}
+.admin-import-preview-modal .modal-kicker{margin:0 0 7px;color:#667085;font-size:.8rem;letter-spacing:.055em;font-weight:700}
+.admin-import-preview-modal h2{font-size:clamp(1.5rem,2.3vw,2rem);letter-spacing:-.04em;font-weight:850;margin:0}
+.admin-import-preview-modal .admin-import-preview-file{border:0;padding:0;margin:8px 0 0;color:#58657b;font-size:.94rem;font-weight:500}
+.admin-import-dialog-header .modal-close{position:absolute;top:13px;right:14px;width:40px;height:40px;border-radius:50%;background:#f4f6fa;color:#344054}
+.admin-import-dialog-header .admin-import-validations{display:block;margin:0 30px 0 0;flex:0 0 285px}
+.admin-import-dialog-header .admin-import-validation{display:flex;align-items:center;gap:13px;min-height:76px;border:1px solid #d2eadd;border-radius:14px;background:#eaf8f2;padding:14px 16px;color:#087849}
+.admin-import-dialog-header .admin-import-validation.error{background:#fff0f1;border-color:#f5cbd1;color:#b42338}
+.admin-import-dialog-header .admin-import-validation>span{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:50%;background:#11875b;color:#fff;font-size:1.25rem;font-weight:800}
+.admin-import-dialog-header .admin-import-validation.error>span{background:#d92d48}
+.admin-import-dialog-header .admin-import-validation strong{display:block;font-size:.96rem}
+.admin-import-dialog-header .admin-import-validation small{display:block;margin-top:4px;color:#526578;font-size:.76rem;line-height:1.4;font-weight:450}
+.admin-import-dialog-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 34px 22px}
+.admin-import-preview-modal .admin-import-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 26px}
+.admin-import-preview-modal .admin-import-preview-grid>div{display:flex;align-items:center;gap:16px;min-width:0;min-height:116px;padding:18px;border-radius:14px;border:1px solid #d9e8f8;background:#f0f7ff}
+.admin-import-preview-modal .admin-import-preview-grid>.admin-import-stat-total{background:#f6f3ff;border-color:#e8e2ff}
+.admin-import-preview-modal .admin-import-preview-grid>.admin-import-stat-rubros{background:#f0faf6;border-color:#d7f0e3}
+.admin-import-stat-icon{width:47px;height:47px;flex:0 0 47px;display:grid!important;place-items:center;border-radius:50%;background:#dceeff;color:#177ee8;font-size:1.5rem!important;font-weight:850!important}
+.admin-import-stat-total .admin-import-stat-icon{background:#eae4ff;color:#6845e6}
+.admin-import-stat-rubros .admin-import-stat-icon{background:#d7f3e6;color:#0b9460}
+.admin-import-preview-modal .admin-import-preview-grid strong{font-size:1.65rem;line-height:1.1;margin:0 0 5px;color:#111827}
+.admin-import-preview-modal .admin-import-preview-grid div>div>span{font-size:.83rem;color:#25334a;font-weight:650}
+.admin-import-preview-modal .admin-import-preview-grid small{display:block;margin-top:4px;font-size:.7rem;color:#697586}
+.admin-import-issues-section{padding-top:22px;border-top:1px solid #e5eaf0}
+.admin-import-issues-head{margin:0 0 18px}
+.admin-import-issues-head h3{font-size:1.18rem}
+.admin-import-issues-head p{font-size:.85rem}
+.admin-import-search{display:flex;align-items:center;gap:9px;min-width:260px;border:1px solid #d5dce7;border-radius:12px;padding:0 12px;background:#f8fafc;color:#667085}
+.admin-import-search span{font-size:1.55rem}
+.admin-import-issues-head .admin-import-search input{border:0;outline:0;box-shadow:none!important;background:transparent;padding:13px 2px;width:100%;font-size:.85rem}
+.admin-import-issues{gap:12px}
+.admin-import-issue{border-radius:13px;border-color:#e1e6ee}
+.admin-import-issue summary{padding:17px 18px;gap:14px}
+.admin-import-issue-symbol{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:50%;background:#fff0df;color:#ed8c15;font-size:1.05rem;font-weight:850}
+.admin-import-issue[data-categoria="duplicados"] .admin-import-issue-symbol{background:#ffe8ed;color:#e02e4c}
+.admin-import-issue-title{font-size:.95rem}
+.admin-import-issue-title small{font-size:.78rem}
+.admin-import-issue summary b{border-radius:18px;font-size:.8rem}
+.admin-import-issue[open]{border-color:#f3cdd4}
+.admin-import-issue[open] summary{background:#fff8f9}
+.admin-import-table-scroll{max-height:none;overflow-x:auto;overflow-y:visible}
+.admin-import-issue table{font-size:.82rem;min-width:650px}
+.admin-import-issue th{position:static;background:#f5f7fa}
+.admin-import-issue th,.admin-import-issue td{padding:12px 14px}
+.admin-import-preview-modal .admin-import-safe,.admin-import-preview-modal .admin-import-replace{margin-top:16px;padding:16px 18px;border-radius:12px}
+.admin-import-preview-modal .admin-import-safe{background:#effaf5;border-color:#cfeadb}
+.admin-import-preview-modal .admin-import-replace{background:#fff7f8;border-color:#f5d5db}
+.admin-import-preview-modal .admin-import-footer{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:nowrap;margin:0;padding:17px 34px;background:#fff;border-top:1px solid #e6eaf0}
+.admin-import-footer-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.admin-import-footer .save-btn{margin-left:0;min-width:200px;background:#f32249!important;color:#fff!important}
+.admin-import-footer button{min-height:46px;padding:11px 19px;font-size:.86rem}
+.admin-import-footer .admin-import-cancel{min-width:130px;background:#f6f7fa}
+html[data-theme="dark"] #adminImportarPreviewModal .admin-import-preview-modal,html[data-theme="dark"] .admin-import-dialog-header,html[data-theme="dark"] .admin-import-preview-modal .admin-import-footer{background:#172334;color:#f4f6fa}
+html[data-theme="dark"] .admin-import-issues-section{border-color:#364458}
+html[data-theme="dark"] .admin-import-search{background:#243448;border-color:#425269}
+html[data-theme="dark"] .admin-import-preview-modal .admin-import-preview-grid>div{background:#243448;border-color:#425269}
+html[data-theme="dark"] .admin-import-preview-modal .admin-import-preview-grid strong,html[data-theme="dark"] .admin-import-preview-modal .admin-import-preview-grid div>div>span{color:#f4f6fa}
+@media(max-width:760px){#adminImportarPreviewModal .admin-import-preview-modal{width:calc(100vw - 14px);height:calc(100dvh - 14px);max-height:calc(100dvh - 14px);border-radius:16px}.admin-import-dialog-header{padding:24px 18px 16px;gap:12px;flex-wrap:wrap}.admin-import-brand-icon{width:48px;height:48px;flex-basis:48px}.admin-import-brand-icon svg{width:32px;height:32px}.admin-import-dialog-header .admin-import-validations{flex-basis:100%;margin:0}.admin-import-dialog-header .admin-import-validation{min-height:54px}.admin-import-dialog-body{padding:0 16px 16px}.admin-import-preview-modal .admin-import-preview-grid{grid-template-columns:1fr;gap:8px}.admin-import-preview-modal .admin-import-preview-grid>div{min-height:72px;padding:10px 14px}.admin-import-issues-head{flex-direction:column;align-items:stretch}.admin-import-search{min-width:0}.admin-import-preview-modal .admin-import-footer{padding:12px 16px;flex-wrap:wrap}.admin-import-footer-right{width:100%;margin-left:0}.admin-import-footer-right button{flex:1;min-width:0!important}.admin-import-download{width:100%}}
+
+/* Importación: íconos vectoriales y botones de detalle (2026-10-09) */
+#adminImportarPreviewModal .admin-import-stat-icon svg{display:block;width:25px;height:25px;flex:none}
+#adminImportarPreviewModal .admin-import-issue summary{cursor:pointer}
+#adminImportarPreviewModal .admin-import-chevron{display:none}
+#adminImportarPreviewModal .admin-import-detail-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:108px;min-height:36px;padding:7px 12px;border:1px solid #d9e1ec;border-radius:9px;background:#fff;color:#344054;font-size:.79rem;font-weight:750;line-height:1.2;white-space:nowrap;transition:background .15s,border-color .15s}
+#adminImportarPreviewModal .admin-import-issue summary:hover .admin-import-detail-button{background:#f2f6fb;border-color:#b9c9dc}
+#adminImportarPreviewModal .admin-import-detail-open{display:none}
+#adminImportarPreviewModal .admin-import-issue[open] .admin-import-detail-open{display:inline}
+#adminImportarPreviewModal .admin-import-issue[open] .admin-import-detail-closed{display:none}
+#adminImportarPreviewModal .admin-import-issue summary:focus-visible{outline:2px solid #478cf0;outline-offset:-2px}
+html[data-theme="dark"] #adminImportarPreviewModal .admin-import-detail-button{background:#243448;color:#f4f6fa;border-color:#53657d}
+@media(max-width:480px){#adminImportarPreviewModal .admin-import-detail-button{min-width:96px;padding:7px 9px;font-size:.74rem}}
+
+/* Resultado de importación: resumen legible y detalles opcionales */
+.admin-import-status:has(.admin-import-result){margin-top:16px;min-height:0}
+.admin-import-result{border:1px solid #dce7e3;border-radius:15px;padding:18px;background:#fff;color:#1e293b;font-size:.88rem;line-height:1.5}
+.admin-import-result-head{display:flex;align-items:flex-start;gap:12px}
+.admin-import-result-check{display:grid!important;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;background:#e4f8ec;color:#07864c;font-size:1.2rem;font-weight:800}
+.admin-import-result-head strong{color:#12263a;font-size:1rem;margin:0}
+.admin-import-result-head p{margin:3px 0 0;color:#64748b}
+.admin-import-result-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.admin-import-result-metrics>div{background:#f6f8fb;border:1px solid #e8edf3;border-radius:11px;padding:13px 15px}
+.admin-import-result-metrics strong{font-size:1.4rem;line-height:1.15;color:#17263d;margin:0}
+.admin-import-result-metrics span{margin-top:4px;color:#64748b;font-size:.8rem}
+.admin-import-result-details{border-top:1px solid #e8edf3;padding-top:13px}
+.admin-import-result-details summary{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;list-style:none}
+.admin-import-result-details summary::-webkit-details-marker{display:none}
+.admin-import-result-details summary>span:first-child{min-width:0}
+.admin-import-result-details summary strong{color:#25354b;font-size:.9rem}
+.admin-import-result-details summary small{display:block;color:#64748b;font-size:.78rem;margin-top:3px;line-height:1.5}
+.admin-import-result-toggle{display:inline-flex!important;align-items:center;justify-content:center;flex-shrink:0;min-width:104px;padding:8px 11px;border:1px solid #d7e0ec;border-radius:9px;color:#344054;font-weight:700;font-size:.8rem}
+.admin-import-result-hide,.admin-import-result-details[open] .admin-import-result-show{display:none!important}
+.admin-import-result-details[open] .admin-import-result-hide{display:inline!important}
+.admin-import-result-details ul{margin:14px 0 0;padding:12px 14px 12px 30px;border-radius:10px;background:#f8fafc;color:#475569;font-size:.82rem}
+.admin-import-result-details li+li{margin-top:6px}
+.admin-import-result-protected{display:flex;gap:8px;align-items:flex-start;margin-top:15px;padding:12px 13px;border-radius:10px;background:#edf9f2;color:#18764a;font-size:.81rem;font-weight:600}
+.admin-import-result-protected span{display:inline!important;font-weight:800}
+@media(max-width:520px){.admin-import-result{padding:13px}.admin-import-result-metrics{gap:7px}.admin-import-result-metrics>div{padding:10px}.admin-import-result-details summary{align-items:flex-start}.admin-import-result-toggle{min-width:90px}}
+html[data-theme="dark"] .admin-import-result{background:#1e293b;border-color:#3b4d61;color:#e2e8f0}
+html[data-theme="dark"] .admin-import-result-head strong,html[data-theme="dark"] .admin-import-result-metrics strong,html[data-theme="dark"] .admin-import-result-details summary strong{color:#f1f5f9}
+html[data-theme="dark"] .admin-import-result-metrics>div,html[data-theme="dark"] .admin-import-result-details ul{background:#263449;border-color:#3b4d61;color:#cbd5e1}
