@@ -289,7 +289,7 @@ async function actualizarBandejaFacturas(){
       const descripcion = x.estado === "listo" ? "Lista para revisar" : x.estado === "procesando" ? "Analizando…" : x.estado === "en_cola" ? "En cola" : "Error: " + escaparLote(x.error || "No se pudo leer");
       const revisar = x.estado === "listo" ? `<button type="button" data-lote-revisar="${id}">Revisar</button>` : "";
       const reintentar = x.estado === "error" ? `<button type="button" data-lote-reintentar="${id}">Reintentar</button>` : "";
-      return `<div class="compras-lote-fila"><div><strong>${escaparLote(x.nombre)}</strong><small>${escaparLote(x.factura?.proveedor || "")} ${escaparLote(x.factura?.numero || "")} · ${descripcion}</small></div><div class="compras-lote-acciones">${revisar}${reintentar}<button type="button" data-lote-quitar="${id}">Quitar</button></div></div>`;
+      return `<div class="compras-lote-fila${String(x.id)===String(facturaPendienteId)?" is-selected":""}"><div><strong>${escaparLote(x.nombre)}</strong><small>${escaparLote(x.factura?.proveedor || "")} ${escaparLote(x.factura?.numero || "")} · ${descripcion}</small></div><div class="compras-lote-acciones">${revisar}${reintentar}<button type="button" data-lote-quitar="${id}">Quitar</button></div></div>`;
     }).join("") : '<p class="compras-lote-vacio">Todavía no hay facturas pendientes.</p>';
   }catch(e){estado.textContent=`No se pudo consultar la bandeja: ${e.message}`;}
 }
@@ -320,8 +320,22 @@ async function accionPendiente(e){
     const item=colaPendientesActual.find(x=>x.id===id);if(!item?.factura)return;
     if(facturaPendienteId && facturaPendienteId!==id){const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Cambiar factura",message:"Los cambios no guardados de la factura actual se perderán. ¿Continuar?",confirmText:"Continuar",cancelText:"Cancelar"}):confirm("¿Descartar cambios no guardados?");if(!ok)return;}
     resetForm();facturaPendienteId=id;aplicarFacturaExtraida(item.factura);
+    // Cargar la vista original desde el servidor, sin volver a analizarla con IA.
+    const idVista=id;
+    try{
+      const respuesta=await fetch(`${API_BASE_URL}/admin/compras/pendientes/${encodeURIComponent(idVista)}/archivo`,{cache:"no-store"});
+      if(!respuesta.ok){const error=await respuesta.json().catch(()=>({}));throw new Error(error.mensaje||`HTTP ${respuesta.status}`);}
+      const blob=await respuesta.blob();
+      if(facturaPendienteId===idVista){
+        const archivo=new File([blob],item.nombre||"factura",{type:blob.type||"image/jpeg"});
+        const detectar=$("comprasAutoDetectar"),previo=detectar?.checked;
+        if(detectar)detectar.checked=false;
+        try{setArchivo(archivo);}finally{if(detectar)detectar.checked=previo;}
+      }
+    }catch(error){console.warn("No se pudo recuperar la vista de la factura",error);$("comprasLoteEstado").textContent=`Revisando ${item.nombre}. Imagen original no disponible: ${error.message}`;}
+    await actualizarBandejaFacturas();
     mostrarVistaCompras("editor");$("comprasProveedor")?.focus();
-    $("comprasLoteEstado").textContent=`Revisando ${item.nombre}. Guardá la factura para quitarla de pendientes.`;
+    if(!$("comprasLoteEstado").textContent.includes("Imagen original no disponible"))$("comprasLoteEstado").textContent=`Revisando ${item.nombre}. Guardá la factura para quitarla de pendientes.`;
     return;
   }
   if(btn.dataset.loteQuitar){

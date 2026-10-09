@@ -16710,3 +16710,8 @@ html[data-theme="dark"] .admin-import-result-metrics>div,html[data-theme="dark"]
 #adminTab-compras .compras-lote-acciones{display:flex;gap:7px;flex-wrap:wrap;flex-shrink:0}
 #adminTab-compras .compras-lote-vacio{font-size:13px;color:var(--text-muted,#64748b)}
 @media(max-width:650px){#adminTab-compras .compras-lote-fila{align-items:flex-start;flex-direction:column}#adminTab-compras .compras-lote-acciones{width:100%}}
+
+/* Factura actualmente seleccionada para revisión. */
+#adminTab-compras .compras-lote-fila.is-selected{background:rgba(29,78,216,.07);border-left:3px solid #2563eb;padding-left:12px;border-radius:8px}
+#adminTab-compras .compras-lote-fila.is-selected strong{color:#1d4ed8}
+html[data-theme="dark"] #adminTab-compras .compras-lote-fila.is-selected strong{color:#93c5fd}

@@ -35,6 +35,21 @@ function instalarColaFacturas({app, requerirAdministrador, analizarFacturaReques
       void procesar();
     }catch(e){errores(res,e);}
   });
+  // La imagen original solo se entrega a administradores al abrir un pendiente.
+  // No se incluye en el listado, para evitar transferir archivos grandes en cada actualización.
+  app.get('/admin/compras/pendientes/:id/archivo',requerirAdministrador,async(req,res)=>{
+    try{
+      await asegurar();
+      const r=await query(`SELECT tipo,base64,nombre FROM purchase_invoice_queue WHERE id=$1 AND estado='listo'`,[req.params.id]);
+      if(!r.rowCount)return res.status(404).json({mensaje:'Factura pendiente no encontrada'});
+      const archivo=r.rows[0];
+      if(!archivo.base64)return res.status(410).json({mensaje:'El archivo original no está disponible para este pendiente. Volvé a importarlo si necesitás verlo.'});
+      res.set('Cache-Control','no-store');
+      res.set('Content-Disposition','inline; filename="comprobante"');
+      res.type(archivo.tipo);
+      return res.send(Buffer.from(archivo.base64,'base64'));
+    }catch(e){errores(res,e);}
+  });
   app.delete('/admin/compras/pendientes/:id',requerirAdministrador,async(req,res)=>{
     try{await asegurar();const r=await query(`DELETE FROM purchase_invoice_queue WHERE id=$1 AND estado<>'procesando'`,[req.params.id]);if(!r.rowCount)return res.status(409).json({mensaje:'No se puede quitar una factura mientras se está analizando.'});res.json({ok:true});}
     catch(e){errores(res,e);}
@@ -60,7 +75,7 @@ function instalarColaFacturas({app, requerirAdministrador, analizarFacturaReques
             const res={status(n){status=n;return this;},json(data){if(status>=400||!data?.ok)reject(new Error(data?.error||data?.mensaje||'Error de lectura'));else resolve(data);return this;}};
             Promise.resolve(analizarFacturaRequest({body:{nombre:item.nombre,tipo:item.tipo,base64:item.base64,textoPdf:item.texto_pdf}},res)).catch(reject);
           });
-          await query(`UPDATE purchase_invoice_queue SET estado='listo',factura=$2::jsonb,base64=NULL,texto_pdf=NULL,error=NULL,actualizado=NOW() WHERE id=$1`,[item.id,JSON.stringify(resultado.factura)]);
+          await query(`UPDATE purchase_invoice_queue SET estado='listo',factura=$2::jsonb,texto_pdf=NULL,error=NULL,actualizado=NOW() WHERE id=$1`,[item.id,JSON.stringify(resultado.factura)]);
         }catch(e){
           await query(`UPDATE purchase_invoice_queue SET estado='error',error=$2,actualizado=NOW() WHERE id=$1`,[item.id,String(e.message||'Error de lectura').slice(0,500)]).catch(console.error);
         }
