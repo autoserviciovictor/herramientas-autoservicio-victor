@@ -1435,11 +1435,16 @@ function obtenerHistorialFiltrado() {
     if (usuario && claveUsuario !== usuario) return false;
     if (accion && accionNormalizada(item.accion) !== accion) return false;
     if (busqueda) {
+      // Buscar por nombre y EAN aun si el registro contiene guiones,
+      // puntuación o espacios diferentes a los ingresados por el usuario.
       const contenido = normalizarTexto(
         `${item.articulo || ""} ${item.codigo || ""}`,
-      );
-      const terminos = busqueda.split(/\s+/).filter(Boolean);
-      if (!terminos.every((termino) => contenido.includes(termino)))
+      ).replace(/[^a-z0-9]+/g, " ").trim();
+      const terminos = busqueda.replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(Boolean);
+      const codigo = String(item.codigo || "").replace(/\D/g, "");
+      const codigoBuscado = busqueda.replace(/\D/g, "");
+      const coincideCodigo = codigoBuscado.length >= 6 && codigo.includes(codigoBuscado);
+      if (!coincideCodigo && !terminos.every((termino) => contenido.includes(termino)))
         return false;
     }
     return true;
@@ -1574,7 +1579,11 @@ function renderHistorialVencimientos() {
   const filtrados = obtenerHistorialFiltrado();
   renderResumenHistorial(filtrados);
   if (!filtrados.length) {
-    cont.innerHTML = '<div class="empty-state admin-history-empty"><svg class="app-icon"><use href="#icon-clock"></use></svg><strong>Sin movimientos</strong><span>No hay movimientos que coincidan con los filtros.</span></div>';
+    const buscando = String($("adminHistorialBuscar")?.value || "").trim();
+    const explicacion = buscando
+      ? "No hay movimientos registrados que coincidan con esta búsqueda. El producto puede estar vigente aunque su alta sea anterior al historial; no se crean movimientos retroactivos."
+      : "No hay movimientos que coincidan con los filtros.";
+    cont.innerHTML = `<div class="empty-state admin-history-empty"><svg class="app-icon"><use href="#icon-clock"></use></svg><strong>Sin movimientos</strong><span>${explicacion}</span></div>`;
     botonMas?.classList.add("oculto");
     renderPaginacionHistorial(0, 1);
     return;
