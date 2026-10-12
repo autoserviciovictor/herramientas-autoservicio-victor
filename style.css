@@ -16715,3 +16715,55 @@ html[data-theme="dark"] .admin-import-result-metrics>div,html[data-theme="dark"]
 #adminTab-compras .compras-lote-fila.is-selected{background:rgba(29,78,216,.07);border-left:3px solid #2563eb;padding-left:12px;border-radius:8px}
 #adminTab-compras .compras-lote-fila.is-selected strong{color:#1d4ed8}
 html[data-theme="dark"] #adminTab-compras .compras-lote-fila.is-selected strong{color:#93c5fd}
+
+
+/* Compras / Importación masiva: tarjetas compactas en columnas.
+   Se limita a la bandeja; no afecta otras listas ni el procesamiento. */
+#adminTab-compras #comprasLoteLista {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  align-items:stretch;
+}
+#adminTab-compras #comprasLoteLista .compras-lote-fila {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:space-between;
+  min-width:0;
+  gap:14px;
+  padding:14px;
+  margin:0;
+  border:1px solid var(--border-color,#e2e8f0);
+  border-radius:12px;
+  background:var(--card-bg,#fff);
+}
+#adminTab-compras #comprasLoteLista .compras-lote-fila > div:first-child {width:100%;min-width:0}
+#adminTab-compras #comprasLoteLista .compras-lote-fila strong {font-size:13px}
+#adminTab-compras #comprasLoteLista .compras-lote-fila small {line-height:1.5}
+#adminTab-compras #comprasLoteLista .compras-lote-acciones {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  width:100%;
+}
+#adminTab-compras #comprasLoteLista .compras-lote-acciones button {min-width:0;flex:1 1 auto}
+#adminTab-compras #comprasLoteLista .compras-lote-fila.is-selected {
+  border:2px solid #2563eb;
+  padding:13px;
+  background:rgba(37,99,235,.06);
+}
+#adminTab-compras #comprasLoteLista .compras-lote-vacio {grid-column:1/-1}
+@media(max-width:1100px) {
+  #adminTab-compras #comprasLoteLista {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px) {
+  #adminTab-compras #comprasLoteLista {grid-template-columns:minmax(0,1fr)}
+  #adminTab-compras #comprasLoteLista .compras-lote-fila {flex-direction:column;align-items:stretch}
+}
+
+/* Bandeja masiva: visible solo en la vista Nueva Factura.
+   mostrarVistaCompras agrega esta clase tanto en Proveedores como en Historial. */
+#adminTab-compras.compras-mostrando-historial > .compras-lote-panel { display: none !important; }

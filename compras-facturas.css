@@ -1155,3 +1155,99 @@ html[data-theme="dark"] .compras-screen{--cf-text:#f2f5f8;--cf-muted:#a8b2c2;--c
 /* El diálogo compartido debe quedar sobre la ficha de proveedor (z-index: 99999).
    Se conserva la ficha abierta y sus valores mientras se muestra el aviso. */
 #appDialogOverlay.app-dialog-overlay { z-index: 100000; }
+
+/* Visor de facturas: ventana fija, scroll bidireccional y ajuste sin recortes. */
+#adminTab-compras .compras-preview-card.has-document .compras-preview-empty,
+#adminTab-compras .compras-preview-empty.compras-image-scroll-wrap,
+#adminTab-compras .compras-preview-empty.compras-pdf-canvas-wrap{
+  height:360px!important;min-height:360px!important;max-height:360px!important;
+  flex:0 0 360px!important;overflow:auto!important;
+  display:block!important;text-align:left!important;
+  align-items:initial!important;justify-content:initial!important;
+  overscroll-behavior:contain;box-sizing:border-box;
+}
+#adminTab-compras .compras-preview-empty.compras-image-scroll-wrap img{
+  display:block!important;flex:none!important;max-width:none!important;
+  max-height:none!important;min-width:0;min-height:0;
+  width:auto;height:auto;margin:0!important;object-fit:fill!important;
+}
+#adminTab-compras .compras-pdf-canvas-wrap .compras-pdf-canvas{
+  margin-left:0!important;margin-right:0!important;
+}
+
+/* Visor: mantener los controles visibles dentro de la tarjeta fija. */
+@media (min-width:1181px) {
+  #adminTab-compras .compras-main-grid > .compras-preview-card {
+    height:326px!important;min-height:326px!important;max-height:326px!important;
+    overflow:hidden!important;box-sizing:border-box!important;
+  }
+  #adminTab-compras .compras-preview-card.has-document .compras-preview-empty,
+  #adminTab-compras .compras-preview-empty.compras-image-scroll-wrap,
+  #adminTab-compras .compras-preview-empty.compras-pdf-canvas-wrap {
+    height:auto!important;min-height:0!important;max-height:none!important;
+    flex:1 1 0!important;overflow:auto!important;
+  }
+}
+#adminTab-compras .compras-preview-card > header,
+#adminTab-compras .compras-preview-actions {flex-shrink:0!important;}
+#adminTab-compras .compras-preview-card .compras-preview-actions {
+  display:flex!important;position:relative!important;z-index:1;
+}
+#adminTab-compras .compras-preview-card .compras-preview-empty {
+  width:100%!important;min-width:0!important;box-sizing:border-box!important;
+}
+@media (max-width:1180px) {
+  #adminTab-compras .compras-preview-card.has-document .compras-preview-empty,
+  #adminTab-compras .compras-preview-empty.compras-image-scroll-wrap,
+  #adminTab-compras .compras-preview-empty.compras-pdf-canvas-wrap {
+    height:360px!important;min-height:0!important;max-height:360px!important;
+    flex:0 0 360px!important;overflow:auto!important;
+  }
+}
+
+
+/* Historial de facturas: nueve columnas, sin scroll interno. */
+#adminTab-compras #comprasHistorial .compras-history-table,
+#adminTab-compras #comprasHistorial .compras-table-scroll {
+  overflow:visible!important;
+  max-height:none!important;
+}
+#adminTab-compras #comprasHistorial .compras-history-table table {
+  width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+  white-space:normal!important;
+}
+#adminTab-compras #comprasHistorial .compras-history-table th,
+#adminTab-compras #comprasHistorial .compras-history-table td {
+  padding:10px 5px!important;
+  font-size:10px;
+  overflow-wrap:anywhere;
+  vertical-align:middle;
+}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(1){width:13%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(2){width:9%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(3){width:20%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(4){width:10%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(5){width:9%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(6){width:9%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(7){width:12%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(8){width:10%}
+#adminTab-compras #comprasHistorial .compras-history-table th:nth-child(9){width:8%}
+#adminTab-compras #comprasHistorial .compras-history-actions {gap:3px;display:flex;flex-wrap:nowrap}
+#adminTab-compras #comprasHistorial .compras-history-actions .compras-row-action {width:27px;height:27px;min-width:0;flex:0 0 27px}
+#adminTab-compras #comprasHistorial .compras-history-actions svg {width:15px;height:15px}
+
+/* El visor vacío también comparte exactamente el alto de sus tarjetas vecinas. */
+@media (min-width:1181px) {
+  #adminTab-compras .compras-main-grid > .compras-preview-card {
+    min-width:0!important;
+  }
+  #adminTab-compras .compras-main-grid > .compras-preview-card > .compras-preview-empty {
+    flex:1 1 0!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:auto!important;
+  }
+}

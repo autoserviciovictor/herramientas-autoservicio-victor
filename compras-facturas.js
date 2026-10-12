@@ -303,9 +303,9 @@ async function subirLoteFacturas(archivos){
       const f=files[i];estado.textContent=`Enviando ${i+1} de ${files.length}: ${f.name}`;
       if(!/^(application\/pdf|image\/(jpeg|png))$/.test(f.type)||f.size>14*1024*1024){errores.push(`${f.name}: formato no admitido o supera 14 MB`);continue;}
       try{
-        const optimizado=await prepararArchivoAnalisis(f);
-        const [base64,textoPdf]=await Promise.all([archivoABase64(optimizado),extraerTextoPdfFactura(optimizado)]);
-        await apiCompras("/admin/compras/pendientes",{method:"POST",body:JSON.stringify({nombre:f.name,tipo:optimizado.type,base64,textoPdf})});
+        // Conservar los bytes originales en la bandeja: la vista previa debe permitir leer detalles al ampliar.
+        const [base64,textoPdf]=await Promise.all([archivoABase64(f),extraerTextoPdfFactura(f)]);
+        await apiCompras("/admin/compras/pendientes",{method:"POST",body:JSON.stringify({nombre:f.name,tipo:f.type,base64,textoPdf})});
         correctos++;
       }catch(e){errores.push(`${f.name}: ${e.message}`);}
       await actualizarBandejaFacturas();
@@ -502,7 +502,7 @@ async function dibujarPaginaPdf() {
   const baseViewport = page.getViewport({ scale: 1 });
   const anchoBase = Math.max(220, preview.clientWidth - 18);
   const escalaAjuste = anchoBase / baseViewport.width;
-  const escalaVisual = Math.max(.5, escalaAjuste * previewZoom);
+  const escalaVisual = Math.max(.1, escalaAjuste * previewZoom);
   const viewport = page.getViewport({ scale: escalaVisual });
 
   // El canvas se renderiza a resolución física real (DPR), no se agranda con CSS.
@@ -573,7 +573,7 @@ async function renderizarPdf(file) {
     pdfPaginaActual = page;
     const baseViewport = page.getViewport({ scale: 1 });
     const anchoDisponible = Math.max(220, preview.clientWidth - 18);
-    preview.style.height = `${Math.round(anchoDisponible * (baseViewport.height / baseViewport.width)) + 18}px`;
+    preview.style.height = "";
     preview.closest(".compras-preview-card")?.classList.add("has-document");
     await dibujarPaginaPdf();
   } catch (error) {
@@ -592,7 +592,7 @@ function setArchivo(file) {
   if (file.type === "application/pdf") {
     renderizarPdf(file);
   } else {
-    preview.className="compras-preview-empty";
+    preview.className="compras-preview-empty compras-image-scroll-wrap";
     preview.style.height = "";
     preview.closest(".compras-preview-card")?.classList.add("has-document");
     preview.innerHTML=`<img src="${previewUrl}" alt="Vista previa de factura">`;
@@ -600,7 +600,8 @@ function setArchivo(file) {
     img?.addEventListener("load", () => {
       if (!img.naturalWidth || archivoActual !== file) return;
       const anchoDisponible = Math.max(220, preview.clientWidth - 18);
-      preview.style.height = `${Math.round(anchoDisponible * (img.naturalHeight / img.naturalWidth)) + 18}px`;
+      preview.style.height = "";
+      aplicarZoomImagen(true);
     }, { once:true });
   }
   const dz=$("comprasDropzone");
@@ -612,6 +613,22 @@ function setArchivo(file) {
     setEstadoDropzoneFactura("uploaded", file);
   }
 }
+// Ajustar inicialmente el documento completo dentro del visor fijo. El zoom
+// modifica el tamaño renderizado a partir de la imagen original, nunca un thumbnail.
+function aplicarZoomImagen(restablecerScroll=false){
+  const preview=$("comprasPreview"), img=preview?.querySelector("img");
+  if(!preview||!img?.naturalWidth||!img.naturalHeight)return;
+  const disponibleAncho=Math.max(1,preview.clientWidth-4);
+  const disponibleAlto=Math.max(1,preview.clientHeight-4);
+  const ajuste=Math.min(disponibleAncho/img.naturalWidth,disponibleAlto/img.naturalHeight);
+  img.style.width=`${Math.round(img.naturalWidth*ajuste*previewZoom)}px`;
+  img.style.height=`${Math.round(img.naturalHeight*ajuste*previewZoom)}px`;
+  img.style.maxWidth="none";
+  img.style.maxHeight="none";
+  img.style.objectFit="fill";
+  img.style.transform="none";
+  if(restablecerScroll){preview.scrollTop=0;preview.scrollLeft=0;}
+}
 function ajustarZoom(delta=0, reset=false){
   previewZoom=reset?1:Math.min(3,Math.max(.5,previewZoom+delta));
   const preview=$("comprasPreview");
@@ -620,12 +637,7 @@ function ajustarZoom(delta=0, reset=false){
     return;
   }
   const img=preview?.querySelector("img");
-  if(img){
-    img.style.width=`${previewZoom * 100}%`;
-    img.style.height="auto";
-    img.style.maxWidth="none";
-    img.style.transform="none";
-  }
+  if(img) aplicarZoomImagen(reset);
 }
 function limpiarArchivo(soloArchivo=false){
   pdfRenderToken++; facturaAnalisisToken++; pdfDocumentoActual=null; pdfPaginaActual=null; archivoActual=null; if(previewUrl) URL.revokeObjectURL(previewUrl); previewUrl=""; previewZoom=1;
@@ -827,7 +839,7 @@ function renderHistorial(){
   const total=lista.reduce((s,f)=>s+numero(f.total),0);$("comprasHistCantidad").textContent=lista.length;$("comprasHistTotal").textContent=money(total);$("comprasHistPromedio").textContent=money(lista.length?total/lista.length:0);
   const mesActual=hoy().slice(0,7);$("comprasHistUltimoMes").textContent=money(todas.filter(f=>String(f.fecha||"").startsWith(mesActual)).reduce((s,f)=>s+numero(f.total),0));
   paginaHistorial=Math.min(paginaHistorial,Math.max(1,Math.ceil(lista.length/porPaginaCompras)));
-  const body=$("comprasHistBody");body.innerHTML=lista.slice((paginaHistorial-1)*porPaginaCompras,paginaHistorial*porPaginaCompras).map(f=>`<tr><td>${escaparHtml(f.creadoEn?new Date(f.creadoEn).toLocaleString("es-AR"):"—")}</td><td>${fechaCorta(f.fecha)}</td><td><strong>${escaparHtml(f.proveedor||"—")}</strong></td><td>${escaparHtml(f.comprobante||"—")}</td><td>${escaparHtml(f.numero||"—")}</td><td>${escaparHtml(f.puntoVenta||"—")}</td><td><span class="compras-fiscal-tag">${escaparHtml(f.condicionFiscal||"—")}</span></td><td><strong>${money(f.total)}</strong></td><td class="compras-note-cell" title="${escaparHtml(f.observaciones||"")}">${escaparHtml(f.observaciones||"—")}</td><td><div class="compras-history-actions"><button class="compras-row-action edit" type="button" data-edit="${escaparHtml(f.id)}" title="Editar factura" aria-label="Editar factura"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button class="compras-row-action danger" type="button" data-remove="${escaparHtml(f.id)}" title="Eliminar factura" aria-label="Eliminar factura"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button></div></td></tr>`).join("")||'<tr><td colspan="10" class="compras-history-empty">No hay facturas para los filtros seleccionados.</td></tr>';
+  const body=$("comprasHistBody");body.innerHTML=lista.slice((paginaHistorial-1)*porPaginaCompras,paginaHistorial*porPaginaCompras).map(f=>`<tr><td>${escaparHtml(f.creadoEn?new Date(f.creadoEn).toLocaleString("es-AR"):"—")}</td><td>${fechaCorta(f.fecha)}</td><td><strong>${escaparHtml(f.proveedor||"—")}</strong></td><td>${escaparHtml(f.comprobante||"—")}</td><td>${escaparHtml(f.numero||"—")}</td><td>${escaparHtml(f.puntoVenta||"—")}</td><td><span class="compras-fiscal-tag">${escaparHtml(f.condicionFiscal||"—")}</span></td><td><strong>${money(f.total)}</strong></td><td><div class="compras-history-actions"><button class="compras-row-action edit" type="button" data-edit="${escaparHtml(f.id)}" title="Editar factura" aria-label="Editar factura"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button class="compras-row-action danger" type="button" data-remove="${escaparHtml(f.id)}" title="Eliminar factura" aria-label="Eliminar factura"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button></div></td></tr>`).join("")||'<tr><td colspan="9" class="compras-history-empty">No hay facturas para los filtros seleccionados.</td></tr>';
   paginasCompras("comprasHistPaginas","comprasHistPaginacionInfo",lista.length,paginaHistorial,n=>{paginaHistorial=n;renderHistorial();});
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>cargarFacturaParaEditar(b.dataset.edit)));
   body.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",async()=>{const ok=window.AppDialog?.confirm?await window.AppDialog.confirm({title:"Eliminar factura",message:"¿Eliminar esta factura del historial?",confirmText:"Eliminar",cancelText:"Cancelar"}):confirm("¿Eliminar esta factura del historial?");if(!ok)return;try{await apiCompras(`/admin/compras/facturas/${encodeURIComponent(b.dataset.remove)}`,{method:"DELETE"});await guardarFacturas(facturas().filter(f=>String(f.id)!==b.dataset.remove));renderHistorial();actualizarResumen();}catch(error){console.error("No se pudo eliminar la factura",error);await avisarCompras("No se pudo eliminar", "No se pudo eliminar la factura.");}}));
@@ -1005,6 +1017,17 @@ function mostrarVistaCompras(vista="editor"){
   pantalla.scrollIntoView({block:"start",behavior:"instant"});
 }
 async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompras(); $("comprasLoteArchivos")?.addEventListener("change",e=>{const fs=[...e.target.files];e.target.value="";void subirLoteFacturas(fs);});$("comprasLoteLista")?.addEventListener("click",e=>{void accionPendiente(e).catch(error=>avisarCompras("Pendientes",error.message));});void actualizarBandejaFacturas();setInterval(()=>{if(document.visibilityState==="visible"&&!cargaLoteEnCurso)void actualizarBandejaFacturas();},6000); $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
+  // Flecha superior: volver a Nueva Factura desde Historial o Proveedores.
+  $("adminHeaderBackBtn")?.addEventListener("click",(event)=>{
+    const compras=$("adminTab-compras");
+    if(!compras || compras.classList.contains("oculto"))return;
+    const enHistorial=!$("comprasHistorial")?.classList.contains("oculto");
+    const enProveedores=!$("comprasProveedoresVista")?.classList.contains("oculto");
+    if(!enHistorial&&!enProveedores)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    mostrarVistaCompras("editor");
+  },true);
   $("comprasProvNuevo")?.addEventListener("click",()=>abrirFichaProveedor());
   $("comprasFichaProveedorCerrar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
   $("comprasFichaProveedorCancelar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
@@ -1044,7 +1067,7 @@ async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompra
     });
     el.addEventListener("focus",()=>{ if (!String(el.value || "").trim()) el.value="$ 0"; });
     el.addEventListener("blur",()=>{ el.value=importeAR(el.value); });
-  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",(e)=>{e.preventDefault(); guardar();}); $("comprasCancelar")?.addEventListener("click",cancelarEdicionOLimpiar); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasNuevaFactura")?.addEventListener("click",()=>{resetForm();mostrarVistaCompras("editor");}); $("comprasVerProveedores")?.addEventListener("click",()=>mostrarVistaCompras("proveedores")); $("comprasProveedoresVolver")?.addEventListener("click",()=>mostrarVistaCompras("editor")); $("comprasProvBuscar")?.addEventListener("input",()=>{paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvLimpiar")?.addEventListener("click",()=>{$("comprasProvBuscar").value="";$("comprasProvFiscal").value="";$("comprasProvOrden").value="nombre";paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvCerrarDetalle")?.addEventListener("click",()=>$("comprasProvDetalle")?.classList.add("oculto")); $("comprasProvFiscal")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasProvOrden")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasHistProveedor")?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();});$("comprasHistBuscar")?.addEventListener("input",()=>{paginaHistorial=1;renderHistorial();}); $("comprasHistMes")?.addEventListener("change",renderHistorial); ["comprasHistTipo","comprasHistDesde","comprasHistHasta"].forEach(id=>$(id)?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();})); $("comprasHistLimpiar")?.addEventListener("click",()=>{["comprasHistBuscar","comprasHistTipo","comprasHistDesde","comprasHistHasta","comprasHistProveedor"].forEach(id=>{if($(id))$(id).value="";});renderHistorial();}); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
+  }); $("comprasComprobante")?.addEventListener("input",calcularTotales); $("comprasZoomOut")?.addEventListener("click",()=>ajustarZoom(-.15)); $("comprasZoomIn")?.addEventListener("click",()=>ajustarZoom(.15)); $("comprasPreviewReset")?.addEventListener("click",()=>ajustarZoom(0,true)); $("comprasQuitarArchivo")?.addEventListener("click",()=>resetForm()); $("comprasAdjuntoBtn")?.addEventListener("click",()=>$("comprasAdjunto")?.click()); $("comprasAdjunto")?.addEventListener("change",e=>{adjuntos.push(...e.target.files);renderAdjuntos();e.target.value=""}); $("comprasGuardar")?.addEventListener("click",(e)=>{e.preventDefault(); guardar();}); $("comprasCancelar")?.addEventListener("click",cancelarEdicionOLimpiar); $("comprasVerHistorial")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasVerTodasInferior")?.addEventListener("click",()=>mostrarVistaCompras("historial")); $("comprasVerProveedores")?.addEventListener("click",()=>mostrarVistaCompras("proveedores")); $("comprasProvBuscar")?.addEventListener("input",()=>{paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvLimpiar")?.addEventListener("click",()=>{$("comprasProvBuscar").value="";$("comprasProvFiscal").value="";$("comprasProvOrden").value="nombre";paginaProveedores=1;$("comprasProvDetalle")?.classList.add("oculto");renderProveedores();}); $("comprasProvCerrarDetalle")?.addEventListener("click",()=>$("comprasProvDetalle")?.classList.add("oculto")); $("comprasProvFiscal")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasProvOrden")?.addEventListener("change",()=>{paginaProveedores=1;renderProveedores();});$("comprasHistProveedor")?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();});$("comprasHistBuscar")?.addEventListener("input",()=>{paginaHistorial=1;renderHistorial();}); $("comprasHistMes")?.addEventListener("change",renderHistorial); ["comprasHistTipo","comprasHistDesde","comprasHistHasta"].forEach(id=>$(id)?.addEventListener("change",()=>{paginaHistorial=1;renderHistorial();})); $("comprasHistLimpiar")?.addEventListener("click",()=>{["comprasHistBuscar","comprasHistTipo","comprasHistDesde","comprasHistHasta","comprasHistProveedor"].forEach(id=>{if($(id))$(id).value="";});renderHistorial();}); $("comprasObservaciones")?.addEventListener("input",e=>{const c=document.querySelector("#adminTab-compras .compras-char-count");if(c)c.textContent=`${e.target.value.length} / 500`;}); $("comprasNuevoProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus()); $("comprasBuscarProveedor")?.addEventListener("click",()=>$("comprasProveedor")?.focus());
 }
 window.ComprasFacturas={render(){actualizarResumen();renderItems();},actualizarResumen,limpiar:()=>resetForm()};
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
