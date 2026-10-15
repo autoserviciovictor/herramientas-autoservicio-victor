@@ -1532,8 +1532,8 @@ html[data-theme="dark"] #pantallaInicio .pro-home-task-sector .app-select-custom
     display: none;
   }
   #pantallaInicio .pro-home-task-sector .app-select-custom {
-    width: 120px;
-    min-width: 120px;
+    width: 100%;
+    min-width: 0;
   }
 }
 

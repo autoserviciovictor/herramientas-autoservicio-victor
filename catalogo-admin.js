@@ -250,6 +250,7 @@ async function cargarProductos({ conservarPagina = true } = {}) {
   if (estado.cargando) return;
   estado.cargando = true;
   if (!conservarPagina) estado.pagina = 1;
+  actualizarBotonesPublicacionMasiva();
   const body = $("catalogProductosBody");
   if (body) body.innerHTML = '<tr><td colspan="6"><div class="catalog-loading">Cargando productos…</div></td></tr>';
   try {
@@ -904,11 +905,11 @@ async function quitarImagenActual() {
 }
 
 function alcancePublicacionMasiva() {
-  const valor = $("catalogFiltroRubro")?.value || "todos";
-  if (valor === "sin-rubro") return { rubroId: null, nombre: "productos sin rubro", sinRubro: true };
-  if (valor === "todos") return { rubroId: null, nombre: "todo el catálogo", sinRubro: false };
-  const rubro = estado.rubros.find((r) => String(r.id) === String(valor));
-  return { rubroId: Number(valor), nombre: rubro?.nombre || "este rubro", sinRubro: false };
+  const filtros = parametrosProductos();
+  const rubro = filtros.get("rubro") || "todos";
+  const activos = ["q", "rubro", "estado", "imagen"].some((clave) => filtros.has(clave));
+  const nombreRubro = rubro === "sin-rubro" ? "productos sin rubro" : estado.rubros.find((r) => String(r.id) === rubro)?.nombre;
+  return { filtros, activos, sinRubro: rubro === "sin-rubro", nombre: activos ? (nombreRubro ? `los productos filtrados (${nombreRubro})` : "los productos que coinciden con los filtros") : "todo el catálogo" };
 }
 
 function actualizarBotonesPublicacionMasiva() {
@@ -919,12 +920,12 @@ function actualizarBotonesPublicacionMasiva() {
     publicar.disabled = alcance.sinRubro;
     publicar.title = alcance.sinRubro ? "Asigná un rubro antes de publicar estos productos" : `Publicar ${alcance.nombre}`;
     const span = publicar.querySelector("span");
-    if (span) span.textContent = alcance.rubroId ? "Publicar rubro" : "Publicar todos";
+    if (span) span.textContent = alcance.activos ? "Publicar filtrados" : "Publicar todos";
   }
   if (ocultar) {
     ocultar.title = `Ocultar ${alcance.nombre}`;
     const span = ocultar.querySelector("span");
-    if (span) span.textContent = alcance.rubroId ? "Ocultar rubro" : "Ocultar todos";
+    if (span) span.textContent = alcance.activos ? "Ocultar filtrados" : "Ocultar todos";
   }
 }
 
@@ -934,24 +935,31 @@ async function cambiarVisibilidadMasiva(visible) {
     mensaje("Los productos sin rubro no se pueden publicar. Asignales un rubro primero.");
     return;
   }
-  const accion = visible ? "publicar" : "ocultar";
-  const confirmar = await window.AutoservicioDialog?.confirm?.({
-    title: visible ? "Publicar productos" : "Ocultar productos",
-    message: `¿Querés ${accion} ${alcance.nombre}? Esta acción afecta a todos los productos de ese alcance, no solo a la página visible.`,
-    confirmarTexto: visible ? "Publicar" : "Ocultar",
-    cancelarTexto: "Cancelar",
-    danger: !visible,
-  });
-  if (!confirmar) return;
-
   const publicar = $("catalogBtnPublicarMasivo");
   const ocultar = $("catalogBtnOcultarMasivo");
   if (publicar) publicar.disabled = true;
   if (ocultar) ocultar.disabled = true;
   try {
+    // Consultar el total real en el servidor, no solamente la página visible.
+    const conteoParams = new URLSearchParams(alcance.filtros);
+    conteoParams.set("pagina", "1");
+    conteoParams.set("limite", "10");
+    const conteo = await api(`/admin/catalogo/productos?${conteoParams}`);
+    const total = Number(conteo.total) || 0;
+    if (!total) return mensaje("No hay productos que coincidan con los filtros seleccionados.");
+    const accion = visible ? "publicar" : "ocultar";
+    const confirmar = await window.AutoservicioDialog?.confirm?.({
+      title: visible ? "Publicar productos" : "Ocultar productos",
+      message: `¿Querés ${accion} ${numero(total)} productos de ${alcance.nombre}? Se incluyen todas las páginas del resultado. Los productos sin rubro no pueden publicarse.`,
+      confirmarTexto: visible ? "Publicar" : "Ocultar",
+      cancelarTexto: "Cancelar",
+      danger: !visible,
+    });
+    if (!confirmar) return;
+    const filtros = alcance.filtros;
     const data = await api("/admin/catalogo/productos/visibilidad-masiva", {
       method: "POST",
-      body: JSON.stringify({ visible, rubroId: alcance.rubroId }),
+      body: JSON.stringify({ visible, q: filtros.get("q") || "", rubro: filtros.get("rubro") || "todos", estado: filtros.get("estado") || "todos", imagen: filtros.get("imagen") || "todos" }),
     });
     await Promise.all([cargarEstado(), cargarRubros(), cargarProductos({ conservarPagina: false })]);
     const omitidos = Number(data.omitidosSinRubro) || 0;

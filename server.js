@@ -2042,6 +2042,10 @@ app.post("/admin/catalogo/productos/visibilidad-masiva", requerirAdministrador, 
     const resultado = await actualizarVisibilidadMasivaCatalogoAdminDb({
       visible: req.body?.visible,
       rubroId: req.body?.rubroId ?? null,
+      busqueda: req.body?.q,
+      rubro: req.body?.rubro,
+      estado: req.body?.estado,
+      estadoImagen: req.body?.imagen,
     });
     res.json({ ok: true, ...resultado });
   } catch (error) {

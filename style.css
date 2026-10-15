@@ -16817,9 +16817,11 @@ html[data-theme="dark"] #adminTab-compras .compras-lote-fila.is-selected strong{
 #pantallaInicio .pro-home-task-sector{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
 #pantallaInicio .pro-home-task-sector>span{flex:none}
 #pantallaInicio .pro-home-task-sector .app-select-custom{flex:0 1 190px;width:190px;min-width:0;max-width:100%}
-#pantallaInicio .pro-home-task-sector .app-select-custom__trigger{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0;min-height:36px;white-space:nowrap}
+#pantallaInicio .pro-home-task-sector .app-select-custom__trigger{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0;min-height:36px;padding-right:12px;white-space:nowrap}
 #pantallaInicio .pro-home-task-sector .app-select-custom__value{display:block;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
-#pantallaInicio .pro-home-task-sector .app-select-custom__chevron{flex:none}
+#pantallaInicio .pro-home-task-sector .app-select-custom__chevron{display:block;flex:0 0 12px;width:12px;height:12px;min-width:12px;min-height:12px;visibility:visible;opacity:1;color:#52627c}
+#pantallaInicio .pro-home-task-sector .app-select-custom__menu{box-sizing:border-box;min-width:100%;padding:6px}
+#pantallaInicio .pro-home-task-sector .app-select-custom__option{box-sizing:border-box;width:100%;margin:0;text-align:left;border-radius:8px}
 #pantallaInicio .pro-home-task-sector select{box-sizing:border-box;width:100%;min-width:0;max-width:100%;white-space:nowrap;font-size:13px}
 #pantallaInicio .pro-home-task-sector-label{display:inline-flex;padding:6px 10px;border-radius:20px;background:#edf4ff;color:#156cf0;font-size:12px;font-weight:700}
 #pantallaInicio .victor-home-task-list{max-height:168px;min-height:100px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
@@ -16848,10 +16850,92 @@ html[data-theme="dark"] #adminTab-compras .compras-lote-fila.is-selected strong{
 #pantallaInicio .victor-home-news-list p::before{content:"";position:absolute;left:2px;top:5px;width:7px;height:7px;border-radius:50%;background:#f21b42}
 #pantallaInicio [data-victor-module].oculto{display:none!important}
 @media(max-width:1050px){#pantallaInicio .victor-home-middle{grid-template-columns:1fr}#pantallaInicio .victor-home-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#pantallaInicio .victor-home-shortcut{gap:10px;padding:11px}#pantallaInicio .victor-home-shortcut-icon{width:55px;height:55px}#pantallaInicio .victor-home-shortcut strong{font-size:14px}}
-@media(max-width:760px){#pantallaInicio .victor-home-shortcut-grid{grid-template-columns:1fr}#pantallaInicio .victor-home-hero-brand{flex-basis:150px}#pantallaInicio .victor-home-hero-brand strong{font-size:46px}#pantallaInicio .victor-home-hero-brand small{font-size:13px}}
-@media(max-width:600px){#pantallaInicio.pro-dashboard{padding:12px 12px 90px!important}#pantallaInicio .victor-home-hero{min-height:115px;padding:22px}#pantallaInicio .victor-home-hero h1{font-size:25px}#pantallaInicio .victor-home-hero p{font-size:14px}#pantallaInicio .victor-home-hero-brand{display:none}#pantallaInicio .victor-home-panel{padding:14px}#pantallaInicio .victor-home-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#pantallaInicio .victor-home-summary-card{min-height:160px;padding:12px}#pantallaInicio .victor-home-shift-content{flex-wrap:wrap}#pantallaInicio .victor-home-shift-content button{width:100%}#pantallaInicio .victor-home-panel-title{flex-wrap:wrap}#pantallaInicio .pro-home-task-sector-control{max-width:100%}}
-
-@media(max-width:600px){#pantallaInicio .victor-home-bathroom{flex-wrap:wrap;padding:14px;gap:10px}#pantallaInicio .victor-home-bathroom-icon{width:54px;height:54px}#pantallaInicio .victor-home-bathroom-action{width:100%;text-align:center}#pantallaInicio .victor-home-summary{grid-template-columns:1fr}}
+/* Inicio móvil: diseño aprobado, aislado de la versión de escritorio. */
+@media (max-width:760px){
+  #pantallaInicio .victor-home-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  #pantallaInicio .victor-home-hero-brand{display:none}
+}
+@media (max-width:600px){
+  #pantallaInicio.pro-dashboard{padding:10px 10px 90px!important}
+  /* Bienvenida compacta en celulares: texto a la izquierda y franjas curvas a la derecha. */
+  #pantallaInicio .victor-home-hero{min-height:104px;box-sizing:border-box;padding:16px 14px;margin-bottom:10px;border:1px solid #ff9aaa;border-radius:12px;background:#fff;color:#14203a;isolation:isolate}
+  #pantallaInicio .victor-home-hero::after{z-index:-1;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20110%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22400%22%20height%3D%22110%22%20fill%3D%22%23ed0032%22%2F%3E%3Cpath%20d%3D%22M245%200%20Q302%2028%20312%20110%20H0%20V0Z%22%20fill%3D%22%23fa4266%22%2F%3E%3Cpath%20d%3D%22M213%200%20Q273%2027%20282%20110%20H0%20V0Z%22%20fill%3D%22%23ff91a5%22%2F%3E%3Cpath%20d%3D%22M182%200%20Q244%2028%20252%20110%20H0%20V0Z%22%20fill%3D%22%23ffc6d1%22%2F%3E%3Cpath%20d%3D%22M151%200%20Q213%2028%20222%20110%20H0%20V0Z%22%20fill%3D%22%23ffe8ed%22%2F%3E%3Cpath%20d%3D%22M120%200%20Q183%2028%20192%20110%20H0%20V0Z%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E") center/100% 100% no-repeat}
+  #pantallaInicio .victor-home-hero-copy{position:relative;z-index:1;flex:0 0 58%;width:58%;max-width:58%;min-width:0}
+  #pantallaInicio .victor-home-hero h1{font-size:clamp(19px,5vw,23px);line-height:1.12;color:#14203a;letter-spacing:-.4px;margin:0 0 3px;max-width:230px}
+  #pantallaInicio .victor-home-hero h1 #proWelcomeName{color:#ee113a;display:inline;white-space:normal}
+  #pantallaInicio .victor-home-hero h1 .victor-home-welcome-exclamation{color:#ee113a;display:inline;white-space:nowrap}
+  #pantallaInicio .victor-home-hero h1{max-width:210px}
+  #pantallaInicio .victor-home-hero h1 #proWelcomeName::before{content:"";display:block}
+  #pantallaInicio .victor-home-hero p{font-size:11px;color:#64728b;line-height:1.3}
+  #pantallaInicio .victor-home-panel{padding:11px;border-radius:13px}
+  #pantallaInicio .victor-home-panel-title{flex-wrap:wrap;gap:6px;margin-bottom:9px}
+  #pantallaInicio .victor-home-panel-title h2{font-size:18px;gap:7px}
+  #pantallaInicio .victor-home-panel-title p{font-size:12px;line-height:1.35}
+  #pantallaInicio .victor-home-shortcuts .victor-home-panel-title p{display:none}
+  #pantallaInicio .victor-home-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  #pantallaInicio .victor-home-shortcut{min-height:72px;padding:7px 5px;gap:5px;border-radius:11px}
+  #pantallaInicio .victor-home-shortcut-icon{width:35px;height:39px;border-radius:8px;flex-shrink:0}
+  #pantallaInicio .victor-home-shortcut-icon .app-icon{width:25px;height:25px}
+  #pantallaInicio .victor-home-shortcut strong{font-size:clamp(12px,3.15vw,14px);line-height:1.25}
+  #pantallaInicio .victor-home-shortcut small{display:none}
+  #pantallaInicio .victor-home-shortcut>b{display:none}
+  #pantallaInicio .victor-home-shortcut>span:nth-child(2){flex:1;min-width:0}
+  #pantallaInicio .victor-home-shortcut strong{overflow-wrap:normal;word-break:normal;hyphens:none}
+  #pantallaInicio .victor-home-middle{gap:9px;margin-top:9px}
+  #pantallaInicio .victor-home-left-stack{gap:9px}
+  #pantallaInicio .victor-home-bathroom{flex-wrap:nowrap;gap:8px;min-height:75px;padding:10px;border-radius:12px}
+  #pantallaInicio .victor-home-bathroom-icon{width:42px;height:42px;border-radius:9px}
+  #pantallaInicio .victor-home-bathroom-icon .app-icon{width:28px;height:28px}
+  #pantallaInicio .victor-home-bathroom-copy{gap:3px;min-width:0}
+  #pantallaInicio .victor-home-bathroom-copy strong{font-size:clamp(14px,3.7vw,18px)}
+  #pantallaInicio .victor-home-bathroom-copy small{font-size:clamp(12px,3.1vw,14px);line-height:1.3}
+  #pantallaInicio .victor-home-bathroom-action{width:auto;flex:0 0 auto;padding:10px 8px;font-size:12px;white-space:nowrap}
+  #pantallaInicio .victor-home-shift{display:flex;align-items:center;gap:8px;min-height:66px}
+  #pantallaInicio .victor-home-shift .victor-home-panel-title{flex:0 1 auto;min-width:0;margin:0}
+  #pantallaInicio .victor-home-shift .victor-home-panel-title p{display:none}
+  #pantallaInicio .victor-home-shift-content{flex:1 1 auto;min-width:0;min-height:0;padding:0;background:transparent;gap:0;justify-content:flex-end}
+  #pantallaInicio .victor-home-shift-content .victor-home-shortcut-icon{display:none}
+  #pantallaInicio .victor-home-shift-content>div{display:block;min-width:0;text-align:right}
+  #pantallaInicio .victor-home-shift-content strong{font-size:14px;margin:0;white-space:normal;line-height:1.25}
+  #pantallaInicio .victor-home-shift-content>div small{display:none}
+  #pantallaInicio .victor-home-shift-content button{display:none}
+  #pantallaInicio .victor-home-tasks{min-height:0}
+  #pantallaInicio .victor-home-tasks .victor-home-panel-title{display:flex;align-items:stretch;flex-direction:column;gap:10px}
+  #pantallaInicio .victor-home-tasks .victor-home-panel-title>div:first-child{min-width:0;flex:1 1 auto}
+  #pantallaInicio .victor-home-tasks .victor-home-panel-title h2{margin-bottom:0}
+  #pantallaInicio .victor-home-tasks .victor-home-panel-title p{display:none}
+  #pantallaInicio .pro-home-task-sector-control{width:100%;max-width:100%;flex:0 0 auto;margin:0}
+  #pantallaInicio .pro-home-task-sector{width:100%;max-width:100%;gap:0}
+  #pantallaInicio .pro-home-task-sector>span{display:none}
+  #pantallaInicio .pro-home-task-sector .app-select-custom{width:100%;min-width:0;flex:1 1 auto;max-width:100%}
+  #pantallaInicio .pro-home-task-sector .app-select-custom__value{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;font-size:13px;letter-spacing:-.15px;line-height:1.35}
+  #pantallaInicio .pro-home-task-sector .app-select-custom__trigger{height:auto;min-height:36px;padding-top:7px;padding-bottom:7px}
+  #pantallaInicio .pro-home-task-sector select{font-size:14px}
+  #pantallaInicio .pro-home-task-sector-label{font-size:14px}
+  #pantallaInicio .victor-home-task-list{min-height:48px;max-height:175px}
+  #pantallaInicio .victor-home-tasks-footer button{display:none}
+  #pantallaInicio .victor-home-tasks-footer span{font-size:12px}
+  #pantallaInicio .victor-home-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}
+  #pantallaInicio .victor-home-summary-card{min-height:128px;padding:11px;gap:5px}
+  #pantallaInicio .victor-home-summary-card>strong{font-size:15px}
+  #pantallaInicio .victor-home-summary-card b{font-size:29px}
+  #pantallaInicio .victor-home-summary-card small{font-size:13px}
+  #pantallaInicio .victor-home-summary-icon{width:34px;height:34px}
+  #pantallaInicio .victor-home-summary-card>.victor-home-summary-link{display:none}
+  #pantallaInicio .victor-home-summary-card{cursor:pointer}
+  #pantallaInicio .victor-home-task-list{margin-top:4px}
+  #pantallaInicio .victor-home-summary-link{font-size:11px}
+  #pantallaInicio .victor-home-news{grid-column:1/-1;min-height:100px}
+  #pantallaInicio .victor-home-news-list p{font-size:13px}
+  #pantallaInicio .victor-home-news>.victor-home-summary-link{display:none}
+}
+@media (max-width:380px){
+  #pantallaInicio .victor-home-bathroom{display:grid;grid-template-columns:42px minmax(0,1fr)}
+  #pantallaInicio .victor-home-bathroom-action{grid-column:1/-1;text-align:center}
+  #pantallaInicio .victor-home-hero h1{font-size:17px}
+  #pantallaInicio .victor-home-shortcut-icon{width:29px;height:34px}
+  #pantallaInicio .victor-home-shortcut strong{font-size:12px}
+}
 
 /* Novedades: controles administrativos discretos y cuadro de edición. */
 #pantallaInicio .victor-home-news{position:relative}

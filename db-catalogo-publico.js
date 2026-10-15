@@ -775,67 +775,58 @@ async function actualizarVisibilidadProductoCatalogoAdminDb(codigo, visible) {
   return actualizarProductoCatalogoAdminDb(codigo, { visible });
 }
 
-async function actualizarVisibilidadMasivaCatalogoAdminDb({ visible, rubroId = null } = {}) {
+async function actualizarVisibilidadMasivaCatalogoAdminDb({ visible, rubroId = null, busqueda = "", rubro = "", estado = "", estadoImagen = "" } = {}) {
   await asegurarEsquemaCatalogoPublico();
   const hacerVisible = booleano(visible, false);
-  let categoria = rubroId;
-  if (categoria === "" || categoria === undefined || categoria === null) categoria = null;
-  else {
-    categoria = Number(categoria);
-    if (!Number.isInteger(categoria) || categoria < 1) throw new Error("El rubro seleccionado no es válido");
-    const existe = await query(`SELECT 1 FROM catalog_categories WHERE category_id=$1 LIMIT 1`, [categoria]);
-    if (!existe.rowCount) throw new Error("El rubro seleccionado no existe");
-  }
-
+  // Compatibilidad con clientes anteriores que solo enviaban rubroId.
+  const rubroFiltro = rubro || (rubroId === null || rubroId === undefined ? "todos" : String(rubroId));
+  const q = normalizarBusqueda(busqueda);
+  const filtroEstado = textoLimitado(estado, 30);
+  const filtroImagen = textoLimitado(estadoImagen, 30);
+  const condiciones = ["1=1"];
   const params = [];
-  let filtroRubro = "";
-  if (categoria !== null) {
-    params.push(categoria);
-    filtroRubro = ` AND s.category_id=$${params.length}`;
+  if (q) {
+    params.push(`%${q}%`);
+    const i = params.length;
+    condiciones.push(`(p.article ILIKE $${i} OR p.code ILIKE $${i} OR COALESCE(s.brand,'') ILIKE $${i} OR COALESCE(s.presentation,'') ILIKE $${i})`);
   }
-
-  if (hacerVisible) {
-    const r = await query(`
-      UPDATE catalog_product_settings s
-      SET visible=TRUE, updated_at=NOW()
-      FROM product_catalog p
-      WHERE s.code=p.code
-        AND s.category_id IS NOT NULL
-        AND s.visible IS DISTINCT FROM TRUE
-        ${filtroRubro}
-      RETURNING s.code
-    `, params);
-    const sinRubro = categoria === null
-      ? await query(`
-          SELECT COUNT(*)::int AS total
-          FROM product_catalog p
-          LEFT JOIN catalog_product_settings s ON s.code=p.code
-          WHERE s.category_id IS NULL
-        `)
-      : { rows: [{ total: 0 }] };
-    return {
-      visible: true,
-      rubroId: categoria,
-      actualizados: r.rowCount,
-      omitidosSinRubro: Number(sinRubro.rows[0]?.total) || 0,
-    };
+  if (rubroFiltro && rubroFiltro !== "todos") {
+    if (rubroFiltro === "sin-rubro") condiciones.push("s.category_id IS NULL");
+    else {
+      const categoria = Number(rubroFiltro);
+      if (!Number.isInteger(categoria) || categoria < 1) throw new Error("El rubro seleccionado no es válido");
+      const existe = await query(`SELECT 1 FROM catalog_categories WHERE category_id=$1 LIMIT 1`, [categoria]);
+      if (!existe.rowCount) throw new Error("El rubro seleccionado no existe");
+      params.push(categoria);
+      condiciones.push(`s.category_id=$${params.length}`);
+    }
   }
-
+  if (filtroEstado === "visible") condiciones.push("s.visible=TRUE");
+  else if (filtroEstado === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
+  else if (filtroEstado === "sin-configurar") condiciones.push("s.code IS NULL");
+  else if (filtroEstado === "destacado") condiciones.push("s.featured=TRUE");
+  if (filtroImagen === "confirmada") condiciones.push("s.image_status='confirmada'");
+  else if (filtroImagen === "candidato") condiciones.push("s.image_status='candidato'");
+  else if (filtroImagen === "buscando") condiciones.push("s.image_status='buscando'");
+  else if (filtroImagen === "sin_resultado") condiciones.push("s.image_status='sin_resultado'");
+  else if (filtroImagen === "error") condiciones.push("s.image_status='error'");
+  else if (filtroImagen === "sin_imagen") condiciones.push("COALESCE(s.image_status,'sin_imagen')='sin_imagen'");
+  const where = condiciones.join(" AND ");
+  const conteo = await query(`SELECT COUNT(*)::int AS total FROM product_catalog p LEFT JOIN catalog_product_settings s ON s.code=p.code WHERE ${where}`, params);
+  const coincidencias = Number(conteo.rows[0]?.total) || 0;
+  if (!coincidencias) return { visible: hacerVisible, actualizados: 0, coincidencias: 0, omitidosSinRubro: 0 };
+  // La publicación exige rubro. Los productos sin configuración nunca se crean implícitamente.
+  const elegibles = hacerVisible ? "AND s.category_id IS NOT NULL" : "";
+  const distintos = hacerVisible ? "s.visible IS DISTINCT FROM TRUE" : "s.visible IS DISTINCT FROM FALSE";
   const r = await query(`
     UPDATE catalog_product_settings s
-    SET visible=FALSE, updated_at=NOW()
+    SET visible=$${params.length + 1}, updated_at=NOW()
     FROM product_catalog p
-    WHERE s.code=p.code
-      AND s.visible IS DISTINCT FROM FALSE
-      ${filtroRubro}
+    WHERE s.code=p.code AND ${where} ${elegibles} AND ${distintos}
     RETURNING s.code
-  `, params);
-  return {
-    visible: false,
-    rubroId: categoria,
-    actualizados: r.rowCount,
-    omitidosSinRubro: 0,
-  };
+  `, [...params, hacerVisible]);
+  const omitidos = hacerVisible ? await query(`SELECT COUNT(*)::int AS total FROM product_catalog p LEFT JOIN catalog_product_settings s ON s.code=p.code WHERE ${where} AND s.category_id IS NULL`, params) : null;
+  return { visible: hacerVisible, actualizados: r.rowCount, coincidencias, omitidosSinRubro: Number(omitidos?.rows[0]?.total) || 0 };
 }
 
 async function guardarResultadoImagenCatalogoDb(codigo, datos = {}, opciones = {}) {
