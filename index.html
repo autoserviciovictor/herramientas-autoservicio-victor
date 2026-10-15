@@ -647,220 +647,28 @@
         id="pantallaInicio"
         class="pantalla pantalla-inicio activa pro-dashboard"
       >
-        <section class="pro-mobile-welcome">
-          <span class="pro-system-status"><i></i>Sistema Operativo Activo</span>
-          <div class="pro-welcome-row">
-            <div>
-              <h1>¡Bienvenido!</h1>
-              <p>Gestioná tu autoservicio desde una sola app.</p>
-            </div>
-            <span class="pro-welcome-icon"
-              ><svg class="app-icon"><use href="#icon-store"></use></svg
-            ></span>
+        <section class="victor-home-hero">
+          <div class="victor-home-hero-copy"><h1>¡Buen día, <span id="proWelcomeName">Administrador</span>!</h1><p>Tu espacio de trabajo de hoy.</p></div>
+          <div class="victor-home-hero-brand"><img src="./icons/brand-logo-home-transparent.png" alt="Autoservicio Víctor" /></div>
+        </section>
+        <section class="victor-home-panel victor-home-shortcuts" aria-label="Accesos rápidos">
+          <header class="victor-home-panel-title"><div><h2><span class="victor-home-heading-icon" aria-hidden="true">🚀</span> Accesos rápidos</h2><p>Tus herramientas de todos los días, en un solo lugar.</p></div></header>
+          <div class="victor-home-shortcut-grid">
+            <button type="button" data-modulo="horarios" data-dashboard-target="horarios" class="victor-home-shortcut"><span class="victor-home-shortcut-icon blue"><svg class="app-icon"><use href="#icon-clock"></use></svg></span><span><strong>Horarios y Turnos</strong><small>Consultá tu horario y calendario.</small></span><b>›</b></button>
+            <button type="button" data-modulo="tareas" data-dashboard-target="tareas" class="victor-home-shortcut"><span class="victor-home-shortcut-icon red"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span><span><strong>Tareas Diarias</strong><small>Revisá y completá tus tareas.</small></span><b>›</b></button>
+            <button type="button" data-modulo="precios" class="victor-home-shortcut"><span class="victor-home-shortcut-icon green"><svg class="app-icon"><use href="#icon-tag"></use></svg></span><span><strong>Consulta Precios</strong><small>Buscá productos y consultá precios.</small></span><b>›</b></button>
           </div>
         </section>
-
-        <section class="pro-desktop-heading app-reference-heading">
-          <div>
-            <span class="app-page-eyebrow">RESUMEN GENERAL</span>
-            <h1>Bienvenido, <span id="proWelcomeName">Admin</span></h1>
-            <p>Resumen general del sistema</p>
-          </div>
+        <section class="victor-home-middle">
+          <div class="victor-home-left-stack"><button type="button" data-modulo="bano" class="victor-home-bathroom" data-victor-module="bano"><span class="victor-home-bathroom-icon"><svg class="app-icon"><use href="#icon-bathroom"></use></svg></span><span class="victor-home-bathroom-copy"><strong>Limpieza del baño</strong><small id="proBathroomStatus">Consultando la asignación de hoy…</small></span><span class="victor-home-bathroom-action">Ver lista completa ›</span></button><article class="victor-home-panel victor-home-shift"><header class="victor-home-panel-title"><div><h2><span class="victor-home-heading-icon" aria-hidden="true"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span> Mi jornada de hoy</h2><p>Consultá tu horario asignado para hoy.</p></div></header><div class="victor-home-shift-content"><span class="victor-home-shortcut-icon blue"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span><div><small id="victorHomeShiftLabel">Horario asignado</small><strong id="victorHomeShiftTime">Consultá tu calendario</strong><small id="victorHomeShiftSector">Tus turnos y horarios asignados</small></div><button type="button" data-modulo="horarios">Ver mi calendario ›</button></div></article></div>
+          <article class="victor-home-panel victor-home-tasks"><header class="victor-home-panel-title"><div><h2><span class="victor-home-heading-icon" aria-hidden="true"><svg class="app-icon"><use href="#icon-tasks"></use></svg></span> Tareas del día</h2><p>Seleccioná un sector para ver todas sus tareas asignadas.</p></div><div class="pro-home-task-sector-control"><label id="proHomeTaskSectorWrap" class="pro-home-task-sector oculto" for="proHomeTaskSector"><span>Sector</span><select id="proHomeTaskSector" aria-label="Seleccionar sector de tareas"></select></label><span id="proHomeTaskSectorLabel" class="pro-home-task-sector-label"></span></div></header><div id="proHomeTareasHoy" class="victor-home-task-list" aria-live="polite"></div><footer class="victor-home-tasks-footer"><span id="proHomeTaskTotal">0 tareas</span><span class="victor-home-task-progress" aria-label="Progreso de tareas de hoy"><i id="proMetricTareasProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></span><button type="button" data-modulo="tareas">Ver todas las tareas ›</button></footer></article>
         </section>
+        <section class="victor-home-summary" aria-label="Información del día">
+          <button type="button" data-modulo="vencimientos" data-dashboard-target="vencimientos" class="victor-home-summary-card" data-victor-module="vencimientos"><span class="victor-home-summary-icon red"><svg class="app-icon"><use href="#icon-calendar"></use></svg></span><strong>Vencimientos</strong><div><b id="proMetricVenc">—</b><small>productos críticos en los próximos 7 días</small></div><span class="victor-home-summary-link">Ver vencimientos ›</span></button>
+          <button type="button" data-modulo="inventario" data-dashboard-target="inventario" class="victor-home-summary-card" data-victor-module="inventario"><span class="victor-home-summary-icon blue"><svg class="app-icon"><use href="#icon-box"></use></svg></span><strong>Stock actual</strong><div><b id="proMetricStock">—</b><small>artículos contados</small></div><span class="victor-home-summary-link">Ver inventario ›</span></button>
 
-        <section class="pro-metrics-grid">
-          <article class="pro-metric-card pro-metric-blue app-kpi-card app-kpi-blue app-kpi-action" role="button" tabindex="0" data-dashboard-target="inventario" aria-label="Abrir Inventario">
-            <div>
-              <span><span class="metric-label-desktop">Stock Contado Hoy</span><span class="metric-label-mobile">Stock contado</span></span
-              ><b class="pro-metric-icon"
-                ><svg class="app-icon"><use href="#icon-box"></use></svg
-              ></b>
-            </div>
-            <strong id="proMetricStock">—</strong><small>artículos</small>
-            <p>↗ Inventario actualizado</p>
-          </article>
-          <article class="pro-metric-card pro-metric-red app-kpi-card app-kpi-red app-kpi-action" role="button" tabindex="0" data-dashboard-target="vencimientos" aria-label="Abrir Vencimientos">
-            <div>
-              <span><span class="metric-label-desktop">Vencimientos Críticos</span><span class="metric-label-mobile">Vencimientos</span></span
-              ><b class="pro-metric-icon"
-                ><svg class="app-icon"><use href="#icon-refresh"></use></svg
-              ></b>
-            </div>
-            <strong id="proMetricVenc">—</strong><small>en 7 días</small>
-            <p>Control preventivo</p>
-          </article>
-          <article class="pro-metric-card pro-metric-orange app-kpi-card app-kpi-amber app-kpi-action" role="button" tabindex="0" data-dashboard-target="horarios" aria-label="Abrir Horarios y Turnos">
-            <div>
-              <span><span class="metric-label-desktop">Personal en Turno</span><span class="metric-label-mobile">Turno actual</span></span
-              ><b class="pro-metric-icon"
-                ><svg class="app-icon"><use href="#icon-users"></use></svg
-              ></b>
-            </div>
-            <strong id="proMetricPersonal">—</strong><small><span class="metric-unit-desktop">empleados</span><span class="metric-unit-mobile">personas</span></small>
-            <p>Turno actual</p>
-          </article>
-          <article class="pro-metric-card pro-metric-green app-kpi-card app-kpi-green app-kpi-action" role="button" tabindex="0" data-dashboard-target="tareas" aria-label="Abrir Tareas Diarias">
-            <div>
-              <span><span class="metric-label-desktop">Tareas Completadas</span><span class="metric-label-mobile">Tareas</span></span
-              ><b class="pro-metric-icon"
-                ><svg class="app-icon"><use href="#icon-check"></use></svg
-              ></b>
-            </div>
-            <strong id="proMetricTareas">—</strong><small>hoy</small>
-            <div class="pro-progress" aria-label="Progreso de tareas de hoy"><i id="proMetricTareasProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
-          </article>
+          <article class="victor-home-summary-card victor-home-news"><span class="victor-home-summary-icon red"><svg class="app-icon"><use href="#icon-bell"></use></svg></span><strong>Novedades</strong><div class="victor-home-news-list"><p>Recordá mantener el orden en los sectores.</p><p>Revisá las tareas asignadas para hoy.</p></div><span class="victor-home-summary-link">Información del día</span></article>
         </section>
-
-        <button
-          type="button"
-          data-modulo="bano"
-          class="pro-bathroom-banner"
-          aria-label="Abrir Limpieza del baño"
-        >
-          <span class="pro-bathroom-banner-copy">
-            <small>ACCESO RÁPIDO</small>
-            <strong>Limpieza del baño</strong>
-            <span id="proBathroomStatus">Controlá la rotación, responsables y confirmaciones de limpieza.</span>
-          </span>
-          <span class="pro-bathroom-banner-action">
-            <span class="pro-bathroom-banner-icon" aria-hidden="true">
-              <svg class="app-icon"><use href="#icon-bathroom"></use></svg>
-            </span>
-            <span>Abrir limpieza</span>
-            <span class="pro-bathroom-banner-chevron" aria-hidden="true">›</span>
-          </span>
-        </button>
-
-        <section class="pro-quick-section">
-          <div class="pro-section-head">
-            <h2>Acceso rápido a módulos</h2>
-            <small>Seleccioná el módulo que querés consultar</small>
-          </div>
-          <div class="pro-quick-grid">
-            <button
-              type="button"
-              data-modulo="inventario"
-              class="pro-module-row"
-            >
-              <span class="pro-module-icon pro-red"
-                ><svg class="app-icon"><use href="#icon-box"></use></svg
-              ></span>
-              <div>
-                <strong>Inventario</strong
-                ><small>Controlá stock, depósitos y movimientos.</small>
-              </div>
-              <b>›</b>
-            </button>
-            <button
-              type="button"
-              data-modulo="vencimientos"
-              class="pro-module-row"
-            >
-              <span class="pro-module-icon pro-orange"
-                ><svg class="app-icon"><use href="#icon-calendar"></use></svg
-              ></span>
-              <div>
-                <strong>Vencimientos</strong
-                ><small>Control preventivo y ofertas por lote.</small>
-              </div>
-              <b>›</b>
-            </button>
-            <button type="button" data-modulo="anotar" class="pro-module-row">
-              <span class="pro-module-icon pro-purple"
-                ><svg class="app-icon"><use href="#icon-clipboard"></use></svg
-              ></span>
-              <div>
-                <strong>Lista de Reposición</strong
-                ><small>Productos faltantes y sugerencias de compra.</small>
-              </div>
-              <b>›</b>
-            </button>
-            <button type="button" data-modulo="precios" class="pro-module-row">
-              <span class="pro-module-icon pro-green"
-                ><svg class="app-icon"><use href="#icon-tag"></use></svg
-              ></span>
-              <div>
-                <strong>Precios</strong
-                ><small>Consultá y verificá precios actuales.</small>
-              </div>
-              <b>›</b>
-            </button>
-            <button type="button" data-modulo="horarios" class="pro-module-row">
-              <span class="pro-module-icon pro-blue"
-                ><svg class="app-icon"><use href="#icon-clock"></use></svg
-              ></span>
-              <div>
-                <strong>Horarios</strong
-                ><small>Turnos semanales y rotaciones del equipo.</small>
-              </div>
-              <b>›</b>
-            </button>
-            <button type="button" data-modulo="tareas" class="pro-module-row">
-              <span class="pro-module-icon pro-purple"
-                ><svg class="app-icon"><use href="#icon-tasks"></use></svg
-              ></span>
-              <div>
-                <strong>Tareas</strong
-                ><small>Rutinas, planificación y organización diaria.</small>
-              </div>
-              <b>›</b>
-            </button>
-            <button
-              id="btnAbrirAdminHome"
-              type="button"
-              data-modulo="admin"
-              class="pro-module-row pro-admin-home oculto"
-            >
-              <span class="pro-module-icon pro-slate"
-                ><svg class="app-icon"><use href="#icon-shield"></use></svg
-              ></span>
-              <div>
-                <strong>Administración</strong
-                ><small>Usuarios, permisos y configuraciones.</small>
-              </div>
-              <b>›</b>
-            </button>
-          </div>
-        </section>
-
-        <section class="pro-desktop-operations" aria-label="Resumen operativo">
-          <article class="pro-operation-card pro-operation-live">
-            <div class="pro-operation-head">
-              <div>
-                <h2>Vencidos hoy</h2>
-                <p>Productos cuya fecha de vencimiento es hoy</p>
-              </div>
-              <button type="button" data-modulo="vencimientos">Ver todos</button>
-            </div>
-            <div id="proHomeVencimientosHoy" class="pro-home-live-list" aria-live="polite"></div>
-            <footer class="pro-home-operation-footer pro-home-expiry-footer">
-              <button type="button" data-modulo="vencimientos" class="pro-home-operation-link">
-                <span>Ver resumen de vencimientos</span><span aria-hidden="true">›</span>
-              </button>
-            </footer>
-          </article>
-          <article class="pro-operation-card pro-operation-live">
-            <div class="pro-operation-head">
-              <div>
-                <h2>Tareas de hoy</h2>
-                <p>Organización del equipo</p>
-              </div>
-              <div class="pro-home-task-sector-control">
-                <label id="proHomeTaskSectorWrap" class="pro-home-task-sector oculto" for="proHomeTaskSector">
-                  <span>Sector</span>
-                  <select id="proHomeTaskSector" aria-label="Seleccionar sector de tareas"></select>
-                </label>
-                <span id="proHomeTaskSectorLabel" class="pro-home-task-sector-label"></span>
-              </div>
-            </div>
-            <div id="proHomeTareasHoy" class="pro-home-live-list" aria-live="polite"></div>
-            <footer class="pro-home-operation-footer pro-home-task-footer">
-              <strong>Total de tareas del sector</strong>
-              <span id="proHomeTaskTotal" class="pro-home-task-total">0 tareas</span>
-            </footer>
-          </article>
-        </section>
-
         <section
           id="pwaInstallCard"
           class="pwa-install-card settings-card oculto"
@@ -4040,8 +3848,10 @@
               <div class="admin-import-issues-head"><div><h3>Observaciones del archivo</h3><p>Revisá los registros que requieren atención antes de continuar.</p></div></div>
               <div id="adminImportarPreviewAdvertencias" class="admin-import-issues"></div>
             </section>
+            <div class="admin-import-preview-notices">
             <div class="admin-import-warning admin-import-safe"><span class="admin-import-notice-icon" aria-hidden="true">✓</span><div><strong>Inventario protegido</strong><span>Stock, Salón y Depósito no se modificarán. La columna Sub Total será ignorada.</span></div></div>
             <div class="admin-import-warning admin-import-replace"><span class="admin-import-notice-icon" aria-hidden="true">!</span><div><strong>Reemplazo de catálogo</strong><span>Al confirmar, el catálogo de Productos será reemplazado completamente por este archivo.</span></div></div>
+            </div>
           </div>
           <footer class="modal-actions admin-import-footer">
             <button id="btnAdminDescargarIncidencias" type="button" class="admin-import-download">↓ Descargar incidencias</button>

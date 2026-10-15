@@ -2267,7 +2267,7 @@ async function confirmarImportacionCatalogo() {
     estado.innerHTML = construirResumenImportacionFinal(r);
     importacionPendiente = null;
     importacionResumenPendiente = null;
-    mensaje("Catálogo reemplazado", "ok");
+    mensaje("Catálogo reemplazado y sincronizado", "ok");
     await Promise.all([cargarResumen(), cargarHistorialAdministracion()]);
   } finally {
     boton.disabled = false;

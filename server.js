@@ -7,6 +7,7 @@ const webpush = require("web-push");
 const path = require("path");
 require("dotenv").config();
 const { verificarConexionPostgres, cerrarPostgres } = require("./db");
+const { leerNovedadesInicio, guardarNovedadesInicio } = require("./db-novedades");
 const {
   asegurarEsquemaUsuariosSectores,
   migracionDatosCompletada,
@@ -1321,6 +1322,23 @@ app.use((req, res, next) => {
   if (req.path === "/") return next();
   return requerirSesion(req, res, next);
 });
+
+// Novedades compartidas: lectura para usuarios autenticados; edición exclusiva de Administración.
+app.get("/inicio/novedades", async (_req, res) => {
+  try { res.json({ ok: true, mensajes: await leerNovedadesInicio() }); }
+  catch (error) { console.error("Error leyendo novedades:", error); res.status(500).json({ ok: false, mensaje: "No se pudieron cargar las novedades" }); }
+});
+app.put("/inicio/novedades", requerirAdministrador, async (req, res) => {
+  const mensajes = req.body?.mensajes;
+  if (!Array.isArray(mensajes) || mensajes.length > 8 || mensajes.some((m) => typeof m !== "string" || !m.trim() || m.trim().length > 200))
+    return res.status(400).json({ ok: false, mensaje: "Ingresá hasta 8 novedades de 200 caracteres como máximo" });
+  const limpios = mensajes.map((m) => m.trim());
+  try {
+    await guardarNovedadesInicio(limpios, req.usuario.usuario);
+    res.json({ ok: true, mensajes: limpios });
+  } catch (error) { console.error("Error guardando novedades:", error); res.status(500).json({ ok: false, mensaje: "No se pudieron guardar las novedades" }); }
+});
+
 
 
 async function reservarOperacionOffline(id, req) {

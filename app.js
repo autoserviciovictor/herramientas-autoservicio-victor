@@ -984,6 +984,48 @@ async function completarDetalleInicio(resumenBase = {}) {
   const puedeElegirSector = ["administrador", "administracion", "supervisor"].includes(rol);
   const trabajos = [];
 
+  // Horario PROGRAMADO del usuario: no se consultan ni muestran fichajes.
+  if (puede("horarios")) {
+    trabajos.push((async () => {
+      try {
+        const contexto = await obtenerJsonResumen("/horarios/contexto");
+        const sectores = Array.isArray(contexto?.sectores) ? contexto.sectores : [];
+        const hoy = fechaHoyLocalIso();
+        const dia = Number(hoy.slice(8, 10));
+        const usuario = window.AutoservicioAuth?.getUsuario?.() || {};
+        const nombres = [usuario.nombreCompleto, usuario.nombre, usuario.usuario,
+          [usuario.nombre, usuario.apellido].filter(Boolean).join(" ")]
+          .map(normalizarEmpleadoResumen).filter(Boolean);
+        if (!nombres.length) return;
+        const calendarios = await Promise.allSettled(sectores.map(async (sector) => ({
+          sector: sector?.nombre || sector?.id || "",
+          data: await obtenerJsonResumen(`/horarios/calendario?sector=${encodeURIComponent(sector.id)}&mes=${encodeURIComponent(hoy.slice(0, 7))}`),
+        })));
+        for (const resultado of calendarios) {
+          if (resultado.status !== "fulfilled") continue;
+          const { sector, data } = resultado.value;
+          const celda = (data?.celdas || []).find((item) =>
+            Number(item?.dia) === dia && nombres.includes(normalizarEmpleadoResumen(item?.empleado)));
+          if (!celda) continue;
+          const clave = String(celda.turno || "").trim();
+          const turno = (data?.turnos || []).find((item) =>
+            String(item?.id || "").trim().toLowerCase() === clave.toLowerCase());
+          const directo = clave.match(/^(\d{1,2}(?::\d{2})?)\s*-\s*(\d{1,2}(?::\d{2})?)$/);
+          const rango = turno?.inicio && turno?.fin
+            ? `${turno.inicio} - ${turno.fin}`
+            : directo ? `${directo[1]} - ${directo[2]}` : "";
+          if (rango) {
+            resumen.horarioProgramadoHoy = rango;
+            resumen.sectorHorarioHoy = sector;
+          }
+          break;
+        }
+      } catch (_) {
+        // Sin calendario disponible se ofrece el acceso al módulo, sin inventar horarios.
+      }
+    })());
+  }
+
   if (puede("vencimientos") && !Array.isArray(resumen.vencimientosHoyDetalle)) {
     trabajos.push(
       listarVencimientos()
@@ -1197,7 +1239,11 @@ async function actualizarResponsableBanoInicio() {
     const hoy = fechaHoyLocalIso();
     const ancla = String(cfg.fechaAncla || cfg.fechaInicio || hoy);
     const dias = diasEntreIsoResumen(ancla, hoy);
-    if (!Number.isFinite(dias) || ((dias % 2) + 2) % 2 !== 0) return;
+    if (!Number.isFinite(dias)) return;
+    if (((dias % 2) + 2) % 2 !== 0) {
+      estado.textContent = "Día de descanso: hoy no corresponde limpieza.";
+      return;
+    }
 
     const turno = Math.floor(dias / 2);
     const indice = ((turno % participantes.length) + participantes.length) % participantes.length;
@@ -1312,10 +1358,18 @@ function renderTareasHoyInicio(resumen = {}) {
 
 function aplicarResumenInicio(resumen = {}) {
   resumenInicioDatosActuales = resumen;
+  const horario = $("victorHomeShiftTime");
+  const sectorHorario = $("victorHomeShiftSector");
+  const etiquetaHorario = $("victorHomeShiftLabel");
+  if (horario) horario.textContent = resumen.horarioProgramadoHoy || "Consultá tu calendario";
+  if (sectorHorario) sectorHorario.textContent = resumen.horarioProgramadoHoy
+    ? (resumen.sectorHorarioHoy || "Turno programado")
+    : "Tus turnos y horarios asignados";
+  if (etiquetaHorario) etiquetaHorario.textContent = resumen.horarioProgramadoHoy
+    ? "Horario asignado" : "Tu calendario de turnos";
   const stock = $("proMetricStock");
   const vencimientos = $("proMetricVenc");
   const personal = $("proMetricPersonal");
-  const tareas = $("proMetricTareas");
   if (stock) stock.textContent = numeroVisibleResumen(resumen.stockContado);
   if (vencimientos)
     vencimientos.textContent = numeroVisibleResumen(resumen.vencimientosCriticos);
@@ -1328,7 +1382,6 @@ function aplicarResumenInicio(resumen = {}) {
   const asignadasHoy = Number.isFinite(Number(resumen.tareasAsignadasHoy))
     ? Number(resumen.tareasAsignadasHoy)
     : detalleHoy.length;
-  if (tareas) tareas.textContent = numeroVisibleResumen(completadasHoy);
 
   const progreso = $("proMetricTareasProgress");
   const porcentaje = Math.max(0, Math.min(100, Number.isFinite(Number(resumen.tareasPorcentajeHoy))
@@ -1339,6 +1392,11 @@ function aplicarResumenInicio(resumen = {}) {
     progreso.setAttribute("aria-valuenow", String(porcentaje));
     progreso.title = `${numeroVisibleResumen(completadasHoy)} de ${numeroVisibleResumen(asignadasHoy)} tareas completadas hoy`;
   }
+  document.querySelectorAll("#pantallaInicio [data-victor-module]").forEach((card) => {
+    const modulo = card.dataset.victorModule;
+    const permitido = window.AutoservicioAuth?.puedeAccederModulo?.(modulo) === true;
+    card.classList.toggle("oculto", !permitido);
+  });
   renderVencimientosHoyInicio(resumen);
   renderTareasHoyInicio(resumen);
 }
@@ -1374,6 +1432,7 @@ window.addEventListener("autoservicio:bano-actualizado", () => {
 
 function prepararAccesosMetricasInicio() {
   document.querySelectorAll("#pantallaInicio [data-dashboard-target]").forEach((tarjeta) => {
+    if (tarjeta.hasAttribute("data-modulo")) return; // Ya navega mediante configurarEventos.
     if (tarjeta.dataset.dashboardBound === "1") return;
     tarjeta.dataset.dashboardBound = "1";
     const abrir = () => window.AutoservicioNavigate?.(tarjeta.dataset.dashboardTarget);
