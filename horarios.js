@@ -2432,27 +2432,72 @@ function renderConfiguracionHorarios() {
   renderOrdenConfig();
 }
 
+function cerrarSelectorPersonalHorario() {
+  const modal = $("horariosSelectorPersonalModal");
+  if (!modal) return;
+  modal.classList.add("oculto");
+  modal.setAttribute("aria-hidden", "true");
+  $("horariosSelectorPersonalBuscar").value = "";
+}
+
 async function agregarPersonalSectorHorario() {
   if (!puedeAdministrarConfiguracion() || !sectorActual) return;
+  const modal = $("horariosSelectorPersonalModal");
+  const lista = $("horariosSelectorPersonalLista");
+  const buscar = $("horariosSelectorPersonalBuscar");
+  if (!modal || !lista || !buscar) return;
+  const sectorDestino = sectorActual;
+  modal.classList.remove("oculto");
+  modal.setAttribute("aria-hidden", "false");
+  lista.innerHTML = '<p class="horarios-selector-empty">Cargando usuarios...</p>';
+  buscar.value = "";
+  buscar.focus();
   try {
-    const r = await fetch(`${API_BASE_URL}/horarios/personal-disponible?sector=${encodeURIComponent(sectorActual)}`);
+    const r = await fetch(`${API_BASE_URL}/horarios/personal-disponible?sector=${encodeURIComponent(sectorDestino)}`);
     const d = await r.json();
     if (!r.ok || !d.ok) throw new Error(d.mensaje || "No se pudo consultar el personal");
-    if (!d.usuarios.length) return mensajeConfig("horariosOrdenMensaje", "Todos los usuarios activos ya están incluidos.");
-    const opciones = d.usuarios.map((u,i) => `${i+1}. ${u.nombre} (${u.sector || "Sin sector"} · ${u.rol})`).join("\n");
-    const elegido = window.prompt(`Seleccioná el número de usuario para agregar a este sector:\n\n${opciones}`);
-    if (elegido === null) return;
-    const indice = Number(elegido)-1;
-    if (!Number.isInteger(indice) || !d.usuarios[indice]) throw new Error("Seleccioná un número válido.");
-    const resp = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sector:sectorActual,usuario:d.usuarios[indice].usuario})});
-    const dato = await resp.json();
-    if (!resp.ok || !dato.ok) throw new Error(dato.mensaje || "No se pudo agregar el usuario");
-    await cargarContextoHorarios();
-    mensajeConfig("horariosOrdenMensaje", "Usuario agregado al sector. Los cambios de horario se compartirán.");
-  } catch(e) { mensajeConfig("horariosOrdenMensaje", e.message, "error"); }
+    if (modal.classList.contains("oculto")) return;
+    const usuarios = d.usuarios || [];
+    const render = () => {
+      const termino = buscar.value.trim().toLocaleLowerCase("es");
+      const filtrados = usuarios.filter(u => `${u.nombre} ${u.sector || ""} ${u.rol || ""}`.toLocaleLowerCase("es").includes(termino));
+      lista.innerHTML = filtrados.length ? filtrados.map(u => `
+        <button type="button" class="horarios-selector-persona" data-usuario="${esc(u.usuario)}">
+          <strong>${esc(u.nombre)}</strong>
+          <span>${esc(u.sector || "Sin sector")} · ${esc(u.rol || "Sin rol")}</span>
+        </button>`).join("") : '<p class="horarios-selector-empty">No hay usuarios disponibles para agregar.</p>';
+    };
+    buscar.oninput = render;
+    lista.onclick = async (evento) => {
+      const boton = evento.target.closest("button[data-usuario]");
+      if (!boton || boton.disabled) return;
+      boton.disabled = true;
+      try {
+        const resp = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {
+          method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({sector:sectorDestino,usuario:boton.dataset.usuario})
+        });
+        const dato = await resp.json();
+        if (!resp.ok || !dato.ok) throw new Error(dato.mensaje || "No se pudo agregar el usuario");
+        cerrarSelectorPersonalHorario();
+        await cargarContextoHorarios();
+        mensajeConfig("horariosOrdenMensaje", "Usuario agregado. Sus horarios se compartirán entre sectores.");
+      } catch (e) {
+        boton.disabled = false;
+        mensajeConfig("horariosOrdenMensaje", e.message, "error");
+      }
+    };
+    render();
+  } catch (e) {
+    lista.innerHTML = `<p class="horarios-selector-empty">${esc(e.message)}</p>`;
+  }
 }
 function configurarEventos() {
   $("btnHorariosAgregarPersonal")?.addEventListener("click", agregarPersonalSectorHorario);
+  $("horariosSelectorPersonalCerrar")?.addEventListener("click", cerrarSelectorPersonalHorario);
+  $("horariosSelectorPersonalModal")?.addEventListener("click", e => {
+    if (e.target.id === "horariosSelectorPersonalModal") cerrarSelectorPersonalHorario();
+  });
   crearBotonVolverHorarios();
   crearControlConfiguracionCalendario();
   crearControlesEdicionCalendario();
