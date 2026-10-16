@@ -1861,7 +1861,16 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
     width:100%!important;
     min-width:0!important;
   }
-  #catalogPanelProductos .catalog-filter-popover-wrap,
+  /* Mantener el ancla del menú junto al botón Filtros en escritorio. */
+  #catalogPanelProductos .catalog-filter-popover-wrap{
+    grid-column:auto!important;
+    grid-row:auto!important;
+    position:relative!important;
+    inset:auto!important;
+    width:auto!important;
+    min-width:0!important;
+    margin:0!important;
+  }
   #catalogPanelProductos #catalogBtnRecargar,
   #catalogPanelProductos #catalogBtnOcultarMasivo,
   #catalogPanelProductos #catalogBtnPublicarMasivo,

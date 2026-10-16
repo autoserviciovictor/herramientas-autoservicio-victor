@@ -161,6 +161,7 @@ function actualizarUIFiltrosProductos() {
   const boton = $("catalogBtnFiltros");
   const badge = $("catalogFiltrosBadge");
   if (boton) boton.classList.toggle("has-active", cantidad > 0);
+  actualizarBotonesPublicacionMasiva();
   if (badge) {
     badge.textContent = String(cantidad);
     badge.classList.toggle("oculto", cantidad === 0);
@@ -193,7 +194,6 @@ async function limpiarFiltrosProductos() {
     window.AppSelect?.refresh?.(select);
   });
   actualizarUIFiltrosProductos();
-  actualizarBotonesPublicacionMasiva();
   await cargarProductos({ conservarPagina: false });
 }
 
@@ -917,20 +917,25 @@ function actualizarBotonesPublicacionMasiva() {
   const publicar = $("catalogBtnPublicarMasivo");
   const ocultar = $("catalogBtnOcultarMasivo");
   if (publicar) {
-    publicar.disabled = alcance.sinRubro;
+    publicar.disabled = !alcance.activos || alcance.sinRubro;
     publicar.title = alcance.sinRubro ? "Asigná un rubro antes de publicar estos productos" : `Publicar ${alcance.nombre}`;
     const span = publicar.querySelector("span");
-    if (span) span.textContent = alcance.activos ? "Publicar filtrados" : "Publicar todos";
+    if (span) span.textContent = "Publicar filtrados";
   }
   if (ocultar) {
+    ocultar.disabled = !alcance.activos;
     ocultar.title = `Ocultar ${alcance.nombre}`;
     const span = ocultar.querySelector("span");
-    if (span) span.textContent = alcance.activos ? "Ocultar filtrados" : "Ocultar todos";
+    if (span) span.textContent = "Ocultar filtrados";
   }
 }
 
 async function cambiarVisibilidadMasiva(visible) {
   const alcance = alcancePublicacionMasiva();
+  if (!alcance.activos) {
+    mensaje("Seleccioná al menos un filtro o escribí una búsqueda antes de modificar productos en forma masiva.");
+    return;
+  }
   if (visible && alcance.sinRubro) {
     mensaje("Los productos sin rubro no se pueden publicar. Asignales un rubro primero.");
     return;
@@ -1152,10 +1157,9 @@ function bind() {
   prepararSelectoresCatalogo();
   actualizarUIFiltrosProductos();
   document.querySelectorAll("[data-catalog-tab]").forEach((b) => b.addEventListener("click", () => cambiarTab(b.dataset.catalogTab)));
-  $("catalogBuscarProductos")?.addEventListener("input", () => { clearTimeout(estado.busquedaTimer); estado.busquedaTimer = setTimeout(() => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)), 260); });
+  $("catalogBuscarProductos")?.addEventListener("input", () => { actualizarBotonesPublicacionMasiva(); clearTimeout(estado.busquedaTimer); estado.busquedaTimer = setTimeout(() => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)), 260); });
   $("catalogFiltroRubro")?.addEventListener("change", () => {
     actualizarUIFiltrosProductos();
-    actualizarBotonesPublicacionMasiva();
     cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message));
   });
   $("catalogFiltroEstado")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });

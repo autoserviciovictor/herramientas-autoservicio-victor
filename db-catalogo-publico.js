@@ -783,6 +783,11 @@ async function actualizarVisibilidadMasivaCatalogoAdminDb({ visible, rubroId = n
   const q = normalizarBusqueda(busqueda);
   const filtroEstado = textoLimitado(estado, 30);
   const filtroImagen = textoLimitado(estadoImagen, 30);
+  if (!q && (!rubroFiltro || rubroFiltro === "todos") && (!filtroEstado || filtroEstado === "todos") && (!filtroImagen || filtroImagen === "todos")) {
+    const error = new Error("Seleccioná al menos un filtro antes de publicar u ocultar productos masivamente");
+    error.status = 400;
+    throw error;
+  }
   const condiciones = ["1=1"];
   const params = [];
   if (q) {
