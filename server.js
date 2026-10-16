@@ -3245,6 +3245,7 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
           nombre,
           rol: u.rol,
           usuario: u.usuario,
+          esAdicional: !empleadosHorarioDelSector(s.id, usuarios, sectores).some(base => normalizarUsuario(base.usuario) === normalizarUsuario(u.usuario)),
           idReloj: u.idReloj || "",
           habilitadoCalendario: habilitados?.get(nombre) !== false,
           descansoInicio: descansos?.get(nombre)?.inicio || "",
@@ -3327,6 +3328,25 @@ app.post("/horarios/personal-adicional", requerirAccesoHorarios, async (req,res)
       if (empleadosHorarioConAdicionales(sector, usuarios, sectores, filas).some(u => normalizarUsuario(u.usuario) === codigo)) return;
       const previas = filas.filter(f => normalizarTexto(f[0]) === sector);
       await reemplazarOrdenSector(sector, [...previas, [sector,nombre,previas.length+1,fechaHoraArgentinaIso(),"Sí","",""]], cliente);
+    }));
+    res.json({ok:true});
+  } catch(e) {res.status(500).json({ok:false,mensaje:e.message});}
+});
+app.delete("/horarios/personal-adicional", requerirAccesoHorarios, async (req,res) => {
+  try {
+    const sector = normalizarTexto(req.body?.sector), nombre = normalizarTexto(req.body?.nombre);
+    if (!(await puedeModificarSectorHorarios(req.usuario,sector))) return res.status(403).json({ok:false,mensaje:"Sin permiso"});
+    const [usuarios,sectores] = await Promise.all([obtenerUsuarios(),obtenerSectores()]);
+    if (empleadosHorarioDelSector(sector,usuarios,sectores).some(u => (u.nombre || u.usuario) === nombre)) return res.status(400).json({ok:false,mensaje:"Este usuario pertenece a la planilla original del sector"});
+    const usuario = usuarios.find(u => (u.nombre || u.usuario) === nombre);
+    if (!usuario) return res.status(404).json({ok:false,mensaje:"Usuario no encontrado"});
+    await asegurarHorariosPostgres();
+    await ejecutarEnCola("horarios-global",async () => conTransaccionHorarios(async cliente => {
+      const filas = await listarOrdenFilas(cliente);
+      const previas = filas.filter(f => normalizarTexto(f[0]) === sector);
+      if (!previas.some(f => normalizarTexto(f[1]) === nombre)) return;
+      const nuevas = previas.filter(f => normalizarTexto(f[1]) !== nombre).map((f,i) => [f[0],f[1],i+1,...f.slice(3)]);
+      await reemplazarOrdenSector(sector,nuevas,cliente);
     }));
     res.json({ok:true});
   } catch(e) {res.status(500).json({ok:false,mensaje:e.message});}

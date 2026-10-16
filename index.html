@@ -55,9 +55,13 @@
 #horariosSelectorPersonalCerrar{border:0;background:#f1f5f9;border-radius:9px;padding:3px 12px;font-size:24px;cursor:pointer}
 #horariosSelectorPersonalBuscar{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}
 .horarios-selector-list{overflow-y:auto;min-height:80px;display:flex;flex-direction:column;gap:7px}
-.horarios-selector-persona{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;cursor:pointer;color:#0f172a}
+.horarios-selector-persona{display:flex;flex-direction:row;align-items:center;gap:4px;text-align:left;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;cursor:pointer;color:#0f172a}
 .horarios-selector-persona:hover,.horarios-selector-persona:focus-visible{border-color:#f43f5e;background:#fff1f2}
-.horarios-selector-persona span,.horarios-selector-empty{color:#64748b;font-size:13px}
+ .horarios-selector-persona-info{display:flex;flex-direction:column;gap:4px}.horarios-selector-persona-info small,.horarios-selector-empty{color:#64748b;font-size:13px}
+.horarios-selector-persona input{width:18px;height:18px;accent-color:#ef233c;flex:none}.horarios-selector-persona.is-selected{border-color:#ef233c;background:#fff1f2}
+.horarios-selector-footer{padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;flex:none}.horarios-selector-footer button{border:0;border-radius:9px;padding:11px 25px;background:#ef233c;color:white;font-weight:700;cursor:pointer}.horarios-selector-footer button:disabled{opacity:.45;cursor:not-allowed}
+.horarios-quitar-adicional{border:1px solid #fecdd3;border-radius:8px;background:#fff1f2;color:#be123c;padding:8px;cursor:pointer}
+@media(min-width:800px){.modal-overlay:not(.oculto),.liq-modal-overlay:not(.oculto),.horarios-selector-overlay:not(.oculto),.catalog-modal-overlay:not(.oculto){left:202px!important;top:88px!important;right:0!important;bottom:0!important;inset:auto 0 0 202px!important}}
 .horarios-selector-persona:disabled{opacity:.5;cursor:wait}
 </style>
 </head>
@@ -2137,11 +2141,12 @@
                   <div id="horariosSelectorPersonalModal" class="horarios-selector-overlay oculto" aria-hidden="true">
                     <div class="horarios-selector-dialog" role="dialog" aria-modal="true" aria-labelledby="horariosSelectorPersonalTitulo">
                       <div class="horarios-selector-head">
-                        <div><h3 id="horariosSelectorPersonalTitulo">Agregar usuario al sector</h3><p>Elegí una persona. Sus horarios serán compartidos en todos sus sectores.</p></div>
+                        <div><h3 id="horariosSelectorPersonalTitulo">Agregar usuario al sector</h3><p>Seleccioná uno o varios usuarios. Sus horarios serán compartidos en todos sus sectores.</p></div>
                         <button type="button" id="horariosSelectorPersonalCerrar" aria-label="Cerrar selector">×</button>
                       </div>
                       <input id="horariosSelectorPersonalBuscar" type="search" placeholder="Buscar por nombre, sector o rol..." autocomplete="off" aria-label="Buscar usuarios" />
                       <div id="horariosSelectorPersonalLista" class="horarios-selector-list"></div>
+                      <footer class="horarios-selector-footer"><button type="button" id="horariosSelectorPersonalConfirmar" disabled>Agregar</button></footer>
                     </div>
                   </div>
                   <div id="horariosOrdenMensaje" class="admin-message"></div>

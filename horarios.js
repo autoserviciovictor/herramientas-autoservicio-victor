@@ -2317,6 +2317,7 @@ function renderOrdenConfig() {
           </span>
           <span class="horarios-order-visibility-switch" aria-hidden="true"><i></i></span>
         </button>
+        ${info.esAdicional ? `<button type="button" class="horarios-quitar-adicional" data-empleado="${escAttr(e)}" title="Quitar de esta planilla">Quitar</button>` : ""}
         <button class="horarios-order-drag-handle" type="button" aria-label="Arrastrar ${escAttr(e)} para cambiar su posición" title="Arrastrar para reordenar"><span aria-hidden="true"></span></button>
       </article>`;
     })
@@ -2442,58 +2443,71 @@ function cerrarSelectorPersonalHorario() {
 
 async function agregarPersonalSectorHorario() {
   if (!puedeAdministrarConfiguracion() || !sectorActual) return;
-  const modal = $("horariosSelectorPersonalModal");
-  const lista = $("horariosSelectorPersonalLista");
-  const buscar = $("horariosSelectorPersonalBuscar");
-  if (!modal || !lista || !buscar) return;
-  const sectorDestino = sectorActual;
-  modal.classList.remove("oculto");
-  modal.setAttribute("aria-hidden", "false");
+  const modal = $("horariosSelectorPersonalModal"), lista = $("horariosSelectorPersonalLista");
+  const buscar = $("horariosSelectorPersonalBuscar"), agregar = $("horariosSelectorPersonalConfirmar");
+  if (!modal || !lista || !buscar || !agregar) return;
+  const sectorDestino = sectorActual, seleccionados = new Set();
+  modal.classList.remove("oculto"); modal.setAttribute("aria-hidden", "false");
   lista.innerHTML = '<p class="horarios-selector-empty">Cargando usuarios...</p>';
-  buscar.value = "";
-  buscar.focus();
+  buscar.value = ""; agregar.disabled = true; agregar.textContent = "Agregar"; buscar.focus();
   try {
     const r = await fetch(`${API_BASE_URL}/horarios/personal-disponible?sector=${encodeURIComponent(sectorDestino)}`);
     const d = await r.json();
     if (!r.ok || !d.ok) throw new Error(d.mensaje || "No se pudo consultar el personal");
     if (modal.classList.contains("oculto")) return;
     const usuarios = d.usuarios || [];
+    const actualizar = () => { agregar.disabled = !seleccionados.size; agregar.textContent = seleccionados.size ? `Agregar (${seleccionados.size})` : "Agregar"; };
     const render = () => {
       const termino = buscar.value.trim().toLocaleLowerCase("es");
-      const filtrados = usuarios.filter(u => `${u.nombre} ${u.sector || ""} ${u.rol || ""}`.toLocaleLowerCase("es").includes(termino));
-      lista.innerHTML = filtrados.length ? filtrados.map(u => `
-        <button type="button" class="horarios-selector-persona" data-usuario="${esc(u.usuario)}">
-          <strong>${esc(u.nombre)}</strong>
-          <span>${esc(u.sector || "Sin sector")} · ${esc(u.rol || "Sin rol")}</span>
-        </button>`).join("") : '<p class="horarios-selector-empty">No hay usuarios disponibles para agregar.</p>';
+      lista.innerHTML = usuarios.filter(u => `${u.nombre} ${u.sector || ""} ${u.rol || ""}`.toLocaleLowerCase("es").includes(termino)).map(u => `
+        <label class="horarios-selector-persona ${seleccionados.has(u.usuario) ? "is-selected" : ""}">
+          <input type="checkbox" data-usuario="${esc(u.usuario)}" ${seleccionados.has(u.usuario) ? "checked" : ""}>
+          <span class="horarios-selector-persona-info"><strong>${esc(u.nombre)}</strong><small>${esc(u.sector || "Sin sector")} · ${esc(u.rol || "Sin rol")}</small></span>
+        </label>`).join("") || '<p class="horarios-selector-empty">No hay usuarios disponibles para agregar.</p>';
     };
     buscar.oninput = render;
-    lista.onclick = async (evento) => {
-      const boton = evento.target.closest("button[data-usuario]");
-      if (!boton || boton.disabled) return;
-      boton.disabled = true;
+    lista.onchange = e => {
+      const check = e.target.closest('input[data-usuario]'); if (!check) return;
+      if (check.checked) seleccionados.add(check.dataset.usuario); else seleccionados.delete(check.dataset.usuario);
+      check.closest(".horarios-selector-persona")?.classList.toggle("is-selected", check.checked);
+      actualizar();
+    };
+    agregar.onclick = async () => {
+      if (!seleccionados.size || agregar.disabled) return;
+      agregar.disabled = true;
+      let agregados = 0;
       try {
-        const resp = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {
-          method: "POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({sector:sectorDestino,usuario:boton.dataset.usuario})
-        });
-        const dato = await resp.json();
-        if (!resp.ok || !dato.ok) throw new Error(dato.mensaje || "No se pudo agregar el usuario");
+        for (const usuario of seleccionados) {
+          const resp = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sector:sectorDestino,usuario})});
+          const dato = await resp.json();
+          if (!resp.ok || !dato.ok) throw new Error(dato.mensaje || `No se pudo agregar ${usuario}`);
+          agregados++;
+        }
         cerrarSelectorPersonalHorario();
         await cargarContextoHorarios();
-        mensajeConfig("horariosOrdenMensaje", "Usuario agregado. Sus horarios se compartirán entre sectores.");
+        mensajeConfig("horariosOrdenMensaje", `${agregados} usuario(s) agregado(s). Los horarios se comparten entre sectores.`);
       } catch (e) {
-        boton.disabled = false;
-        mensajeConfig("horariosOrdenMensaje", e.message, "error");
+        await cargarContextoHorarios();
+        mensajeConfig("horariosOrdenMensaje", `${agregados} agregado(s). ${e.message}`, "error");
+        cerrarSelectorPersonalHorario();
       }
     };
-    render();
-  } catch (e) {
-    lista.innerHTML = `<p class="horarios-selector-empty">${esc(e.message)}</p>`;
-  }
+    render(); actualizar();
+  } catch (e) { lista.innerHTML = `<p class="horarios-selector-empty">${esc(e.message)}</p>`; }
+}
+async function quitarPersonalAdicionalHorario(nombre) {
+  if (!puedeAdministrarConfiguracion() || !sectorActual) return;
+  if (!window.confirm(`¿Quitar a ${nombre} de esta planilla? Sus horarios y otras planillas no se modificarán.`)) return;
+  try {
+    const r = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({sector:sectorActual,nombre})});
+    const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.mensaje || "No se pudo quitar el usuario");
+    await cargarContextoHorarios();
+    mensajeConfig("horariosOrdenMensaje", `${nombre} fue quitado de esta planilla.`);
+  } catch(e) { mensajeConfig("horariosOrdenMensaje",e.message,"error"); }
 }
 function configurarEventos() {
   $("btnHorariosAgregarPersonal")?.addEventListener("click", agregarPersonalSectorHorario);
+  $("horariosOrdenLista")?.addEventListener("click", e => { const btn = e.target.closest(".horarios-quitar-adicional"); if (btn) quitarPersonalAdicionalHorario(btn.dataset.empleado); });
   $("horariosSelectorPersonalCerrar")?.addEventListener("click", cerrarSelectorPersonalHorario);
   $("horariosSelectorPersonalModal")?.addEventListener("click", e => {
     if (e.target.id === "horariosSelectorPersonalModal") cerrarSelectorPersonalHorario();
