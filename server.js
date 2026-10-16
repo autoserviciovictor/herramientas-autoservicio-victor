@@ -2447,6 +2447,25 @@ function empleadosHorarioDelSector(sectorId, usuarios, sectores) {
   );
 }
 
+// Una asignación adicional se guarda en el orden del sector. No modifica
+// el rol ni el sector principal del usuario.
+function personalAdicionalHorarios(sector, usuarios, filasOrden) {
+  const nombres = new Set((filasOrden || []).filter(f => normalizarTexto(f[0]) === sector).map(f => normalizarTexto(f[1])));
+  return usuarios.filter(u => u.activo && nombres.has(u.nombre || u.usuario));
+}
+function empleadosHorarioConAdicionales(sector, usuarios, sectores, filasOrden) {
+  const base = empleadosHorarioDelSector(sector, usuarios, sectores);
+  const vistos = new Set(base.map(u => normalizarUsuario(u.usuario)));
+  for (const u of personalAdicionalHorarios(sector, usuarios, filasOrden)) {
+    if (!vistos.has(normalizarUsuario(u.usuario))) { base.push(u); vistos.add(normalizarUsuario(u.usuario)); }
+  }
+  return base;
+}
+function sectoresCompartidosHorario(nombre, usuarios, sectores, filasOrden) {
+  const usuario = usuarios.find(u => u.activo && (u.nombre || u.usuario) === nombre);
+  if (!usuario) return [];
+  return sectores.filter(s => s.activo && empleadosHorarioConAdicionales(s.id, usuarios, sectores, filasOrden).some(u => normalizarUsuario(u.usuario) === normalizarUsuario(usuario.usuario))).map(s => s.id);
+}
 function habilitadoCalendarioHorarios(valor) {
   const estado = normalizarTexto(valor).toLowerCase();
   // Compatibilidad hacia atrás: filas anteriores no tienen la columna E.
@@ -2729,16 +2748,12 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
     // si todavía no existe la copia sincronizada de un supervisor, se completa
     // visualmente desde su sector propio. Las futuras ediciones quedan guardadas
     // en ambos sectores por el PUT de calendario.
-    if (sector === "administracion") {
-      const supervisores = usuarios.filter(
-        (u) => u.activo && u.rol === "supervisor",
-      );
-      for (const supervisor of supervisores) {
-        const nombre = supervisor.nombre || supervisor.usuario;
-        const sectoresFuente = sectoresHorarioSupervisor(
-          supervisor,
-          sectores,
-        ).filter((id) => id !== "administracion");
+    {
+      const filasOrden = await listarOrdenFilas();
+      const personal = empleadosHorarioConAdicionales(sector, usuarios, sectores, filasOrden);
+      for (const usuarioCompartido of personal) {
+        const nombre = usuarioCompartido.nombre || usuarioCompartido.usuario;
+        const sectoresFuente = sectoresCompartidosHorario(nombre, usuarios, sectores, filasOrden).filter(id => id !== sector);
         for (const sectorFuente of sectoresFuente) {
           filasCalendario
             .filter(
@@ -2784,23 +2799,13 @@ app.get("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
     }
 
     let turnos = await obtenerTurnosSector(sector);
-    if (sector === "administracion") {
-      const supervisores = usuarios.filter(
-        (u) => u.activo && u.rol === "supervisor",
-      );
-      const sectoresTurnos = new Set(
-        supervisores
-          .flatMap((u) => sectoresHorarioSupervisor(u, sectores))
-          .filter((id) => id !== "administracion"),
-      );
-      for (const id of sectoresTurnos) {
-        const extra = await obtenerTurnosSector(id);
-        const ids = new Set(turnos.map((t) => t.id));
-        for (const turno of extra)
-          if (!ids.has(turno.id)) {
-            turnos.push(turno);
-            ids.add(turno.id);
-          }
+    {
+      const filasOrden = await listarOrdenFilas();
+      const personal = empleadosHorarioConAdicionales(sector, usuarios, sectores, filasOrden);
+      const fuentes = new Set(personal.flatMap(u => sectoresCompartidosHorario(u.nombre || u.usuario, usuarios, sectores, filasOrden)).filter(id => id !== sector));
+      const ids = new Set(turnos.map(t => t.id));
+      for (const id of fuentes) for (const turno of await obtenerTurnosSector(id)) {
+        if (!ids.has(turno.id)) { turnos.push(turno); ids.add(turno.id); }
       }
     }
     const mesActual = fechaArgentina().slice(0, 7);
@@ -2849,7 +2854,8 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         .status(404)
         .json({ ok: false, mensaje: "Sector inexistente o inactivo" });
 
-    const empleadosBase = empleadosHorarioDelSector(sector, usuarios, sectores);
+    const filasOrdenCompartidas = await listarOrdenFilas();
+    const empleadosBase = empleadosHorarioConAdicionales(sector, usuarios, sectores, filasOrdenCompartidas);
     const empleadosPermitidos = new Set(
       empleadosBase.map((u) => u.nombre || u.usuario),
     );
@@ -3034,10 +3040,10 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         const pos = k.lastIndexOf("::"),
           empleado = k.slice(0, pos),
           dia = Number(k.slice(pos + 2));
-        const supervisor = supervisorPorNombre.get(empleado);
-        if (!supervisor) continue;
+        const destinos = sectoresCompartidosHorario(empleado, usuarios, sectores, filasOrdenCompartidas);
+        if (!destinos.length) continue;
         const valor = nuevoCompleto.get(k) || "";
-        for (const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+        for (const destino of destinos) {
           alcancesEscritura.set(`${destino}||${mes}`, { sector: destino, mes });
           const claveDestino = `${destino}||${mes}||${empleado}||${dia}`;
           if (valor)
@@ -3080,13 +3086,10 @@ app.put("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
         ]);
 
       // Para supervisores sincroniza también licencias/motivos/observaciones.
-      const supervisoresEnSector = empleadosBase.filter(
-        (u) => u.rol === "supervisor",
-      );
-      for (const supervisor of supervisoresEnSector) {
-        const empleado = supervisor.nombre || supervisor.usuario;
+      for (const usuarioCompartido of empleadosBase) {
+        const empleado = usuarioCompartido.nombre || usuarioCompartido.usuario;
         const detalleEmpleado = detalles.filter((x) => x.empleado === empleado);
-        for (const destino of sectoresHorarioSupervisor(supervisor, sectores)) {
+        for (const destino of sectoresCompartidosHorario(empleado, usuarios, sectores, filasOrdenCompartidas)) {
           alcancesEscritura.set(`${destino}||${mes}`, { sector: destino, mes });
           for (const key of [...mapaDetalles.keys()]) {
             if (key.startsWith(`${destino}||${mes}||${empleado}||`))
@@ -3214,10 +3217,11 @@ app.get("/horarios/contexto", requerirAccesoHorarios, async (req, res) => {
     });
 
     const respuesta = visibles.map((s) => {
-      const empleadosSector = empleadosHorarioDelSector(
+      const empleadosSector = empleadosHorarioConAdicionales(
         s.id,
         usuarios,
         activos,
+        filasOrden,
       ).sort((a, b) => {
         const mapa = ordenPorSector.get(s.id);
         const an = a.nombre || a.usuario,
@@ -3299,6 +3303,34 @@ app.get("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
       .json({ ok: false, mensaje: e.message || "No se pudo cargar el orden" });
   }
 });
+app.get("/horarios/personal-disponible", requerirAccesoHorarios, async (req, res) => {
+  try {
+    const sector = normalizarTexto(req.query.sector);
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"Sin permiso"});
+    const [usuarios, sectores, filas] = await Promise.all([obtenerUsuarios(), obtenerSectores(), listarOrdenFilas()]);
+    const existentes = new Set(empleadosHorarioConAdicionales(sector, usuarios, sectores, filas).map(u => normalizarUsuario(u.usuario)));
+    res.json({ok:true, usuarios: usuarios.filter(u => u.activo && !existentes.has(normalizarUsuario(u.usuario))).map(u => ({usuario:u.usuario,nombre:u.nombre || u.usuario,sector:u.sector,rol:u.rol}))});
+  } catch(e) { res.status(500).json({ok:false,mensaje:e.message}); }
+});
+app.post("/horarios/personal-adicional", requerirAccesoHorarios, async (req,res) => {
+  try {
+    const sector = normalizarTexto(req.body?.sector), codigo = normalizarUsuario(req.body?.usuario);
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector))) return res.status(403).json({ok:false,mensaje:"Sin permiso"});
+    const [usuarios, sectores] = await Promise.all([obtenerUsuarios(), obtenerSectores()]);
+    if (!sectores.some(s => s.id === sector && s.activo)) return res.status(404).json({ok:false,mensaje:"Sector inexistente"});
+    const usuario = usuarios.find(u => u.activo && normalizarUsuario(u.usuario) === codigo);
+    if (!usuario) return res.status(404).json({ok:false,mensaje:"Usuario inexistente o inactivo"});
+    await asegurarHorariosPostgres();
+    await ejecutarEnCola("horarios-global", async () => conTransaccionHorarios(async cliente => {
+      const filas = await listarOrdenFilas(cliente);
+      const nombre = usuario.nombre || usuario.usuario;
+      if (empleadosHorarioConAdicionales(sector, usuarios, sectores, filas).some(u => normalizarUsuario(u.usuario) === codigo)) return;
+      const previas = filas.filter(f => normalizarTexto(f[0]) === sector);
+      await reemplazarOrdenSector(sector, [...previas, [sector,nombre,previas.length+1,fechaHoraArgentinaIso(),"Sí","",""]], cliente);
+    }));
+    res.json({ok:true});
+  } catch(e) {res.status(500).json({ok:false,mensaje:e.message});}
+});
 app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.body?.sector);
@@ -3320,7 +3352,7 @@ app.put("/horarios/orden", requerirAccesoHorarios, async (req, res) => {
     if (!sec)
       return res.status(404).json({ ok: false, mensaje: "Sector inexistente" });
     const permitidos = new Set(
-      empleadosHorarioDelSector(sector, usuarios, sectores).map(
+      empleadosHorarioConAdicionales(sector, usuarios, sectores, await listarOrdenFilas()).map(
         (u) => u.nombre || u.usuario,
       ),
     );

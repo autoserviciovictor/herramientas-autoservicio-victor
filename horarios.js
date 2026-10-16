@@ -2432,7 +2432,27 @@ function renderConfiguracionHorarios() {
   renderOrdenConfig();
 }
 
+async function agregarPersonalSectorHorario() {
+  if (!puedeAdministrarConfiguracion() || !sectorActual) return;
+  try {
+    const r = await fetch(`${API_BASE_URL}/horarios/personal-disponible?sector=${encodeURIComponent(sectorActual)}`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.mensaje || "No se pudo consultar el personal");
+    if (!d.usuarios.length) return mensajeConfig("horariosOrdenMensaje", "Todos los usuarios activos ya están incluidos.");
+    const opciones = d.usuarios.map((u,i) => `${i+1}. ${u.nombre} (${u.sector || "Sin sector"} · ${u.rol})`).join("\n");
+    const elegido = window.prompt(`Seleccioná el número de usuario para agregar a este sector:\n\n${opciones}`);
+    if (elegido === null) return;
+    const indice = Number(elegido)-1;
+    if (!Number.isInteger(indice) || !d.usuarios[indice]) throw new Error("Seleccioná un número válido.");
+    const resp = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sector:sectorActual,usuario:d.usuarios[indice].usuario})});
+    const dato = await resp.json();
+    if (!resp.ok || !dato.ok) throw new Error(dato.mensaje || "No se pudo agregar el usuario");
+    await cargarContextoHorarios();
+    mensajeConfig("horariosOrdenMensaje", "Usuario agregado al sector. Los cambios de horario se compartirán.");
+  } catch(e) { mensajeConfig("horariosOrdenMensaje", e.message, "error"); }
+}
 function configurarEventos() {
+  $("btnHorariosAgregarPersonal")?.addEventListener("click", agregarPersonalSectorHorario);
   crearBotonVolverHorarios();
   crearControlConfiguracionCalendario();
   crearControlesEdicionCalendario();
