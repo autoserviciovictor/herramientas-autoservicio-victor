@@ -2317,7 +2317,7 @@ function renderOrdenConfig() {
           </span>
           <span class="horarios-order-visibility-switch" aria-hidden="true"><i></i></span>
         </button>
-        ${info.esAdicional ? `<button type="button" class="horarios-quitar-adicional" data-empleado="${escAttr(e)}" title="Quitar de esta planilla">Quitar</button>` : ""}
+        ${info.esAdicional ? `<button type="button" class="horarios-quitar-adicional" data-empleado="${escAttr(e)}" title="Quitar de esta planilla" aria-label="Quitar a ${escAttr(e)} de esta planilla"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg></button>` : ""}
         <button class="horarios-order-drag-handle" type="button" aria-label="Arrastrar ${escAttr(e)} para cambiar su posición" title="Arrastrar para reordenar"><span aria-hidden="true"></span></button>
       </article>`;
     })
@@ -2497,7 +2497,14 @@ async function agregarPersonalSectorHorario() {
 }
 async function quitarPersonalAdicionalHorario(nombre) {
   if (!puedeAdministrarConfiguracion() || !sectorActual) return;
-  if (!window.confirm(`¿Quitar a ${nombre} de esta planilla? Sus horarios y otras planillas no se modificarán.`)) return;
+  const confirmado = await dialogoHorarios({
+    titulo: "Quitar usuario de la planilla",
+    mensaje: `¿Estás seguro de que querés quitar a ${nombre} de la planilla de ${sectorActual}? Sus horarios y su presencia en otros sectores no se modificarán.`,
+    confirmar: "Quitar usuario",
+    peligro: true,
+    kicker: "Personal del sector",
+  });
+  if (!confirmado) return;
   try {
     const r = await fetch(`${API_BASE_URL}/horarios/personal-adicional`, {method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({sector:sectorActual,nombre})});
     const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.mensaje || "No se pudo quitar el usuario");
@@ -2506,6 +2513,9 @@ async function quitarPersonalAdicionalHorario(nombre) {
   } catch(e) { mensajeConfig("horariosOrdenMensaje",e.message,"error"); }
 }
 function configurarEventos() {
+  // Ubicar el selector en body para evitar que un contenedor con transform o scroll recorte el overlay fijo.
+  const selectorPersonal = $("horariosSelectorPersonalModal");
+  if (selectorPersonal && selectorPersonal.parentElement !== document.body) document.body.appendChild(selectorPersonal);
   $("btnHorariosAgregarPersonal")?.addEventListener("click", agregarPersonalSectorHorario);
   $("horariosOrdenLista")?.addEventListener("click", e => { const btn = e.target.closest(".horarios-quitar-adicional"); if (btn) quitarPersonalAdicionalHorario(btn.dataset.empleado); });
   $("horariosSelectorPersonalCerrar")?.addEventListener("click", cerrarSelectorPersonalHorario);
