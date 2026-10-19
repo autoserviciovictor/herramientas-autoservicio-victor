@@ -2207,6 +2207,12 @@ function renderBano() {
           const confirmo = Boolean(String(x.usuario || "").trim());
           const verificado = Boolean(String(x.supervisadoPor || "").trim());
           const puedeVerificar = puedeVerificarBano();
+          const actual = usuario();
+          const identidad = (valor) => String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "");
+          const responsableUsuario = usuarioParticipante(responsableClave);
+          const puedeConfirmarPendiente = !confirmo && [actual?.usuario, actual?.nombre].some((identidadActual) =>
+            identidad(identidadActual) && [responsableClave, responsableUsuario?.usuario, responsableUsuario?.nombre].some((clave) => identidad(clave) === identidad(identidadActual))
+          );
           const accion = verificado
             ? '<span class="bano-history-status is-confirmed">Confirmado</span>'
             : puedeVerificar
@@ -2214,10 +2220,15 @@ function renderBano() {
               : confirmo
                 ? '<span class="bano-history-waiting">Pendiente</span>'
                 : '<span class="bano-history-empty">—</span>';
+          const confirmacionResponsable = confirmo
+            ? '<span class="bano-history-status is-confirmed">Confirmado</span>'
+            : puedeConfirmarPendiente
+              ? `<button type="button" class="bano-history-verify" data-bano-confirmar="${esc(x.fecha)}" title="Confirmar limpieza pendiente de esta fecha">Confirmar</button>`
+              : '<span class="bano-history-status is-unconfirmed">Sin confirmar</span>';
           return `<div class="bano-history-row" role="row">
             <span class="bano-history-date" role="cell" data-label="Fecha">${esc(fmt(fecha, { day: "2-digit", month: "2-digit", year: "numeric" }))}</span>
             <strong role="cell" data-label="Responsable de limpieza">${esc(responsableNombre || "Sin participante")}</strong>
-            <span role="cell" data-label="Confirmación responsable"><span class="bano-history-status ${confirmo ? "is-confirmed" : "is-unconfirmed"}">${confirmo ? "Confirmado" : "Sin confirmar"}</span></span>
+            <span role="cell" data-label="Confirmación responsable">${confirmacionResponsable}</span>
             <span role="cell" data-label="Supervisado por">${verificado ? esc(x.supervisadoPor) : '<span class="bano-history-empty">—</span>'}</span>
             <span role="cell" data-label="Confirmación de limpieza">${accion}</span>
           </div>`;
@@ -2225,6 +2236,9 @@ function renderBano() {
       </div>`
     : `<div class="bano-all-confirmed"><span><svg class="app-icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M4 9h16M5 5h14v16H5z"/></svg></span><div><strong>Sin historial todavía</strong><small>Las limpiezas realizadas aparecerán acá.</small></div></div>`;
 
+  $("banoPendientes").querySelectorAll("[data-bano-confirmar]").forEach((boton) => {
+    boton.addEventListener("click", () => confirmarBano(boton.dataset.banoConfirmar, boton));
+  });
   $("banoPendientes").querySelectorAll("[data-bano-verificar]").forEach((boton) => {
     boton.addEventListener("click", () => verificarBano(boton.dataset.banoVerificar, boton));
   });
@@ -2327,18 +2341,19 @@ async function cambiarResponsableBano(fecha, boton = null) {
   }
 }
 
-async function confirmarBano() {
+async function confirmarBano(fechaSolicitada = null, botonHistorial = null) {
   const hoyFecha = new Date(),
     hoy = iso(hoyFecha),
+    fecha = typeof fechaSolicitada === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fechaSolicitada) ? fechaSolicitada : hoy,
     cfg = configBano();
   if (
-    !esDiaLimpieza(hoyFecha, cfg) ||
+    fecha > hoy || !esDiaLimpieza(parseFecha(fecha), cfg) ||
     (cfg.historial || []).some(
-      (h) => h.fecha === hoy && String(h.usuario || "").trim(),
+      (h) => h.fecha === fecha && String(h.usuario || "").trim(),
     )
-  )
-    return;
-  const boton = $("btnConfirmarBano");
+  ) return;
+  const boton = botonHistorial || $("btnConfirmarBano");
+  const textoAnterior = boton?.innerHTML;
   if (boton) {
     boton.disabled = true;
     boton.textContent = "Confirmando...";
@@ -2347,7 +2362,7 @@ async function confirmarBano() {
     const r = await fetch(`${API_BASE_URL}/tareas/bano/confirmar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fecha: hoy }),
+        body: JSON.stringify({ fecha }),
       }),
       data = await r.json();
     if (!r.ok || !data.ok)
@@ -2364,7 +2379,7 @@ async function confirmarBano() {
     });
     if (boton) {
       boton.disabled = false;
-      boton.innerHTML = '<svg class="app-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span>Marcar como completado</span>';
+      boton.innerHTML = textoAnterior;
     }
   }
 }

@@ -639,8 +639,17 @@ function configurarTooltipsHorarios(body) {
     if (event.relatedTarget && boton.contains(event.relatedTarget)) return;
     ocultar();
   });
+  // El tooltip vive en document.body: si se reemplaza la tabla, no debe
+  // permanecer flotando tras eliminar personal o cambiar de sector.
   body.addEventListener("scroll", ocultar, { passive: true });
+  window.addEventListener("scroll", ocultar, { passive: true, capture: true });
   window.addEventListener("resize", ocultar, { passive: true });
+  document.addEventListener("pointerdown", ocultar, { capture: true });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) ocultar(); });
+  new MutationObserver(() => {
+    if (tooltip?.classList.contains("visible") &&
+        (!body.isConnected || !body.querySelector(".horario-cell:hover"))) ocultar();
+  }).observe(body, { childList: true, subtree: true });
 }
 
 function coberturaDia(d) {
@@ -1287,6 +1296,11 @@ function renderTabla() {
   const head = $("horariosTablaHead"),
     body = $("horariosTablaBody");
   if (!head || !body) return;
+  // Limpiar los tooltips globales antes de regenerar las filas.
+  document.querySelectorAll(".horarios-turno-tooltip").forEach((el) => {
+    el.classList.remove("visible");
+    el.setAttribute("aria-hidden", "true");
+  });
   const tabla = head.closest(".horarios-table");
   if (tabla) {
     let columnas = tabla.querySelector("#horariosTablaColumnas");
