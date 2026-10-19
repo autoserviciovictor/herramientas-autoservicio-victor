@@ -120,6 +120,13 @@ async function asegurarEsquemaCatalogoPublico() {
     )`);
     await query(`INSERT INTO catalog_image_batch_state(batch_id) VALUES(1) ON CONFLICT(batch_id) DO NOTHING`);
 
+    await query(`CREATE TABLE IF NOT EXISTS catalog_import_settings (
+      id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id=1),
+      auto_stock BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await query(`INSERT INTO catalog_import_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+
     esquemaAsegurado = true;
   })();
 
@@ -438,6 +445,21 @@ async function listarProductosSinImagenDb(cliente = null) {
   }));
 }
 
+async function obtenerAutoStockCatalogoDb(cliente = null) {
+  if (!cliente) await asegurarEsquemaCatalogoPublico();
+  const resultado = await ejecutarConsultaCatalogo(cliente,
+    "SELECT auto_stock FROM catalog_import_settings WHERE id=1");
+  return resultado.rows[0]?.auto_stock !== false;
+}
+
+async function guardarAutoStockCatalogoDb(habilitado) {
+  await asegurarEsquemaCatalogoPublico();
+  await query(`INSERT INTO catalog_import_settings(id, auto_stock, updated_at)
+    VALUES(1,$1,NOW()) ON CONFLICT(id) DO UPDATE
+    SET auto_stock=EXCLUDED.auto_stock, updated_at=NOW()`, [habilitado]);
+  return habilitado;
+}
+
 async function sincronizarVisibilidadStockCatalogoDb(productos = [], cliente = null) {
   if (!cliente) await asegurarEsquemaCatalogoPublico();
 
@@ -576,12 +598,14 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   else if (estado === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
   else if (estado === "sin-configurar") condiciones.push("s.code IS NULL");
   else if (estado === "destacado") condiciones.push("s.featured=TRUE");
-  if (estadoImagen === "confirmada") condiciones.push("s.image_status='confirmada'");
+  if (estadoImagen === "con_imagen") condiciones.push("(s.image_data IS NOT NULL OR NULLIF(BTRIM(s.image_url),'') IS NOT NULL)");
+  else if (estadoImagen === "sin_imagen") condiciones.push("(s.image_data IS NULL AND NULLIF(BTRIM(s.image_url),'') IS NULL)");
+  else if (estadoImagen === "confirmada") condiciones.push("s.image_status='confirmada'");
   else if (estadoImagen === "candidato") condiciones.push("s.image_status='candidato'");
   else if (estadoImagen === "buscando") condiciones.push("s.image_status='buscando'");
   else if (estadoImagen === "sin_resultado") condiciones.push("s.image_status='sin_resultado'");
   else if (estadoImagen === "error") condiciones.push("s.image_status='error'");
-  else if (estadoImagen === "sin_imagen") condiciones.push("COALESCE(s.image_status,'sin_imagen')='sin_imagen'");
+
   const where = condiciones.join(" AND ");
   const conteo = await query(`
     SELECT COUNT(*)::int AS total
@@ -810,12 +834,14 @@ async function actualizarVisibilidadMasivaCatalogoAdminDb({ visible, rubroId = n
   else if (filtroEstado === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
   else if (filtroEstado === "sin-configurar") condiciones.push("s.code IS NULL");
   else if (filtroEstado === "destacado") condiciones.push("s.featured=TRUE");
-  if (filtroImagen === "confirmada") condiciones.push("s.image_status='confirmada'");
+  if (filtroImagen === "con_imagen") condiciones.push("(s.image_data IS NOT NULL OR NULLIF(BTRIM(s.image_url),'') IS NOT NULL)");
+  else if (filtroImagen === "sin_imagen") condiciones.push("(s.image_data IS NULL AND NULLIF(BTRIM(s.image_url),'') IS NULL)");
+  else if (filtroImagen === "confirmada") condiciones.push("s.image_status='confirmada'");
   else if (filtroImagen === "candidato") condiciones.push("s.image_status='candidato'");
   else if (filtroImagen === "buscando") condiciones.push("s.image_status='buscando'");
   else if (filtroImagen === "sin_resultado") condiciones.push("s.image_status='sin_resultado'");
   else if (filtroImagen === "error") condiciones.push("s.image_status='error'");
-  else if (filtroImagen === "sin_imagen") condiciones.push("COALESCE(s.image_status,'sin_imagen')='sin_imagen'");
+
   const where = condiciones.join(" AND ");
   const conteo = await query(`SELECT COUNT(*)::int AS total FROM product_catalog p LEFT JOIN catalog_product_settings s ON s.code=p.code WHERE ${where}`, params);
   const coincidencias = Number(conteo.rows[0]?.total) || 0;
@@ -1097,5 +1123,7 @@ module.exports = {
   listarPendientesProcesoImagenesDb,
   listarProductosSinImagenDb,
   sincronizarVisibilidadStockCatalogoDb,
+  obtenerAutoStockCatalogoDb,
+  guardarAutoStockCatalogoDb,
   sincronizarRubrosImportadosCatalogoDb,
 };

@@ -1926,3 +1926,96 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
     height:42px!important;
   }
 }
+
+/* Control persistente de publicación por stock */
+.catalog-stock-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid #dce3ed;border-radius:10px;background:#fff;color:#344258;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.catalog-stock-toggle input{accent-color:#11a56a;width:16px;height:16px;cursor:pointer}
+.catalog-stock-toggle:has(input:disabled){opacity:.55;cursor:wait}
+
+/* V12 · Escritorio: una sola definición de columnas para la barra.
+   Sustituye las reglas D31/V11 incompatibles con el control Auto stock. */
+@media (min-width: 1100px) {
+  #catalogPanelProductos .catalog-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(150px,1fr) 104px 42px 110px 118px 120px 108px !important;
+    grid-template-areas: "search filter refresh stock hide publish import" !important;
+    grid-auto-flow: row !important;
+    column-gap: 7px !important;
+    row-gap: 0 !important;
+    align-items: center !important;
+    padding: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 0 12px !important;
+  }
+  #catalogPanelProductos .catalog-toolbar > .catalog-search {grid-area:search!important;}
+  #catalogPanelProductos .catalog-toolbar > .catalog-filter-popover-wrap {grid-area:filter!important;}
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnRecargar {grid-area:refresh!important;}
+  #catalogPanelProductos .catalog-toolbar > .catalog-stock-toggle {grid-area:stock!important;}
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnOcultarMasivo {grid-area:hide!important;}
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnPublicarMasivo {grid-area:publish!important;}
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnImportarImagenes {grid-area:import!important;}
+  #catalogPanelProductos .catalog-toolbar > .catalog-search,
+  #catalogPanelProductos .catalog-toolbar > .catalog-filter-popover-wrap,
+  #catalogPanelProductos .catalog-toolbar > .catalog-stock-toggle,
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnRecargar,
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnOcultarMasivo,
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnPublicarMasivo,
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnImportarImagenes {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 42px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #catalogPanelProductos .catalog-toolbar > .catalog-stock-toggle {
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    gap:5px!important;padding:0 5px!important;white-space:nowrap!important;
+  }
+  #catalogPanelProductos .catalog-stock-toggle input {width:15px!important;height:15px!important;flex:0 0 15px!important;margin:0!important;}
+  #catalogPanelProductos .catalog-stock-toggle span {font-size:11px!important;white-space:nowrap!important;}
+  #catalogPanelProductos #catalogBtnFiltros {width:100%!important;min-width:0!important;max-width:none!important;}
+  #catalogPanelProductos #catalogBtnRecargar {justify-self:stretch!important;min-width:0!important;}
+  #catalogPanelProductos .catalog-toolbar > #catalogBtnVerPublicoMobile {display:none!important;}
+  #catalogPanelProductos .catalog-toolbar:after {display:none!important;content:none!important;}
+}
+
+/* V13: barra escritorio. Neutraliza anchos mínimos y posiciones heredadas. */
+@media (min-width:1100px) {
+  body #catalogPanelProductos .catalog-toolbar {
+    display:flex!important;flex-flow:row nowrap!important;align-items:center!important;
+    gap:8px!important;min-width:0!important;width:100%!important;
+    padding:0!important;margin-bottom:12px!important;
+    grid-template-columns:none!important;grid-template-areas:none!important;
+  }
+  body #catalogPanelProductos .catalog-toolbar > .catalog-search {
+    flex:1 1 160px!important;width:0!important;min-width:120px!important;max-width:none!important;
+  }
+  body #catalogPanelProductos .catalog-toolbar > .catalog-filter-popover-wrap {flex:0 0 96px!important;width:96px!important;}
+  body #catalogPanelProductos .catalog-toolbar > #catalogBtnRecargar {flex:0 0 42px!important;width:42px!important;}
+  body #catalogPanelProductos .catalog-toolbar > .catalog-stock-toggle {flex:0 0 106px!important;width:106px!important;}
+  body #catalogPanelProductos .catalog-toolbar > #catalogBtnOcultarMasivo {flex:0 0 118px!important;width:118px!important;}
+  body #catalogPanelProductos .catalog-toolbar > #catalogBtnPublicarMasivo {flex:0 0 120px!important;width:120px!important;}
+  body #catalogPanelProductos .catalog-toolbar > #catalogBtnImportarImagenes {flex:0 0 104px!important;width:104px!important;}
+  body #catalogPanelProductos .catalog-toolbar > :is(.catalog-search,.catalog-filter-popover-wrap,#catalogBtnRecargar,.catalog-stock-toggle,#catalogBtnOcultarMasivo,#catalogBtnPublicarMasivo,#catalogBtnImportarImagenes) {
+    grid-area:auto!important;grid-column:auto!important;grid-row:auto!important;
+    position:relative!important;inset:auto!important;transform:none!important;
+    min-width:0!important;max-width:none!important;box-sizing:border-box!important;
+    height:42px!important;margin:0!important;overflow:visible!important;
+  }
+  body #catalogPanelProductos .catalog-toolbar > .catalog-search {min-width:120px!important;}
+  body #catalogPanelProductos .catalog-toolbar > .catalog-filter-popover-wrap .catalog-filter-btn {width:100%!important;min-width:0!important;}
+  body #catalogPanelProductos .catalog-toolbar > .catalog-stock-toggle {padding:0 6px!important;justify-content:center!important;gap:5px!important;}
+  body #catalogPanelProductos .catalog-toolbar > .catalog-stock-toggle span {display:inline!important;font-size:11px!important;}
+  body #catalogPanelProductos .catalog-toolbar > :is(#catalogBtnOcultarMasivo,#catalogBtnPublicarMasivo,#catalogBtnImportarImagenes) {padding:0 7px!important;white-space:nowrap!important;}
+  body #catalogPanelProductos .catalog-toolbar > :is(#catalogBtnOcultarMasivo,#catalogBtnPublicarMasivo,#catalogBtnImportarImagenes) span {display:inline!important;font-size:11px!important;}
+  body #catalogPanelProductos .catalog-toolbar > #catalogBtnVerPublicoMobile {display:none!important;}
+}

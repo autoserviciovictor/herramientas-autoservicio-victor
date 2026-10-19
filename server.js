@@ -84,6 +84,8 @@ const {
   obtenerImagenCatalogoDb,
   quitarImagenCatalogoDb,
   sincronizarVisibilidadStockCatalogoDb,
+  obtenerAutoStockCatalogoDb,
+  guardarAutoStockCatalogoDb,
   sincronizarRubrosImportadosCatalogoDb,
 } = require("./db-catalogo-publico");
 const {
@@ -1928,6 +1930,16 @@ app.patch("/admin/catalogo/pedidos/:numero/observaciones", requerirAdministrador
       mensaje: error.message || "No se pudieron guardar las observaciones",
     });
   }
+});
+
+app.get("/admin/catalogo/auto-stock", requerirAdministrador, async (req, res) => {
+  try { res.json({ ok: true, habilitado: await obtenerAutoStockCatalogoDb() }); }
+  catch (error) { res.status(500).json({ ok: false, mensaje: error.message }); }
+});
+app.put("/admin/catalogo/auto-stock", requerirAdministrador, async (req, res) => {
+  if (typeof req.body?.habilitado !== "boolean") return res.status(400).json({ ok: false, mensaje: "Valor inválido" });
+  try { res.json({ ok: true, habilitado: await guardarAutoStockCatalogoDb(req.body.habilitado) }); }
+  catch (error) { res.status(500).json({ ok: false, mensaje: error.message }); }
 });
 
 app.get("/admin/catalogo/estado", requerirAdministrador, async (req, res) => {
@@ -5248,7 +5260,10 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
     const sincronizacion = await conTransaccionInventarioProductos(async (cliente) => {
       await reemplazarCatalogoDb(catalogo, cliente);
       const rubros = await sincronizarRubrosImportadosCatalogoDb(catalogo, cliente);
-      const stockCatalogo = await sincronizarVisibilidadStockCatalogoDb(catalogo, cliente);
+      const autoStock = await obtenerAutoStockCatalogoDb(cliente);
+      const stockCatalogo = autoStock
+        ? await sincronizarVisibilidadStockCatalogoDb(catalogo, cliente)
+        : { omitido: true, motivo: "Publicación automática desactivada" };
       const dependencias = await sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente);
       const provisionalesConciliados = await conciliarProductosProvisionalesDb(catalogo, cliente);
       return { rubros, stockCatalogo, dependencias, provisionalesConciliados };

@@ -3152,22 +3152,16 @@ body.en-horarios.horarios-vista-config .horarios-order-item .horarios-quitar-adi
                     <label class="catalog-filter-field">
                       <span>Estado</span>
                       <select id="catalogFiltroEstado" aria-label="Filtrar por estado">
-                        <option value="todos">Todos los estados</option>
+                        <option value="todos" hidden>Filtrar por estado</option>
                         <option value="visible">Visibles</option>
                         <option value="oculto">Ocultos</option>
-                        <option value="sin-configurar">Sin configurar</option>
-                        <option value="destacado">Destacados</option>
                       </select>
                     </label>
                     <label class="catalog-filter-field">
                       <span>Estado de imagen</span>
                       <select id="catalogFiltroImagen" aria-label="Filtrar por imagen">
-                        <option value="todos">Todas las imágenes</option>
-                        <option value="confirmada">Imagen confirmada</option>
-                        <option value="candidato">Candidatas</option>
-                        <option value="buscando">Buscando</option>
-                        <option value="sin_resultado">Sin resultado</option>
-                        <option value="error">Con error</option>
+                        <option value="todos" hidden>Filtrar por imagen</option>
+                        <option value="con_imagen">Con imagen</option>
                         <option value="sin_imagen">Sin imagen</option>
                       </select>
                     </label>
@@ -3175,6 +3169,10 @@ body.en-horarios.horarios-vista-config .horarios-order-item .horarios-quitar-adi
                 </div>
               </div>
 
+              <label class="catalog-stock-toggle" title="Al importar Excel, publicar productos con stock positivo y ocultar los demás">
+                <input id="catalogAutoStock" type="checkbox" checked disabled aria-label="Publicación automática por stock" />
+                <span>Auto stock</span>
+              </label>
               <button id="catalogBtnRecargar" class="catalog-icon-btn" type="button" aria-label="Actualizar productos" title="Actualizar productos">
                 <svg class="app-icon"><use href="#icon-refresh"></use></svg>
               </button>

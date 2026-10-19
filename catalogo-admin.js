@@ -111,6 +111,28 @@ async function cargarEstado() {
   $("catalogMetricaRubros").textContent = numero(data.rubros);
 }
 
+async function cargarAutoStock() {
+  const control = $("catalogAutoStock");
+  if (!control) return;
+  const data = await api("/admin/catalogo/auto-stock");
+  control.checked = data.habilitado;
+  control.disabled = false;
+}
+async function cambiarAutoStock() {
+  const control = $("catalogAutoStock");
+  if (!control) return;
+  const valorAnterior = !control.checked;
+  control.disabled = true;
+  try {
+    const data = await api("/admin/catalogo/auto-stock", {
+      method: "PUT", body: JSON.stringify({ habilitado: control.checked })
+    });
+    control.checked = data.habilitado;
+    mensaje(data.habilitado ? "Publicación automática por stock activada." : "Publicación automática por stock desactivada.", "ok");
+  } catch (error) { control.checked = valorAnterior; mensaje(error.message); }
+  finally { control.disabled = false; }
+}
+
 async function cargarRubros() {
   const data = await api("/admin/catalogo/rubros");
   estado.rubros = data.rubros || [];
@@ -260,6 +282,18 @@ async function cargarProductos({ conservarPagina = true } = {}) {
     estado.paginas = Number(data.paginas) || 0;
     estado.total = Number(data.total) || 0;
     renderProductos();
+  } catch (error) {
+    if (body) {
+      body.textContent = "";
+      const fila = document.createElement("tr");
+      const celda = document.createElement("td");
+      celda.colSpan = 7;
+      celda.className = "catalog-loading";
+      celda.textContent = `No se pudieron cargar los productos: ${error.message || "Error de conexión"}`;
+      fila.appendChild(celda);
+      body.appendChild(fila);
+    }
+    throw error;
   } finally {
     estado.cargando = false;
   }
@@ -1179,6 +1213,7 @@ function bind() {
   $("catalogImportarImagenesConfirmar")?.addEventListener("click", importarZipImagenes);
   $("catalogImportarImagenesCerrar")?.addEventListener("click", cerrarImportacionImagenes);
   $("catalogImportarImagenesCancelar")?.addEventListener("click", cerrarImportacionImagenes);
+  $("catalogAutoStock")?.addEventListener("change", cambiarAutoStock);
   $("catalogBtnRecargar")?.addEventListener("click", () => Promise.all([cargarEstado(), cargarRubros(), cargarProductos()]).catch((e) => mensaje(e.message)));
   $("catalogPedidosBuscar")?.addEventListener("input", () => {
     clearTimeout(estado.pedidosBusquedaTimer);
@@ -1218,7 +1253,7 @@ async function activar() {
   estado.activo = true;
   bind();
   try {
-    await Promise.all([cargarEstado(), cargarRubros(), cargarResumenPedidos()]);
+    await Promise.all([cargarEstado(), cargarRubros(), cargarResumenPedidos(), cargarAutoStock()]);
     await cargarProductos({ conservarPagina: false });
   } catch (e) { mensaje(e.message); }
 }
