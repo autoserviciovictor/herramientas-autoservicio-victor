@@ -2068,7 +2068,7 @@ function historialCompletoBano(cfg, hoy = inicioDia(new Date())) {
 
 function puedeVerificarBano() {
   const actual = usuario();
-  return ROLES_GESTION_TAREAS.includes(actual?.rol) || actual?.permisos?.confirmarLimpiezaBano === true;
+  return ROLES_GESTION_TAREAS.includes(actual?.rol);
 }
 function puedeReasignarBano() {
   return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
@@ -2210,9 +2210,9 @@ function renderBano() {
           const actual = usuario();
           const identidad = (valor) => String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "");
           const responsableUsuario = usuarioParticipante(responsableClave);
-          const puedeConfirmarPendiente = !confirmo && [actual?.usuario, actual?.nombre].some((identidadActual) =>
+          const puedeConfirmarPendiente = !confirmo && (puedeVerificar || [actual?.usuario, actual?.nombre].some((identidadActual) =>
             identidad(identidadActual) && [responsableClave, responsableUsuario?.usuario, responsableUsuario?.nombre].some((clave) => identidad(clave) === identidad(identidadActual))
-          );
+          ));
           const accion = verificado
             ? '<span class="bano-history-status is-confirmed">Confirmado</span>'
             : puedeVerificar

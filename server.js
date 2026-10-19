@@ -3944,13 +3944,18 @@ function normalizarIdentidadBano(valor) {
     .replace(/\s+/g, "");
 }
 
-function usuarioCoincideResponsableBano(registro, usuario) {
+async function usuarioCoincideResponsableBano(registro, usuario) {
   const responsable = normalizarIdentidadBano(registro?.responsable);
-  if (!responsable) return false;
-  return [usuario?.usuario, usuario?.nombre]
-    .map(normalizarIdentidadBano)
-    .filter(Boolean)
-    .includes(responsable);
+  if (!responsable || !usuario) return false;
+  const identidades = [usuario.usuario, usuario.nombre].map(normalizarIdentidadBano).filter(Boolean);
+  if (identidades.includes(responsable)) return true;
+  // La rotación puede almacenar el nombre visible o el identificador de acceso.
+  // Resolver ambos contra el registro de usuarios evita rechazar al responsable real.
+  const usuarios = await obtenerUsuarios();
+  const asignado = usuarios.find((u) =>
+    [u.usuario, u.nombre].some((valor) => normalizarIdentidadBano(valor) === responsable));
+  return Boolean(asignado && [asignado.usuario, asignado.nombre]
+    .some((valor) => identidades.includes(normalizarIdentidadBano(valor))));
 }
 
 function usuarioCoincideConfirmacionBano(registro, usuario) {
@@ -4579,8 +4584,8 @@ app.post("/tareas/bano/confirmar", async (req, res) => {
         error.statusCode = 404;
         throw error;
       }
-      if (!usuarioCoincideResponsableBano(registro, req.usuario)) {
-        const error = new Error("Solo el responsable asignado puede confirmar esta limpieza");
+      if (!(await usuarioCoincideResponsableBano(registro, req.usuario)) && !rolGestionSector(req.usuario)) {
+        const error = new Error("Solo el responsable, un supervisor o un usuario de administración puede confirmar esta limpieza");
         error.statusCode = 403;
         throw error;
       }
@@ -4607,7 +4612,7 @@ app.post("/tareas/bano/confirmar", async (req, res) => {
 
 app.post("/tareas/bano/verificar", async (req, res) => {
   try {
-    if (!rolGestionSector(req.usuario) && req.usuario?.permisos?.confirmarLimpiezaBano !== true)
+    if (!rolGestionSector(req.usuario))
       return res.status(403).json({
         ok: false,
         mensaje: "No tenés permiso para confirmar la limpieza de otros usuarios",
@@ -4629,14 +4634,8 @@ app.post("/tareas/bano/verificar", async (req, res) => {
         error.statusCode = 409;
         throw error;
       }
-      if (
-        usuarioCoincideResponsableBano(registro, req.usuario) ||
-        usuarioCoincideConfirmacionBano(registro, req.usuario)
-      ) {
-        const error = new Error("La limpieza debe ser verificada por otra persona autorizada");
-        error.statusCode = 403;
-        throw error;
-      }
+      // La verificación requiere rol de gestión, pero no exige que sea otra persona.
+      // Un supervisor o administrador puede confirmar la tarea y verificarla.
       if (!normalizarTexto(registro.supervisadoPor)) {
         registro.supervisadoPor = req.usuario.nombre || req.usuario.usuario;
         registro.horaVerificacion = new Date().toLocaleTimeString("es-AR", {
