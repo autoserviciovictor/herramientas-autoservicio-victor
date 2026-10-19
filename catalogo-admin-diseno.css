@@ -457,14 +457,19 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
 .catalog-price-input>b{display:grid;place-items:center;align-self:stretch;flex:0 0 34px;min-width:34px;padding:0;margin:0;border:0;border-right:1px solid #d9e0e8;border-radius:0;background:#fff;color:#667085;font-size:13px;line-height:1;box-sizing:border-box}
 #catalogProductoModal #catalogProductoPrecio,
 #catalogProductoModal #catalogProductoPrecio:focus,
-#catalogProductoModal #catalogProductoPrecio:focus-visible{
+#catalogProductoModal #catalogProductoPrecio:focus-visible,
+#catalogProductoModal #catalogProductoPrecioOferta,
+#catalogProductoModal #catalogProductoPrecioOferta:focus,
+#catalogProductoModal #catalogProductoPrecioOferta:focus-visible{
   flex:1!important;min-width:0!important;width:auto!important;height:40px!important;min-height:40px!important;margin:0!important;padding:0 11px!important;
   border:0!important;border-width:0!important;border-style:none!important;border-color:transparent!important;border-radius:0!important;
   outline:0!important;box-shadow:none!important;background:transparent!important;
   -webkit-appearance:none!important;appearance:textfield!important;
 }
 #catalogProductoModal #catalogProductoPrecio::-webkit-outer-spin-button,
-#catalogProductoModal #catalogProductoPrecio::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#catalogProductoModal #catalogProductoPrecio::-webkit-inner-spin-button,
+#catalogProductoModal #catalogProductoPrecioOferta::-webkit-outer-spin-button,
+#catalogProductoModal #catalogProductoPrecioOferta::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 
 /* Modal compacto: encabezado y acciones fijos; sólo el cuerpo desplaza. */
 .catalog-product-modal{width:min(660px,calc(100vw - 32px));max-height:min(720px,calc(100vh - 28px));padding:0;overflow:hidden;border-radius:18px;display:flex;flex-direction:column}
@@ -2019,3 +2024,42 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
   body #catalogPanelProductos .catalog-toolbar > :is(#catalogBtnOcultarMasivo,#catalogBtnPublicarMasivo,#catalogBtnImportarImagenes) span {display:inline!important;font-size:11px!important;}
   body #catalogPanelProductos .catalog-toolbar > #catalogBtnVerPublicoMobile {display:none!important;}
 }
+
+/* Editor de productos 2026: diseño amplio y ordenado, sin modificar eventos ni IDs. */
+@media (min-width: 851px) {
+  #catalogProductoModal.catalog-modal-overlay { padding:22px!important; align-items:center!important; justify-content:center!important; }
+  #catalogProductoModal .catalog-product-modal--redesign { width:min(1200px,96vw)!important; max-width:1200px!important; height:min(850px,94vh)!important; max-height:94vh!important; border-radius:20px!important; display:flex!important; flex-direction:column!important; overflow:hidden!important; }
+  #catalogProductoModal .catalog-modal-head { flex:0 0 auto!important; padding:18px 24px!important; }
+  #catalogProductoModal .catalog-modal-body.catalog-product-layout { display:grid!important; grid-template-columns:minmax(300px,.85fr) minmax(440px,1.15fr)!important; gap:18px!important; padding:18px 22px!important; overflow:auto!important; flex:1 1 auto!important; min-height:0!important; align-items:start!important; }
+  #catalogProductoModal .catalog-modal-actions { flex:0 0 auto!important; position:relative!important; padding:15px 24px!important; }
+  #catalogProductoModal .catalog-product-left, #catalogProductoModal .catalog-product-right { min-width:0; }
+  #catalogProductoModal .catalog-product-info-panel, #catalogProductoModal .catalog-product-options-panel, #catalogProductoModal .catalog-product-image-editor { border:1px solid #e6eaf0!important; background:#fff!important; border-radius:14px!important; padding:16px!important; box-shadow:0 2px 12px rgba(16,24,40,.025); }
+  #catalogProductoModal .catalog-product-info-panel h3, #catalogProductoModal .catalog-product-options-panel h3 { font-size:14px; margin:0 0 17px; color:#101828; }
+  #catalogProductoModal .catalog-product-right { display:grid; gap:14px; }
+  #catalogProductoModal .catalog-form-grid { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:14px!important; }
+  #catalogProductoModal .catalog-field-wide { grid-column:1/-1!important; }
+  #catalogProductoModal .catalog-product-image-editor__body { display:flex!important; flex-direction:column!important; gap:12px!important; }
+  #catalogProductoModal .catalog-product-image-preview { width:100%!important; height:clamp(220px,37vh,360px)!important; max-width:none!important; margin:0!important; }
+  #catalogProductoModal .catalog-product-image-controls { width:100%!important; min-width:0!important; }
+  #catalogProductoModal .catalog-product-image-actions { display:grid!important; grid-template-columns:1fr 1fr!important; gap:8px!important; }
+  #catalogProductoModal .catalog-product-image-actions .catalog-btn { white-space:normal!important; min-width:0!important; }
+  #catalogProductoModal .catalog-switches { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:12px!important; }
+  #catalogProductoModal .catalog-switch-row { min-width:0; align-items:start; }
+}
+@media (max-width:850px) {
+  #catalogProductoModal .catalog-product-modal--redesign { max-height:95vh!important; overflow:hidden!important; display:flex!important; flex-direction:column!important; }
+  #catalogProductoModal .catalog-modal-body.catalog-product-layout { overflow-y:auto!important; min-height:0!important; padding:14px!important; display:flex!important; flex-direction:column!important; gap:14px!important; }
+  #catalogProductoModal .catalog-product-left, #catalogProductoModal .catalog-product-right { width:100%; min-width:0; }
+  #catalogProductoModal .catalog-product-info-panel, #catalogProductoModal .catalog-product-options-panel { border:1px solid #e6eaf0; border-radius:12px; padding:13px; }
+  #catalogProductoModal .catalog-product-info-panel h3, #catalogProductoModal .catalog-product-options-panel h3 { margin:0 0 12px; font-size:14px; }
+  #catalogProductoModal .catalog-modal-actions { flex-shrink:0!important; }
+}
+
+/* Editor: alinear el borde superior de ambas columnas. */
+#catalogProductoModal .catalog-product-left > .catalog-product-image-editor {
+  margin-top:0!important; margin-bottom:0!important;
+}
+#catalogProductoModal .catalog-product-left,
+#catalogProductoModal .catalog-product-right { align-self:start!important; }
+#catalogProductoModal .catalog-product-image-editor,
+#catalogProductoModal .catalog-product-info-panel { box-sizing:border-box!important; }

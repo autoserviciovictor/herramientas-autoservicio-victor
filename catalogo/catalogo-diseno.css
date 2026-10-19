@@ -567,3 +567,6 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
     overscroll-behavior: contain;
   }
 }
+
+/* Ofertas */
+.product-card__old-price{color:#98a2b3;text-decoration:line-through;font-size:12px;margin-right:6px}.product-card__meta:has(.product-card__old-price){flex-wrap:wrap;gap:3px}.product-card__meta:has(.product-card__old-price) .product-card__price{color:#e61e36}

@@ -637,18 +637,24 @@ function abrirEditorCantidad(codigo) {
   programarCierreCantidad(codigo);
 }
 
+function precioVigente(producto) {
+  const normal = Number(producto.precio) || 0;
+  const oferta = producto.destacado && producto.precioOferta != null ? Number(producto.precioOferta) : null;
+  return oferta !== null && Number.isFinite(oferta) && oferta > 0 && oferta < normal ? oferta : normal;
+}
+
 function renderProductCard(producto) {
   const marca = String(producto.marca || "").trim();
   return `<article class="product-card" data-product="${escapeHtml(producto.codigo)}">
     <div class="product-card__image">
-      ${producto.destacado ? '<span class="product-card__featured">DESTACADO</span>' : ""}
+      ${producto.destacado ? '<span class="product-card__featured">OFERTA</span>' : ""}
       ${imagenProducto(producto)}
     </div>
     <div class="product-card__body">
       <div class="product-card__rubric">${escapeHtml(producto.rubro?.nombre || "Producto")}</div>
       <h3 title="${escapeHtml(producto.nombre)}">${escapeHtml(producto.nombre)}</h3>
       ${marca ? `<div class="product-card__brand">${escapeHtml(marca)}</div>` : '<div class="product-card__brand">&nbsp;</div>'}
-      <div class="product-card__meta"><strong class="product-card__price">${formatMoney(producto.precio)}</strong><span class="product-card__unit">${escapeHtml(producto.unidadVenta || "unidad")}</span></div>
+      <div class="product-card__meta">${precioVigente(producto) < Number(producto.precio) ? `<del class="product-card__old-price">${formatMoney(producto.precio)}</del>` : ""}<strong class="product-card__price">${formatMoney(precioVigente(producto))}</strong><span class="product-card__unit">${escapeHtml(producto.unidadVenta || "unidad")}</span></div>
       <div class="product-card__actions purchase-control" data-purchase-control="${escapeHtml(producto.codigo)}">
         ${controlCompraHtml(producto)}
       </div>
@@ -656,11 +662,37 @@ function renderProductCard(producto) {
   </article>`;
 }
 
+let ofertasHome = [];
+let ofertasCargadas = false;
+window.addEventListener('catalogo-producto-actualizado', async (evento) => {
+  const producto = evento.detail?.producto;
+  if (!producto) return;
+  // Volver a leer las ofertas confirmadas desde el servidor sin perder scroll ni filtros.
+  await cargarOfertasHome();
+  const indice = state.productos.findIndex(p => String(p.codigo) === String(producto.codigo));
+  if (indice >= 0) {
+    if (!producto.visible) state.productos.splice(indice,1);
+    else state.productos[indice] = {...state.productos[indice],...producto};
+  }
+  const item = state.carrito.find(p => String(p.codigo) === String(producto.codigo));
+  if (item && producto.visible) {
+    item.precio = precioVigente(producto);
+    item.nombre = producto.nombre;
+    guardarCarrito(); renderCart();
+  }
+});
+async function cargarOfertasHome() {
+  try {
+    const data = await apiJson("/catalogo/api/productos?destacado=1&pagina=1&limite=60");
+    ofertasHome = Array.isArray(data.productos) ? data.productos : [];
+    ofertasCargadas = true;
+  } catch (error) { console.warn("No se pudieron cargar las ofertas", error); ofertasHome = []; ofertasCargadas = true; }
+  renderHomeProducts();
+}
 function renderHomeProducts() {
   if (!els.bestSellersGrid) return;
-  const destacados = state.productos.filter((p) => p.destacado);
-  const base = destacados.length >= 6 ? destacados : state.productos;
-  els.bestSellersGrid.innerHTML = base.slice(0, 6).map(renderProductCard).join("");
+  const destacados = ofertasHome.filter((p) => p.destacado);
+  els.bestSellersGrid.innerHTML = destacados.slice(0, 6).map(renderProductCard).join("");
 }
 
 function syncViewMode() {
@@ -688,8 +720,8 @@ function seleccionarRubroPorNombre(nombre = "") {
 
 function productosOrdenados() {
   const items = [...state.productos];
-  if (state.orden === "precio-asc") items.sort((a,b) => (Number(a.precio)||0) - (Number(b.precio)||0));
-  else if (state.orden === "precio-desc") items.sort((a,b) => (Number(b.precio)||0) - (Number(a.precio)||0));
+  if (state.orden === "precio-asc") items.sort((a,b) => precioVigente(a) - precioVigente(b));
+  else if (state.orden === "precio-desc") items.sort((a,b) => precioVigente(b) - precioVigente(a));
   else if (state.orden === "nombre") items.sort((a,b) => String(a.nombre||"").localeCompare(String(b.nombre||""), "es"));
   return items;
 }
@@ -765,6 +797,7 @@ async function cargarProductos({ append = false } = {}) {
     state.paginas = Number(data.paginas) || 0;
     renderProducts({ append: false });
     renderHomeProducts();
+    if (!ofertasCargadas && !state.modoCatalogo && !state.rubro && !state.busqueda) cargarOfertasHome();
     updateHeading();
     renderCategories();
     syncViewMode();
@@ -800,7 +833,7 @@ function buscar(texto = "") {
   document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function buscarProducto(codigo) { return state.productos.find((p) => p.codigo === codigo) || state.carrito.find((p) => p.codigo === codigo); }
+function buscarProducto(codigo) { return state.productos.find((p) => p.codigo === codigo) || ofertasHome.find((p) => p.codigo === codigo) || state.carrito.find((p) => p.codigo === codigo); }
 
 function agregarPrimeraUnidad(codigo) {
   state.pedidoRegistrado = null;
@@ -810,11 +843,12 @@ function agregarPrimeraUnidad(codigo) {
   const existente = state.carrito.find((x) => x.codigo === codigo);
   if (existente) {
     existente.cantidad = Math.min(999, (Number(existente.cantidad) || 0) + 1);
+    existente.precio = precioVigente(producto);
   } else {
     state.carrito.push({
       codigo: producto.codigo,
       nombre: producto.nombre,
-      precio: producto.precio,
+      precio: precioVigente(producto),
       unidadVenta: producto.unidadVenta,
       rubro: producto.rubro,
       cantidad: 1,

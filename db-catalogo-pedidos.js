@@ -188,7 +188,7 @@ async function cargarProductosAutoritativos(cliente, items = []) {
 
   const codigos = [...consolidados.keys()];
   const r = await cliente.query(
-    `SELECT p.code, p.article, p.price, COALESCE(s.sale_unit,'unidad') AS sale_unit
+    `SELECT p.code, p.article, p.price, s.featured, s.offer_price, COALESCE(s.sale_unit,'unidad') AS sale_unit
        FROM product_catalog p
        JOIN catalog_product_settings s ON s.code=p.code
        JOIN catalog_categories c ON c.category_id=s.category_id
@@ -204,7 +204,9 @@ async function cargarProductosAutoritativos(cliente, items = []) {
   return codigos.map((code) => {
     const p = porCodigo.get(code);
     const qty = consolidados.get(code);
-    const precio = Number(p.price) || 0;
+    const normal = Number(p.price) || 0;
+    const oferta = p.featured && p.offer_price !== null ? Number(p.offer_price) : null;
+    const precio = oferta !== null && oferta > 0 && oferta < normal ? oferta : normal;
     return {
       codigo: code,
       nombre: String(p.article || ""),

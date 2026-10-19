@@ -62,6 +62,7 @@ async function asegurarEsquemaCatalogoPublico() {
       image_error TEXT NOT NULL DEFAULT '',
       visible BOOLEAN NOT NULL DEFAULT FALSE,
       featured BOOLEAN NOT NULL DEFAULT FALSE,
+      offer_price NUMERIC(14,2),
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -73,6 +74,7 @@ async function asegurarEsquemaCatalogoPublico() {
         image_status IN ('sin_imagen','buscando','candidato','confirmada','sin_resultado','error')
       )
     )`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS offer_price NUMERIC(14,2)`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_url TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_source TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_title TEXT NOT NULL DEFAULT ''`);
@@ -243,7 +245,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const resultado = await query(
     `SELECT
        p.code, p.article, p.price,
-       s.brand, s.presentation, s.sale_unit, s.image_url, s.featured, s.sort_order,
+       s.brand, s.presentation, s.sale_unit, s.image_url, s.featured, s.offer_price, s.sort_order,
        c.category_id, c.name AS category_name, c.slug AS category_slug
      FROM product_catalog p
      JOIN catalog_product_settings s ON s.code=p.code
@@ -269,6 +271,7 @@ async function listarProductosPublicosDb(opciones = {}) {
       unidadVenta: String(fila.sale_unit || "unidad"),
       imagen: String(fila.image_url || ""),
       destacado: Boolean(fila.featured),
+      precioOferta: fila.featured && fila.offer_price !== null ? Number(fila.offer_price) : null,
       rubro: {
         id: Number(fila.category_id),
         nombre: String(fila.category_name || ""),
@@ -631,6 +634,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
            s.image_checked_at, COALESCE(s.image_error,'') AS image_error,
            COALESCE(s.visible,FALSE) AS visible,
            COALESCE(s.featured,FALSE) AS featured,
+           s.offer_price,
            COALESCE(s.sort_order,0) AS sort_order,
            (s.code IS NOT NULL) AS configured
     FROM product_catalog p
@@ -667,6 +671,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
       errorImagen: String(f.image_error || ""),
       visible: Boolean(f.visible),
       destacado: Boolean(f.featured),
+      precioOferta: f.offer_price === null || f.offer_price === undefined ? null : Number(f.offer_price),
       orden: Number(f.sort_order) || 0,
       configurado: Boolean(f.configured),
     })),
@@ -694,6 +699,7 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
            s.image_checked_at, COALESCE(s.image_error,'') AS image_error,
            COALESCE(s.visible,FALSE) AS visible,
            COALESCE(s.featured,FALSE) AS featured,
+           s.offer_price,
            COALESCE(s.sort_order,0) AS sort_order,
            (s.code IS NOT NULL) AS configured
     FROM product_catalog p
@@ -725,6 +731,7 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
     errorImagen: String(f.image_error || ""),
     visible: Boolean(f.visible),
     destacado: Boolean(f.featured),
+    precioOferta: f.offer_price === null || f.offer_price === undefined ? null : Number(f.offer_price),
     orden: Number(f.sort_order) || 0,
     configurado: Boolean(f.configured),
   };
@@ -764,9 +771,19 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
   if (!UNIDADES_VENTA.includes(saleUnit)) throw new Error("La unidad de venta no es válida");
   const visibleFinal = cambios.visible === undefined ? Boolean(s.visible) : booleano(cambios.visible, Boolean(s.visible));
   if (visibleFinal && !categoryId) throw new Error("Asigná un rubro antes de hacer visible el producto");
+  let precioOferta = s.offer_price ?? null;
+  if (cambios.precioOferta !== undefined) {
+    if (cambios.precioOferta === null || cambios.precioOferta === "") precioOferta = null;
+    else {
+      precioOferta = Number(cambios.precioOferta);
+      if (!Number.isFinite(precioOferta) || precioOferta <= 0) throw new Error("El precio de oferta debe ser mayor a cero");
+      precioOferta = Math.round(precioOferta * 100) / 100;
+    }
+  }
+  if (precioOferta !== null && (!Number.isFinite(Number(precio)) || precioOferta >= Number(precio))) throw new Error("El precio de oferta debe ser menor al precio normal");
   await query(`
-    INSERT INTO catalog_product_settings(code, category_id, brand, presentation, sale_unit, image_url, image_source, image_status, visible, featured, sort_order, updated_at)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())
+    INSERT INTO catalog_product_settings(code, category_id, brand, presentation, sale_unit, image_url, image_source, image_status, visible, featured, offer_price, sort_order, updated_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
     ON CONFLICT(code) DO UPDATE SET
       category_id=EXCLUDED.category_id,
       brand=EXCLUDED.brand,
@@ -777,6 +794,7 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
       image_status=EXCLUDED.image_status,
       visible=EXCLUDED.visible,
       featured=EXCLUDED.featured,
+      offer_price=EXCLUDED.offer_price,
       sort_order=EXCLUDED.sort_order,
       updated_at=NOW()
   `, [
@@ -790,6 +808,7 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
     normalizarEstadoImagen(s.image_status),
     visibleFinal,
     cambios.destacado === undefined ? Boolean(s.featured) : booleano(cambios.destacado, Boolean(s.featured)),
+    precioOferta,
     Number(s.sort_order) || 0,
   ]);
   return obtenerProductoCatalogoAdminDb(code);

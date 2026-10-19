@@ -781,7 +781,6 @@ function etiquetaEstadoImagen(valor) {
 
 function renderImagenProducto(p = {}) {
   const preview = $("catalogProductoImagenPreview");
-  const input = $("catalogProductoImagenUrl");
   const meta = $("catalogProductoImagenMeta");
   const confirmar = $("catalogProductoConfirmarImagen");
   const quitar = $("catalogProductoQuitarImagen");
@@ -790,7 +789,6 @@ function renderImagenProducto(p = {}) {
   const candidata = p.candidatoImagen || "";
   const imagen = p.imagen || "";
   if (estadoEl) estadoEl.textContent = etiquetaEstadoImagen(p.estadoImagen);
-  if (input) input.value = imagen || candidata || "";
   if (confirmar) confirmar.classList.toggle("oculto", !candidata);
   if (quitar) quitar.classList.toggle("oculto", !imagen && !candidata);
   if (meta) {
@@ -904,18 +902,6 @@ async function subirImagenArchivoActual(archivo) {
   }
 }
 
-async function guardarImagenManualActual() {
-  const codigo = $("catalogProductoModal")?.dataset.codigo;
-  const imagen = $("catalogProductoImagenUrl")?.value.trim();
-  if (!codigo || !imagen) return mensaje("Pegá una URL HTTPS de imagen.");
-  try {
-    const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}/imagen`, { method: "PUT", body: JSON.stringify({ imagen }) });
-    renderImagenProducto(data.producto || {});
-    await Promise.all([cargarEstado(), cargarProductos()]);
-    mensaje("Imagen guardada y confirmada.", "ok");
-  } catch (e) { mensaje(e.message); }
-}
-
 async function confirmarImagenActual() {
   const codigo = $("catalogProductoModal")?.dataset.codigo;
   if (!codigo) return;
@@ -1020,6 +1006,7 @@ async function abrirProducto(codigo) {
     $("catalogProductoModal").dataset.codigo = p.codigo;
     $("catalogProductoNombre").value = p.nombre || "";
     $("catalogProductoPrecio").value = p.precio ?? "";
+    $("catalogProductoPrecioOferta").value = p.precioOferta ?? "";
     $("catalogProductoRubro").value = p.rubroId ?? "";
     $("catalogProductoMarca").value = p.marca || "";
     $("catalogProductoPresentacion").value = p.presentacion || "";
@@ -1039,11 +1026,22 @@ async function guardarProducto() {
   const codigo = modal?.dataset.codigo;
   if (!codigo) return;
   const boton = $("catalogProductoGuardar");
+  let aviso = $("catalogProductoGuardarAviso");
+  if (!aviso) {
+    aviso = document.createElement("div");
+    aviso.id = "catalogProductoGuardarAviso";
+    aviso.setAttribute("role", "alert");
+    aviso.style.cssText = "padding:10px 14px;margin:10px 20px;border-radius:9px;background:#fff1f2;color:#a61027;font-size:13px;font-weight:700;display:none";
+    modal.querySelector(".catalog-modal-actions")?.before(aviso);
+  }
+  aviso.style.display = "none";
   boton.disabled = true;
+  boton.textContent = "Guardando...";
   try {
-    await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}`, { method: "PUT", body: JSON.stringify({
+    const respuestaGuardado = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}`, { method: "PUT", body: JSON.stringify({
       nombre: $("catalogProductoNombre").value,
       precio: $("catalogProductoPrecio").value,
+      precioOferta: $("catalogProductoPrecioOferta").value,
       rubroId: $("catalogProductoRubro").value || null,
       marca: $("catalogProductoMarca").value,
       presentacion: $("catalogProductoPresentacion").value,
@@ -1051,11 +1049,25 @@ async function guardarProducto() {
       visible: $("catalogProductoVisible").checked,
       destacado: $("catalogProductoDestacado").checked,
     }) });
+    // Confirmar la persistencia: algunas versiones del servidor aceptan el PUT
+    // pero todavía no implementan el campo precioOferta.
+    const verificacion = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}?verificarOferta=${Date.now()}`);
+    const guardado = verificacion.producto || respuestaGuardado.producto;
+    const solicitado = $("catalogProductoPrecioOferta").value.trim();
+    const esperado = solicitado === "" ? null : Number(solicitado);
+    const recibido = guardado?.precioOferta == null ? null : Number(guardado.precioOferta);
+    if ((esperado === null) !== (recibido === null) || (esperado !== null && Math.abs(esperado - recibido) > 0.009)) {
+      throw new Error("El servidor no guardó el precio de oferta. Es necesario actualizar el backend en Render antes de continuar.");
+    }
     cerrarModal("catalogProductoModal");
     await Promise.all([cargarEstado(), cargarProductos()]);
     mensaje("Producto actualizado correctamente.", "ok");
-  } catch (e) { mensaje(e.message); }
-  finally { boton.disabled = false; }
+  } catch (e) {
+    aviso.textContent = `No se pudo confirmar el guardado: ${e.message}`;
+    aviso.style.display = "block";
+    mensaje(e.message);
+  }
+  finally { boton.disabled = false; boton.textContent = "Guardar cambios"; }
 }
 
 function renderRubros() {
@@ -1236,7 +1248,6 @@ function bind() {
   $("catalogProductoElegirImagen")?.addEventListener("click", () => $("catalogProductoImagenArchivo")?.click());
   $("catalogProductoImagenArchivo")?.addEventListener("change", (e) => subirImagenArchivoActual(e.target.files?.[0]));
   $("catalogProductoBuscarImagen")?.addEventListener("click", buscarImagenProductoActual);
-  $("catalogProductoGuardarImagenUrl")?.addEventListener("click", guardarImagenManualActual);
   $("catalogProductoConfirmarImagen")?.addEventListener("click", confirmarImagenActual);
   $("catalogProductoQuitarImagen")?.addEventListener("click", quitarImagenActual);
   $("catalogProductoCerrar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
