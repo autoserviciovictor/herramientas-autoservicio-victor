@@ -1011,6 +1011,9 @@ async function abrirProducto(codigo) {
     $("catalogProductoMarca").value = p.marca || "";
     $("catalogProductoPresentacion").value = p.presentacion || "";
     $("catalogProductoUnidad").value = p.unidadVenta || "unidad";
+    $("catalogProductoModalidadKg").value = p.modalidadKg || "peso";
+    $("catalogProductoGramos").value = p.gramosPorUnidad ?? "";
+    actualizarCamposKgAdmin();
     window.AppSelect?.refresh?.($("catalogProductoRubro"));
     window.AppSelect?.refresh?.($("catalogProductoUnidad"));
     $("catalogProductoVisible").checked = Boolean(p.visible);
@@ -1046,6 +1049,8 @@ async function guardarProducto() {
       marca: $("catalogProductoMarca").value,
       presentacion: $("catalogProductoPresentacion").value,
       unidadVenta: $("catalogProductoUnidad").value,
+      modalidadKg: $("catalogProductoModalidadKg").value,
+      gramosPorUnidad: $("catalogProductoGramos").value,
       visible: $("catalogProductoVisible").checked,
       destacado: $("catalogProductoDestacado").checked,
     }) });
@@ -1277,3 +1282,11 @@ function desactivar() {
 }
 
 window.CatalogoAdminModule = { activar, desactivar, recargar: activar };
+
+function actualizarCamposKgAdmin() {
+  const kg = document.getElementById("catalogProductoUnidad")?.value === "kg";
+  document.getElementById("catalogProductoKgOpciones").hidden = !kg;
+  document.getElementById("catalogProductoGramosGrupo").hidden = !kg || document.getElementById("catalogProductoModalidadKg").value !== "peso_unidades";
+}
+document.getElementById("catalogProductoUnidad")?.addEventListener("change", actualizarCamposKgAdmin);
+document.getElementById("catalogProductoModalidadKg")?.addEventListener("change", actualizarCamposKgAdmin);

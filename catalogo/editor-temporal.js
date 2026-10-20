@@ -48,7 +48,7 @@
         </section>
         <div class="temp-editor-right">
           <section class="temp-editor-panel"><h3>Información del producto</h3>
-            <div class="temp-editor-fields"><label class="wide">Nombre del producto *<input id="tempEditorNombre" maxlength="220" required></label><label>Precio *<span class="temp-editor-price"><b>$</b><input id="tempEditorPrecio" type="number" min="0" step="0.01" required></span></label><label>Precio de oferta<span class="temp-editor-price"><b>$</b><input id="tempEditorPrecioOferta" type="number" min="0" step="0.01" placeholder="Sin oferta"></span></label><label>Rubro<select id="tempEditorRubro"></select></label><label>Marca<input id="tempEditorMarca" maxlength="120" placeholder="Ej.: Coca-Cola"></label><label>Presentación<input id="tempEditorPresentacion" maxlength="120" placeholder="Ej.: 2,25 L"></label><label>Unidad de venta<select id="tempEditorUnidad"><option value="unidad">Unidad</option><option value="kg">Kg</option><option value="pack">Pack</option><option value="cajon">Cajón</option><option value="bulto">Bulto</option><option value="litro">Litro</option><option value="metro">Metro</option></select></label></div>
+            <div class="temp-editor-fields"><label class="wide">Nombre del producto *<input id="tempEditorNombre" maxlength="220" required></label><label>Precio *<span class="temp-editor-price"><b>$</b><input id="tempEditorPrecio" type="number" min="0" step="0.01" required></span></label><label>Precio de oferta<span class="temp-editor-price"><b>$</b><input id="tempEditorPrecioOferta" type="number" min="0" step="0.01" placeholder="Sin oferta"></span></label><label>Rubro<select id="tempEditorRubro"></select></label><label>Marca<input id="tempEditorMarca" maxlength="120" placeholder="Ej.: Coca-Cola"></label><label>Presentación<input id="tempEditorPresentacion" maxlength="120" placeholder="Ej.: 2,25 L"></label><label>Unidad de venta<select id="tempEditorUnidad"><option value="unidad">Unidad</option><option value="kg">Kg</option><option value="pack">Pack</option><option value="cajon">Cajón</option><option value="bulto">Bulto</option><option value="litro">Litro</option><option value="metro">Metro</option></select></label><div class="wide" id="tempEditorKgOpciones" hidden><label>Modalidad de venta por KG<select id="tempEditorModalidadKg"><option value="peso">Solo por peso</option><option value="peso_unidades">Por peso y unidades</option></select></label><label id="tempEditorGramosGrupo" hidden>Peso aproximado por unidad (gramos)<input id="tempEditorGramos" type="number" min="1" max="100000" step="1" placeholder="Ej.: 250"></label><small>Por peso se selecciona de 500 g en 500 g.</small></div></div>
           </section>
           <section class="temp-editor-panel"><h3>Opciones de visibilidad y destaque</h3><div class="temp-editor-checks">
             <label><input id="tempEditorVisible" type="checkbox"><span class="temp-editor-switch"></span><span><strong>Visible para clientes</strong><small>El producto podrá aparecer en el catálogo público cuando tenga un rubro activo.</small></span></label>
@@ -71,6 +71,8 @@
       $('tempEditorImagenAviso').textContent='Buscá una imagen y guardala en tu PC; después usá «Cargar desde mi PC».';
     };
     $('tempEditorGuardar').onclick=guardar;
+    $('tempEditorUnidad').onchange=actualizarKgTemporal;
+    $('tempEditorModalidadKg').onchange=actualizarKgTemporal;
   }
   async function abrir(codigo){
     codigoActivo=codigo; imagenPendiente=null;
@@ -80,6 +82,9 @@
       $('tempEditorCodigo').textContent=`Código: ${p.codigo}`;
       for(const [id,val] of Object.entries({Nombre:p.nombre,Precio:p.precio,Rubro:p.rubroId,Marca:p.marca,Presentacion:p.presentacion,Unidad:p.unidadVenta||'unidad'})) $( 'tempEditor'+id).value=val??'';
       $('tempEditorPrecioOferta').value=p.precioOferta??'';
+      $('tempEditorModalidadKg').value=p.modalidadKg||'peso';
+      $('tempEditorGramos').value=p.gramosPorUnidad??'';
+      actualizarKgTemporal();
       $('tempEditorVisible').checked=!!p.visible; $('tempEditorDestacado').checked=!!p.destacado;
       if(!p.visible)productosOcultados.add(String(codigo));
       $('tempEditorImagen').src=`${API}/catalogo/api/productos/${encodeURIComponent(codigo)}/imagen?t=${Date.now()}`;
@@ -116,7 +121,7 @@
   async function guardar(){
     const btn=$('tempEditorGuardar');btn.disabled=true;$('tempEditorMensaje').textContent='Guardando...';
     try{
-      const body={nombre:$('tempEditorNombre').value,precio:$('tempEditorPrecio').value,precioOferta:$('tempEditorPrecioOferta').value,rubroId:$('tempEditorRubro').value||null,marca:$('tempEditorMarca').value,presentacion:$('tempEditorPresentacion').value,unidadVenta:$('tempEditorUnidad').value,visible:$('tempEditorVisible').checked,destacado:$('tempEditorDestacado').checked};
+      const body={nombre:$('tempEditorNombre').value,precio:$('tempEditorPrecio').value,precioOferta:$('tempEditorPrecioOferta').value,rubroId:$('tempEditorRubro').value||null,marca:$('tempEditorMarca').value,presentacion:$('tempEditorPresentacion').value,unidadVenta:$('tempEditorUnidad').value,modalidadKg:$('tempEditorModalidadKg').value,gramosPorUnidad:$('tempEditorGramos').value,visible:$('tempEditorVisible').checked,destacado:$('tempEditorDestacado').checked};
       const resultado=await solicitud(`/admin/catalogo/productos/${encodeURIComponent(codigoActivo)}`,{method:'PUT',body:JSON.stringify(body)});
       if(Boolean(resultado.producto?.visible)!==body.visible)throw new Error('El servidor no confirmó el cambio de visibilidad. Verificá los permisos y volvé a intentar.');
       if(imagenPendiente){const imagen=await archivoDataUrl(imagenPendiente);await solicitud(`/admin/catalogo/productos/${encodeURIComponent(codigoActivo)}/imagen/subir`,{method:'POST',body:JSON.stringify({imagen})});}
@@ -136,6 +141,11 @@
       $('tempEditorMensaje').textContent='Guardado correctamente';
       $('tempEditorBackdrop').hidden=true;imagenPendiente=null;
     }catch(e){$('tempEditorMensaje').textContent=e.message;}finally{btn.disabled=false;}
+  }
+  function actualizarKgTemporal(){
+    const kg=$('tempEditorUnidad').value==='kg';
+    $('tempEditorKgOpciones').hidden=!kg;
+    $('tempEditorGramosGrupo').hidden=!kg||$('tempEditorModalidadKg').value!=='peso_unidades';
   }
   async function habilitar(){
     // El servidor es quien decide si existe una sesión de Administrador/Administración.

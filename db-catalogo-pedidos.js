@@ -20,7 +20,7 @@ function telefono(valor) {
 
 function cantidad(valor) {
   const n = Number(valor);
-  if (!Number.isInteger(n) || n < 1 || n > 999) return 0;
+  if (!Number.isFinite(n) || n < 0.001 || n > 999 || Math.abs(n * 1000 - Math.round(n * 1000)) > 0.00001) return 0;
   return n;
 }
 
@@ -91,7 +91,7 @@ async function asegurarEsquemaCatalogoPedidos() {
       order_id BIGINT NOT NULL REFERENCES catalog_orders(order_id) ON DELETE CASCADE,
       code TEXT NOT NULL,
       article TEXT NOT NULL,
-      quantity INTEGER NOT NULL,
+      quantity NUMERIC(12,3) NOT NULL,
       unit_price NUMERIC(14,2) NOT NULL,
       line_total NUMERIC(14,2) NOT NULL,
       sale_unit TEXT NOT NULL DEFAULT 'unidad',
@@ -99,6 +99,9 @@ async function asegurarEsquemaCatalogoPedidos() {
       CONSTRAINT catalog_order_items_quantity_valid CHECK (quantity BETWEEN 1 AND 999),
       CONSTRAINT catalog_order_items_price_nonnegative CHECK (unit_price >= 0 AND line_total >= 0)
     )`);
+    await query(`ALTER TABLE catalog_order_items ALTER COLUMN quantity TYPE NUMERIC(12,3) USING quantity::NUMERIC(12,3)`);
+    await query(`ALTER TABLE catalog_order_items DROP CONSTRAINT IF EXISTS catalog_order_items_quantity_valid`);
+    await query(`ALTER TABLE catalog_order_items ADD CONSTRAINT catalog_order_items_quantity_valid CHECK (quantity BETWEEN 0.001 AND 999)`);
     await query(`ALTER TABLE catalog_orders
       ADD COLUMN IF NOT EXISTS internal_notes TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_orders
@@ -183,12 +186,12 @@ async function cargarProductosAutoritativos(cliente, items = []) {
     const code = texto(item?.codigo, 160);
     const qty = cantidad(item?.cantidad);
     if (!code || !qty) throw Object.assign(new Error("Hay un producto o cantidad inválida"), { status: 400 });
-    consolidados.set(code, Math.min(999, (consolidados.get(code) || 0) + qty));
+    consolidados.set(code, Math.round(Math.min(999, (consolidados.get(code) || 0) + qty) * 1000) / 1000);
   }
 
   const codigos = [...consolidados.keys()];
   const r = await cliente.query(
-    `SELECT p.code, p.article, p.price, s.featured, s.offer_price, COALESCE(s.sale_unit,'unidad') AS sale_unit
+    `SELECT p.code, p.article, p.price, s.featured, s.offer_price, COALESCE(s.sale_unit,'unidad') AS sale_unit, COALESCE(s.kg_sale_mode,'peso') AS kg_sale_mode, s.kg_unit_grams
        FROM product_catalog p
        JOIN catalog_product_settings s ON s.code=p.code
        JOIN catalog_categories c ON c.category_id=s.category_id
@@ -204,6 +207,14 @@ async function cargarProductosAutoritativos(cliente, items = []) {
   return codigos.map((code) => {
     const p = porCodigo.get(code);
     const qty = consolidados.get(code);
+    const esKg = String(p.sale_unit).toLowerCase() === "kg";
+    if (!esKg && !Number.isInteger(qty)) throw Object.assign(new Error("La cantidad debe ser un número entero para este producto"), { status: 400 });
+    if (esKg) {
+      const pasosPeso = Math.abs(qty * 2 - Math.round(qty * 2)) < 0.00001;
+      const gramos = Number(p.kg_unit_grams);
+      const pasosUnidades = p.kg_sale_mode === "peso_unidades" && Number.isInteger(gramos) && gramos > 0 && Math.abs(qty * 1000 / gramos - Math.round(qty * 1000 / gramos)) < 0.00001;
+      if (!pasosPeso && !pasosUnidades) throw Object.assign(new Error("La cantidad por KG debe respetar incrementos de 500 g o unidades configuradas"), { status: 400 });
+    }
     const normal = Number(p.price) || 0;
     const oferta = p.featured && p.offer_price !== null ? Number(p.offer_price) : null;
     const precio = oferta !== null && oferta > 0 && oferta < normal ? oferta : normal;

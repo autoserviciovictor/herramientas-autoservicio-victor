@@ -122,7 +122,7 @@ img{max-width:100%;display:block}
 .catalogo-sort-menu button:hover{background:#f5f7fa}
 .catalogo-sort-menu button[aria-selected="true"]{background:#f1f3f6;color:#111827;font-weight:700}
 .catalogo-feedback{min-height:0;color:#b42318;font-size:12px}
-body:not(.catalogo-browse-mode) .catalogo-products-toolbar,body:not(.catalogo-browse-mode) #catalogoFeedback,body:not(.catalogo-browse-mode) #catalogoProductsGrid,body:not(.catalogo-browse-mode) #catalogoLoadMoreWrap{display:none!important}
+body:not(.catalogo-browse-mode) .catalogo-products-toolbar,body:not(.catalogo-browse-mode) #catalogoFeedback,body:not(.catalogo-browse-mode) #catalogoProductsGrid,body:not(.catalogo-browse-mode) #catalogoPagination{display:none!important}
 body.catalogo-browse-mode .catalogo-home{display:none!important}
 
 /* Product cards */
@@ -570,3 +570,280 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
 
 /* Ofertas */
 .product-card__old-price{color:#98a2b3;text-decoration:line-through;font-size:12px;margin-right:6px}.product-card__meta:has(.product-card__old-price){flex-wrap:wrap;gap:3px}.product-card__meta:has(.product-card__old-price) .product-card__price{color:#e61e36}
+
+/* Carruseles de inicio: filas horizontales en móvil y escritorio */
+.catalogo-best-sellers{min-width:0}
+.catalogo-carousel{position:relative;min-width:0;width:100%}
+.catalogo-carousel .catalogo-grid--carousel{
+  display:flex!important;flex-wrap:nowrap!important;grid-template-columns:none!important;
+  gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+  scroll-padding-inline:2px;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;padding:2px 1px 10px;
+  scrollbar-width:none;
+}
+.catalogo-carousel .catalogo-grid--carousel::-webkit-scrollbar{display:none}
+.catalogo-carousel .catalogo-grid--carousel>.product-card{
+  display:flex!important;flex-direction:column;
+  flex:0 0 clamp(148px,calc((100% - 60px)/6),210px)!important;
+  width:auto!important;min-width:0;scroll-snap-align:start;
+}
+.catalogo-carousel-arrow{
+  position:absolute;top:43%;z-index:8;display:grid;place-items:center;
+  width:36px;height:42px;border-radius:12px;border:1px solid #e0e5ec;
+  background:#fff;color:#e9192c;font-size:30px;font-weight:800;
+  box-shadow:0 3px 12px #0002;cursor:pointer;
+}
+.catalogo-carousel-arrow--prev{left:-13px}
+.catalogo-carousel-arrow--next{right:-13px}
+.catalogo-carousel-arrow:hover{background:#fff0f2}
+@media(min-width:701px) and (max-width:1300px){
+ .catalogo-carousel .catalogo-grid--carousel>.product-card{flex-basis:clamp(155px,calc((100% - 36px)/4),210px)!important}
+}
+@media(max-width:700px){
+ .catalogo-carousel .catalogo-grid--carousel{gap:10px;touch-action:pan-x pan-y}
+ .catalogo-carousel .catalogo-grid--carousel>.product-card{flex:0 0 calc((100% - 10px)/2.15)!important}
+ .catalogo-carousel-arrow{display:none}
+}
+
+/* Ajuste de flechas y paginación visual de seis productos por clic en PC. */
+@media (min-width:701px){
+  .catalogo-carousel .catalogo-grid--carousel>.product-card{
+    flex:0 0 calc((100% - 60px)/6)!important;
+    max-width:none!important;
+  }
+}
+@media (min-width:701px) and (max-width:1300px){
+  .catalogo-carousel .catalogo-grid--carousel>.product-card{
+    flex:0 0 calc((100% - 60px)/6)!important;
+  }
+}
+.catalogo-carousel{padding:0 31px}
+.catalogo-carousel-arrow{top:50%;transform:translateY(-50%);width:28px;height:44px;border-radius:8px;font-size:24px;box-shadow:0 2px 8px #0001}
+.catalogo-carousel-arrow--prev{left:0}
+.catalogo-carousel-arrow--next{right:0}
+@media(max-width:700px){.catalogo-carousel{padding:0}.catalogo-carousel-arrow{display:none}}
+
+/* Nombres completos en tarjetas, también en la vista de celular.
+   Anula el límite previo de dos líneas y permite palabras largas. */
+.product-card h3,
+.catalogo-carousel .product-card h3{
+  display:block!important;
+  -webkit-line-clamp:unset!important;
+  -webkit-box-orient:initial!important;
+  line-clamp:unset!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  height:auto!important;
+  max-height:none!important;
+}
+
+/* Controles circulares con íconos vectoriales y estados deshabilitados. */
+.catalogo-carousel-arrow,
+.catalogo-carousel .catalogo-carousel-arrow{
+  display:grid;place-items:center;box-sizing:border-box;
+  width:38px;height:38px;min-width:38px;min-height:38px;
+  padding:0;border-radius:50%;font-size:0;line-height:1;
+  color:#ed1732;background:#fff;border:1px solid #e0e5ec;
+  top:50%;transform:translateY(-50%);
+  box-shadow:0 2px 8px rgba(0,0,0,.09);
+  transition:opacity .2s ease,background .2s ease,box-shadow .2s ease;
+}
+.catalogo-carousel-arrow svg{width:19px;height:19px;display:block;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.catalogo-carousel-arrow--prev{left:0}
+.catalogo-carousel-arrow--next{right:0}
+.catalogo-carousel-arrow:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;color:#9aa4b2;background:#f5f6f8}
+.catalogo-carousel-arrow:not(:disabled):hover{background:#fff0f2;box-shadow:0 3px 10px #0002}
+@media(max-width:700px){.catalogo-carousel .catalogo-carousel-arrow{display:none}}
+
+/* Iconos de secciones: porcentaje y llama, sin fondo circular rojo. */
+.catalogo-best-sellers .catalogo-section-head h2 > .catalogo-section-icon{
+ display:inline-flex;align-items:center;justify-content:center;
+ width:34px;height:34px;flex:0 0 34px;margin:0;
+ background:transparent;border-radius:0;color:#ef1726;font-size:inherit;
+}
+.catalogo-best-sellers .catalogo-section-head h2 > .catalogo-section-icon svg{
+ width:30px;height:30px;display:block;flex-shrink:0;
+}
+@media(max-width:700px){
+ .catalogo-best-sellers .catalogo-section-head h2 > .catalogo-section-icon{width:30px;height:30px;flex-basis:30px}
+ .catalogo-best-sellers .catalogo-section-head h2 > .catalogo-section-icon svg{width:27px;height:27px}
+}
+
+/* Rubros completos: sin scroll interno ni recorte de categorías.
+   Cuando superan el alto de la pantalla, se recorren con el scroll general. */
+@media (min-width:701px){
+  .catalogo-products-layout > .catalogo-sidebar{
+    position:relative;
+    top:auto;
+    align-self:start;
+    height:auto;
+    max-height:none;
+    overflow:visible;
+  }
+  .catalogo-products-layout > .catalogo-sidebar > .catalogo-sidebar__sticky{
+    display:block;
+    position:static;
+    height:auto;
+    max-height:none;
+    min-height:0;
+    overflow:visible;
+  }
+  .catalogo-products-layout > .catalogo-sidebar .catalogo-sidebar__sticky > nav{
+    display:grid;
+    height:auto;
+    max-height:none;
+    min-height:0;
+    overflow:visible;
+    overscroll-behavior:auto;
+  }
+}
+
+/* Paginación de productos */
+.catalogo-pagination{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:20px 2px 12px}
+.catalogo-pagination[hidden]{display:none!important}
+.catalogo-pagination-summary{font-size:12px;color:#667085}
+.catalogo-pagination-buttons{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:5px}
+.catalogo-page-button,.catalogo-page-ellipsis{min-width:35px;height:36px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dbe2ec;border-radius:9px;background:#fff;color:#23324a;font:inherit;font-size:13px;font-weight:700}
+.catalogo-page-button{cursor:pointer}
+.catalogo-page-button:hover:not(:disabled):not(.is-active){background:#fff0f2;border-color:#fca5ae}
+.catalogo-page-button.is-active{background:#f01830;border-color:#f01830;color:#fff}
+.catalogo-page-button:disabled{opacity:.4;cursor:default}
+.catalogo-page-ellipsis{border-color:transparent;color:#8792a4}
+@media(max-width:700px){.catalogo-pagination{justify-content:center;text-align:center}.catalogo-pagination-summary{width:100%}.catalogo-pagination-buttons{justify-content:center}}
+
+/* Flechas vectoriales nítidas y perfectamente centradas. */
+.catalogo-page-arrow{width:38px;min-width:38px;height:38px;padding:0;display:inline-flex;align-items:center;justify-content:center;color:#ef1731}
+.catalogo-page-arrow svg{display:block;width:19px;height:19px;flex:none}
+.catalogo-page-arrow:disabled{color:#a9b4c4;opacity:.45}
+
+/* =========================================================
+   REDISEÑO MÓVIL APROBADO — solo pantallas pequeñas
+   Mantiene sin cambios la experiencia de escritorio.
+   ========================================================= */
+.catalogo-toolbar-heading{display:flex;align-items:center;gap:12px}
+.catalogo-toolbar-bag{display:none}
+.catalogo-sort-order-icon{display:none}
+@media(max-width:700px){
+  body,.catalogo-app{background:#f5f7fa}
+  .catalogo-header{background:#f5f7fa;box-shadow:none;padding:10px 12px 0}
+  .catalogo-header__inner{height:74px;min-height:74px;grid-template-rows:1fr;padding:5px 12px;background:#fff;border-radius:19px;box-shadow:0 3px 18px rgba(19,34,55,.07)}
+  .catalogo-menu-btn,.catalogo-header__actions{grid-row:1}
+  .catalogo-menu-btn span{font-size:0}
+  .catalogo-menu-btn span::before{content:'☰';font-size:26px;font-weight:400}
+  .catalogo-brand{top:7px;height:60px}
+  .catalogo-hero{width:calc(100% - 24px);margin:12px 12px 14px;height:clamp(140px,37vw,215px);border-radius:16px;box-shadow:0 4px 16px rgba(15,23,42,.08)}
+  .catalogo-hero__mobile-copy{top:19%;left:7%;width:72%}
+  .catalogo-hero__mobile-copy strong{font-size:clamp(22px,7vw,34px)}
+  .catalogo-hero__mobile-copy em{font-size:clamp(17px,5.4vw,27px)}
+  .catalogo-hero__mobile-copy small{margin-top:10px;font-size:11px}
+  .catalogo-services{display:none}
+  .catalogo-products-section{background:#f5f7fa;padding:0 0 24px}
+  .catalogo-products-layout{padding:0 12px}
+  .catalogo-products-main{display:flex;flex-direction:column;gap:0}
+  .catalogo-products-toolbar{order:1;display:flex;flex-direction:column;gap:12px;margin:0 0 10px;padding:17px 14px 14px;background:linear-gradient(115deg,#fff7f8,#fff 80%);border:1px solid #f3e9eb;border-radius:19px;box-shadow:0 3px 15px rgba(19,34,55,.045)}
+  .catalogo-toolbar-heading{gap:13px;min-width:0}
+  .catalogo-toolbar-bag{display:grid;place-items:center;flex:0 0 58px;width:58px;height:58px;border-radius:15px;color:#ef1731;background:#ffebee}
+  .catalogo-toolbar-bag svg{width:29px;height:29px}
+  .catalogo-products-toolbar .catalogo-eyebrow{color:#f01830;font-size:10px;letter-spacing:.16em;font-weight:900}
+  .catalogo-products-toolbar h2{font-size:clamp(21px,6vw,27px);line-height:1.15;margin:4px 0 3px;color:#142640;font-weight:900;overflow-wrap:anywhere}
+  .catalogo-products-count{color:#617189;font-size:12px}
+  .catalogo-toolbar-actions{margin:0;width:100%}
+  .catalogo-sort-custom{width:100%}
+  .catalogo-sort-trigger{width:100%;height:47px;display:flex;align-items:center;gap:11px;text-align:left;padding:0 14px;border:1px solid #dbe2ed;border-radius:12px;background:#fff;color:#1b2e49;font-weight:800;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+  .catalogo-sort-order-icon{display:inline-grid;place-items:center;width:22px;height:22px;color:#607089}
+  .catalogo-sort-order-icon svg{width:22px;height:22px}
+  .catalogo-sort-trigger>svg:last-child{margin-left:auto}
+  .catalogo-search-section{order:2;display:block;width:100%;padding:0 2px 12px;background:transparent}
+  .catalogo-search-section__inner{padding:0;width:100%}
+  .catalogo-search-section .catalogo-header-search{height:51px;border:1px solid #dce3ed;border-radius:13px;box-shadow:0 2px 8px rgba(19,34,55,.035)}
+  .catalogo-search-section .catalogo-header-search button{background:#f01830}
+  .catalogo-feedback{order:3}
+  #catalogoProductsGrid{order:4;gap:10px}
+  .catalogo-pagination{order:5}
+  .catalogo-load-more{order:5}
+  .catalogo-home{order:6;margin-top:25px}
+  .product-card{border-radius:15px;border-color:#e6e9ef;box-shadow:0 2px 10px rgba(15,23,42,.055)}
+  .product-card__image{height:clamp(126px,40vw,190px);background:#fff}
+  .product-card__image img{padding:12px}
+  .product-card__body{padding:10px 9px 11px}
+  .product-card h3{color:#172942;font-size:clamp(12px,3.4vw,14px);line-height:1.3}
+  .product-card__price{font-size:clamp(14px,4.1vw,19px)}
+  .product-card__old-price{font-size:10px}
+  .product-card__meta{align-items:baseline;flex-wrap:wrap}
+  .product-card__unit{font-size:9px}
+  .add-button,.purchase-add-button{background:#f01830;border-radius:9px;font-weight:800}
+  .catalogo-pagination{gap:8px;padding:17px 0 10px}
+  .catalogo-pagination-summary{font-size:11px;color:#66768c}
+  .catalogo-page-button,.catalogo-page-ellipsis{min-width:31px;height:34px;padding:0 6px;border-radius:9px;font-size:12px}
+  .catalogo-page-arrow{min-width:34px;width:34px;height:34px}
+}
+@media(max-width:360px){
+  .catalogo-header{padding-inline:7px}
+  .catalogo-header__inner{padding-inline:6px}
+  .catalogo-products-layout{padding-inline:8px}
+  .catalogo-toolbar-bag{flex-basis:49px;width:49px;height:49px}
+  .catalogo-products-toolbar{padding:13px 11px}
+  .product-card__body{padding:8px 7px}
+}
+
+/* Ajustes finales del diseño móvil: alineación, precios y contador */
+@media(max-width:700px){
+  .catalogo-toolbar-heading{width:100%;align-items:center;justify-content:flex-start;gap:12px}
+  .catalogo-toolbar-heading > div{flex:1;min-width:0;text-align:left}
+  .catalogo-toolbar-bag{margin:0;flex-shrink:0}
+  .catalogo-products-toolbar h2{overflow-wrap:break-word;word-break:normal}
+  .catalogo-header .cart-button__badge[hidden]{display:grid!important}
+  .catalogo-header .cart-button__badge{position:absolute;top:-5px;left:auto;right:-3px;display:grid;place-items:center;min-width:20px;height:20px;padding:0 4px;border-radius:50%;background:#f01830;color:#fff;font-weight:900;line-height:1;border:2px solid white}
+  .product-card__body{min-width:0;display:flex;flex-direction:column}
+  .product-card__meta{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:4px;min-width:0;padding-top:10px}
+  .product-card__meta:has(.product-card__old-price){gap:5px}
+  .product-card__meta .product-card__old-price{display:block;margin:0;font-size:10px;line-height:1.2;white-space:normal}
+  .product-card__meta .product-card__price{display:block;font-size:clamp(14px,4.1vw,18px);line-height:1.2;white-space:normal;overflow-wrap:normal;letter-spacing:-.025em}
+  .product-card__meta .product-card__unit{display:block;max-width:none;font-size:10px;line-height:1.2}
+  .product-card__actions{margin-top:10px}
+  .product-card h3{min-height:48px;-webkit-line-clamp:unset;display:block;overflow:visible}
+}
+
+/* Corrección tipográfica móvil: trazos nítidos y bordes neutros (19/10/2026).
+   No altera colores de precios, promociones ni botones de acción. */
+@media (max-width:700px){
+  .catalogo-page,
+  .catalogo-page button,
+  .catalogo-page input,
+  .catalogo-page select,
+  .catalogo-page option,
+  .catalogo-products-layout,
+  .catalogo-products-layout button,
+  .catalogo-products-layout input{
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+    -webkit-text-stroke:0 transparent;
+    text-shadow:none;
+  }
+  .catalogo-products-toolbar,
+  .catalogo-search-section .catalogo-header-search,
+  .catalogo-sort-trigger,
+  .product-card{
+    border-color:#dfe5ed;
+    outline-color:#dfe5ed;
+  }
+  .catalogo-products-toolbar{
+    background:#fff;
+    box-shadow:0 2px 12px rgba(15,23,42,.045);
+  }
+  .catalogo-products-toolbar h2{font-weight:750;letter-spacing:-.015em}
+  .catalogo-products-toolbar .catalogo-eyebrow{font-weight:750}
+  .catalogo-sort-trigger{font-weight:650}
+  .product-card h3{font-weight:650;letter-spacing:0;line-height:1.4}
+  .product-card__price{font-weight:750;letter-spacing:0;line-height:1.25}
+  .add-button,.purchase-add-button{font-weight:700}
+  .product-card{box-shadow:0 2px 9px rgba(15,23,42,.045)}
+  .product-card:focus-within{outline-color:#dfe5ed}
+}
+
+/* Selector por peso */
+.kg-modal[hidden]{display:none!important}.kg-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px}.kg-modal__shade{position:absolute;inset:0;background:rgba(17,24,39,.65)}.kg-modal__panel{position:relative;width:min(100%,490px);max-height:90dvh;overflow:auto;background:#fff;border-radius:22px;padding:26px;box-shadow:0 25px 75px #0003;color:#151724}.kg-modal__handle{display:none}.kg-modal__panel header{display:flex;align-items:center;justify-content:space-between;gap:12px}.kg-modal__panel h2{font-size:23px;margin:0;font-weight:800}.kg-modal__panel header button{border:0;background:transparent;font-size:32px;cursor:pointer}.kg-modal__product{font-size:14px;color:#667085;margin:8px 0 22px}.kg-modal__options{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px 8px}.kg-mode{display:flex;align-items:center;gap:12px;font-weight:700;cursor:pointer}.kg-mode input{accent-color:#f0172c;width:20px;height:20px}.kg-mode small{display:block;color:#667085;font-size:12px;font-weight:400;margin-top:4px}.kg-step{display:flex;align-items:center;gap:10px;border-radius:40px;background:#f4f5f7;padding:4px}.kg-step button{border:0;background:white;border-radius:50%;width:35px;height:35px;font-size:23px;cursor:pointer}.kg-step button:disabled{opacity:.3;cursor:default}.kg-step strong{min-width:45px;text-align:center;font-size:14px}.kg-modal__summary{display:flex;justify-content:space-between;align-items:end;margin:35px 0 22px;gap:10px}.kg-modal__summary span{font-size:21px;font-weight:800}.kg-modal__summary small{display:block;font-size:12px;font-weight:400;color:#667085;margin-top:5px}.kg-modal__summary strong{font-size:24px;color:#f0172c;white-space:nowrap}.kg-modal__confirm{width:100%;border:0;border-radius:12px;background:#f0172c;color:white;padding:16px;font-size:16px;font-weight:800;cursor:pointer}.kg-cart-edit{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:7px 10px;cursor:pointer;font-weight:700}.kg-modal-open{overflow:hidden}@media(max-width:600px){.kg-modal{padding:0;align-items:flex-end}.kg-modal__panel{width:100%;max-height:90dvh;border-radius:25px 25px 0 0;padding:25px 20px calc(22px + env(safe-area-inset-bottom))}.kg-modal__handle{display:block;width:50px;height:5px;background:#d9d9df;border-radius:10px;margin:-9px auto 28px}.kg-modal__panel h2{font-size:22px}}

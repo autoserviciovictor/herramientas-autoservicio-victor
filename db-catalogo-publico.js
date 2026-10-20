@@ -46,6 +46,8 @@ async function asegurarEsquemaCatalogoPublico() {
       brand TEXT NOT NULL DEFAULT '',
       presentation TEXT NOT NULL DEFAULT '',
       sale_unit TEXT NOT NULL DEFAULT 'unidad',
+      kg_sale_mode TEXT NOT NULL DEFAULT 'peso',
+      kg_unit_grams INTEGER,
       image_url TEXT NOT NULL DEFAULT '',
       image_source TEXT NOT NULL DEFAULT '',
       image_status TEXT NOT NULL DEFAULT 'sin_imagen',
@@ -75,6 +77,8 @@ async function asegurarEsquemaCatalogoPublico() {
       )
     )`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS offer_price NUMERIC(14,2)`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS kg_sale_mode TEXT NOT NULL DEFAULT 'peso'`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS kg_unit_grams INTEGER`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_url TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_source TEXT NOT NULL DEFAULT ''`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS image_candidate_title TEXT NOT NULL DEFAULT ''`);
@@ -245,7 +249,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const resultado = await query(
     `SELECT
        p.code, p.article, p.price,
-       s.brand, s.presentation, s.sale_unit, s.image_url, s.featured, s.offer_price, s.sort_order,
+       s.brand, s.presentation, s.sale_unit, s.kg_sale_mode, s.kg_unit_grams, s.image_url, s.featured, s.offer_price, s.sort_order,
        c.category_id, c.name AS category_name, c.slug AS category_slug
      FROM product_catalog p
      JOIN catalog_product_settings s ON s.code=p.code
@@ -269,6 +273,8 @@ async function listarProductosPublicosDb(opciones = {}) {
       marca: String(fila.brand || ""),
       presentacion: String(fila.presentation || ""),
       unidadVenta: String(fila.sale_unit || "unidad"),
+      modalidadKg: String(fila.kg_sale_mode || "peso"),
+      gramosPorUnidad: Number(fila.kg_unit_grams) || null,
       imagen: String(fila.image_url || ""),
       destacado: Boolean(fila.featured),
       precioOferta: fila.featured && fila.offer_price !== null ? Number(fila.offer_price) : null,
@@ -623,6 +629,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
            COALESCE(s.brand,'') AS brand,
            COALESCE(s.presentation,'') AS presentation,
            COALESCE(s.sale_unit,'unidad') AS sale_unit,
+           COALESCE(s.kg_sale_mode,'peso') AS kg_sale_mode, s.kg_unit_grams, 
            COALESCE(s.image_url,'') AS image_url,
            COALESCE(s.image_status,'sin_imagen') AS image_status,
            COALESCE(s.image_source,'') AS image_source,
@@ -659,6 +666,8 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
       marca: String(f.brand || ""),
       presentacion: String(f.presentation || ""),
       unidadVenta: String(f.sale_unit || "unidad"),
+      modalidadKg: String(f.kg_sale_mode || "peso"),
+      gramosPorUnidad: Number(f.kg_unit_grams) || null,
       imagen: String(f.image_url || ""),
       estadoImagen: normalizarEstadoImagen(f.image_status),
       fuenteImagen: String(f.image_source || ""),
@@ -688,6 +697,7 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
            COALESCE(s.brand,'') AS brand,
            COALESCE(s.presentation,'') AS presentation,
            COALESCE(s.sale_unit,'unidad') AS sale_unit,
+           COALESCE(s.kg_sale_mode,'peso') AS kg_sale_mode, s.kg_unit_grams, 
            COALESCE(s.image_url,'') AS image_url,
            COALESCE(s.image_status,'sin_imagen') AS image_status,
            COALESCE(s.image_source,'') AS image_source,
@@ -720,6 +730,8 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
     marca: String(f.brand || ""),
     presentacion: String(f.presentation || ""),
     unidadVenta: String(f.sale_unit || "unidad"),
+      modalidadKg: String(f.kg_sale_mode || "peso"),
+      gramosPorUnidad: Number(f.kg_unit_grams) || null,
     imagen: String(f.image_url || ""),
     fuenteImagen: String(f.image_source || ""),
     estadoImagen: normalizarEstadoImagen(f.image_status),
@@ -769,6 +781,10 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
   }
   const saleUnit = cambios.unidadVenta === undefined ? (s.sale_unit || "unidad") : textoLimitado(cambios.unidadVenta, 30).toLowerCase();
   if (!UNIDADES_VENTA.includes(saleUnit)) throw new Error("La unidad de venta no es válida");
+  const modalidadKg = saleUnit === "kg" ? (cambios.modalidadKg === undefined ? (s.kg_sale_mode || "peso") : String(cambios.modalidadKg)) : "peso";
+  if (!["peso", "peso_unidades"].includes(modalidadKg)) throw new Error("La modalidad de venta por KG no es válida");
+  const gramosPorUnidad = saleUnit === "kg" && modalidadKg === "peso_unidades" ? Number(cambios.gramosPorUnidad === undefined ? s.kg_unit_grams : cambios.gramosPorUnidad) : null;
+  if (modalidadKg === "peso_unidades" && (!Number.isInteger(gramosPorUnidad) || gramosPorUnidad < 1 || gramosPorUnidad > 100000)) throw new Error("Indicá el peso aproximado en gramos de cada unidad");
   const visibleFinal = cambios.visible === undefined ? Boolean(s.visible) : booleano(cambios.visible, Boolean(s.visible));
   if (visibleFinal && !categoryId) throw new Error("Asigná un rubro antes de hacer visible el producto");
   let precioOferta = s.offer_price ?? null;
@@ -782,13 +798,15 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
   }
   if (precioOferta !== null && (!Number.isFinite(Number(precio)) || precioOferta >= Number(precio))) throw new Error("El precio de oferta debe ser menor al precio normal");
   await query(`
-    INSERT INTO catalog_product_settings(code, category_id, brand, presentation, sale_unit, image_url, image_source, image_status, visible, featured, offer_price, sort_order, updated_at)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+    INSERT INTO catalog_product_settings(code, category_id, brand, presentation, sale_unit, kg_sale_mode, kg_unit_grams, image_url, image_source, image_status, visible, featured, offer_price, sort_order, updated_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
     ON CONFLICT(code) DO UPDATE SET
       category_id=EXCLUDED.category_id,
       brand=EXCLUDED.brand,
       presentation=EXCLUDED.presentation,
       sale_unit=EXCLUDED.sale_unit,
+      kg_sale_mode=EXCLUDED.kg_sale_mode,
+      kg_unit_grams=EXCLUDED.kg_unit_grams,
       image_url=EXCLUDED.image_url,
       image_source=EXCLUDED.image_source,
       image_status=EXCLUDED.image_status,
@@ -803,6 +821,8 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
     cambios.marca === undefined ? String(s.brand || "") : textoLimitado(cambios.marca, 120),
     cambios.presentacion === undefined ? String(s.presentation || "") : textoLimitado(cambios.presentacion, 120),
     saleUnit,
+    modalidadKg,
+    gramosPorUnidad,
     String(s.image_url || ""),
     String(s.image_source || ""),
     normalizarEstadoImagen(s.image_status),

@@ -7,7 +7,7 @@
   <meta name="description" content="Catálogo online de Autoservicio Victor. Brindamos calidad y atención.">
   <title>Catálogo online | Autoservicio Victor</title>
   <link rel="icon" href="./assets/favicon.png">
-  <link rel="stylesheet" href="./catalogo-diseno.css?v=cuenta-pedidos-modal-220926">
+  <link rel="stylesheet" href="./catalogo-diseno.css?v=kg-selector-20261020">
   <link rel="stylesheet" href="./editor-temporal.css?v=1">
 </head>
 <body>
@@ -98,20 +98,35 @@
                 <button class="catalogo-rubro-card" type="button" data-rubro-name="LIMPIEZA"><img src="./assets/rubro-limpieza.webp" alt="" loading="lazy" decoding="async"><span><strong>Higiene y limpieza</strong><i aria-hidden="true">→</i></span></button>
               </nav>
               <section class="catalogo-best-sellers" aria-labelledby="catalogoBestSellersTitle">
-                <div class="catalogo-section-head"><h2 id="catalogoBestSellersTitle"><span>★</span> Ofertas</h2><button type="button" class="catalogo-link-button" data-show-products><span class="catalogo-link-button__text">Ver más</span> <span class="catalogo-link-button__arrow" aria-hidden="true">→</span></button></div>
-                <div class="catalogo-grid catalogo-grid--home" id="catalogoBestSellersGrid"></div>
+                <div class="catalogo-section-head"><h2 id="catalogoBestSellersTitle"><span class="catalogo-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 15 4l3.4.1 1.5 3 2.6 2.2-.6 3.4.6 3.3-2.6 2.2-1.5 3-3.4.1-3 1.5-3-1.5-3.4-.1-1.5-3L1.5 16l.6-3.3-.6-3.4L4.1 7l1.5-3L9 4z"/><path d="m8.5 15.5 7-7"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/></svg></span> Ofertas</h2><button type="button" class="catalogo-link-button" data-show-products><span class="catalogo-link-button__text">Ver más</span> <span class="catalogo-link-button__arrow" aria-hidden="true">→</span></button></div>
+                <div class="catalogo-carousel">
+                  <button type="button" class="catalogo-carousel-arrow catalogo-carousel-arrow--prev" data-carousel-target="catalogoBestSellersGrid" data-carousel-dir="-1" aria-label="Ver productos anteriores">‹</button>
+                  <div class="catalogo-grid catalogo-grid--home catalogo-grid--carousel" id="catalogoBestSellersGrid" tabindex="0" aria-label="Productos, deslizar horizontalmente"></div>
+                  <button type="button" class="catalogo-carousel-arrow catalogo-carousel-arrow--next" data-carousel-target="catalogoBestSellersGrid" data-carousel-dir="1" aria-label="Ver productos siguientes">›</button>
+                </div>
+              </section>
+              <section class="catalogo-best-sellers" aria-labelledby="catalogoMasVendidosTitle">
+                <div class="catalogo-section-head"><h2 id="catalogoMasVendidosTitle"><span class="catalogo-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c4.6 0 7.5-3.2 7.5-7.4 0-3.4-2.2-5.8-4.2-7.7.2 2.6-1.2 4.1-2.2 4.6C13 7.3 11.5 4.8 9.5 2 10 6.7 7.3 8.5 5.6 11 4.7 12.4 4.5 13.7 4.5 15.2 4.5 19 7.5 22 12 22Z"/><path d="M12 22c2.2 0 3.6-1.5 3.6-3.4 0-1.5-1.1-2.8-2.4-4.2.1 1.7-.7 2.5-1.4 2.8-.4-1.3-1.2-2.3-2.3-3.5.2 2.6-1.3 3.5-1.3 5C8.2 20.6 9.6 22 12 22Z"/></svg></span> Más vendidos</h2><button type="button" class="catalogo-link-button" data-show-products><span class="catalogo-link-button__text">Ver más</span> <span class="catalogo-link-button__arrow" aria-hidden="true">→</span></button></div>
+                <div class="catalogo-carousel">
+                  <button type="button" class="catalogo-carousel-arrow catalogo-carousel-arrow--prev" data-carousel-target="catalogoMasVendidosGrid" data-carousel-dir="-1" aria-label="Ver productos anteriores">‹</button>
+                  <div class="catalogo-grid catalogo-grid--home catalogo-grid--carousel" id="catalogoMasVendidosGrid" tabindex="0" aria-label="Productos, deslizar horizontalmente"></div>
+                  <button type="button" class="catalogo-carousel-arrow catalogo-carousel-arrow--next" data-carousel-target="catalogoMasVendidosGrid" data-carousel-dir="1" aria-label="Ver productos siguientes">›</button>
+                </div>
               </section>
             </div>
             <div class="catalogo-products-toolbar">
-              <div>
+              <div class="catalogo-toolbar-heading">
+                <span class="catalogo-toolbar-bag" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l1 12H4L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg></span>
+                <div>
                 <p class="catalogo-eyebrow" id="catalogoContextEyebrow">CATÁLOGO</p>
                 <h2 id="catalogoProductsTitle">Todos los productos</h2>
                 <p class="catalogo-products-count" id="catalogoProductsCount">Cargando productos…</p>
+                </div>
               </div>
               <div class="catalogo-toolbar-actions">
                 <div class="catalogo-sort-custom" id="catalogoSortCustom">
                   <button class="catalogo-sort-trigger" id="catalogoSortTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
-                    <span id="catalogoSortLabel">Más relevantes</span>
+                    <span class="catalogo-sort-order-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4m-4 4 4-4 4 4M17 4v16m-4-4 4 4 4-4"/></svg></span><span id="catalogoSortLabel">Más relevantes</span>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
                   </button>
                   <div class="catalogo-sort-menu" id="catalogoSortMenu" role="listbox" aria-label="Ordenar productos" hidden>
@@ -294,7 +309,8 @@
     </button>
   </div>
 
-  <script defer src="./catalogo-base.js?v=cuenta-pedidos-220926"></script>
-  <script defer src="./editor-temporal.js?v=1"></script>
+  <script defer src="./catalogo-base.js?v=kg-selector-20261020"></script>
+  <script defer src="./editor-temporal.js?v=kg-selector-20261020"></script>
+  <script defer src="./catalogo-mobile-diseno.js?v=1"></script>
 </body>
 </html>

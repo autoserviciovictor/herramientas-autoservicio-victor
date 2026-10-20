@@ -14,7 +14,7 @@ const CART_STORAGE_KEY = "autoservicio-victor-catalogo-carrito-v1";
 const CHECKOUT_STORAGE_KEY = "autoservicio-victor-catalogo-checkout-v1";
 const CUSTOMER_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-v1";
 const CUSTOMER_TOKEN_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-token-v1";
-const PAGE_SIZE = 32;
+const PAGE_SIZE = 25;
 const state = {
   rubros: [],
   productos: [],
@@ -45,8 +45,9 @@ const els = {
   title: $("catalogoProductsTitle"),
   eyebrow: $("catalogoContextEyebrow"),
   feedback: $("catalogoFeedback"),
-  loadMoreWrap: $("catalogoLoadMoreWrap"),
-  loadMore: $("catalogoLoadMore"),
+  pagination: $("catalogoPagination"),
+  paginationSummary: $("catalogoPaginationSummary"),
+  paginationButtons: $("catalogoPaginationButtons"),
   search: $("catalogoHeaderSearch"),
   searchForm: $("catalogoHeaderSearchForm"),
   cartButton: $("catalogoCartButton"),
@@ -96,6 +97,7 @@ const els = {
   headerCartTotal: $("catalogoHeaderCartTotal"),
   home: $("catalogoHome"),
   bestSellersGrid: $("catalogoBestSellersGrid"),
+  masVendidosGrid: $("catalogoMasVendidosGrid"),
   sortCustom: $("catalogoSortCustom"),
   sortTrigger: $("catalogoSortTrigger"),
   sortMenu: $("catalogoSortMenu"),
@@ -135,38 +137,73 @@ function categoryIcon(name = "") {
     pan: svg('<path d="M5 15c0-5 3-9 7-9s7 4 7 9c0 3-2 5-5 5H10c-3 0-5-2-5-5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9l2 2M13 8l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
     golosina: svg('<path d="m8 8 8 8M8 16l8-8M5 9l3-1 8 8 1 3 3-3-1-3-8-8-3-1-3 5Z" fill="none" stroke="currentColor" stroke-width="1.6"/>'),
     mascota: svg('<circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="13" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="13" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 18c1-3 7-3 8 0 0 2-2 3-4 3s-4-1-4-3Z" fill="none" stroke="currentColor" stroke-width="1.6"/>'),
+    condimentos: svg('<path d="M8 5h8l1 3v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8l1-3Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 5V3h8v2M7 11h10M10 14h4M10 17h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'),
+    electro: svg('<path d="M8 3v7M16 3v7M6 10h12v3a6 6 0 0 1-5 5.9V22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'),
+    embutidos: svg('<path d="M5 16c2-5 8-9 13-8 2 1 2 4 0 6-3 4-8 6-12 5-2-.5-2-2-1-3Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m5 16-2-1m15-7 2-2M9 15l1-1m3-2 1-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'),
+    cotillon: svg('<path d="M8 3c-3 0-5 3-5 6s2 5 5 5 5-2 5-5-2-6-5-6ZM17 6c-2 0-4 2-4 5s2 4 4 4 4-1 4-4-2-5-4-5Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m8 14 1 2-1 1m9-2 1 2-1 1M8 17c-2 2 3 3 1 5m8-4c-3 1 0 2-1 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
+    green: svg('<path d="M5 20C4 9 10 4 20 4c0 10-5 16-15 16ZM5 20c4-6 7-9 12-12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'),
+    pescados: svg('<path d="M3 12c4-6 11-7 16 0-5 7-12 6-16 0Zm0 0-1-5 5 3m-4 2-1 5 5-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="15" cy="11" r="1" fill="currentColor"/>'),
+    postres: svg('<path d="M4 12h16l-2 9H6l-2-9ZM4 12l3-5 4 2 3-4 6 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 15v3m6-3v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'),
+    juguetes: svg('<path d="M5 8 12 4l7 4v9l-7 4-7-4V8Zm0 0 7 4 7-4m-7 4v9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>'),
+    vinos: svg('<path d="M6 3h12v5a6 6 0 0 1-12 0V3Zm6 11v7m-5 0h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 8h12" stroke="currentColor" stroke-width="1.4"/>'),
+    snacks: svg('<path d="m7 3 10 0 3 18H4L7 3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 8h10m-7 5 2-2 2 2-2 2-2-2Z" fill="none" stroke="currentColor" stroke-width="1.4"/>'),
+    conservas: svg('<path d="M6 5h12v16H6V5ZM5 3h14v2H5V3Zm3 7h8v6H8v-6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>'),
     otros: svg('<circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/>'),
   };
 
+  if (/^todos$/.test(n)) return icons.todos;
+  if (/condiment|especia/.test(n)) return icons.condimentos;
+  if (/electro/.test(n)) return icons.electro;
+  if (/embutid/.test(n)) return icons.embutidos;
+  if (/cotillon|cotillón|fiesta/.test(n)) return icons.cotillon;
+  if (/^green$|organico|orgánico|natural/.test(n)) return icons.green;
+  if (/pescad|marisco/.test(n)) return icons.pescados;
+  if (/postre|reposteria|repostería|torta/.test(n)) return icons.postres;
+  if (/juguet/.test(n)) return icons.juguetes;
+  if (/vinoteca|aperitivo|vino/.test(n)) return icons.vinos;
+  if (/snack/.test(n)) return icons.snacks;
+  if (/conserva|frasco/.test(n)) return icons.conservas;
   if (/aderezo|salsa|aceite|vinagre/.test(n)) return icons.botella;
-  if (/agua|jugo|energ|gase|cerve|vino|bebida/.test(n)) return icons.bebida;
-  if (/almacen|conserva|arroz|fideo|harina/.test(n)) return icons.almacen;
+  if (/agua|jugo|energ|gase|cerve|bebida/.test(n)) return icons.bebida;
+  if (/almacen|almacén|arroz|fideo|harina/.test(n)) return icons.almacen;
   if (/carne|carnic/.test(n)) return icons.carne;
-  if (/lact|ques|fiambre/.test(n)) return icons.lacteos;
+  if (/fiambre/.test(n)) return icons.embutidos;
+  if (/lact|ques/.test(n)) return icons.lacteos;
   if (/limp/.test(n)) return icons.limpieza;
   if (/higiene|perf|cuidado/.test(n)) return icons.higiene;
   if (/verd|fruta/.test(n)) return icons.verdura;
   if (/congel/.test(n)) return icons.congelados;
   if (/pan|gallet|panific/.test(n)) return icons.pan;
-  if (/golos|snack|chocol|caramel/.test(n)) return icons.golosina;
+  if (/golos|chocol|caramel/.test(n)) return icons.golosina;
   if (/mascot|pet/.test(n)) return icons.mascota;
   return icons.otros;
 }
 
 function categoryTone(name = "") {
   const n = String(name || "").toLowerCase();
+  if (/condiment|especia/.test(n)) return "tone-amber";
+  if (/electro/.test(n)) return "tone-blue";
+  if (/embutid|fiambre/.test(n)) return "tone-red";
+  if (/cotillon|cotillón|fiesta/.test(n)) return "tone-magenta";
+  if (/^green$|organico|orgánico|natural/.test(n)) return "tone-green";
+  if (/pescad|marisco/.test(n)) return "tone-cyan";
+  if (/postre|reposteria|repostería|torta/.test(n)) return "tone-pink";
+  if (/juguet/.test(n)) return "tone-violet";
+  if (/vinoteca|aperitivo|vino/.test(n)) return "tone-wine";
+  if (/snack/.test(n)) return "tone-magenta";
+  if (/conserva|frasco/.test(n)) return "tone-olive";
   if (/aderezo|salsa|aceite|vinagre/.test(n)) return "tone-amber";
   if (/agua|jugo|energ|gase|bebida/.test(n)) return "tone-blue";
-  if (/cerve|vino|alcohol/.test(n)) return "tone-wine";
-  if (/lact|ques|fiambre/.test(n)) return "tone-cyan";
+  if (/cerve|alcohol/.test(n)) return "tone-wine";
+  if (/lact|ques/.test(n)) return "tone-cyan";
   if (/limp/.test(n)) return "tone-violet";
   if (/higiene|perf|cuidado/.test(n)) return "tone-pink";
   if (/verd|fruta/.test(n)) return "tone-green";
   if (/congel/.test(n)) return "tone-ice";
   if (/pan|gallet|panific/.test(n)) return "tone-brown";
-  if (/golos|snack|chocol|caramel/.test(n)) return "tone-magenta";
+  if (/golos|chocol|caramel/.test(n)) return "tone-magenta";
   if (/carne|carnic/.test(n)) return "tone-red";
-  if (/almacen|conserva|arroz|fideo|harina/.test(n)) return "tone-olive";
+  if (/almacen|almacén|arroz|fideo|harina/.test(n)) return "tone-olive";
   return "tone-neutral";
 }
 
@@ -463,7 +500,7 @@ function generarMensajePedido() {
     `*Cliente:* ${c.nombre || "-"}`,
     `*Teléfono:* ${c.telefono || "-"}`, "",
     "*Productos:*",
-    ...state.carrito.map((item) => `• ${item.cantidad} x ${item.nombre} — ${formatMoney((Number(item.precio) || 0) * (Number(item.cantidad) || 0))}`),
+    ...state.carrito.map((item) => `• ${item.cantidad}${String(item.unidadVenta).toLowerCase()==="kg" ? " kg de" : " x"} ${item.nombre} — ${formatMoney((Number(item.precio) || 0) * (Number(item.cantidad) || 0))}`),
     "", `*Total estimado:* ${formatMoney(totals.total)}`, "",
     `*Entrega:* ${resumenEntrega()}`,
   ];
@@ -541,7 +578,7 @@ function cargarCarrito() {
   try {
     const parsed = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x) => x && x.codigo && Number(x.cantidad) > 0).map((x) => ({ ...x, cantidad: Math.min(999, Math.max(1, Number(x.cantidad) || 1)) }));
+    return parsed.filter((x) => x && x.codigo && Number(x.cantidad) > 0).map((x) => ({ ...x, cantidad: Math.min(999, Math.max(String(x.unidadVenta).toLowerCase() === "kg" ? 0.001 : 1, Number(x.cantidad) || 1)) }));
   } catch { return []; }
 }
 
@@ -587,6 +624,7 @@ function controlCompraHtml(producto) {
   const codigo = escapeHtml(producto.codigo);
   const cantidad = cantidadEnCarrito(producto.codigo);
   const editando = state.editoresCantidad.has(producto.codigo);
+  if (String(producto.unidadVenta).toLowerCase() === "kg") return `<button class="add-button purchase-add-button" type="button" data-action="kg-select" data-code="${codigo}">${cantidad ? `${cantidad.toLocaleString("es-AR")} kg · Cambiar` : "Elegir cantidad"}</button>`;
 
   if (!cantidad) {
     return `<button class="add-button purchase-add-button" type="button" data-action="add-first" data-code="${codigo}">Agregar</button>`;
@@ -692,7 +730,12 @@ async function cargarOfertasHome() {
 function renderHomeProducts() {
   if (!els.bestSellersGrid) return;
   const destacados = ofertasHome.filter((p) => p.destacado);
-  els.bestSellersGrid.innerHTML = destacados.slice(0, 6).map(renderProductCard).join("");
+  els.bestSellersGrid.innerHTML = destacados.map(renderProductCard).join("");
+  // Mantener la selección inicial que se utilizaba antes de separar Ofertas.
+  // No hay un ranking de ventas disponible en esta API.
+  if (els.masVendidosGrid) {
+    els.masVendidosGrid.innerHTML = state.productos.map(renderProductCard).join("");
+  }
 }
 
 function syncViewMode() {
@@ -749,7 +792,52 @@ function updateHeading() {
     els.title.textContent = "Todos los productos";
   }
   els.count.textContent = pluralProductos(state.total);
-  els.loadMoreWrap.hidden = state.pagina >= state.paginas || state.total === 0;
+  renderPagination();
+}
+
+function renderPagination() {
+  if (!els.pagination || !els.paginationButtons || !els.paginationSummary) return;
+  const total = Math.max(0, state.total);
+  const paginas = Math.max(1, state.paginas || Math.ceil(total / PAGE_SIZE));
+  const actual = Math.min(Math.max(1, state.pagina), paginas);
+  els.pagination.hidden = !total;
+  if (!total) return;
+  const desde = (actual - 1) * PAGE_SIZE + 1;
+  const hasta = Math.min(actual * PAGE_SIZE, total);
+  els.paginationSummary.textContent = `Mostrando ${desde.toLocaleString("es-AR")}–${hasta.toLocaleString("es-AR")} de ${total.toLocaleString("es-AR")} productos`;
+  // Con pocas páginas, mostrar todas en orden, sin puntos suspensivos.
+  // Con muchas, mantener una ventana consecutiva alrededor de la página actual.
+  const paginasVisibles = new Set();
+  if (paginas <= 7) {
+    for (let i = 1; i <= paginas; i++) paginasVisibles.add(i);
+  } else {
+    paginasVisibles.add(1);
+    paginasVisibles.add(paginas);
+    const inicio = actual <= 3 ? 1 : actual >= paginas - 2 ? paginas - 4 : actual - 1;
+    for (let i = inicio; i <= Math.min(paginas, inicio + 4); i++) paginasVisibles.add(i);
+  }
+  const items = [...paginasVisibles].sort((a, b) => a - b);
+  let previo = 0;
+  const botones = [];
+  const flecha = (direccion, pagina, deshabilitado) => `<button type="button" data-page="${pagina}" ${deshabilitado ? "disabled" : ""} aria-label="${direccion === "prev" ? "Página anterior" : "Página siguiente"}" title="${direccion === "prev" ? "Página anterior" : "Página siguiente"}" class="catalogo-page-button catalogo-page-arrow"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false"><path d="${direccion === "prev" ? "M15 18 9 12l6-6" : "m9 18 6-6-6-6"}" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const boton = (pagina, actualPagina = false) => `<button type="button" data-page="${pagina}" ${actualPagina ? 'aria-current="page"' : ""} aria-label="Página ${pagina}" class="catalogo-page-button${actualPagina ? " is-active" : ""}">${pagina}</button>`;
+  botones.push(flecha("prev", actual - 1, actual === 1));
+  for (const pagina of items) {
+    if (previo && pagina > previo + 1) botones.push('<span class="catalogo-page-ellipsis" aria-hidden="true">…</span>');
+    botones.push(boton(pagina, pagina === actual));
+    previo = pagina;
+  }
+  botones.push(flecha("next", actual + 1, actual === paginas));
+  els.paginationButtons.innerHTML = botones.join("");
+}
+
+async function cambiarPagina(pagina) {
+  if (state.loading || !Number.isInteger(pagina) || pagina < 1 || pagina > state.paginas || pagina === state.pagina) return;
+  const anterior = state.pagina;
+  state.pagina = pagina;
+  const ok = await cargarProductos();
+  if (!ok) { state.pagina = anterior; renderPagination(); return; }
+  document.querySelector(".catalogo-products-toolbar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function apiJson(path) {
@@ -801,12 +889,14 @@ async function cargarProductos({ append = false } = {}) {
     updateHeading();
     renderCategories();
     syncViewMode();
+    return true;
   } catch (error) {
     console.error("No se pudieron cargar los productos:", error);
     if (!append) state.productos = [];
     els.grid.innerHTML = '<div class="catalogo-empty"><div><div class="catalogo-empty__icon">!</div><h3>Catálogo temporalmente no disponible</h3><p>Intentá nuevamente en unos instantes.</p></div></div>';
     els.count.textContent = "No se pudieron cargar los productos";
     els.feedback.textContent = "Hubo un problema de conexión con el catálogo.";
+    return false;
   } finally {
     state.loading = false;
   }
@@ -936,7 +1026,7 @@ function renderCart() {
   }
   els.cartItems.innerHTML = state.carrito.map((item) => `<article class="cart-item">
     <div class="cart-item__image">${imagenProducto(item)}</div>
-    <div><h3>${escapeHtml(item.nombre)}</h3><div class="cart-item__price">${formatMoney(item.precio)}</div><div class="qty-control"><button type="button" data-cart-action="minus" data-code="${escapeHtml(item.codigo)}">−</button><span>${item.cantidad}</span><button type="button" data-cart-action="plus" data-code="${escapeHtml(item.codigo)}">+</button></div></div>
+    <div><h3>${escapeHtml(item.nombre)}</h3><div class="cart-item__price">${formatMoney(item.precio)} / ${String(item.unidadVenta).toLowerCase()==="kg" ? "kg" : "unidad"}</div>${String(item.unidadVenta).toLowerCase()==="kg" ? `<button class="kg-cart-edit" type="button" data-action="kg-select" data-code="${escapeHtml(item.codigo)}">${Number(item.cantidad).toLocaleString("es-AR")} kg · Cambiar</button>` : `<div class="qty-control"><button type="button" data-cart-action="minus" data-code="${escapeHtml(item.codigo)}">−</button><span>${item.cantidad}</span><button type="button" data-cart-action="plus" data-code="${escapeHtml(item.codigo)}">+</button></div>`}</div>
     <button class="cart-item__remove" type="button" data-cart-action="remove" data-code="${escapeHtml(item.codigo)}" aria-label="Quitar ${escapeHtml(item.nombre)}">×</button>
   </article>`).join("");
 }
@@ -946,6 +1036,7 @@ function abrirDrawer(tipo) {
   els.cart.classList.toggle("is-open", isCart);
   els.mobileCategories.classList.toggle("is-open", !isCart);
   els.cart.setAttribute("aria-hidden", String(!isCart));
+  if (isCart && els.mobileCategories.contains(document.activeElement)) els.menuBtn.focus();
   els.mobileCategories.setAttribute("aria-hidden", String(isCart));
   els.menuBtn.setAttribute("aria-expanded", String(!isCart));
   els.overlay.hidden = false;
@@ -953,6 +1044,10 @@ function abrirDrawer(tipo) {
 }
 
 function cerrarDrawers() {
+  // Antes de ocultar un panel, devolver el foco al control que lo abrió.
+  if (els.mobileCategories.contains(document.activeElement)) els.menuBtn.focus();
+  else if (els.cart.contains(document.activeElement)) els.cartButton?.focus();
+  else if (els.account?.contains(document.activeElement)) els.accountButton?.focus();
   els.account?.classList.remove("is-open");
   els.account?.setAttribute("aria-hidden", "true");
   els.checkout?.classList.remove("is-open");
@@ -981,6 +1076,7 @@ function bindEvents() {
     if (action) {
       const code = action.dataset.code || "";
       if (action.dataset.action === "add-first") agregarPrimeraUnidad(code);
+      if (action.dataset.action === "kg-select") abrirSelectorKg(code);
       if (action.dataset.action === "open-qty") abrirEditorCantidad(code);
       if (action.dataset.action === "cart-minus") modificarCantidadProducto(code, -1);
       if (action.dataset.action === "cart-plus") modificarCantidadProducto(code, 1);
@@ -1039,24 +1135,10 @@ function bindEvents() {
   document.addEventListener("click", (e) => {
     if (!els.sortCustom?.contains(e.target)) cerrarSort();
   });
-  els.loadMore.addEventListener("click", async () => {
-    if (state.pagina >= state.paginas || state.loading) return;
-    state.pagina += 1;
-    const anteriores = [...state.productos];
-    state.loading = true;
-    try {
-      const params = new URLSearchParams({ pagina: String(state.pagina), limite: String(PAGE_SIZE) });
-      if (state.busqueda) params.set("q", state.busqueda);
-      if (state.rubro) params.set("rubro", state.rubro);
-      const data = await apiJson(`/catalogo/api/productos?${params}`);
-      state.productos = [...anteriores, ...(data.productos || [])];
-      state.total = Number(data.total) || state.total;
-      state.paginas = Number(data.paginas) || state.paginas;
-      renderProducts(); updateHeading();
-    } catch (error) {
-      state.pagina -= 1;
-      els.feedback.textContent = "No pudimos cargar más productos. Intentá nuevamente.";
-    } finally { state.loading = false; }
+  els.paginationButtons?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-page]");
+    if (!button || button.disabled) return;
+    cambiarPagina(Number(button.dataset.page));
   });
   els.accountButton?.addEventListener("click", abrirMiCuenta);
   els.accountClose?.addEventListener("click", cerrarMiCuenta);
@@ -1102,3 +1184,116 @@ async function iniciar() {
 }
 
 iniciar();
+
+// Navegación horizontal de las secciones de inicio: deslizamiento táctil
+// en celulares y botones anterior/siguiente en pantallas grandes.
+document.addEventListener("click", (event) => {
+  const boton = event.target.closest("[data-carousel-target][data-carousel-dir]");
+  if (!boton) return;
+  const lista = document.getElementById(boton.dataset.carouselTarget);
+  if (!lista) return;
+  const tarjeta = lista.querySelector(".product-card");
+  if (!tarjeta) return;
+  const separacion = parseFloat(getComputedStyle(lista).columnGap) || 12;
+  const ancho = tarjeta.getBoundingClientRect().width + separacion;
+  const visibles = window.matchMedia("(max-width: 700px)").matches ? 2 : 6;
+  const paso = ancho * visibles;
+  const maximo = Math.max(0, lista.scrollWidth - lista.clientWidth);
+  const destino = Math.min(maximo, Math.max(0, Math.round(lista.scrollLeft / ancho / visibles + Number(boton.dataset.carouselDir)) * paso));
+  lista.scrollTo({left: destino, behavior: "smooth"});
+});
+
+// Las flechas se activan únicamente si hay productos hacia ese lado.
+// Observa los cambios en la lista porque los productos se cargan de forma asíncrona.
+function actualizarFlechasCarrusel(lista) {
+  const carrusel = lista.closest(".catalogo-carousel");
+  if (!carrusel) return;
+  const anterior = carrusel.querySelector('[data-carousel-dir="-1"]');
+  const siguiente = carrusel.querySelector('[data-carousel-dir="1"]');
+  const margen = 3;
+  const maximo = Math.max(0, lista.scrollWidth - lista.clientWidth);
+  if (anterior) anterior.disabled = lista.scrollLeft <= margen;
+  if (siguiente) siguiente.disabled = maximo <= margen || lista.scrollLeft >= maximo - margen;
+}
+
+function configurarFlechasCarrusel() {
+  document.querySelectorAll(".catalogo-carousel").forEach((carrusel) => {
+    const lista = carrusel.querySelector(".catalogo-grid--carousel");
+    if (!lista || carrusel.dataset.flechasConfiguradas === "1") return;
+    carrusel.dataset.flechasConfiguradas = "1";
+    carrusel.querySelectorAll(".catalogo-carousel-arrow").forEach((boton) => {
+      const izquierda = boton.dataset.carouselDir === "-1";
+      boton.innerHTML = izquierda
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 5 7 7-7 7"/></svg>';
+      boton.disabled = true;
+    });
+    const actualizar = () => actualizarFlechasCarrusel(lista);
+    lista.addEventListener("scroll", actualizar, {passive:true});
+    new MutationObserver(actualizar).observe(lista, {childList:true});
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(actualizar).observe(lista);
+    window.addEventListener("resize", actualizar);
+    actualizar();
+  });
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", configurarFlechasCarrusel);
+} else {
+  configurarFlechasCarrusel();
+}
+
+// Selector de compra por KG. El servidor valida las cantidades y vuelve a calcular precios.
+let kgSeleccion = null;
+function abrirSelectorKg(codigo) {
+  const producto = buscarProducto(codigo);
+  if (!producto || String(producto.unidadVenta).toLowerCase() !== "kg") return;
+  const previo = state.carrito.find(item => item.codigo === codigo);
+  kgSeleccion = { producto, modo: "peso", pasos: Math.max(1, Math.round((Number(previo?.cantidad) || 1) * 2)), piezas: 1 };
+  const modal = document.getElementById("catalogoKgModal");
+  modal.hidden = false;
+  document.body.classList.add("kg-modal-open");
+  dibujarSelectorKg();
+  document.getElementById("catalogoKgCerrar").focus();
+}
+function cerrarSelectorKg() {
+  document.getElementById("catalogoKgModal").hidden = true;
+  document.body.classList.remove("kg-modal-open");
+  kgSeleccion = null;
+}
+function dibujarSelectorKg() {
+  if (!kgSeleccion) return;
+  const {producto, modo, pasos, piezas} = kgSeleccion;
+  const permiteUnidades = producto.modalidadKg === "peso_unidades" && Number(producto.gramosPorUnidad) > 0;
+  const kilos = modo === "peso" ? pasos * 0.5 : piezas * Number(producto.gramosPorUnidad) / 1000;
+  document.getElementById("catalogoKgNombre").textContent = producto.nombre;
+  document.getElementById("catalogoKgOpciones").innerHTML = `<label class="kg-mode"><input type="radio" name="kgModo" value="peso" ${modo === "peso" ? "checked" : ""}><span>Peso<small>De 500 g en 500 g</small></span></label><div class="kg-step"><button type="button" data-kg-step="-1" ${modo !== "peso" || pasos <= 1 ? "disabled" : ""}>−</button><strong>${(pasos * 0.5).toLocaleString("es-AR")} kg</strong><button type="button" data-kg-step="1" ${modo !== "peso" ? "disabled" : ""}>+</button></div>${permiteUnidades ? `<label class="kg-mode"><input type="radio" name="kgModo" value="unidades" ${modo === "unidades" ? "checked" : ""}><span>Unidades<small>${producto.gramosPorUnidad} g aprox. por unidad</small></span></label><div class="kg-step"><button type="button" data-kg-piece="-1" ${modo !== "unidades" || piezas <= 1 ? "disabled" : ""}>−</button><strong>${piezas}</strong><button type="button" data-kg-piece="1" ${modo !== "unidades" ? "disabled" : ""}>+</button></div>` : ""}`;
+  document.getElementById("catalogoKgPrecio").textContent = formatMoney(precioVigente(producto) * kilos);
+  document.getElementById("catalogoKgCantidad").textContent = `${kilos.toLocaleString("es-AR", {maximumFractionDigits: 3})} kg estimados`;
+}
+function confirmarSelectorKg() {
+  if (!kgSeleccion) return;
+  const {producto, modo, pasos, piezas} = kgSeleccion;
+  const cantidad = modo === "peso" ? pasos / 2 : Math.round(piezas * Number(producto.gramosPorUnidad)) / 1000;
+  if (!Number.isFinite(cantidad) || cantidad < 0.01 || cantidad > 999) return;
+  const item = state.carrito.find(x => x.codigo === producto.codigo);
+  if (item) { item.cantidad = cantidad; item.precio = precioVigente(producto); item.unidadVenta = "kg"; }
+  else state.carrito.push({ codigo:producto.codigo, nombre:producto.nombre, precio:precioVigente(producto), unidadVenta:"kg", rubro:producto.rubro, cantidad });
+  state.pedidoRegistrado = null;
+  guardarCarrito(); renderCart(); renderControlCompra(producto.codigo); cerrarSelectorKg();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.createElement("div");
+  modal.id = "catalogoKgModal"; modal.className = "kg-modal"; modal.hidden = true;
+  modal.innerHTML = `<div class="kg-modal__shade" data-kg-close></div><section class="kg-modal__panel" role="dialog" aria-modal="true" aria-labelledby="catalogoKgTitulo"><div class="kg-modal__handle"></div><header><h2 id="catalogoKgTitulo">Elegí cuánto querés</h2><button id="catalogoKgCerrar" type="button" aria-label="Cerrar">×</button></header><p class="kg-modal__product" id="catalogoKgNombre"></p><div class="kg-modal__options" id="catalogoKgOpciones"></div><div class="kg-modal__summary"><span>Tu producto<small id="catalogoKgCantidad"></small></span><strong id="catalogoKgPrecio"></strong></div><button type="button" class="kg-modal__confirm" id="catalogoKgConfirmar">Agregar al carrito</button></section>`;
+  document.body.append(modal);
+  modal.addEventListener("click", event => {
+    if (event.target.closest("[data-kg-close], #catalogoKgCerrar")) cerrarSelectorKg();
+    const step = event.target.closest("[data-kg-step]");
+    if (step && kgSeleccion) { kgSeleccion.pasos = Math.max(1, Math.min(1998, kgSeleccion.pasos + Number(step.dataset.kgStep))); dibujarSelectorKg(); }
+    const piece = event.target.closest("[data-kg-piece]");
+    if (piece && kgSeleccion) { kgSeleccion.piezas = Math.max(1, Math.min(999, kgSeleccion.piezas + Number(piece.dataset.kgPiece))); dibujarSelectorKg(); }
+  });
+  modal.addEventListener("change", event => { if (event.target.name === "kgModo" && kgSeleccion) { kgSeleccion.modo = event.target.value; dibujarSelectorKg(); } });
+  document.getElementById("catalogoKgConfirmar").addEventListener("click", confirmarSelectorKg);
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !modal.hidden) cerrarSelectorKg(); });
+});

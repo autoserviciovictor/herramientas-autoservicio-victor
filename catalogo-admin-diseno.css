@@ -2063,3 +2063,6 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
 #catalogProductoModal .catalog-product-right { align-self:start!important; }
 #catalogProductoModal .catalog-product-image-editor,
 #catalogProductoModal .catalog-product-info-panel { box-sizing:border-box!important; }
+
+#catalogProductoKgOpciones[hidden],#catalogProductoGramosGrupo[hidden]{display:none!important}
+#catalogProductoKgOpciones{padding:12px;border:1px solid #e4e8ef;border-radius:10px;background:#fafbfc}

@@ -52,3 +52,7 @@
 .temp-editor #tempEditorGuardar{background:#ef233c;border-color:#ef233c;color:#fff;box-shadow:0 6px 16px #ef233c25}
 @media(max-width:850px){.temp-editor-body{grid-template-columns:1fr;padding:14px}.temp-editor{max-height:95vh}.temp-editor-preview{height:220px}}
 @media(max-width:480px){.temp-editor-checks,.temp-editor-fields{grid-template-columns:1fr}.temp-editor-header,.temp-editor-footer{padding:14px}.temp-editor-backdrop{padding:8px}}
+
+#tempEditorKgOpciones[hidden],#tempEditorGramosGrupo[hidden]{display:none!important}
+#tempEditorKgOpciones{padding:12px;border:1px solid #e4e8ef;border-radius:10px;background:#fafbfc}
+#tempEditorKgOpciones label{display:block;margin-bottom:10px}
