@@ -54,7 +54,7 @@ async function asegurarEsquemaCatalogoPedidos() {
       payment_method TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'recibido',
       total NUMERIC(14,2) NOT NULL DEFAULT 0,
-      item_units INTEGER NOT NULL DEFAULT 0,
+      item_units NUMERIC(12,3) NOT NULL DEFAULT 0,
       item_lines INTEGER NOT NULL DEFAULT 0,
       whatsapp_opened BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -70,6 +70,10 @@ async function asegurarEsquemaCatalogoPedidos() {
     // Migración compatible con instalaciones donde catalog_orders ya existía
     // antes de incorporar client_token. CREATE TABLE IF NOT EXISTS no agrega
     // columnas nuevas sobre una tabla existente, por eso se asegura aquí.
+    // Los pedidos por kilogramo pueden sumar cantidades fraccionarias (ej.: 3.5 kg).
+    // Migrar la columna existente antes de insertar cualquier pedido nuevo.
+    await query(`ALTER TABLE catalog_orders
+      ALTER COLUMN item_units TYPE NUMERIC(12,3) USING item_units::NUMERIC(12,3)`);
     await query(`ALTER TABLE catalog_orders
       ADD COLUMN IF NOT EXISTS client_token TEXT`);
     await query(`UPDATE catalog_orders

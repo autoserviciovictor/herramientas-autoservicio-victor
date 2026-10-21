@@ -1134,8 +1134,9 @@ function cartTotals() {
 
 function renderCart() {
   const totals = cartTotals();
-  els.cartBadge.hidden = totals.unidades === 0;
-  els.cartBadge.textContent = totals.unidades > 99 ? "99+" : String(totals.unidades);
+  const variedades = state.carrito.length;
+  els.cartBadge.hidden = variedades === 0;
+  els.cartBadge.textContent = variedades > 99 ? "99+" : String(variedades);
   els.cartProductsLabel.textContent = pluralProductos(state.carrito.length);
   els.cartTotal.textContent = formatMoney(totals.total);
   if (els.headerCartTotal) els.headerCartTotal.textContent = formatMoney(totals.total);
