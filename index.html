@@ -66,7 +66,7 @@
     <link rel="stylesheet" href="compras-facturas.css?v=v38-editar-factura" />
     <link
       rel="stylesheet"
-      href="catalogo-admin-diseno.css?v=desktop-toolbar-d31-110926"
+      href="catalogo-admin-diseno.css?v=pedido-desplegable-20261021"
     />
     <link
       rel="stylesheet"
@@ -6426,7 +6426,7 @@
                 class="catalog-btn catalog-btn-secondary catalog-order-print-btn"
                 type="button"
               >
-                <span aria-hidden="true">🖨</span><span>Imprimir pedido</span>
+                <span>Imprimir pedido</span>
               </button>
               <button
                 id="catalogPedidoCerrar"
@@ -6482,11 +6482,19 @@
             </section>
 
             <section class="catalog-order-items-card">
-              <header>
-                <strong>Productos</strong
-                ><span id="catalogPedidoItemsResumen">—</span>
-              </header>
-              <div id="catalogPedidoItems" class="catalog-order-items"></div>
+              <details id="catalogPedidoProductosDesplegable" class="catalog-order-products-details">
+                <summary class="catalog-order-products-head">
+                  <span class="catalog-order-products-heading">
+                    <strong>Productos</strong>
+                    <span id="catalogPedidoItemsResumen">—</span>
+                  </span>
+                  <span class="catalog-order-expand-btn" aria-hidden="true">
+                    <span class="catalog-order-expand-closed">Ver pedido ▾</span>
+                    <span class="catalog-order-expand-open">Ocultar pedido ▴</span>
+                  </span>
+                </summary>
+                <div id="catalogPedidoItems" class="catalog-order-items"></div>
+              </details>
               <footer>
                 <span>Total</span><strong id="catalogPedidoTotal">—</strong>
               </footer>
@@ -10330,5 +10338,6 @@
         </form>
       </section>
     </div>
-  </body>
+
+</body>
 </html>
