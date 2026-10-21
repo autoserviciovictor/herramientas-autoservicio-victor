@@ -847,3 +847,182 @@ body.catalogo-browse-mode .catalogo-home{display:none!important}
 
 /* Selector por peso */
 .kg-modal[hidden]{display:none!important}.kg-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px}.kg-modal__shade{position:absolute;inset:0;background:rgba(17,24,39,.65)}.kg-modal__panel{position:relative;width:min(100%,490px);max-height:90dvh;overflow:auto;background:#fff;border-radius:22px;padding:26px;box-shadow:0 25px 75px #0003;color:#151724}.kg-modal__handle{display:none}.kg-modal__panel header{display:flex;align-items:center;justify-content:space-between;gap:12px}.kg-modal__panel h2{font-size:23px;margin:0;font-weight:800}.kg-modal__panel header button{border:0;background:transparent;font-size:32px;cursor:pointer}.kg-modal__product{font-size:14px;color:#667085;margin:8px 0 22px}.kg-modal__options{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px 8px}.kg-mode{display:flex;align-items:center;gap:12px;font-weight:700;cursor:pointer}.kg-mode input{accent-color:#f0172c;width:20px;height:20px}.kg-mode small{display:block;color:#667085;font-size:12px;font-weight:400;margin-top:4px}.kg-step{display:flex;align-items:center;gap:10px;border-radius:40px;background:#f4f5f7;padding:4px}.kg-step button{border:0;background:white;border-radius:50%;width:35px;height:35px;font-size:23px;cursor:pointer}.kg-step button:disabled{opacity:.3;cursor:default}.kg-step strong{min-width:45px;text-align:center;font-size:14px}.kg-modal__summary{display:flex;justify-content:space-between;align-items:end;margin:35px 0 22px;gap:10px}.kg-modal__summary span{font-size:21px;font-weight:800}.kg-modal__summary small{display:block;font-size:12px;font-weight:400;color:#667085;margin-top:5px}.kg-modal__summary strong{font-size:24px;color:#f0172c;white-space:nowrap}.kg-modal__confirm{width:100%;border:0;border-radius:12px;background:#f0172c;color:white;padding:16px;font-size:16px;font-weight:800;cursor:pointer}.kg-cart-edit{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:7px 10px;cursor:pointer;font-weight:700}.kg-modal-open{overflow:hidden}@media(max-width:600px){.kg-modal{padding:0;align-items:flex-end}.kg-modal__panel{width:100%;max-height:90dvh;border-radius:25px 25px 0 0;padding:25px 20px calc(22px + env(safe-area-inset-bottom))}.kg-modal__handle{display:block;width:50px;height:5px;background:#d9d9df;border-radius:10px;margin:-9px auto 28px}.kg-modal__panel h2{font-size:22px}}
+
+/* Navegación inferior exclusiva de celulares */
+.catalogo-bottom-nav{display:none}
+@media(max-width:700px){
+  .catalogo-account-button{display:none!important}
+  .catalogo-bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:8500;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-top:1px solid #e8e9ee;box-shadow:0 -5px 20px #10182813;padding:7px 8px calc(7px + env(safe-area-inset-bottom));min-height:65px}
+  .catalogo-bottom-nav button{border:0;background:none;color:#667085;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:47px;font:600 11px/1.2 inherit;cursor:pointer;border-radius:10px}
+  .catalogo-bottom-nav button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .catalogo-bottom-nav button.is-active{color:#ed1532;background:#fff3f5}
+  .catalogo-app{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  .catalogo-mobile-cartbar:not([hidden]){bottom:calc(72px + env(safe-area-inset-bottom))!important}
+  .catalogo-bottom-nav button:focus-visible{outline:2px solid #ed1532;outline-offset:-2px}
+}
+
+/* Pantallas independientes de Pedidos y Perfil en celular. */
+@media(max-width:700px){
+  .catalogo-account[data-mobile-screen]{width:100%;height:calc(100dvh - 65px - env(safe-area-inset-bottom));bottom:calc(65px + env(safe-area-inset-bottom));top:0;z-index:8490;box-shadow:none;transition:none;}
+  .catalogo-account[data-mobile-screen] .drawer-header{padding:18px 18px 15px;}
+  .catalogo-account[data-mobile-screen] .account-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:22px 18px 35px;scrollbar-width:none;-ms-overflow-style:none;}
+  .catalogo-account[data-mobile-screen] .account-body::-webkit-scrollbar{display:none;}
+  .catalogo-account[data-mobile-screen="pedidos"] .account-section:not(.account-orders){display:none;}
+  .catalogo-account[data-mobile-screen="perfil"] .account-orders{display:none;}
+  .catalogo-account[data-mobile-screen] .account-section{margin:0;padding:0;border:0;}
+  .catalogo-account[data-mobile-screen] .account-orders__head{align-items:center;}
+  .catalogo-account[data-mobile-screen] .account-orders__head h3{font-size:20px;}
+  .catalogo-account[data-mobile-screen] .checkout-fields{max-width:100%;}
+}
+
+/* Ofertas reutiliza el mismo encabezado, buscador y grilla del listado general. */
+@media(max-width:700px){
+  body.catalogo-mobile-offers-active .catalogo-hero,
+  body.catalogo-mobile-offers-active .catalogo-services,
+  body.catalogo-mobile-offers-active .catalogo-home{display:none!important}
+  body.catalogo-mobile-offers-active .catalogo-products-section{padding-top:12px;min-height:calc(100dvh - 170px)}
+  body.catalogo-mobile-offers-active #catalogoLoadMoreWrap,
+  body.catalogo-mobile-offers-active #catalogoPagination{display:none!important}
+}
+
+/* La vista Ofertas debe mantener visible el listado incluso desde Inicio. */
+@media(max-width:700px){
+ body.catalogo-mobile-offers-active .catalogo-products-toolbar,
+ body.catalogo-mobile-offers-active #catalogoProductsGrid,
+ body.catalogo-mobile-offers-active #catalogoFeedback{display:grid!important}
+ body.catalogo-mobile-offers-active .catalogo-products-toolbar{display:flex!important;flex-direction:column;gap:12px}
+}
+
+/* El banner institucional se muestra exclusivamente en la portada de Inicio.
+   Al navegar por rubros, listado general u Ofertas se oculta. */
+body.catalogo-browse-mode .catalogo-hero,
+body.catalogo-mobile-offers-active .catalogo-hero {
+  display: none !important;
+}
+
+/* Separación uniforme del encabezado del listado en rubros y Ofertas (móvil). */
+@media (max-width:700px){
+  body.catalogo-browse-mode .catalogo-products-toolbar,
+  body.catalogo-mobile-offers-active .catalogo-products-toolbar{
+    display:flex!important;flex-direction:column;gap:12px;
+    padding:17px 14px 14px;margin-bottom:10px;
+  }
+  body.catalogo-browse-mode .catalogo-toolbar-heading,
+  body.catalogo-mobile-offers-active .catalogo-toolbar-heading{margin:0;}
+  body.catalogo-browse-mode .catalogo-toolbar-actions,
+  body.catalogo-mobile-offers-active .catalogo-toolbar-actions{margin:0;width:100%;}
+}
+
+/* 21/10/2026 — Mismos espacios entre marcos en todos los rubros y Ofertas.
+   La portada conserva su disposición original; el cambio es solo móvil. */
+@media (max-width:700px){
+  body.catalogo-browse-mode .catalogo-products-section,
+  body.catalogo-mobile-offers-active .catalogo-products-section{
+    padding-top:12px;
+  }
+  body.catalogo-browse-mode .catalogo-products-toolbar,
+  body.catalogo-mobile-offers-active .catalogo-products-toolbar{
+    margin-top:0;
+    margin-bottom:12px;
+  }
+  body.catalogo-browse-mode .catalogo-search-section,
+  body.catalogo-mobile-offers-active .catalogo-search-section{
+    padding-bottom:12px;
+  }
+}
+
+/* Rediseño de la navegación inferior móvil — 21/10/2026. */
+@media (max-width:700px){
+  .catalogo-bottom-nav{
+    min-height:69px;
+    padding:6px 10px calc(6px + env(safe-area-inset-bottom));
+    background:#fff;
+    border-top:1px solid #edf0f4;
+    box-shadow:0 -8px 28px rgba(17,24,39,.085);
+    gap:4px;
+  }
+  .catalogo-bottom-nav button{
+    appearance:none;
+    min-height:55px;
+    padding:2px 0;
+    gap:3px;
+    border:0;
+    border-radius:14px;
+    background:transparent;
+    color:#738096;
+    font-family:inherit;
+    font-size:11px;
+    font-weight:600;
+    line-height:1.15;
+    transition:color .18s ease, transform .18s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .catalogo-bottom-nav button svg{
+    box-sizing:content-box;
+    width:21px;
+    height:21px;
+    padding:6px 18px;
+    border-radius:13px;
+    background:transparent;
+    stroke-width:1.85;
+    transition:background-color .18s ease, color .18s ease;
+  }
+  .catalogo-bottom-nav button.is-active{
+    color:#ed1532;
+    background:transparent;
+    font-weight:750;
+  }
+  .catalogo-bottom-nav button.is-active svg{
+    background:#fff0f2;
+    stroke-width:2.15;
+  }
+  .catalogo-bottom-nav button:active{transform:scale(.96)}
+  .catalogo-bottom-nav button:focus-visible{outline:2px solid #ed1532;outline-offset:-2px}
+  .catalogo-app{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+  .catalogo-mobile-cartbar:not([hidden]){bottom:calc(76px + env(safe-area-inset-bottom))!important}
+  .catalogo-account[data-mobile-screen]{
+    height:calc(100dvh - 69px - env(safe-area-inset-bottom));
+    bottom:calc(69px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width:700px) and (prefers-reduced-motion:reduce){
+  .catalogo-bottom-nav button,.catalogo-bottom-nav button svg{transition:none}
+}
+
+/* Menú móvil: accesos principales y rubros separados */
+.catalogo-mobile-categories .category-menu-section-title{margin:13px 7px 5px;padding-top:13px;border-top:1px solid #e8edf3;font-size:10px;font-weight:800;letter-spacing:.13em;color:#758197}
+.catalogo-mobile-categories .category-button--shortcut{font-size:13px;font-weight:750;min-height:46px}
+.catalogo-mobile-categories .category-button--shortcut .category-button__icon{font-size:19px;font-weight:800}
+
+/* Íconos SVG de alta definición en el menú móvil de categorías. */
+@media (max-width:700px){
+  .catalogo-mobile-categories .category-button{min-height:43px;gap:11px;padding:4px 9px;border-radius:10px}
+  .catalogo-mobile-categories .category-button__icon{width:34px;height:34px;flex:0 0 34px;border-radius:11px}
+  .catalogo-mobile-categories .category-logo__svg{width:23px;height:23px;display:block;overflow:visible;shape-rendering:geometricPrecision}
+  .catalogo-mobile-categories .category-logo__svg--shortcut{width:22px;height:22px}
+  .catalogo-mobile-categories .category-button--shortcut{min-height:48px;font-size:13px}
+  .catalogo-mobile-categories .category-button--shortcut .category-button__icon{background:#fff0f2!important;color:#ef1726}
+  .catalogo-mobile-categories .category-button__count{min-width:0;flex:0 0 auto;margin-left:auto;padding-left:4px;font-size:11px}
+  .catalogo-mobile-categories .category-menu-chevron{width:15px;height:15px;flex:0 0 15px;color:#7a8699;margin-left:4px}
+  .catalogo-mobile-categories .category-button.is-active .category-menu-chevron{color:#ef1726}
+  .catalogo-mobile-categories .category-button:focus-visible{outline:2px solid #ef1726;outline-offset:2px}
+}
+
+/* Flechas de rubros destacados: centrado óptico exacto en el botón circular. */
+.catalogo-rubro-card > span > i {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  font-size:0;
+  padding:0;
+  text-indent:0;
+}
+.catalogo-rubro-card > span > i::before {
+  content:"";
+  display:block;
+  width:15px;
+  height:15px;
+  flex:0 0 15px;
+  background:center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14m-6-6 6 6-6 6' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}

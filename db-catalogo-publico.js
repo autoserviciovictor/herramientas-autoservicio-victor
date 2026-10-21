@@ -782,9 +782,9 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
   const saleUnit = cambios.unidadVenta === undefined ? (s.sale_unit || "unidad") : textoLimitado(cambios.unidadVenta, 30).toLowerCase();
   if (!UNIDADES_VENTA.includes(saleUnit)) throw new Error("La unidad de venta no es válida");
   const modalidadKg = saleUnit === "kg" ? (cambios.modalidadKg === undefined ? (s.kg_sale_mode || "peso") : String(cambios.modalidadKg)) : "peso";
-  if (!["peso", "peso_unidades"].includes(modalidadKg)) throw new Error("La modalidad de venta por KG no es válida");
-  const gramosPorUnidad = saleUnit === "kg" && modalidadKg === "peso_unidades" ? Number(cambios.gramosPorUnidad === undefined ? s.kg_unit_grams : cambios.gramosPorUnidad) : null;
-  if (modalidadKg === "peso_unidades" && (!Number.isInteger(gramosPorUnidad) || gramosPorUnidad < 1 || gramosPorUnidad > 100000)) throw new Error("Indicá el peso aproximado en gramos de cada unidad");
+  if (!["peso", "peso_unidades", "solo_unidades"].includes(modalidadKg)) throw new Error("La modalidad de venta por KG no es válida");
+  const gramosPorUnidad = saleUnit === "kg" && ["peso_unidades", "solo_unidades"].includes(modalidadKg) ? Number(cambios.gramosPorUnidad === undefined ? s.kg_unit_grams : cambios.gramosPorUnidad) : null;
+  if (["peso_unidades", "solo_unidades"].includes(modalidadKg) && (!Number.isInteger(gramosPorUnidad) || gramosPorUnidad < 1 || gramosPorUnidad > 100000)) throw new Error("Indicá el peso aproximado en gramos de cada unidad");
   const visibleFinal = cambios.visible === undefined ? Boolean(s.visible) : booleano(cambios.visible, Boolean(s.visible));
   if (visibleFinal && !categoryId) throw new Error("Asigná un rubro antes de hacer visible el producto");
   let precioOferta = s.offer_price ?? null;

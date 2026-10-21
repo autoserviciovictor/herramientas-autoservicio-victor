@@ -1286,7 +1286,7 @@ window.CatalogoAdminModule = { activar, desactivar, recargar: activar };
 function actualizarCamposKgAdmin() {
   const kg = document.getElementById("catalogProductoUnidad")?.value === "kg";
   document.getElementById("catalogProductoKgOpciones").hidden = !kg;
-  document.getElementById("catalogProductoGramosGrupo").hidden = !kg || document.getElementById("catalogProductoModalidadKg").value !== "peso_unidades";
+  document.getElementById("catalogProductoGramosGrupo").hidden = !kg || !["peso_unidades", "solo_unidades"].includes(document.getElementById("catalogProductoModalidadKg").value);
 }
 document.getElementById("catalogProductoUnidad")?.addEventListener("change", actualizarCamposKgAdmin);
 document.getElementById("catalogProductoModalidadKg")?.addEventListener("change", actualizarCamposKgAdmin);

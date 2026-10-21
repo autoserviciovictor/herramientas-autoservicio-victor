@@ -608,12 +608,28 @@ function categoryButton(rubro, mobile = false) {
   </button>`;
 }
 
-function renderCategories() {
-  const todos = { nombre: "Todos", slug: "", productos: state.rubros.reduce((a, r) => a + (Number(r.productos) || 0), 0) };
-  const list = [todos, ...state.rubros];
-  els.nav.innerHTML = list.map((r) => categoryButton(r)).join("");
-  els.mobileNav.innerHTML = list.map((r) => categoryButton(r, true)).join("");
+// Íconos vectoriales para los accesos principales del menú móvil.
+function mobileMenuIcon(action) {
+  const shapes = {
+    inicio: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+    ofertas: '<path d="M5 5h14v14H5z" opacity="0"/><circle cx="7.5" cy="7.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/><path d="M18.5 5.5 5.5 18.5"/>',
+    vendidos: '<path d="m12 2.5 2.9 6.1 6.7 1-4.8 4.7 1.1 6.7-5.9-3.1-5.9 3.1 1.1-6.7-4.8-4.7 6.7-1z"/>',
+  };
+  return `<svg class="category-logo__svg category-logo__svg--shortcut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${shapes[action] || shapes.inicio}</svg>`;
+}
 
+function renderCategories() {
+  // Los accesos principales son independientes del filtro de rubros.
+  const mobileEntry = (action, title, active = false) => `<button class="category-button category-button--shortcut${active ? ' is-active' : ''}" type="button" data-menu-view="${action}"${active ? ' aria-current="page"' : ''}><span class="category-button__icon category-logo tone-red" aria-hidden="true">${mobileMenuIcon(action)}</span><span>${title}</span><svg class="category-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`;
+  els.nav.innerHTML = state.rubros.map(r => categoryButton(r)).join("");
+  const isHome = !state.modoCatalogo && !state.rubro && !state.busqueda && !document.body.classList.contains('catalogo-mobile-offers-active') && !document.body.classList.contains('catalogo-mobile-bestsellers-active');
+  els.mobileNav.innerHTML = [
+    mobileEntry('inicio', 'Inicio', isHome),
+    mobileEntry('ofertas', 'Ofertas', document.body.classList.contains('catalogo-mobile-offers-active')),
+    mobileEntry('vendidos', 'Más vendidos', document.body.classList.contains('catalogo-mobile-bestsellers-active')),
+    '<div class="category-menu-section-title">TODOS LOS RUBROS</div>',
+    ...state.rubros.map(r => categoryButton(r, true).replace('</button>', '<svg class="category-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>'))
+  ].join('');
 }
 
 function cantidadEnCarrito(codigo) {
@@ -726,6 +742,16 @@ async function cargarOfertasHome() {
     ofertasCargadas = true;
   } catch (error) { console.warn("No se pudieron cargar las ofertas", error); ofertasHome = []; ofertasCargadas = true; }
   renderHomeProducts();
+  renderMobileOffers();
+  if (document.body.classList.contains("catalogo-mobile-offers-active")) { renderProducts(); updateHeading(); }
+}
+function renderMobileOffers() {
+  const grid = document.getElementById("catalogoMobileOffersGrid");
+  const count = document.getElementById("catalogoMobileOffersCount");
+  if (!grid || !count) return;
+  const items = ofertasHome.filter(p => p.destacado && p.visible !== false && precioVigente(p) < Number(p.precio));
+  grid.innerHTML = items.length ? items.map(renderProductCard).join("") : `<p class="catalogo-mobile-offers-empty">No hay ofertas disponibles por el momento.</p>`;
+  count.textContent = `${items.length} ${items.length === 1 ? "producto en oferta" : "productos en oferta"}`;
 }
 function renderHomeProducts() {
   if (!els.bestSellersGrid) return;
@@ -739,12 +765,18 @@ function renderHomeProducts() {
 }
 
 function syncViewMode() {
-  const browse = Boolean(state.modoCatalogo || state.rubro || state.busqueda);
+  const browse = Boolean(state.modoCatalogo || state.rubro || state.busqueda || document.body.classList.contains("catalogo-mobile-bestsellers-active"));
   document.body.classList.toggle("catalogo-browse-mode", browse);
+  document.body.classList.toggle("catalogo-home-active", !browse && !document.body.classList.contains("catalogo-mobile-offers-active"));
   if (els.home) els.home.hidden = browse;
 }
 
 function abrirCatalogoCompleto() {
+  document.body.classList.remove("catalogo-mobile-offers-active", "catalogo-mobile-bestsellers-active");
+  document.querySelectorAll('#catalogoBottomNav [data-mobile-nav]').forEach(button => {
+    button.classList.remove('is-active');
+    button.removeAttribute('aria-current');
+  });
   state.modoCatalogo = true;
   state.rubro = "";
   state.busqueda = "";
@@ -762,7 +794,11 @@ function seleccionarRubroPorNombre(nombre = "") {
 }
 
 function productosOrdenados() {
-  const items = [...state.productos];
+  const items = document.body.classList.contains("catalogo-mobile-bestsellers-active")
+    ? [...state.productos].filter(p => !state.busqueda || `${p.nombre || ""} ${p.codigo || ""}`.toLowerCase().includes(state.busqueda.toLowerCase()))
+    : document.body.classList.contains("catalogo-mobile-offers-active")
+    ? ofertasHome.filter(p => p.destacado && p.visible !== false && precioVigente(p) < Number(p.precio) && (!state.busqueda || `${p.nombre || ""} ${p.codigo || ""} ${p.rubro || ""}`.toLowerCase().includes(state.busqueda.toLowerCase())))
+    : [...state.productos];
   if (state.orden === "precio-asc") items.sort((a,b) => precioVigente(a) - precioVigente(b));
   else if (state.orden === "precio-desc") items.sort((a,b) => precioVigente(b) - precioVigente(a));
   else if (state.orden === "nombre") items.sort((a,b) => String(a.nombre||"").localeCompare(String(b.nombre||""), "es"));
@@ -770,6 +806,11 @@ function productosOrdenados() {
 }
 
 function renderProducts({ append = false } = {}) {
+  if (document.body.classList.contains("catalogo-mobile-offers-active") || document.body.classList.contains("catalogo-mobile-bestsellers-active")) {
+    const items = productosOrdenados();
+    els.grid.innerHTML = items.length ? items.map(renderProductCard).join("") : `<div class="catalogo-empty"><h3>No encontramos productos</h3><p>Probá con otra búsqueda o volvé más tarde.</p></div>`;
+    return;
+  }
   if (!state.productos.length && !append) {
     const noVisible = !state.busqueda && !state.rubro;
     els.grid.innerHTML = `<div class="catalogo-empty"><div><div class="catalogo-empty__icon">⌕</div><h3>${noVisible ? "Todavía no hay productos publicados" : "No encontramos productos"}</h3><p>${noVisible ? "El catálogo está listo. Los productos aparecerán acá cuando sean marcados como visibles desde la administración." : "Probá con otro nombre, código o rubro."}</p></div></div>`;
@@ -780,6 +821,20 @@ function renderProducts({ append = false } = {}) {
 }
 
 function updateHeading() {
+  if (document.body.classList.contains("catalogo-mobile-bestsellers-active")) {
+    els.eyebrow.textContent = "CATÁLOGO";
+    els.title.textContent = "Más vendidos";
+    els.count.textContent = pluralProductos(state.total);
+    if (els.pagination) els.pagination.hidden = true;
+    return;
+  }
+  if (document.body.classList.contains("catalogo-mobile-offers-active")) {
+    els.eyebrow.textContent = "CATÁLOGO";
+    els.title.textContent = "Ofertas";
+    els.count.textContent = `${productosOrdenados().length} productos en oferta`;
+    if (els.pagination) els.pagination.hidden = true;
+    return;
+  }
   const selected = state.rubros.find((r) => r.slug === state.rubro);
   if (state.busqueda) {
     els.eyebrow.textContent = "RESULTADOS";
@@ -903,6 +958,14 @@ async function cargarProductos({ append = false } = {}) {
 }
 
 function seleccionarRubro(slug = "") {
+  // Cada rubro (incluido Todos) abre el listado, nunca la portada de Inicio.
+  document.body.classList.remove("catalogo-mobile-offers-active", "catalogo-mobile-bestsellers-active");
+  document.querySelectorAll('#catalogoBottomNav [data-mobile-nav]').forEach(button => {
+    const active = false; // Un rubro no es la pantalla Inicio.
+    button.classList.toggle('is-active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
   state.modoCatalogo = true;
   state.rubro = slug;
   state.busqueda = "";
@@ -914,6 +977,12 @@ function seleccionarRubro(slug = "") {
 }
 
 function buscar(texto = "") {
+  if (document.body.classList.contains("catalogo-mobile-offers-active") || document.body.classList.contains("catalogo-mobile-bestsellers-active")) {
+    state.busqueda = String(texto || "").trim().replace(/\s+/g, " ").slice(0, 100);
+    els.search.value = state.busqueda;
+    renderProducts(); updateHeading();
+    return;
+  }
   state.modoCatalogo = true;
   const q = String(texto || "").trim().replace(/\s+/g, " ").slice(0, 100);
   state.busqueda = q;
@@ -1068,6 +1137,29 @@ function bindEvents() {
 
     const promo = event.target.closest("[data-rubro-name]");
     if (promo) return seleccionarRubroPorNombre(promo.dataset.rubroName || "");
+
+    const menuView = event.target.closest('[data-menu-view]');
+    if (menuView) {
+      const view = menuView.dataset.menuView;
+      cerrarDrawers();
+      if (view === 'inicio' || view === 'ofertas') {
+        document.querySelector(`#catalogoBottomNav [data-mobile-nav="${view}"]`)?.click();
+      } else if (view === 'vendidos') {
+        document.body.classList.remove('catalogo-mobile-offers-active');
+        document.body.classList.add('catalogo-mobile-bestsellers-active');
+        state.modoCatalogo = true;
+        state.rubro = '';
+        state.busqueda = '';
+        state.pagina = 1;
+        els.search.value = '';
+        document.querySelectorAll('#catalogoBottomNav [data-mobile-nav]').forEach(b => { b.classList.remove('is-active'); b.removeAttribute('aria-current'); });
+        syncViewMode();
+        cargarProductos();
+        window.scrollTo({top:0,behavior:'instant'});
+      }
+      renderCategories();
+      return;
+    }
 
     const category = event.target.closest("[data-rubro]");
     if (category) return seleccionarRubro(category.dataset.rubro || "");
@@ -1248,7 +1340,7 @@ function abrirSelectorKg(codigo) {
   const producto = buscarProducto(codigo);
   if (!producto || String(producto.unidadVenta).toLowerCase() !== "kg") return;
   const previo = state.carrito.find(item => item.codigo === codigo);
-  kgSeleccion = { producto, modo: "peso", pasos: Math.max(1, Math.round((Number(previo?.cantidad) || 1) * 2)), piezas: 1 };
+  kgSeleccion = { producto, modo: producto.modalidadKg === "solo_unidades" ? "unidades" : "peso", pasos: Math.max(1, Math.round((Number(previo?.cantidad) || 1) * 2)), piezas: 1 };
   const modal = document.getElementById("catalogoKgModal");
   modal.hidden = false;
   document.body.classList.add("kg-modal-open");
@@ -1263,10 +1355,10 @@ function cerrarSelectorKg() {
 function dibujarSelectorKg() {
   if (!kgSeleccion) return;
   const {producto, modo, pasos, piezas} = kgSeleccion;
-  const permiteUnidades = producto.modalidadKg === "peso_unidades" && Number(producto.gramosPorUnidad) > 0;
+  const permiteUnidades = ["peso_unidades", "solo_unidades"].includes(producto.modalidadKg) && Number(producto.gramosPorUnidad) > 0;
   const kilos = modo === "peso" ? pasos * 0.5 : piezas * Number(producto.gramosPorUnidad) / 1000;
   document.getElementById("catalogoKgNombre").textContent = producto.nombre;
-  document.getElementById("catalogoKgOpciones").innerHTML = `<label class="kg-mode"><input type="radio" name="kgModo" value="peso" ${modo === "peso" ? "checked" : ""}><span>Peso<small>De 500 g en 500 g</small></span></label><div class="kg-step"><button type="button" data-kg-step="-1" ${modo !== "peso" || pasos <= 1 ? "disabled" : ""}>−</button><strong>${(pasos * 0.5).toLocaleString("es-AR")} kg</strong><button type="button" data-kg-step="1" ${modo !== "peso" ? "disabled" : ""}>+</button></div>${permiteUnidades ? `<label class="kg-mode"><input type="radio" name="kgModo" value="unidades" ${modo === "unidades" ? "checked" : ""}><span>Unidades<small>${producto.gramosPorUnidad} g aprox. por unidad</small></span></label><div class="kg-step"><button type="button" data-kg-piece="-1" ${modo !== "unidades" || piezas <= 1 ? "disabled" : ""}>−</button><strong>${piezas}</strong><button type="button" data-kg-piece="1" ${modo !== "unidades" ? "disabled" : ""}>+</button></div>` : ""}`;
+  document.getElementById("catalogoKgOpciones").innerHTML = `${producto.modalidadKg === "solo_unidades" ? "" : `<label class="kg-mode"><input type="radio" name="kgModo" value="peso" ${modo === "peso" ? "checked" : ""}><span>Peso<small>De 500 g en 500 g</small></span></label><div class="kg-step"><button type="button" data-kg-step="-1" ${modo !== "peso" || pasos <= 1 ? "disabled" : ""}>−</button><strong>${(pasos * 0.5).toLocaleString("es-AR")} kg</strong><button type="button" data-kg-step="1" ${modo !== "peso" ? "disabled" : ""}>+</button></div>`}${permiteUnidades ? `<label class="kg-mode"><input type="radio" name="kgModo" value="unidades" ${modo === "unidades" ? "checked" : ""}><span>Unidades<small>${producto.gramosPorUnidad} g aprox. por unidad</small></span></label><div class="kg-step"><button type="button" data-kg-piece="-1" ${modo !== "unidades" || piezas <= 1 ? "disabled" : ""}>−</button><strong>${piezas}</strong><button type="button" data-kg-piece="1" ${modo !== "unidades" ? "disabled" : ""}>+</button></div>` : ""}`;
   document.getElementById("catalogoKgPrecio").textContent = formatMoney(precioVigente(producto) * kilos);
   document.getElementById("catalogoKgCantidad").textContent = `${kilos.toLocaleString("es-AR", {maximumFractionDigits: 3})} kg estimados`;
 }
@@ -1293,7 +1385,93 @@ document.addEventListener("DOMContentLoaded", () => {
     const piece = event.target.closest("[data-kg-piece]");
     if (piece && kgSeleccion) { kgSeleccion.piezas = Math.max(1, Math.min(999, kgSeleccion.piezas + Number(piece.dataset.kgPiece))); dibujarSelectorKg(); }
   });
-  modal.addEventListener("change", event => { if (event.target.name === "kgModo" && kgSeleccion) { kgSeleccion.modo = event.target.value; dibujarSelectorKg(); } });
+  modal.addEventListener("change", event => { if (event.target.name === "kgModo" && kgSeleccion) { kgSeleccion.modo = kgSeleccion.producto.modalidadKg === "solo_unidades" ? "unidades" : event.target.value; dibujarSelectorKg(); } });
   document.getElementById("catalogoKgConfirmar").addEventListener("click", confirmarSelectorKg);
   document.addEventListener("keydown", event => { if (event.key === "Escape" && !modal.hidden) cerrarSelectorKg(); });
 });
+
+// Navegación móvil: Pedidos y Perfil son pantallas independientes.
+(() => {
+  const nav = document.getElementById('catalogoBottomNav');
+  const account = document.getElementById('catalogoAccount');
+  if (!nav || !account) return;
+  const buttons = [...nav.querySelectorAll('[data-mobile-nav]')];
+  const showOffers = (enabled) => {
+    document.body.classList.remove('catalogo-mobile-bestsellers-active');
+    document.body.classList.toggle('catalogo-mobile-offers-active', enabled);
+    state.busqueda = '';
+    els.search.value = '';
+    // El listado de Ofertas usa la misma sección que el catálogo normal.
+    // Mantenerla visible aunque el usuario estuviera en la portada.
+    if (enabled) {
+      state.modoCatalogo = true;
+      state.rubro = '';
+    } else {
+      state.modoCatalogo = false;
+      state.rubro = '';
+    }
+    syncViewMode();
+    if (enabled && !ofertasCargadas) cargarOfertasHome();
+    if (!enabled) cargarProductos();
+    else { renderProducts(); updateHeading(); }
+    renderCategories();
+    if (enabled) window.scrollTo({top:0,behavior:'instant'});
+  };
+  const activate = (name) => buttons.forEach(button => {
+    const active = button.dataset.mobileNav === name;
+    button.classList.toggle('is-active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  const showScreen = (name) => {
+    if (!window.matchMedia('(max-width:700px)').matches) return;
+    account.dataset.mobileScreen = name;
+    const title = document.getElementById('catalogoAccountTitle');
+    if (title) title.textContent = name === 'pedidos' ? 'Mis pedidos' : 'Mi perfil';
+    const kicker = account.querySelector('.drawer-header small');
+    if (kicker) kicker.textContent = name === 'pedidos' ? 'PEDIDOS' : 'PERFIL';
+    const body = account.querySelector('.account-body');
+    if (body) body.scrollTop = 0;
+    activate(name);
+  };
+  nav.addEventListener('click', event => {
+    const button = event.target.closest('[data-mobile-nav]');
+    if (!button) return;
+    const target = button.dataset.mobileNav;
+    if (target === 'inicio' || target === 'ofertas') {
+      cerrarDrawers();
+      showOffers(target === 'ofertas');
+      account.removeAttribute('data-mobile-screen');
+      activate(target);
+      if (target === 'inicio') window.scrollTo({top: 0, behavior: 'smooth'});
+
+    } else if (target === 'pedidos' || target === 'perfil') {
+      showOffers(false);
+      if (!account.classList.contains('is-open')) abrirMiCuenta();
+      showScreen(target);
+    }
+  });
+  document.getElementById('catalogoAccountClose')?.addEventListener('click', () => {
+    account.removeAttribute('data-mobile-screen');
+    activate('inicio');
+  });
+  document.getElementById('catalogoOverlay')?.addEventListener('click', () => {
+    account.removeAttribute('data-mobile-screen');
+    activate('inicio');
+  });
+  window.matchMedia('(max-width:700px)').addEventListener('change', event => {
+    if (!event.matches) { account.removeAttribute('data-mobile-screen'); showOffers(false); }
+  });
+  // Posiciona el buscador en el listado en celular, sin cargar un script adicional.
+  const applyMobileSearchLayout = () => {
+    const section = document.querySelector('.catalogo-search-section');
+    const toolbar = document.querySelector('.catalogo-products-toolbar');
+    const services = document.querySelector('.catalogo-services');
+    if (!section || !toolbar || !services) return;
+    if (window.matchMedia('(max-width:700px)').matches) {
+      if (section.previousElementSibling !== toolbar) toolbar.insertAdjacentElement('afterend', section);
+    } else if (section.previousElementSibling !== services) services.insertAdjacentElement('afterend', section);
+  };
+  applyMobileSearchLayout();
+  window.matchMedia('(max-width:700px)').addEventListener('change', applyMobileSearchLayout);
+})();

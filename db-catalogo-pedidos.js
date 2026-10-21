@@ -212,8 +212,8 @@ async function cargarProductosAutoritativos(cliente, items = []) {
     if (esKg) {
       const pasosPeso = Math.abs(qty * 2 - Math.round(qty * 2)) < 0.00001;
       const gramos = Number(p.kg_unit_grams);
-      const pasosUnidades = p.kg_sale_mode === "peso_unidades" && Number.isInteger(gramos) && gramos > 0 && Math.abs(qty * 1000 / gramos - Math.round(qty * 1000 / gramos)) < 0.00001;
-      if (!pasosPeso && !pasosUnidades) throw Object.assign(new Error("La cantidad por KG debe respetar incrementos de 500 g o unidades configuradas"), { status: 400 });
+      const pasosUnidades = ["peso_unidades", "solo_unidades"].includes(p.kg_sale_mode) && Number.isInteger(gramos) && gramos > 0 && Math.abs(qty * 1000 / gramos - Math.round(qty * 1000 / gramos)) < 0.00001;
+      if (!(p.kg_sale_mode !== "solo_unidades" && pasosPeso) && !pasosUnidades) throw Object.assign(new Error("La cantidad por KG debe respetar incrementos de 500 g o unidades configuradas"), { status: 400 });
     }
     const normal = Number(p.price) || 0;
     const oferta = p.featured && p.offer_price !== null ? Number(p.offer_price) : null;
