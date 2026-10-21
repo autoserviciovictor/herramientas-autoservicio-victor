@@ -17,6 +17,8 @@ const CUSTOMER_TOKEN_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-token-v
 const PAGE_SIZE = 25;
 const state = {
   rubros: [],
+  grupoPortada: "",
+  productosGrupo: [],
   productos: [],
   rubro: "",
   busqueda: "",
@@ -778,6 +780,8 @@ function abrirCatalogoCompleto() {
     button.removeAttribute('aria-current');
   });
   state.modoCatalogo = true;
+  state.grupoPortada = "";
+  state.productosGrupo = [];
   state.rubro = "";
   state.busqueda = "";
   state.pagina = 1;
@@ -787,10 +791,39 @@ function abrirCatalogoCompleto() {
   document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// Los accesos de portada son agrupaciones, no necesariamente un rubro real.
+const RUBROS_BEBIDAS = /\b(bebidas?|gaseosas?|aguas?|jugos?|cervezas?|vinos?|vinoteca|aperitivos?|energizantes?|isotonicas?|isot[oó]nicas?|licores?|espumantes?|sidras?)\b/i;
+
 function seleccionarRubroPorNombre(nombre = "") {
   const buscado = String(nombre || "").trim().toLowerCase();
+  if (buscado === "bebidas") {
+    state.grupoPortada = "bebidas";
+    state.productosGrupo = [];
+    seleccionarRubro("");
+    return;
+  }
+  state.grupoPortada = "";
   const rubro = state.rubros.find((r) => String(r.nombre || "").trim().toLowerCase() === buscado || String(r.nombre || "").toLowerCase().includes(buscado));
   if (rubro) seleccionarRubro(rubro.slug || "");
+}
+
+async function cargarGrupoBebidas() {
+  const rubros = state.rubros.filter(r => RUBROS_BEBIDAS.test(String(r.nombre || "")));
+  const productos = new Map();
+  for (const rubro of rubros) {
+    let pagina = 1;
+    let paginas = 1;
+    do {
+      const params = new URLSearchParams({ pagina: String(pagina), limite: "100", rubro: String(rubro.slug) });
+      const data = await apiJson(`/catalogo/api/productos?${params}`);
+      for (const producto of (Array.isArray(data.productos) ? data.productos : [])) {
+        productos.set(String(producto.codigo || producto.id), producto);
+      }
+      paginas = Number(data.paginas) || 1;
+      pagina++;
+    } while (pagina <= paginas);
+  }
+  state.productosGrupo = [...productos.values()];
 }
 
 function productosOrdenados() {
@@ -836,6 +869,13 @@ function updateHeading() {
     return;
   }
   const selected = state.rubros.find((r) => r.slug === state.rubro);
+  if (state.grupoPortada === "bebidas" && !state.busqueda) {
+    els.eyebrow.textContent = "CATEGORÍA";
+    els.title.textContent = "Bebidas";
+    els.count.textContent = pluralProductos(state.total);
+    renderPagination();
+    return;
+  }
   if (state.busqueda) {
     els.eyebrow.textContent = "RESULTADOS";
     els.title.textContent = `“${state.busqueda}”`;
@@ -930,6 +970,17 @@ async function cargarProductos({ append = false } = {}) {
   els.feedback.textContent = "";
   if (!append) renderSkeletons();
   try {
+    if (state.grupoPortada === "bebidas" && !state.busqueda) {
+      if (!state.productosGrupo.length) await cargarGrupoBebidas();
+      state.total = state.productosGrupo.length;
+      state.paginas = Math.ceil(state.total / PAGE_SIZE);
+      state.productos = state.productosGrupo.slice((state.pagina - 1) * PAGE_SIZE, state.pagina * PAGE_SIZE);
+      renderProducts();
+      updateHeading();
+      renderCategories();
+      syncViewMode();
+      return true;
+    }
     const params = new URLSearchParams({ pagina: String(state.pagina), limite: String(PAGE_SIZE) });
     if (state.busqueda) params.set("q", state.busqueda);
     if (state.rubro) params.set("rubro", state.rubro);
@@ -967,6 +1018,7 @@ function seleccionarRubro(slug = "") {
     else button.removeAttribute('aria-current');
   });
   state.modoCatalogo = true;
+  if (slug) { state.grupoPortada = ""; state.productosGrupo = []; }
   state.rubro = slug;
   state.busqueda = "";
   els.search.value = "";
@@ -984,6 +1036,8 @@ function buscar(texto = "") {
     return;
   }
   state.modoCatalogo = true;
+  state.grupoPortada = "";
+  state.productosGrupo = [];
   const q = String(texto || "").trim().replace(/\s+/g, " ").slice(0, 100);
   state.busqueda = q;
   state.pagina = 1;
@@ -1301,6 +1355,94 @@ async function iniciar() {
 }
 
 iniciar();
+
+// Botón Atrás del teléfono: primero cierra paneles o vuelve a Inicio.
+// En Inicio requiere dos pulsaciones próximas para dejar actuar al navegador.
+(() => {
+  if (!window.history?.pushState) return;
+  const MARCA = "__victorCatalogoBack";
+  let ultimoAtrasInicio = 0;
+  let saliendo = false;
+  let avisoTimer = null;
+
+  function avisoSalida() {
+    let aviso = document.getElementById("catalogoAvisoSalida");
+    if (!aviso) {
+      aviso = document.createElement("div");
+      aviso.id = "catalogoAvisoSalida";
+      aviso.setAttribute("role", "status");
+      Object.assign(aviso.style, {
+        position: "fixed", bottom: "92px", left: "50%", transform: "translateX(-50%)",
+        padding: "11px 17px", borderRadius: "12px", background: "#202329",
+        color: "white", fontSize: "13px", fontWeight: "600", textAlign: "center",
+        zIndex: "2147483647", boxShadow: "0 6px 22px #0004", maxWidth: "90vw",
+        whiteSpace: "nowrap", pointerEvents: "none"
+      });
+      document.body.appendChild(aviso);
+    }
+    aviso.textContent = "Presioná Atrás nuevamente para salir";
+    aviso.hidden = false;
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(() => { aviso.hidden = true; }, 2000);
+  }
+
+  function volverInicio() {
+    cerrarDrawers();
+    cerrarMiCuenta();
+    cerrarCheckout();
+    document.getElementById("catalogoKgModal")?.setAttribute("hidden", "");
+    document.querySelector('#catalogoBottomNav [data-mobile-nav="inicio"]')?.click();
+    // Al salir de un rubro, Inicio debe limpiar también la selección y la búsqueda.
+    state.grupoPortada = "";
+    state.productosGrupo = [];
+    state.rubro = "";
+    state.busqueda = "";
+    state.modoCatalogo = false;
+    if (els.search) els.search.value = "";
+    document.body.classList.remove("catalogo-mobile-bestsellers-active", "catalogo-mobile-offers-active");
+    syncViewMode();
+    renderCategories();
+    cargarProductos();
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function hayPantallaSecundaria() {
+    return Boolean(
+      els.cart?.classList.contains("is-open") ||
+      els.mobileCategories?.classList.contains("is-open") ||
+      els.checkout?.classList.contains("is-open") ||
+      els.account?.classList.contains("is-open") ||
+      document.getElementById("catalogoKgModal")?.hasAttribute("hidden") === false ||
+      state.modoCatalogo || state.rubro || state.busqueda || state.grupoPortada ||
+      document.body.classList.contains("catalogo-mobile-offers-active") ||
+      document.body.classList.contains("catalogo-mobile-bestsellers-active")
+    );
+  }
+
+  // Dos entradas propias permiten interceptar Atrás sin reemplazar la URL.
+  history.pushState({ [MARCA]: 1 }, "", location.href);
+  history.pushState({ [MARCA]: 2 }, "", location.href);
+  window.addEventListener("popstate", () => {
+    if (saliendo) return;
+    const ahora = Date.now();
+    if (hayPantallaSecundaria()) {
+      ultimoAtrasInicio = 0;
+      volverInicio();
+      history.pushState({ [MARCA]: 2 }, "", location.href);
+      return;
+    }
+    if (ahora - ultimoAtrasInicio <= 2000) {
+      saliendo = true;
+      // Estamos sobre la primera entrada de protección; retroceder dos
+      // posiciones deja el historial del catálogo y vuelve al sitio anterior.
+      history.go(-2);
+      return;
+    }
+    ultimoAtrasInicio = ahora;
+    avisoSalida();
+    history.pushState({ [MARCA]: 2 }, "", location.href);
+  });
+})();
 
 // Navegación horizontal de las secciones de inicio: deslizamiento táctil
 // en celulares y botones anterior/siguiente en pantallas grandes.

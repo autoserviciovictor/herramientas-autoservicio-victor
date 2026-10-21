@@ -1036,3 +1036,107 @@ html.catalogo-scroll-locked { overflow: hidden !important; overscroll-behavior: 
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
+
+/* Corrección: ninguna pantalla móvil debe quedar detrás de la navegación fija. */
+@media (max-width: 700px) {
+  :root { --catalogo-mobile-nav-space: calc(69px + env(safe-area-inset-bottom, 0px)); }
+
+  /* El listado de rubros conserva su propio scroll y termina antes del menú. */
+  .catalogo-mobile-categories {
+    height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+    max-height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+    bottom: var(--catalogo-mobile-nav-space) !important;
+    box-sizing: border-box;
+    padding-bottom: 12px !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+  }
+
+  /* El carrito ocupa únicamente el espacio disponible sobre el menú inferior. */
+  .catalogo-cart,
+  .catalogo-cart.is-open {
+    height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+    bottom: var(--catalogo-mobile-nav-space) !important;
+    box-sizing: border-box;
+    padding-bottom: 12px !important;
+  }
+  .catalogo-cart .cart-items { min-height: 0; overflow-y: auto; }
+
+  /* Pedidos, Perfil y el contenido principal dejan un margen útil al final. */
+  .catalogo-account[data-mobile-screen] {
+    height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+    bottom: var(--catalogo-mobile-nav-space) !important;
+    box-sizing: border-box;
+  }
+  .catalogo-account[data-mobile-screen] .account-body { padding-bottom: 30px !important; }
+  .catalogo-app { padding-bottom: calc(var(--catalogo-mobile-nav-space) + 16px) !important; }
+}
+
+/* Checkout móvil: navegación inferior no debe cubrir el botón Continuar. */
+@media (max-width:700px) {
+  .catalogo-checkout.is-open {
+    z-index: 8601 !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    bottom: 0 !important;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .catalogo-checkout.is-open .checkout-body {
+    min-height: 0;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  /* El checkout termina justo por encima de la barra fija, que sigue visible. */
+  .catalogo-checkout.is-open {
+    z-index: 8400 !important;
+    top: 0 !important;
+    bottom: var(--catalogo-mobile-nav-space) !important;
+    height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+    max-height: calc(100dvh - var(--catalogo-mobile-nav-space)) !important;
+  }
+  .catalogo-checkout.is-open .checkout-body {
+    padding-bottom: 18px !important;
+  }
+  body:has(.catalogo-checkout.is-open) .catalogo-bottom-nav {
+    display: grid !important;
+    z-index: 8500 !important;
+  }
+}
+
+/* Categorías móvil: panel superpuesto a la navegación, sin ocultarla ni modificar otras pantallas. */
+@media (max-width: 700px) {
+  .catalogo-mobile-categories,
+  .catalogo-mobile-categories.is-open {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    z-index: 8600 !important;
+    box-sizing: border-box !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Categorías: el velo gris y desenfocado también cubre la navegación inferior.
+   La barra permanece montada y recupera su apariencia al cerrar el panel. */
+@media (max-width: 700px) {
+  body:has(.catalogo-mobile-categories.is-open) .catalogo-overlay:not([hidden]) {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 8550 !important; /* sobre barra (8500), debajo del panel (8600) */
+    background: rgba(15, 23, 42, .52) !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+    backdrop-filter: blur(3px) !important;
+  }
+  body:has(.catalogo-mobile-categories.is-open) .catalogo-mobile-categories {
+    z-index: 8600 !important;
+  }
+}
