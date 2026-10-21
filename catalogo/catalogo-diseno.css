@@ -1026,3 +1026,13 @@ body.catalogo-mobile-offers-active .catalogo-hero {
   flex:0 0 15px;
   background:center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14m-6-6 6 6-6 6' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
+
+/* Scroll independiente del menú de categorías: sin desplazar el catálogo de fondo. */
+html.catalogo-scroll-locked { overflow: hidden !important; overscroll-behavior: none; }
+.catalogo-mobile-categories {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}

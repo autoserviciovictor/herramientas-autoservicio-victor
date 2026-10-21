@@ -229,12 +229,12 @@ function abrirMiCuenta() {
   cerrarDrawers();
   const d = cargarDatosCliente();
   els.accountNombre.value = d.nombre || ""; els.accountTelefono.value = d.telefono || ""; els.accountDireccion.value = d.direccion || ""; els.accountReferencia.value = d.referencia || "";
-  els.account.classList.add("is-open"); els.account.setAttribute("aria-hidden", "false"); els.overlay.hidden = false; document.body.classList.add("drawer-open");
+  els.account.classList.add("is-open"); els.account.setAttribute("aria-hidden", "false"); els.overlay.hidden = false; document.body.classList.add("drawer-open"); actualizarBloqueoCatalogo();
   cargarMisPedidos();
 }
 function cerrarMiCuenta() {
   els.account?.classList.remove("is-open"); els.account?.setAttribute("aria-hidden", "true");
-  if (!els.cart.classList.contains("is-open") && !els.mobileCategories.classList.contains("is-open") && !els.checkout.classList.contains("is-open")) { els.overlay.hidden = true; document.body.classList.remove("drawer-open"); }
+  if (!els.cart.classList.contains("is-open") && !els.mobileCategories.classList.contains("is-open") && !els.checkout.classList.contains("is-open")) { els.overlay.hidden = true; document.body.classList.remove("drawer-open"); actualizarBloqueoCatalogo(); }
 }
 function guardarMiCuenta() {
   const datos = { nombre: String(els.accountNombre.value || "").trim(), telefono: normalizarTelefono(els.accountTelefono.value), direccion: String(els.accountDireccion.value || "").trim(), referencia: String(els.accountReferencia.value || "").trim() };
@@ -562,7 +562,7 @@ function abrirCheckout() {
   els.checkout.classList.add("is-open");
   els.checkout.setAttribute("aria-hidden", "false");
   els.overlay.hidden = false;
-  document.body.classList.add("drawer-open");
+  document.body.classList.add("drawer-open"); actualizarBloqueoCatalogo();
 }
 
 function cerrarCheckout() {
@@ -570,7 +570,7 @@ function cerrarCheckout() {
   els.checkout?.setAttribute("aria-hidden", "true");
   if (!els.cart.classList.contains("is-open") && !els.mobileCategories.classList.contains("is-open")) {
     els.overlay.hidden = true;
-    document.body.classList.remove("drawer-open");
+    document.body.classList.remove("drawer-open"); actualizarBloqueoCatalogo();
   }
 }
 
@@ -1100,6 +1100,31 @@ function renderCart() {
   </article>`).join("");
 }
 
+// Mantiene inmóvil el catálogo mientras un panel lateral está abierto.
+let catalogoScrollBloqueado = null;
+function bloquearScrollCatalogo() {
+  if (catalogoScrollBloqueado !== null) return;
+  catalogoScrollBloqueado = window.scrollY || document.documentElement.scrollTop || 0;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${catalogoScrollBloqueado}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+  document.documentElement.classList.add("catalogo-scroll-locked");
+}
+function liberarScrollCatalogo() {
+  if (catalogoScrollBloqueado === null) return;
+  const y = catalogoScrollBloqueado;
+  catalogoScrollBloqueado = null;
+  for (const propiedad of ["position", "top", "left", "right", "width"]) document.body.style[propiedad] = "";
+  document.documentElement.classList.remove("catalogo-scroll-locked");
+  window.scrollTo(0, y);
+}
+function actualizarBloqueoCatalogo() {
+  if (document.body.classList.contains("drawer-open")) bloquearScrollCatalogo();
+  else liberarScrollCatalogo();
+}
+
 function abrirDrawer(tipo) {
   const isCart = tipo === "cart";
   els.cart.classList.toggle("is-open", isCart);
@@ -1109,7 +1134,7 @@ function abrirDrawer(tipo) {
   els.mobileCategories.setAttribute("aria-hidden", String(isCart));
   els.menuBtn.setAttribute("aria-expanded", String(!isCart));
   els.overlay.hidden = false;
-  document.body.classList.add("drawer-open");
+  document.body.classList.add("drawer-open"); actualizarBloqueoCatalogo();
 }
 
 function cerrarDrawers() {
@@ -1127,7 +1152,7 @@ function cerrarDrawers() {
   els.mobileCategories.setAttribute("aria-hidden", "true");
   els.menuBtn.setAttribute("aria-expanded", "false");
   els.overlay.hidden = true;
-  document.body.classList.remove("drawer-open");
+  document.body.classList.remove("drawer-open"); actualizarBloqueoCatalogo();
 }
 
 function bindEvents() {
