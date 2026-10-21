@@ -1848,7 +1848,7 @@ function limpiarCodigoImportacion(valor) {
 function claveCodigoImportacion(valor) {
   const codigo = limpiarCodigoImportacion(valor);
   if (!codigo) return "";
-  return /^\d+$/.test(codigo) ? codigo.replace(/^0+(?=\d)/, "") : codigo;
+  return codigo; // Identidad exacta: 00663 y 663 son códigos diferentes.
 }
 
 function parsearPrecioImportacion(valor) {
@@ -1916,7 +1916,7 @@ function abrirVistaPreviaImportacion(resumen, archivoNombre) {
   if (rubros) rubros.textContent = resumen.rubrosDetectados ?? 0;
   const incidencias = resumen.incidencias || {};
   const categorias = [
-    ["duplicados", "Códigos duplicados", "Se conserva la última aparición", resumen.duplicadosArchivo],
+    ["duplicados", "Códigos exactamente repetidos", "Revisar: se conserva la última aparición del mismo código", resumen.duplicadosArchivo],
     ["sinCodigo", "Filas sin código", "No se incorporarán al catálogo", resumen.sinCodigo],
     ["invalidos", "Códigos inválidos", "No se incorporarán al catálogo", resumen.codigosInvalidos],
     ["sinArticulo", "Filas sin artículo", "No se incorporarán al catálogo", resumen.sinArticulo],
@@ -2050,12 +2050,8 @@ function extraerProductosImportacion(filas, columnas) {
       estadisticas.filasIgnoradas++;
       continue;
     }
-    if (!/^\d+$/.test(codigo)) {
-      incidencias.invalidos.push({ fila: numeroFila, codigo, articulo, motivo: "El código contiene caracteres no numéricos: se omite" });
-      estadisticas.codigosInvalidos++;
-      estadisticas.filasIgnoradas++;
-      continue;
-    }
+    // Se aceptan códigos internos/manuales alfanuméricos (p. ej. X13).
+    // No exigimos un código de barras numérico.
     if (
       columnas.rangos.precio &&
       String(precioOriginal ?? "").trim() !== "" &&
@@ -2084,9 +2080,8 @@ function extraerProductosImportacion(filas, columnas) {
       incidencias.sinRubro.push({ fila: numeroFila, codigo, articulo, motivo: "Sin rubro asignado" });
     }
 
-    // Los códigos numéricos con y sin ceros iniciales representan el mismo
-    // producto (por ejemplo 00663 y 663). Se conserva la última aparición,
-    // incluyendo el rubro detectado para esa fila.
+    // Únicamente códigos idénticos son duplicados. Se preservan los ceros
+    // iniciales y los códigos manuales, con sus precios y rubros propios.
     mapa.set(clave, { codigo, articulo, precio, stock, rubro: rubroActual });
   }
   const productos = [...mapa.values()];
