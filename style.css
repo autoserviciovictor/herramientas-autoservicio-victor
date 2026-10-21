@@ -17009,3 +17009,120 @@ html[data-theme="dark"] #adminTab-compras .compras-lote-fila.is-selected strong{
   box-shadow: none !important;
   outline: none !important;
 }
+
+/* Carteles: posiciones seleccionadas arriba; listado completo debajo. */
+#pantallaCartelOferta .carteles-oferta-item .carteles-oferta-precios{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px;text-align:right}
+#pantallaCartelOferta .carteles-oferta-precios small{font-size:12px;color:#64748b}
+#pantallaCartelOferta .carteles-oferta-precios em{font-style:normal;font-size:12px;font-weight:800;color:#e11d48;background:#fff1f2;padding:3px 7px;border-radius:7px}
+#pantallaCartelOferta .carteles-oferta-precios strong{font-size:16px;color:#111827}
+#pantallaCartelOferta #cartelOfertaBandeja{margin-bottom:24px}
+#pantallaCartelOferta .carteles-oferta-item span:first-of-type{flex:1 1 auto}
+@media(max-width:620px){#pantallaCartelOferta .carteles-oferta-precios{width:100%;align-items:flex-start;text-align:left;padding-left:32px}}
+
+/* Oferta configurada en las tarjetas de Vencimientos */
+#pantallaVencimientos .venc-product-card__offer-prices {
+  display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;
+  margin-top:10px; padding:9px 10px; border:1px solid #f5d4db;
+  border-radius:9px; background:#fff7f9; font-size:12px;
+}
+#pantallaVencimientos .venc-product-card__offer-before { color:#68758a; }
+#pantallaVencimientos .venc-product-card__offer-percent {
+  padding:3px 6px; border-radius:5px; color:#cf173c;
+  background:#ffe3e9; font-weight:800;
+}
+#pantallaVencimientos .venc-product-card__offer-now {
+  color:#b91035; font-size:14px; font-weight:900;
+}
+#pantallaVencimientos .venc-list-offer-prices { display:block; margin-top:4px; font-size:11px; color:#7d4250; }
+#pantallaVencimientos .venc-list-offer-prices strong { display:block; color:#bf153b; font-size:12px; }
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card__offer-prices {
+  background:#3a232d; border-color:#764154;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card__offer-before { color:#d2b9c2; }
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card__offer-now { color:#ff91aa; }
+
+/* Vencimientos: un recuadro de oferta uniforme en todas las tarjetas. */
+#pantallaVencimientos .venc-product-card__offer-prices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  border: 1px solid #ef5268;
+  margin-top: 6px;
+  padding: 3px 8px;
+}
+#pantallaVencimientos .venc-product-card__offer-percent,
+#pantallaVencimientos .venc-product-card__offer-now {
+  display: block;
+  min-width: 0;
+  text-align: center;
+  justify-self: stretch;
+}
+#pantallaVencimientos .venc-product-card__offer-percent {
+  padding: 2px 2px;
+  line-height: 1.2;
+}
+#pantallaVencimientos .venc-product-card__offer-now {
+  line-height: 1.35;
+}
+#pantallaVencimientos .venc-product-card__offer-prices.is-without-offer {
+  grid-template-columns: 1fr;
+}
+#pantallaVencimientos .venc-product-card__offer-empty {
+  display: block;
+  text-align: center;
+  color: #c41b3c;
+  font-size: 12px;
+  font-weight: 800;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card__offer-prices {
+  border-color: #f06a81;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-product-card__offer-empty {
+  color: #ff91aa;
+}
+
+/* Configuración de oferta dentro de Editar vencimiento */
+.venc-edit-offer-config { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e5e9ef; }
+.venc-edit-offer-config.oculto { display: none !important; }
+.venc-edit-offer-config h4 { margin: 0 0 12px; font-size: 14px; font-weight: 800; }
+.venc-edit-offer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+.venc-edit-offer-grid label { min-width: 0; display: flex; flex-direction: column; gap: 7px; font-size: 12px; font-weight: 700; color: #3b4a62; }
+.venc-edit-offer-grid label > input, .venc-edit-offer-money { box-sizing: border-box; width: 100%; min-height: 42px; border: 1px solid #d9e0eb; border-radius: 10px; background: #fff; color: #172033; }
+.venc-edit-offer-grid label > input { padding: 9px 11px; font: inherit; }
+.venc-edit-offer-money { display: flex; align-items: center; gap: 8px; padding: 0 11px; }
+.venc-edit-offer-money b { color: #627087; font-weight: 700; }
+.venc-edit-offer-money input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; padding: 9px 0; }
+@media (max-width: 480px) { .venc-edit-offer-grid { grid-template-columns: 1fr; } }
+html[data-theme="dark"] .venc-edit-offer-grid label > input, html[data-theme="dark"] .venc-edit-offer-money { background: #222b3b; color: #f4f6fb; border-color: #46516a; }
+
+/* Editor de vencimientos: un único marco exterior por campo de oferta. */
+#vencEditOfertaConfiguracion .venc-edit-offer-money {
+  border: 1px solid #d9e0eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+#vencEditOfertaConfiguracion .venc-edit-offer-money input,
+#vencEditOfertaConfiguracion .venc-edit-offer-money input:focus,
+#vencEditOfertaConfiguracion .venc-edit-offer-money input:hover {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  min-height: 0 !important;
+  padding: 9px 0 !important;
+}
+#vencEditOfertaConfiguracion .venc-edit-offer-money:focus-within {
+  border-color: #f02246;
+}
+
+/* Bandeja de carteles: repetir una oferta dentro de las cuatro posiciones A4. */
+#pantallaCartelOferta .offer-queue-slot-copy{flex:1;min-width:0}
+#pantallaCartelOferta .offer-queue-slot-copy b{display:block;font-size:11px;line-height:1.35}
+#pantallaCartelOferta .offer-queue-slot-copy small{display:block;font-size:9px;line-height:1.4}
+#pantallaCartelOferta .offer-queue-actions{display:flex;align-items:center;gap:5px;margin-left:auto;flex-shrink:0}
+#pantallaCartelOferta .offer-queue-actions button{border:1px solid #f3b6c0;border-radius:7px;padding:5px 8px;background:#fff7f8;color:#cf1736;font-size:11px;font-weight:750;white-space:nowrap}
+#pantallaCartelOferta .offer-queue-actions button:disabled{opacity:.35;cursor:not-allowed}
+#pantallaCartelOferta .offer-queue-actions button:last-child{font-size:16px;padding:2px 8px}

@@ -46,6 +46,7 @@ function permisosUsuario(usuario = usuarioActual) {
 function puedeVerModulo(modulo, usuario = usuarioActual) {
   if (["inicio", "ajustes"].includes(modulo)) return true;
   if (modulo === "bano") return true;
+  if (modulo === "cartelOferta") return permisosUsuario(usuario).vencimientos === true;
   if (modulo === "admin") return ["administrador", "administracion"].includes(usuario?.rol);
   if (modulo === "catalogo") return permisosUsuario(usuario).catalogo === true;
   return permisosUsuario(usuario)[modulo] === true;
@@ -54,6 +55,7 @@ function puedeVerModulo(modulo, usuario = usuarioActual) {
 function puedeAccederModulo(modulo, usuario = usuarioActual) {
   if (["inicio", "ajustes"].includes(modulo)) return true;
   if (modulo === "bano") return true;
+  if (modulo === "cartelOferta") return ["administrador", "administracion"].includes(usuario?.rol) || permisosUsuario(usuario).vencimientos === true;
   if (["administrador", "administracion"].includes(usuario?.rol)) return true;
   if (modulo === "admin" || modulo === "catalogo") return false;
   return permisosUsuario(usuario)[modulo] === true;

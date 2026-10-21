@@ -3124,6 +3124,35 @@ function ordenarListaVencimientos(lista) {
   );
 }
 
+// Los precios y porcentajes de los carteles son valores asignados por el usuario.
+// No calcular el porcentaje a partir de la diferencia de precios.
+function ofertaGuardadaVencimiento(item) {
+  if (!tieneOferta(item)) return null;
+  const id = String(item.id ?? "");
+  const codigo = String(item.codigo ?? "").trim();
+  const ofertas = leerOfertasCarteles();
+  return ofertas.find((o) => String(o.id ?? "") === id)
+    || (codigo ? ofertas.find((o) => String(o.codigo ?? "").trim() === codigo) : null)
+    || null;
+}
+
+function resumenOfertaVencimiento(item) {
+  const oferta = ofertaGuardadaVencimiento(item);
+  if (!oferta) return null;
+  const original = Number(oferta.precioActual);
+  const final = Number(oferta.precioOferta ?? oferta.precioDescuento ?? oferta.precioPromo);
+  if (!Number.isFinite(original) || original <= 0 || !Number.isFinite(final) || final < 0) return null;
+  const porcentaje = Number(oferta.descuento);
+  const textoPorcentaje = Number.isFinite(porcentaje) && porcentaje > 0
+    ? `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(porcentaje)}% de descuento`
+    : "Oferta activa";
+  return {
+    original: escapeHTML(formatearDineroCartel(original)),
+    final: escapeHTML(formatearDineroCartel(final)),
+    porcentaje: escapeHTML(textoPorcentaje),
+  };
+}
+
 function datosVisualesVencimiento(item) {
   const bucket = bucketVencimiento(item);
   const clase = claseEstadoVencimiento(item);
@@ -3136,6 +3165,7 @@ function datosVisualesVencimiento(item) {
     fecha: escapeHTML(formatearFecha(item.vencimiento)),
     estado: escapeHTML(textoEstadoVencimiento(item)),
     ofertaActiva: tieneOferta(item),
+    ofertaDetalle: resumenOfertaVencimiento(item),
     precio: escapeHTML(formatearPrecioVencimiento(precioVencimiento(item))),
     rubro: escapeHTML(nombreRubroVencimiento(item.rubro)),
     rubroClase: escapeHTML(
@@ -3164,6 +3194,12 @@ function crearTarjetaVencimiento(item) {
         <span><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg><span><small>Stock total</small><b>${d.cantidad} un.</b></span></span>
         <span><svg class="app-icon" aria-hidden="true"><use href="#icon-tag"></use></svg><span><small>Precio unitario</small><b>${d.precio}</b></span></span>
       </div>
+      <div class="venc-product-card__offer-prices ${d.ofertaDetalle ? "" : "is-without-offer"}">
+        ${d.ofertaDetalle ? `
+          <span class="venc-product-card__offer-percent">${d.ofertaDetalle.porcentaje}</span>
+          <strong class="venc-product-card__offer-now">Ahora ${d.ofertaDetalle.final}</strong>
+        ` : `<span class="venc-product-card__offer-empty">${d.ofertaActiva ? "Oferta activa" : "Sin oferta"}</span>`}
+      </div>
       <div class="venc-product-card__footer">
         <span class="venc-offer-state ${d.ofertaActiva ? "is-active" : ""}">${d.ofertaActiva ? "Oferta activa" : "Sin oferta"}</span>
         ${
@@ -3188,7 +3224,7 @@ function crearFilaVencimiento(item) {
       <span class="venc-list-cell venc-list-cell--date"><strong>${d.fecha}</strong><small class="${d.clase}">${d.estado}</small></span>
       <span class="venc-list-cell venc-list-cell--qty"><strong>${d.cantidad} un.</strong></span>
       <span class="venc-list-cell venc-list-cell--price"><strong>${d.precio}</strong></span>
-      <span class="venc-list-cell venc-list-cell--offer"><span class="venc-offer-state ${d.ofertaActiva ? "is-active" : ""}">${d.ofertaActiva ? "Activa" : "Sin oferta"}</span></span>
+      <span class="venc-list-cell venc-list-cell--offer"><span class="venc-offer-state ${d.ofertaActiva ? "is-active" : ""}">${d.ofertaActiva ? "Activa" : "Sin oferta"}</span>${d.ofertaDetalle ? `<span class="venc-list-offer-prices">${d.ofertaDetalle.porcentaje}<strong>Ahora ${d.ofertaDetalle.final}</strong></span>` : ""}</span>
       <span class="venc-list-row__chevron" aria-hidden="true">›</span>
     </article>`;
 }
@@ -3690,15 +3726,26 @@ function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCa
 function renderListadoCartelesOfertas() {
   const host = $("cartelesOfertasLista"); if (!host) return;
   const ofertas = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso());
-  const elegidos = new Set(leerBandejaCartelesOferta().map(x => x.copiaId));
-  host.innerHTML = ofertas.length ? ofertas.map((o, i) => `<label class="carteles-oferta-item"><input type="checkbox" data-cartel-id="${escapeHTML(String(o.id))}" ${elegidos.has(o.copiaId) ? "checked" : ""}><span><b>${escapeHTML(o.articulo)}</b><small>${escapeHTML(o.descripcion)} · Vence ${escapeHTML(formatearFecha(o.vencimiento))}</small></span><strong>${escapeHTML(formatearDineroCartel(o.precioOferta))}</strong></label>`).join("") : '<p class="carteles-empty">Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá.</p>';
-  const primera = leerBandejaCartelesOferta()[0] || ofertas[0]; if (primera) $("cartelOfertaPreview").innerHTML = svgCartelOferta(primera, { precioValido: true }); else $("cartelOfertaPreview").innerHTML = "";
+  const elegidos = new Set(leerBandejaCartelesOferta().map(x => String(x.id)));
+  host.innerHTML = ofertas.length ? ofertas.map((o) => {
+    const precioOriginal = Number(o.precioActual) || 0;
+    const precioFinal = Number(o.precioOferta || o.precioDescuento || o.precioPromo) || 0;
+    // Mostrar el porcentaje configurado por el usuario, sin recalcularlo
+    // a partir de los precios (que pueden haber sido ajustados manualmente).
+    const descuento = Number(o.descuento) || 0;
+    const porcentaje = Number.isInteger(descuento) ? String(descuento) : descuento.toLocaleString("es-AR", { maximumFractionDigits: 1 });
+    return `<label class="carteles-oferta-item"><input type="checkbox" data-cartel-id="${escapeHTML(String(o.id))}" ${elegidos.has(String(o.id)) ? "checked" : ""}><span><b>${escapeHTML(o.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(o.codigo || "—"))} · Vence ${escapeHTML(formatearFecha(o.vencimiento))}</small></span><span class="carteles-oferta-precios"><small>Antes <s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></small><em>${escapeHTML(porcentaje)}% de descuento</em><strong>Ahora ${escapeHTML(formatearDineroCartel(precioFinal))}</strong></span></label>`;
+  }).join("") : '<p class="carteles-empty">Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá.</p>';
+  renderBandejaCartelesOferta();
+  const primera = leerBandejaCartelesOferta()[0] || ofertas[0];
+  if ($("cartelOfertaPreview")) $("cartelOfertaPreview").innerHTML = primera ? svgCartelOferta(primera, { precioValido: true }) : "";
 }
+
 function cambiarSeleccionCartel(event) {
   const input = event.target.closest("[data-cartel-id]"); if (!input) return;
   const id = input.dataset.cartelId; const oferta = leerOfertasCarteles().find(x => String(x.id) === id); if (!oferta) return;
   let seleccion = leerBandejaCartelesOferta();
-  if (input.checked) { if (seleccion.length >= CARTEL_OFERTA_MAX) { input.checked = false; mostrarMensaje("Podés imprimir hasta 4 carteles por hoja", "error"); return; } seleccion.push(oferta); }
+  if (input.checked) { if (seleccion.some(x => String(x.id) === id)) return; if (seleccion.length >= CARTEL_OFERTA_MAX) { input.checked = false; mostrarMensaje("Podés imprimir hasta 4 carteles por hoja", "error"); return; } seleccion.push(oferta); }
   else seleccion = seleccion.filter(x => String(x.id) !== id);
   guardarBandejaCartelesOferta(seleccion); renderListadoCartelesOfertas();
 }
@@ -3768,21 +3815,30 @@ function renderBandejaCartelesOferta() {
   const slots = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
     const item = items[index];
     if (!item) return `<div class="offer-queue-slot is-empty"><span>${index + 1}</span><b>Espacio disponible</b><small>Elegí otro producto en Vencimientos</small></div>`;
-    return `<div class="offer-queue-slot"><span>${index + 1}</span><div><b>${escapeHTML(item.articulo)}</b><small>${escapeHTML(item.descripcion)} · vence ${escapeHTML(formatearFecha(item.vencimiento))}</small></div><button type="button" data-cartel-quitar-indice="${index}" aria-label="Quitar ${escapeHTML(item.articulo)}">×</button></div>`;
+    return `<div class="offer-queue-slot is-filled"><span>${index + 1}</span><div class="offer-queue-slot-copy"><b>${escapeHTML(item.articulo)}</b><small>${escapeHTML(item.descripcion || "")} · vence ${escapeHTML(formatearFecha(item.vencimiento))}</small></div><div class="offer-queue-actions"><button type="button" data-cartel-duplicar-indice="${index}" ${items.length >= CARTEL_OFERTA_MAX ? "disabled" : ""} title="Agregar otra copia de esta oferta" aria-label="Agregar otra copia de ${escapeHTML(item.articulo)}">+ Copia</button><button type="button" data-cartel-quitar-indice="${index}" aria-label="Quitar una copia de ${escapeHTML(item.articulo)}">×</button></div></div>`;
   });
   box.innerHTML = slots.join("");
 }
 
 function manejarAccionBandejaCarteles(event) {
-  const btn = event.target.closest("[data-cartel-quitar-indice]");
-  if (!btn) return;
-  const indice = Number(btn.dataset.cartelQuitarIndice);
+  const duplicar = event.target.closest("[data-cartel-duplicar-indice]");
+  const quitar = event.target.closest("[data-cartel-quitar-indice]");
+  if (!duplicar && !quitar) return;
+  const indice = Number((duplicar || quitar).dataset[duplicar ? "cartelDuplicarIndice" : "cartelQuitarIndice"]);
   const items = leerBandejaCartelesOferta();
   if (!Number.isInteger(indice) || indice < 0 || indice >= items.length) return;
-  // Quitamos solamente esta copia; otras copias del mismo producto permanecen.
-  items.splice(indice, 1);
+  if (duplicar) {
+    if (items.length >= CARTEL_OFERTA_MAX) {
+      mostrarMensaje("La hoja admite hasta 4 carteles en total", "error");
+      return;
+    }
+    items.splice(indice + 1, 0, { ...items[indice] });
+  } else {
+    // Quitar una posición no elimina las otras copias de la misma oferta.
+    items.splice(indice, 1);
+  }
   guardarBandejaCartelesOferta(items);
-  $("btnCartelGuardar").textContent = "Guardar";
+  renderListadoCartelesOfertas();
 }
 
 function escaparXmlCartel(valor = "") {
@@ -4206,6 +4262,7 @@ function establecerOfertaEdicionVencimiento(valor = "sin") {
       (btn.dataset.vencEditOferta || "sin") === estado,
     );
   });
+  $("vencEditOfertaConfiguracion")?.classList.toggle("oculto", estado !== "activa");
   limpiarErrorEdicionVencimiento();
 }
 
@@ -4242,6 +4299,11 @@ function mostrarEdicionVencimiento() {
     elementos.vencEditDepositoInput.value = normalizarCantidadVencimiento(
       item.deposito,
     );
+  const ofertaGuardada = leerOfertasCarteles().find((o) => String(o.id) === String(item.id));
+  $("vencOfertaPrecioActual").value = String(ofertaGuardada?.precioActual || precioVencimiento(item) || "");
+  $("vencOfertaDescuento").value = String(ofertaGuardada?.descuento || 50);
+  $("vencOfertaPrecioFinal").value = String(ofertaGuardada?.precioDescuento || ofertaGuardada?.precioOferta || "");
+  $("vencOfertaFecha").value = ofertaGuardada?.vencimiento || item.vencimiento || "";
   establecerOfertaEdicionVencimiento(tieneOferta(item) ? "activa" : "sin");
   actualizarTotalEdicionVencimiento();
   snapshotVencimientoEditando = capturarEstadoEdicionVencimiento();
@@ -4266,6 +4328,16 @@ async function guardarEdicionVencimiento() {
   const cantidadOriginal = normalizarCantidadVencimiento(item.cantidad);
   const rubro = $("vencEditRubroInput")?.value || "";
   const ofertaDeseada = $("vencEditOfertaInput")?.value === "activa";
+  const precioActualOferta = Number($("vencOfertaPrecioActual")?.value);
+  const descuentoOferta = Number($("vencOfertaDescuento")?.value);
+  const precioFinalOferta = Number($("vencOfertaPrecioFinal")?.value);
+  const fechaOferta = $("vencOfertaFecha")?.value || "";
+  if (ofertaDeseada) {
+    if (!(precioActualOferta > 0)) { mostrarErrorEdicionVencimiento("Ingresá el precio actual de la oferta.", $("vencOfertaPrecioActual")); return; }
+    if (!Number.isInteger(descuentoOferta) || descuentoOferta < 1 || descuentoOferta > 99) { mostrarErrorEdicionVencimiento("Ingresá un descuento entre 1 y 99 %.", $("vencOfertaDescuento")); return; }
+    if (!(precioFinalOferta > 0)) { mostrarErrorEdicionVencimiento("Ingresá el precio final de la oferta.", $("vencOfertaPrecioFinal")); return; }
+    if (!fechaOferta) { mostrarErrorEdicionVencimiento("Ingresá la fecha de vencimiento de la oferta.", $("vencOfertaFecha")); return; }
+  }
   if (!vencimiento) {
     mostrarErrorEdicionVencimiento(
       "Cargá la fecha de vencimiento",
@@ -4309,6 +4381,24 @@ async function guardarEdicionVencimiento() {
     });
     if (ofertaDeseada !== tieneOferta(item)) {
       await actualizarOfertaVencimiento(item.id, ofertaDeseada);
+    }
+    if (ofertaDeseada) {
+      const anterior = leerOfertasCarteles().find((o) => String(o.id) === String(item.id));
+      const precioOferta = precioFinalOferta;
+      const registro = {
+        ...anterior, id: String(item.id), articulo: item.articulo, nombreCartel: item.articulo,
+        codigo: item.codigo, cantidad, presentacion: extraerPresentacionCartel(item.articulo),
+        tipo: "porcentaje", precioActual: precioActualOferta, descuento: descuentoOferta,
+        precioDescuento: precioFinalOferta, precioOferta, precioPromo: 0,
+        vencimiento: fechaOferta, promoGrande: `${descuentoOferta}%`, promoTexto: "DESCUENTO",
+        ahora: formatearDineroCartel(precioOferta),
+        descripcion: `${descuentoOferta}% de descuento · Ahora ${formatearDineroCartel(precioOferta)}`,
+        guardadoEn: new Date().toISOString()
+      };
+      guardarOfertasCarteles([...leerOfertasCarteles().filter((o) => String(o.id) !== String(item.id)), registro]);
+      guardarBandejaCartelesOferta(leerBandejaCartelesOferta().map((o) => String(o.id) === String(item.id) ? registro : o));
+    } else {
+      eliminarOfertaCartelGuardada(item.id);
     }
     await cargarListadoVencimientos({
       mantenerVista: true,
@@ -4389,6 +4479,10 @@ function capturarEstadoEdicionVencimiento() {
     salon: stockUbicacionVencimiento(elementos.vencEditSalonInput?.value),
     deposito: stockUbicacionVencimiento(elementos.vencEditDepositoInput?.value),
     oferta: $("vencEditOfertaInput")?.value === "activa",
+    ofertaPrecioActual: $("vencOfertaPrecioActual")?.value || "",
+    ofertaDescuento: $("vencOfertaDescuento")?.value || "",
+    ofertaPrecioFinal: $("vencOfertaPrecioFinal")?.value || "",
+    ofertaFecha: $("vencOfertaFecha")?.value || "",
   };
 }
 function hayCambiosVencimiento() {
@@ -4399,7 +4493,11 @@ function hayCambiosVencimiento() {
     actual.rubro !== snapshotVencimientoEditando.rubro ||
     actual.salon !== snapshotVencimientoEditando.salon ||
     actual.deposito !== snapshotVencimientoEditando.deposito ||
-    actual.oferta !== snapshotVencimientoEditando.oferta
+    actual.oferta !== snapshotVencimientoEditando.oferta ||
+    (actual.oferta && (actual.ofertaPrecioActual !== snapshotVencimientoEditando.ofertaPrecioActual ||
+      actual.ofertaDescuento !== snapshotVencimientoEditando.ofertaDescuento ||
+      actual.ofertaPrecioFinal !== snapshotVencimientoEditando.ofertaPrecioFinal ||
+      actual.ofertaFecha !== snapshotVencimientoEditando.ofertaFecha))
   );
 }
 function abrirModalCambiosPendientes({

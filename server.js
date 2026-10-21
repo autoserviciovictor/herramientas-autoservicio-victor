@@ -4625,7 +4625,7 @@ app.post("/tareas/bano/confirmar", async (req, res) => {
 
 app.post("/tareas/bano/verificar", async (req, res) => {
   try {
-    if (!rolGestionSector(req.usuario))
+    if (!rolGestionSector(req.usuario) && req.usuario?.permisos?.confirmarLimpiezaBano !== true)
       return res.status(403).json({
         ok: false,
         mensaje: "No tenés permiso para confirmar la limpieza de otros usuarios",

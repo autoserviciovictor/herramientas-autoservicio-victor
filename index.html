@@ -34,7 +34,7 @@
       rel="stylesheet"
       href="design-tokens.css?v=1960-d21-cierre-etapa6-010926"
     />
-    <link rel="stylesheet" href="style.css?v=1980-vencimientos-fixes-240926" />
+    <link rel="stylesheet" href="style.css?v=venc-oferta-editor-20261021" />
     <link
       rel="stylesheet"
       href="design-components.css?v=1960-d21-cierre-etapa6-010926"
@@ -762,7 +762,7 @@
                 data-pro-nav="cartelOferta"
               >
                 <svg class="app-icon"><use href="#icon-clipboard"></use></svg
-                ><span>Carteles</span>
+                ><span>Imprimir carteles</span>
               </button>
               <button
                 type="button"
@@ -928,7 +928,7 @@
             data-pro-nav="cartelOferta"
           >
             <svg class="app-icon"><use href="#icon-clipboard"></use></svg
-            ><span>Carteles</span>
+            ><span>Imprimir carteles</span>
           </button>
           <button
             type="button"
@@ -2574,25 +2574,10 @@
           </header>
           <div class="carteles-main-layout">
             <section class="offer-config-card">
-              <div class="carteles-list-head">
-                <h2>Ofertas creadas</h2>
-                <button
-                  id="cartelesSeleccionarTodos"
-                  type="button"
-                  class="secondary-btn"
-                >
-                  Seleccionar hasta 4
-                </button>
-              </div>
-              <div
-                id="cartelesOfertasLista"
-                class="carteles-ofertas-list"
-              ></div>
-              <div
-                id="cartelOfertaBandeja"
-                class="offer-queue-grid"
-                hidden
-              ></div>
+              <div class="carteles-list-head"><h2>Carteles seleccionados</h2><span class="carteles-section-help">Hasta 4 por hoja</span></div>
+              <div id="cartelOfertaBandeja" class="offer-queue-grid"></div>
+              <div class="carteles-list-head" style="margin-top:28px"><h2>Todos los productos en oferta</h2><button id="cartelesSeleccionarTodos" type="button" class="secondary-btn">Seleccionar hasta 4</button></div>
+              <div id="cartelesOfertasLista" class="carteles-ofertas-list"></div>
               <div
                 id="cartelOfertaGuardarEstado"
                 class="form-error oculto"
@@ -9640,6 +9625,15 @@
                     Sin oferta
                   </button>
                 </div>
+                <div id="vencEditOfertaConfiguracion" class="venc-edit-offer-config oculto">
+                  <h4>Configuración de la oferta</h4>
+                  <div class="venc-edit-offer-grid">
+                    <label><span>Precio actual</span><div class="venc-edit-offer-money"><b>$</b><input id="vencOfertaPrecioActual" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></div></label>
+                    <label><span>Descuento (%)</span><div class="venc-edit-offer-money"><input id="vencOfertaDescuento" type="number" min="1" max="99" step="1" inputmode="numeric" placeholder="50" /><b>%</b></div></label>
+                    <label><span>Nuevo valor con descuento</span><div class="venc-edit-offer-money"><b>$</b><input id="vencOfertaPrecioFinal" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Precio final" /></div></label>
+                    <label><span>Fecha de vencimiento de la oferta</span><input id="vencOfertaFecha" type="date" /></label>
+                  </div>
+                </div>
               </section>
 
               <div id="vencEditError" class="form-error oculto"></div>
@@ -10031,7 +10025,7 @@
     ></script>
     <script
       type="module"
-      src="./auth.js?v=1960-d21-cierre-etapa6-010926"
+      src="./auth.js?v=carteles-permisos-20261021"
     ></script>
     <script src="./horarios-config.js?v=1960-horarios-sector-historico-220926"></script>
     <script
@@ -10061,7 +10055,7 @@
     ></script>
     <script
       type="module"
-      src="./app.js?v=20261021-fix-activar-oferta-carteles"
+      src="./app.js?v=carteles-copias-20261021"
     ></script>
     <script type="module" src="./lotes.js?v=lotes-alertas-180926"></script>
     <script

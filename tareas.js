@@ -2068,7 +2068,7 @@ function historialCompletoBano(cfg, hoy = inicioDia(new Date())) {
 
 function puedeVerificarBano() {
   const actual = usuario();
-  return ROLES_GESTION_TAREAS.includes(actual?.rol);
+  return ROLES_GESTION_TAREAS.includes(actual?.rol) || actual?.permisos?.confirmarLimpiezaBano === true;
 }
 function puedeReasignarBano() {
   return ROLES_GESTION_TAREAS.includes(usuario()?.rol);
