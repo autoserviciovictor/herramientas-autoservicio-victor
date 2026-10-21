@@ -1555,7 +1555,7 @@ async function entrarPantalla(nombre, opciones = {}) {
   }
   if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
   if (nombre === "lotes") await window.LotesModule?.activar?.();
-  if (nombre === "cartelOferta") prepararPantallaCartelOferta();
+  if (nombre === "cartelOferta") { renderBandejaCartelesOferta(); renderListadoCartelesOfertas(); }
   if (["cargados", "vencimientos"].includes(nombre)) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -1857,8 +1857,10 @@ function configurarEventos() {
     "click",
     guardarEdicionVencimiento,
   );
-  $("btnVencCrearCartel")?.addEventListener("click", abrirConfiguradorCartelOferta);
-  $("btnCartelCancelar")?.addEventListener("click", volverDesdeCartelOferta);
+  $("cartelesSeleccionarTodos")?.addEventListener("click", seleccionarCartelesDisponibles);
+  $("cartelesOfertasLista")?.addEventListener("change", cambiarSeleccionCartel);
+  $("cartelesOfertaModal")?.addEventListener("click", (event) => { if (event.target.closest("[data-cerrar-cartel]")) cerrarModalOfertaCartel(); });
+  $("btnCartelCancelar")?.addEventListener("click", cerrarModalOfertaCartel);
   $("adminHeaderBackBtn")?.addEventListener("click", (event) => {
     if (document.body.dataset.screen !== "cartelOferta") return;
     event.preventDefault();
@@ -3367,6 +3369,8 @@ async function manejarClickListadoVencimientos(event) {
   vencimientoSeleccionado = item;
 
   if (accion === "oferta" && bucketVencimiento(item) !== "vencidos") {
+    if (!tieneOferta(item)) { cartelOfertaItemActual = { ...item }; prepararPantallaCartelOferta(); abrirModalOfertaCartel(); return; }
+    eliminarOfertaCartelGuardada(item.id);
     alternarOfertaVencimiento(item);
     return;
   }
@@ -3644,14 +3648,11 @@ function prepararPantallaCartelOferta() {
     botonVolverGlobal.setAttribute("aria-label", "Volver a Vencimientos");
     botonVolverGlobal.setAttribute("title", "Volver a Vencimientos");
   }
-  if (!item) {
-    void entrarPantalla("vencimientos", { forzar: true });
-    return;
-  }
-  $("cartelOfertaProducto").textContent = item.articulo || "Producto";
-  $("cartelOfertaCodigo").textContent = item.codigo || "-";
-  $("cartelOfertaVence").textContent = formatearFecha(item.vencimiento);
-  $("cartelOfertaCantidad").textContent = `${normalizarCantidadVencimiento(item.cantidad)} un.`;
+  if (!item) return;
+  if ($("cartelOfertaProducto")) $("cartelOfertaProducto").textContent = item.articulo || "Producto";
+  if ($("cartelOfertaCodigo")) $("cartelOfertaCodigo").textContent = item.codigo || "-";
+  if ($("cartelOfertaVence")) $("cartelOfertaVence").textContent = formatearFecha(item.vencimiento);
+  if ($("cartelOfertaCantidad")) $("cartelOfertaCantidad").textContent = `${normalizarCantidadVencimiento(item.cantidad)} un.`;
   $("cartelValidoHasta").value = item.vencimiento || fechaHoyLocalIso();
   const precio = precioVencimiento(item);
   $("cartelPrecioActual").value = precio > 0 ? String(precio) : "";
@@ -3660,7 +3661,7 @@ function prepararPantallaCartelOferta() {
   $("cartelPrecioPromo").value = "";
   const radio = document.querySelector('input[name="cartelPromoTipo"][value="porcentaje"]');
   if (radio) radio.checked = true;
-  const existente = leerBandejaCartelesOferta().find((x) => String(x.id) === String(item.id));
+  const existente = leerOfertasCarteles().find((x) => String(x.id) === String(item.id));
   if (existente) {
     const r = document.querySelector(`input[name="cartelPromoTipo"][value="${existente.tipo}"]`);
     if (r) r.checked = true;
@@ -3671,28 +3672,45 @@ function prepararPantallaCartelOferta() {
     $("cartelValidoHasta").value = existente.vencimiento || item.vencimiento || "";
     // Si ya existe una copia de este producto, reutilizamos sus valores como ayuda,
     // pero Guardar siempre agrega una nueva copia en la primera posición disponible.
-    $("btnCartelGuardar").textContent = "Guardar cartel";
+    $("btnCartelGuardar").textContent = "Guardar";
   } else {
-    $("btnCartelGuardar").textContent = "Guardar cartel";
+    $("btnCartelGuardar").textContent = "Guardar";
   }
   renderBandejaCartelesOferta();
   actualizarConfiguradorCartelOferta();
-  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
 }
 
+function abrirModalOfertaCartel() { const modal = $("cartelesOfertaModal"); if (!modal) return; modal.classList.remove("oculto"); modal.setAttribute("aria-hidden", "false"); $("cartelDescuento")?.focus(); }
+function cerrarModalOfertaCartel() { const modal = $("cartelesOfertaModal"); modal?.classList.add("oculto"); modal?.setAttribute("aria-hidden", "true"); cartelOfertaItemActual = null; }
+function claveOfertasCarteles() { return `autoservicio_ofertas_carteles_v2:${claveBandejaCartelesOferta()}`; }
+function leerOfertasCarteles() { try { const data = JSON.parse(localStorage.getItem(claveOfertasCarteles()) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; } }
+function guardarOfertasCarteles(ofertas) { localStorage.setItem(claveOfertasCarteles(), JSON.stringify(ofertas)); }
+function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCarteles().filter(x => String(x.id) !== String(id))); guardarBandejaCartelesOferta(leerBandejaCartelesOferta().filter(x => String(x.id) !== String(id))); }
+function renderListadoCartelesOfertas() {
+  const host = $("cartelesOfertasLista"); if (!host) return;
+  const ofertas = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso());
+  const elegidos = new Set(leerBandejaCartelesOferta().map(x => x.copiaId));
+  host.innerHTML = ofertas.length ? ofertas.map((o, i) => `<label class="carteles-oferta-item"><input type="checkbox" data-cartel-id="${escapeHTML(String(o.id))}" ${elegidos.has(o.copiaId) ? "checked" : ""}><span><b>${escapeHTML(o.articulo)}</b><small>${escapeHTML(o.descripcion)} · Vence ${escapeHTML(formatearFecha(o.vencimiento))}</small></span><strong>${escapeHTML(formatearDineroCartel(o.precioOferta))}</strong></label>`).join("") : '<p class="carteles-empty">Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá.</p>';
+  const primera = leerBandejaCartelesOferta()[0] || ofertas[0]; if (primera) $("cartelOfertaPreview").innerHTML = svgCartelOferta(primera, { precioValido: true }); else $("cartelOfertaPreview").innerHTML = "";
+}
+function cambiarSeleccionCartel(event) {
+  const input = event.target.closest("[data-cartel-id]"); if (!input) return;
+  const id = input.dataset.cartelId; const oferta = leerOfertasCarteles().find(x => String(x.id) === id); if (!oferta) return;
+  let seleccion = leerBandejaCartelesOferta();
+  if (input.checked) { if (seleccion.length >= CARTEL_OFERTA_MAX) { input.checked = false; mostrarMensaje("Podés imprimir hasta 4 carteles por hoja", "error"); return; } seleccion.push(oferta); }
+  else seleccion = seleccion.filter(x => String(x.id) !== id);
+  guardarBandejaCartelesOferta(seleccion); renderListadoCartelesOfertas();
+}
+function seleccionarCartelesDisponibles() { const seleccion = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso()).slice(0, CARTEL_OFERTA_MAX); guardarBandejaCartelesOferta(seleccion); renderListadoCartelesOfertas(); }
 function abrirConfiguradorCartelOferta() {
   if (!vencimientoSeleccionado) return;
-  if (hayCambiosVencimiento()) {
-    mostrarErrorEdicionVencimiento("Guardá o descartá los cambios del vencimiento antes de crear el cartel.");
-    return;
-  }
-  cartelOfertaItemActual = { ...vencimientoSeleccionado };
-  cerrarModalVencimiento();
-  void entrarPantalla("cartelOferta", { forzar: true });
+  if (hayCambiosVencimiento()) { mostrarErrorEdicionVencimiento("Guardá los cambios antes de configurar la oferta."); return; }
+  cartelOfertaItemActual = { ...vencimientoSeleccionado }; cerrarModalVencimiento(); prepararPantallaCartelOferta(); abrirModalOfertaCartel();
 }
 
 function volverDesdeCartelOferta() {
-  cartelOfertaItemActual = null;
+  cerrarModalOfertaCartel();
   void entrarPantalla("vencimientos", { forzar: true });
 }
 
@@ -3722,45 +3740,21 @@ async function guardarCartelOfertaActual() {
     $("cartelValidoHasta")?.focus();
     return;
   }
-  const bandeja = leerBandejaCartelesOferta();
-  if (bandeja.length >= CARTEL_OFERTA_MAX) {
-    mostrarErrorCartelOferta("La hoja ya tiene 4 carteles. Quitá uno antes de agregar otro.");
-    return;
-  }
-  // IMPORTANTE: una posición de impresión es una COPIA, no un producto único.
-  // Por eso jamás buscamos/reemplazamos por datos.id: el mismo producto puede
-  // ocupar las 4 posiciones de la hoja si el usuario pulsa Guardar 4 veces.
   const ahora = new Date().toISOString();
-  const registro = {
-    ...datos,
-    copiaId: `${String(datos.id)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    guardadoEn: ahora,
-  };
-  // Siempre anexamos una nueva posición. No se deduplica por id de producto:
-  // cada pulsación de Guardar cartel representa una copia física en la hoja.
-  const nuevaBandeja = bandeja.concat(registro);
-  let guardados;
+  const registro = { ...datos, copiaId: String(datos.id), guardadoEn: ahora };
   try {
-    guardados = guardarBandejaCartelesOferta(nuevaBandeja);
-  } catch (error) {
-    console.error("Error al guardar cartel de oferta:", error);
-    mostrarErrorCartelOferta("No se pudo guardar el cartel. Recargá la aplicación e intentá nuevamente.");
-    return;
-  }
-  if (guardados.length !== bandeja.length + 1) {
-    mostrarErrorCartelOferta("No se pudo agregar el cartel a la hoja. Intentá nuevamente.");
-    return;
-  }
-  try {
-    const original = vencimientosCache.find((x) => String(x.id) === datos.id) || cartelOfertaItemActual;
+    const ofertas = leerOfertasCarteles().filter(x => String(x.id) !== datos.id);
+    guardarOfertasCarteles([...ofertas, registro]);
+    const seleccion = leerBandejaCartelesOferta().map(x => String(x.id) === datos.id ? registro : x);
+    guardarBandejaCartelesOferta(seleccion);
+    const original = vencimientosCache.find(x => String(x.id) === datos.id) || cartelOfertaItemActual;
     if (original && !tieneOferta(original)) await actualizarOfertaVencimiento(datos.id, true);
-  } catch (error) {
-    console.warn("No se pudo marcar la oferta del vencimiento:", error);
-  }
-  $("btnCartelGuardar").textContent = "Guardar cartel";
-  mostrarErrorCartelOferta("");
-  mostrarMensaje("Cartel agregado a la hoja para imprimir", "ok");
-  reproducirConfirmacion("guardado");
+    cerrarModalOfertaCartel();
+    renderListadoCartelesOfertas();
+    await cargarListadoVencimientos({ mantenerVista: true });
+    mostrarMensaje("Oferta guardada. Ya está disponible en Carteles.", "ok");
+  } catch (error) { mostrarErrorCartelOferta("No se pudo guardar la oferta: " + error.message); }
+
 }
 
 function renderBandejaCartelesOferta() {
@@ -3788,7 +3782,7 @@ function manejarAccionBandejaCarteles(event) {
   // Quitamos solamente esta copia; otras copias del mismo producto permanecen.
   items.splice(indice, 1);
   guardarBandejaCartelesOferta(items);
-  $("btnCartelGuardar").textContent = "Guardar cartel";
+  $("btnCartelGuardar").textContent = "Guardar";
 }
 
 function escaparXmlCartel(valor = "") {

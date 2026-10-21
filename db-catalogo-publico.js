@@ -589,6 +589,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   const rubro = textoLimitado(opciones.rubro, 80);
   const estado = textoLimitado(opciones.estado, 30);
   const estadoImagen = textoLimitado(opciones.estadoImagen, 30);
+  const destacado = textoLimitado(opciones.destacado, 30);
   const condiciones = ["1=1"];
   const parametros = [];
   if (busqueda) {
@@ -607,6 +608,8 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   else if (estado === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
   else if (estado === "sin-configurar") condiciones.push("s.code IS NULL");
   else if (estado === "destacado") condiciones.push("s.featured=TRUE");
+  if (destacado === "destacados") condiciones.push("COALESCE(s.featured,FALSE)=TRUE");
+  else if (destacado === "no_destacados") condiciones.push("COALESCE(s.featured,FALSE)=FALSE");
   if (estadoImagen === "con_imagen") condiciones.push("(s.image_data IS NOT NULL OR NULLIF(BTRIM(s.image_url),'') IS NOT NULL)");
   else if (estadoImagen === "sin_imagen") condiciones.push("(s.image_data IS NULL AND NULLIF(BTRIM(s.image_url),'') IS NULL)");
   else if (estadoImagen === "confirmada") condiciones.push("s.image_status='confirmada'");

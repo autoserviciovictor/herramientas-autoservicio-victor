@@ -2000,6 +2000,7 @@ app.get("/admin/catalogo/productos", requerirAdministrador, async (req, res) => 
       rubro: req.query.rubro,
       estado: req.query.estado,
       estadoImagen: req.query.imagen,
+      destacado: req.query.destacado,
     });
     res.json({ ok: true, ...resultado });
   } catch (error) {
