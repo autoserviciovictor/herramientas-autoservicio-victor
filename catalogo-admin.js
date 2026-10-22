@@ -1093,6 +1093,31 @@ function renderRubros() {
   cont.querySelectorAll("[data-rubro-edit]").forEach((b) => b.addEventListener("click", () => abrirRubro(Number(b.dataset.rubroEdit))));
 }
 
+async function cargarSubrubrosRubro(id) {
+  const lista = $("catalogSubrubrosLista");
+  if (!lista) return;
+  lista.innerHTML = '<small>Cargando subrubros...</small>';
+  try {
+    const data = await api(`/admin/catalogo/rubros/${id}/subrubros`);
+    const items = data.subrubros || [];
+    lista.innerHTML = items.length ? items.map(s => `<div class="catalog-subrubro-item" data-subid="${Number(s.id)}"><span>${esc(s.nombre)}</span><div><button type="button" data-subedit="${Number(s.id)}" aria-label="Editar ${esc(s.nombre)}">Editar</button><button type="button" data-subdelete="${Number(s.id)}" aria-label="Eliminar ${esc(s.nombre)}">Eliminar</button></div></div>`).join('') : '<small class="catalog-subrubros-vacio">Todavía no hay subrubros en este rubro.</small>';
+    lista.querySelectorAll('[data-subedit]').forEach(b => b.addEventListener('click', async () => {
+      const item = items.find(s => Number(s.id) === Number(b.dataset.subedit));
+      const nombre = window.prompt('Nuevo nombre del subrubro:', item?.nombre || '');
+      if (nombre === null || !nombre.trim() || nombre.trim() === item?.nombre) return;
+      try { await api(`/admin/catalogo/rubros/${id}/subrubros/${item.id}`, {method:'PUT',body:JSON.stringify({nombre:nombre.trim()})}); await cargarSubrubrosRubro(id); mensaje('Subrubro modificado.', 'ok'); }
+      catch(e) { mensaje(e.message); }
+    }));
+    lista.querySelectorAll('[data-subdelete]').forEach(b => b.addEventListener('click', async () => {
+      const item = items.find(s => Number(s.id) === Number(b.dataset.subdelete));
+      const ok = await window.AutoservicioDialog?.confirm?.({title:'Eliminar subrubro',message:`¿Eliminar “${item?.nombre}”?`,confirmarTexto:'Eliminar',cancelarTexto:'Cancelar',danger:true});
+      if (!ok) return;
+      try { await api(`/admin/catalogo/rubros/${id}/subrubros/${item.id}`, {method:'DELETE'}); await cargarSubrubrosRubro(id); mensaje('Subrubro eliminado.', 'ok'); }
+      catch(e) { mensaje(e.message); }
+    }));
+  } catch(e) { lista.textContent = e.message; }
+}
+
 function abrirRubro(id = null) {
   const r = estado.rubros.find((x) => x.id === id);
   $("catalogRubroId").value = r?.id || "";
@@ -1101,6 +1126,8 @@ function abrirRubro(id = null) {
   $("catalogRubroDescripcion").value = r?.descripcion || "";
   $("catalogRubroActivo").checked = r ? Boolean(r.activo) : true;
   $("catalogRubroEliminar").classList.toggle("oculto", !r);
+  $("catalogSubrubrosSeccion")?.classList.toggle("oculto", !r);
+  if (r) cargarSubrubrosRubro(r.id);
   abrirModal("catalogRubroModal");
 }
 
@@ -1262,6 +1289,17 @@ function bind() {
   $("catalogProductoCerrar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogProductoCancelar")?.addEventListener("click", () => cerrarModal("catalogProductoModal"));
   $("catalogRubroGuardar")?.addEventListener("click", guardarRubro);
+  $("catalogSubrubroAgregar")?.addEventListener("click", async () => {
+    const id = $("catalogRubroId")?.value;
+    const campo = $("catalogSubrubroNuevo");
+    const nombre = campo?.value.trim();
+    if (!id || !nombre) { mensaje('Ingresá el nombre del subrubro.'); return; }
+    const boton = $("catalogSubrubroAgregar"); boton.disabled = true;
+    try { await api(`/admin/catalogo/rubros/${id}/subrubros`, {method:'POST',body:JSON.stringify({nombre})}); campo.value=''; await cargarSubrubrosRubro(id); mensaje('Subrubro agregado.', 'ok'); }
+    catch(e) { mensaje(e.message); }
+    finally { boton.disabled = false; }
+  });
+  $("catalogSubrubroNuevo")?.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); $("catalogSubrubroAgregar")?.click(); } });
   $("catalogRubroEliminar")?.addEventListener("click", eliminarRubro);
   $("catalogRubroCerrar")?.addEventListener("click", () => cerrarModal("catalogRubroModal"));
   $("catalogRubroCancelar")?.addEventListener("click", () => cerrarModal("catalogRubroModal"));

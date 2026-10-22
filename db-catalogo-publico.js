@@ -37,6 +37,17 @@ async function asegurarEsquemaCatalogoPublico() {
     await query(`CREATE INDEX IF NOT EXISTS catalog_categories_active_order_idx
       ON catalog_categories(active, sort_order, name)`);
 
+    await query(`CREATE TABLE IF NOT EXISTS catalog_subcategories (
+      subcategory_id BIGSERIAL PRIMARY KEY,
+      category_id BIGINT NOT NULL REFERENCES catalog_categories(category_id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT catalog_subcategories_name_valid CHECK (length(btrim(name)) > 0)
+    )`);
+    await query(`CREATE INDEX IF NOT EXISTS catalog_subcategories_category_idx ON catalog_subcategories(category_id, sort_order, subcategory_id)`);
+
     // product_catalog ya es la fuente maestra de código, artículo y precio.
     // Esta tabla guarda únicamente la configuración comercial/pública para no
     // duplicar los ~5.000 productos ni interferir con Inventario/Precios.
@@ -366,6 +377,40 @@ async function listarRubrosAdminDb() {
     productos: Number(f.configured_count) || 0,
     visibles: Number(f.visible_count) || 0,
   }));
+}
+
+async function listarSubrubrosCatalogoDb(rubroId) {
+  await asegurarEsquemaCatalogoPublico();
+  const r = await query(`SELECT subcategory_id AS id, category_id AS "rubroId", name AS nombre, sort_order AS orden
+    FROM catalog_subcategories WHERE category_id=$1 ORDER BY sort_order, subcategory_id`, [rubroId]);
+  return r.rows;
+}
+
+async function crearSubrubroCatalogoDb(rubroId, nombre) {
+  await asegurarEsquemaCatalogoPublico();
+  nombre = textoLimitado(nombre, 80);
+  if (!nombre) throw new Error("Ingresá un nombre para el subrubro");
+  const existe = await query(`SELECT 1 FROM catalog_subcategories WHERE category_id=$1 AND lower(name)=lower($2)`, [rubroId, nombre]);
+  if (existe.rowCount) throw new Error("Ya existe un subrubro con ese nombre");
+  const r = await query(`INSERT INTO catalog_subcategories(category_id,name,sort_order)
+    VALUES($1,$2,(SELECT COALESCE(MAX(sort_order),0)+1 FROM catalog_subcategories WHERE category_id=$1)) RETURNING subcategory_id`, [rubroId,nombre]);
+  return r.rows[0].subcategory_id;
+}
+
+async function actualizarSubrubroCatalogoDb(rubroId, id, nombre) {
+  await asegurarEsquemaCatalogoPublico();
+  nombre = textoLimitado(nombre,80);
+  if (!nombre) throw new Error("Ingresá un nombre para el subrubro");
+  const duplicado = await query(`SELECT 1 FROM catalog_subcategories WHERE category_id=$1 AND lower(name)=lower($2) AND subcategory_id<>$3`, [rubroId,nombre,id]);
+  if (duplicado.rowCount) throw new Error("Ya existe un subrubro con ese nombre");
+  const r = await query(`UPDATE catalog_subcategories SET name=$3, updated_at=NOW() WHERE category_id=$1 AND subcategory_id=$2`, [rubroId,id,nombre]);
+  if (!r.rowCount) throw new Error("No se encontró el subrubro");
+}
+
+async function eliminarSubrubroCatalogoDb(rubroId,id) {
+  await asegurarEsquemaCatalogoPublico();
+  const r = await query(`DELETE FROM catalog_subcategories WHERE category_id=$1 AND subcategory_id=$2`, [rubroId,id]);
+  if (!r.rowCount) throw new Error("No se encontró el subrubro");
 }
 
 async function crearRubroCatalogoAdminDb(datos = {}) {
@@ -1145,6 +1190,10 @@ module.exports = {
   listarProductosPublicosDb,
   obtenerEstadoCatalogoAdminDb,
   listarRubrosAdminDb,
+  listarSubrubrosCatalogoDb,
+  crearSubrubroCatalogoDb,
+  actualizarSubrubroCatalogoDb,
+  eliminarSubrubroCatalogoDb,
   crearRubroCatalogoAdminDb,
   actualizarRubroCatalogoAdminDb,
   eliminarRubroCatalogoAdminDb,

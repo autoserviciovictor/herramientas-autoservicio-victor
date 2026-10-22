@@ -2199,3 +2199,11 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
 #catalogPedidoModal .catalog-order-products-details #catalogPedidoItems{max-height:none!important;overflow:visible!important;height:auto!important;}
 #catalogPedidoModal .catalog-order-print-btn{gap:0!important;}
 #catalogPedidoModal .catalog-order-print-btn > span{white-space:nowrap;}
+
+/* Gestión de subrubros desde el editor de rubros */
+.catalog-rubro-modal .catalog-modal-body{overflow-y:auto;max-height:calc(90vh - 185px)}
+.catalog-subrubros-section{margin:20px 0;padding:17px 0;border-top:1px solid #e5eaf1}
+.catalog-subrubros-heading{margin-bottom:12px}.catalog-subrubros-heading strong{display:block;font-size:14px;color:#142034}.catalog-subrubros-heading small,.catalog-subrubros-nota{display:block;color:#748097;font-size:11px;margin-top:3px}
+.catalog-subrubros-lista{display:grid;gap:7px;margin-bottom:12px}.catalog-subrubro-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #e4eaf2;border-radius:9px;font-size:13px;font-weight:600}
+.catalog-subrubro-item>div{display:flex;gap:6px}.catalog-subrubro-item button{border:1px solid #e3e9f1;background:#fff;border-radius:7px;padding:6px 9px;font-size:11px;cursor:pointer}.catalog-subrubro-item button:last-child{color:#e51d42;background:#fff5f6;border-color:#ffd6dd}
+.catalog-subrubros-nuevo{display:flex;gap:8px}.catalog-subrubros-nuevo input{flex:1;min-width:0;border:1px solid #dfe5ee;border-radius:9px;padding:10px;font-size:13px}.catalog-subrubros-nuevo button{white-space:nowrap}.catalog-subrubros-vacio{color:#76839a}

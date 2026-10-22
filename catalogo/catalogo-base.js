@@ -17,6 +17,10 @@ const CUSTOMER_TOKEN_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-token-v
 const PAGE_SIZE = 25;
 const state = {
   rubros: [],
+  rubroExpandido: "",
+  subrubro: "",
+  productosSubrubro: [],
+  cacheSubrubros: new Map(),
   grupoPortada: "",
   productosGrupo: [],
   productos: [],
@@ -620,6 +624,37 @@ function mobileMenuIcon(action) {
   return `<svg class="category-logo__svg category-logo__svg--shortcut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${shapes[action] || shapes.inicio}</svg>`;
 }
 
+// Clasificación sugerida por nombre. "Otros" incluye lo que no coincide;
+// nunca se excluye un producto del rubro por no reconocerlo.
+const SUBRUBROS_ALMACEN = [
+  ["fideos", "Fideos y pastas", /\b(fideo|fideos|tallarin|tallarines|mostachol|tirabuzon|codito|spaghetti|espagueti|ñoqui|noqui|raviol|capeleti|pasta seca)\b/i],
+  ["harinas", "Harinas", /\b(harina|harinas|premezcla|semolin|semola|polenta)\b/i],
+  ["arroz", "Arroz", /\b(arroz|arroces)\b/i],
+  ["legumbres", "Legumbres", /\b(lenteja|lentejas|garbanzo|garbanzos|poroto|porotos|arveja|arvejas)\b/i],
+  ["especias", "Especias y condimentos", /\b(oregano|orégano|pimienta|comino|pimenton|pimentón|aji molido|ají molido|laurel|provenzal|condimento|especia|canela|nuez moscada|curry)\b/i],
+  ["aceites", "Aceites y vinagres", /\b(aceite|vinagre|aceto)\b/i],
+  ["azucar", "Azúcar y endulzantes", /\b(azucar|azúcar|edulcorante|stevia|endulzante)\b/i],
+  ["otros", "Otros productos", null],
+];
+function subrubrosParaRubro(rubro) {
+  return /\balmacen\b/i.test(String(rubro?.nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")) ? SUBRUBROS_ALMACEN : [];
+}
+function subrubroDeProducto(producto) {
+  const nombre = String(producto?.nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return SUBRUBROS_ALMACEN.find(([, , patron]) => patron && patron.test(nombre))?.[0] || "otros";
+}
+function rubroMenuMovil(rubro) {
+  const slug = rubro?.slug || "";
+  const subrubros = subrubrosParaRubro(rubro);
+  const abierto = state.rubroExpandido === slug && subrubros.length > 0;
+  const boton = categoryButton(rubro, true).replace('data-rubro=', `${subrubros.length ? 'data-expand-rubro=' : 'data-rubro='}`).replace('</button>', `<svg class="category-menu-chevron${abierto ? ' is-expanded' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`);
+  if (!abierto) return boton;
+  return boton + `<div class="category-subrubros" aria-label="Subrubros de ${escapeHtml(rubro.nombre)}">
+    <button type="button" class="category-subrubro${state.rubro === slug && !state.subrubro ? ' is-active' : ''}" data-rubro="${escapeHtml(slug)}">Ver todos los productos <span>→</span></button>
+    ${subrubros.map(([id, nombre]) => `<button type="button" class="category-subrubro${state.rubro === slug && state.subrubro === id ? ' is-active' : ''}" data-subrubro="${id}" data-parent-rubro="${escapeHtml(slug)}">${escapeHtml(nombre)}<span>›</span></button>`).join('')}
+  </div>`;
+}
+
 function renderCategories() {
   // Los accesos principales son independientes del filtro de rubros.
   const mobileEntry = (action, title, active = false) => `<button class="category-button category-button--shortcut${active ? ' is-active' : ''}" type="button" data-menu-view="${action}"${active ? ' aria-current="page"' : ''}><span class="category-button__icon category-logo tone-red" aria-hidden="true">${mobileMenuIcon(action)}</span><span>${title}</span><svg class="category-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`;
@@ -630,7 +665,7 @@ function renderCategories() {
     mobileEntry('ofertas', 'Ofertas', document.body.classList.contains('catalogo-mobile-offers-active')),
     mobileEntry('vendidos', 'Más vendidos', document.body.classList.contains('catalogo-mobile-bestsellers-active')),
     '<div class="category-menu-section-title">TODOS LOS RUBROS</div>',
-    ...state.rubros.map(r => categoryButton(r, true).replace('</button>', '<svg class="category-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>'))
+    ...state.rubros.map(rubroMenuMovil)
   ].join('');
 }
 
@@ -783,6 +818,7 @@ function abrirCatalogoCompleto() {
   state.grupoPortada = "";
   state.productosGrupo = [];
   state.rubro = "";
+  state.subrubro = "";
   state.busqueda = "";
   state.pagina = 1;
   if (els.search) els.search.value = "";
@@ -881,7 +917,7 @@ function updateHeading() {
     els.title.textContent = `“${state.busqueda}”`;
   } else if (selected) {
     els.eyebrow.textContent = "RUBRO";
-    els.title.textContent = selected.nombre;
+    els.title.textContent = state.subrubro ? `${selected.nombre} · ${SUBRUBROS_ALMACEN.find(([id]) => id === state.subrubro)?.[1] || state.subrubro}` : selected.nombre;
   } else {
     els.eyebrow.textContent = "CATÁLOGO";
     els.title.textContent = "Todos los productos";
@@ -981,6 +1017,28 @@ async function cargarProductos({ append = false } = {}) {
       syncViewMode();
       return true;
     }
+    if (state.subrubro && state.rubro) {
+      let todos = state.cacheSubrubros.get(state.rubro);
+      if (!todos) {
+        todos = [];
+        let pagina = 1;
+        let paginas = 1;
+        do {
+          const params = new URLSearchParams({ pagina: String(pagina), limite: "100", rubro: state.rubro });
+          const respuesta = await apiJson(`/catalogo/api/productos?${params}`);
+          todos.push(...(Array.isArray(respuesta.productos) ? respuesta.productos : []));
+          paginas = Math.max(1, Number(respuesta.paginas) || 1);
+          pagina++;
+        } while (pagina <= paginas && pagina <= 100);
+        state.cacheSubrubros.set(state.rubro, todos);
+      }
+      const filtrados = todos.filter(p => subrubroDeProducto(p) === state.subrubro);
+      state.total = filtrados.length;
+      state.paginas = Math.ceil(state.total / PAGE_SIZE);
+      state.productos = filtrados.slice((state.pagina - 1) * PAGE_SIZE, state.pagina * PAGE_SIZE);
+      renderProducts(); updateHeading(); renderCategories(); syncViewMode();
+      return true;
+    }
     const params = new URLSearchParams({ pagina: String(state.pagina), limite: String(PAGE_SIZE) });
     if (state.busqueda) params.set("q", state.busqueda);
     if (state.rubro) params.set("rubro", state.rubro);
@@ -1008,7 +1066,7 @@ async function cargarProductos({ append = false } = {}) {
   }
 }
 
-function seleccionarRubro(slug = "") {
+function seleccionarRubro(slug = "", { cargar = true } = {}) {
   // Cada rubro (incluido Todos) abre el listado, nunca la portada de Inicio.
   document.body.classList.remove("catalogo-mobile-offers-active", "catalogo-mobile-bestsellers-active");
   document.querySelectorAll('#catalogoBottomNav [data-mobile-nav]').forEach(button => {
@@ -1020,11 +1078,12 @@ function seleccionarRubro(slug = "") {
   state.modoCatalogo = true;
   if (slug) { state.grupoPortada = ""; state.productosGrupo = []; }
   state.rubro = slug;
+  state.subrubro = "";
   state.busqueda = "";
   els.search.value = "";
   state.pagina = 1;
   cerrarDrawers();
-  cargarProductos();
+  if (cargar) cargarProductos();
   document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1241,6 +1300,20 @@ function bindEvents() {
       return;
     }
 
+    const expand = event.target.closest("[data-expand-rubro]");
+    if (expand) {
+      const slug = expand.dataset.expandRubro || "";
+      state.rubroExpandido = state.rubroExpandido === slug ? "" : slug;
+      renderCategories();
+      return;
+    }
+    const sub = event.target.closest("[data-subrubro]");
+    if (sub) {
+      seleccionarRubro(sub.dataset.parentRubro || "", { cargar: false });
+      state.subrubro = sub.dataset.subrubro || "";
+      cargarProductos();
+      return;
+    }
     const category = event.target.closest("[data-rubro]");
     if (category) return seleccionarRubro(category.dataset.rubro || "");
 
@@ -1397,6 +1470,7 @@ iniciar();
     state.grupoPortada = "";
     state.productosGrupo = [];
     state.rubro = "";
+    state.subrubro = "";
     state.busqueda = "";
     state.modoCatalogo = false;
     if (els.search) els.search.value = "";
@@ -1633,12 +1707,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // Posiciona el buscador en el listado en celular, sin cargar un script adicional.
   const applyMobileSearchLayout = () => {
     const section = document.querySelector('.catalogo-search-section');
-    const toolbar = document.querySelector('.catalogo-products-toolbar');
+    const hero = document.querySelector('.catalogo-hero');
     const services = document.querySelector('.catalogo-services');
-    if (!section || !toolbar || !services) return;
+    if (!section || !hero || !services) return;
     if (window.matchMedia('(max-width:700px)').matches) {
-      if (section.previousElementSibling !== toolbar) toolbar.insertAdjacentElement('afterend', section);
-    } else if (section.previousElementSibling !== services) services.insertAdjacentElement('afterend', section);
+      // En celulares el buscador siempre debe estar inmediatamente antes del banner.
+      if (section.nextElementSibling !== hero) hero.insertAdjacentElement('beforebegin', section);
+    } else if (section.previousElementSibling !== services) {
+      // En escritorio se conserva la ubicación original del buscador.
+      services.insertAdjacentElement('afterend', section);
+    }
   };
   applyMobileSearchLayout();
   window.matchMedia('(max-width:700px)').addEventListener('change', applyMobileSearchLayout);

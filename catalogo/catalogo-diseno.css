@@ -1140,3 +1140,39 @@ html.catalogo-scroll-locked { overflow: hidden !important; overscroll-behavior: 
     z-index: 8600 !important;
   }
 }
+
+/* Ajuste definitivo: buscador móvil alineado con el banner, sin reglas heredadas. */
+@media (max-width: 700px) {
+  .catalogo-search-section {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 10px 14px 12px;
+  }
+  .catalogo-search-section__inner {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .catalogo-search-section .catalogo-header-search {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+}
+
+/* Inicio móvil: igualar distancia banner → rubros con buscador → banner. */
+@media (max-width: 700px) {
+  .catalogo-products-main > .catalogo-home { margin-top: 10px; }
+}
+
+/* Subrubros desplegables en el panel móvil de categorías */
+.catalogo-mobile-categories .category-menu-chevron.is-expanded{transform:rotate(90deg);color:#ef1726}
+.catalogo-mobile-categories .category-subrubros{margin:2px 4px 9px 18px;padding:4px 0;border-left:0;display:grid;gap:3px}
+.catalogo-mobile-categories .category-subrubro{width:100%;min-height:39px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:0;border-radius:9px;background:transparent;padding:8px 10px;text-align:left;color:#354154;font:600 12px inherit;cursor:pointer}
+.catalogo-mobile-categories .category-subrubro span{font-size:16px;color:#8c98a9}
+.catalogo-mobile-categories .category-subrubro:hover,.catalogo-mobile-categories .category-subrubro.is-active{background:#fff0f2;color:#ef1726}

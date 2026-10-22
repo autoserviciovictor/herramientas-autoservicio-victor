@@ -71,6 +71,10 @@ const {
   listarProductosPublicosDb,
   obtenerEstadoCatalogoAdminDb,
   listarRubrosAdminDb,
+  listarSubrubrosCatalogoDb,
+  crearSubrubroCatalogoDb,
+  actualizarSubrubroCatalogoDb,
+  eliminarSubrubroCatalogoDb,
   crearRubroCatalogoAdminDb,
   actualizarRubroCatalogoAdminDb,
   eliminarRubroCatalogoAdminDb,
@@ -1959,6 +1963,23 @@ app.get("/admin/catalogo/rubros", requerirAdministrador, async (req, res) => {
     console.error("Error listando rubros del catálogo:", error);
     res.status(500).json({ ok: false, mensaje: error.message || "No se pudieron cargar los rubros" });
   }
+});
+
+app.get("/admin/catalogo/rubros/:id/subrubros", requerirAdministrador, async (req,res) => {
+  try { res.json({ok:true,subrubros:await listarSubrubrosCatalogoDb(req.params.id)}); }
+  catch(e) { res.status(400).json({ok:false,mensaje:e.message}); }
+});
+app.post("/admin/catalogo/rubros/:id/subrubros", requerirAdministrador, async (req,res) => {
+  try { await crearSubrubroCatalogoDb(req.params.id,req.body?.nombre); res.status(201).json({ok:true,subrubros:await listarSubrubrosCatalogoDb(req.params.id)}); }
+  catch(e) { res.status(400).json({ok:false,mensaje:e.message}); }
+});
+app.put("/admin/catalogo/rubros/:id/subrubros/:subId", requerirAdministrador, async (req,res) => {
+  try { await actualizarSubrubroCatalogoDb(req.params.id,req.params.subId,req.body?.nombre); res.json({ok:true,subrubros:await listarSubrubrosCatalogoDb(req.params.id)}); }
+  catch(e) { res.status(400).json({ok:false,mensaje:e.message}); }
+});
+app.delete("/admin/catalogo/rubros/:id/subrubros/:subId", requerirAdministrador, async (req,res) => {
+  try { await eliminarSubrubroCatalogoDb(req.params.id,req.params.subId); res.json({ok:true,subrubros:await listarSubrubrosCatalogoDb(req.params.id)}); }
+  catch(e) { res.status(400).json({ok:false,mensaje:e.message}); }
 });
 
 app.post("/admin/catalogo/rubros", requerirAdministrador, async (req, res) => {

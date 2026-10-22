@@ -34,7 +34,7 @@
       rel="stylesheet"
       href="design-tokens.css?v=1960-d21-cierre-etapa6-010926"
     />
-    <link rel="stylesheet" href="style.css?v=venc-oferta-editor-20261021" />
+    <link rel="stylesheet" href="style.css?v=carteles-final-20261022" />
     <link
       rel="stylesheet"
       href="design-components.css?v=1960-d21-cierre-etapa6-010926"
@@ -762,7 +762,7 @@
                 data-pro-nav="cartelOferta"
               >
                 <svg class="app-icon"><use href="#icon-clipboard"></use></svg
-                ><span>Imprimir carteles</span>
+                ><span>Carteles</span>
               </button>
               <button
                 type="button"
@@ -928,7 +928,7 @@
             data-pro-nav="cartelOferta"
           >
             <svg class="app-icon"><use href="#icon-clipboard"></use></svg
-            ><span>Imprimir carteles</span>
+            ><span>Carteles</span>
           </button>
           <button
             type="button"
@@ -2558,61 +2558,25 @@
         aria-hidden="true"
       >
         <section class="offer-poster-shell carteles-screen">
-          <header class="offer-poster-header">
-            <div>
-              <span class="app-page-eyebrow">VENCIMIENTOS · CARTELES</span>
-              <h1>Carteles de ofertas</h1>
-              <p>
-                Elegí los productos con oferta que querés imprimir. Los
-                descuentos se configuran desde Vencimientos.
-              </p>
-            </div>
-            <div class="offer-poster-queue-badge">
-              <span>Seleccionados</span
-              ><strong id="cartelOfertaContador">0 / 4</strong>
-            </div>
-          </header>
+          <header class="offer-poster-header"><div><span class="app-page-eyebrow">VENCIMIENTOS · CARTELES</span><h1>Imprimir carteles de ofertas</h1><p>Seleccioná los productos en oferta y definí qué carteles querés imprimir.</p></div></header>
           <div class="carteles-main-layout">
-            <section class="offer-config-card">
-              <div class="carteles-list-head"><h2>Carteles seleccionados</h2><span class="carteles-section-help">Hasta 4 por hoja</span></div>
-              <div id="cartelOfertaBandeja" class="offer-queue-grid"></div>
-              <div class="carteles-list-head" style="margin-top:28px"><h2>Todos los productos en oferta</h2><button id="cartelesSeleccionarTodos" type="button" class="secondary-btn">Seleccionar hasta 4</button></div>
-              <div id="cartelesOfertasLista" class="carteles-ofertas-list"></div>
-              <div
-                id="cartelOfertaGuardarEstado"
-                class="form-error oculto"
-              ></div>
-            </section>
+            <div class="carteles-columna-gestion">
+              <section class="offer-config-card carteles-seleccionados-panel">
+                <div class="carteles-list-head"><h2>Carteles seleccionados</h2><span class="carteles-total-badge">Total: <strong id="cartelesSeleccionadosTotal">0 de 4 carteles</strong></span></div>
+                <div id="cartelOfertaBandeja" class="offer-queue-grid"></div>
+                <div class="carteles-legacy-controls" hidden><span id="cartelOfertaContador"></span><button id="cartelesSeleccionarTodos" type="button">Seleccionar hasta 4</button></div>
+              </section>
+              <section class="offer-config-card carteles-disponibles-panel">
+                <div class="carteles-list-head"><h2>Productos en oferta disponibles</h2><input id="cartelesBuscarOferta" type="search" placeholder="Buscar producto..." aria-label="Buscar productos en oferta" autocomplete="off"></div>
+                <div id="cartelesOfertasLista" class="carteles-ofertas-list"></div>
+                <div id="cartelOfertaGuardarEstado" class="form-error oculto"></div>
+              </section>
+            </div>
             <aside class="offer-poster-preview-panel">
-              <div class="offer-preview-head">
-                <div>
-                  <span>VISTA PREVIA</span>
-                  <h2>Consumo inmediato</h2>
-                </div>
-                <small>Diseño definitivo</small>
-              </div>
-              <div id="cartelOfertaPreview" class="instant-offer-card"></div>
-              <div class="offer-print-spec">
-                <svg class="app-icon"><use href="#icon-monitor"></use></svg>
-                <div>
-                  <strong>Hoja A4 horizontal · 4 carteles</strong
-                  ><span>Cada cartel mide 135 × 78 mm.</span>
-                </div>
-              </div>
-              <button
-                id="btnCartelImprimirHoja"
-                class="offer-print-button"
-                type="button"
-                disabled
-              >
-                <svg class="app-icon"><use href="#icon-clipboard"></use></svg
-                ><span
-                  ><strong>Imprimir seleccionados</strong
-                  ><small id="cartelImprimirEstado"
-                    >Seleccioná una oferta</small
-                  ></span
-                >
-              </button>
+              <div class="offer-preview-head"><h2>Vista previa de impresión</h2><small>Hoja A4 (4 carteles)</small></div>
+              <div id="cartelOfertaPreview" class="carteles-preview-list"></div>
+              <button id="btnCartelImprimirHoja" class="offer-print-button" type="button" disabled><svg class="app-icon"><use href="#icon-clipboard"></use></svg><span><strong>Imprimir carteles</strong></span></button>
+              <p id="cartelImprimirEstado" class="carteles-estado-impresion">Seleccioná al menos un cartel</p>
             </aside>
           </div>
         </section>
@@ -6951,6 +6915,12 @@
                 ></textarea>
               </label>
             </div>
+            <section id="catalogSubrubrosSeccion" class="catalog-subrubros-section oculto">
+              <div class="catalog-subrubros-heading"><div><strong>Subrubros</strong><small>Organizá los productos dentro de este rubro.</small></div></div>
+              <div id="catalogSubrubrosLista" class="catalog-subrubros-lista"></div>
+              <div class="catalog-subrubros-nuevo"><input id="catalogSubrubroNuevo" type="text" maxlength="80" placeholder="Nombre del nuevo subrubro" /><button id="catalogSubrubroAgregar" type="button" class="catalog-btn catalog-btn-primary">+ Agregar</button></div>
+              <small class="catalog-subrubros-nota">Los cambios en subrubros se guardan al instante.</small>
+            </section>
             <label class="catalog-switch-row catalog-rubro-active"
               ><input id="catalogRubroActivo" type="checkbox" checked /><span
                 class="catalog-switch"
@@ -10030,7 +10000,7 @@
     <script src="./horarios-config.js?v=1960-horarios-sector-historico-220926"></script>
     <script
       type="module"
-      src="./catalogo-admin.js?v=thumb-storage-fix-220926"
+      src="./catalogo-admin.js?v=subrubros-editor-20261022"
     ></script>
     <script type="module" src="./admin.js?v=1960-password6-fix-220926"></script>
     <script
@@ -10055,7 +10025,7 @@
     ></script>
     <script
       type="module"
-      src="./app.js?v=carteles-copias-20261021"
+      src="./app.js?v=carteles-final-20261022"
     ></script>
     <script type="module" src="./lotes.js?v=lotes-alertas-180926"></script>
     <script

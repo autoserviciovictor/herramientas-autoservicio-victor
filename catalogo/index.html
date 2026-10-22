@@ -7,7 +7,7 @@
   <meta name="description" content="Catálogo online de Autoservicio Victor. Brindamos calidad y atención.">
   <title>Catálogo online | Autoservicio Victor</title>
   <link rel="icon" href="./assets/favicon.png">
-  <link rel="stylesheet" href="./catalogo-diseno.css?v=47babfab41fd">
+  <link rel="stylesheet" href="./catalogo-diseno.css?v=subrubros-20261022">
 </head>
 <body>
   <div class="catalogo-app catalogo-final-design" id="catalogoApp">
@@ -41,6 +41,17 @@
     </header>
 
     <main>
+      <section class="catalogo-search-section" aria-label="Buscar en el catálogo">
+        <div class="catalogo-container catalogo-search-section__inner">
+          <form class="catalogo-header-search" id="catalogoHeaderSearchForm" role="search">
+          <label class="sr-only" for="catalogoHeaderSearch">Buscar productos</label>
+          <span class="catalogo-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></span>
+          <input id="catalogoHeaderSearch" type="search" autocomplete="off" placeholder="Buscar productos, marcas o códigos…" maxlength="100">
+          <button type="submit" aria-label="Buscar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></button>
+        </form>
+        </div>
+      </section>
+
       <section class="catalogo-hero catalogo-hero--final" aria-label="Autoservicio Victor. Variedad de productos, precios siempre claros y pedido simple y rápido. Brindamos calidad y atención. Siempre cerca tuyo.">
         <img
           class="catalogo-hero__final-image"
@@ -63,17 +74,6 @@
           <div class="catalogo-service catalogo-service--payments"><span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></span><div><strong>Medios de pago</strong><small>Efectivo, tarjeta y transferencias.</small></div></div>
           <div class="catalogo-service catalogo-service--hours"><span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><strong>Horario de atención</strong><small>Consultá nuestros horarios.</small></div></div>
           <div class="catalogo-service catalogo-service--whatsapp"><span class="catalogo-service__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z"/><path d="M8 12h8M12 8v8"/></svg></span><div><strong>Ofertas especiales</strong><small>Beneficios para vos.</small></div></div>
-        </div>
-      </section>
-
-      <section class="catalogo-search-section" aria-label="Buscar en el catálogo">
-        <div class="catalogo-container catalogo-search-section__inner">
-          <form class="catalogo-header-search" id="catalogoHeaderSearchForm" role="search">
-          <label class="sr-only" for="catalogoHeaderSearch">Buscar productos</label>
-          <span class="catalogo-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></span>
-          <input id="catalogoHeaderSearch" type="search" autocomplete="off" placeholder="Buscar productos, marcas o códigos…" maxlength="100">
-          <button type="submit" aria-label="Buscar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></button>
-        </form>
         </div>
       </section>
 
@@ -315,7 +315,7 @@
     </button>
   </div>
 
-  <script defer src="./catalogo-base.js?v=pedido-decimales-variedades-20261021"></script>
+  <script defer src="./catalogo-base.js?v=subrubros-20261022"></script>
 
 </body>
 </html>

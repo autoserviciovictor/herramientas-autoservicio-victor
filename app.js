@@ -3726,19 +3726,33 @@ function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCa
 function renderListadoCartelesOfertas() {
   const host = $("cartelesOfertasLista"); if (!host) return;
   const ofertas = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso());
-  const elegidos = new Set(leerBandejaCartelesOferta().map(x => String(x.id)));
-  host.innerHTML = ofertas.length ? ofertas.map((o) => {
+  const bandejaLlena = leerBandejaCartelesOferta().length >= CARTEL_OFERTA_MAX;
+  const filtro = $("cartelesBuscarOferta")?.value?.trim().toLocaleLowerCase("es-AR") || "";
+  const filtradas = ofertas.filter(o => !filtro || `${o.articulo || ""} ${o.codigo || ""}`.toLocaleLowerCase("es-AR").includes(filtro));
+  host.innerHTML = filtradas.length ? filtradas.map(o => {
     const precioOriginal = Number(o.precioActual) || 0;
     const precioFinal = Number(o.precioOferta || o.precioDescuento || o.precioPromo) || 0;
-    // Mostrar el porcentaje configurado por el usuario, sin recalcularlo
-    // a partir de los precios (que pueden haber sido ajustados manualmente).
     const descuento = Number(o.descuento) || 0;
     const porcentaje = Number.isInteger(descuento) ? String(descuento) : descuento.toLocaleString("es-AR", { maximumFractionDigits: 1 });
-    return `<label class="carteles-oferta-item"><input type="checkbox" data-cartel-id="${escapeHTML(String(o.id))}" ${elegidos.has(String(o.id)) ? "checked" : ""}><span><b>${escapeHTML(o.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(o.codigo || "—"))} · Vence ${escapeHTML(formatearFecha(o.vencimiento))}</small></span><span class="carteles-oferta-precios"><small>Antes <s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></small><em>${escapeHTML(porcentaje)}% de descuento</em><strong>Ahora ${escapeHTML(formatearDineroCartel(precioFinal))}</strong></span></label>`;
-  }).join("") : '<p class="carteles-empty">Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá.</p>';
+    return `<div class="carteles-oferta-item"><div class="carteles-disponible-info"><b>${escapeHTML(o.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(o.codigo || "—"))}</small></div><span class="carteles-disponible-descuento">${escapeHTML(porcentaje)}% de descuento</span><div class="carteles-disponible-precio"><div class="carteles-precio-antes"><span>Antes:</span><s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></div><div class="carteles-precio-ahora"><span>Ahora:</span><strong>${escapeHTML(formatearDineroCartel(precioFinal))}</strong></div></div><button type="button" class="carteles-agregar-btn" data-cartel-agregar-id="${escapeHTML(String(o.id))}" ${bandejaLlena ? "disabled" : ""}>+ Agregar</button></div>`;
+  }).join("") : `<p class="carteles-empty">${ofertas.length ? "No se encontraron productos con ese nombre o código." : "Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá."}</p>`;
   renderBandejaCartelesOferta();
-  const primera = leerBandejaCartelesOferta()[0] || ofertas[0];
-  if ($("cartelOfertaPreview")) $("cartelOfertaPreview").innerHTML = primera ? svgCartelOferta(primera, { precioValido: true }) : "";
+}
+document.addEventListener("click", event => { if (event.target.closest("#cartelesOfertasLista [data-cartel-agregar-id]")) agregarCartelDesdeLista(event); });
+document.addEventListener("input", event => { if (event.target.id === "cartelesBuscarOferta") renderListadoCartelesOfertas(); });
+function agregarCartelDesdeLista(event) {
+  const boton = event.target.closest("[data-cartel-agregar-id]"); if (!boton) return;
+  const oferta = leerOfertasCarteles().find(o => String(o.id) === boton.dataset.cartelAgregarId);
+  if (!oferta) return;
+  const items = leerBandejaCartelesOferta();
+  if (items.length >= CARTEL_OFERTA_MAX) { mostrarMensaje("La hoja admite hasta 4 carteles en total", "error"); return; }
+  items.push({ ...oferta });
+  guardarBandejaCartelesOferta(items);
+  renderListadoCartelesOfertas();
+}
+function renderVistaPreviaCarteles(items) {
+  const preview = $("cartelOfertaPreview"); if (!preview) return;
+  preview.innerHTML = items.length ? items.map((item, i) => `<div class="carteles-preview-item">${svgCartelOferta(item, { precioValido: true, sufijo: `cola-${i}` })}</div>`).join("") : '<p class="carteles-preview-vacia">Agregá una oferta para ver los carteles.</p>';
 }
 
 function cambiarSeleccionCartel(event) {
@@ -3807,15 +3821,21 @@ async function guardarCartelOfertaActual() {
 function renderBandejaCartelesOferta() {
   const box = $("cartelOfertaBandeja");
   const items = leerBandejaCartelesOferta();
-  if ($("cartelOfertaContador")) $("cartelOfertaContador").textContent = `${items.length} / ${CARTEL_OFERTA_MAX}`;
+  if ($("cartelOfertaContador")) $("cartelOfertaContador").textContent = `${items.length} de ${CARTEL_OFERTA_MAX} carteles`;
   const imprimir = $("btnCartelImprimirHoja");
   if (imprimir) imprimir.disabled = items.length < 1;
-  if ($("cartelImprimirEstado")) $("cartelImprimirEstado").textContent = items.length > 0 ? `Imprimir ${items.length} de ${CARTEL_OFERTA_MAX} posiciones` : "Guardá al menos 1 cartel";
+  if ($("cartelImprimirEstado")) $("cartelImprimirEstado").textContent = items.length ? `Imprimir ${items.length} carteles en 1 hoja A4` : "Seleccioná al menos un cartel";
+  if ($("cartelesSeleccionadosTotal")) $("cartelesSeleccionadosTotal").textContent = `${items.length} de ${CARTEL_OFERTA_MAX} carteles`;
+  renderVistaPreviaCarteles(items);
   if (!box) return;
   const slots = Array.from({ length: CARTEL_OFERTA_MAX }, (_, index) => {
     const item = items[index];
-    if (!item) return `<div class="offer-queue-slot is-empty"><span>${index + 1}</span><b>Espacio disponible</b><small>Elegí otro producto en Vencimientos</small></div>`;
-    return `<div class="offer-queue-slot is-filled"><span>${index + 1}</span><div class="offer-queue-slot-copy"><b>${escapeHTML(item.articulo)}</b><small>${escapeHTML(item.descripcion || "")} · vence ${escapeHTML(formatearFecha(item.vencimiento))}</small></div><div class="offer-queue-actions"><button type="button" data-cartel-duplicar-indice="${index}" ${items.length >= CARTEL_OFERTA_MAX ? "disabled" : ""} title="Agregar otra copia de esta oferta" aria-label="Agregar otra copia de ${escapeHTML(item.articulo)}">+ Copia</button><button type="button" data-cartel-quitar-indice="${index}" aria-label="Quitar una copia de ${escapeHTML(item.articulo)}">×</button></div></div>`;
+    if (!item) return `<div class="offer-queue-slot is-empty"><span>${index + 1}</span><b>Espacio disponible</b></div>`;
+    const original = Number(item.precioActual) || 0;
+    const final = Number(item.precioOferta || item.precioDescuento || item.precioPromo) || 0;
+    const descuento = Number(item.descuento) || 0;
+    const porcentaje = Number.isInteger(descuento) ? String(descuento) : descuento.toLocaleString("es-AR", {maximumFractionDigits:1});
+    return `<div class="offer-queue-slot is-filled"><div class="offer-queue-slot-copy"><b>${escapeHTML(item.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(item.codigo || "—"))}</small><em>${escapeHTML(porcentaje)}% de descuento</em><div class="carteles-seleccionado-precios"><span>Antes: <s>${escapeHTML(formatearDineroCartel(original))}</s></span><strong><span>Ahora:</span> ${escapeHTML(formatearDineroCartel(final))}</strong></div></div><button type="button" class="carteles-quitar-btn" data-cartel-quitar-indice="${index}" aria-label="Quitar ${escapeHTML(item.articulo || "producto")}" title="Quitar cartel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v6m4-6v6"/></svg></button></div>`;
   });
   box.innerHTML = slots.join("");
 }
