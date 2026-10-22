@@ -267,6 +267,7 @@ function prepararSelectoresCatalogo() {
   prepararSelectorCatalogo("catalogFiltroImagen", { ancho: "normal" });
   prepararSelectorCatalogo("catalogFiltroDestacado", { ancho: "normal" });
   prepararSelectorCatalogo("catalogProductoRubro", { ancho: "wide", buscable: true });
+  prepararSelectorCatalogo("catalogProductoSubrubro", { ancho: "wide" });
   prepararSelectorCatalogo("catalogProductoUnidad", { ancho: "compact" });
   prepararSelectorCatalogo("catalogPedidosFiltroEstado", { ancho: "orders" });
 }
@@ -1000,6 +1001,25 @@ async function cambiarVisibilidadMasiva(visible) {
   }
 }
 
+async function actualizarSubrubrosProducto(seleccion = "") {
+  const rubroId = $("catalogProductoRubro")?.value;
+  const campo = $("catalogProductoSubrubro");
+  if (!campo) return;
+  const pedido = String(rubroId || "");
+  campo.innerHTML = '<option value="">Sin subrubro</option>';
+  campo.disabled = true;
+  if (!pedido) { window.AppSelect?.refresh?.(campo); return; }
+  try {
+    const data = await api(`/admin/catalogo/rubros/${encodeURIComponent(pedido)}/subrubros`);
+    if ($( "catalogProductoRubro")?.value !== pedido) return;
+    const items = data.subrubros || [];
+    campo.innerHTML = '<option value="">Sin subrubro</option>' + items.map(item => `<option value="${Number(item.id)}">${esc(item.nombre)}</option>`).join("");
+    campo.disabled = !items.length;
+    if (items.some(item => String(item.id) === String(seleccion))) campo.value = String(seleccion);
+  } catch (e) { mensaje(`No se pudieron cargar los subrubros: ${e.message}`); }
+  window.AppSelect?.refresh?.(campo);
+}
+
 async function abrirProducto(codigo) {
   try {
     const data = await api(`/admin/catalogo/productos/${encodeURIComponent(codigo)}`);
@@ -1011,6 +1031,7 @@ async function abrirProducto(codigo) {
     $("catalogProductoPrecio").value = p.precio ?? "";
     $("catalogProductoPrecioOferta").value = p.precioOferta ?? "";
     $("catalogProductoRubro").value = p.rubroId ?? "";
+    await actualizarSubrubrosProducto(p.subrubroId ?? "");
     $("catalogProductoMarca").value = p.marca || "";
     $("catalogProductoPresentacion").value = p.presentacion || "";
     $("catalogProductoUnidad").value = p.unidadVenta || "unidad";
@@ -1049,6 +1070,7 @@ async function guardarProducto() {
       precio: $("catalogProductoPrecio").value,
       precioOferta: $("catalogProductoPrecioOferta").value,
       rubroId: $("catalogProductoRubro").value || null,
+      subrubroId: $("catalogProductoSubrubro").value || null,
       marca: $("catalogProductoMarca").value,
       presentacion: $("catalogProductoPresentacion").value,
       unidadVenta: $("catalogProductoUnidad").value,
@@ -1103,10 +1125,39 @@ async function cargarSubrubrosRubro(id) {
     lista.innerHTML = items.length ? items.map(s => `<div class="catalog-subrubro-item" data-subid="${Number(s.id)}"><span>${esc(s.nombre)}</span><div><button type="button" data-subedit="${Number(s.id)}" aria-label="Editar ${esc(s.nombre)}">Editar</button><button type="button" data-subdelete="${Number(s.id)}" aria-label="Eliminar ${esc(s.nombre)}">Eliminar</button></div></div>`).join('') : '<small class="catalog-subrubros-vacio">Todavía no hay subrubros en este rubro.</small>';
     lista.querySelectorAll('[data-subedit]').forEach(b => b.addEventListener('click', async () => {
       const item = items.find(s => Number(s.id) === Number(b.dataset.subedit));
-      const nombre = window.prompt('Nuevo nombre del subrubro:', item?.nombre || '');
-      if (nombre === null || !nombre.trim() || nombre.trim() === item?.nombre) return;
-      try { await api(`/admin/catalogo/rubros/${id}/subrubros/${item.id}`, {method:'PUT',body:JSON.stringify({nombre:nombre.trim()})}); await cargarSubrubrosRubro(id); mensaje('Subrubro modificado.', 'ok'); }
-      catch(e) { mensaje(e.message); }
+      if (!item) return;
+      const fila = b.closest('.catalog-subrubro-item');
+      if (!fila || fila.classList.contains('is-editing')) return;
+      // Editar en el mismo lugar, sin cuadros de diálogo del navegador.
+      const etiqueta = fila.querySelector('span');
+      const acciones = b.parentElement;
+      const nombreOriginal = item.nombre || '';
+      fila.classList.add('is-editing');
+      etiqueta.hidden = true;
+      acciones.hidden = true;
+      const editor = document.createElement('form');
+      editor.className = 'catalog-subrubro-editor';
+      editor.innerHTML = '<input type="text" maxlength="100" required aria-label="Nombre del subrubro"><button type="submit" class="catalog-subrubro-guardar">Guardar</button><button type="button" class="catalog-subrubro-cancelar">Cancelar</button>';
+      const campo = editor.querySelector('input');
+      campo.value = nombreOriginal;
+      fila.appendChild(editor);
+      const cancelar = () => { editor.remove(); etiqueta.hidden = false; acciones.hidden = false; fila.classList.remove('is-editing'); };
+      editor.querySelector('.catalog-subrubro-cancelar').addEventListener('click', cancelar);
+      campo.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); cancelar(); } });
+      editor.addEventListener('submit', async e => {
+        e.preventDefault();
+        const nombre = campo.value.trim();
+        if (!nombre) { campo.focus(); return; }
+        if (nombre === nombreOriginal) { cancelar(); return; }
+        const guardar = editor.querySelector('.catalog-subrubro-guardar');
+        guardar.disabled = true;
+        try {
+          await api(`/admin/catalogo/rubros/${id}/subrubros/${item.id}`, {method:'PUT',body:JSON.stringify({nombre})});
+          await cargarSubrubrosRubro(id);
+          mensaje('Subrubro modificado.', 'ok');
+        } catch (error) { mensaje(error.message); guardar.disabled = false; }
+      });
+      campo.focus(); campo.select();
     }));
     lista.querySelectorAll('[data-subdelete]').forEach(b => b.addEventListener('click', async () => {
       const item = items.find(s => Number(s.id) === Number(b.dataset.subdelete));
@@ -1281,6 +1332,7 @@ function bind() {
   $("catalogBtnVerPublicoMobile")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());
   $("catalogProductoGuardar")?.addEventListener("click", guardarProducto);
+  $("catalogProductoRubro")?.addEventListener("change", () => actualizarSubrubrosProducto());
   $("catalogProductoElegirImagen")?.addEventListener("click", () => $("catalogProductoImagenArchivo")?.click());
   $("catalogProductoImagenArchivo")?.addEventListener("change", (e) => subirImagenArchivoActual(e.target.files?.[0]));
   $("catalogProductoBuscarImagen")?.addEventListener("click", buscarImagenProductoActual);

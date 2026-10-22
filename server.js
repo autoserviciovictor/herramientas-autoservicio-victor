@@ -1078,6 +1078,7 @@ app.get("/catalogo/api/productos", async (req, res) => {
       limite: req.query.limite,
       busqueda: req.query.q,
       rubro: req.query.rubro,
+      subrubro: req.query.subrubro,
       destacado: String(req.query.destacado || "") === "1",
     });
     res.json({ ok: true, ...resultado });

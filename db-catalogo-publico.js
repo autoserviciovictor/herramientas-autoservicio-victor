@@ -87,6 +87,7 @@ async function asegurarEsquemaCatalogoPublico() {
         image_status IN ('sin_imagen','buscando','candidato','confirmada','sin_resultado','error')
       )
     )`);
+    await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS subcategory_id BIGINT REFERENCES catalog_subcategories(subcategory_id) ON DELETE SET NULL`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS offer_price NUMERIC(14,2)`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS kg_sale_mode TEXT NOT NULL DEFAULT 'peso'`);
     await query(`ALTER TABLE catalog_product_settings ADD COLUMN IF NOT EXISTS kg_unit_grams INTEGER`);
@@ -201,7 +202,9 @@ async function listarRubrosPublicosDb() {
     HAVING COUNT(p.code) > 0
     ORDER BY c.name, c.category_id
   `);
+  const subs = await query(`SELECT subcategory_id, category_id, name, sort_order FROM catalog_subcategories ORDER BY sort_order, subcategory_id`);
   return resultado.rows.map((fila) => ({
+    subrubros: subs.rows.filter(sub => Number(sub.category_id) === Number(fila.category_id)).map(sub => ({id: Number(sub.subcategory_id), nombre: String(sub.name), orden: Number(sub.sort_order) || 0})),
     id: Number(fila.category_id),
     nombre: String(fila.name || ""),
     slug: String(fila.slug || ""),
@@ -221,6 +224,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const busqueda = normalizarBusqueda(opciones.busqueda);
   const rubro = String(opciones.rubro || "").trim().slice(0, 80);
   const destacado = opciones.destacado === true;
+  const subrubro = Number(opciones.subrubro);
 
   const condiciones = ["s.visible=TRUE", "c.active=TRUE", "p.stock > 0"];
   const parametros = [];
@@ -242,6 +246,11 @@ async function listarProductosPublicosDb(opciones = {}) {
     condiciones.push(`(c.slug=$${indice} OR c.category_id::text=$${indice})`);
   }
 
+  if (Number.isInteger(subrubro) && subrubro > 0) {
+    parametros.push(subrubro);
+    condiciones.push(`s.subcategory_id=$${parametros.length}`);
+  }
+
   if (destacado) condiciones.push("s.featured=TRUE");
 
   const where = condiciones.join(" AND ");
@@ -260,7 +269,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const resultado = await query(
     `SELECT
        p.code, p.article, p.price,
-       s.brand, s.presentation, s.sale_unit, s.kg_sale_mode, s.kg_unit_grams, s.image_url, s.featured, s.offer_price, s.sort_order,
+       s.subcategory_id, s.brand, s.presentation, s.sale_unit, s.kg_sale_mode, s.kg_unit_grams, s.image_url, s.featured, s.offer_price, s.sort_order,
        c.category_id, c.name AS category_name, c.slug AS category_slug
      FROM product_catalog p
      JOIN catalog_product_settings s ON s.code=p.code
@@ -281,6 +290,7 @@ async function listarProductosPublicosDb(opciones = {}) {
       codigo: String(fila.code || ""),
       nombre: String(fila.article || ""),
       precio: fila.price === null || fila.price === undefined ? null : Number(fila.price),
+      subrubroId: fila.subcategory_id == null ? null : Number(fila.subcategory_id),
       marca: String(fila.brand || ""),
       presentacion: String(fila.presentation || ""),
       unidadVenta: String(fila.sale_unit || "unidad"),
@@ -673,7 +683,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   parametros.push(limite, offset);
   const r = await query(`
     SELECT p.code, p.article, p.price,
-           s.category_id, c.name AS category_name,
+           s.category_id, s.subcategory_id, c.name AS category_name,
            COALESCE(s.brand,'') AS brand,
            COALESCE(s.presentation,'') AS presentation,
            COALESCE(s.sale_unit,'unidad') AS sale_unit,
@@ -710,6 +720,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
       nombre: String(f.article || ""),
       precio: f.price === null || f.price === undefined ? null : Number(f.price),
       rubroId: f.category_id === null || f.category_id === undefined ? null : Number(f.category_id),
+      subrubroId: f.subcategory_id == null ? null : Number(f.subcategory_id),
       rubro: String(f.category_name || ""),
       marca: String(f.brand || ""),
       presentacion: String(f.presentation || ""),
@@ -741,7 +752,7 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
   if (!code) return null;
   const r = await query(`
     SELECT p.code, p.article, p.price,
-           s.category_id, c.name AS category_name,
+           s.category_id, s.subcategory_id, c.name AS category_name,
            COALESCE(s.brand,'') AS brand,
            COALESCE(s.presentation,'') AS presentation,
            COALESCE(s.sale_unit,'unidad') AS sale_unit,
@@ -827,6 +838,14 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
     const rubro = await query(`SELECT 1 FROM catalog_categories WHERE category_id=$1`, [categoryId]);
     if (!rubro.rowCount) throw new Error("El rubro seleccionado no existe");
   }
+  let subcategoryId = cambios.subrubroId === undefined ? (s.subcategory_id ?? null) : cambios.subrubroId;
+  if (!categoryId || subcategoryId === "" || subcategoryId === null) subcategoryId = null;
+  else {
+    subcategoryId = Number(subcategoryId);
+    if (!Number.isInteger(subcategoryId) || subcategoryId < 1) throw new Error("El subrubro seleccionado no es válido");
+    const sub = await query(`SELECT 1 FROM catalog_subcategories WHERE subcategory_id=$1 AND category_id=$2`, [subcategoryId, categoryId]);
+    if (!sub.rowCount) throw new Error("El subrubro no pertenece al rubro seleccionado");
+  }
   const saleUnit = cambios.unidadVenta === undefined ? (s.sale_unit || "unidad") : textoLimitado(cambios.unidadVenta, 30).toLowerCase();
   if (!UNIDADES_VENTA.includes(saleUnit)) throw new Error("La unidad de venta no es válida");
   const modalidadKg = saleUnit === "kg" ? (cambios.modalidadKg === undefined ? (s.kg_sale_mode || "peso") : String(cambios.modalidadKg)) : "peso";
@@ -846,10 +865,11 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
   }
   if (precioOferta !== null && (!Number.isFinite(Number(precio)) || precioOferta >= Number(precio))) throw new Error("El precio de oferta debe ser menor al precio normal");
   await query(`
-    INSERT INTO catalog_product_settings(code, category_id, brand, presentation, sale_unit, kg_sale_mode, kg_unit_grams, image_url, image_source, image_status, visible, featured, offer_price, sort_order, updated_at)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+    INSERT INTO catalog_product_settings(code, category_id, brand, presentation, sale_unit, kg_sale_mode, kg_unit_grams, image_url, image_source, image_status, visible, featured, offer_price, sort_order, subcategory_id, updated_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())
     ON CONFLICT(code) DO UPDATE SET
       category_id=EXCLUDED.category_id,
+      subcategory_id=EXCLUDED.subcategory_id,
       brand=EXCLUDED.brand,
       presentation=EXCLUDED.presentation,
       sale_unit=EXCLUDED.sale_unit,
@@ -878,6 +898,7 @@ async function actualizarProductoCatalogoAdminDb(codigo, cambios = {}) {
     cambios.destacado === undefined ? Boolean(s.featured) : booleano(cambios.destacado, Boolean(s.featured)),
     precioOferta,
     Number(s.sort_order) || 0,
+    subcategoryId,
   ]);
   return obtenerProductoCatalogoAdminDb(code);
 }

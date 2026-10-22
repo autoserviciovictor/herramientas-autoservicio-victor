@@ -624,24 +624,21 @@ function mobileMenuIcon(action) {
   return `<svg class="category-logo__svg category-logo__svg--shortcut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${shapes[action] || shapes.inicio}</svg>`;
 }
 
-// Clasificación sugerida por nombre. "Otros" incluye lo que no coincide;
-// nunca se excluye un producto del rubro por no reconocerlo.
-const SUBRUBROS_ALMACEN = [
-  ["fideos", "Fideos y pastas", /\b(fideo|fideos|tallarin|tallarines|mostachol|tirabuzon|codito|spaghetti|espagueti|ñoqui|noqui|raviol|capeleti|pasta seca)\b/i],
-  ["harinas", "Harinas", /\b(harina|harinas|premezcla|semolin|semola|polenta)\b/i],
-  ["arroz", "Arroz", /\b(arroz|arroces)\b/i],
-  ["legumbres", "Legumbres", /\b(lenteja|lentejas|garbanzo|garbanzos|poroto|porotos|arveja|arvejas)\b/i],
-  ["especias", "Especias y condimentos", /\b(oregano|orégano|pimienta|comino|pimenton|pimentón|aji molido|ají molido|laurel|provenzal|condimento|especia|canela|nuez moscada|curry)\b/i],
-  ["aceites", "Aceites y vinagres", /\b(aceite|vinagre|aceto)\b/i],
-  ["azucar", "Azúcar y endulzantes", /\b(azucar|azúcar|edulcorante|stevia|endulzante)\b/i],
-  ["otros", "Otros productos", null],
-];
+// Subrubros reales, definidos desde la administración (sin categorías precargadas).
 function subrubrosParaRubro(rubro) {
-  return /\balmacen\b/i.test(String(rubro?.nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")) ? SUBRUBROS_ALMACEN : [];
+  return Array.isArray(rubro?.subrubros) ? rubro.subrubros : [];
 }
 function subrubroDeProducto(producto) {
-  const nombre = String(producto?.nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return SUBRUBROS_ALMACEN.find(([, , patron]) => patron && patron.test(nombre))?.[0] || "otros";
+  return producto?.subrubroId == null ? "" : String(producto.subrubroId);
+}
+function rubroMenuEscritorio(rubro) {
+  const slug = rubro?.slug || "";
+  const subrubros = subrubrosParaRubro(rubro);
+  if (!subrubros.length) return categoryButton(rubro);
+  const abierto = state.rubroExpandido === slug;
+  const boton = categoryButton(rubro).replace('data-rubro=', 'data-expand-rubro=');
+  return `<div class="desktop-rubro-group">${boton}<button type="button" class="desktop-rubro-toggle" data-expand-rubro="${escapeHtml(slug)}" aria-label="Desplegar subrubros" aria-expanded="${abierto}">${abierto ? '⌄' : '›'}</button></div>` +
+    (abierto ? `<div class="desktop-subrubros"><button class="category-subrubro" data-rubro="${escapeHtml(slug)}">Ver todos los productos</button>${subrubros.map(sub => `<button class="category-subrubro${state.subrubro === String(sub.id) && state.rubro === slug ? ' is-active' : ''}" data-subrubro="${escapeHtml(String(sub.id))}" data-parent-rubro="${escapeHtml(slug)}">${escapeHtml(sub.nombre)}</button>`).join('')}</div>` : '');
 }
 function rubroMenuMovil(rubro) {
   const slug = rubro?.slug || "";
@@ -651,14 +648,14 @@ function rubroMenuMovil(rubro) {
   if (!abierto) return boton;
   return boton + `<div class="category-subrubros" aria-label="Subrubros de ${escapeHtml(rubro.nombre)}">
     <button type="button" class="category-subrubro${state.rubro === slug && !state.subrubro ? ' is-active' : ''}" data-rubro="${escapeHtml(slug)}">Ver todos los productos <span>→</span></button>
-    ${subrubros.map(([id, nombre]) => `<button type="button" class="category-subrubro${state.rubro === slug && state.subrubro === id ? ' is-active' : ''}" data-subrubro="${id}" data-parent-rubro="${escapeHtml(slug)}">${escapeHtml(nombre)}<span>›</span></button>`).join('')}
+    ${subrubros.map(sub => `<button type="button" class="category-subrubro${state.rubro === slug && state.subrubro === String(sub.id) ? ' is-active' : ''}" data-subrubro="${escapeHtml(String(sub.id))}" data-parent-rubro="${escapeHtml(slug)}">${escapeHtml(sub.nombre)}<span>›</span></button>`).join('')}
   </div>`;
 }
 
 function renderCategories() {
   // Los accesos principales son independientes del filtro de rubros.
   const mobileEntry = (action, title, active = false) => `<button class="category-button category-button--shortcut${active ? ' is-active' : ''}" type="button" data-menu-view="${action}"${active ? ' aria-current="page"' : ''}><span class="category-button__icon category-logo tone-red" aria-hidden="true">${mobileMenuIcon(action)}</span><span>${title}</span><svg class="category-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`;
-  els.nav.innerHTML = state.rubros.map(r => categoryButton(r)).join("");
+  els.nav.innerHTML = state.rubros.map(rubroMenuEscritorio).join("");
   const isHome = !state.modoCatalogo && !state.rubro && !state.busqueda && !document.body.classList.contains('catalogo-mobile-offers-active') && !document.body.classList.contains('catalogo-mobile-bestsellers-active');
   els.mobileNav.innerHTML = [
     mobileEntry('inicio', 'Inicio', isHome),
@@ -917,7 +914,7 @@ function updateHeading() {
     els.title.textContent = `“${state.busqueda}”`;
   } else if (selected) {
     els.eyebrow.textContent = "RUBRO";
-    els.title.textContent = state.subrubro ? `${selected.nombre} · ${SUBRUBROS_ALMACEN.find(([id]) => id === state.subrubro)?.[1] || state.subrubro}` : selected.nombre;
+    els.title.textContent = state.subrubro ? `${selected.nombre} · ${subrubrosParaRubro(selected).find(sub => String(sub.id) === state.subrubro)?.nombre || state.subrubro}` : selected.nombre;
   } else {
     els.eyebrow.textContent = "CATÁLOGO";
     els.title.textContent = "Todos los productos";
@@ -1017,31 +1014,10 @@ async function cargarProductos({ append = false } = {}) {
       syncViewMode();
       return true;
     }
-    if (state.subrubro && state.rubro) {
-      let todos = state.cacheSubrubros.get(state.rubro);
-      if (!todos) {
-        todos = [];
-        let pagina = 1;
-        let paginas = 1;
-        do {
-          const params = new URLSearchParams({ pagina: String(pagina), limite: "100", rubro: state.rubro });
-          const respuesta = await apiJson(`/catalogo/api/productos?${params}`);
-          todos.push(...(Array.isArray(respuesta.productos) ? respuesta.productos : []));
-          paginas = Math.max(1, Number(respuesta.paginas) || 1);
-          pagina++;
-        } while (pagina <= paginas && pagina <= 100);
-        state.cacheSubrubros.set(state.rubro, todos);
-      }
-      const filtrados = todos.filter(p => subrubroDeProducto(p) === state.subrubro);
-      state.total = filtrados.length;
-      state.paginas = Math.ceil(state.total / PAGE_SIZE);
-      state.productos = filtrados.slice((state.pagina - 1) * PAGE_SIZE, state.pagina * PAGE_SIZE);
-      renderProducts(); updateHeading(); renderCategories(); syncViewMode();
-      return true;
-    }
     const params = new URLSearchParams({ pagina: String(state.pagina), limite: String(PAGE_SIZE) });
     if (state.busqueda) params.set("q", state.busqueda);
     if (state.rubro) params.set("rubro", state.rubro);
+    if (state.rubro && state.subrubro) params.set("subrubro", state.subrubro);
     const data = await apiJson(`/catalogo/api/productos?${params}`);
     const nuevos = Array.isArray(data.productos) ? data.productos : [];
     state.productos = append ? [...state.productos, ...nuevos] : nuevos;

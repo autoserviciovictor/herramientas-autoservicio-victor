@@ -2207,3 +2207,29 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
 .catalog-subrubros-lista{display:grid;gap:7px;margin-bottom:12px}.catalog-subrubro-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #e4eaf2;border-radius:9px;font-size:13px;font-weight:600}
 .catalog-subrubro-item>div{display:flex;gap:6px}.catalog-subrubro-item button{border:1px solid #e3e9f1;background:#fff;border-radius:7px;padding:6px 9px;font-size:11px;cursor:pointer}.catalog-subrubro-item button:last-child{color:#e51d42;background:#fff5f6;border-color:#ffd6dd}
 .catalog-subrubros-nuevo{display:flex;gap:8px}.catalog-subrubros-nuevo input{flex:1;min-width:0;border:1px solid #dfe5ee;border-radius:9px;padding:10px;font-size:13px}.catalog-subrubros-nuevo button{white-space:nowrap}.catalog-subrubros-vacio{color:#76839a}
+
+/* Edición de subrubros en la misma fila del modal */
+.catalog-subrubro-item.is-editing{display:block}
+.catalog-subrubro-item .catalog-subrubro-editor{display:flex;align-items:center;gap:7px;width:100%;margin:0}
+.catalog-subrubro-editor input{flex:1;min-width:0;padding:9px 10px;border:1px solid #dfe5ee;border-radius:8px;background:#fff;color:#172033;font:inherit;outline:none}
+.catalog-subrubro-editor input:focus,.catalog-subrubro-editor input:focus-visible{border-color:#dfe5ee!important;outline:none!important;box-shadow:none!important}
+.catalog-subrubro-editor .catalog-subrubro-guardar{background:#f31e46;color:#fff;border-color:#f31e46;font-weight:700}
+.catalog-subrubro-editor .catalog-subrubro-cancelar{color:#435066;background:#f5f7fa;border-color:#dfe5ee}
+.catalog-subrubro-item [hidden]{display:none!important}
+@media(max-width:520px){.catalog-subrubro-item .catalog-subrubro-editor{flex-wrap:wrap}.catalog-subrubro-editor input{flex-basis:100%}}
+
+/* Mantener borde neutro durante la edición de subrubros. */
+#catalogRubroModal .catalog-subrubro-editor input:is(:focus,:focus-visible), .catalog-subrubro-editor input:is(:focus,:focus-visible){border-color:#dfe5ee!important;outline:none!important;box-shadow:none!important;}
+
+/* Subrubros: un único marco exterior, sin campo redondeado interno ni salto de tamaño. */
+#catalogRubroModal .catalog-subrubro-item.is-editing{padding:9px 10px;min-width:0;box-sizing:border-box}
+#catalogRubroModal .catalog-subrubro-item .catalog-subrubro-editor{min-width:0;box-sizing:border-box}
+#catalogRubroModal .catalog-subrubro-editor input,
+#catalogRubroModal .catalog-subrubro-editor input:focus,
+#catalogRubroModal .catalog-subrubro-editor input:focus-visible{
+  min-width:0;height:27px;min-height:0;box-sizing:border-box;
+  padding:2px 0;border:0!important;border-radius:0!important;
+  outline:0!important;box-shadow:none!important;background:transparent!important;
+}
+#catalogRubroModal .catalog-subrubro-item.is-editing:focus-within{outline:0;box-shadow:none}
+#catalogRubroModal .catalog-subrubro-editor button{flex-shrink:0}
