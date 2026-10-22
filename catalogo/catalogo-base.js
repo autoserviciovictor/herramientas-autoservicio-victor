@@ -637,7 +637,7 @@ function rubroMenuEscritorio(rubro) {
   if (!subrubros.length) return categoryButton(rubro);
   const abierto = state.rubroExpandido === slug;
   const boton = categoryButton(rubro).replace('data-rubro=', 'data-expand-rubro=');
-  return `<div class="desktop-rubro-group">${boton}<button type="button" class="desktop-rubro-toggle" data-expand-rubro="${escapeHtml(slug)}" aria-label="Desplegar subrubros" aria-expanded="${abierto}">${abierto ? '⌄' : '›'}</button></div>` +
+  return `<div class="desktop-rubro-group">${boton}<button type="button" class="desktop-rubro-toggle" data-expand-rubro="${escapeHtml(slug)}" aria-label="Desplegar subrubros" aria-expanded="${abierto}"><svg class="desktop-rubro-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>` +
     (abierto ? `<div class="desktop-subrubros"><button class="category-subrubro" data-rubro="${escapeHtml(slug)}">Ver todos los productos</button>${subrubros.map(sub => `<button class="category-subrubro${state.subrubro === String(sub.id) && state.rubro === slug ? ' is-active' : ''}" data-subrubro="${escapeHtml(String(sub.id))}" data-parent-rubro="${escapeHtml(slug)}">${escapeHtml(sub.nombre)}</button>`).join('')}</div>` : '');
 }
 function rubroMenuMovil(rubro) {

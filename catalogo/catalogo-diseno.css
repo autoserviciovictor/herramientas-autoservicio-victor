@@ -1180,8 +1180,8 @@ html.catalogo-scroll-locked { overflow: hidden !important; overscroll-behavior: 
 /* Subrubros del catálogo en escritorio: misma jerarquía que en móvil. */
 @media(min-width: 769px){
   .desktop-rubro-group{display:flex;align-items:center;position:relative}
-  .desktop-rubro-group>.category-button{flex:1;min-width:0;padding-right:32px}
-  .desktop-rubro-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#64748b;cursor:pointer;font-size:19px;padding:5px 8px}
+  .desktop-rubro-group>.category-button{flex:1;min-width:0;padding-right:34px}
+  .desktop-rubro-toggle{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:26px;height:28px;border:0;border-radius:6px;background:transparent;color:#64748b;cursor:pointer;padding:0;line-height:1}.desktop-rubro-chevron{display:block;width:16px;height:16px;flex:none;transition:transform .18s ease}.desktop-rubro-toggle[aria-expanded="true"] .desktop-rubro-chevron{transform:rotate(180deg)}.desktop-rubro-toggle:hover{color:#ef173c;background:#fff0f2}
   .desktop-subrubros{display:grid;gap:3px;margin:0 5px 8px 19px}
   .desktop-subrubros .category-subrubro{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:8px;color:#334155;cursor:pointer;font-size:12px}
   .desktop-subrubros .category-subrubro:hover,.desktop-subrubros .category-subrubro.is-active{background:#fff0f2;color:#ed173c}

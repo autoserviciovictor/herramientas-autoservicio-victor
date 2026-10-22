@@ -1303,6 +1303,8 @@ function renderTabla() {
   });
   const tabla = head.closest(".horarios-table");
   if (tabla) {
+    // Mantener el ancho de las fechas legible en pantallas reducidas.
+    tabla.style.setProperty("--horarios-cantidad-dias", String(diasDelMes()));
     let columnas = tabla.querySelector("#horariosTablaColumnas");
     if (!columnas) {
       columnas = document.createElement("colgroup");

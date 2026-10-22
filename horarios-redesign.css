@@ -2807,3 +2807,69 @@ body.en-horarios.horarios-vista-calendario .horarios-descanso-card small {
 body.en-horarios.horarios-vista-calendario .horarios-trabajador-avatar {
   font-size: 12.5px !important;
 }
+
+/* Escritorio compacto: mostrar el mes completo sin desplazamiento horizontal.
+   Las columnas de los días se reparten el espacio disponible. */
+@media (min-width: 901px) and (max-width: 1750px) {
+  body.en-horarios.horarios-vista-calendario .horarios-board-card {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-table-wrap {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    scrollbar-width: none !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-col-personal,
+  body.en-horarios.horarios-vista-calendario .horarios-table .empleado-col {
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-col-dia,
+  body.en-horarios.horarios-vista-calendario .horarios-table th:not(.empleado-col),
+  body.en-horarios.horarios-vista-calendario .horarios-table td:not(.empleado-col) {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-table thead th:not(.empleado-col) > span {
+    font-size: 10.35px !important;
+    letter-spacing: -.03em !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horarios-table thead th:not(.empleado-col) > strong {
+    font-size: 12.65px !important;
+  }
+  body.en-horarios.horarios-vista-calendario .horario-cell {
+    font-size: 11.5px !important;
+    letter-spacing: -.03em !important;
+    border-radius: 5px !important;
+  }
+}
+@media (min-width: 901px) and (max-width: 1250px) {
+  body.en-horarios.horarios-vista-calendario .horarios-col-personal,
+  body.en-horarios.horarios-vista-calendario .horarios-table .empleado-col {
+    width: 116px !important;
+    min-width: 116px !important;
+    max-width: 116px !important;
+    padding-left: 4px !important;
+    padding-right: 3px !important;
+  }
+  body.en-horarios.horarios-vista-calendario .empleado-avatar {
+    width: 22px !important;
+    height: 22px !important;
+    flex-basis: 22px !important;
+  }
+  body.en-horarios.horarios-vista-calendario .empleado-cell-inner { gap: 3px !important; }
+  body.en-horarios.horarios-vista-calendario .empleado-info > strong { font-size: 12.65px !important; }
+  body.en-horarios.horarios-vista-calendario .empleado-info > small { font-size: 10.35px !important; }
+  body.en-horarios.horarios-vista-calendario .horario-cell { font-size: 10.35px !important; }
+}
