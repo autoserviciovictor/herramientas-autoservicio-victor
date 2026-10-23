@@ -182,6 +182,27 @@ async function obtenerEstadoCatalogoPublicoDb() {
   };
 }
 
+async function obtenerRevisionCatalogoDb() {
+  await asegurarEsquemaCatalogoPublico();
+  const r = await query('SELECT updated_at FROM catalog_import_settings WHERE id=1');
+  return r.rows[0]?.updated_at || null;
+}
+
+async function consultarPreciosCarritoDb(codigos = []) {
+  await asegurarEsquemaCatalogoPublico();
+  const unicos = [...new Set(codigos.map((c) => String(c).trim()).filter(Boolean))].slice(0, 100);
+  if (!unicos.length) return [];
+  const r = await query(`SELECT p.code, p.article, p.price, s.featured, s.offer_price,
+    (s.visible AND c.active AND p.stock > 0) AS disponible
+    FROM product_catalog p
+    JOIN catalog_product_settings s ON s.code=p.code
+    JOIN catalog_categories c ON c.category_id=s.category_id
+    WHERE p.code = ANY($1::text[])`, [unicos]);
+  return r.rows.map((x) => ({ codigo: x.code, nombre: x.article,
+    precio: x.featured && x.offer_price != null ? Number(x.offer_price) : Number(x.price),
+    disponible: Boolean(x.disponible) }));
+}
+
 async function listarRubrosPublicosDb() {
   await asegurarEsquemaCatalogoPublico();
   const resultado = await query(`
@@ -533,28 +554,38 @@ async function sincronizarVisibilidadStockCatalogoDb(productos = [], cliente = n
       const code = textoLimitado(producto?.codigo, 160);
       const stock = Number(producto?.stock);
       if (!code) return null;
-      return { code, visible: Number.isFinite(stock) && stock > 0 };
+      return { code, conStock: Number.isFinite(stock) && stock > 0 };
     })
     .filter(Boolean);
 
   if (!filas.length) return { activos: 0, desactivados: 0 };
 
-  // La importación del Excel manda sobre la visibilidad comercial: stock > 0
-  // publica; stock <= 0 (o inválido, normalizado a 0) oculta. Se preservan
-  // imágenes, rubro, marca, presentación, unidad y destacado.
-  await ejecutarConsultaCatalogo(cliente, `
-    INSERT INTO catalog_product_settings(code, visible, updated_at)
-    SELECT x.code, x.visible, NOW()
-    FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, visible BOOLEAN)
-    JOIN product_catalog p ON p.code=x.code
-    ON CONFLICT(code) DO UPDATE
-      SET visible=EXCLUDED.visible, updated_at=NOW()
-  `, [JSON.stringify(filas)]);
-
-  const activos = filas.filter((fila) => fila.visible).length;
-  return { activos, desactivados: filas.length - activos };
+  // Solo publicar productos con stock Y una imagen confirmada real.
+  // El estado de imagen se conserva entre importaciones.
+  const resultado = await ejecutarConsultaCatalogo(cliente, `
+    WITH entradas AS (
+      SELECT x.code, x.con_stock
+      FROM jsonb_to_recordset($1::jsonb) AS x(code TEXT, con_stock BOOLEAN)
+    ), actualizados AS (
+      INSERT INTO catalog_product_settings(code, visible, updated_at)
+      SELECT e.code,
+        (e.con_stock AND COALESCE(s.image_status, 'sin_imagen')='confirmada'
+         AND (s.image_data IS NOT NULL OR NULLIF(BTRIM(s.image_url),'') IS NOT NULL)),
+        NOW()
+      FROM entradas e
+      JOIN product_catalog p ON p.code=e.code
+      LEFT JOIN catalog_product_settings s ON s.code=e.code
+      ON CONFLICT(code) DO UPDATE
+        SET visible=EXCLUDED.visible, updated_at=NOW()
+      RETURNING visible
+    )
+    SELECT COUNT(*) FILTER (WHERE visible)::int AS activos,
+           COUNT(*) FILTER (WHERE NOT visible)::int AS desactivados
+    FROM actualizados
+  `, [JSON.stringify(filas.map(({code,conStock}) => ({code,con_stock:conStock}))) ]);
+  return { activos: Number(resultado.rows[0]?.activos)||0,
+    desactivados: Number(resultado.rows[0]?.desactivados)||0 };
 }
-
 // Idempotente: crea únicamente los subrubros aprobados y asocia los productos
 // sin subrubro. No pisa las selecciones manuales del administrador.
 async function asegurarSubrubrosAutomaticosCatalogoDb(cliente = null) {
@@ -1264,6 +1295,8 @@ async function listarPendientesProcesoImagenesDb(limite = 10) {
 }
 
 module.exports = {
+  obtenerRevisionCatalogoDb,
+  consultarPreciosCarritoDb,
   UNIDADES_VENTA,
   ESTADOS_IMAGEN: ESTADOS_IMAGEN_VALIDOS,
   asegurarEsquemaCatalogoPublico,

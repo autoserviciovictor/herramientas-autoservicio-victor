@@ -1036,15 +1036,34 @@ async function verificarCredencialGoogle(credential) {
   }
 }
 
+const { obtenerRevisionCatalogoDb, consultarPreciosCarritoDb } = require("./db-catalogo-publico");
+
 // Catálogo público: estas rutas son deliberadamente anónimas y se declaran
 // antes del middleware global de sesión. Solo exponen productos marcados como
 // visibles; la administración del catálogo se implementa en la Etapa 2.
 app.use("/catalogo/api", (req, res, next) => {
   res.set({
-    "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    "Cache-Control": "no-store, no-cache, must-revalidate",
     "X-Robots-Tag": "noindex",
   });
   next();
+});
+
+app.get("/catalogo/api/revision", async (req, res) => {
+  try { res.json({ ok: true, revision: await obtenerRevisionCatalogoDb() }); }
+  catch (error) { res.status(500).json({ ok: false, mensaje: "No se pudo consultar la revisión" }); }
+});
+
+app.post("/catalogo/api/precios-carrito", async (req, res) => {
+  try {
+    const codigos = req.body?.codigos;
+    if (!Array.isArray(codigos) || codigos.length > 100 ||
+        codigos.some((c) => typeof c !== "string" || c.length > 160))
+      return res.status(400).json({ ok: false, mensaje: "Códigos inválidos" });
+    res.json({ ok: true, productos: await consultarPreciosCarritoDb(codigos) });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: "No se pudieron consultar los precios" });
+  }
 });
 
 app.get("/catalogo/api/estado", async (req, res) => {
@@ -5289,6 +5308,7 @@ async function ejecutarImportacionProductos(items, aplicarCambios = true) {
       const stockCatalogo = autoStock
         ? await sincronizarVisibilidadStockCatalogoDb(catalogo, cliente)
         : { omitido: true, motivo: "Publicación automática desactivada" };
+      await cliente.query("UPDATE catalog_import_settings SET updated_at=NOW() WHERE id=1");
       const dependencias = await sincronizarProductosMaestrosEnTodaLaApp(catalogo, cliente);
       const provisionalesConciliados = await conciliarProductosProvisionalesDb(catalogo, cliente);
       return { rubros, stockCatalogo, dependencias, provisionalesConciliados };

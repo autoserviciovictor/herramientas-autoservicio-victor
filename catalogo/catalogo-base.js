@@ -535,6 +535,7 @@ async function enviarPedidoWhatsApp() {
   if (els.checkoutEnviarWhatsapp) { els.checkoutEnviarWhatsapp.disabled = true; els.checkoutEnviarWhatsapp.textContent = "Registrando pedido..."; }
   mensajeCheckout(els.checkoutMensajePaso3, "");
   try {
+    await refrescarPreciosCarrito();
     const pedido = await registrarPedidoCatalogo();
     const mensaje = generarMensajePedido();
     const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
@@ -966,6 +967,55 @@ async function cambiarPagina(pagina) {
   const ok = await cargarProductos();
   if (!ok) { state.pagina = anterior; renderPagination(); return; }
   document.querySelector(".catalogo-products-toolbar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+let revisionCatalogoActual = null;
+let actualizacionCatalogoEnCurso = false;
+
+async function refrescarPreciosCarrito() {
+  if (!state.carrito.length) return;
+  const response = await fetch(`${API_BASE_URL}/catalogo/api/precios-carrito`, {
+    method: "POST", cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ codigos: state.carrito.map((x) => String(x.codigo)) }),
+  });
+  if (!response.ok) throw new Error("No se pudieron verificar los precios del carrito");
+  const data = await response.json();
+  if (!data.ok) throw new Error(data.mensaje || "Error verificando precios");
+  const vigentes = new Map((data.productos || []).map((x) => [String(x.codigo), x]));
+  let cambio = false;
+  for (const item of state.carrito) {
+    const actual = vigentes.get(String(item.codigo));
+    if (!actual) continue;
+    if (Number.isFinite(Number(actual.precio)) && Number(item.precio) !== Number(actual.precio)) {
+      item.precio = Number(actual.precio); cambio = true;
+    }
+    if (actual.nombre && item.nombre !== actual.nombre) { item.nombre = actual.nombre; cambio = true; }
+  }
+  if (cambio) {
+    guardarCarrito(); renderCart();
+    if (els.checkout?.classList.contains("is-open")) renderCheckoutReview();
+    els.feedback.textContent = "Se actualizaron los precios del carrito según el último Excel.";
+  }
+}
+
+async function comprobarActualizacionCatalogo() {
+  if (actualizacionCatalogoEnCurso) return;
+  actualizacionCatalogoEnCurso = true;
+  try {
+    const data = await apiJson("/catalogo/api/revision");
+    const revision = String(data.revision || "");
+    if (revisionCatalogoActual !== null && revision !== revisionCatalogoActual) {
+      // No perder cantidades ni vaciar el carrito al recargar los productos.
+      ofertasCargadas = false;
+      state.productosGrupo = [];
+      await cargarProductos();
+      await cargarOfertasHome();
+    }
+    revisionCatalogoActual = revision;
+    await refrescarPreciosCarrito();
+  } catch (error) { console.warn("No se pudo sincronizar el catálogo:", error); }
+  finally { actualizacionCatalogoEnCurso = false; }
 }
 
 async function apiJson(path) {
@@ -1402,6 +1452,12 @@ async function iniciar() {
   await cargarEstadoCatalogo();
   await cargarRubros();
   await cargarProductos();
+  await comprobarActualizacionCatalogo();
+  // Comprobación frecuente para catálogos web y de la app ya abiertos.
+  setInterval(comprobarActualizacionCatalogo, 5000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) void comprobarActualizacionCatalogo();
+  });
 }
 
 iniciar();
