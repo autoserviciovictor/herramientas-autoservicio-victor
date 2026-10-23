@@ -7053,8 +7053,18 @@ app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async
 
     const oferta = normalizarOfertaVencimiento(req.body.oferta);
     const detalleOferta = req.body.detalleOferta === undefined ? undefined : req.body.detalleOferta;
-    if (detalleOferta !== undefined && detalleOferta !== null && (typeof detalleOferta !== "object" || Array.isArray(detalleOferta))) {
-      return res.status(400).json({ ok: false, mensaje: "Detalle de oferta inválido" });
+    if (oferta === "Sí") {
+      if (!detalleOferta || typeof detalleOferta !== "object" || Array.isArray(detalleOferta)) {
+        return res.status(400).json({ ok: false, mensaje: "Para activar una oferta debés indicar descuento y precio final." });
+      }
+      const descuento = Number(detalleOferta.descuento);
+      const precioActual = Number(detalleOferta.precioActual);
+      const precioFinal = Number(detalleOferta.precioOferta ?? detalleOferta.precioDescuento);
+      if (!Number.isFinite(descuento) || descuento <= 0 || descuento >= 100 ||
+          !Number.isFinite(precioActual) || precioActual <= 0 ||
+          !Number.isFinite(precioFinal) || precioFinal <= 0) {
+        return res.status(400).json({ ok: false, mensaje: "Porcentaje o precios de oferta inválidos." });
+      }
     }
     const actualizadoDb = await actualizarVencimientoDb(id, { oferta, detalleOferta: oferta === "Sí" ? detalleOferta : null });
     if (!actualizadoDb)

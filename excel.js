@@ -416,7 +416,7 @@ function normalizarVencimientoServidor(registro = {}) {
 }
 
 export async function listarVencimientos() {
-  const data = await pedirJson("/vencimientos");
+  const data = await pedirJson("/vencimientos", { cache: "no-store" });
   return (data.vencimientos || []).map(normalizarVencimientoServidor);
 }
 

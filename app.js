@@ -1555,7 +1555,11 @@ async function entrarPantalla(nombre, opciones = {}) {
   }
   if (nombre === "vencimientos") cambiarTabVencimientos("cargar");
   if (nombre === "lotes") await window.LotesModule?.activar?.();
-  if (nombre === "cartelOferta") { renderBandejaCartelesOferta(); renderListadoCartelesOfertas(); }
+  if (nombre === "cartelOferta") {
+    renderBandejaCartelesOferta();
+    renderListadoCartelesOfertas();
+    cargarOfertasCompartidasCarteles();
+  }
   if (["cargados", "vencimientos"].includes(nombre)) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -2923,9 +2927,7 @@ async function cargarListadoVencimientos(opciones = {}) {
     ]);
     vencimientosCache = Array.isArray(vencimientos) ? vencimientos : [];
     // El servidor es la fuente compartida para los datos de ofertas.
-    const locales = leerOfertasCarteles();
-    const remotos = vencimientosCache.filter((v) => v.detalleOferta && tieneOferta(v)).map((v) => ({ ...v.detalleOferta, id: String(v.id) }));
-    guardarOfertasCarteles([...locales.filter((o) => !vencimientosCache.some((v) => String(v.id) === String(o.id) && (v.detalleOferta || !tieneOferta(v)))), ...remotos]);
+    sincronizarCartelesConVencimientos(vencimientosCache);
 
     // El servidor puede conservar durante unos segundos una lectura anterior de
     // /vencimientos. Si acabamos de crear un lote, garantizamos que ese registro
@@ -3461,7 +3463,13 @@ async function alternarOfertaVencimiento(item) {
       "ok",
     );
     const nuevaOferta = !tieneOferta(item);
-    await actualizarOfertaVencimiento(item.id, nuevaOferta);
+    if (nuevaOferta) {
+      abrirDetalleVencimiento(item);
+      mostrarEdicionVencimiento();
+      establecerOfertaEdicionVencimiento("activa");
+      return false;
+    }
+    await actualizarOfertaVencimiento(item.id, false);
     await cargarListadoVencimientos({
       mantenerVista: true,
       vista,
@@ -3724,6 +3732,29 @@ function claveOfertasCarteles() { return `autoservicio_ofertas_carteles_v2:${cla
 function leerOfertasCarteles() { try { const data = JSON.parse(localStorage.getItem(claveOfertasCarteles()) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; } }
 function guardarOfertasCarteles(ofertas) { localStorage.setItem(claveOfertasCarteles(), JSON.stringify(ofertas)); }
 function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCarteles().filter(x => String(x.id) !== String(id))); guardarBandejaCartelesOferta(leerBandejaCartelesOferta().filter(x => String(x.id) !== String(id))); }
+async function cargarOfertasCompartidasCarteles() {
+  try {
+    const registros = await listarVencimientos();
+    sincronizarCartelesConVencimientos(registros);
+    renderListadoCartelesOfertas();
+    renderBandejaCartelesOferta();
+  } catch (error) {
+    console.error("No se pudieron cargar las ofertas compartidas:", error);
+    mostrarMensaje("No se pudieron actualizar las ofertas de Carteles desde el servidor.", "error");
+  }
+}
+
+function sincronizarCartelesConVencimientos(registros) {
+  const ofertas = (registros || [])
+    .filter((v) => tieneOferta(v) && v.detalleOferta)
+    .map((v) => ({ ...v.detalleOferta, id: String(v.id), articulo: v.articulo, codigo: v.codigo }));
+  guardarOfertasCarteles(ofertas);
+  const porId = new Map(ofertas.map((o) => [String(o.id), o]));
+  guardarBandejaCartelesOferta(leerBandejaCartelesOferta()
+    .filter((o) => porId.has(String(o.id)))
+    .map((o) => porId.get(String(o.id))));
+}
+
 function renderListadoCartelesOfertas() {
   const host = $("cartelesOfertasLista"); if (!host) return;
   const ofertas = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso());
@@ -3811,7 +3842,6 @@ async function guardarCartelOfertaActual() {
     const seleccion = leerBandejaCartelesOferta().map(x => String(x.id) === datos.id ? registro : x);
     guardarBandejaCartelesOferta(seleccion);
     const original = vencimientosCache.find(x => String(x.id) === datos.id) || cartelOfertaItemActual;
-    if (original && !tieneOferta(original)) await actualizarOfertaVencimiento(datos.id, true);
     cerrarModalOfertaCartel();
     renderListadoCartelesOfertas();
     await cargarListadoVencimientos({ mantenerVista: true });
@@ -4321,7 +4351,7 @@ function mostrarEdicionVencimiento() {
     elementos.vencEditDepositoInput.value = normalizarCantidadVencimiento(
       item.deposito,
     );
-  const ofertaGuardada = item.detalleOferta || leerOfertasCarteles().find((o) => String(o.id) === String(item.id));
+  const ofertaGuardada = item.detalleOferta || null;
   $("vencOfertaPrecioActual").value = String(ofertaGuardada?.precioActual || precioVencimiento(item) || "");
   $("vencOfertaDescuento").value = String(ofertaGuardada?.descuento || 50);
   $("vencOfertaPrecioFinal").value = String(ofertaGuardada?.precioDescuento || ofertaGuardada?.precioOferta || "");
