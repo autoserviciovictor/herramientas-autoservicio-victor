@@ -60,7 +60,7 @@ async function api(ruta, opciones = {}) {
   if (opciones.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const r = await fetch(`${API_BASE_URL}${ruta}`, { ...opciones, headers });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok || data.ok === false) throw new Error(data.mensaje || "No se pudo completar la operación");
+  if (!r.ok || data.ok === false) throw new Error(data.mensaje || `Error HTTP ${r.status}: no se pudo completar la operación`);
   return data;
 }
 
@@ -1312,6 +1312,66 @@ function cerrarImportacionImagenes() {
 function abrirModal(id) { const m = $(id); if (!m) return; m.classList.remove("oculto"); m.setAttribute("aria-hidden", "false"); }
 function cerrarModal(id) { const m = $(id); if (!m) return; m.classList.add("oculto"); m.setAttribute("aria-hidden", "true"); }
 
+let paginaHistorialCatalogo = 1;
+let totalHistorialCatalogo = 0;
+let cargandoHistorialCatalogo = false;
+function detalleHistorialCatalogo(m) {
+  const nombres = { precio:'Precio', stock:'Stock', visible:'Visibilidad', imagen:'Imagen', subrubro:'Subrubro', rubro:'Rubro', nombre:'Nombre', marca:'Marca', presentacion:'Presentación', destacado:'Destacado', precioOferta:'Precio de oferta' };
+  const antes = m.anterior || {}, nuevo = m.nuevo || {};
+  const campos = [...new Set([...Object.keys(antes), ...Object.keys(nuevo)])];
+  const valores = campos.map(c => {
+    const formato = v => v === null || v === undefined ? '—' : typeof v === 'boolean' ? (v ? 'Sí' : 'No') : typeof v === 'object' ? JSON.stringify(v) : String(v);
+    return `<div class="catalog-history-change"><b>${esc(nombres[c] || c)}</b><span>${esc(formato(antes[c]))}</span><span class="catalog-history-arrow">→</span><strong>${esc(formato(nuevo[c]))}</strong></div>`;
+  });
+  return `${valores.join('')}${m.detalle && !campos.length ? `<span>${esc(m.detalle)}</span>` : ''}` || '<span class="catalog-history-muted">Sin detalle adicional</span>';
+}
+async function cargarHistorialCatalogo() {
+  const contenedor = $("catalogHistorialResultados");
+  if (!contenedor || cargandoHistorialCatalogo) return;
+  cargandoHistorialCatalogo = true;
+  contenedor.innerHTML = '<tr><td colspan="6" class="catalog-history-empty">Cargando movimientos…</td></tr>';
+  try {
+    const params = new URLSearchParams({ pagina:String(paginaHistorialCatalogo), q:$("catalogHistorialBuscar")?.value||"", accion:$("catalogHistorialTipo")?.value||"" });
+    const data = await api(`/admin/catalogo/historial?${params}`);
+    totalHistorialCatalogo = Number(data.total) || 0;
+    const movimientos = data.movimientos || [];
+    $("catalogHistorialTotal").textContent = numero(totalHistorialCatalogo);
+    $("catalogHistorialPublicados").textContent = numero(movimientos.filter(m=>m.accion==='Publicado').length);
+    $("catalogHistorialOcultados").textContent = numero(movimientos.filter(m=>m.accion==='Ocultado').length);
+    $("catalogHistorialUltimo").textContent = movimientos.length ? new Date(movimientos[0].created_at).toLocaleDateString('es-AR') : '—';
+    contenedor.innerHTML = movimientos.map(m => {
+      const fecha = new Date(m.created_at);
+      const clase = m.accion==='Publicado' ? 'visible' : m.accion==='Ocultado' ? 'oculto' : 'neutro';
+      const accion = m.accion === 'Publicado' ? 'Ocultar' : m.accion === 'Ocultado' ? 'Hacer visible' : 'Cambiar estado';
+      const visible = m.accion === 'Publicado' ? '0' : m.accion === 'Ocultado' ? '1' : '';
+      return `<tr><td><strong>${esc(fecha.toLocaleDateString('es-AR'))}</strong><small>${esc(fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}))}</small></td>
+        <td><strong>${esc(m.nombre||m.code||'Producto')}</strong><small>${esc(m.code||'Sin código')}</small></td>
+        <td><span class="catalog-history-status ${clase}">${esc(m.accion)}</span></td>
+        <td><strong>${esc(m.origen||'Sistema')}</strong><small>${esc(m.usuario||'Sistema')}</small></td>
+        <td class="catalog-history-details">${detalleHistorialCatalogo(m)}</td>
+        <td>${m.code ? `<button type="button" class="catalog-history-action" data-hist-cambiar="${esc(m.code)}" data-hist-visible="${visible}">${esc(accion)}</button>` : '—'}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="catalog-history-empty">Todavía no hay movimientos registrados con estos filtros.</td></tr>';
+    $("catalogHistorialPagina").textContent = `Página ${paginaHistorialCatalogo} de ${Math.max(1,Math.ceil(totalHistorialCatalogo/50))} · ${numero(totalHistorialCatalogo)} movimientos`;
+    $("catalogHistorialAnterior").disabled = paginaHistorialCatalogo <= 1;
+    $("catalogHistorialSiguiente").disabled = paginaHistorialCatalogo * 50 >= totalHistorialCatalogo;
+    contenedor.querySelectorAll('[data-hist-cambiar]').forEach(b=>b.addEventListener('click',async()=>{
+      b.disabled=true;
+      try {
+        const nuevoVisible = b.dataset.histVisible === '' ? window.confirm('Aceptar para hacer visible el producto. Cancelar para ocultarlo.') : b.dataset.histVisible === '1';
+        await api(`/admin/catalogo/productos/${encodeURIComponent(b.dataset.histCambiar)}/visibilidad`,{method:'PATCH',body:JSON.stringify({visible:nuevoVisible})});
+        mensaje('Visibilidad actualizada.', 'ok');
+        await Promise.all([cargarEstado(),cargarProductos()]);
+        await cargarHistorialCatalogo();
+      } catch(e) { mensaje(e.message); b.disabled=false; }
+    }));
+  } catch(e) {
+    const base = API_BASE_URL || 'servidor configurado';
+    contenedor.innerHTML = `<tr><td colspan="6" class="catalog-history-empty catalog-history-error"><strong>No se pudo cargar el historial</strong><p>${esc(e.message)}</p><small>Comprobá que el servidor (${esc(base)}) tenga publicada la ruta /admin/catalogo/historial y que PostgreSQL esté disponible.</small></td></tr>`;
+    $("catalogHistorialTotal").textContent = '—';
+  } finally { cargandoHistorialCatalogo=false; }
+}
+function abrirHistorialCatalogo() { paginaHistorialCatalogo=1; abrirModal('catalogHistorialModal'); cargarHistorialCatalogo(); }
+
 function bind() {
   if (document.body.dataset.catalogAdminBound === "1") return;
   document.body.dataset.catalogAdminBound = "1";
@@ -1359,7 +1419,13 @@ function bind() {
   $("catalogPedidoGuardarObservaciones")?.addEventListener("click", guardarObservacionesPedido);
   $("catalogPedidoCerrar")?.addEventListener("click", () => cerrarModal("catalogPedidoModal"));
   const abrirCatalogoPublico = () => window.open(new URL("./catalogo/", location.href).href, "_blank", "noopener");
-  $("catalogBtnExportarSinImagen")?.addEventListener("click", exportarProductosSinImagenExcel);
+  $("catalogBtnHistorial")?.addEventListener("click", abrirHistorialCatalogo);
+  $("catalogHistorialCerrar")?.addEventListener("click",()=>cerrarModal('catalogHistorialModal'));
+  $("catalogHistorialRecargar")?.addEventListener("click",cargarHistorialCatalogo);
+  $("catalogHistorialBuscar")?.addEventListener("input",()=>{clearTimeout(estado.historialTimer);estado.historialTimer=setTimeout(()=>{paginaHistorialCatalogo=1;cargarHistorialCatalogo();},300)});
+  $("catalogHistorialTipo")?.addEventListener("change",()=>{paginaHistorialCatalogo=1;cargarHistorialCatalogo()});
+  $("catalogHistorialAnterior")?.addEventListener("click",()=>{if(paginaHistorialCatalogo>1){paginaHistorialCatalogo--;cargarHistorialCatalogo()}});
+  $("catalogHistorialSiguiente")?.addEventListener("click",()=>{if(paginaHistorialCatalogo*50<totalHistorialCatalogo){paginaHistorialCatalogo++;cargarHistorialCatalogo()}});
   $("catalogBtnVerPublico")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnVerPublicoMobile")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());

@@ -14,7 +14,7 @@ const CART_STORAGE_KEY = "autoservicio-victor-catalogo-carrito-v1";
 const CHECKOUT_STORAGE_KEY = "autoservicio-victor-catalogo-checkout-v1";
 const CUSTOMER_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-v1";
 const CUSTOMER_TOKEN_STORAGE_KEY = "autoservicio-victor-catalogo-cliente-token-v1";
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 50;
 const state = {
   rubros: [],
   rubroExpandido: "",

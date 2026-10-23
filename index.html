@@ -5862,6 +5862,27 @@
         </div>
       </div>
 
+      <div id="catalogHistorialModal" class="modal-overlay oculto" aria-hidden="true">
+        <section class="catalog-history-dialog" role="dialog" aria-modal="true" aria-labelledby="catalogHistorialTitulo">
+          <header class="catalog-history-header">
+            <div class="catalog-history-heading"><span class="catalog-history-eyebrow">CONTROL Y AUDITORÍA</span><h2 id="catalogHistorialTitulo">Historial del catálogo</h2><p>Consultá movimientos, cambios de precios y publicaciones de productos.</p></div>
+            <button type="button" id="catalogHistorialCerrar" class="catalog-history-close" aria-label="Cerrar historial">✕</button>
+          </header>
+          <div class="catalog-history-summary">
+            <div><span>Movimientos registrados</span><strong id="catalogHistorialTotal">—</strong></div>
+            <div><span>Publicaciones en esta página</span><strong id="catalogHistorialPublicados">—</strong></div>
+            <div><span>Ocultamientos en esta página</span><strong id="catalogHistorialOcultados">—</strong></div>
+            <div><span>Último movimiento</span><strong id="catalogHistorialUltimo">—</strong></div>
+          </div>
+          <div class="catalog-history-toolbar">
+            <label class="catalog-history-search"><span>Buscar</span><input id="catalogHistorialBuscar" type="search" placeholder="Producto, código o usuario…" /></label>
+            <label class="catalog-history-filter"><span>Tipo de movimiento</span><select id="catalogHistorialTipo"><option value="">Todos los movimientos</option><option>Publicado</option><option>Ocultado</option><option>Edición manual</option><option>Producto modificado</option><option>Precio actualizado</option><option>Stock actualizado</option><option>Imagen modificada</option><option>Subrubro modificado</option></select></label>
+            <button type="button" id="catalogHistorialRecargar" class="catalog-btn catalog-btn-secondary">↻ Actualizar</button>
+          </div>
+          <div class="catalog-history-table-scroll"><table class="catalog-history-table"><thead><tr><th>Fecha y hora</th><th>Producto</th><th>Movimiento</th><th>Origen / usuario</th><th>Detalle del cambio</th><th>Acción</th></tr></thead><tbody id="catalogHistorialResultados"><tr><td colspan="6" class="catalog-history-empty">Cargando movimientos…</td></tr></tbody></table></div>
+          <footer class="catalog-history-footer"><span id="catalogHistorialPagina">Página 1</span><div><button id="catalogHistorialAnterior" type="button" class="catalog-btn catalog-btn-secondary">← Anterior</button><button id="catalogHistorialSiguiente" type="button" class="catalog-btn catalog-btn-secondary">Siguiente →</button></div></footer>
+        </section>
+      </div>
       <main
         id="pantallaCatalogoAdmin"
         class="pantalla catalog-admin-screen"
@@ -5876,12 +5897,12 @@
             </div>
             <div class="catalog-admin-header-actions">
               <button
-                id="catalogBtnExportarSinImagen"
+                id="catalogBtnHistorial"
                 class="catalog-btn catalog-btn-secondary"
                 type="button"
               >
                 <svg class="app-icon"><use href="#icon-clipboard"></use></svg
-                ><span>Excel sin imagen</span>
+                ><span>Historial</span>
               </button>
               <button
                 id="catalogBtnVerPublico"

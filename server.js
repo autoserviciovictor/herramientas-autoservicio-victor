@@ -1957,6 +1957,13 @@ app.patch("/admin/catalogo/pedidos/:numero/observaciones", requerirAdministrador
   }
 });
 
+const { listarHistorialCatalogo, registrarAccionCatalogo, asegurarHistorialCatalogo } = require('./db-catalogo-historial');
+// Se instala el registro al iniciar el servidor, antes de recibir nuevas importaciones.
+asegurarEsquemaCatalogoPublico().then(() => asegurarHistorialCatalogo()).catch(e => console.error('No se pudo iniciar historial catálogo:',e));
+app.get('/admin/catalogo/historial', requerirAdministrador, async (req,res) => {
+  try { res.json({ok:true,...await listarHistorialCatalogo(req.query)}); }
+  catch(e) { console.error(e); res.status(500).json({ok:false,mensaje:'No se pudo cargar el historial'}); }
+});
 app.get("/admin/catalogo/auto-stock", requerirAdministrador, async (req, res) => {
   try { res.json({ ok: true, habilitado: await obtenerAutoStockCatalogoDb() }); }
   catch (error) { res.status(500).json({ ok: false, mensaje: error.message }); }
@@ -2076,6 +2083,7 @@ app.get("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, 
 app.put("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, res) => {
   try {
     const producto = await actualizarProductoCatalogoAdminDb(req.params.codigo, req.body || {});
+    await registrarAccionCatalogo({codigo:req.params.codigo,accion:'Edición manual',usuario:req.usuario?.usuario,detalle:'Datos del producto guardados'});
     res.json({ ok: true, producto });
   } catch (error) {
     console.error("Error actualizando producto del catálogo:", error);
@@ -2086,6 +2094,7 @@ app.put("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, 
 app.patch("/admin/catalogo/productos/:codigo/visibilidad", requerirAdministrador, async (req, res) => {
   try {
     const producto = await actualizarVisibilidadProductoCatalogoAdminDb(req.params.codigo, req.body?.visible);
+    await registrarAccionCatalogo({codigo:req.params.codigo,accion:producto.visible?'Publicado':'Ocultado',usuario:req.usuario?.usuario,detalle:'Cambio manual de visibilidad'});
     res.json({ ok: true, producto });
   } catch (error) {
     console.error("Error actualizando visibilidad del catálogo:", error);
