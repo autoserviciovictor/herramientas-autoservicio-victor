@@ -463,12 +463,12 @@ export async function actualizarVencimiento(id, registro) {
   return data.vencimiento ? normalizarVencimientoServidor(data.vencimiento) : data.vencimiento;
 }
 
-export async function actualizarOfertaVencimiento(id, oferta) {
+export async function actualizarOfertaVencimiento(id, oferta, detalleOferta) {
   const data = await pedirJson(
     `/vencimientos/${encodeURIComponent(id)}/oferta`,
     {
       method: "PATCH",
-      body: JSON.stringify({ oferta: oferta ? "Sí" : "No" }),
+      body: JSON.stringify({ oferta: oferta ? "Sí" : "No", ...(detalleOferta !== undefined ? { detalleOferta } : {}) }),
     },
   );
   return data.vencimiento;

@@ -2922,6 +2922,10 @@ async function cargarListadoVencimientos(opciones = {}) {
       }),
     ]);
     vencimientosCache = Array.isArray(vencimientos) ? vencimientos : [];
+    // El servidor es la fuente compartida para los datos de ofertas.
+    const locales = leerOfertasCarteles();
+    const remotos = vencimientosCache.filter((v) => v.detalleOferta && tieneOferta(v)).map((v) => ({ ...v.detalleOferta, id: String(v.id) }));
+    guardarOfertasCarteles([...locales.filter((o) => !vencimientosCache.some((v) => String(v.id) === String(o.id) && (v.detalleOferta || !tieneOferta(v)))), ...remotos]);
 
     // El servidor puede conservar durante unos segundos una lectura anterior de
     // /vencimientos. Si acabamos de crear un lote, garantizamos que ese registro
@@ -3131,7 +3135,7 @@ function ofertaGuardadaVencimiento(item) {
   const id = String(item.id ?? "");
   const codigo = String(item.codigo ?? "").trim();
   const ofertas = leerOfertasCarteles();
-  return ofertas.find((o) => String(o.id ?? "") === id)
+  return item.detalleOferta || ofertas.find((o) => String(o.id ?? "") === id)
     || (codigo ? ofertas.find((o) => String(o.codigo ?? "").trim() === codigo) : null)
     || null;
 }
@@ -3805,6 +3809,7 @@ async function guardarCartelOfertaActual() {
   const registro = { ...datos, copiaId: String(datos.id), guardadoEn: ahora };
   try {
     const ofertas = leerOfertasCarteles().filter(x => String(x.id) !== datos.id);
+    await actualizarOfertaVencimiento(datos.id, true, registro);
     guardarOfertasCarteles([...ofertas, registro]);
     const seleccion = leerBandejaCartelesOferta().map(x => String(x.id) === datos.id ? registro : x);
     guardarBandejaCartelesOferta(seleccion);
@@ -4319,7 +4324,7 @@ function mostrarEdicionVencimiento() {
     elementos.vencEditDepositoInput.value = normalizarCantidadVencimiento(
       item.deposito,
     );
-  const ofertaGuardada = leerOfertasCarteles().find((o) => String(o.id) === String(item.id));
+  const ofertaGuardada = item.detalleOferta || leerOfertasCarteles().find((o) => String(o.id) === String(item.id));
   $("vencOfertaPrecioActual").value = String(ofertaGuardada?.precioActual || precioVencimiento(item) || "");
   $("vencOfertaDescuento").value = String(ofertaGuardada?.descuento || 50);
   $("vencOfertaPrecioFinal").value = String(ofertaGuardada?.precioDescuento || ofertaGuardada?.precioOferta || "");
@@ -4415,6 +4420,7 @@ async function guardarEdicionVencimiento() {
         descripcion: `${descuentoOferta}% de descuento · Ahora ${formatearDineroCartel(precioOferta)}`,
         guardadoEn: new Date().toISOString()
       };
+      await actualizarOfertaVencimiento(item.id, true, registro);
       guardarOfertasCarteles([...leerOfertasCarteles().filter((o) => String(o.id) !== String(item.id)), registro]);
       guardarBandejaCartelesOferta(leerBandejaCartelesOferta().map((o) => String(o.id) === String(item.id) ? registro : o));
     } else {

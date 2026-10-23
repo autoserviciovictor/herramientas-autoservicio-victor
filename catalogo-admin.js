@@ -157,6 +157,26 @@ function poblarSelectRubros() {
   }
   window.AppSelect?.refresh?.(filtro);
   window.AppSelect?.refresh?.(producto);
+  actualizarSubrubrosFiltro().catch((e) => mensaje(e.message));
+  actualizarUIFiltrosProductos();
+}
+
+async function actualizarSubrubrosFiltro() {
+  const campo = $("catalogFiltroSubrubro");
+  if (!campo) return;
+  const rubro = $("catalogFiltroRubro")?.value || "todos";
+  const previo = campo.value;
+  campo.innerHTML = '<option value="todos">Todos los subrubros</option><option value="sin-subrubro">Sin subrubro</option>';
+  campo.value = previo === "sin-subrubro" ? previo : "todos";
+  if (rubro !== "todos" && rubro !== "sin-rubro") {
+    try {
+      const data = await api(`/admin/catalogo/rubros/${encodeURIComponent(rubro)}/subrubros`);
+      if (($("catalogFiltroRubro")?.value || "todos") !== rubro) return;
+      campo.innerHTML += (data.subrubros || []).map(s => `<option value="${Number(s.id)}">${esc(s.nombre)}</option>`).join("");
+      if ([...campo.options].some(o => o.value === previo)) campo.value = previo;
+    } catch (e) { mensaje(`No se pudieron cargar los subrubros: ${e.message}`); }
+  }
+  window.AppSelect?.refresh?.(campo);
   actualizarUIFiltrosProductos();
 }
 
@@ -164,11 +184,13 @@ function parametrosProductos() {
   const p = new URLSearchParams({ pagina: String(estado.pagina), limite: String(estado.limite) });
   const q = $("catalogBuscarProductos")?.value.trim();
   const rubro = $("catalogFiltroRubro")?.value || "todos";
+  const subrubro = $("catalogFiltroSubrubro")?.value || "todos";
   const est = $("catalogFiltroEstado")?.value || "todos";
   const imagen = $("catalogFiltroImagen")?.value || "todos";
   const destacado = $("catalogFiltroDestacado")?.value || "todos";
   if (q) p.set("q", q);
   if (rubro !== "todos") p.set("rubro", rubro);
+  if (subrubro !== "todos") p.set("subrubro", subrubro);
   if (est !== "todos") p.set("estado", est);
   if (imagen !== "todos") p.set("imagen", imagen);
   if (destacado !== "todos") p.set("destacado", destacado);
@@ -176,7 +198,7 @@ function parametrosProductos() {
 }
 
 function cantidadFiltrosProductosActivos() {
-  return ["catalogFiltroRubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado"]
+  return ["catalogFiltroRubro", "catalogFiltroSubrubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado"]
     .reduce((total, id) => total + (($(id)?.value || "todos") !== "todos" ? 1 : 0), 0);
 }
 
@@ -211,12 +233,13 @@ function alternarFiltrosProductos() {
 }
 
 async function limpiarFiltrosProductos() {
-  ["catalogFiltroRubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado"].forEach((id) => {
+  ["catalogFiltroRubro", "catalogFiltroSubrubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado"].forEach((id) => {
     const select = $(id);
     if (!select) return;
     select.value = "todos";
     window.AppSelect?.refresh?.(select);
   });
+  await actualizarSubrubrosFiltro();
   actualizarUIFiltrosProductos();
   await cargarProductos({ conservarPagina: false });
 }
@@ -263,6 +286,7 @@ function prepararSelectorCatalogo(id, { ancho = "normal", buscable = false } = {
 
 function prepararSelectoresCatalogo() {
   prepararSelectorCatalogo("catalogFiltroRubro", { ancho: "wide", buscable: true });
+  prepararSelectorCatalogo("catalogFiltroSubrubro", { ancho: "wide" });
   prepararSelectorCatalogo("catalogFiltroEstado", { ancho: "normal" });
   prepararSelectorCatalogo("catalogFiltroImagen", { ancho: "normal" });
   prepararSelectorCatalogo("catalogFiltroDestacado", { ancho: "normal" });
@@ -1089,6 +1113,11 @@ async function guardarProducto() {
     if ((esperado === null) !== (recibido === null) || (esperado !== null && Math.abs(esperado - recibido) > 0.009)) {
       throw new Error("El servidor no guardó el precio de oferta. Es necesario actualizar el backend en Render antes de continuar.");
     }
+    const subrubroEsperado = $("catalogProductoSubrubro").value || null;
+    const subrubroRecibido = guardado?.subrubroId == null ? null : String(guardado.subrubroId);
+    if (subrubroEsperado !== subrubroRecibido) {
+      throw new Error("El servidor no confirmó la asignación del subrubro. Actualizá el backend y volvé a intentar.");
+    }
     cerrarModal("catalogProductoModal");
     await Promise.all([cargarEstado(), cargarProductos()]);
     mensaje("Producto actualizado correctamente.", "ok");
@@ -1288,12 +1317,15 @@ function bind() {
   document.body.dataset.catalogAdminBound = "1";
   prepararSelectoresCatalogo();
   actualizarUIFiltrosProductos();
+  actualizarSubrubrosFiltro().catch((e) => mensaje(e.message));
   document.querySelectorAll("[data-catalog-tab]").forEach((b) => b.addEventListener("click", () => cambiarTab(b.dataset.catalogTab)));
   $("catalogBuscarProductos")?.addEventListener("input", () => { actualizarBotonesPublicacionMasiva(); clearTimeout(estado.busquedaTimer); estado.busquedaTimer = setTimeout(() => cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)), 260); });
   $("catalogFiltroRubro")?.addEventListener("change", () => {
+    actualizarSubrubrosFiltro().catch((e) => mensaje(e.message));
     actualizarUIFiltrosProductos();
     cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message));
   });
+  $("catalogFiltroSubrubro")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
   $("catalogFiltroEstado")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
   $("catalogFiltroImagen")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
   $("catalogFiltroDestacado")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });

@@ -2021,6 +2021,7 @@ app.get("/admin/catalogo/productos", requerirAdministrador, async (req, res) => 
       limite: req.query.limite,
       busqueda: req.query.q,
       rubro: req.query.rubro,
+      subrubro: req.query.subrubro,
       estado: req.query.estado,
       estadoImagen: req.query.imagen,
       destacado: req.query.destacado,
@@ -7051,7 +7052,11 @@ app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async
         .json({ ok: false, mensaje: "Registro no encontrado" });
 
     const oferta = normalizarOfertaVencimiento(req.body.oferta);
-    const actualizadoDb = await actualizarVencimientoDb(id, { oferta });
+    const detalleOferta = req.body.detalleOferta === undefined ? undefined : req.body.detalleOferta;
+    if (detalleOferta !== undefined && detalleOferta !== null && (typeof detalleOferta !== "object" || Array.isArray(detalleOferta))) {
+      return res.status(400).json({ ok: false, mensaje: "Detalle de oferta inválido" });
+    }
+    const actualizadoDb = await actualizarVencimientoDb(id, { oferta, detalleOferta: oferta === "Sí" ? detalleOferta : null });
     if (!actualizadoDb)
       return res
         .status(404)

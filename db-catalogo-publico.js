@@ -694,6 +694,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   const offset = (pagina - 1) * limite;
   const busqueda = normalizarBusqueda(opciones.busqueda);
   const rubro = textoLimitado(opciones.rubro, 80);
+  const subrubro = textoLimitado(opciones.subrubro, 80);
   const estado = textoLimitado(opciones.estado, 30);
   const estadoImagen = textoLimitado(opciones.estadoImagen, 30);
   const destacado = textoLimitado(opciones.destacado, 30);
@@ -710,6 +711,11 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
       parametros.push(rubro);
       condiciones.push(`s.category_id::text=$${parametros.length}`);
     }
+  }
+  if (subrubro === "sin-subrubro") condiciones.push("s.subcategory_id IS NULL");
+  else if (subrubro && subrubro !== "todos") {
+    parametros.push(subrubro);
+    condiciones.push(`s.subcategory_id::text=$${parametros.length}`);
   }
   if (estado === "visible") condiciones.push("s.visible=TRUE");
   else if (estado === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
@@ -837,6 +843,7 @@ async function obtenerProductoCatalogoAdminDb(codigo) {
     nombre: String(f.article || ""),
     precio: f.price === null || f.price === undefined ? null : Number(f.price),
     rubroId: f.category_id === null || f.category_id === undefined ? null : Number(f.category_id),
+    subrubroId: f.subcategory_id === null || f.subcategory_id === undefined ? null : Number(f.subcategory_id),
     rubro: String(f.category_name || ""),
     marca: String(f.brand || ""),
     presentacion: String(f.presentation || ""),
