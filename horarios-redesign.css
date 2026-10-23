@@ -812,7 +812,7 @@ body.en-horarios.horarios-vista-calendario .horario-nota-dot {
   background: currentColor !important;
 }
 body.en-horarios.horarios-vista-calendario .horarios-table .fin-semana {
-  background: color-mix(in srgb, var(--horarios-surface-soft) 76%, var(--horarios-border) 24%) !important;
+  background: color-mix(in srgb, #ef4444 20%, var(--horarios-surface)) !important;
 }
 /* Contexto del calendario: solo se pinta el fondo. Los chips/turnos conservan su color. */
 body.en-horarios.horarios-vista-calendario .horarios-table .dia-feriado {
@@ -820,6 +820,9 @@ body.en-horarios.horarios-vista-calendario .horarios-table .dia-feriado {
 }
 body.en-horarios.horarios-vista-calendario .horarios-table .dia-hoy {
   background: color-mix(in srgb, #2563eb 22%, var(--horarios-surface)) !important;
+}
+html[data-theme="dark"] body.en-horarios.horarios-vista-calendario .horarios-table .fin-semana {
+  background: color-mix(in srgb, #ef4444 27%, var(--horarios-surface)) !important;
 }
 html[data-theme="dark"] body.en-horarios.horarios-vista-calendario .horarios-table .dia-feriado {
   background: color-mix(in srgb, #ef4444 27%, var(--horarios-surface)) !important;

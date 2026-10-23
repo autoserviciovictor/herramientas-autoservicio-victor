@@ -399,6 +399,7 @@ const FERIADOS_ARGENTINA_2026 = new Map([
   ["2026-07-10", "Día no laborable con fines turísticos"],
   ["2026-08-17", "Paso a la Inmortalidad del General José de San Martín"],
   ["2026-10-12", "Día del Respeto a la Diversidad Cultural"],
+  ["2026-11-09", "Llegada del Papa (fecha especial del comercio)"],
   ["2026-11-23", "Día de la Soberanía Nacional"],
   ["2026-12-07", "Día no laborable con fines turísticos"],
   ["2026-12-08", "Día de la Inmaculada Concepción de María"],
@@ -1340,6 +1341,7 @@ function renderTabla() {
               { length: diasDelMes() },
               (_, i) => {
                 const d = i + 1,
+                  finde = [0, 6].includes(new Date(fechaVista.getFullYear(), fechaVista.getMonth(), d).getDay()),
                   feriado = obtenerFeriadoDia(d),
                   id = obtenerTurno(e, d),
                   t = obtenerDefinicion(id),
@@ -1347,7 +1349,7 @@ function renderTabla() {
                 const detalle = detalles.get(keyCelda(e, d));
                 const marcas = `${detalle?.observacion || detalle?.motivo ? '<i class="horario-nota-dot" title="Tiene observación"></i>' : ""}`;
                 const horarioCompleto = formatoHorario24(id);
-                return `<td class="${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${escAttr(e)}" data-dia="${d}" ${feriado ? `title="${escAttr(feriado)}"` : ""}><button type="button" class="horario-cell ${escAttr(t.clase)}" style="${escAttr(t.estilo || "")}" data-tooltip="${escAttr(horarioCompleto)}" aria-label="${escAttr(horarioCompleto)}">${esc(formatoCelda(id))}${marcas}</button></td>`;
+                return `<td class="${finde ? "fin-semana" : ""} ${feriado ? "dia-feriado" : ""} ${esHoy(d) ? "dia-hoy" : ""} ${d === diaSeleccionado ? "dia-seleccionado" : ""} ${sel ? "celda-seleccionada" : ""}" data-empleado="${escAttr(e)}" data-dia="${d}" ${feriado ? `title="${escAttr(feriado)}"` : ""}><button type="button" class="horario-cell ${escAttr(t.clase)}" style="${escAttr(t.estilo || "")}" data-tooltip="${escAttr(horarioCompleto)}" aria-label="${escAttr(horarioCompleto)}">${esc(formatoCelda(id))}${marcas}</button></td>`;
               },
             ).join("")}</tr>`;
           },
