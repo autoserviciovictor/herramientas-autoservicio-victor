@@ -6830,6 +6830,32 @@ app.put("/lotes/:id", requerirAlgunModulo("lotes"), async (req,res)=>{
   } catch(error){console.error("Error en PUT /lotes/:id:",error);res.status(500).json({ok:false,mensaje:error.message||"Error al reemplazar lote"});}
 });
 
+const { listarCartelesImpresosDb, marcarCartelesImpresosDb } = require("./db-vencimientos");
+
+app.get("/vencimientos/carteles-impresos", requerirAlgunModulo("vencimientos"), async (req, res) => {
+  try {
+    res.json({ ok: true, impresos: await listarCartelesImpresosDb() });
+  } catch (error) {
+    console.error("Error consultando carteles impresos:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudieron consultar los carteles impresos." });
+  }
+});
+
+app.post("/vencimientos/carteles-impresos", requerirAlgunModulo("vencimientos"), async (req, res) => {
+  try {
+    const ids = req.body?.ids;
+    if (!Array.isArray(ids) || ids.length < 1 || ids.length > 4 ||
+        ids.some((id) => typeof id !== "string" && typeof id !== "number")) {
+      return res.status(400).json({ ok: false, mensaje: "Seleccioná entre 1 y 4 carteles." });
+    }
+    const cantidad = await marcarCartelesImpresosDb(ids);
+    res.json({ ok: true, cantidad });
+  } catch (error) {
+    console.error("Error registrando carteles impresos:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudo registrar la impresión." });
+  }
+});
+
 app.get("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) => {
   try {
     const vencimientos = (await obtenerVencimientos()).reverse();

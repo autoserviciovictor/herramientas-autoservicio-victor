@@ -40,6 +40,10 @@ async function asegurarEsquemaVencimientos() {
     await query(`UPDATE expiration_records
       SET quantity=GREATEST(0, salon_quantity) + GREATEST(0, deposit_quantity)
       WHERE quantity <> GREATEST(0, salon_quantity) + GREATEST(0, deposit_quantity)`);
+    await query(`CREATE TABLE IF NOT EXISTS expiration_poster_prints (
+      record_id TEXT PRIMARY KEY,
+      printed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
     await query(`CREATE INDEX IF NOT EXISTS expiration_records_code_idx ON expiration_records(code)`);
     await query(`CREATE INDEX IF NOT EXISTS expiration_records_expiry_idx ON expiration_records(expiry_date)`);
     await query(`CREATE INDEX IF NOT EXISTS expiration_records_category_idx ON expiration_records(category)`);
@@ -275,7 +279,25 @@ async function eliminarVencimientoDb(id, cliente = null) {
   return conTransaccionVencimientos(ejecutar);
 }
 
+async function listarCartelesImpresosDb() {
+  await asegurarEsquemaVencimientos();
+  const resultado = await query("SELECT record_id, printed_at FROM expiration_poster_prints");
+  return resultado.rows.map((r) => ({ id: r.record_id, impresoEn: r.printed_at }));
+}
+
+async function marcarCartelesImpresosDb(ids) {
+  await asegurarEsquemaVencimientos();
+  const unicos = [...new Set(ids.map((id) => texto(id)).filter(Boolean))];
+  for (const id of unicos) {
+    await query(`INSERT INTO expiration_poster_prints(record_id, printed_at)
+      VALUES ($1, NOW()) ON CONFLICT(record_id) DO UPDATE SET printed_at=NOW()`, [id]);
+  }
+  return unicos.length;
+}
+
 module.exports = {
+  listarCartelesImpresosDb,
+  marcarCartelesImpresosDb,
   BLOQUEO_VENCIMIENTOS,
   asegurarEsquemaVencimientos,
   conTransaccionVencimientos,

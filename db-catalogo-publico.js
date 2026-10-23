@@ -564,6 +564,8 @@ async function asegurarSubrubrosAutomaticosCatalogoDb(cliente = null) {
   for (const rubro of rubros.rows) {
     const definicion = DEFINICIONES[slugRubro(rubro.name)];
     if (!definicion) continue;
+    // Respetar los seis subrubros de ALMACEN ya creados por el administrador.
+    if (slugRubro(rubro.name) === "almacen") continue;
     for (const nombre of Object.keys(definicion)) {
       const existente = await ejecutarConsultaCatalogo(cliente, `SELECT 1 FROM catalog_subcategories WHERE category_id=$1 AND lower(name)=lower($2)`, [rubro.category_id, nombre]);
       if (existente.rowCount) continue;

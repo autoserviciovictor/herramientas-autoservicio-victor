@@ -3734,10 +3734,44 @@ function claveOfertasCarteles() { return `autoservicio_ofertas_carteles_v2:${cla
 function leerOfertasCarteles() { try { const data = JSON.parse(localStorage.getItem(claveOfertasCarteles()) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; } }
 function guardarOfertasCarteles(ofertas) { localStorage.setItem(claveOfertasCarteles(), JSON.stringify(ofertas)); }
 function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCarteles().filter(x => String(x.id) !== String(id))); guardarBandejaCartelesOferta(leerBandejaCartelesOferta().filter(x => String(x.id) !== String(id))); }
+// Se reutiliza el registro persistente anterior para identificar carteles ya agregados.
+let cartelesImpresosCompartidos = new Set();
+
+async function solicitarCartelesImpresos(ruta, opciones = {}) {
+  const token = window.AutoservicioAuth?.getToken?.();
+  const respuesta = await fetch(`${API_BASE_URL}${ruta}`, {
+    ...opciones,
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      ...(opciones.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok || datos.ok === false) throw new Error(datos.mensaje || "No se pudo sincronizar la impresión.");
+  return datos;
+}
+
+async function cargarEstadoCartelesImpresos() {
+  const datos = await solicitarCartelesImpresos("/vencimientos/carteles-impresos");
+  cartelesImpresosCompartidos = new Set((datos.impresos || []).map((item) => String(item.id)));
+  renderListadoCartelesOfertas();
+}
+
+// La marca indica que el cartel fue AGREGADO alguna vez, no que se imprimió.
+async function registrarCartelAgregado(id) {
+  await solicitarCartelesImpresos("/vencimientos/carteles-impresos", {
+    method: "POST", body: JSON.stringify({ ids: [String(id)] }),
+  });
+  cartelesImpresosCompartidos.add(String(id));
+}
+
 async function cargarOfertasCompartidasCarteles() {
   try {
     const registros = await listarVencimientos();
     sincronizarCartelesConVencimientos(registros);
+    await cargarEstadoCartelesImpresos();
     renderListadoCartelesOfertas();
     renderBandejaCartelesOferta();
   } catch (error) {
@@ -3762,27 +3796,43 @@ function renderListadoCartelesOfertas() {
   const ofertas = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso());
   const bandejaLlena = leerBandejaCartelesOferta().length >= CARTEL_OFERTA_MAX;
   const filtro = $("cartelesBuscarOferta")?.value?.trim().toLocaleLowerCase("es-AR") || "";
-  const filtradas = ofertas.filter(o => !filtro || `${o.articulo || ""} ${o.codigo || ""}`.toLocaleLowerCase("es-AR").includes(filtro));
+  const filtradas = ofertas
+    .filter(o => !filtro || `${o.articulo || ""} ${o.codigo || ""}`.toLocaleLowerCase("es-AR").includes(filtro))
+    .sort((a, b) => Number(cartelesImpresosCompartidos.has(String(a.id))) - Number(cartelesImpresosCompartidos.has(String(b.id))));
   host.innerHTML = filtradas.length ? filtradas.map(o => {
     const precioOriginal = Number(o.precioActual) || 0;
     const precioFinal = Number(o.precioOferta || o.precioDescuento || o.precioPromo) || 0;
     const descuento = Number(o.descuento) || 0;
     const porcentaje = Number.isInteger(descuento) ? String(descuento) : descuento.toLocaleString("es-AR", { maximumFractionDigits: 1 });
-    return `<div class="carteles-oferta-item"><div class="carteles-disponible-info"><b>${escapeHTML(o.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(o.codigo || "—"))}</small></div><span class="carteles-disponible-descuento">${escapeHTML(porcentaje)}% de descuento</span><div class="carteles-disponible-precio"><div class="carteles-precio-antes"><span>Antes:</span><s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></div><div class="carteles-precio-ahora"><span>Ahora:</span><strong>${escapeHTML(formatearDineroCartel(precioFinal))}</strong></div></div><button type="button" class="carteles-agregar-btn" data-cartel-agregar-id="${escapeHTML(String(o.id))}" ${bandejaLlena ? "disabled" : ""}>+ Agregar</button></div>`;
+    const impreso = cartelesImpresosCompartidos.has(String(o.id));
+    return `<div class="carteles-oferta-item${impreso ? " cartel-ya-impreso" : ""}" style="${impreso ? "background:#fff3f4;border:2px solid #ef2449;" : ""}"><div class="carteles-disponible-info"><b>${escapeHTML(o.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(o.codigo || "—"))}</small>${impreso ? '<small style="color:#d51b3c;font-weight:700;">✓ Ya agregado · disponible para volver a agregar</small>' : ""}</div><span class="carteles-disponible-descuento">${escapeHTML(porcentaje)}% de descuento</span><div class="carteles-disponible-precio"><div class="carteles-precio-antes"><span>Antes:</span><s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></div><div class="carteles-precio-ahora"><span>Ahora:</span><strong>${escapeHTML(formatearDineroCartel(precioFinal))}</strong></div></div><button type="button" class="carteles-agregar-btn" data-cartel-agregar-id="${escapeHTML(String(o.id))}" ${bandejaLlena ? "disabled" : ""}>+ Agregar</button></div>`;
   }).join("") : `<p class="carteles-empty">${ofertas.length ? "No se encontraron productos con ese nombre o código." : "Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá."}</p>`;
   renderBandejaCartelesOferta();
 }
 document.addEventListener("click", event => { if (event.target.closest("#cartelesOfertasLista [data-cartel-agregar-id]")) agregarCartelDesdeLista(event); });
 document.addEventListener("input", event => { if (event.target.id === "cartelesBuscarOferta") renderListadoCartelesOfertas(); });
-function agregarCartelDesdeLista(event) {
-  const boton = event.target.closest("[data-cartel-agregar-id]"); if (!boton) return;
+async function agregarCartelDesdeLista(event) {
+  const boton = event.target.closest("[data-cartel-agregar-id]");
+  if (!boton || boton.disabled) return;
   const oferta = leerOfertasCarteles().find(o => String(o.id) === boton.dataset.cartelAgregarId);
   if (!oferta) return;
   const items = leerBandejaCartelesOferta();
-  if (items.length >= CARTEL_OFERTA_MAX) { mostrarMensaje("La hoja admite hasta 4 carteles en total", "error"); return; }
+  if (items.length >= CARTEL_OFERTA_MAX) {
+    mostrarMensaje("La hoja admite hasta 4 carteles en total", "error");
+    return;
+  }
+  // Agregar inmediatamente a la bandeja, sin esperar la respuesta del servidor.
   items.push({ ...oferta });
   guardarBandejaCartelesOferta(items);
+  cartelesImpresosCompartidos.add(String(oferta.id));
   renderListadoCartelesOfertas();
+  // Guardar la marca compartida en PostgreSQL y avisar si falla.
+  try {
+    await registrarCartelAgregado(oferta.id);
+  } catch (error) {
+    console.error("No se pudo guardar la marca compartida del cartel:", error);
+    mostrarMensaje("Se agregó el cartel para imprimir, pero la marca roja no se guardó en el servidor: " + error.message, "error");
+  }
 }
 function renderVistaPreviaCarteles(items) {
   const preview = $("cartelOfertaPreview"); if (!preview) return;

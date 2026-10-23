@@ -1,12 +1,12 @@
 // Subrubros mínimos aprobados. Reglas conservadoras: sin coincidencia => sin subrubro.
 const DEFINICIONES = {
   almacen: {
-    Fideos: /\b(fideos?|tallarines?|spaghetti|espaguetis?|mostacholes?|tirabuzones?|coditos?|moñitos?|ravioles?|ñoquis?|capelettis?)\b/,
-    Harinas: /\b(harinas?|premezclas?|semolas?|polentas?)\b/,
-    Arroz: /\b(arroz|arroces)\b/,
-    Aceites: /\b(aceites?)\b/,
-    Infusiones: /\b(yerbas?|mates? cocidos?|tes?|te en saquitos?|cafes?|cafe molido|cafe instantaneo|infusiones?)\b/,
-    Repostería: /\b(levaduras?|polvo de hornear|esencias? de vainilla|coco rallado|cacao amargo|coberturas? de chocolate|gelatinas? sin sabor|granas?)\b/,
+    'Fideos, Arroz y Sopas': /\b(fideos?|tallarines?|spaghetti|espaguetis?|mostacholes?|tirabuzones?|coditos?|monitos?|ravioles?|noquis?|capelettis?|arroz|arroces|sopas?|caldos?|consomes?|ramen)\b/,
+    'Harinas y Legumbres': /\b(harinas?|premezclas?|semolas?|polentas?|lentejas?|garbanzos?|porotos?|legumbres?|arvejas? secas?)\b/,
+    'Aceites y Salsas': /\b(aceites?|salsas?|pure de tomates?|extracto de tomates?|tomates? triturados?|passatas?)\b/,
+    'Yerba y Infusiones': /\b(yerbas?|mates? cocidos?|tes?|infusiones?|cafes?|cappuccinos?|capuchinos?)\b/,
+    'Dulces y Repostería': /\b(azucar|azucares|edulcorantes?|stevia|mermeladas?|dulces? de leche|levaduras?|polvo de hornear|esencias?|vainilla|coco rallado|cacao|coberturas?|granas?|reposteria|gelatinas?|flanes?|bizcochuelos?)\b/,
+    'Enlatados': /\b(atun|sardinas?|caballas?|conservas?|enlatados?|choclo|palmitos?|arvejas? en lata|latas? de)\b/,
   },
   cervezas: {
     'Sin alcohol': /\b(sin alcohol|0[.,]0\s*%?|alcohol free|non alcoholic)\b/,
