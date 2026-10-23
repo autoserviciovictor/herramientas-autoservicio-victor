@@ -3132,12 +3132,9 @@ function ordenarListaVencimientos(lista) {
 // No calcular el porcentaje a partir de la diferencia de precios.
 function ofertaGuardadaVencimiento(item) {
   if (!tieneOferta(item)) return null;
-  const id = String(item.id ?? "");
-  const codigo = String(item.codigo ?? "").trim();
-  const ofertas = leerOfertasCarteles();
-  return item.detalleOferta || ofertas.find((o) => String(o.id ?? "") === id)
-    || (codigo ? ofertas.find((o) => String(o.codigo ?? "").trim() === codigo) : null)
-    || null;
+  // El detalle compartido del servidor tiene prioridad. No usar valores
+  // locales antiguos para simular una oferta sincronizada con otros usuarios.
+  return item.detalleOferta || null;
 }
 
 function resumenOfertaVencimiento(item) {
@@ -4404,9 +4401,6 @@ async function guardarEdicionVencimiento() {
       deposito,
       cantidad,
     });
-    if (ofertaDeseada !== tieneOferta(item)) {
-      await actualizarOfertaVencimiento(item.id, ofertaDeseada);
-    }
     if (ofertaDeseada) {
       const anterior = leerOfertasCarteles().find((o) => String(o.id) === String(item.id));
       const precioOferta = precioFinalOferta;
@@ -4424,6 +4418,7 @@ async function guardarEdicionVencimiento() {
       guardarOfertasCarteles([...leerOfertasCarteles().filter((o) => String(o.id) !== String(item.id)), registro]);
       guardarBandejaCartelesOferta(leerBandejaCartelesOferta().map((o) => String(o.id) === String(item.id) ? registro : o));
     } else {
+      if (tieneOferta(item)) await actualizarOfertaVencimiento(item.id, false);
       eliminarOfertaCartelGuardada(item.id);
     }
     await cargarListadoVencimientos({

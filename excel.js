@@ -471,6 +471,25 @@ export async function actualizarOfertaVencimiento(id, oferta, detalleOferta) {
       body: JSON.stringify({ oferta: oferta ? "Sí" : "No", ...(detalleOferta !== undefined ? { detalleOferta } : {}) }),
     },
   );
+  // Comprobar que el servidor realmente persistió el detalle compartido.
+  // Antes, un servidor desactualizado podía responder OK ignorando detalleOferta.
+  if (oferta && detalleOferta !== undefined && detalleOferta !== null) {
+    const guardado = data.vencimiento?.detalleOferta;
+    if (!guardado || Number(guardado.descuento) !== Number(detalleOferta.descuento) ||
+        Number(guardado.precioOferta ?? guardado.precioDescuento) !==
+          Number(detalleOferta.precioOferta ?? detalleOferta.precioDescuento)) {
+      throw new Error("El servidor no confirmó el guardado del porcentaje y precio de oferta. Verificá el despliegue en Render.");
+    }
+    // Releer desde el endpoint usado por los demás usuarios.
+    const lectura = await pedirJson("/vencimientos", { cache: "no-store" });
+    const compartido = (lectura.vencimientos || []).find((v) => String(v.id) === String(id));
+    const detalle = compartido?.detalleOferta;
+    if (!detalle || Number(detalle.descuento) !== Number(detalleOferta.descuento) ||
+        Number(detalle.precioOferta ?? detalle.precioDescuento) !==
+          Number(detalleOferta.precioOferta ?? detalleOferta.precioDescuento)) {
+      throw new Error("La oferta no aparece completa en la consulta compartida. No se confirmó la sincronización.");
+    }
+  }
   return data.vencimiento;
 }
 
