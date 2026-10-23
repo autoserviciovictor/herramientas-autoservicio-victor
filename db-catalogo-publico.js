@@ -1,4 +1,5 @@
 const { query } = require("./db");
+const { DEFINICIONES, slugRubro, detectarSubrubro } = require("./catalogo-subrubros-automaticos");
 const {
   ESTADOS_IMAGEN,
   ESTADOS_IMAGEN_VALIDOS,
@@ -554,6 +555,54 @@ async function sincronizarVisibilidadStockCatalogoDb(productos = [], cliente = n
   return { activos, desactivados: filas.length - activos };
 }
 
+// Idempotente: crea únicamente los subrubros aprobados y asocia los productos
+// sin subrubro. No pisa las selecciones manuales del administrador.
+async function asegurarSubrubrosAutomaticosCatalogoDb(cliente = null) {
+  if (!cliente) await asegurarEsquemaCatalogoPublico();
+  const rubros = await ejecutarConsultaCatalogo(cliente, `SELECT category_id, name FROM catalog_categories`);
+  let creados = 0;
+  for (const rubro of rubros.rows) {
+    const definicion = DEFINICIONES[slugRubro(rubro.name)];
+    if (!definicion) continue;
+    for (const nombre of Object.keys(definicion)) {
+      const existente = await ejecutarConsultaCatalogo(cliente, `SELECT 1 FROM catalog_subcategories WHERE category_id=$1 AND lower(name)=lower($2)`, [rubro.category_id, nombre]);
+      if (existente.rowCount) continue;
+      await ejecutarConsultaCatalogo(cliente, `INSERT INTO catalog_subcategories(category_id,name,sort_order) VALUES($1,$2,(SELECT COALESCE(MAX(sort_order),0)+1 FROM catalog_subcategories WHERE category_id=$1))`, [rubro.category_id,nombre]);
+      creados++;
+    }
+  }
+  return creados;
+}
+
+async function clasificarSubrubrosAutomaticamenteCatalogoDb(cliente = null) {
+  if (!cliente) await asegurarEsquemaCatalogoPublico();
+  await asegurarSubrubrosAutomaticosCatalogoDb(cliente);
+  const filas = await ejecutarConsultaCatalogo(cliente, `
+    SELECT s.code, p.article AS nombre, c.name AS rubro, c.category_id
+    FROM catalog_product_settings s
+    JOIN product_catalog p ON p.code=s.code
+    JOIN catalog_categories c ON c.category_id=s.category_id
+    WHERE s.subcategory_id IS NULL
+  `);
+  const subrubros = await ejecutarConsultaCatalogo(cliente, `SELECT category_id, subcategory_id, name FROM catalog_subcategories`);
+  const mapa = new Map(subrubros.rows.map(s => [`${s.category_id}:${s.name.toLowerCase()}`, s.subcategory_id]));
+  const grupos = new Map();
+  for (const producto of filas.rows) {
+    const nombre = detectarSubrubro(producto.rubro, producto.nombre);
+    if (!nombre) continue;
+    const id = mapa.get(`${producto.category_id}:${nombre.toLowerCase()}`);
+    if (!id) continue;
+    if (!grupos.has(id)) grupos.set(id, []);
+    grupos.get(id).push(producto.code);
+  }
+  let asignados = 0;
+  for (const [id, codigos] of grupos) {
+    const resultado = await ejecutarConsultaCatalogo(cliente, `UPDATE catalog_product_settings SET subcategory_id=$1, updated_at=NOW() WHERE code=ANY($2::text[]) AND subcategory_id IS NULL`, [id,codigos]);
+    asignados += resultado.rowCount || 0;
+  }
+  return { asignados, pendientes: filas.rows.length - asignados };
+}
+
 async function sincronizarRubrosImportadosCatalogoDb(productos = [], cliente = null) {
   // El esquema se asegura antes de abrir la transacción principal. Cuando se
   // recibe un cliente, todas las mutaciones posteriores usan la misma sesión.
@@ -595,7 +644,7 @@ async function sincronizarRubrosImportadosCatalogoDb(productos = [], cliente = n
   if (codigosSinRubro.length) {
     await ejecutarConsultaCatalogo(cliente, `
       UPDATE catalog_product_settings
-      SET category_id=NULL, updated_at=NOW()
+      SET category_id=NULL, subcategory_id=NULL, updated_at=NOW()
       WHERE code = ANY($1::text[])
     `, [codigosSinRubro]);
   }
@@ -615,7 +664,7 @@ async function sincronizarRubrosImportadosCatalogoDb(productos = [], cliente = n
       JOIN catalog_categories c ON c.slug=x.slug
       JOIN product_catalog p ON p.code=x.code
       ON CONFLICT(code) DO UPDATE
-        SET category_id=EXCLUDED.category_id, updated_at=NOW()
+        SET category_id=EXCLUDED.category_id, subcategory_id=CASE WHEN catalog_product_settings.category_id IS DISTINCT FROM EXCLUDED.category_id THEN NULL ELSE catalog_product_settings.subcategory_id END, updated_at=NOW()
     `, [JSON.stringify(asignaciones)]);
   }
 
@@ -627,7 +676,10 @@ async function sincronizarRubrosImportadosCatalogoDb(productos = [], cliente = n
     RETURNING s.code
   `);
 
+  const clasificacion = await clasificarSubrubrosAutomaticamenteCatalogoDb(cliente);
+
   return {
+    subrubrosAsignados: clasificacion.asignados,
     rubros: rubrosUnicos.length,
     productosAsignados: asignaciones.length,
     productosSinRubro: codigosSinRubro.length,
@@ -1212,6 +1264,8 @@ module.exports = {
   obtenerEstadoCatalogoAdminDb,
   listarRubrosAdminDb,
   listarSubrubrosCatalogoDb,
+  asegurarSubrubrosAutomaticosCatalogoDb,
+  clasificarSubrubrosAutomaticamenteCatalogoDb,
   crearSubrubroCatalogoDb,
   actualizarSubrubroCatalogoDb,
   eliminarSubrubroCatalogoDb,

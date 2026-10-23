@@ -72,6 +72,7 @@ const {
   obtenerEstadoCatalogoAdminDb,
   listarRubrosAdminDb,
   listarSubrubrosCatalogoDb,
+  clasificarSubrubrosAutomaticamenteCatalogoDb,
   crearSubrubroCatalogoDb,
   actualizarSubrubroCatalogoDb,
   eliminarSubrubroCatalogoDb,
@@ -7704,6 +7705,7 @@ async function prepararPostgresEtapa9() {
   await asegurarTareasBanoPostgres();
   await asegurarInventarioProductosPostgres();
   await asegurarEsquemaCatalogoPublico();
+  await clasificarSubrubrosAutomaticamenteCatalogoDb();
   await asegurarEsquemaCatalogoPedidos();
   await asegurarVencimientosPostgres();
   await asegurarEsquemaLotes();
