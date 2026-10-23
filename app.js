@@ -3108,25 +3108,33 @@ function formatearPrecioVencimiento(valor) {
   return `$${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(numero)}`;
 }
 
+// Desempate determinista: fecha, nombre y código/ID.
+function compararNombreVencimiento(a, b) {
+  const nombre = String(a.articulo || "").localeCompare(
+    String(b.articulo || ""), "es", { sensitivity: "base", numeric: true },
+  );
+  if (nombre !== 0) return nombre;
+  return String(a.codigo ?? "").localeCompare(String(b.codigo ?? ""), "es", { numeric: true }) ||
+    String(a.id ?? "").localeCompare(String(b.id ?? ""), "es", { numeric: true });
+}
+
+function compararFechaVencimiento(a, b, direccion = 1) {
+  const fechaA = diasHastaVencimiento(a.vencimiento);
+  const fechaB = diasHastaVencimiento(b.vencimiento);
+  if (Number.isFinite(fechaA) && Number.isFinite(fechaB) && fechaA !== fechaB) {
+    return (fechaA - fechaB) * direccion;
+  }
+  if (Number.isFinite(fechaA) !== Number.isFinite(fechaB)) {
+    return Number.isFinite(fechaA) ? -1 : 1;
+  }
+  return compararNombreVencimiento(a, b);
+}
+
 function ordenarListaVencimientos(lista) {
   const resultado = [...lista];
-  if (ordenVencimientos === "lejano") {
-    return resultado.sort(
-      (a, b) =>
-        diasHastaVencimiento(b.vencimiento) -
-        diasHastaVencimiento(a.vencimiento),
-    );
-  }
-  if (ordenVencimientos === "nombre") {
-    return resultado.sort((a, b) =>
-      String(a.articulo || "").localeCompare(String(b.articulo || ""), "es", {
-        sensitivity: "base",
-      }),
-    );
-  }
-  return resultado.sort(
-    (a, b) =>
-      diasHastaVencimiento(a.vencimiento) - diasHastaVencimiento(b.vencimiento),
+  if (ordenVencimientos === "nombre") return resultado.sort(compararNombreVencimiento);
+  return resultado.sort((a, b) =>
+    compararFechaVencimiento(a, b, ordenVencimientos === "lejano" ? -1 : 1)
   );
 }
 
@@ -3300,12 +3308,6 @@ function renderListadoVencimientos() {
       let items = lista.filter(
         (item) => bucketVencimiento(item) === grupo.bucket,
       );
-      // En vencidos siempre priorizamos lo que venció más recientemente.
-      if (grupo.bucket === "vencidos") {
-        items = [...items].sort((a, b) =>
-          diasHastaVencimiento(b.vencimiento) - diasHastaVencimiento(a.vencimiento),
-        );
-      }
       if (!items.length) return "";
       const abierto =
         filtroVencimientos !== "todos" ||
