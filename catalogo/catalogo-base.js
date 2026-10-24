@@ -536,6 +536,7 @@ async function enviarPedidoWhatsApp() {
   mensajeCheckout(els.checkoutMensajePaso3, "");
   try {
     await refrescarPreciosCarrito();
+    await sincronizarDisponibilidadVisible();
     const pedido = await registrarPedidoCatalogo();
     const mensaje = generarMensajePedido();
     const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
@@ -969,6 +970,67 @@ async function cambiarPagina(pagina) {
   document.querySelector(".catalogo-products-toolbar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// Validación de disponibilidad contra PostgreSQL, sin confiar en tarjetas en caché.
+const verificacionesCompra = new Set();
+async function verificarProductoParaCompra(codigo) {
+  if (verificacionesCompra.has(codigo)) return null;
+  verificacionesCompra.add(codigo);
+  try {
+    const response = await fetch(`${API_BASE_URL}/catalogo/api/precios-carrito`, {
+      method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigos: [String(codigo)] }),
+    });
+    if (!response.ok) throw new Error("No se pudo verificar la disponibilidad");
+    const data = await response.json();
+    if (!data.ok) throw new Error(data.mensaje || "No se pudo verificar la disponibilidad");
+    const actual = (data.productos || []).find(x => String(x.codigo) === String(codigo));
+    if (!actual?.disponible) {
+      await retirarProductoNoDisponible(codigo);
+      alert("Producto no disponible. No se puede agregar al carrito porque está oculto o no tiene stock.");
+      return null;
+    }
+    return actual;
+  } catch (error) {
+    alert("No pudimos verificar la disponibilidad. Intentá nuevamente.");
+    return null;
+  } finally { verificacionesCompra.delete(codigo); }
+}
+async function retirarProductoNoDisponible(codigo) {
+  state.productos = state.productos.filter(p => String(p.codigo) !== String(codigo));
+  ofertasHome = ofertasHome.filter(p => String(p.codigo) !== String(codigo));
+  state.carrito = state.carrito.filter(p => String(p.codigo) !== String(codigo));
+  guardarCarrito(); renderCart();
+  renderProducts(); renderHomeProducts(); renderMobileOffers();
+  // Recalcular contadores y páginas con los datos del servidor.
+  await Promise.allSettled([cargarProductos(), cargarRubros()]);
+}
+async function sincronizarDisponibilidadVisible() {
+  const codigos = [...new Set([
+    ...Array.from(document.querySelectorAll("[data-product]"), el => el.dataset.product),
+    ...state.carrito.map(item => String(item.codigo)),
+  ].filter(Boolean))].slice(0, 100);
+  if (!codigos.length) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/catalogo/api/precios-carrito`, {
+      method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigos }),
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.ok) return;
+    const disponibles = new Set((data.productos || []).filter(p => p.disponible).map(p => String(p.codigo)));
+    const retirados = codigos.filter(c => !disponibles.has(c));
+    if (!retirados.length) return;
+    const fuera = new Set(retirados);
+    state.productos = state.productos.filter(p => !fuera.has(String(p.codigo)));
+    ofertasHome = ofertasHome.filter(p => !fuera.has(String(p.codigo)));
+    state.carrito = state.carrito.filter(p => !fuera.has(String(p.codigo)));
+    guardarCarrito(); renderCart(); renderProducts(); renderHomeProducts(); renderMobileOffers();
+    await Promise.allSettled([cargarProductos(), cargarRubros()]);
+    els.feedback.textContent = "Se quitaron productos que ya no están disponibles.";
+  } catch (error) { console.warn("No se pudo comprobar la disponibilidad:", error); }
+}
+
 let revisionCatalogoActual = null;
 let actualizacionCatalogoEnCurso = false;
 
@@ -1014,6 +1076,7 @@ async function comprobarActualizacionCatalogo() {
     }
     revisionCatalogoActual = revision;
     await refrescarPreciosCarrito();
+    await sincronizarDisponibilidadVisible();
   } catch (error) { console.warn("No se pudo sincronizar el catálogo:", error); }
   finally { actualizacionCatalogoEnCurso = false; }
 }
@@ -1133,7 +1196,9 @@ function buscar(texto = "") {
 
 function buscarProducto(codigo) { return state.productos.find((p) => p.codigo === codigo) || ofertasHome.find((p) => p.codigo === codigo) || state.carrito.find((p) => p.codigo === codigo); }
 
-function agregarPrimeraUnidad(codigo) {
+async function agregarPrimeraUnidad(codigo) {
+  const vigente = await verificarProductoParaCompra(codigo);
+  if (!vigente) return;
   state.pedidoRegistrado = null;
   const producto = buscarProducto(codigo);
   if (!producto) return;
@@ -1141,12 +1206,12 @@ function agregarPrimeraUnidad(codigo) {
   const existente = state.carrito.find((x) => x.codigo === codigo);
   if (existente) {
     existente.cantidad = Math.min(999, (Number(existente.cantidad) || 0) + 1);
-    existente.precio = precioVigente(producto);
+    existente.precio = Number(vigente.precio);
   } else {
     state.carrito.push({
       codigo: producto.codigo,
       nombre: producto.nombre,
-      precio: precioVigente(producto),
+      precio: Number(vigente.precio),
       unidadVenta: producto.unidadVenta,
       rubro: producto.rubro,
       cantidad: 1,
@@ -1160,7 +1225,8 @@ function agregarPrimeraUnidad(codigo) {
   programarCierreCantidad(codigo);
 }
 
-function modificarCantidadProducto(codigo, delta) {
+async function modificarCantidadProducto(codigo, delta) {
+  if (delta > 0 && !(await verificarProductoParaCompra(codigo))) return;
   state.pedidoRegistrado = null;
   const item = state.carrito.find((x) => x.codigo === codigo);
   if (!item) return;
@@ -1188,7 +1254,8 @@ function modificarCantidadProducto(codigo, delta) {
   programarCierreCantidad(codigo);
 }
 
-function actualizarCantidadCarrito(codigo, delta) {
+async function actualizarCantidadCarrito(codigo, delta) {
+  if (delta > 0 && !(await verificarProductoParaCompra(codigo))) return;
   state.pedidoRegistrado = null;
   const item = state.carrito.find((x) => x.codigo === codigo);
   if (!item) return;
@@ -1636,14 +1703,16 @@ function dibujarSelectorKg() {
   document.getElementById("catalogoKgPrecio").textContent = formatMoney(precioVigente(producto) * kilos);
   document.getElementById("catalogoKgCantidad").textContent = `${kilos.toLocaleString("es-AR", {maximumFractionDigits: 3})} kg estimados`;
 }
-function confirmarSelectorKg() {
+async function confirmarSelectorKg() {
   if (!kgSeleccion) return;
   const {producto, modo, pasos, piezas} = kgSeleccion;
+  const vigente = await verificarProductoParaCompra(producto.codigo);
+  if (!vigente) { cerrarSelectorKg(); return; }
   const cantidad = modo === "peso" ? pasos / 2 : Math.round(piezas * Number(producto.gramosPorUnidad)) / 1000;
   if (!Number.isFinite(cantidad) || cantidad < 0.01 || cantidad > 999) return;
   const item = state.carrito.find(x => x.codigo === producto.codigo);
-  if (item) { item.cantidad = cantidad; item.precio = precioVigente(producto); item.unidadVenta = "kg"; }
-  else state.carrito.push({ codigo:producto.codigo, nombre:producto.nombre, precio:precioVigente(producto), unidadVenta:"kg", rubro:producto.rubro, cantidad });
+  if (item) { item.cantidad = cantidad; item.precio = Number(vigente.precio); item.unidadVenta = "kg"; }
+  else state.carrito.push({ codigo:producto.codigo, nombre:producto.nombre, precio:Number(vigente.precio), unidadVenta:"kg", rubro:producto.rubro, cantidad });
   state.pedidoRegistrado = null;
   guardarCarrito(); renderCart(); renderControlCompra(producto.codigo); cerrarSelectorKg();
 }
