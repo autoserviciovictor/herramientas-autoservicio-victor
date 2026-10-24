@@ -218,7 +218,7 @@ async function listarRubrosPublicosDb() {
     LEFT JOIN catalog_product_settings s
       ON s.category_id=c.category_id AND s.visible=TRUE
     LEFT JOIN product_catalog p
-      ON p.code=s.code AND p.stock > 0
+      ON p.code=s.code
     WHERE c.active=TRUE
     GROUP BY c.category_id, c.name, c.slug, c.description, c.image_url, c.sort_order
     HAVING COUNT(p.code) > 0
@@ -248,7 +248,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const destacado = opciones.destacado === true;
   const subrubro = Number(opciones.subrubro);
 
-  const condiciones = ["s.visible=TRUE", "c.active=TRUE", "p.stock > 0"];
+  const condiciones = ["s.visible=TRUE", "c.active=TRUE"];
   const parametros = [];
 
   if (busqueda) {
@@ -290,7 +290,7 @@ async function listarProductosPublicosDb(opciones = {}) {
   const offsetParam = parametros.length;
   const resultado = await query(
     `SELECT
-       p.code, p.article, p.price,
+       p.code, p.article, p.price, p.stock,
        s.subcategory_id, s.brand, s.presentation, s.sale_unit, s.kg_sale_mode, s.kg_unit_grams, s.image_url, s.featured, s.offer_price, s.sort_order,
        c.category_id, c.name AS category_name, c.slug AS category_slug
      FROM product_catalog p
@@ -312,6 +312,8 @@ async function listarProductosPublicosDb(opciones = {}) {
       codigo: String(fila.code || ""),
       nombre: String(fila.article || ""),
       precio: fila.price === null || fila.price === undefined ? null : Number(fila.price),
+      disponible: Number(fila.stock) > 0,
+      stock: Number(fila.stock) || 0,
       subrubroId: fila.subcategory_id == null ? null : Number(fila.subcategory_id),
       marca: String(fila.brand || ""),
       presentacion: String(fila.presentation || ""),

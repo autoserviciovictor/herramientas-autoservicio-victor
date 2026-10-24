@@ -682,6 +682,7 @@ function cantidadEnCarrito(codigo) {
 }
 
 function controlCompraHtml(producto) {
+  if (producto.disponible === false) return `<span style="display:block;text-align:center;padding:12px;color:#a11b2b;font-weight:700">Sin stock</span>`;
   const codigo = escapeHtml(producto.codigo);
   const cantidad = cantidadEnCarrito(producto.codigo);
   const editando = state.editoresCantidad.has(producto.codigo);
@@ -754,6 +755,7 @@ function renderProductCard(producto) {
       <h3 title="${escapeHtml(producto.nombre)}">${escapeHtml(producto.nombre)}</h3>
       ${marca ? `<div class="product-card__brand">${escapeHtml(marca)}</div>` : '<div class="product-card__brand">&nbsp;</div>'}
       <div class="product-card__meta">${precioVigente(producto) < Number(producto.precio) ? `<del class="product-card__old-price">${formatMoney(producto.precio)}</del>` : ""}<strong class="product-card__price">${formatMoney(precioVigente(producto))}</strong><span class="product-card__unit">${escapeHtml(producto.unidadVenta || "unidad")}</span></div>
+      ${producto.disponible === false ? `<div style="color:#b42335;font-size:12px;font-weight:700;margin-bottom:5px">Sin stock · No disponible para comprar</div>` : ""}
       <div class="product-card__actions purchase-control" data-purchase-control="${escapeHtml(producto.codigo)}">
         ${controlCompraHtml(producto)}
       </div>
