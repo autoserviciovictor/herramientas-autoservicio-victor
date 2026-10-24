@@ -1060,6 +1060,54 @@ async function actualizarVisibilidadMasivaCatalogoAdminDb({ visible, rubroId = n
   return { visible: hacerVisible, actualizados: r.rowCount, coincidencias, omitidosSinRubro: Number(omitidos?.rows[0]?.total) || 0 };
 }
 
+async function quitarImagenesMasivamenteCatalogoDb({ busqueda = "", rubro = "todos", subrubro = "todos", estado = "todos", estadoImagen = "todos", destacado = "todos", soloContar = false } = {}) {
+  await asegurarEsquemaCatalogoPublico();
+  const q = normalizarBusqueda(busqueda);
+  const r = textoLimitado(rubro, 80) || "todos";
+  const sub = textoLimitado(subrubro, 80) || "todos";
+  const est = textoLimitado(estado, 30) || "todos";
+  const img = textoLimitado(estadoImagen, 30) || "todos";
+  const dest = textoLimitado(destacado, 30) || "todos";
+  const condiciones = ["1=1"];
+  const args = [];
+  if (q) {
+    args.push(`%${q}%`);
+    const n = args.length;
+    condiciones.push(`(p.article ILIKE $${n} OR p.code ILIKE $${n} OR COALESCE(s.brand,'') ILIKE $${n} OR COALESCE(s.presentation,'') ILIKE $${n})`);
+  }
+  if (r === "sin-rubro") condiciones.push("s.category_id IS NULL");
+  else if (r !== "todos") { args.push(r); condiciones.push(`s.category_id::text=$${args.length}`); }
+  if (sub === "sin-subrubro") condiciones.push("s.subcategory_id IS NULL");
+  else if (sub !== "todos") { args.push(sub); condiciones.push(`s.subcategory_id::text=$${args.length}`); }
+  if (est === "visible") condiciones.push("s.visible=TRUE");
+  else if (est === "oculto") condiciones.push("COALESCE(s.visible,FALSE)=FALSE");
+  else if (est === "sin-configurar") condiciones.push("s.code IS NULL");
+  else if (est === "destacado") condiciones.push("s.featured=TRUE");
+  if (dest === "destacados") condiciones.push("COALESCE(s.featured,FALSE)=TRUE");
+  else if (dest === "no_destacados") condiciones.push("COALESCE(s.featured,FALSE)=FALSE");
+  if (img === "con_imagen") condiciones.push("(s.image_data IS NOT NULL OR NULLIF(BTRIM(s.image_url),'') IS NOT NULL)");
+  else if (img === "sin_imagen") condiciones.push("(s.image_data IS NULL AND NULLIF(BTRIM(s.image_url),'') IS NULL)");
+  else if (["confirmada", "candidato", "buscando", "sin_resultado", "error"].includes(img)) { args.push(img); condiciones.push(`s.image_status=$${args.length}`); }
+  const hayFiltros = Boolean(q) || [r,sub,est,img,dest].some(v => v !== "todos");
+  if (!hayFiltros) { const error = new Error("Aplicá al menos un filtro antes de quitar imágenes masivamente."); error.status=400; throw error; }
+  const where = condiciones.join(" AND ");
+  const tieneImagen = `(s.image_data IS NOT NULL OR NULLIF(BTRIM(s.image_url),'') IS NOT NULL OR s.image_candidate_data IS NOT NULL OR NULLIF(BTRIM(s.image_candidate_url),'') IS NOT NULL)`;
+  if (soloContar) {
+    const result = await query(`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE ${tieneImagen})::int AS con_imagen FROM product_catalog p LEFT JOIN catalog_product_settings s ON s.code=p.code WHERE ${where}`, args);
+    return { coincidencias: Number(result.rows[0]?.total)||0, conImagen: Number(result.rows[0]?.con_imagen)||0 };
+  }
+  // Una sola sentencia conserva el alcance original incluso si cambia el filtro de imagen/visibilidad.
+  // El trigger de auditoría registra los cambios de imagen y visibilidad por producto.
+  const result = await query(`UPDATE catalog_product_settings s SET
+    image_url='', image_source='', image_status='sin_imagen', image_data=NULL, image_mime='',
+    image_candidate_url='', image_candidate_source='', image_candidate_title='', image_candidate_score=0,
+    image_candidate_data=NULL, image_candidate_mime='', image_candidates='[]', image_error='',
+    visible=FALSE, updated_at=NOW()
+    FROM product_catalog p WHERE p.code=s.code AND ${where} AND ${tieneImagen}
+    RETURNING s.code`, args);
+  return { actualizados: result.rowCount };
+}
+
 async function guardarResultadoImagenCatalogoDb(codigo, datos = {}, opciones = {}) {
   await asegurarEsquemaCatalogoPublico();
   const code = textoLimitado(codigo, 160);
@@ -1323,6 +1371,7 @@ module.exports = {
   confirmarCandidatoImagenCatalogoDb,
   obtenerImagenCatalogoDb,
   quitarImagenCatalogoDb,
+  quitarImagenesMasivamenteCatalogoDb,
   obtenerEstadoProcesoImagenesDb,
   iniciarProcesoImagenesDb,
   pausarProcesoImagenesDb,

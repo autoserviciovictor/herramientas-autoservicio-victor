@@ -88,6 +88,7 @@ const {
   confirmarCandidatoImagenCatalogoDb,
   obtenerImagenCatalogoDb,
   quitarImagenCatalogoDb,
+  quitarImagenesMasivamenteCatalogoDb,
   sincronizarVisibilidadStockCatalogoDb,
   obtenerAutoStockCatalogoDb,
   guardarAutoStockCatalogoDb,
@@ -2083,7 +2084,6 @@ app.get("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, 
 app.put("/admin/catalogo/productos/:codigo", requerirAdministrador, async (req, res) => {
   try {
     const producto = await actualizarProductoCatalogoAdminDb(req.params.codigo, req.body || {});
-    await registrarAccionCatalogo({codigo:req.params.codigo,accion:'Edición manual',usuario:req.usuario?.usuario,detalle:'Datos del producto guardados'});
     res.json({ ok: true, producto });
   } catch (error) {
     console.error("Error actualizando producto del catálogo:", error);
@@ -2116,6 +2116,21 @@ app.post("/admin/catalogo/productos/visibilidad-masiva", requerirAdministrador, 
   } catch (error) {
     console.error("Error actualizando visibilidad masiva del catálogo:", error);
     res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudo actualizar la publicación masiva" });
+  }
+});
+
+app.post("/admin/catalogo/productos/quitar-imagenes-masivo", requerirAdministrador, async (req, res) => {
+  try {
+    const filtros = {
+      busqueda: req.body?.q, rubro: req.body?.rubro, subrubro: req.body?.subrubro,
+      estado: req.body?.estado, estadoImagen: req.body?.imagen, destacado: req.body?.destacado,
+      soloContar: req.body?.soloContar === true,
+    };
+    const resultado = await quitarImagenesMasivamenteCatalogoDb(filtros);
+    res.json({ ok: true, ...resultado });
+  } catch (error) {
+    console.error("Error quitando imágenes masivamente:", error);
+    res.status(error.status || 400).json({ ok: false, mensaje: error.message || "No se pudieron quitar las imágenes" });
   }
 });
 

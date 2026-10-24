@@ -955,7 +955,7 @@ async function quitarImagenActual() {
 function alcancePublicacionMasiva() {
   const filtros = parametrosProductos();
   const rubro = filtros.get("rubro") || "todos";
-  const activos = ["q", "rubro", "estado", "imagen"].some((clave) => filtros.has(clave));
+  const activos = ["q", "rubro", "subrubro", "estado", "imagen", "destacado"].some((clave) => filtros.has(clave));
   const nombreRubro = rubro === "sin-rubro" ? "productos sin rubro" : estado.rubros.find((r) => String(r.id) === rubro)?.nombre;
   return { filtros, activos, sinRubro: rubro === "sin-rubro", nombre: activos ? (nombreRubro ? `los productos filtrados (${nombreRubro})` : "los productos que coinciden con los filtros") : "todo el catálogo" };
 }
@@ -964,6 +964,11 @@ function actualizarBotonesPublicacionMasiva() {
   const alcance = alcancePublicacionMasiva();
   const publicar = $("catalogBtnPublicarMasivo");
   const ocultar = $("catalogBtnOcultarMasivo");
+  const quitarImagenes = $("catalogBtnQuitarImagenesMasivo");
+  if (quitarImagenes) {
+    quitarImagenes.disabled = !alcance.activos;
+    quitarImagenes.title = `Quitar imágenes de ${alcance.nombre} (todas las páginas)`;
+  }
   if (publicar) {
     publicar.disabled = !alcance.activos || alcance.sinRubro;
     publicar.title = alcance.sinRubro ? "Asigná un rubro antes de publicar estos productos" : `Publicar ${alcance.nombre}`;
@@ -976,6 +981,38 @@ function actualizarBotonesPublicacionMasiva() {
     const span = ocultar.querySelector("span");
     if (span) span.textContent = "Ocultar filtrados";
   }
+}
+
+async function quitarImagenesFiltradas() {
+  const alcance = alcancePublicacionMasiva();
+  if (!alcance.activos) return mensaje("Aplicá al menos un filtro antes de quitar imágenes masivamente.");
+  const boton = $("catalogBtnQuitarImagenesMasivo");
+  if (boton) boton.disabled = true;
+  try {
+    const filtros = alcance.filtros;
+    const body = {
+      q: filtros.get("q") || "", rubro: filtros.get("rubro") || "todos",
+      subrubro: filtros.get("subrubro") || "todos", estado: filtros.get("estado") || "todos",
+      imagen: filtros.get("imagen") || "todos", destacado: filtros.get("destacado") || "todos",
+    };
+    const conteo = await api("/admin/catalogo/productos/quitar-imagenes-masivo", {
+      method: "POST", body: JSON.stringify({ ...body, soloContar: true }),
+    });
+    if (!conteo.coincidencias) return mensaje("No hay productos que coincidan con los filtros.");
+    if (!conteo.conImagen) return mensaje("Ninguno de los productos filtrados tiene una imagen asignada.");
+    const confirmar = await window.AutoservicioDialog?.confirm?.({
+      title: "Quitar imágenes de productos filtrados",
+      message: `Se quitarán las imágenes de ${numero(conteo.conImagen)} productos (de ${numero(conteo.coincidencias)} filtrados), incluyendo todas las páginas. Los productos afectados quedarán ocultos. ¿Querés continuar?`,
+      confirmarTexto: "Quitar imágenes", cancelarTexto: "Cancelar", danger: true,
+    });
+    if (!confirmar) return;
+    const data = await api("/admin/catalogo/productos/quitar-imagenes-masivo", {
+      method: "POST", body: JSON.stringify(body),
+    });
+    await Promise.all([cargarEstado(), cargarProductos({ conservarPagina: false })]);
+    mensaje(`Se quitaron imágenes de ${numero(data.actualizados)} productos. Los afectados quedaron ocultos.`, "ok");
+  } catch (e) { mensaje(e.message); }
+  finally { actualizarBotonesPublicacionMasiva(); }
 }
 
 async function cambiarVisibilidadMasiva(visible) {
@@ -1325,50 +1362,89 @@ function detalleHistorialCatalogo(m) {
   });
   return `${valores.join('')}${m.detalle && !campos.length ? `<span>${esc(m.detalle)}</span>` : ''}` || '<span class="catalog-history-muted">Sin detalle adicional</span>';
 }
+function claseMovimientoHistorial(accion) {
+  if (accion==='Publicado') return ['visible','◉'];
+  if (accion==='Ocultado') return ['oculto','◉'];
+  if (/precio/i.test(accion)) return ['precio','◇'];
+  if (/imagen/i.test(accion)) return ['imagen','▧'];
+  if (/importaci/i.test(accion)) return ['excel','▤'];
+  if (/subrubro/i.test(accion)) return ['subrubro','◇'];
+  return ['neutro','✎'];
+}
+function pintarPaginasHistorial() {
+  const totalPaginas=Math.max(1,Math.ceil(totalHistorialCatalogo/10));
+  const inicio=totalHistorialCatalogo ? (paginaHistorialCatalogo-1)*10+1 : 0;
+  const fin=Math.min(paginaHistorialCatalogo*10,totalHistorialCatalogo);
+  $('catalogHistorialPagina').textContent=`Mostrando ${numero(inicio)} a ${numero(fin)} de ${numero(totalHistorialCatalogo)} movimientos`;
+  $('catalogHistorialAnterior').disabled=paginaHistorialCatalogo<=1;
+  $('catalogHistorialSiguiente').disabled=paginaHistorialCatalogo>=totalPaginas;
+  const paginas=new Set([1,totalPaginas]);
+  for(let n=Math.max(1,paginaHistorialCatalogo-2);n<=Math.min(totalPaginas,paginaHistorialCatalogo+2);n++) paginas.add(n);
+  let anterior=0;
+  $('catalogHistorialNumeros').innerHTML=[...paginas].sort((a,b)=>a-b).map(n=>{
+    const sep=n-anterior>1 ? '<span class="catalog-history-ellipsis">…</span>' : '';
+    anterior=n;
+    return `${sep}<button type="button" class="catalog-history-pagebtn ${n===paginaHistorialCatalogo?'activo':''}" data-hist-pagina="${n}">${n}</button>`;
+  }).join('');
+  $('catalogHistorialNumeros').querySelectorAll('[data-hist-pagina]').forEach(btn=>btn.addEventListener('click',()=>{paginaHistorialCatalogo=Number(btn.dataset.histPagina);cargarHistorialCatalogo();}));
+}
 async function cargarHistorialCatalogo() {
-  const contenedor = $("catalogHistorialResultados");
+  const contenedor=$('catalogHistorialResultados');
   if (!contenedor || cargandoHistorialCatalogo) return;
-  cargandoHistorialCatalogo = true;
-  contenedor.innerHTML = '<tr><td colspan="6" class="catalog-history-empty">Cargando movimientos…</td></tr>';
+  cargandoHistorialCatalogo=true;
+  contenedor.innerHTML='<tr><td colspan="7" class="catalog-history-empty">Cargando movimientos…</td></tr>';
   try {
-    const params = new URLSearchParams({ pagina:String(paginaHistorialCatalogo), q:$("catalogHistorialBuscar")?.value||"", accion:$("catalogHistorialTipo")?.value||"" });
-    const data = await api(`/admin/catalogo/historial?${params}`);
-    totalHistorialCatalogo = Number(data.total) || 0;
-    const movimientos = data.movimientos || [];
-    $("catalogHistorialTotal").textContent = numero(totalHistorialCatalogo);
-    $("catalogHistorialPublicados").textContent = numero(movimientos.filter(m=>m.accion==='Publicado').length);
-    $("catalogHistorialOcultados").textContent = numero(movimientos.filter(m=>m.accion==='Ocultado').length);
-    $("catalogHistorialUltimo").textContent = movimientos.length ? new Date(movimientos[0].created_at).toLocaleDateString('es-AR') : '—';
-    contenedor.innerHTML = movimientos.map(m => {
-      const fecha = new Date(m.created_at);
-      const clase = m.accion==='Publicado' ? 'visible' : m.accion==='Ocultado' ? 'oculto' : 'neutro';
-      const accion = m.accion === 'Publicado' ? 'Ocultar' : m.accion === 'Ocultado' ? 'Hacer visible' : 'Cambiar estado';
-      const visible = m.accion === 'Publicado' ? '0' : m.accion === 'Ocultado' ? '1' : '';
-      return `<tr><td><strong>${esc(fecha.toLocaleDateString('es-AR'))}</strong><small>${esc(fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}))}</small></td>
-        <td><strong>${esc(m.nombre||m.code||'Producto')}</strong><small>${esc(m.code||'Sin código')}</small></td>
-        <td><span class="catalog-history-status ${clase}">${esc(m.accion)}</span></td>
-        <td><strong>${esc(m.origen||'Sistema')}</strong><small>${esc(m.usuario||'Sistema')}</small></td>
-        <td class="catalog-history-details">${detalleHistorialCatalogo(m)}</td>
-        <td>${m.code ? `<button type="button" class="catalog-history-action" data-hist-cambiar="${esc(m.code)}" data-hist-visible="${visible}">${esc(accion)}</button>` : '—'}</td></tr>`;
-    }).join('') || '<tr><td colspan="6" class="catalog-history-empty">Todavía no hay movimientos registrados con estos filtros.</td></tr>';
-    $("catalogHistorialPagina").textContent = `Página ${paginaHistorialCatalogo} de ${Math.max(1,Math.ceil(totalHistorialCatalogo/50))} · ${numero(totalHistorialCatalogo)} movimientos`;
-    $("catalogHistorialAnterior").disabled = paginaHistorialCatalogo <= 1;
-    $("catalogHistorialSiguiente").disabled = paginaHistorialCatalogo * 50 >= totalHistorialCatalogo;
+    const params=new URLSearchParams({pagina:String(paginaHistorialCatalogo),q:$('catalogHistorialBuscar')?.value||'',accion:$('catalogHistorialTipo')?.value||'',desde:$('catalogHistorialDesde')?.value||'',hasta:$('catalogHistorialHasta')?.value||''});
+    const data=await api(`/admin/catalogo/historial?${params}`);
+    totalHistorialCatalogo=Number(data.total)||0;
+    const resumen=data.resumen||{};
+    const contadores={catalogHistorialTotal:totalHistorialCatalogo,catalogHistorialPublicados:resumen.publicados,catalogHistorialOcultados:resumen.ocultados,catalogHistorialModificaciones:resumen.modificaciones,catalogHistorialPrecios:resumen.precios,catalogHistorialImagenes:resumen.imagenes,catalogHistorialImportaciones:resumen.importaciones};
+    Object.entries(contadores).forEach(([id,n])=>{if($(id)) $(id).textContent=numero(Number(n)||0);});
+    const movimientos=data.movimientos||[];
+    contenedor.innerHTML=movimientos.map(m=>{
+      const fecha=new Date(m.created_at);
+      const [clase,icono]=claseMovimientoHistorial(m.accion||'');
+      const cambio=m.nuevo?.visible;
+      const visibleActual=typeof cambio==='boolean' ? cambio : (m.accion==='Publicado'?true:m.accion==='Ocultado'?false:null);
+      const accion=visibleActual===true?'Ocultar':visibleActual===false?'Hacer visible':'Ver detalles';
+      const esCambio=visibleActual!==null && !!m.code;
+      const origen=m.origen||'Sistema';
+      const esAuto=/auto|sistema/i.test(origen);
+      const esExcel=/excel|importaci/i.test(origen);
+      const origenClase=esExcel?'excel':esAuto?'auto':'manual';
+      const detalle=detalleHistorialCatalogo(m);
+      return `<tr>
+        <td class="catalog-history-date"><strong>${esc(fecha.toLocaleDateString('es-AR'))}</strong><small>${esc(fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}))}</small></td>
+        <td><span class="catalog-history-status ${clase}"><span>${icono}</span>${esc(m.accion||'Movimiento')}</span></td>
+        <td><div class="catalog-history-product"><div><strong>${esc(m.nombre||m.code||'Importación Excel')}</strong><small>${esc(m.code||'—')}</small></div></div></td>
+        <td class="catalog-history-details">${detalle}</td>
+        <td><div class="catalog-history-user"><span class="catalog-history-avatar">${esc((m.usuario||'S').slice(0,1).toUpperCase())}</span><div><strong>${esc(m.usuario||'Sistema')}</strong><small>${esAuto?'Sistema':'Administrador'}</small></div></div></td>
+        <td><span class="catalog-history-origin ${origenClase}">${esc(origen)}</span></td>
+        <td><button type="button" class="catalog-history-action ${esCambio&&visibleActual?'danger':''}" ${esCambio?`data-hist-cambiar="${esc(m.code)}" data-hist-visible="${visibleActual?'0':'1'}"`:`data-hist-detalle="${esc(m.id)}"`}>${esc(accion)}</button></td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="7" class="catalog-history-empty">No hay movimientos para los filtros seleccionados.</td></tr>';
+    pintarPaginasHistorial();
     contenedor.querySelectorAll('[data-hist-cambiar]').forEach(b=>b.addEventListener('click',async()=>{
+      const nuevoVisible=b.dataset.histVisible==='1';
+      if(!window.confirm(`¿Querés ${nuevoVisible?'hacer visible':'ocultar'} este producto?`)) return;
       b.disabled=true;
       try {
-        const nuevoVisible = b.dataset.histVisible === '' ? window.confirm('Aceptar para hacer visible el producto. Cancelar para ocultarlo.') : b.dataset.histVisible === '1';
         await api(`/admin/catalogo/productos/${encodeURIComponent(b.dataset.histCambiar)}/visibilidad`,{method:'PATCH',body:JSON.stringify({visible:nuevoVisible})});
-        mensaje('Visibilidad actualizada.', 'ok');
+        mensaje('Visibilidad actualizada.','ok');
         await Promise.all([cargarEstado(),cargarProductos()]);
-        await cargarHistorialCatalogo();
-      } catch(e) { mensaje(e.message); b.disabled=false; }
+      } catch(e) {mensaje(e.message);} finally {b.disabled=false;setTimeout(cargarHistorialCatalogo,0);}
+    }));
+    contenedor.querySelectorAll('[data-hist-detalle]').forEach(b=>b.addEventListener('click',()=>{
+      const m=movimientos.find(x=>String(x.id)===b.dataset.histDetalle);
+      if(!m)return;
+      const div=document.createElement('div');div.className='catalog-history-detail-overlay';
+      div.innerHTML=`<div class="catalog-history-detail-card" role="dialog" aria-modal="true"><button class="catalog-history-close" type="button" aria-label="Cerrar">✕</button><h3>Detalle del movimiento</h3><p><strong>${esc(m.nombre||m.code||'Movimiento')}</strong> · ${esc(m.accion||'')}</p><div class="catalog-history-details">${detalleHistorialCatalogo(m)}</div><small>${esc(new Date(m.created_at).toLocaleString('es-AR'))} · ${esc(m.usuario||'Sistema')}</small></div>`;
+      div.addEventListener('click',e=>{if(e.target===div||e.target.closest('.catalog-history-close'))div.remove();});
+      document.body.appendChild(div);
     }));
   } catch(e) {
-    const base = API_BASE_URL || 'servidor configurado';
-    contenedor.innerHTML = `<tr><td colspan="6" class="catalog-history-empty catalog-history-error"><strong>No se pudo cargar el historial</strong><p>${esc(e.message)}</p><small>Comprobá que el servidor (${esc(base)}) tenga publicada la ruta /admin/catalogo/historial y que PostgreSQL esté disponible.</small></td></tr>`;
-    $("catalogHistorialTotal").textContent = '—';
-  } finally { cargandoHistorialCatalogo=false; }
+    contenedor.innerHTML=`<tr><td colspan="7" class="catalog-history-empty catalog-history-error"><strong>No se pudo cargar el historial</strong><p>${esc(e.message)}</p></td></tr>`;
+  } finally {cargandoHistorialCatalogo=false;}
 }
 function abrirHistorialCatalogo() { paginaHistorialCatalogo=1; abrirModal('catalogHistorialModal'); cargarHistorialCatalogo(); }
 
@@ -1398,6 +1474,7 @@ function bind() {
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarFiltrosProductos(); });
   $("catalogBtnPublicarMasivo")?.addEventListener("click", () => cambiarVisibilidadMasiva(true));
   $("catalogBtnOcultarMasivo")?.addEventListener("click", () => cambiarVisibilidadMasiva(false));
+  $("catalogBtnQuitarImagenesMasivo")?.addEventListener("click", quitarImagenesFiltradas);
   $("catalogBtnImportarImagenes")?.addEventListener("click", () => $("catalogImportarImagenesArchivo")?.click());
   $("catalogImportarImagenesArchivo")?.addEventListener("change", (e) => seleccionarZipImagenes(e.target.files?.[0]));
   $("catalogImportarImagenesCambiar")?.addEventListener("click", () => $("catalogImportarImagenesArchivo")?.click());
@@ -1424,8 +1501,9 @@ function bind() {
   $("catalogHistorialRecargar")?.addEventListener("click",cargarHistorialCatalogo);
   $("catalogHistorialBuscar")?.addEventListener("input",()=>{clearTimeout(estado.historialTimer);estado.historialTimer=setTimeout(()=>{paginaHistorialCatalogo=1;cargarHistorialCatalogo();},300)});
   $("catalogHistorialTipo")?.addEventListener("change",()=>{paginaHistorialCatalogo=1;cargarHistorialCatalogo()});
+  ["catalogHistorialDesde","catalogHistorialHasta"].forEach(id=>$(id)?.addEventListener("change",()=>{paginaHistorialCatalogo=1;cargarHistorialCatalogo()}));
   $("catalogHistorialAnterior")?.addEventListener("click",()=>{if(paginaHistorialCatalogo>1){paginaHistorialCatalogo--;cargarHistorialCatalogo()}});
-  $("catalogHistorialSiguiente")?.addEventListener("click",()=>{if(paginaHistorialCatalogo*50<totalHistorialCatalogo){paginaHistorialCatalogo++;cargarHistorialCatalogo()}});
+  $("catalogHistorialSiguiente")?.addEventListener("click",()=>{if(paginaHistorialCatalogo*10<totalHistorialCatalogo){paginaHistorialCatalogo++;cargarHistorialCatalogo()}});
   $("catalogBtnVerPublico")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnVerPublicoMobile")?.addEventListener("click", abrirCatalogoPublico);
   $("catalogBtnNuevoRubro")?.addEventListener("click", () => abrirRubro());

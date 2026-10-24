@@ -423,7 +423,7 @@ function renderCheckoutReview() {
   els.checkoutReviewTotal.textContent = formatMoney(totals.total);
   els.checkoutReviewProductos.innerHTML = state.carrito.map((item) => `
     <div class="checkout-review-product">
-      <span>${item.cantidad} × ${escapeHtml(item.nombre)}</span>
+      <span>${escapeHtml(cantidadPresentada(item))} × ${escapeHtml(item.nombre)}</span>
       <strong>${formatMoney((Number(item.precio) || 0) * (Number(item.cantidad) || 0))}</strong>
     </div>`).join("");
 }
@@ -496,6 +496,15 @@ async function registrarPedidoCatalogo() {
   return data.pedido;
 }
 
+function cantidadPresentada(item) {
+  if (String(item.unidadVenta).toLowerCase() === "kg") {
+    if (item.modoCompraKg === "unidades" && Number(item.piezasCompraKg) > 0)
+      return `${Math.round(Number(item.piezasCompraKg))} unidades`;
+    return `${Number(item.cantidad).toLocaleString("es-AR", { maximumFractionDigits: 3 })} kg`;
+  }
+  return `${item.cantidad} unidades`;
+}
+
 function generarMensajePedido() {
   const c = state.checkout || {};
   const totals = cartTotals();
@@ -506,7 +515,7 @@ function generarMensajePedido() {
     `*Cliente:* ${c.nombre || "-"}`,
     `*Teléfono:* ${c.telefono || "-"}`, "",
     "*Productos:*",
-    ...state.carrito.map((item) => `• ${item.cantidad}${String(item.unidadVenta).toLowerCase()==="kg" ? " kg de" : " x"} ${item.nombre} — ${formatMoney((Number(item.precio) || 0) * (Number(item.cantidad) || 0))}`),
+    ...state.carrito.map((item) => `• ${cantidadPresentada(item)} de ${item.nombre} — ${formatMoney((Number(item.precio) || 0) * (Number(item.cantidad) || 0))}`),
     "", `*Total estimado:* ${formatMoney(totals.total)}`, "",
     `*Entrega:* ${resumenEntrega()}`,
   ];
@@ -676,7 +685,7 @@ function controlCompraHtml(producto) {
   const codigo = escapeHtml(producto.codigo);
   const cantidad = cantidadEnCarrito(producto.codigo);
   const editando = state.editoresCantidad.has(producto.codigo);
-  if (String(producto.unidadVenta).toLowerCase() === "kg") return `<button class="add-button purchase-add-button" type="button" data-action="kg-select" data-code="${codigo}">${cantidad ? `${cantidad.toLocaleString("es-AR")} kg · Cambiar` : "Elegir cantidad"}</button>`;
+  if (String(producto.unidadVenta).toLowerCase() === "kg") return `<button class="add-button purchase-add-button" type="button" data-action="kg-select" data-code="${codigo}">${cantidad ? `${escapeHtml(cantidadPresentada(state.carrito.find(x => x.codigo === producto.codigo)))} · Cambiar` : "Elegir cantidad"}</button>`;
 
   if (!cantidad) {
     return `<button class="add-button purchase-add-button" type="button" data-action="add-first" data-code="${codigo}">Agregar</button>`;
@@ -1302,7 +1311,7 @@ function renderCart() {
   }
   els.cartItems.innerHTML = state.carrito.map((item) => `<article class="cart-item">
     <div class="cart-item__image">${imagenProducto(item)}</div>
-    <div><h3>${escapeHtml(item.nombre)}</h3><div class="cart-item__price">${formatMoney(item.precio)} / ${String(item.unidadVenta).toLowerCase()==="kg" ? "kg" : "unidad"}</div>${String(item.unidadVenta).toLowerCase()==="kg" ? `<button class="kg-cart-edit" type="button" data-action="kg-select" data-code="${escapeHtml(item.codigo)}">${Number(item.cantidad).toLocaleString("es-AR")} kg · Cambiar</button>` : `<div class="qty-control"><button type="button" data-cart-action="minus" data-code="${escapeHtml(item.codigo)}">−</button><span>${item.cantidad}</span><button type="button" data-cart-action="plus" data-code="${escapeHtml(item.codigo)}">+</button></div>`}</div>
+    <div><h3>${escapeHtml(item.nombre)}</h3><div class="cart-item__price">${formatMoney(item.precio)} / ${String(item.unidadVenta).toLowerCase()==="kg" ? "kg" : "unidad"}</div>${String(item.unidadVenta).toLowerCase()==="kg" ? `<button class="kg-cart-edit" type="button" data-action="kg-select" data-code="${escapeHtml(item.codigo)}">${escapeHtml(cantidadPresentada(item))} · Cambiar</button>` : `<div class="qty-control"><button type="button" data-cart-action="minus" data-code="${escapeHtml(item.codigo)}">−</button><span>${item.cantidad}</span><button type="button" data-cart-action="plus" data-code="${escapeHtml(item.codigo)}">+</button></div>`}</div>
     <button class="cart-item__remove" type="button" data-cart-action="remove" data-code="${escapeHtml(item.codigo)}" aria-label="Quitar ${escapeHtml(item.nombre)}">×</button>
   </article>`).join("");
 }
@@ -1681,7 +1690,7 @@ function abrirSelectorKg(codigo) {
   const producto = buscarProducto(codigo);
   if (!producto || String(producto.unidadVenta).toLowerCase() !== "kg") return;
   const previo = state.carrito.find(item => item.codigo === codigo);
-  kgSeleccion = { producto, modo: producto.modalidadKg === "solo_unidades" ? "unidades" : "peso", pasos: Math.max(1, Math.round((Number(previo?.cantidad) || 1) * 2)), piezas: 1 };
+  kgSeleccion = { producto, modo: previo?.modoCompraKg === "unidades" ? "unidades" : producto.modalidadKg === "solo_unidades" ? "unidades" : "peso", pasos: Math.max(1, Math.round((Number(previo?.cantidad) || 1) * 2)), piezas: Math.max(1, Math.round(Number(previo?.piezasCompraKg) || 1)) };
   const modal = document.getElementById("catalogoKgModal");
   modal.hidden = false;
   document.body.classList.add("kg-modal-open");
@@ -1711,8 +1720,8 @@ async function confirmarSelectorKg() {
   const cantidad = modo === "peso" ? pasos / 2 : Math.round(piezas * Number(producto.gramosPorUnidad)) / 1000;
   if (!Number.isFinite(cantidad) || cantidad < 0.01 || cantidad > 999) return;
   const item = state.carrito.find(x => x.codigo === producto.codigo);
-  if (item) { item.cantidad = cantidad; item.precio = Number(vigente.precio); item.unidadVenta = "kg"; }
-  else state.carrito.push({ codigo:producto.codigo, nombre:producto.nombre, precio:Number(vigente.precio), unidadVenta:"kg", rubro:producto.rubro, cantidad });
+  if (item) { item.cantidad = cantidad; item.precio = Number(vigente.precio); item.unidadVenta = "kg"; item.modoCompraKg = modo; item.piezasCompraKg = modo === "unidades" ? piezas : null; }
+  else state.carrito.push({ codigo:producto.codigo, nombre:producto.nombre, precio:Number(vigente.precio), unidadVenta:"kg", rubro:producto.rubro, cantidad, modoCompraKg:modo, piezasCompraKg:modo === "unidades" ? piezas : null });
   state.pedidoRegistrado = null;
   guardarCarrito(); renderCart(); renderControlCompra(producto.codigo); cerrarSelectorKg();
 }
