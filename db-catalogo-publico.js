@@ -252,13 +252,18 @@ async function listarProductosPublicosDb(opciones = {}) {
   const parametros = [];
 
   if (busqueda) {
-    parametros.push(`%${busqueda}%`);
+    // Comparación sin tildes y sin distinguir mayúsculas/minúsculas.
+    // translate() evita depender de la extensión unaccent en PostgreSQL.
+    const busquedaSinTildes = busqueda.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+    parametros.push(`%${busquedaSinTildes}%`);
     const indice = parametros.length;
+    const sinTildes = (campo) =>
+      `translate(lower(COALESCE(${campo}, '')), 'áéíóúüñàèìòùâêîôûäëïöÿ', 'aeiouunaeiouaeiouaeioy')`;
     condiciones.push(`(
-      p.article ILIKE $${indice}
-      OR p.code ILIKE $${indice}
-      OR s.brand ILIKE $${indice}
-      OR s.presentation ILIKE $${indice}
+      ${sinTildes("p.article")} LIKE lower($${indice})
+      OR ${sinTildes("p.code")} LIKE lower($${indice})
+      OR ${sinTildes("s.brand")} LIKE lower($${indice})
+      OR ${sinTildes("s.presentation")} LIKE lower($${indice})
     )`);
   }
 
