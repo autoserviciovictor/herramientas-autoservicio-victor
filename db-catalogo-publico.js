@@ -775,7 +775,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   `, parametros);
   parametros.push(limite, offset);
   const r = await query(`
-    SELECT p.code, p.article, p.price,
+    SELECT p.code, p.article, p.price, p.stock,
            s.category_id, s.subcategory_id, c.name AS category_name,
            COALESCE(s.brand,'') AS brand,
            COALESCE(s.presentation,'') AS presentation,
@@ -812,6 +812,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
       codigo: String(f.code || ""),
       nombre: String(f.article || ""),
       precio: f.price === null || f.price === undefined ? null : Number(f.price),
+      stock: Number(f.stock) || 0,
       rubroId: f.category_id === null || f.category_id === undefined ? null : Number(f.category_id),
       subrubroId: f.subcategory_id == null ? null : Number(f.subcategory_id),
       rubro: String(f.category_name || ""),

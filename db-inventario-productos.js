@@ -397,6 +397,15 @@ async function reemplazarCatalogoDb(catalogo, cliente = null) {
         stock: Number.isFinite(Number(producto?.stock)) ? Number(producto.stock) : 0,
       }))
       .filter((producto) => producto.code && producto.article);
+    // La importación reemplaza la tabla completa (DELETE + INSERT), por lo que
+    // el trigger UPDATE no puede detectar los cambios de precio. Comparamos
+    // contra el catálogo anterior dentro de la misma transacción.
+    const anteriores = await c.query(
+      `SELECT DISTINCT ON (code) code, price
+       FROM product_catalog WHERE code <> ''
+       ORDER BY code, COALESCE(legacy_row, 2147483647), catalog_id`,
+    );
+    const preciosAnteriores = new Map(anteriores.rows.map(f => [f.code, f.price]));
     await c.query("DELETE FROM product_catalog");
     if (!filas.length) return;
     await c.query(
@@ -407,6 +416,38 @@ async function reemplazarCatalogoDb(catalogo, cliente = null) {
        )`,
       [JSON.stringify(filas)],
     );
+    const cambiosPrecio = [];
+    const codigosProcesados = new Set();
+    for (const fila of filas) {
+      if (codigosProcesados.has(fila.code)) continue;
+      codigosProcesados.add(fila.code);
+      if (!preciosAnteriores.has(fila.code)) continue; // Altas nuevas no son cambios.
+      const anterior = preciosAnteriores.get(fila.code);
+      if (anterior === fila.price || (anterior == null && fila.price == null)) continue;
+      cambiosPrecio.push({
+        code: fila.code, nombre: fila.article,
+        anterior, nuevo: fila.price,
+      });
+    }
+    if (cambiosPrecio.length) {
+      // La tabla de auditoría se crea al iniciar el servidor. Evitamos bloquear
+      // la importación inicial si todavía no existe.
+      const auditoria = await c.query("SELECT to_regclass('public.catalog_audit_log') AS tabla");
+      if (auditoria.rows[0]?.tabla) {
+        await c.query(
+          `INSERT INTO catalog_audit_log
+            (code, nombre, accion, origen, usuario, anterior, nuevo, detalle, operation_id)
+           SELECT x.code, x.nombre, 'Precio actualizado', 'Importación Excel',
+                  'Sistema', jsonb_build_object('precio', x.anterior),
+                  jsonb_build_object('precio', x.nuevo), 'precio',
+                  txid_current()::text
+           FROM jsonb_to_recordset($1::jsonb) AS x(
+             code TEXT, nombre TEXT, anterior DOUBLE PRECISION, nuevo DOUBLE PRECISION
+           )`,
+          [JSON.stringify(cambiosPrecio)],
+        );
+      }
+    }
   };
   if (cliente) return ejecutar(cliente);
   return conTransaccionInventarioProductos(ejecutar);

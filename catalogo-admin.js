@@ -378,7 +378,7 @@ function renderProductos() {
   const body = $("catalogProductosBody");
   if (!body) return;
   if (!estado.productos.length) {
-    body.innerHTML = '<tr><td colspan="6"><div class="catalog-empty">No hay productos que coincidan con los filtros.</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="7"><div class="catalog-empty">No hay productos que coincidan con los filtros.</div></td></tr>';
   } else {
     body.innerHTML = estado.productos.map((p) => {
       const chip = !p.configurado ? '<span class="catalog-chip unconfigured">Sin configurar</span>' : p.visible ? '<span class="catalog-chip visible">Visible</span>' : '<span class="catalog-chip hidden">Oculto</span>';
@@ -386,6 +386,7 @@ function renderProductos() {
         <td data-label="Producto"><div class="catalog-product-cell"><span class="catalog-product-thumb ${(p.estadoImagen === "confirmada" || p.imagen) ? "has-image" : ""}">${miniaturaProductoCatalogo(p)}</span><div class="catalog-product-copy"><strong title="${esc(p.nombre)}">${esc(p.nombre)}</strong><small>${esc(p.codigo)}${p.destacado ? " · Destacado" : ""} · ${esc(({confirmada:"Imagen confirmada",candidato:"Imagen candidata",buscando:"Buscando imagen",sin_resultado:"Sin resultado",error:"Error de imagen",sin_imagen:"Sin imagen"})[p.estadoImagen] || "Sin imagen")}</small></div></div></td>
         <td data-label="Rubro">${p.rubro ? esc(p.rubro) : '<span class="catalog-chip unconfigured">Sin rubro</span>'}</td>
         <td data-label="Precio"><span class="catalog-price">${moneda(p.precio)}</span></td>
+        <td data-label="Stock"><span class="catalog-stock-value ${Number(p.stock) <= 0 ? "is-empty" : Number(p.stock) <= 5 ? "is-low" : "is-available"}">${numero(Number(p.stock) || 0)} ${p.unidadVenta === "kg" ? "kg" : "un."}</span></td>
         <td data-label="Unidad">${esc(etiquetaUnidad(p.unidadVenta))}</td>
         <td data-label="Estado">${chip}</td>
         <td data-label="Acciones"><div class="catalog-row-actions"><label class="catalog-visibility-toggle" title="${p.visible ? "Ocultar producto" : "Mostrar producto"}"><input type="checkbox" data-catalog-visible="${esc(p.codigo)}" ${p.visible ? "checked" : ""}><span></span></label><button class="catalog-edit-btn" type="button" data-catalog-edit="${esc(p.codigo)}">Editar</button></div></td>
@@ -1354,11 +1355,13 @@ let totalHistorialCatalogo = 0;
 let cargandoHistorialCatalogo = false;
 function detalleHistorialCatalogo(m) {
   const nombres = { precio:'Precio', stock:'Stock', visible:'Visibilidad', imagen:'Imagen', subrubro:'Subrubro', rubro:'Rubro', nombre:'Nombre', marca:'Marca', presentacion:'Presentación', destacado:'Destacado', precioOferta:'Precio de oferta' };
+  if (Array.isArray(m.cambios) && m.cambios.length > 1) return m.cambios.map(c => `<div class="catalog-history-change-group"><b>${esc(c.accion || 'Cambio')}</b>${detalleHistorialCatalogo(c)}</div>`).join('');
   const antes = m.anterior || {}, nuevo = m.nuevo || {};
   const campos = [...new Set([...Object.keys(antes), ...Object.keys(nuevo)])];
   const valores = campos.map(c => {
     const formato = v => v === null || v === undefined ? '—' : typeof v === 'boolean' ? (v ? 'Sí' : 'No') : typeof v === 'object' ? JSON.stringify(v) : String(v);
-    return `<div class="catalog-history-change"><b>${esc(nombres[c] || c)}</b><span>${esc(formato(antes[c]))}</span><span class="catalog-history-arrow">→</span><strong>${esc(formato(nuevo[c]))}</strong></div>`;
+    const valor = v => (c === 'precio' || c === 'precioOferta') && v !== null && v !== undefined && Number.isFinite(Number(v)) ? moneda(Number(v)) : formato(v);
+    return `<div class="catalog-history-change"><b>${esc(nombres[c] || c)}</b><span>${esc(valor(antes[c]))}</span><span class="catalog-history-arrow">→</span><strong>${esc(valor(nuevo[c]))}</strong></div>`;
   });
   return `${valores.join('')}${m.detalle && !campos.length ? `<span>${esc(m.detalle)}</span>` : ''}` || '<span class="catalog-history-muted">Sin detalle adicional</span>';
 }
@@ -1404,15 +1407,15 @@ async function cargarHistorialCatalogo() {
     contenedor.innerHTML=movimientos.map(m=>{
       const fecha=new Date(m.created_at);
       const [clase,icono]=claseMovimientoHistorial(m.accion||'');
-      const cambio=m.nuevo?.visible;
+      const cambio=(m.cambios||[]).slice().reverse().find(c=>typeof c.nuevo?.visible==='boolean')?.nuevo?.visible ?? m.nuevo?.visible;
       const visibleActual=typeof cambio==='boolean' ? cambio : (m.accion==='Publicado'?true:m.accion==='Ocultado'?false:null);
-      const accion=visibleActual===true?'Ocultar':visibleActual===false?'Hacer visible':'Ver detalles';
-      const esCambio=visibleActual!==null && !!m.code;
+      const accion=(m.cantidad_cambios>1) ? 'Ver detalles' : visibleActual===true?'Ocultar':visibleActual===false?'Hacer visible':'Ver detalles';
+      const esCambio=visibleActual!==null && !!m.code && !(m.cantidad_cambios>1);
       const origen=m.origen||'Sistema';
       const esAuto=/auto|sistema/i.test(origen);
       const esExcel=/excel|importaci/i.test(origen);
       const origenClase=esExcel?'excel':esAuto?'auto':'manual';
-      const detalle=detalleHistorialCatalogo(m);
+      const detalle=m.cantidad_cambios>1 ? `${m.cantidad_cambios} cambios registrados · Ver detalles` : detalleHistorialCatalogo(m);
       return `<tr>
         <td class="catalog-history-date"><strong>${esc(fecha.toLocaleDateString('es-AR'))}</strong><small>${esc(fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}))}</small></td>
         <td><span class="catalog-history-status ${clase}"><span>${icono}</span>${esc(m.accion||'Movimiento')}</span></td>

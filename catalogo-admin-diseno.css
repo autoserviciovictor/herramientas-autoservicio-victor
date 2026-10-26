@@ -2362,3 +2362,11 @@ body.en-catalogo #pantallaCatalogoAdmin .catalog-price {
   #catalogPanelProductos .catalog-toolbar .catalog-bulk-actions>.catalog-btn {flex:1 1 145px;min-width:0!important;padding:0 8px!important}
   #catalogPanelProductos .catalog-toolbar .catalog-bulk-actions>.catalog-btn span {font-size:11px!important}
 }
+
+/* Stock real en el listado de productos del administrador */
+#catalogPanelProductos .catalog-products-table col.catalog-col-stock{width:104px}
+#catalogPanelProductos .catalog-stock-value{display:inline-block;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:#087a55;white-space:nowrap}
+#catalogPanelProductos .catalog-stock-value.is-low{color:#b66b0b}
+#catalogPanelProductos .catalog-stock-value.is-empty{color:#c9223b}
+
+.catalog-history-change-group{padding:8px 0;border-bottom:1px solid #e9edf3}.catalog-history-change-group:last-child{border-bottom:0}.catalog-history-change-group>b{display:block;margin-bottom:4px;color:#17233a}

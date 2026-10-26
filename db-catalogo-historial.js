@@ -11,6 +11,7 @@ async function asegurarHistorialCatalogo() {
       anterior JSONB, nuevo JSONB, detalle TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await query(`ALTER TABLE catalog_audit_log ADD COLUMN IF NOT EXISTS operation_id TEXT`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_audit_log_recent_idx ON catalog_audit_log(created_at DESC, id DESC)`);
     await query(`CREATE INDEX IF NOT EXISTS catalog_audit_log_code_idx ON catalog_audit_log(code, created_at DESC)`);
     await query(`CREATE OR REPLACE FUNCTION registrar_cambio_catalogo() RETURNS trigger AS $$
@@ -39,9 +40,9 @@ async function asegurarHistorialCatalogo() {
               WHEN campo='precio' THEN 'Precio actualizado' WHEN campo='stock' THEN 'Stock actualizado'
               WHEN campo='imagen' THEN 'Imagen modificada' WHEN campo='subrubro' THEN 'Subrubro modificado'
               ELSE 'Producto modificado' END;
-            INSERT INTO catalog_audit_log(code,nombre,accion,origen,usuario,anterior,nuevo,detalle)
+            INSERT INTO catalog_audit_log(code,nombre,accion,origen,usuario,anterior,nuevo,detalle,operation_id)
             VALUES (clave, COALESCE(titulo,clave), clase, 'Cambio en base de datos', 'Sistema',
-              jsonb_build_object(campo,previo->campo),jsonb_build_object(campo,actual->campo),campo);
+              jsonb_build_object(campo,previo->campo),jsonb_build_object(campo,actual->campo),campo,txid_current()::text);
           END IF;
         END LOOP;
         RETURN NEW;
@@ -65,24 +66,41 @@ async function listarHistorialCatalogo({ pagina=1, q='', accion='', desde='', ha
   const fin = /^\d{4}-\d{2}-\d{2}$/.test(hasta) ? hasta : null;
   const args = [busqueda,tipo,`%${busqueda}%`,inicio,fin];
   const condicion = `WHERE NOT (LOWER(TRIM(accion))='edición manual' AND LOWER(TRIM(detalle)) LIKE 'datos del producto guardados%') AND ($1='' OR code ILIKE $3 OR nombre ILIKE $3 OR usuario ILIKE $3) AND ($2='' OR accion=$2) AND ($4::date IS NULL OR created_at >= $4::date) AND ($5::date IS NULL OR created_at < $5::date + interval '1 day')`;
+  // Las entradas históricas anteriores al identificador de operación se agrupan
+  // por producto y segundo. Las nuevas se agrupan por transacción real.
+  const agrupados = `WITH base AS (
+    SELECT *, CASE WHEN operation_id IS NOT NULL THEN 'tx:' || operation_id || ':' || code
+      ELSE 'legacy:' || code || ':' || date_trunc('second',created_at)::text END AS grupo
+    FROM catalog_audit_log ${condicion}
+  ), movimientos AS (
+    SELECT MAX(id) AS id, MAX(code) AS code, (ARRAY_AGG(nombre ORDER BY id DESC))[1] AS nombre,
+      CASE WHEN COUNT(*) > 1 THEN 'Producto modificado' ELSE (ARRAY_AGG(accion ORDER BY id DESC))[1] END AS accion,
+      (ARRAY_AGG(origen ORDER BY id DESC))[1] AS origen,
+      (ARRAY_AGG(usuario ORDER BY id DESC))[1] AS usuario,
+      NULL::jsonb AS anterior, NULL::jsonb AS nuevo,
+      COUNT(*)::int AS cantidad_cambios,
+      jsonb_agg(jsonb_build_object('accion',accion,'anterior',anterior,'nuevo',nuevo,'detalle',detalle) ORDER BY id) AS cambios,
+      MAX(created_at) AS created_at
+    FROM base GROUP BY grupo
+  )`;
   const [resumen, filas] = await Promise.all([
-    query(`SELECT COUNT(*)::int AS total,
-      COUNT(*) FILTER (WHERE accion='Publicado')::int AS publicados,
-      COUNT(*) FILTER (WHERE accion='Ocultado')::int AS ocultados,
-      COUNT(*) FILTER (WHERE accion IN ('Edición manual','Producto modificado','Stock actualizado','Subrubro modificado'))::int AS modificaciones,
-      COUNT(*) FILTER (WHERE accion IN ('Precio actualizado','Precio modificado'))::int AS precios,
-      COUNT(*) FILTER (WHERE accion='Imagen modificada')::int AS imagenes,
-      COUNT(*) FILTER (WHERE accion ILIKE '%importaci%')::int AS importaciones
-      FROM catalog_audit_log ${condicion}`,args),
-    query(`SELECT id,code,nombre,accion,origen,usuario,anterior,nuevo,detalle,created_at FROM catalog_audit_log ${condicion} ORDER BY created_at DESC,id DESC LIMIT 10 OFFSET $6`,[...args,(pag-1)*10]),
+    query(`${agrupados} SELECT COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(cambios) c WHERE c->>'accion'='Publicado'))::int AS publicados,
+      COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(cambios) c WHERE c->>'accion'='Ocultado'))::int AS ocultados,
+      COUNT(*) FILTER (WHERE accion='Producto modificado' OR EXISTS (SELECT 1 FROM jsonb_array_elements(cambios) c WHERE c->>'accion' IN ('Stock actualizado','Subrubro modificado')))::int AS modificaciones,
+      COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(cambios) c WHERE c->>'accion' IN ('Precio actualizado','Precio modificado')))::int AS precios,
+      COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(cambios) c WHERE c->>'accion'='Imagen modificada'))::int AS imagenes,
+      COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(cambios) c WHERE c->>'accion' ILIKE '%importaci%'))::int AS importaciones
+      FROM movimientos`,args),
+    query(`${agrupados} SELECT * FROM movimientos ORDER BY created_at DESC,id DESC LIMIT 10 OFFSET $6`,[...args,(pag-1)*10]),
   ]);
   return {total:resumen.rows[0].total,pagina:pag,resumen:resumen.rows[0],movimientos:filas.rows};
 }
 async function registrarAccionCatalogo({codigo,accion,usuario,origen='Manual',detalle=''}) {
   if (String(accion||'').trim().toLowerCase()==='edición manual' && String(detalle||'').trim().toLowerCase().startsWith('datos del producto guardados')) return;
   await asegurarHistorialCatalogo();
-  await query(`INSERT INTO catalog_audit_log(code,nombre,accion,origen,usuario,detalle)
-    VALUES($1,COALESCE((SELECT article FROM product_catalog WHERE code=$1 LIMIT 1),$1),$2,$3,$4,$5)`,
+  await query(`INSERT INTO catalog_audit_log(code,nombre,accion,origen,usuario,detalle,operation_id)
+    VALUES($1,COALESCE((SELECT article FROM product_catalog WHERE code=$1 LIMIT 1),$1),$2,$3,$4,$5,txid_current()::text)`,
     [String(codigo||''),String(accion),String(origen),String(usuario||'Administrador'),String(detalle||'')]);
 }
 module.exports = { asegurarHistorialCatalogo, listarHistorialCatalogo, registrarAccionCatalogo };
