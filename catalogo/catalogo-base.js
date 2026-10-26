@@ -603,9 +603,27 @@ function guardarCarrito() {
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.carrito));
 }
 
+// Una versión por sesión evita reutilizar imágenes viejas al abrir el catálogo.
+let versionImagenesCatalogo = Date.now();
+
+// Renovar únicamente las imágenes que están en pantalla, sin reconstruir
+// las tarjetas ni alterar búsquedas, cantidades o posición de desplazamiento.
+function actualizarImagenesVisibles() {
+  versionImagenesCatalogo = Date.now();
+  document.querySelectorAll('img[src*="/catalogo/api/productos/"][src*="/imagen"]').forEach((imagen) => {
+    const url = new URL(imagen.src, window.location.href);
+    url.searchParams.set("v", String(versionImagenesCatalogo));
+    // Precargar antes de reemplazar para evitar parpadeos en el catálogo.
+    const precarga = new Image();
+    precarga.onload = () => { if (imagen.isConnected) imagen.src = url.href; };
+    precarga.onerror = () => {}; // Conservar la imagen visible si falla la red.
+    precarga.src = url.href;
+  });
+}
+
 function imagenProducto(producto, clase = "") {
   const codigo = encodeURIComponent(producto.codigo);
-  const src = `${API_BASE_URL}/catalogo/api/productos/${codigo}/imagen`;
+  const src = `${API_BASE_URL}/catalogo/api/productos/${codigo}/imagen?v=${versionImagenesCatalogo}`;
   return `<span class="product-card__placeholder" aria-hidden="true"><span class="product-card__placeholder-box">▣</span><small>Sin imagen</small></span><img class="${clase}" src="${src}" alt="" loading="lazy" decoding="async" onload="this.previousElementSibling.hidden=true" onerror="this.remove()">`;
 }
 
@@ -1016,10 +1034,10 @@ async function retirarProductoNoDisponible(codigo) {
   await Promise.allSettled([cargarProductos(), cargarRubros()]);
 }
 async function sincronizarDisponibilidadVisible() {
-  const codigos = [...new Set([
-    ...Array.from(document.querySelectorAll("[data-product]"), el => el.dataset.product),
-    ...state.carrito.map(item => String(item.codigo)),
-  ].filter(Boolean))].slice(0, 100);
+  // La validación periódica corresponde únicamente a artículos del carrito.
+  // Las tarjetas visibles se actualizan mediante la revisión del catálogo,
+  // no deben desaparecer por respuestas parciales o cambios transitorios.
+  const codigos = [...new Set(state.carrito.map(item => String(item.codigo)).filter(Boolean))].slice(0, 100);
   if (!codigos.length) return;
   try {
     const response = await fetch(`${API_BASE_URL}/catalogo/api/precios-carrito`, {
@@ -1028,17 +1046,16 @@ async function sincronizarDisponibilidadVisible() {
     });
     if (!response.ok) return;
     const data = await response.json();
-    if (!data.ok) return;
-    const disponibles = new Set((data.productos || []).filter(p => p.disponible).map(p => String(p.codigo)));
-    const retirados = codigos.filter(c => !disponibles.has(c));
-    if (!retirados.length) return;
-    const fuera = new Set(retirados);
-    state.productos = state.productos.filter(p => !fuera.has(String(p.codigo)));
-    ofertasHome = ofertasHome.filter(p => !fuera.has(String(p.codigo)));
-    state.carrito = state.carrito.filter(p => !fuera.has(String(p.codigo)));
-    guardarCarrito(); renderCart(); renderProducts(); renderHomeProducts(); renderMobileOffers();
-    await Promise.allSettled([cargarProductos(), cargarRubros()]);
-    els.feedback.textContent = "Se quitaron productos que ya no están disponibles.";
+    if (!data.ok || !Array.isArray(data.productos)) return;
+    // Solo retirar artículos que el servidor marca explícitamente como no disponibles.
+    const retirados = new Set(data.productos.filter(p => p.disponible === false).map(p => String(p.codigo)));
+    if (!retirados.size) return;
+    const cantidadAnterior = state.carrito.length;
+    state.carrito = state.carrito.filter(p => !retirados.has(String(p.codigo)));
+    if (state.carrito.length === cantidadAnterior) return;
+    guardarCarrito();
+    renderCart();
+    els.feedback.textContent = "Se quitaron del carrito productos que ya no están disponibles.";
   } catch (error) { console.warn("No se pudo comprobar la disponibilidad:", error); }
 }
 
@@ -1088,6 +1105,7 @@ async function comprobarActualizacionCatalogo() {
     revisionCatalogoActual = revision;
     await refrescarPreciosCarrito();
     await sincronizarDisponibilidadVisible();
+    actualizarImagenesVisibles();
   } catch (error) { console.warn("No se pudo sincronizar el catálogo:", error); }
   finally { actualizacionCatalogoEnCurso = false; }
 }
@@ -1636,8 +1654,8 @@ async function iniciar() {
   await cargarRubros();
   await cargarProductos();
   await comprobarActualizacionCatalogo();
-  // Comprobación frecuente para catálogos web y de la app ya abiertos.
-  setInterval(comprobarActualizacionCatalogo, 5000);
+  // Consultar cambios sin reconstruir la pantalla cada cinco segundos.
+  setInterval(() => { if (!document.hidden) void comprobarActualizacionCatalogo(); }, 30000);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) void comprobarActualizacionCatalogo();
   });

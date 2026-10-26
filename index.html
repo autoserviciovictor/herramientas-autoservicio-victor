@@ -7013,6 +7013,10 @@
       >
         <div id="adminMensaje" class="admin-message"></div>
 
+        <section id="adminTab-proveedores" class="admin-tab-panel admin-official-panel oculto">
+          <div id="provApp" class="prov-app"></div>
+        </section>
+
         <section
           id="adminTab-inicio"
           class="admin-tab-panel admin-official-panel admin-home-panel"
@@ -7268,6 +7272,11 @@
               <button type="button" data-admin-open="compras">
                 Abrir compras y facturas <span>›</span>
               </button>
+            </article>
+            <article class="admin-module-access-card tone-red">
+              <header><span class="admin-module-access-icon"><svg class="app-icon"><use href="#icon-cart"></use></svg></span><div><h2>Proveedores</h2><p>Gestioná proveedores, catálogos, pedidos, cronogramas, precios y pagos.</p></div></header>
+              <div class="admin-module-access-stats"><div><strong>6 herramientas</strong><span>Gestión centralizada</span></div><div><strong>Compras</strong><span>Control de proveedores</span></div></div>
+              <button type="button" data-admin-open="proveedores">Abrir proveedores <span>›</span></button>
             </article>
           </section>
 
@@ -10050,6 +10059,8 @@
       type="module"
       src="./catalogo-admin.js?v=producto-subrubro-20261022"
     ></script>
+    <link rel="stylesheet" href="./proveedores.css?v=1" />
+    <script src="./proveedores.js?v=1" defer></script>
     <script type="module" src="./admin.js?v=1960-password6-fix-220926"></script>
     <script
       type="module"

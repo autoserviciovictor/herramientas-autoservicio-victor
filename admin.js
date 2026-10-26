@@ -1678,7 +1678,7 @@ async function cargarTodo() {
 }
 
 function cambiarTab(tab) {
-  const destino = ["inicio", "usuarios", "sectores", "sistema", "liquidacion", "compras"].includes(tab) ? tab : "inicio";
+  const destino = ["inicio", "usuarios", "sectores", "sistema", "liquidacion", "compras", "proveedores"].includes(tab) ? tab : "inicio";
   document.querySelectorAll(".admin-tab-panel").forEach((p) => p.classList.toggle("oculto", p.id !== `adminTab-${destino}`));
   document.body.dataset.adminView = destino;
   sessionStorage.setItem("autoservicio_admin_vista", destino);
@@ -1686,6 +1686,7 @@ function cambiarTab(tab) {
   if (destino === "sectores") renderSectores();
   if (destino === "liquidacion") window.LiquidacionHoras?.render?.();
   if (destino === "compras") window.ComprasFacturas?.render?.();
+  if (destino === "proveedores") window.ProveedoresModulo?.render?.();
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
