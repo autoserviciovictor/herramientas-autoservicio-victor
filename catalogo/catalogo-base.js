@@ -1121,9 +1121,14 @@ async function cargarRubros() {
   renderCategories();
 }
 
+let recargaBusquedaPendiente = false;
 async function cargarProductos({ append = false } = {}) {
-  if (state.loading) return;
+  if (state.loading) {
+    recargaBusquedaPendiente = true;
+    return;
+  }
   state.loading = true;
+  const busquedaSolicitada = state.busqueda;
   els.feedback.textContent = "";
   if (!append) renderSkeletons();
   try {
@@ -1143,6 +1148,7 @@ async function cargarProductos({ append = false } = {}) {
     if (state.rubro) params.set("rubro", state.rubro);
     if (state.rubro && state.subrubro) params.set("subrubro", state.subrubro);
     const data = await apiJson(`/catalogo/api/productos?${params}`);
+    if (busquedaSolicitada !== state.busqueda) return false;
     const nuevos = Array.isArray(data.productos) ? data.productos : [];
     state.productos = append ? [...state.productos, ...nuevos] : nuevos;
     state.total = Number(data.total) || 0;
@@ -1163,6 +1169,10 @@ async function cargarProductos({ append = false } = {}) {
     return false;
   } finally {
     state.loading = false;
+    if (recargaBusquedaPendiente || busquedaSolicitada !== state.busqueda) {
+      recargaBusquedaPendiente = false;
+      cargarProductos();
+    }
   }
 }
 
@@ -1187,7 +1197,7 @@ function seleccionarRubro(slug = "", { cargar = true } = {}) {
   document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function buscar(texto = "") {
+function buscar(texto = "", { desplazar = true } = {}) {
   if (document.body.classList.contains("catalogo-mobile-offers-active") || document.body.classList.contains("catalogo-mobile-bestsellers-active")) {
     state.busqueda = String(texto || "").trim().replace(/\s+/g, " ").slice(0, 100);
     els.search.value = state.busqueda;
@@ -1201,6 +1211,8 @@ function buscar(texto = "") {
   state.busqueda = q;
   state.pagina = 1;
   els.search.value = q;
+  const campoDesktop = document.getElementById("catalogoDesktopSearch");
+  if (campoDesktop) campoDesktop.value = q;
   cargarProductos();
   document.getElementById("productos")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -1441,11 +1453,104 @@ function bindEvents() {
     }
   });
 
-  els.searchForm.addEventListener("submit", (e) => { e.preventDefault(); buscar(els.search.value); });
+  els.searchForm.addEventListener("submit", (e) => { e.preventDefault(); clearTimeout(temporizadorBusqueda); buscar(els.search.value); });
   const desktopSearchForm = $("catalogoDesktopSearchForm");
   const desktopSearch = $("catalogoDesktopSearch");
   if (desktopSearchForm && desktopSearch) {
-    desktopSearchForm.addEventListener("submit", (e) => { e.preventDefault(); buscar(desktopSearch.value); });
+    desktopSearchForm.addEventListener("submit", (e) => { e.preventDefault(); clearTimeout(temporizadorBusqueda); buscar(desktopSearch.value); });
+  }
+
+  // Sugerencias independientes: escribir no modifica la grilla de productos.
+  let temporizadorBusqueda;
+  let solicitudSugerencias = 0;
+  const camposBusqueda = [els.search, desktopSearch].filter(Boolean);
+  const menusBusqueda = new Map();
+  const normalizarTextoBusqueda = texto => String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const cerrarSugerencias = () => {
+    for (const menu of menusBusqueda.values()) { menu.hidden = true; menu.replaceChildren(); }
+    for (const campo of camposBusqueda) campo.setAttribute("aria-expanded", "false");
+  };
+  const confirmarBusqueda = texto => {
+    clearTimeout(temporizadorBusqueda);
+    solicitudSugerencias++;
+    cerrarSugerencias();
+    buscar(texto);
+  };
+  for (const campo of camposBusqueda) {
+    const formulario = campo.closest("form");
+    if (!formulario) continue;
+    const menu = document.createElement("div");
+    menu.className = "catalogo-search-suggestions";
+    menu.id = `${campo.id}Suggestions`;
+    menu.setAttribute("role", "listbox");
+    menu.setAttribute("aria-label", "Sugerencias de productos");
+    menu.hidden = true;
+    formulario.appendChild(menu);
+    menusBusqueda.set(campo, menu);
+    campo.setAttribute("aria-controls", menu.id);
+    campo.setAttribute("aria-expanded", "false");
+    campo.setAttribute("aria-autocomplete", "list");
+    campo.addEventListener("input", () => {
+      for (const otro of camposBusqueda) if (otro !== campo) otro.value = campo.value;
+      clearTimeout(temporizadorBusqueda);
+      const version = ++solicitudSugerencias;
+      cerrarSugerencias();
+      const texto = campo.value.trim();
+      if (!texto) return;
+      temporizadorBusqueda = setTimeout(async () => {
+        try {
+          const data = await apiJson(`/catalogo/api/productos?${new URLSearchParams({q:texto, pagina:"1", limite:"8"})}`);
+          if (version !== solicitudSugerencias || document.activeElement !== campo) return;
+          const productos = (data.productos || []).slice(0, 5);
+          menu.replaceChildren();
+          if (!productos.length) {
+            const vacio = document.createElement("div");
+            vacio.className = "catalogo-search-suggestions__empty";
+            vacio.textContent = "No encontramos coincidencias";
+            menu.appendChild(vacio);
+          }
+          for (const producto of productos) {
+            const opcion = document.createElement("button");
+            opcion.type = "button";
+            opcion.className = "catalogo-search-suggestions__item";
+            opcion.setAttribute("role", "option");
+            opcion.textContent = producto.nombre || producto.article || producto.name || producto.codigo || "Producto";
+            opcion.addEventListener("click", () => confirmarBusqueda(producto.codigo || producto.code || opcion.textContent));
+            menu.appendChild(opcion);
+          }
+          menu.hidden = false;
+          campo.setAttribute("aria-expanded", "true");
+        } catch (error) {
+          if (version === solicitudSugerencias) cerrarSugerencias();
+        }
+      }, 300);
+    });
+    campo.addEventListener("keydown", e => {
+      if (e.key === "Escape") { solicitudSugerencias++; cerrarSugerencias(); }
+      if (e.key === "ArrowDown" && !menu.hidden) {
+        const primero = menu.querySelector("button");
+        if (primero) { e.preventDefault(); primero.focus(); }
+      }
+    });
+    menu.addEventListener("keydown", e => {
+      if (e.key === "Escape") { cerrarSugerencias(); campo.focus(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const opciones = [...menu.querySelectorAll("button")];
+        const actual = opciones.indexOf(document.activeElement);
+        const siguiente = opciones[actual + (e.key === "ArrowDown" ? 1 : -1)];
+        if (siguiente) { e.preventDefault(); siguiente.focus(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); campo.focus(); }
+      }
+    });
+  }
+  document.addEventListener("pointerdown", e => {
+    if (!camposBusqueda.some(campo => campo.closest("form")?.contains(e.target))) {
+      solicitudSugerencias++;
+      cerrarSugerencias();
+    }
+  });
+  for (const formulario of [els.searchForm, desktopSearchForm]) {
+    formulario?.addEventListener("submit", () => { solicitudSugerencias++; cerrarSugerencias(); });
   }
 
   const sortLabels = {
