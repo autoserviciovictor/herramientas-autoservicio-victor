@@ -1356,6 +1356,12 @@ let cargandoHistorialCatalogo = false;
 function detalleHistorialCatalogo(m) {
   const nombres = { precio:'Precio', stock:'Stock', visible:'Visibilidad', imagen:'Imagen', subrubro:'Subrubro', rubro:'Rubro', nombre:'Nombre', marca:'Marca', presentacion:'Presentación', destacado:'Destacado', precioOferta:'Precio de oferta' };
   if (Array.isArray(m.cambios) && m.cambios.length > 1) return m.cambios.map(c => `<div class="catalog-history-change-group"><b>${esc(c.accion || 'Cambio')}</b>${detalleHistorialCatalogo(c)}</div>`).join('');
+  // Las consultas agrupadas antiguas devolvían anterior/nuevo nulos aun para
+  // movimientos individuales. Usar el cambio real que viene en cambios[].
+  if (Array.isArray(m.cambios) && m.cambios.length === 1) {
+    const c = m.cambios[0];
+    if (c && (c.anterior != null || c.nuevo != null)) return detalleHistorialCatalogo({ ...c, cambios: [] });
+  }
   const antes = m.anterior || {}, nuevo = m.nuevo || {};
   const campos = [...new Set([...Object.keys(antes), ...Object.keys(nuevo)])];
   const valores = campos.map(c => {

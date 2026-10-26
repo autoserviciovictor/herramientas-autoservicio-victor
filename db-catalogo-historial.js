@@ -77,7 +77,9 @@ async function listarHistorialCatalogo({ pagina=1, q='', accion='', desde='', ha
       CASE WHEN COUNT(*) > 1 THEN 'Producto modificado' ELSE (ARRAY_AGG(accion ORDER BY id DESC))[1] END AS accion,
       (ARRAY_AGG(origen ORDER BY id DESC))[1] AS origen,
       (ARRAY_AGG(usuario ORDER BY id DESC))[1] AS usuario,
-      NULL::jsonb AS anterior, NULL::jsonb AS nuevo,
+      (ARRAY_AGG(anterior ORDER BY id DESC))[1] AS anterior,
+      (ARRAY_AGG(nuevo ORDER BY id DESC))[1] AS nuevo,
+      (ARRAY_AGG(detalle ORDER BY id DESC))[1] AS detalle,
       COUNT(*)::int AS cantidad_cambios,
       jsonb_agg(jsonb_build_object('accion',accion,'anterior',anterior,'nuevo',nuevo,'detalle',detalle) ORDER BY id) AS cambios,
       MAX(created_at) AS created_at
