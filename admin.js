@@ -2347,6 +2347,13 @@ document.addEventListener("DOMContentLoaded", () => {
     event.stopImmediatePropagation();
     cerrarHistorialVencimientosUI();
   }, true);
+  // Priorizar la navegación interna del módulo de proveedores antes de salir a Administración.
+  $("adminHeaderBackBtn")?.addEventListener("click", (event) => {
+    if (document.body.dataset.adminView !== "proveedores") return;
+    if (!window.ProveedoresModulo?.back?.()) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
   $("adminHeaderBackBtn")?.addEventListener("click", () => cambiarTab("inicio"));
   document.querySelectorAll('.pro-global-nav[data-modulo="admin"]').forEach((btn) =>
     btn.addEventListener("click", () =>

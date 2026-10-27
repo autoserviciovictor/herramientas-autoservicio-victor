@@ -741,9 +741,20 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   const condiciones = ["1=1"];
   const parametros = [];
   if (busqueda) {
-    parametros.push(`%${busqueda}%`);
-    const i = parametros.length;
-    condiciones.push(`(p.article ILIKE $${i} OR p.code ILIKE $${i} OR COALESCE(s.brand,'') ILIKE $${i} OR COALESCE(s.presentation,'') ILIKE $${i})`);
+    // Cada palabra puede aparecer en cualquier posición o campo del producto.
+    // Normalizamos acentos, puntuación y separadores para admitir, por ejemplo,
+    // "SIERRA SODA" -> "Sierra de los Padres Soda" y "1.75" -> "1,75".
+    const normalizar = (valor) => String(valor || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const palabras = [...new Set(normalizar(busqueda).split(/\s+/).filter(Boolean))].slice(0, 12);
+    const textoSql = `LOWER(translate(CONCAT_WS(' ', p.article, p.code, s.brand, s.presentation, c.name),
+      'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun'))`;
+    for (const palabra of palabras) {
+      parametros.push(palabra);
+      const i = parametros.length;
+      condiciones.push(`strpos(regexp_replace(${textoSql}, '[^a-z0-9]+', ' ', 'g'), $${i}) > 0`);
+    }
   }
   if (rubro && rubro !== "todos") {
     if (rubro === "sin-rubro") condiciones.push("s.category_id IS NULL");
@@ -776,6 +787,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
     SELECT COUNT(*)::int AS total
     FROM product_catalog p
     LEFT JOIN catalog_product_settings s ON s.code=p.code
+    LEFT JOIN catalog_categories c ON c.category_id=s.category_id
     WHERE ${where}
   `, parametros);
   parametros.push(limite, offset);

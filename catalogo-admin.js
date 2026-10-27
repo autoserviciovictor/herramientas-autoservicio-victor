@@ -296,19 +296,64 @@ function prepararSelectoresCatalogo() {
   prepararSelectorCatalogo("catalogPedidosFiltroEstado", { ancho: "orders" });
 }
 
+// Búsqueda por términos independientes: "HIGIE 80" encuentra "Higienol ... 80Mts".
+// El servidor histórico busca la frase completa; por eso se consultan candidatos
+// con un término y se comprueban TODOS los términos en el navegador.
+const normalizarBusquedaCatalogo = (valor) => String(valor ?? "")
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim();
+
+async function buscarProductosPorTerminos(parametros, terminos) {
+  const consulta = new URLSearchParams(parametros);
+  consulta.set("q", terminos[0]);
+  consulta.set("pagina", "1");
+  consulta.set("limite", "200");
+  const primera = await api(`/admin/catalogo/productos?${consulta}`);
+  const paginas = Math.ceil((Number(primera.total) || 0) / 200);
+  const candidatos = [...(primera.productos || [])];
+  // Se recorren todas las páginas: los resultados pueden estar fuera de las primeras 50 filas.
+  for (let pagina = 2; pagina <= paginas; pagina++) {
+    consulta.set("pagina", String(pagina));
+    const respuesta = await api(`/admin/catalogo/productos?${consulta}`);
+    candidatos.push(...(respuesta.productos || []));
+  }
+  return candidatos.filter((producto) => {
+    // En búsquedas con varias palabras, exigir que TODOS los términos estén
+    // presentes en el nombre. No mezclar el código de barras: por ejemplo,
+    // "HIGIE 80" no debe aceptar un artículo cuyo código contiene "80"
+    // si su descripción no contiene esa medida.
+    const nombre = normalizarBusquedaCatalogo(producto.nombre);
+    return terminos.every((termino) => nombre.includes(termino));
+  });
+}
+
 async function cargarProductos({ conservarPagina = true } = {}) {
-  if (estado.cargando) return;
-  estado.cargando = true;
   if (!conservarPagina) estado.pagina = 1;
+  if (estado.cargando) {
+    estado.recargarPendiente = true;
+    return;
+  }
+  estado.cargando = true;
   actualizarBotonesPublicacionMasiva();
   const body = $("catalogProductosBody");
   if (body) body.innerHTML = '<tr><td colspan="6"><div class="catalog-loading">Cargando productos…</div></td></tr>';
   try {
-    const data = await api(`/admin/catalogo/productos?${parametrosProductos()}`);
-    estado.productos = data.productos || [];
-    estado.pagina = Number(data.pagina) || 1;
-    estado.paginas = Number(data.paginas) || 0;
-    estado.total = Number(data.total) || 0;
+    const parametros = parametrosProductos();
+    const busqueda = normalizarBusquedaCatalogo($("catalogBuscarProductos")?.value);
+    const terminos = busqueda.split(/\s+/).filter(Boolean);
+    if (terminos.length > 1) {
+      const encontrados = await buscarProductosPorTerminos(parametros, terminos);
+      estado.total = encontrados.length;
+      estado.paginas = Math.ceil(estado.total / estado.limite);
+      estado.pagina = Math.min(Math.max(1, estado.pagina), Math.max(1, estado.paginas));
+      estado.productos = encontrados.slice((estado.pagina - 1) * estado.limite, estado.pagina * estado.limite);
+    } else {
+      const data = await api(`/admin/catalogo/productos?${parametros}`);
+      estado.productos = data.productos || [];
+      estado.pagina = Number(data.pagina) || 1;
+      estado.paginas = Number(data.paginas) || 0;
+      estado.total = Number(data.total) || 0;
+    }
     renderProductos();
   } catch (error) {
     if (body) {
@@ -324,6 +369,10 @@ async function cargarProductos({ conservarPagina = true } = {}) {
     throw error;
   } finally {
     estado.cargando = false;
+    if (estado.recargarPendiente) {
+      estado.recargarPendiente = false;
+      cargarProductos({ conservarPagina: true }).catch((e) => mensaje(e.message));
+    }
   }
 }
 

@@ -414,6 +414,7 @@ body.en-precios #pantallaPrecios > .precios-pro-shell,
 body.en-horarios #pantallaHorarios > .horarios-shell,
 body.en-tareas #pantallaTareas > .tareas-view > .tareas-shell,
 body.en-admin #adminTab-inicio,
+body.en-admin #adminTab-proveedores,
 body.en-admin #adminTab-usuarios,
 body.en-admin #adminTab-sectores,
 body.en-admin #adminTab-sistema,
@@ -460,6 +461,10 @@ body.en-etiquetas #pantallaEtiquetas > .etiquetas-shell {
      con el mismo padding nominal de 26 px, el título quedaba visualmente más abajo.
      La geometría se resuelve aquí, en una sola fuente de verdad. */
   body.en-admin #adminTab-inicio {
+    padding-top: 26px !important;
+    padding-bottom: 50px !important;
+  }
+  body.en-admin #adminTab-proveedores {
     padding-top: 26px !important;
     padding-bottom: 50px !important;
   }

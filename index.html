@@ -240,7 +240,128 @@
         cursor: wait;
       }
     </style>
-  </head>
+  <style id="prov-custom-select-style">
+#provApp .prov-custom-select{position:relative;display:block;min-width:0;width:100%;font:inherit}
+#provApp .prov-custom-select .prov-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;clip-path:inset(50%)}
+#provApp .prov-select-trigger{width:100%;height:40px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:#fff;border:1px solid #dbe4f0;border-radius:11px;padding:0 12px;color:#172b50;font:inherit;font-size:13px;cursor:pointer;box-shadow:0 1px 2px rgba(22,43,80,.025);transition:border-color .15s,box-shadow .15s}
+#provApp .prov-select-trigger:hover{border-color:#aebfd8;background:#fcfdff}
+#provApp .prov-select-trigger:focus-visible,#provApp .prov-custom-select.is-open .prov-select-trigger{outline:none;border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.13)}
+#provApp .prov-select-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#provApp .prov-select-trigger svg{flex-shrink:0;color:#667b9e;transition:transform .15s}
+#provApp .prov-custom-select.is-open .prov-select-trigger svg{transform:rotate(180deg)}
+#provApp .prov-select-menu{display:none;position:absolute;top:calc(100% + 5px);left:0;z-index:1000;max-height:260px;overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #dfe7f2;border-radius:12px;padding:5px;box-shadow:0 14px 36px rgba(18,40,80,.16)}
+#provApp .prov-custom-select.is-open .prov-select-menu{display:block}
+#provApp .prov-custom-select.opens-up .prov-select-menu{top:auto;bottom:calc(100% + 5px)}
+#provApp .prov-select-option{display:block;width:100%;padding:10px 11px;text-align:left;border:0;border-radius:8px;background:transparent;color:#263a5c;font:inherit;font-size:13px;line-height:1.3;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
+#provApp .prov-select-option:hover,#provApp .prov-select-option:focus-visible{background:#eff5ff;outline:none;color:#1462d6}
+#provApp .prov-select-option.is-selected{background:#edf3ff;color:#1765db;font-weight:700}
+#provApp .prov-select-option:disabled{opacity:.45;cursor:not-allowed}
+#provApp .prov-pagination .prov-custom-select{display:inline-block;width:68px;vertical-align:middle;margin:0 6px}
+#provApp .prov-pagination .prov-select-trigger{height:38px;padding:0 9px}
+@media(max-width:700px){#provApp .prov-select-menu{max-height:220px}}
+</style>
+<style id="prov-order-floating-editor-styles">
+/* Modal detached from the module: retain its form styles and dropdowns */
+.prov-order-modal-overlay .prov-form label{font-size:13px;font-weight:700;color:#101b35}
+.prov-order-modal-overlay .prov-form input,.prov-order-modal-overlay .prov-form textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #d6deeb;border-radius:10px;font:inherit;background:#fff;color:#101b35}
+.prov-order-modal-overlay .prov-form label input,.prov-order-modal-overlay .prov-form label textarea,.prov-order-modal-overlay .prov-form label .prov-custom-select{display:block;margin-top:7px}
+.prov-order-modal-overlay .prov-back{border:1px solid #dce3ee;background:white;border-radius:9px;padding:10px 15px;cursor:pointer;font-weight:700;color:#101b35}
+.prov-order-modal-overlay .prov-primary{border:0;border-radius:10px;padding:12px 18px;background:#f01842;color:white;font-weight:700;cursor:pointer}
+.prov-order-modal-overlay .prov-custom-select{position:relative;display:block;min-width:0;width:100%}
+.prov-order-modal-overlay .prov-custom-select .prov-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;clip-path:inset(50%)}
+.prov-order-modal-overlay .prov-custom-select{position:relative;display:block;min-width:0;width:100%;font:inherit}
+.prov-order-modal-overlay .prov-custom-select .prov-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;clip-path:inset(50%)}
+.prov-order-modal-overlay .prov-select-trigger{width:100%;height:40px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:#fff;border:1px solid #dbe4f0;border-radius:11px;padding:0 12px;color:#172b50;font:inherit;font-size:13px;cursor:pointer;box-shadow:0 1px 2px rgba(22,43,80,.025);transition:border-color .15s,box-shadow .15s}
+.prov-order-modal-overlay .prov-select-trigger:hover{border-color:#aebfd8;background:#fcfdff}
+.prov-order-modal-overlay .prov-select-trigger:focus-visible,.prov-order-modal-overlay .prov-custom-select.is-open .prov-select-trigger{outline:none;border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.13)}
+.prov-order-modal-overlay .prov-select-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prov-order-modal-overlay .prov-select-trigger svg{flex-shrink:0;color:#667b9e;transition:transform .15s}
+.prov-order-modal-overlay .prov-custom-select.is-open .prov-select-trigger svg{transform:rotate(180deg)}
+.prov-order-modal-overlay .prov-select-menu{display:none;position:absolute;top:calc(100% + 5px);left:0;z-index:1000;max-height:260px;overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #dfe7f2;border-radius:12px;padding:5px;box-shadow:0 14px 36px rgba(18,40,80,.16)}
+.prov-order-modal-overlay .prov-custom-select.is-open .prov-select-menu{display:block}
+.prov-order-modal-overlay .prov-custom-select.opens-up .prov-select-menu{top:auto;bottom:calc(100% + 5px)}
+.prov-order-modal-overlay .prov-select-option{display:block;width:100%;padding:10px 11px;text-align:left;border:0;border-radius:8px;background:transparent;color:#263a5c;font:inherit;font-size:13px;line-height:1.3;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
+.prov-order-modal-overlay .prov-select-option:hover,.prov-order-modal-overlay .prov-select-option:focus-visible{background:#eff5ff;outline:none;color:#1462d6}
+.prov-order-modal-overlay .prov-select-option.is-selected{background:#edf3ff;color:#1765db;font-weight:700}
+.prov-order-modal-overlay .prov-select-option:disabled{opacity:.45;cursor:not-allowed}
+.prov-order-modal-overlay .prov-pagination .prov-custom-select{display:inline-block;width:68px;vertical-align:middle;margin:0 6px}
+.prov-order-modal-overlay .prov-pagination .prov-select-trigger{height:38px;padding:0 9px}
+
+body.prov-order-modal-open{overflow:hidden}
+.prov-order-modal-overlay{position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,.56);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:22px;box-sizing:border-box}
+.prov-order-modal{width:min(100%,980px);max-height:min(88vh,850px);background:#fff;border-radius:20px;box-shadow:0 25px 80px rgba(13,29,57,.25);display:flex;flex-direction:column;overflow:hidden;color:#101c38}
+.prov-order-modal-header{display:flex;align-items:center;gap:13px;padding:22px 26px;border-bottom:1px solid #e8edf5;flex-shrink:0}
+.prov-order-modal-symbol{display:grid;place-items:center;width:43px;height:43px;border-radius:13px;background:#fff0f3;font-size:23px}
+.prov-order-modal-header h3{font-size:21px;margin:2px 0 3px;font-weight:800}
+.prov-order-modal-header small{font-size:11px;letter-spacing:1.3px;color:#697e9c;font-weight:800}
+.prov-order-modal-header p{font-size:13px;color:#6b7d99;margin:0}
+.prov-order-modal-x{margin-left:auto;align-self:flex-start;background:#f5f7fb;border:0;border-radius:11px;width:38px;height:38px;font-size:25px;cursor:pointer;color:#25334b}
+.prov-order-modal-body{padding:24px 26px;overflow-y:auto;overscroll-behavior:contain}
+.prov-order-modal .prov-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 20px}
+.prov-order-modal .prov-form>label{min-width:0}
+.prov-order-modal .prov-form .prov-order-wide,.prov-order-modal .prov-form-actions{grid-column:1/-1}
+.prov-order-modal .prov-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:5px}
+.prov-order-modal .prov-notice{font-size:12px;color:#72819b;margin:16px 0 0}
+@media(max-width:650px){.prov-order-modal-overlay{padding:8px;align-items:center}.prov-order-modal{max-height:94dvh;border-radius:15px}.prov-order-modal-header{padding:15px}.prov-order-modal-body{padding:16px}.prov-order-modal .prov-form{grid-template-columns:1fr;gap:12px}.prov-order-modal .prov-form-actions{grid-column:1}.prov-order-modal-header h3{font-size:18px}}
+/* Editor de pedidos: estructura compacta por secciones */
+.prov-order-modal{width:min(100%,790px);max-height:min(90dvh,820px)}
+.prov-order-modal-header{padding:18px 24px}
+.prov-order-modal-body{padding:18px 24px 22px}
+.prov-order-modal .prov-order-form-redesign{display:flex;flex-direction:column;gap:12px}
+.prov-order-section-title{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f01842;margin-top:5px}
+.prov-order-section-title span{font-size:13px;letter-spacing:0;color:#152441}
+.prov-order-section-title:after{content:"";height:1px;background:#e9edf4;flex:1}
+.prov-order-fields{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px 16px;align-items:start}
+.prov-order-fields>label,.prov-order-detail-field{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;font-weight:700;color:#273652}
+.prov-order-fields input,.prov-order-fields select,.prov-order-detail-field textarea{box-sizing:border-box;width:100%;min-width:0}
+.prov-order-modal .prov-order-fields input,.prov-order-modal .prov-order-fields select{height:40px}
+.prov-order-modal .prov-order-detail-field textarea{min-height:74px;resize:vertical;padding:11px 12px}
+.prov-order-footer{display:flex;align-items:center;justify-content:space-between;gap:18px;border-top:1px solid #e9edf4;padding-top:14px;margin-top:3px}
+.prov-order-modal .prov-order-footer .prov-notice{margin:0;max-width:330px;line-height:1.5}
+.prov-order-modal .prov-order-footer .prov-form-actions{display:flex;gap:9px;margin:0;flex-shrink:0}
+@media(max-width:650px){.prov-order-modal{max-height:95dvh}.prov-order-modal-body{padding:14px 16px}.prov-order-fields{grid-template-columns:1fr;gap:11px}.prov-order-footer{flex-direction:column-reverse;align-items:stretch}.prov-order-modal .prov-order-footer .prov-form-actions{justify-content:flex-end}.prov-order-modal-header{padding:14px 16px}}
+/* Pedidos: editor completo sin desplazamiento interno en escritorio */
+@media (min-width: 701px) and (min-height: 690px) {
+  .prov-order-modal-overlay{padding:12px!important}
+  .prov-order-modal{width:min(100%,790px);max-height:calc(100dvh - 24px);overflow:visible}
+  .prov-order-modal-header{padding:13px 22px;gap:10px}
+  .prov-order-modal-symbol{width:37px;height:37px;font-size:20px}
+  .prov-order-modal-header h3{font-size:19px}
+  .prov-order-modal-header p{font-size:12px}
+  .prov-order-modal-body{padding:12px 22px 15px;overflow:visible!important}
+  .prov-order-modal .prov-order-form-redesign{gap:8px}
+  .prov-order-section-title{margin-top:1px;font-size:10px}
+  .prov-order-section-title span{font-size:12px}
+  .prov-order-fields{gap:8px 14px}
+  .prov-order-fields>label,.prov-order-detail-field{gap:3px;font-size:12px}
+  .prov-order-modal-overlay .prov-form label input,.prov-order-modal-overlay .prov-form label textarea,.prov-order-modal-overlay .prov-form label .prov-custom-select{margin-top:3px}
+  .prov-order-modal .prov-order-fields input,.prov-order-modal .prov-order-fields select,.prov-order-modal .prov-select-trigger{height:35px}
+  .prov-order-modal-overlay .prov-form input{padding:7px 10px}
+  .prov-order-modal .prov-order-detail-field textarea{min-height:54px;height:54px;padding:8px 10px;resize:none}
+  .prov-order-footer{padding-top:9px;margin-top:1px}
+  .prov-order-modal .prov-order-footer .prov-notice{font-size:11px;line-height:1.35}
+  .prov-order-modal-overlay .prov-back,.prov-order-modal-overlay .prov-primary{padding:9px 13px}
+}
+/* En pantallas de poca altura se conserva acceso a todos los campos. */
+@media (max-height: 689px), (max-width: 700px) {
+  .prov-order-modal{overflow:hidden}
+  .prov-order-modal-body{overflow-y:auto}
+}
+
+/* Campos del editor: foco neutro sin anillos rojos */
+.prov-order-modal-overlay .prov-form input:focus,
+.prov-order-modal-overlay .prov-form textarea:focus,
+.prov-order-modal-overlay .prov-form select:focus,
+.prov-order-modal-overlay .prov-select-trigger:focus,
+.prov-order-modal-overlay .prov-select-trigger:focus-visible,
+.prov-order-modal-overlay .prov-custom-select.is-open .prov-select-trigger {
+  outline:none!important;box-shadow:none!important;border-color:#d6deeb!important;
+}
+.prov-order-money{position:relative;display:block}
+.prov-order-money .prov-money-symbol{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:#536784;pointer-events:none}
+.prov-order-modal-overlay .prov-form .prov-order-money input{padding-left:29px!important;font-variant-numeric:tabular-nums}
+</style>
+</head>
   <body>
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
       <symbol id="icon-user" viewBox="0 0 24 24">
