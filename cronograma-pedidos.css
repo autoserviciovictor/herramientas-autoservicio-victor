@@ -223,3 +223,15 @@ body > .cr-overlay .cr-schedule-modal .cr-custom-trigger[aria-expanded="true"] .
  .cr-app .cr-manage{font-size:11px;padding:7px 9px}
  .cr-app .cr-day-head b{font-size:11px}
 }
+/* Acción de eliminación disponible solo al editar una programación existente. */
+body > .cr-overlay .cr-schedule-modal footer .cr-schedule-remove {
+  background:#fff1f3!important;
+  color:#dc1744!important;
+  border:1px solid #fecdd5!important;
+  border-radius:8px;
+  padding:10px 14px;
+  font-weight:700;
+  cursor:pointer;
+  margin-right:auto;
+}
+body > .cr-overlay .cr-schedule-modal footer .cr-schedule-remove:hover {background:#ffe4e9!important;}
