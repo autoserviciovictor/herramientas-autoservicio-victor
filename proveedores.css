@@ -202,3 +202,10 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-supplier-modal .prov-select-option{display:block;width:100%;text-align:left;padding:10px 12px;background:white;border:0;color:#14213d;font-size:13px;cursor:pointer}
 .prov-supplier-modal .prov-select-option:hover,.prov-supplier-modal .prov-select-option.is-selected{background:#f2f5fa}
 @media(max-width:700px){.prov-supplier-modal{max-height:96dvh !important}.prov-supplier-modal-header,.prov-supplier-modal-body,.prov-supplier-footer{padding-left:15px !important;padding-right:15px !important}.prov-supplier-fields{grid-template-columns:1fr !important;gap:10px !important}}
+
+/* Formulario simplificado de proveedores */
+.prov-supplier-modal-compact{max-width:760px;width:min(760px,calc(100vw - 32px));}
+.prov-supplier-modal-compact .prov-supplier-modal-body{overflow:visible;max-height:none;}
+.prov-supplier-modal-compact .prov-payment-hint{font-size:12px;color:#64748b;margin:12px 0 0;}
+.prov-supplier-modal-compact .prov-supplier-footer{flex-shrink:0;}
+@media(max-width:640px){.prov-supplier-modal-compact .prov-supplier-fields{grid-template-columns:1fr;}.prov-supplier-modal-compact .prov-supplier-modal-body{max-height:65vh;overflow-y:auto;}}

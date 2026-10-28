@@ -4864,3 +4864,32 @@ html[data-theme="dark"] #adminUsuarioModal .admin-special-permission-copy strong
 html[data-theme="dark"] #adminUsuarioModal .admin-special-permission-copy small{
   color:#aeb7c4 !important;
 }
+
+/* Administracion: cuatro modulos por fila en escritorio. */
+@media (min-width: 1200px) {
+  #pantallaAdmin .admin-module-access-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+  }
+  #pantallaAdmin .admin-module-access-card {
+    min-width: 0;
+    padding: 16px !important;
+    gap: 13px !important;
+  }
+  #pantallaAdmin .admin-module-access-card header {
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+  #pantallaAdmin .admin-module-access-icon {
+    width: 44px !important; height: 44px !important;
+  }
+  #pantallaAdmin .admin-module-access-icon .app-icon {
+    width: 23px !important; height: 23px !important;
+  }
+  #pantallaAdmin .admin-module-access-card h2 {
+    font-size: 16px !important; overflow-wrap: anywhere;
+  }
+  #pantallaAdmin .admin-module-access-card p {
+    font-size: 11px !important;
+  }
+}
