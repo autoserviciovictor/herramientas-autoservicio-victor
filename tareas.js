@@ -720,7 +720,17 @@ function turnosPermitidos(t) {
   return ["manana", "tarde"];
 }
 function asignacion(t, fecha, turno) {
-  return t.asignaciones?.[fecha]?.[turno] || null;
+  const explicita = t.asignaciones?.[fecha]?.[turno];
+  const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+  const fijas = (t.fijas || []).filter(x => x.dia === dia && x.turno === turno && x.desde <= fecha);
+  if (!fijas.length) return explicita || null;
+  if (explicita?.excepcionFija) return explicita;
+  return {
+    ...(explicita || {}),
+    responsables: [...new Set([...(explicita?.responsables || []), ...fijas.map(x => x.responsable)])],
+    estado: explicita?.estado || 'pendiente',
+    esFija: true,
+  };
 }
 function asignacionesDelDia() {
   const fecha = iso(fechaSeleccionada),
@@ -857,7 +867,7 @@ function fechaPlanDia(indice) {
   return d;
 }
 function asignacionesCeldaPlan(t, fecha) {
-  const data = t?.asignaciones?.[fecha] || {};
+  const data = Object.fromEntries(["manana", "tarde"].map(turno => [turno, asignacion(t, fecha, turno)]).filter(x => x[1]));
   return ["manana", "tarde"]
     .map((turno) => ({ turno, a: data[turno] }))
     .filter((x) => x.a && (x.a.responsables || []).length);
@@ -959,7 +969,7 @@ function renderPlanificacion() {
   $("btnPlanCambiarSector").disabled = sectoresPermitidos().length < 2;
 }
 
-async function guardarCeldaPlan(tarea, fecha, turno, responsables) {
+async function guardarCeldaPlan(tarea, fecha, turno, responsables, fija = false) {
   if (planGuardando) return false;
   const lista = [
     ...new Set(
@@ -980,6 +990,7 @@ async function guardarCeldaPlan(tarea, fecha, turno, responsables) {
         turno,
         responsables: lista,
         estado: "pendiente",
+        modoFijo: fija ? "fija" : "quitar",
       }),
     });
     const data = await r.json();
@@ -991,7 +1002,19 @@ async function guardarCeldaPlan(tarea, fecha, turno, responsables) {
       responsables: lista,
       estado: "pendiente",
     };
-    guardarLocal(leer());
+    // Refrescar reglas fijas y asignaciones desde el servidor para no perder datos existentes.
+    await cargarTareasRemotas();
+    const actualizada = leer().find(t => String(t.id) === String(tarea.id));
+    const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+    const reglas = (actualizada?.fijas || []).filter(f =>
+      Number(f.dia) === dia && f.turno === turno &&
+      String(f.desde || "").slice(0, 10) <= fecha
+    );
+    const coinciden = lista.length === reglas.length &&
+      lista.every(nombre => reglas.some(f => String(f.responsable).trim().toLowerCase() === nombre.toLowerCase()));
+    if (fija && !coinciden) {
+      throw new Error("El servidor no confirmó la asignación fija. Verificá que esté actualizado y funcionando antes de continuar.");
+    }
     renderPlanificacion();
     return true;
   } catch (error) {
@@ -1016,7 +1039,7 @@ async function quitarCeldaPlan(tarea, fecha, turno) {
     const data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo quitar la asignación");
-    if (tarea.asignaciones?.[fecha]?.[turno])
+    if (asignacion(tarea, fecha, turno))
       delete tarea.asignaciones[fecha][turno];
     if (
       tarea.asignaciones?.[fecha] &&
@@ -1085,6 +1108,12 @@ function asegurarModalPlanificacion() {
         <div id="tareasPlanModalUsuarios" class="tareas-plan-modal-users"></div>
       </section>
 
+      <div class="tareas-plan-fixed-row">
+        <label class="tareas-plan-fixed-label" for="tareasPlanFija">
+          <input type="checkbox" id="tareasPlanFija" />
+          <span><strong>Dejar tarea fija</strong><small>Repetir este día y turno con los mismos responsables hasta que lo cambies.</small></span>
+        </label>
+      </div>
       <footer class="tareas-plan-modal-actions">
         <div class="tareas-plan-modal-actions-main">
           <button type="button" id="btnPlanGuardar" class="tareas-plan-modal-save">Guardar asignación</button>
@@ -1130,7 +1159,7 @@ function actualizarResumenSeleccionPlan() {
 }
 
 async function datosTurnoPlan(tarea, fecha, turno) {
-  const actual = tarea.asignaciones?.[fecha]?.[turno] || null;
+  const actual = asignacion(tarea, fecha, turno);
   const anteriorFecha = fechaSeleccionada;
   fechaSeleccionada = parseFecha(fecha);
   let disponibles = await usuariosDisponiblesCalendario(turno);
@@ -1235,6 +1264,12 @@ async function seleccionarTurnoPlanModal(turno) {
     (actual?.responsables || []).map((x) => String(x).trim()).filter(Boolean),
   );
 
+  const dia = new Date(`${planModalEstado.fecha}T12:00:00Z`).getUTCDay();
+  const tareaActualizada = leer().find(t => String(t.id) === String(planModalEstado.tarea.id));
+  if (tareaActualizada) planModalEstado.tarea = tareaActualizada;
+  const fijas = (planModalEstado.tarea.fijas || []).filter(f => Number(f.dia) === dia && f.turno === turno && String(f.desde || "").slice(0, 10) <= planModalEstado.fecha);
+  const check = $("tareasPlanFija");
+  if (check) check.checked = fijas.length > 0;
   renderUsuariosPlanModal();
 }
 
@@ -1249,6 +1284,7 @@ async function guardarDesdeModalPlanificacion() {
   }
 
   let ok = true;
+  const fija = Boolean($("tareasPlanFija")?.checked);
 
   if (responsables.length) {
     ok = await guardarCeldaPlan(
@@ -1256,6 +1292,7 @@ async function guardarDesdeModalPlanificacion() {
       planModalEstado.fecha,
       planModalEstado.turno,
       responsables,
+      fija,
     );
   } else if (planModalEstado.actual) {
     // Si se destildan todos los usuarios y se guarda,
@@ -1337,7 +1374,7 @@ async function cambiarEstado(id, turno) {
   const all = leer(),
     t = all.find((x) => x.id === id),
     fecha = iso(fechaSeleccionada),
-    a = t?.asignaciones?.[fecha]?.[turno];
+    a = asignacion(t, fecha, turno);
   if (!a || a.estado === "completada") return false;
   const ok = await window.AutoservicioDialog?.confirm?.({
     title: "¿Confirmar tarea completada?",
@@ -1733,6 +1770,9 @@ function cargarTareasUsuarioAsignacion() {
     ).values(),
   ];
   asignarTareasSeleccionadas = new Set(yaAsignadas.map((t) => t.id));
+  const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+  const fijaActual = todasSector.some(t => (t.fijas || []).some(f => f.dia === dia && f.turno === turno && f.desde <= fecha && normalClave(f.responsable) === normalClave(responsableOrigen)));
+  if ($("asignarFija")) $("asignarFija").checked = fijaActual;
   actualizarTituloAsignacionUsuario();
   renderTareasAsignables();
 }
@@ -1858,6 +1898,7 @@ function cerrarAsignar() {
   asignacionEditando = null;
   asignarUsuarioSeleccionado = "";
   asignarTareasSeleccionadas.clear();
+  if ($("asignarFija")) $("asignarFija").checked = false;
   asignarDisponibles = [];
   solicitudResponsables++;
   $("asignarModal").classList.add("oculto");
@@ -1899,6 +1940,7 @@ async function guardarAsignacion() {
           responsableAnterior,
           eliminarResponsable: !responsable,
           reemplazar: true,
+          modoFijo: $("asignarFija")?.checked ? "fija" : "quitar",
         }),
       }),
       data = await r.json();

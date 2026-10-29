@@ -35,6 +35,15 @@ async function asegurarEsquemaTareasBano() {
       PRIMARY KEY(task_id, work_date, shift_type)
     )`);
 
+    await query(`CREATE TABLE IF NOT EXISTS task_weekly_fixed (
+      task_id TEXT NOT NULL REFERENCES tasks(task_id) ON DELETE CASCADE,
+      weekday SMALLINT NOT NULL CHECK(weekday BETWEEN 0 AND 6),
+      shift_type TEXT NOT NULL CHECK(shift_type IN ('manana','tarde')),
+      responsible TEXT NOT NULL,
+      starts_on TEXT NOT NULL,
+      PRIMARY KEY(task_id,weekday,shift_type,responsible)
+    )`);
+
     await query(`CREATE TABLE IF NOT EXISTS bathroom_rotation_config (
       config_id SMALLINT PRIMARY KEY DEFAULT 1 CHECK(config_id = 1),
       participants JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -300,9 +309,10 @@ async function importarTareasBanoAtomico(datos, claveMigracion) {
 }
 
 async function listarTareasDb(cliente = null) {
-  const [rt, ra] = await Promise.all([
+  const [rt, ra, rf] = await Promise.all([
     ejecutarConsulta(cliente, `SELECT task_id,sector_key,name,duration_min,active,weekdays,sort_order FROM tasks ORDER BY sector_key,sort_order,task_id`),
     ejecutarConsulta(cliente, `SELECT task_id,work_date,shift_type,responsibles,state,completed_by,completed_time,extra FROM task_assignments ORDER BY task_id,work_date,shift_type`),
+    ejecutarConsulta(cliente, `SELECT task_id,weekday,shift_type,responsible,starts_on FROM task_weekly_fixed`),
   ]);
   const mapa = new Map(rt.rows.map((x) => [x.task_id, {
     id: x.task_id,
@@ -313,6 +323,7 @@ async function listarTareasDb(cliente = null) {
     diasSemana: limpiarDias(x.weekdays),
     orden: Number(x.sort_order) || 0,
     asignaciones: {},
+    fijas: [],
   }]));
   for (const x of ra.rows) {
     const tarea = mapa.get(x.task_id);
@@ -326,7 +337,23 @@ async function listarTareasDb(cliente = null) {
       completadaHora: x.completed_time || "",
     };
   }
+  for (const x of rf.rows) {
+    const tarea = mapa.get(x.task_id);
+    if (tarea) tarea.fijas.push({ dia: Number(x.weekday), turno: x.shift_type, responsable: x.responsible, desde: x.starts_on instanceof Date ? x.starts_on.toISOString().slice(0, 10) : String(x.starts_on || "").slice(0, 10) });
+  }
   return [...mapa.values()];
+}
+
+async function guardarFijasTareasDb(cliente, ids, fecha, turno, responsable, modo) {
+  const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+  if (!Number.isInteger(dia)) throw new Error('Fecha inválida');
+  // Eliminar las reglas anteriores de esta persona para el día/turno seleccionado.
+  await cliente.query(`DELETE FROM task_weekly_fixed WHERE weekday=$1 AND shift_type=$2 AND LOWER(responsible)=LOWER($3)`, [dia, turno, responsable]);
+  if (modo === 'fija') for (const id of ids) {
+    await cliente.query(`INSERT INTO task_weekly_fixed(task_id,weekday,shift_type,responsible,starts_on)
+      VALUES($1,$2,$3,$4,$5) ON CONFLICT(task_id,weekday,shift_type,responsible)
+      DO UPDATE SET starts_on=EXCLUDED.starts_on`, [id,dia,turno,responsable,fecha]);
+  }
 }
 
 async function actualizarOrdenTareasDb(sector, idsOrdenados, cliente = null) {
@@ -479,6 +506,7 @@ module.exports = {
   conTransaccionTareasBano,
   importarTareasBanoAtomico,
   listarTareasDb,
+  guardarFijasTareasDb,
   guardarTareaDb,
   eliminarTareasDb,
   guardarAsignacionTareaDb,
