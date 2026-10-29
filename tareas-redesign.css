@@ -4222,18 +4222,3 @@ body.bano-planilla-abierta { overflow:hidden; }
 #tareaModal .duration-column input[type="number"]:focus {
   outline: 2px solid #b5cafa; outline-offset: 1px;
 }
-
-/* Repetición semanal de asignaciones */
-.assign-fixed-option{display:flex;align-items:flex-start;gap:12px;margin:0 22px 12px;padding:13px 15px;border:1px solid #dbe4f0;border-radius:12px;background:#f7faff;cursor:pointer}
-.assign-fixed-option input{width:18px;height:18px;accent-color:#f51b4c;flex:none;margin-top:2px}
-.assign-fixed-option span{display:flex;flex-direction:column;gap:4px}
-.assign-fixed-option strong{font-size:13px;color:#17233c}
-.assign-fixed-option small{font-size:11px;color:#66758c;line-height:1.4}
-
-/* Opción de repetición fija en el editor semanal */
-.tareas-plan-fixed-row { padding: 12px 0 4px; border-top: 1px solid #e5eaf2; }
-.tareas-plan-fixed-label { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 10px 12px; border: 1px solid #dce5f0; border-radius: 12px; background: #f8fafc; }
-.tareas-plan-fixed-label input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #fa174d; cursor: pointer; }
-.tareas-plan-fixed-label span { display: flex; flex-direction: column; gap: 3px; }
-.tareas-plan-fixed-label strong { font-size: 13px; color: #17243c; }
-.tareas-plan-fixed-label small { font-size: 11px; color: #66758e; line-height: 1.4; }

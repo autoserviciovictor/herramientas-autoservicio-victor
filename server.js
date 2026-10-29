@@ -40,7 +40,6 @@ const {
   asegurarEsquemaTareasBano,
   conTransaccionTareasBano,
   listarTareasDb,
-  guardarFijasTareasDb,
   guardarTareaDb,
   eliminarTareasDb,
   guardarAsignacionTareaDb,
@@ -4313,25 +4312,6 @@ app.post("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) =
         tarea.asignaciones[fecha][turno],
         cliente,
       );
-      if (req.body?.modoFijo === "fija" || req.body?.modoFijo === "quitar") {
-        const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !Number.isInteger(dia)) {
-          const error = new Error("Fecha inválida"); error.statusCode = 400; throw error;
-        }
-        await cliente.query(
-          `DELETE FROM task_weekly_fixed WHERE task_id=$1 AND weekday=$2 AND shift_type=$3`,
-          [id, dia, turno],
-        );
-        if (req.body.modoFijo === "fija") {
-          for (const responsable of responsables) {
-            await cliente.query(
-              `INSERT INTO task_weekly_fixed(task_id,weekday,shift_type,responsible,starts_on)
-               VALUES($1,$2,$3,$4,$5)`,
-              [id, dia, turno, responsable, fecha],
-            );
-          }
-        }
-      }
       return tarea.asignaciones[fecha][turno];
     });
     res.json({ ok: true, asignacion });
@@ -4362,7 +4342,6 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
       reemplazar = Boolean(req.body?.reemplazar),
       responsableAnterior = normalizarTexto(req.body?.responsableAnterior),
       eliminarResponsable = Boolean(req.body?.eliminarResponsable);
-    const modoFijo = req.body?.modoFijo === 'fija' ? 'fija' : req.body?.modoFijo === 'quitar' ? 'quitar' : null;
     if (
       (!ids.length && !reemplazar) ||
       !fecha ||
@@ -4444,13 +4423,6 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
         } else if (asignacionesPrevias.get(tarea.id)) {
           await eliminarAsignacionTareaDb(tarea.id, fecha, turno, cliente);
         }
-      }
-      if (modoFijo) {
-        await guardarFijasTareasDb(cliente, eliminarResponsable ? [] : ids, fecha, turno, responsableAnterior || responsable, modoFijo);
-        // Volver a leer para devolver las reglas actualizadas al navegador.
-        const actualizadas = await listarTareasDb(cliente);
-        const visibles = rolGestionGlobal(req.usuario) ? actualizadas : actualizadas.filter(t => permitidos.has(normalizarTexto(t.sector)));
-        return { asignadas: seleccionadas.length, tareas: visibles };
       }
       const visibles = rolGestionGlobal(req.usuario)
         ? tareas
