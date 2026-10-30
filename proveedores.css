@@ -225,3 +225,16 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-order-modal .prov-order-searchable .prov-select-option:hover,.prov-order-modal .prov-order-searchable .prov-select-option.is-selected{background:#edf4ff}
 .prov-order-modal .prov-order-searchable .prov-select-option[hidden],.prov-order-modal .prov-order-searchable .prov-order-select-empty[hidden]{display:none!important}
 .prov-order-modal .prov-order-searchable .prov-order-select-empty{margin:0;padding:12px;color:#73839b;font-size:12px;text-align:center}
+
+/* Confirmación de eliminación de proveedor: reemplaza el diálogo nativo. */
+.prov-delete-confirm-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.57);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.prov-delete-confirm{box-sizing:border-box;width:min(100%,410px);padding:28px 26px 24px;background:#fff;border-radius:17px;box-shadow:0 22px 70px rgba(15,23,42,.28);text-align:center;color:#16243c;font-family:inherit}
+.prov-delete-confirm-icon{display:grid;place-items:center;margin:0 auto 14px;width:42px;height:42px;border-radius:13px;background:#fff0f3;color:#f7194b;font-size:26px;font-weight:800}
+.prov-delete-confirm h2{margin:0 0 10px;font-size:19px;font-weight:800;line-height:1.3}
+.prov-delete-confirm p{margin:0 0 24px;color:#64748b;font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+.prov-delete-confirm p strong{color:#24334d}
+.prov-delete-confirm-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
+.prov-delete-confirm-actions button{font:inherit;font-size:13px;font-weight:700;min-height:41px;padding:0 17px;border:1px solid #dbe3ef;border-radius:9px;background:#f8fafc;color:#23334c;cursor:pointer}
+.prov-delete-confirm-actions button.prov-delete-confirm-danger{background:#fa174c;border-color:#fa174c;color:#fff}
+.prov-delete-confirm-actions button:focus-visible{outline:2px solid #7ca9f6;outline-offset:2px}
+.prov-delete-confirm-actions button:hover{filter:brightness(.97)}
