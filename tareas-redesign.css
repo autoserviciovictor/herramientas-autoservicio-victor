@@ -1534,8 +1534,7 @@ body.en-bano #pantallaBano .config-user-list {
 #tareaModal .tarea-delete-btn .app-icon { width: 16px; height: 16px; }
 
 #tareaModal .modal-actions,
-#asignarModal .assign-modal-footer,
-.tareas-plan-modal-actions-main {
+#asignarModal .assign-modal-footer {
   display: grid !important;
   grid-template-columns: 1fr !important;
   gap: 0 !important;
@@ -2698,57 +2697,9 @@ body.en-tareas .tareas-back-label {
     top: 22px !important;
     right: 14px !important;
   }
-  #asignarModal .assign-modal-body {
-    min-height: 0 !important;
-    max-height: none !important;
-    padding: 16px 18px !important;
-    gap: 16px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    overscroll-behavior: contain;
-  }
-  #asignarModal .asignar-usuarios,
-  #asignarModal .assign-task-list {
-    max-height: none !important;
-    overflow: visible !important;
-  }
   #asignarModal .assign-modal-footer {
     position: relative !important;
     z-index: 20;
-    padding: 12px 18px max(14px, env(safe-area-inset-bottom)) !important;
-    border-top: 1px solid var(--task-border) !important;
-    background: var(--task-surface) !important;
-    box-shadow: 0 -10px 24px color-mix(in srgb, #0f172a 9%, transparent) !important;
-  }
-
-  .tareas-plan-modal-card {
-    display: grid !important;
-    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
-    overflow: hidden !important;
-    padding: 14px 18px 0 !important;
-  }
-  .tareas-plan-modal-head {
-    padding: 14px 46px 14px 0 !important;
-  }
-  .tareas-plan-modal-close {
-    top: 16px !important;
-    right: 14px !important;
-  }
-  .tareas-plan-modal-block {
-    min-height: 0;
-  }
-  .tareas-plan-modal-block:nth-of-type(2) {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    overscroll-behavior: contain;
-    padding-bottom: 10px;
-  }
-  .tareas-plan-modal-users {
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  .tareas-plan-modal-actions {
-    margin: 0 -18px !important;
     padding: 12px 18px max(14px, env(safe-area-inset-bottom)) !important;
     border-top: 1px solid var(--task-border) !important;
     background: var(--task-surface) !important;
@@ -4221,4 +4172,182 @@ body.bano-planilla-abierta { overflow:hidden; }
 }
 #tareaModal .duration-column input[type="number"]:focus {
   outline: 2px solid #b5cafa; outline-offset: 1px;
+}
+
+/* Asignación fija: evitar superposición y conservar el diseño del formulario. */
+.tareas-plan-fixed-label, label[for="asignarFija"] {
+  display:flex !important; align-items:flex-start !important; gap:10px !important;
+  white-space:normal !important; line-height:1.4 !important; height:auto !important;
+  min-height:48px; padding:10px 12px; box-sizing:border-box;
+}
+.tareas-plan-fixed-label input, label[for="asignarFija"] input { flex:0 0 auto; margin:3px 0 0 !important; }
+.tareas-plan-fixed-label span, label[for="asignarFija"] span { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.tareas-plan-fixed-label small, label[for="asignarFija"] small { white-space:normal !important; }
+
+/* Acciones explícitas de eliminación en ambos editores */
+.tareas-delete-action { border:1px solid #f5a2ad; background:#fff0f2; color:#c71840; border-radius:10px; padding:12px 20px; font:inherit; font-weight:700; cursor:pointer; flex:0 0 auto; }
+.tareas-delete-action:hover:not(:disabled) { background:#ffe0e5; }
+.tareas-delete-action:disabled { opacity:.5; cursor:not-allowed; }
+.tareas-delete-action[hidden] { display:none!important; }
+#asignarModal .assign-modal-footer, .tareas-plan-modal-actions-main { display:flex; gap:10px; align-items:center; }
+#asignarModal .assign-modal-footer .save-btn, .tareas-plan-modal-actions-main .tareas-plan-modal-save { flex:1; min-width:0; }
+
+/* Modal de planificación: encabezado, turno y acciones fijos; sólo usuarios con scroll. */
+.tareas-plan-modal .tareas-plan-modal-card {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: min(850px, calc(100dvh - 40px)) !important;
+  overflow: hidden !important;
+}
+.tareas-plan-modal .tareas-plan-modal-head,
+.tareas-plan-modal .tareas-plan-modal-block:first-of-type,
+.tareas-plan-modal .tareas-plan-fixed-row,
+.tareas-plan-modal .tareas-plan-modal-actions { flex: 0 0 auto; }
+.tareas-plan-modal .tareas-plan-modal-block:nth-of-type(2) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden !important;
+}
+.tareas-plan-modal .tareas-plan-modal-users {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+}
+.tareas-plan-modal .tareas-plan-modal-actions { margin-top: 12px; }
+.tareas-plan-modal .tareas-plan-modal-actions-main {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: stretch;
+}
+.tareas-plan-modal .tareas-plan-modal-actions-main > button { width: 100%; min-width: 0; }
+@media (max-width: 700px) {
+  .tareas-plan-modal .tareas-plan-modal-card { max-height: min(92dvh, 820px) !important; }
+  .tareas-plan-modal .tareas-plan-modal-head { padding: 14px 46px 14px 0 !important; }
+  .tareas-plan-modal .tareas-plan-modal-actions {
+    margin: 12px -18px 0 !important;
+    padding: 12px 18px max(14px, env(safe-area-inset-bottom)) !important;
+    background: var(--task-surface) !important;
+  }
+}
+
+/* Editor por usuario: cabecera, turno, usuarios y pie fijos.
+   La lista de tareas es la única sección desplazable del formulario. */
+#asignarModal .assign-modal-card {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: min(860px, calc(100dvh - 40px)) !important;
+  overflow: hidden !important;
+}
+#asignarModal .assign-modal-header,
+#asignarModal .assign-fixed-option,
+#asignarModal .assign-modal-footer {
+  flex: 0 0 auto !important;
+}
+#asignarModal .assign-modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  gap: 14px !important;
+}
+#asignarModal .assign-modal-body > .assign-field {
+  flex: 0 0 auto;
+}
+#asignarModal .assign-modal-body > .assign-field:last-child {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+#asignarModal .asignar-usuarios {
+  max-height: min(180px, 22dvh) !important;
+}
+#asignarModal .assign-task-list {
+  flex: 1 1 auto !important;
+  min-height: 65px !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+}
+#asignarModal .assign-modal-footer {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+#asignarModal .assign-modal-footer > .tareas-delete-action,
+#asignarModal .assign-modal-footer > .save-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+@media (max-width: 700px) {
+  #asignarModal .assign-modal-card {
+    max-height: min(92dvh, 820px) !important;
+  }
+  #asignarModal .assign-modal-body {
+    padding: 12px 18px !important;
+    gap: 12px !important;
+  }
+  #asignarModal .asignar-usuarios {
+    max-height: min(140px, 19dvh) !important;
+  }
+}
+
+#asignarModal .assign-modal-footer > #btnEliminarAsignar:not([hidden]) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Editor por usuario: priorizar espacio para tareas, sin cortar tarjetas.
+   Sustituye el límite antiguo de 245px y evita que grid estire filas. */
+#asignarModal .assign-modal-card {
+  height: min(860px, calc(100dvh - 32px)) !important;
+}
+#asignarModal .assign-modal-body {
+  gap: 10px !important;
+  padding-top: 14px !important;
+  padding-bottom: 12px !important;
+}
+#asignarModal .assign-modal-body > .assign-field {
+  gap: 7px !important;
+}
+#asignarModal .asignar-usuarios {
+  max-height: 112px !important;
+  overflow-y: auto !important;
+}
+#asignarModal .assign-modal-body > .assign-field:last-child {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+#asignarModal .assign-task-list {
+  display: grid !important;
+  grid-auto-rows: max-content !important;
+  align-content: start !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+#asignarModal.assign-few-tasks .assign-task-list {
+  overflow-y: hidden !important;
+}
+@media (max-width: 700px) {
+  #asignarModal .assign-modal-card {
+    height: min(92dvh, 820px) !important;
+  }
+  #asignarModal .asignar-usuarios {
+    max-height: 100px !important;
+  }
 }

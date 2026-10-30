@@ -533,7 +533,7 @@ function opcionSectorTareas(nombre, actual = "") {
   return {
     value: nombre,
     label: info?.nombre || nombre,
-    color: info?.color || "#718096",
+    color: info?.color || ({caja:"#ef476f",carniceria:"#e76f51",deposito:"#3b82f6",fiambreria:"#8b5cf6",verduleria:"#10b981"}[claveSector(nombre)] || "#64748b"),
     description:
       normalClave(nombre) === normalClave(actual)
         ? "Sector actual"
@@ -722,7 +722,7 @@ function turnosPermitidos(t) {
 function asignacion(t, fecha, turno) {
   const explicita = t.asignaciones?.[fecha]?.[turno];
   const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
-  const fijas = (t.fijas || []).filter(x => x.dia === dia && x.turno === turno && x.desde <= fecha);
+  const fijas = (t.fijas || []).filter(x => Number(x.dia) === dia && x.turno === turno && String(x.desde || "").slice(0,10) <= fecha);
   if (!fijas.length) return explicita || null;
   if (explicita?.excepcionFija) return explicita;
   return {
@@ -1039,14 +1039,14 @@ async function quitarCeldaPlan(tarea, fecha, turno) {
     const data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudo quitar la asignación");
-    if (asignacion(tarea, fecha, turno))
+    if (tarea.asignaciones?.[fecha]?.[turno])
       delete tarea.asignaciones[fecha][turno];
     if (
       tarea.asignaciones?.[fecha] &&
       !Object.keys(tarea.asignaciones[fecha]).length
     )
       delete tarea.asignaciones[fecha];
-    guardarLocal(leer());
+    await cargarTareasRemotas();
     renderPlanificacion();
     return true;
   } catch (error) {
@@ -1116,6 +1116,7 @@ function asegurarModalPlanificacion() {
       </div>
       <footer class="tareas-plan-modal-actions">
         <div class="tareas-plan-modal-actions-main">
+          <button type="button" id="btnPlanEliminar" class="tareas-delete-action">Eliminar</button>
           <button type="button" id="btnPlanGuardar" class="tareas-plan-modal-save">Guardar asignación</button>
         </div>
       </footer>
@@ -1133,6 +1134,7 @@ function asegurarModalPlanificacion() {
       ),
     );
   $("btnPlanGuardar").addEventListener("click", guardarDesdeModalPlanificacion);
+  $("btnPlanEliminar").addEventListener("click", eliminarDesdeModalPlanificacion);
   modal.addEventListener("keydown", (e) => {
     if (e.key === "Escape") cerrarModalPlanificacion();
   });
@@ -1156,6 +1158,8 @@ function actualizarResumenSeleccionPlan() {
     texto.textContent = `${cantidad} ${cantidad === 1 ? "seleccionado" : "seleccionados"}`;
   const guardar = $("btnPlanGuardar");
   if (guardar) guardar.disabled = !planModalEstado.turno || planGuardando;
+  const eliminar = $("btnPlanEliminar");
+  if (eliminar) eliminar.disabled = !planModalEstado.turno || planGuardando || !(planModalEstado.actual?.responsables || []).length;
 }
 
 async function datosTurnoPlan(tarea, fecha, turno) {
@@ -1271,6 +1275,47 @@ async function seleccionarTurnoPlanModal(turno) {
   const check = $("tareasPlanFija");
   if (check) check.checked = fijas.length > 0;
   renderUsuariosPlanModal();
+}
+
+async function confirmarEliminarTareas(titulo, mensaje) {
+  if (typeof window.AutoservicioDialog?.confirm !== "function") {
+    window.AutoservicioDialog?.alert?.({ title: "Confirmación no disponible", message: "No se puede eliminar sin confirmación." });
+    return false;
+  }
+  return (await window.AutoservicioDialog.confirm({
+    title: titulo, message: mensaje, confirmText: "Eliminar", cancelText: "Cancelar", danger: true,
+  })) === true;
+}
+
+async function eliminarDesdeModalPlanificacion() {
+  if (!planModalEstado || planGuardando || !planModalEstado.turno) return;
+  const { tarea, fecha, turno, seleccionados, actual } = planModalEstado;
+  const existentes = (actual?.responsables || []).map(String);
+  const elegidos = [...(seleccionados || [])].filter(n => existentes.some(x => normalClave(x) === normalClave(n)));
+  if (!existentes.length) return;
+  if (!elegidos.length) {
+    window.AutoservicioDialog?.alert?.({title:"Seleccioná un responsable", message:"Marcá al menos uno de los responsables asignados para eliminarlo."});
+    return;
+  }
+  const ok = await confirmarEliminarTareas("Eliminar asignación", `¿Quitar a ${elegidos.join(", ")} de ${tarea.nombre} en este turno? También se quitará su asignación fija semanal.`);
+  if (!ok) return;
+  const restantes = existentes.filter(n => !elegidos.some(x => normalClave(x) === normalClave(n)));
+  // Guardar por responsable para preservar a quienes no se están quitando.
+  const boton = $("btnPlanEliminar");
+  if (boton) { boton.disabled = true; boton.textContent = "Eliminando…"; }
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/asignacion`, {
+      method:"DELETE", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:tarea.id, fecha, turno, responsables:elegidos}),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudo eliminar");
+    await cargarTareasRemotas();
+    renderPlanificacion();
+    cerrarModalPlanificacion();
+  } catch (error) {
+    window.AutoservicioDialog?.alert?.({title:"No se pudo eliminar",message:error.message});
+  } finally { if (boton) {boton.textContent="Eliminar"; boton.disabled=false;} }
 }
 
 async function guardarDesdeModalPlanificacion() {
@@ -1837,6 +1882,7 @@ function renderTareasAsignables() {
   $("asignarTareasCantidad").textContent = (asignarUsuarioSeleccionado || asignacionEditando?.porUsuario)
     ? `${lista.length} para ${dia}`
     : "Seleccioná un usuario";
+  $("asignarModal")?.classList.toggle("assign-few-tasks", lista.length <= 1);
   $("asignarTareasLista").innerHTML = lista.length
     ? lista
         .map(
@@ -1946,8 +1992,7 @@ async function guardarAsignacion() {
       data = await r.json();
     if (!r.ok || !data.ok)
       throw new Error(data.mensaje || "No se pudieron guardar las tareas");
-    if (Array.isArray(data.tareas)) guardarLocal(data.tareas);
-    else await cargarTareasRemotas();
+    await cargarTareasRemotas();
     cerrarAsignar();
     renderTareas();
   } catch (error) {
@@ -1959,6 +2004,28 @@ async function guardarAsignacion() {
     if (etiqueta) etiqueta.textContent = "Guardar cambios";
   }
 }
+async function eliminarTareasUsuario() {
+  if (!asignacionEditando?.porUsuario || !asignarUsuarioSeleccionado) return;
+  const responsable = asignarUsuarioSeleccionado.trim();
+  const turno = $("asignarTurno")?.value;
+  const fecha = iso(fechaSeleccionada);
+  if (!turno) return;
+  if (!await confirmarEliminarTareas("Eliminar tareas del usuario", `¿Quitar todas las tareas de ${responsable} para este día y turno? También se quitarán sus repeticiones fijas de estas tareas. Las asignaciones de otras personas no se modificarán.`)) return;
+  const boton = $("btnEliminarAsignar");
+  if (boton) { boton.disabled=true; boton.textContent="Eliminando…"; }
+  try {
+    const r = await fetch(`${API_BASE_URL}/tareas/asignaciones-lote`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ids:[],fecha,turno,responsable,responsableAnterior:responsable,eliminarResponsable:true,reemplazar:true,modoFijo:"quitar",sector:sectorSeleccionado}),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudieron eliminar las tareas");
+    await cargarTareasRemotas(); cerrarAsignar(); renderTareas();
+  } catch (error) {
+    window.AutoservicioDialog?.alert?.({title:"No se pudo eliminar",message:error.message});
+  } finally {if (boton) {boton.disabled=false; boton.textContent="Eliminar";}}
+}
+
 async function abrirEditarUsuario(responsable, turno) {
   const fecha = iso(fechaSeleccionada);
   asignacionEditando = { porUsuario: true, fecha, turno, responsable };
@@ -1974,6 +2041,8 @@ async function abrirEditarUsuario(responsable, turno) {
   actualizarTituloAsignacionUsuario();
   const etiquetaGuardar = $("btnGuardarAsignar")?.querySelector("span");
   if (etiquetaGuardar) etiquetaGuardar.textContent = "Guardar cambios";
+  const botonEliminar = $("btnEliminarAsignar");
+  if (botonEliminar) botonEliminar.hidden = false;
   $("asignarModal").classList.remove("oculto");
   $("asignarModal").setAttribute("aria-hidden", "false");
   document.body.classList.add("tareas-modal-open");
@@ -2911,6 +2980,7 @@ function bind() {
   };
   $("btnCerrarAsignarModal").onclick = cerrarAsignar;
   $("btnGuardarAsignar").onclick = guardarAsignacion;
+  $("btnEliminarAsignar")?.addEventListener("click", eliminarTareasUsuario);
   document
     .querySelectorAll("#asignarTurnoOpciones [data-turno]")
     .forEach(

@@ -209,3 +209,19 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-supplier-modal-compact .prov-payment-hint{font-size:12px;color:#64748b;margin:12px 0 0;}
 .prov-supplier-modal-compact .prov-supplier-footer{flex-shrink:0;}
 @media(max-width:640px){.prov-supplier-modal-compact .prov-supplier-fields{grid-template-columns:1fr;}.prov-supplier-modal-compact .prov-supplier-modal-body{max-height:65vh;overflow-y:auto;}}
+
+/* Buscador del proveedor en el formulario de pedidos. */
+.prov-order-modal .prov-order-searchable{position:relative;min-width:0;width:100%}
+.prov-order-modal .prov-order-searchable>.prov-native-select{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;opacity:0!important;pointer-events:none!important;clip-path:inset(50%)!important}
+.prov-order-modal .prov-order-searchable>.prov-select-trigger{width:100%;min-height:39px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:1px solid #dce3ed;border-radius:10px;background:#fff;color:#16243c;padding:9px 12px;font:inherit;cursor:pointer}
+.prov-order-modal .prov-order-searchable .prov-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.prov-order-modal .prov-order-searchable>.prov-select-menu{position:absolute;top:calc(100% + 5px);left:0;z-index:120;width:100%;max-height:270px;overflow-y:auto;background:#fff;border:1px solid #dce3ed;border-radius:11px;box-shadow:0 16px 32px #14213d30}
+.prov-order-modal .prov-order-searchable:not(.is-open)>.prov-select-menu{display:none!important}
+.prov-order-modal .prov-order-searchable.opens-up>.prov-select-menu{top:auto;bottom:calc(100% + 5px)}
+.prov-order-modal .prov-order-searchable .prov-order-select-search{position:sticky;top:0;z-index:1;background:#fff;padding:9px;border-bottom:1px solid #e9edf5}
+.prov-order-modal .prov-order-searchable .prov-order-select-search input{display:block;width:100%;box-sizing:border-box;margin:0;min-height:36px;border:1px solid #dce3ed;border-radius:8px;background:#fff;padding:8px 10px;color:#16243c;font:inherit;outline:none}
+.prov-order-modal .prov-order-searchable .prov-order-select-search input:focus{border-color:#94b5e6;box-shadow:0 0 0 2px #e5efff}
+.prov-order-modal .prov-order-searchable .prov-select-option{display:block;width:100%;padding:10px 12px;text-align:left;border:0;background:#fff;color:#16243c;font:inherit;cursor:pointer}
+.prov-order-modal .prov-order-searchable .prov-select-option:hover,.prov-order-modal .prov-order-searchable .prov-select-option.is-selected{background:#edf4ff}
+.prov-order-modal .prov-order-searchable .prov-select-option[hidden],.prov-order-modal .prov-order-searchable .prov-order-select-empty[hidden]{display:none!important}
+.prov-order-modal .prov-order-searchable .prov-order-select-empty{margin:0;padding:12px;color:#73839b;font-size:12px;text-align:center}

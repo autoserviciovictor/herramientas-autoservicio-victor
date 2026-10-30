@@ -44,6 +44,7 @@ const {
   eliminarTareasDb,
   guardarAsignacionTareaDb,
   eliminarAsignacionTareaDb,
+  guardarFijasTareasDb,
   actualizarOrdenTareasDb,
   leerBanoDb,
   guardarConfiguracionBanoDb,
@@ -4312,6 +4313,19 @@ app.post("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res) =
         tarea.asignaciones[fecha][turno],
         cliente,
       );
+      if (["fija", "quitar"].includes(normalizarTexto(req.body?.modoFijo))) {
+        const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+        const anteriores = (tarea.fijas || []).filter(f => Number(f.dia) === dia && f.turno === turno);
+        for (const anterior of anteriores) {
+          await cliente.query(`DELETE FROM task_weekly_fixed WHERE task_id=$1 AND weekday=$2 AND shift_type=$3 AND LOWER(responsible)=LOWER($4)`, [id, dia, turno, anterior.responsable]);
+        }
+        if (req.body.modoFijo === "fija") {
+          for (const nombre of responsables) {
+            await cliente.query(`INSERT INTO task_weekly_fixed(task_id,weekday,shift_type,responsible,starts_on) VALUES($1,$2,$3,$4,$5) ON CONFLICT(task_id,weekday,shift_type,responsible) DO UPDATE SET starts_on=EXCLUDED.starts_on`, [id, dia, turno, nombre, fecha]);
+          }
+        }
+      }
+
       return tarea.asignaciones[fecha][turno];
     });
     res.json({ ok: true, asignacion });
@@ -4416,6 +4430,14 @@ app.post("/tareas/asignaciones-lote", requerirAlgunModulo("tareas"), async (req,
           completadaHora: anterior.completadaHora || "",
         };
       }
+      // Mantener sincronizadas las reglas semanales al editar o quitar tareas.
+      if (reemplazar && ["fija", "quitar"].includes(normalizarTexto(req.body?.modoFijo))) {
+        const nombreAnterior = responsableAnterior || responsable;
+        await guardarFijasTareasDb(cliente, [], fecha, turno, nombreAnterior, "quitar");
+        if (!eliminarResponsable && normalizarTexto(req.body?.modoFijo) === "fija") {
+          await guardarFijasTareasDb(cliente, ids, fecha, turno, responsable, "fija");
+        }
+      }
       for (const tarea of tareas) {
         const actual = tarea.asignaciones?.[fecha]?.[turno];
         if (actual) {
@@ -4462,8 +4484,8 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
     await conTransaccionTareasBano(async (cliente) => {
       const tareas = await obtenerTareasServidor(cliente),
         tarea = tareas.find((t) => t.id === id);
-      if (!tarea?.asignaciones?.[fecha]?.[turno]) {
-        const error = new Error("Asignación no encontrada");
+      if (!tarea) {
+        const error = new Error("Tarea no encontrada");
         error.statusCode = 404;
         throw error;
       }
@@ -4475,10 +4497,15 @@ app.delete("/tareas/asignacion", requerirAlgunModulo("tareas"), async (req, res)
         error.statusCode = 403;
         throw error;
       }
-      delete tarea.asignaciones[fecha][turno];
-      if (!Object.keys(tarea.asignaciones[fecha]).length)
-        delete tarea.asignaciones[fecha];
+      if (tarea.asignaciones?.[fecha]?.[turno]) {
+        delete tarea.asignaciones[fecha][turno];
+        if (!Object.keys(tarea.asignaciones[fecha]).length)
+          delete tarea.asignaciones[fecha];
+      }
       await eliminarAsignacionTareaDb(id, fecha, turno, cliente);
+      // Quitar también la regla semanal; de lo contrario reaparece.
+      const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+      await cliente.query(`DELETE FROM task_weekly_fixed WHERE task_id=$1 AND weekday=$2 AND shift_type=$3`, [id, dia, turno]);
     });
     res.json({ ok: true });
   } catch (e) {
