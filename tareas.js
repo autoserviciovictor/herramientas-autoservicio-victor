@@ -2067,9 +2067,11 @@ function configBano() {
   // Compatibilidad con configuraciones históricas: algunas versiones guardaron el nombre
   // visible del responsable (por ejemplo, "Sofia") y las actuales guardan el usuario.
   // Resolver ambos formatos evita que una rotación válida se interprete como eliminada.
-  // La rotación del baño es global. Nunca filtrar participantes por el sector
-  // o el rol de quien inició sesión. Si un usuario no puede resolverse en el
-  // directorio actual, conservar igualmente su clave guardada.
+  // La rotación es global: usar el directorio global del baño, no el sector.
+  // Si el directorio todavía no se cargó, conservar temporalmente la lista
+  // guardada para no ocultar participantes ante un error de conexión.
+  // Cuando está disponible, excluir de los próximos turnos usuarios eliminados.
+  const directorioDisponible = usuariosBano.length > 0;
   const participantes = participantesGuardados
     .map((p) => {
       const clave = claveParticipante(p).trim();
@@ -2077,7 +2079,12 @@ function configBano() {
       const u = usuarioParticipante(clave);
       return u ? claveParticipante(u) : clave;
     })
-    .filter((clave, indice, lista) => clave && lista.indexOf(clave) === indice);
+    .filter((clave, indice, lista) =>
+      clave && lista.indexOf(clave) === indice &&
+      (!directorioDisponible || usuariosBano.some((u) =>
+        claveParticipante(u) === clave || u.nombre === clave
+      ))
+    );
   return {
     participantes,
     fechaAncla: cfg.fechaAncla || cfg.fechaInicio || iso(new Date()),
