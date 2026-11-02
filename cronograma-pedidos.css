@@ -275,3 +275,36 @@ body > .cr-overlay .cr-color-modal{width:min(670px,calc(100vw - 32px))!important
 .cr-feedback-actions button{border:1px solid #d8e2ef;border-radius:9px;background:#f7f9fc;padding:11px 17px;color:#283956;font-weight:700;cursor:pointer}
 .cr-feedback-actions .cr-feedback-danger{background:#fa1550;color:white;border-color:#fa1550}
 .cr-feedback-actions button:hover{filter:brightness(.97)}
+
+
+/* Cabecera de Cronograma: mismas dimensiones que Proveedores y Pedidos */
+.cr-app .cr-title-icon {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  min-height: 76px;
+  flex: 0 0 76px;
+  padding: 0;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+}
+.cr-app .cr-title-icon .cr-svg {
+  display: block;
+  width: 38px;
+  height: 38px;
+}
+@media (max-width: 600px) {
+  .cr-app .cr-title-icon {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    min-height: 60px;
+    flex-basis: 60px;
+  }
+  .cr-app .cr-title-icon .cr-svg {
+    width: 30px;
+    height: 30px;
+  }
+}

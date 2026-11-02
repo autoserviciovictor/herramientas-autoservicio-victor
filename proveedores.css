@@ -455,3 +455,52 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-week-grid .prov-week-today{outline:2px solid var(--week-accent);outline-offset:-2px}
 @media(hover:hover){.prov-week-grid .prov-week-card:hover{transform:translateY(-2px);box-shadow:0 9px 20px rgba(23,39,68,.09)}}
 @media(prefers-reduced-motion:reduce){.prov-week-grid .prov-week-card{transition:none}}
+
+/* Pedidos: tabla compacta sin columna Notas ni botón de vista previa */
+.prov-app .prov-orders-table{min-width:790px}
+.prov-app .prov-orders-table th:nth-child(1){width:11%}
+.prov-app .prov-orders-table th:nth-child(2){width:11%}
+.prov-app .prov-orders-table th:nth-child(3){width:24%}
+.prov-app .prov-orders-table th:nth-child(4){width:13%}
+.prov-app .prov-orders-table th:nth-child(5){width:13%}
+.prov-app .prov-orders-table th:nth-child(6){width:15%}
+.prov-app .prov-orders-table th:nth-child(7){width:13%;text-align:center}
+
+
+/* Cabeceras de Proveedores y Pedidos: iconos de tamaño uniforme */
+.prov-app .prov-hero-icon,
+.prov-app .prov-subtitle-icon {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  min-height: 76px;
+  flex: 0 0 76px;
+  padding: 0;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+}
+.prov-app .prov-hero-icon svg,
+.prov-app .prov-subtitle-icon svg {
+  display: block;
+  width: 38px;
+  height: 38px;
+  max-width: 38px;
+  max-height: 38px;
+}
+@media (max-width: 600px) {
+  .prov-app .prov-hero-icon,
+  .prov-app .prov-subtitle-icon {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    min-height: 60px;
+    flex-basis: 60px;
+  }
+  .prov-app .prov-hero-icon svg,
+  .prov-app .prov-subtitle-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+}
