@@ -358,3 +358,51 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-arrival-tabs{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
 .prov-arrival-tabs button{border:1px solid #dce5f0;background:#fff;color:#344867;border-radius:10px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
 .prov-arrival-tabs button.active{background:#344e73;color:#fff;border-color:#344e73}
+
+
+/* Formulario de pedidos: columnas y controles alineados. */
+.prov-order-modal .prov-order-fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:14px;
+  row-gap:16px;
+  align-items:start;
+}
+.prov-order-modal .prov-order-fields>label{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:0;
+  margin:0;
+  font-weight:700;
+  line-height:18px;
+}
+.prov-order-modal .prov-order-fields>label>input,
+.prov-order-modal .prov-order-fields>label>select,
+.prov-order-modal .prov-order-fields>label>.prov-order-searchable,
+.prov-order-modal .prov-order-fields>label>.prov-order-money{
+  width:100%;
+  min-width:0;
+  height:44px;
+  min-height:44px;
+  box-sizing:border-box;
+  margin:0;
+}
+.prov-order-modal .prov-order-fields .prov-order-money{
+  display:flex;
+  align-items:center;
+}
+.prov-order-modal .prov-order-fields .prov-order-money input{
+  flex:1;
+  min-width:0;
+  height:100%;
+  box-sizing:border-box;
+}
+.prov-order-modal .prov-order-fields .prov-order-searchable>.prov-select-trigger{
+  height:44px;
+  min-height:44px;
+  box-sizing:border-box;
+}
+@media(max-width:620px){
+  .prov-order-modal .prov-order-fields{grid-template-columns:minmax(0,1fr)}
+}
