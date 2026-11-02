@@ -420,3 +420,38 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-order-modal .prov-order-fields>label>input,
 .prov-order-modal .prov-order-fields>label>select{grid-row:2!important;height:44px!important;min-height:44px!important;margin:0!important;align-self:start!important}
 .prov-order-modal .prov-order-fields>label>.prov-order-money input{height:100%!important;min-height:0!important}
+
+/* Resumen de pagos pendientes de la semana (lunes a viernes). */
+.prov-week-summary{margin-top:18px;padding:22px 20px;background:#fff;border:1px solid #e0e7f1;border-radius:16px;box-shadow:0 6px 24px rgba(30,49,85,.035)}
+.prov-week-heading{margin-bottom:16px}.prov-week-heading h2{margin:0 0 5px;font-size:18px;font-weight:800;color:#172744}.prov-week-heading p{margin:0;color:#627391;font-size:12px}
+.prov-week-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.prov-week-card{min-width:0;display:flex;flex-direction:column;gap:12px;padding:16px 13px;background:#f8fafc;border:1px solid #e4eaf2;border-radius:12px}
+.prov-week-day{display:flex;justify-content:space-between;align-items:center;gap:5px;font-size:12px;font-weight:800;color:#334867}.prov-week-day span{font-size:11px;color:#7b8aa2;font-weight:600}
+.prov-week-card strong{font-size:clamp(13px,1.1vw,17px);color:#182a48;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.prov-week-card small{font-size:11px;color:#7a8ba4}
+.prov-week-today{border-color:#ff7593;background:#fff5f7}.prov-week-total{background:#fff0f3;border-color:#ffc7d3}.prov-week-total strong{color:#ed1649}
+@media(max-width:1150px){.prov-week-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:680px){.prov-week-summary{padding:16px}.prov-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Tarjetas semanales: colores por día y jerarquía visual consistente. */
+.prov-week-grid .prov-week-card{
+  position:relative;overflow:hidden;isolation:isolate;
+  border-radius:14px;padding:18px 14px 15px;gap:13px;
+  box-shadow:0 4px 13px rgba(23,39,68,.045);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.prov-week-grid .prov-week-card::before{
+  content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--week-accent);
+}
+.prov-week-grid .prov-week-card:nth-child(1){--week-accent:#ec4774;background:#fff1f5;border-color:#f9c9d7}
+.prov-week-grid .prov-week-card:nth-child(2){--week-accent:#e79b21;background:#fff8e9;border-color:#f5dfaf}
+.prov-week-grid .prov-week-card:nth-child(3){--week-accent:#2589d9;background:#eef7ff;border-color:#c4e3fa}
+.prov-week-grid .prov-week-card:nth-child(4){--week-accent:#18a58b;background:#edfaf6;border-color:#bdebdc}
+.prov-week-grid .prov-week-card:nth-child(5){--week-accent:#8c62d5;background:#f6f0ff;border-color:#decdfa}
+.prov-week-grid .prov-week-card:nth-child(6){--week-accent:#f2154a;background:#ffe9ef;border-color:#f8b3c5;box-shadow:0 5px 16px rgba(242,21,74,.075)}
+.prov-week-grid .prov-week-card .prov-week-day{color:var(--week-accent);font-size:12px}
+.prov-week-grid .prov-week-card .prov-week-day span{color:#63748e}
+.prov-week-grid .prov-week-card strong{color:#182a48;font-weight:850;font-size:clamp(14px,1.13vw,18px);letter-spacing:-.3px}
+.prov-week-grid .prov-week-total strong{color:#e91045}
+.prov-week-grid .prov-week-card small{color:#62738c}
+.prov-week-grid .prov-week-today{outline:2px solid var(--week-accent);outline-offset:-2px}
+@media(hover:hover){.prov-week-grid .prov-week-card:hover{transform:translateY(-2px);box-shadow:0 9px 20px rgba(23,39,68,.09)}}
+@media(prefers-reduced-motion:reduce){.prov-week-grid .prov-week-card{transition:none}}
