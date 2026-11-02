@@ -406,3 +406,17 @@ body.prov-supplier-modal-open{overflow:hidden}
 @media(max-width:620px){
   .prov-order-modal .prov-order-fields{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Opción de pago al recibir la mercadería */
+.prov-supplier-form .prov-payment-sameday{display:flex;align-items:center;gap:9px;margin-top:12px;font-weight:600;cursor:pointer;width:fit-content}
+.prov-supplier-form .prov-payment-sameday input{width:17px;height:17px;min-height:17px;flex:none;accent-color:#fa1649;margin:0}
+
+/* Alineación definitiva: los campos de una misma fila comparten altura y posición. */
+.prov-order-modal .prov-order-fields{align-items:stretch!important;grid-auto-rows:auto}
+.prov-order-modal .prov-order-fields>label{display:grid!important;grid-template-rows:18px 44px!important;align-content:start!important;gap:8px!important;min-height:70px!important;position:relative}
+.prov-order-modal .prov-order-fields>label>small{display:none!important}
+.prov-order-modal .prov-order-fields>label>.prov-order-money,
+.prov-order-modal .prov-order-fields>label>.prov-order-searchable,
+.prov-order-modal .prov-order-fields>label>input,
+.prov-order-modal .prov-order-fields>label>select{grid-row:2!important;height:44px!important;min-height:44px!important;margin:0!important;align-self:start!important}
+.prov-order-modal .prov-order-fields>label>.prov-order-money input{height:100%!important;min-height:0!important}
