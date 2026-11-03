@@ -548,3 +548,20 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-dashboard-home .prov-dashboard-table td:first-child strong {vertical-align:middle;}
 .prov-dashboard-home .prov-dashboard-table .prov-dashboard-actions {justify-content:center;align-items:center;}
 .prov-dashboard-home .prov-dashboard-table td.prov-dashboard-empty {text-align:center;}
+
+/* Pedidos y vencimientos: proveedor e importe alineados con sus encabezados. */
+.prov-dashboard-home .prov-dashboard-table th:nth-child(1),
+.prov-dashboard-home .prov-dashboard-table th:nth-child(2),
+.prov-dashboard-home .prov-dashboard-table td:nth-child(1),
+.prov-dashboard-home .prov-dashboard-table td:nth-child(2) {
+  text-align: left;
+}
+.prov-dashboard-home .prov-dashboard-table th:nth-child(1) .prov-dashboard-sort,
+.prov-dashboard-home .prov-dashboard-table th:nth-child(2) .prov-dashboard-sort {
+  justify-content: flex-start;
+  text-align: left;
+}
+.prov-dashboard-home .prov-dashboard-table td:first-child .prov-dashboard-avatar,
+.prov-dashboard-home .prov-dashboard-table td:first-child strong {
+  vertical-align: middle;
+}
