@@ -107,7 +107,7 @@ function leerPrioridadesVencimientos() {
 }
 const prioridadesVencimientosManuales = leerPrioridadesVencimientos();
 function esPrioridadVencimiento(item) {
-  return Number(item?.cantidad || 0) > 20 || prioridadesVencimientosManuales.has(String(item?.id || ""));
+  return ["7", "15", "30"].includes(bucketVencimiento(item)) && (Number(item?.cantidad || 0) > 20 || prioridadesVencimientosManuales.has(String(item?.id || "")));
 }
 function prioridadManualVencimiento(item) {
   return prioridadesVencimientosManuales.has(String(item?.id || ""));
