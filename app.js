@@ -107,7 +107,10 @@ function leerPrioridadesVencimientos() {
 }
 const prioridadesVencimientosManuales = leerPrioridadesVencimientos();
 function esPrioridadVencimiento(item) {
-  return ["7", "15", "30"].includes(bucketVencimiento(item)) && (Number(item?.cantidad || 0) > 20 || prioridadesVencimientosManuales.has(String(item?.id || "")));
+  // La fecha prevalece sobre el stock y la selección manual: nunca incluir vencidos.
+  const diasRestantes = diasHastaVencimiento(item?.vencimiento);
+  if (!Number.isFinite(diasRestantes) || diasRestantes <= 0 || diasRestantes >= 99999) return false;
+  return Number(item?.cantidad || 0) > 20 || prioridadesVencimientosManuales.has(String(item?.id || ""));
 }
 function prioridadManualVencimiento(item) {
   return prioridadesVencimientosManuales.has(String(item?.id || ""));
@@ -3321,7 +3324,7 @@ function renderListadoVencimientos() {
     {
       bucket: "prioridad",
       titulo: "Prioridad",
-      detalle: "Más de 20 unidades o selección manual, sin importar el vencimiento",
+      detalle: "Más de 20 unidades o selección manual; solo productos no vencidos",
     },
     {
       bucket: "7",
@@ -4460,10 +4463,31 @@ function mostrarEdicionVencimiento() {
   $("vencOfertaFecha").value = ofertaGuardada?.vencimiento || item.vencimiento || "";
   establecerOfertaEdicionVencimiento(tieneOferta(item) ? "activa" : "sin");
   const prioridadCheckbox = $("vencEditPrioridadInput");
-  if (prioridadCheckbox) prioridadCheckbox.checked = prioridadManualVencimiento(item);
+  if (prioridadCheckbox) {
+    prioridadCheckbox.checked = prioridadManualVencimiento(item);
+    prioridadCheckbox.disabled = false;
+    prioridadCheckbox.dataset.prioridadManual = String(prioridadCheckbox.checked);
+  }
+  sincronizarPrioridadEdicionVencimiento();
   actualizarTotalEdicionVencimiento();
   snapshotVencimientoEditando = capturarEstadoEdicionVencimiento();
   mostrarPanelModal(elementos.vencModalEditar);
+}
+
+function sincronizarPrioridadEdicionVencimiento() {
+  const casilla = $("vencEditPrioridadInput");
+  if (!casilla) return;
+  const stock = stockVencimientoDesdeInputs(elementos.vencEditSalonInput, elementos.vencEditDepositoInput);
+  const automatica = stock.cantidad > 20;
+  if (automatica) {
+    // Se muestra tildada automáticamente, sin sobrescribir la preferencia manual.
+    if (!casilla.disabled) casilla.dataset.prioridadManual = String(casilla.checked);
+    casilla.checked = true;
+  } else if (casilla.disabled) {
+    casilla.checked = casilla.dataset.prioridadManual === "true";
+  }
+  casilla.disabled = automatica;
+  casilla.title = automatica ? "Prioridad automática por tener más de 20 unidades" : "Marcar como prioridad";
 }
 
 function actualizarTotalEdicionVencimiento() {
@@ -4473,6 +4497,7 @@ function actualizarTotalEdicionVencimiento() {
   );
   if (elementos.vencEditTotalTexto)
     elementos.vencEditTotalTexto.textContent = formatearStockTotalVencimiento(stock.cantidad);
+  sincronizarPrioridadEdicionVencimiento();
   return stock;
 }
 
@@ -4525,6 +4550,10 @@ async function guardarEdicionVencimiento() {
     return;
   }
   const vista = capturarVistaVencimientos(item.id);
+  const casillaPrioridad = $("vencEditPrioridadInput");
+  const prioridadManualElegida = casillaPrioridad?.disabled
+    ? casillaPrioridad.dataset.prioridadManual === "true"
+    : Boolean(casillaPrioridad?.checked);
   try {
     elementos.btnVencGuardarEdicion.disabled = true;
     mostrarMensaje("Actualizando registro...", "ok");
@@ -4555,6 +4584,7 @@ async function guardarEdicionVencimiento() {
       if (tieneOferta(item)) await actualizarOfertaVencimiento(item.id, false);
       eliminarOfertaCartelGuardada(item.id);
     }
+    cambiarPrioridadManualVencimiento(item, prioridadManualElegida);
     await cargarListadoVencimientos({
       mantenerVista: true,
       vista,
@@ -4633,7 +4663,9 @@ function capturarEstadoEdicionVencimiento() {
     rubro: String($("vencEditRubroInput")?.value || ""),
     salon: stockUbicacionVencimiento(elementos.vencEditSalonInput?.value),
     deposito: stockUbicacionVencimiento(elementos.vencEditDepositoInput?.value),
-    prioridad: Boolean($("vencEditPrioridadInput")?.checked),
+    prioridad: $("vencEditPrioridadInput")?.disabled
+      ? $("vencEditPrioridadInput")?.dataset.prioridadManual === "true"
+      : Boolean($("vencEditPrioridadInput")?.checked),
     oferta: $("vencEditOfertaInput")?.value === "activa",
     ofertaPrecioActual: $("vencOfertaPrecioActual")?.value || "",
     ofertaDescuento: $("vencOfertaDescuento")?.value || "",
