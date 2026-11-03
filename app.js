@@ -97,6 +97,30 @@ let pulsacionLargaVencimientos = null;
 let ignorarSiguienteClickVencimiento = false;
 let vistaVencimientos = "grid";
 const gruposVencimientosAbiertos = new Set(["7"]);
+// Selecciones manuales persistentes en este navegador.
+const CLAVE_PRIORIDADES_VENC = "autoservicio_vencimientos_prioridad_v1";
+function leerPrioridadesVencimientos() {
+  try {
+    const ids = JSON.parse(localStorage.getItem(CLAVE_PRIORIDADES_VENC) || "[]");
+    return new Set(Array.isArray(ids) ? ids.map(String) : []);
+  } catch { return new Set(); }
+}
+const prioridadesVencimientosManuales = leerPrioridadesVencimientos();
+function esPrioridadVencimiento(item) {
+  return Number(item?.cantidad || 0) > 20 || prioridadesVencimientosManuales.has(String(item?.id || ""));
+}
+function prioridadManualVencimiento(item) {
+  return prioridadesVencimientosManuales.has(String(item?.id || ""));
+}
+function cambiarPrioridadManualVencimiento(item, activa) {
+  const id = String(item?.id || "");
+  if (!id) return;
+  if (activa) prioridadesVencimientosManuales.add(id);
+  else prioridadesVencimientosManuales.delete(id);
+  localStorage.setItem(CLAVE_PRIORIDADES_VENC, JSON.stringify([...prioridadesVencimientosManuales]));
+  renderListadoVencimientos();
+}
+
 let vencimientoSeleccionado = null;
 let vencTabActual = "cargar";
 let vencTabRetornoCarga = "cargar";
@@ -1962,7 +1986,7 @@ function manejarClickResumenVencimientos(event) {
   // encabezados y desplegar únicamente el rango seleccionado.
   filtroVencimientos = "todos";
   gruposVencimientosAbiertos.clear();
-  if (["7", "15", "30", "vencidos"].includes(bucket)) {
+  if (["7", "15", "30", "vencidos", "prioridad"].includes(bucket)) {
     gruposVencimientosAbiertos.add(bucket);
   }
   vencTabActual = "proximos";
@@ -3075,6 +3099,10 @@ function renderResumenVencimientos() {
     quince: contarRango("15"),
     treinta: contarRango("30"),
     vencidos: contarRango("vencidos"),
+    prioridad: {
+      total: vencimientosCache.filter(esPrioridadVencimiento).length,
+      oferta: vencimientosCache.filter(item => esPrioridadVencimiento(item) && tieneOferta(item)).length,
+    },
   };
   const el = elementos.vencResumen || $("vencResumen");
   if (!el) return;
@@ -3088,6 +3116,7 @@ function renderResumenVencimientos() {
       </span>
     </button>`;
   el.innerHTML = [
+    fila("venc-resumen-prioridad", "app-kpi-priority", "prioridad", "Prioridad", resumen.prioridad),
     fila("venc-resumen-7", "app-kpi-red", "7", "Próximos 7 días", resumen.siete),
     fila("venc-resumen-15", "app-kpi-amber", "15", "8 a 15 días", resumen.quince),
     fila("venc-resumen-30", "app-kpi-green", "30", "16 días en adelante", resumen.treinta),
@@ -3290,6 +3319,11 @@ function renderListadoVencimientos() {
 
   const definiciones = [
     {
+      bucket: "prioridad",
+      titulo: "Prioridad",
+      detalle: "Más de 20 unidades o selección manual, sin importar el vencimiento",
+    },
+    {
       bucket: "7",
       titulo: "Próximos 7 días",
       detalle: "Vencen entre hoy y 7 días",
@@ -3321,9 +3355,9 @@ function renderListadoVencimientos() {
   elementos.vencListado.innerHTML = grupos
     .map((grupo) => {
       let items = lista.filter(
-        (item) => bucketVencimiento(item) === grupo.bucket,
+        (item) => grupo.bucket === "prioridad" ? esPrioridadVencimiento(item) : bucketVencimiento(item) === grupo.bucket,
       );
-      if (!items.length) return "";
+      if (!items.length && grupo.bucket !== "prioridad") return "";
       const abierto =
         filtroVencimientos !== "todos" ||
         gruposVencimientosAbiertos.has(grupo.bucket);
@@ -3487,6 +3521,7 @@ async function alternarOfertaVencimiento(item) {
       return false;
     }
     await actualizarOfertaVencimiento(item.id, false);
+    cambiarPrioridadManualVencimiento(item, Boolean($("vencEditPrioridadInput")?.checked));
     await cargarListadoVencimientos({
       mantenerVista: true,
       vista,
@@ -4424,6 +4459,8 @@ function mostrarEdicionVencimiento() {
   $("vencOfertaPrecioFinal").value = String(ofertaGuardada?.precioDescuento || ofertaGuardada?.precioOferta || "");
   $("vencOfertaFecha").value = ofertaGuardada?.vencimiento || item.vencimiento || "";
   establecerOfertaEdicionVencimiento(tieneOferta(item) ? "activa" : "sin");
+  const prioridadCheckbox = $("vencEditPrioridadInput");
+  if (prioridadCheckbox) prioridadCheckbox.checked = prioridadManualVencimiento(item);
   actualizarTotalEdicionVencimiento();
   snapshotVencimientoEditando = capturarEstadoEdicionVencimiento();
   mostrarPanelModal(elementos.vencModalEditar);
@@ -4596,6 +4633,7 @@ function capturarEstadoEdicionVencimiento() {
     rubro: String($("vencEditRubroInput")?.value || ""),
     salon: stockUbicacionVencimiento(elementos.vencEditSalonInput?.value),
     deposito: stockUbicacionVencimiento(elementos.vencEditDepositoInput?.value),
+    prioridad: Boolean($("vencEditPrioridadInput")?.checked),
     oferta: $("vencEditOfertaInput")?.value === "activa",
     ofertaPrecioActual: $("vencOfertaPrecioActual")?.value || "",
     ofertaDescuento: $("vencOfertaDescuento")?.value || "",
@@ -4611,6 +4649,7 @@ function hayCambiosVencimiento() {
     actual.rubro !== snapshotVencimientoEditando.rubro ||
     actual.salon !== snapshotVencimientoEditando.salon ||
     actual.deposito !== snapshotVencimientoEditando.deposito ||
+    actual.prioridad !== snapshotVencimientoEditando.prioridad ||
     actual.oferta !== snapshotVencimientoEditando.oferta ||
     (actual.oferta && (actual.ofertaPrecioActual !== snapshotVencimientoEditando.ofertaPrecioActual ||
       actual.ofertaDescuento !== snapshotVencimientoEditando.ofertaDescuento ||

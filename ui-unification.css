@@ -2642,3 +2642,107 @@ html[data-theme="dark"] #vencHistorialAdmin .admin-history-detail{
     max-height: none !important;
   }
 }
+
+/* Vencimientos: excepción a la grilla global de cuatro KPIs.
+   Se define aquí porque la regla general de este mismo archivo usa !important. */
+@media (min-width: 901px) {
+  #pantallaVencimientos .venc-resumen {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  #pantallaVencimientos .venc-resumen-card.app-kpi-card {
+    min-width: 0 !important;
+    padding: 11px 9px !important;
+    gap: 8px !important;
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+  }
+  #pantallaVencimientos .venc-summary-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+}
+
+/* Vencimientos: cinco contadores, bordes y distribución uniforme. */
+@media (min-width: 901px) {
+  #pantallaVencimientos .venc-resumen {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  #pantallaVencimientos .venc-resumen-card.app-kpi-card {
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    gap: 11px !important;
+    padding: 14px 12px !important;
+    min-height: 112px !important;
+    align-items: center !important;
+  }
+  #pantallaVencimientos .venc-summary-icon {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+  }
+  #pantallaVencimientos .venc-summary-icon .app-icon {
+    width: 19px !important;
+    height: 19px !important;
+  }
+  #pantallaVencimientos .venc-summary-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+  #pantallaVencimientos .venc-resumen-rango {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+  }
+  #pantallaVencimientos .venc-resumen-datos {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: baseline !important;
+    column-gap: 6px !important;
+    row-gap: 2px !important;
+    white-space: normal !important;
+  }
+  #pantallaVencimientos .venc-resumen-datos strong {
+    font-size: 22px !important;
+    line-height: 1.15 !important;
+  }
+  #pantallaVencimientos .venc-resumen-datos small {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+  #pantallaVencimientos .venc-resumen-oferta {
+    font-size: 10px !important;
+    min-height: 20px !important;
+    padding: 3px 8px !important;
+    line-height: 1.2 !important;
+  }
+}
+#pantallaVencimientos .venc-resumen-prioridad.app-kpi-card {
+  --app-kpi-accent: #7c3aed;
+  --app-kpi-soft: #f3e8ff;
+  --app-kpi-border: #c4b5fd;
+  border: 1px solid #c4b5fd !important;
+}
+html[data-theme="dark"] #pantallaVencimientos .venc-resumen-prioridad.app-kpi-card {
+  --app-kpi-soft: #302044;
+  --app-kpi-border: #8159b6;
+  border-color: #8159b6 !important;
+}
+
+/* Vencimientos: textos de mayor tamaño y mejor legibilidad. */
+@media (min-width: 901px) {
+ #pantallaVencimientos .venc-resumen {gap: 10px !important;}
+ #pantallaVencimientos .venc-resumen-card.app-kpi-card {grid-template-columns: 42px minmax(0,1fr) !important;column-gap: 12px !important;padding: 16px 12px !important;min-height: 124px !important;}
+ #pantallaVencimientos .venc-summary-icon {width: 42px !important;height:42px !important;min-width:42px !important;}
+ #pantallaVencimientos .venc-summary-icon .app-icon {width:22px !important;height:22px !important;}
+ #pantallaVencimientos .venc-summary-copy {gap:6px !important;min-width:0 !important;}
+ #pantallaVencimientos .venc-resumen-rango {font-size:12.5px !important;font-weight:700 !important;line-height:1.35 !important;letter-spacing:0 !important;}
+ #pantallaVencimientos .venc-resumen-datos {gap:5px !important;align-items:baseline !important;}
+ #pantallaVencimientos .venc-resumen-datos strong {font-size:25px !important;font-weight:750 !important;line-height:1.15 !important;letter-spacing:-.4px !important;}
+ #pantallaVencimientos .venc-resumen-datos small {font-size:11.5px !important;font-weight:600 !important;line-height:1.35 !important;}
+ #pantallaVencimientos .venc-resumen-oferta {font-size:11px !important;font-weight:600 !important;line-height:1.3 !important;padding:4px 9px !important;min-height:23px !important;}
+}
+#pantallaVencimientos .venc-resumen-card,#pantallaVencimientos .venc-resumen-card * {text-shadow:none !important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}

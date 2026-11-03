@@ -17339,3 +17339,102 @@ html[data-theme="dark"] .venc-edit-offer-grid label > input, html[data-theme="da
 #pantallaVencimientos .venc-range-group--vencidos .venc-range-group__header > strong { color:#2563eb; }
 html[data-theme="dark"] #pantallaVencimientos .venc-range-group--30 .venc-range-group__header { background:linear-gradient(90deg,rgba(16,185,129,.17),#17283d 54%) !important; }
 html[data-theme="dark"] #pantallaVencimientos .venc-range-group--vencidos .venc-range-group__header { background:linear-gradient(90deg,rgba(48,124,246,.16),#17283d 54%) !important; }
+
+/* Contador Prioridad y selección manual de productos */
+#pantallaVencimientos .venc-resumen { grid-template-columns: repeat(5,minmax(0,1fr)); }
+#pantallaVencimientos .venc-resumen-prioridad { --app-kpi-accent:#7c3aed; --app-kpi-soft:#f3e8ff; border-color:#c4b5fd; }
+#pantallaVencimientos .venc-resumen-prioridad .venc-summary-icon { background:#f3e8ff;color:#7c3aed; }
+#pantallaVencimientos .venc-resumen-prioridad .venc-resumen-rango,
+#pantallaVencimientos .venc-resumen-prioridad .venc-resumen-datos small {color:#6d28d9;}
+#pantallaVencimientos .venc-resumen-prioridad .venc-resumen-oferta {background:#f3e8ff;color:#6d28d9;}
+#pantallaVencimientos .venc-range-group--prioridad .venc-range-group__header {background:#f8f4ff;}
+#pantallaVencimientos .venc-range-group--prioridad .venc-range-group__icon {background:#7c3aed;}
+#pantallaVencimientos .venc-range-group--prioridad .venc-range-group__header > strong {color:#6d28d9;}
+#pantallaVencimientos .venc-priority-toggle {display:inline-flex;align-items:center;gap:5px;margin-left:auto;padding:3px 6px;border:1px solid #d9c9fa;border-radius:6px;color:#6d28d9;background:#faf7ff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;}
+#pantallaVencimientos .venc-priority-toggle input {width:13px;height:13px;accent-color:#7c3aed;cursor:pointer;margin:0;}
+#pantallaVencimientos .venc-list-cell--product .venc-priority-toggle {margin:5px 0 0;width:max-content;}
+@media(max-width:1100px){#pantallaVencimientos .venc-resumen {grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:700px){#pantallaVencimientos .venc-resumen {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:430px){#pantallaVencimientos .venc-resumen {grid-template-columns:1fr;}}
+
+/* Cinco contadores alineados; Prioridad primero */
+@media (min-width: 1101px) {
+  #pantallaVencimientos .venc-resumen {grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
+  #pantallaVencimientos .venc-resumen-card {grid-template-columns:36px minmax(0,1fr);gap:9px;padding:12px 10px;min-height:108px;}
+  #pantallaVencimientos .venc-summary-icon {width:36px;height:36px;}
+  #pantallaVencimientos .venc-resumen-rango {font-size:11px;}
+  #pantallaVencimientos .venc-resumen-datos strong {font-size:23px;}
+}
+#pantallaVencimientos .venc-edit-priority-option {display:flex;align-items:flex-start;gap:12px;padding:14px 16px;margin:14px 0;border:1px solid #d9c9fa;border-radius:12px;background:#faf7ff;cursor:pointer;}
+#pantallaVencimientos .venc-edit-priority-option input {flex:0 0 auto;width:18px;height:18px;margin-top:2px;accent-color:#7c3aed;}
+#pantallaVencimientos .venc-edit-priority-option span {display:flex;flex-direction:column;gap:4px;}
+#pantallaVencimientos .venc-edit-priority-option strong {font-size:13px;color:#6d28d9;}
+#pantallaVencimientos .venc-edit-priority-option small {font-size:11px;line-height:1.5;color:#667085;}
+html[data-theme="dark"] #pantallaVencimientos .venc-edit-priority-option {background:#241c3a;border-color:#6146a0;}
+html[data-theme="dark"] #pantallaVencimientos .venc-edit-priority-option strong {color:#d8b4fe;}
+
+/* Selector de prioridad compacto y moderno dentro del editor de vencimientos. */
+.venc-edit-priority-option {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-height: 54px !important;
+  padding: 12px 15px !important;
+  margin: 12px 0 16px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+.venc-edit-priority-option:hover {
+  border-color: #c4b5fd !important;
+  background: #faf7ff !important;
+}
+.venc-edit-priority-option:has(input:checked) {
+  border-color: #a78bfa !important;
+  background: #f5f0ff !important;
+}
+.venc-edit-priority-option:has(input:focus-visible) {
+  outline: 2px solid #8b5cf6 !important;
+  outline-offset: 2px !important;
+}
+.venc-edit-priority-option #vencEditPrioridadInput {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.venc-edit-priority-check {
+  width: 22px !important;
+  height: 22px !important;
+  flex: 0 0 22px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1.5px solid #a5b4c7 !important;
+  border-radius: 7px !important;
+  background: white !important;
+  box-sizing: border-box !important;
+}
+.venc-edit-priority-option input:checked + .venc-edit-priority-check {
+  border-color: #7c3aed !important;
+  background: #7c3aed !important;
+}
+.venc-edit-priority-option input:checked + .venc-edit-priority-check::after {
+  content: "" !important;
+  display: block !important;
+  width: 10px !important;
+  height: 6px !important;
+  border-left: 2px solid white !important;
+  border-bottom: 2px solid white !important;
+  transform: translateY(-1px) rotate(-45deg) !important;
+}
+.venc-edit-priority-label {
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  line-height: 1.4 !important;
+  color: #26354d !important;
+}
