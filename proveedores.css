@@ -538,3 +538,13 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort:hover .prov-dashboard-sort-icon,.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort.is-active .prov-dashboard-sort-icon{color:#ed174b}
 .prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort.is-active .sort-up,.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort.is-active .sort-down{opacity:.3}
 .prov-dashboard-home .prov-dashboard-table td.prov-dashboard-plazo{font-weight:650;color:#405576}
+
+/* Tabla de pagos: encabezados y valores alineados por columna */
+.prov-dashboard-home .prov-dashboard-table th,
+.prov-dashboard-home .prov-dashboard-table td {text-align:center;vertical-align:middle;}
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort {justify-content:center;width:100%;text-align:center;}
+.prov-dashboard-home .prov-dashboard-table td:first-child {text-align:center;}
+.prov-dashboard-home .prov-dashboard-table td:first-child .prov-dashboard-avatar {vertical-align:middle;}
+.prov-dashboard-home .prov-dashboard-table td:first-child strong {vertical-align:middle;}
+.prov-dashboard-home .prov-dashboard-table .prov-dashboard-actions {justify-content:center;align-items:center;}
+.prov-dashboard-home .prov-dashboard-table td.prov-dashboard-empty {text-align:center;}
