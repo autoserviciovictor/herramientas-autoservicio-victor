@@ -529,3 +529,12 @@ body.prov-supplier-modal-open{overflow:hidden}
 /* Fecha real de recepción claramente diferenciada en edición */
 .prov-order-actual-received{grid-column:1/-1;max-width:calc(50% - 8px)}
 @media(max-width:650px){.prov-order-actual-received{max-width:100%}}
+
+/* Encabezados ordenables de la tabla de pagos */
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort{appearance:none;display:inline-flex;align-items:center;justify-content:flex-start;gap:7px;padding:3px 0;margin:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:750;white-space:nowrap;cursor:pointer;transition:color .15s ease}
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort:hover,.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort:focus-visible{color:#f21b4c}
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort:focus-visible{outline:2px solid #f7a5b9;outline-offset:4px;border-radius:3px}
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort-icon{flex:none;color:#9cacc0;transition:color .15s ease}
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort:hover .prov-dashboard-sort-icon,.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort.is-active .prov-dashboard-sort-icon{color:#ed174b}
+.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort.is-active .sort-up,.prov-dashboard-home .prov-dashboard-table th .prov-dashboard-sort.is-active .sort-down{opacity:.3}
+.prov-dashboard-home .prov-dashboard-table td.prov-dashboard-plazo{font-weight:650;color:#405576}
