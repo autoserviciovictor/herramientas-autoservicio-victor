@@ -504,3 +504,28 @@ body.prov-supplier-modal-open{overflow:hidden}
     height: 30px;
   }
 }
+
+/* Navegación semanal de vencimientos */
+.prov-week-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.prov-week-navigation{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.prov-week-navigation button{appearance:none;background:#fff;border:1px solid #dce5f1;border-radius:9px;color:#263d60;font:inherit;font-size:12px;font-weight:700;padding:9px 12px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
+.prov-week-navigation button:hover{background:#f1f6ff;border-color:#a9c5e8}
+.prov-week-navigation button:focus-visible{outline:2px solid #297fd0;outline-offset:2px}
+@media(max-width:680px){.prov-week-navigation{width:100%;justify-content:flex-start}.prov-week-navigation button{font-size:11px;padding:8px 9px}}
+
+/* Selector de semanas: compacto, con jerarquía visual y controles integrados */
+.prov-week-heading{align-items:center}
+.prov-week-navigation{display:flex;align-items:center;gap:10px}
+.prov-week-switcher{display:flex;align-items:center;overflow:hidden;background:#f5f8fc;border:1px solid #dce5ef;border-radius:13px;box-shadow:0 1px 2px rgba(20,40,70,.035)}
+.prov-week-navigation .prov-week-arrow{width:38px;height:42px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:0;background:transparent;color:#263b59;font-size:25px;font-weight:400;line-height:1;transition:background .15s,color .15s}
+.prov-week-navigation .prov-week-arrow:hover{background:#e6edf6;color:#f31749}
+.prov-week-current{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:122px;padding:4px 13px;border-left:1px solid #e1e8f1;border-right:1px solid #e1e8f1;line-height:1.25}
+.prov-week-period{font-size:13px;font-weight:800;letter-spacing:.1px;color:#172744;white-space:nowrap}
+.prov-week-caption{font-size:10px;font-weight:600;color:#75849c;margin-top:3px;white-space:nowrap}
+.prov-week-navigation .prov-week-reset{height:36px;padding:0 13px;background:#fff;border:1px solid #dce5ef;border-radius:10px;color:#e91948;font-size:12px;font-weight:800}
+.prov-week-navigation .prov-week-reset:hover{background:#fff0f4;border-color:#f6b5c4}
+@media(max-width:680px){.prov-week-navigation{width:100%;justify-content:flex-start}.prov-week-navigation .prov-week-arrow{height:39px;width:36px}.prov-week-current{min-width:108px}.prov-week-period{font-size:12px}}
+
+/* Fecha real de recepción claramente diferenciada en edición */
+.prov-order-actual-received{grid-column:1/-1;max-width:calc(50% - 8px)}
+@media(max-width:650px){.prov-order-actual-received{max-width:100%}}
