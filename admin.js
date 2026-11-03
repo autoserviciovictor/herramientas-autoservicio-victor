@@ -1497,6 +1497,9 @@ function datosAccionHistorial(accion = "") {
   if (clave === "elimino") return { clave, etiqueta: "Eliminó", icono: "#icon-trash" };
   if (clave === "creo") return { clave, etiqueta: "Creó", icono: "#icon-plus-circle" };
   if (clave === "edito") return { clave, etiqueta: "Editó", icono: "#icon-edit" };
+  if (clave === "activooferta") return { clave, etiqueta: "Activó oferta", icono: "#icon-plus-circle" };
+  if (clave === "editooferta") return { clave, etiqueta: "Editó oferta", icono: "#icon-edit" };
+  if (clave === "quitooferta") return { clave, etiqueta: "Quitó oferta", icono: "#icon-trash" };
   return { clave: clave || "movimiento", etiqueta: accion || "Movimiento", icono: "#icon-clock" };
 }
 
@@ -1604,7 +1607,7 @@ function renderHistorialVencimientos() {
     return `<article class="admin-history-card accion-${accion.clave}" data-history-index="${inicioPagina + indice}">
       <div class="admin-history-toggle">
         <span class="admin-history-action"><svg class="app-icon" aria-hidden="true"><use href="${accion.icono}"></use></svg><span>${escaparHtml(accion.etiqueta)}</span></span>
-        <span class="admin-history-product"><strong>${articulo}</strong><small>${codigo ? `Código: ${codigo}` : "Sin código"}</small></span>
+        <span class="admin-history-product"><strong>${articulo}</strong><small>${codigo ? `Código: ${codigo}` : "Sin código"}</small>${h.detalle ? `<small>${escaparHtml(h.detalle)}</small>` : ""}</span>
         <span class="admin-history-detail-summary"><strong>${valorVencimientoHistorial(h)}</strong></span>
         <span class="admin-history-date"><strong><span>${fecha}</span>${hora ? `<span>${hora}</span>` : ""}</strong></span>
         <span class="admin-history-user"><span class="admin-history-user-avatar">${escaparHtml(inicialesHistorial(usuarioNombre))}</span><strong>${usuario}</strong></span>

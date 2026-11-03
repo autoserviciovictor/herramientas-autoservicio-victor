@@ -7173,6 +7173,29 @@ app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async
       estado: calcularEstadoVencimiento(actualizadoDb.vencimiento),
     };
     invalidarCache("vencimientos");
+    const detalleOfertaTexto = (datos) => {
+      if (!datos || typeof datos !== "object") return "";
+      const campos = [
+        ["Descuento", datos.descuento, "%"],
+        ["Precio original", datos.precioActual, ""],
+        ["Precio oferta", datos.precioOferta ?? datos.precioDescuento, ""],
+        ["Hasta", datos.vencimiento, ""],
+      ];
+      return campos.filter(([, valor]) => valor !== undefined && valor !== null && valor !== "")
+        .map(([nombre, valor, sufijo]) => `${nombre}: ${valor}${sufijo}`).join(" · ");
+    };
+    const antesOferta = registro.oferta === "Sí";
+    const despuesOferta = oferta === "Sí";
+    const detalleAnterior = detalleOfertaTexto(registro.detalleOferta);
+    const detalleNuevo = detalleOfertaTexto(actualizado.detalleOferta ?? detalleOferta);
+    if (antesOferta !== despuesOferta || (despuesOferta && detalleAnterior !== detalleNuevo)) {
+      await registrarHistorialVencimiento(
+        req,
+        despuesOferta ? (antesOferta ? "Editó oferta" : "Activó oferta") : "Quitó oferta",
+        actualizado,
+        despuesOferta ? `Oferta: ${detalleNuevo || "Activa"}${antesOferta ? ` · Antes: ${detalleAnterior || "Activa"}` : ""}` : `Oferta desactivada${detalleAnterior ? ` · Antes: ${detalleAnterior}` : ""}`,
+      );
+    }
     res.json({
       ok: true,
       mensaje: oferta === "Sí" ? "Oferta marcada" : "Oferta quitada",
