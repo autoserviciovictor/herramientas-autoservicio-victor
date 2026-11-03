@@ -3133,9 +3133,16 @@ function compararFechaVencimiento(a, b, direccion = 1) {
 function ordenarListaVencimientos(lista) {
   const resultado = [...lista];
   if (ordenVencimientos === "nombre") return resultado.sort(compararNombreVencimiento);
-  return resultado.sort((a, b) =>
-    compararFechaVencimiento(a, b, ordenVencimientos === "lejano" ? -1 : 1)
-  );
+  return resultado.sort((a, b) => {
+    const diasA = diasHastaVencimiento(a.vencimiento);
+    const diasB = diasHastaVencimiento(b.vencimiento);
+    // Dentro de Vencidos, mostrar primero los vencimientos más recientes.
+    // Conservar el orden habitual para los productos que aún no vencieron.
+    if (ordenVencimientos === "proximo" && diasA < 0 && diasB < 0) {
+      return compararFechaVencimiento(a, b, -1);
+    }
+    return compararFechaVencimiento(a, b, ordenVencimientos === "lejano" ? -1 : 1);
+  });
 }
 
 // Los precios y porcentajes de los carteles son valores asignados por el usuario.
