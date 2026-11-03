@@ -385,6 +385,17 @@ function render() {
   $('lotesMetrica15Dias').textContent = resumenVencimientos['15'];
   $('lotesMetrica16Mas').textContent = resumenVencimientos['16mas'];
   $('lotesMetricaVencidos').textContent = resumenVencimientos.vencidos;
+  // Contar productos únicos que tengan al menos un lote marcado como Corta fecha.
+  // Se usa el mismo grupo de vencimiento que para el contador principal.
+  const cortaFechaPorGrupo = productosConBucket.reduce((totales, p) => {
+    if (p.bucketVencimiento in totales && p.cortaFecha) totales[p.bucketVencimiento] += 1;
+    return totales;
+  }, { '7': 0, '15': 0, '16mas': 0, vencidos: 0 });
+  [['7Dias', '7'], ['15Dias', '15'], ['16Mas', '16mas'], ['Vencidos', 'vencidos']].forEach(([id, grupo]) => {
+    const cantidad = cortaFechaPorGrupo[grupo];
+    const elemento = $('lotesMetrica' + id + 'Lotes');
+    if (elemento) elemento.textContent = cantidad + ' en corta fecha';
+  });
 
   const grupos = [
     ['7', 'PRÓXIMOS 7 DÍAS', 'Vencen entre hoy y 7 días'],

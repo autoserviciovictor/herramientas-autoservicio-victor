@@ -17329,3 +17329,13 @@ html[data-theme="dark"] .venc-edit-offer-grid label > input, html[data-theme="da
 #pantallaCartelOferta .carteles-seleccionado-precios>strong{font-size:22px!important;line-height:1.2!important;gap:6px!important;}
 #pantallaCartelOferta .carteles-seleccionado-precios>strong>span{font-size:16px!important;color:#182236!important;font-weight:700!important;}
 @media(max-width:1050px){#pantallaCartelOferta .carteles-seleccionado-precios>strong{font-size:22px!important;}}
+
+/* Vencimientos: colores de los encabezados alineados con los contadores superiores. */
+#pantallaVencimientos .venc-range-group--30 .venc-range-group__header { background:#effbf5; }
+#pantallaVencimientos .venc-range-group--30 .venc-range-group__icon { background:#10b981; }
+#pantallaVencimientos .venc-range-group--30 .venc-range-group__header > strong { color:#059669; }
+#pantallaVencimientos .venc-range-group--vencidos .venc-range-group__header { background:#f0f6ff; }
+#pantallaVencimientos .venc-range-group--vencidos .venc-range-group__icon { background:#307cf6; }
+#pantallaVencimientos .venc-range-group--vencidos .venc-range-group__header > strong { color:#2563eb; }
+html[data-theme="dark"] #pantallaVencimientos .venc-range-group--30 .venc-range-group__header { background:linear-gradient(90deg,rgba(16,185,129,.17),#17283d 54%) !important; }
+html[data-theme="dark"] #pantallaVencimientos .venc-range-group--vencidos .venc-range-group__header { background:linear-gradient(90deg,rgba(48,124,246,.16),#17283d 54%) !important; }

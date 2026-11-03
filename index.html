@@ -80,7 +80,7 @@
       rel="stylesheet"
       href="ui-unification.css?v=1960-d21-cierre-etapa6-010926"
     />
-    <link rel="stylesheet" href="lotes.css?v=lotes-alertas-180926" />
+    <link rel="stylesheet" href="lotes.css?v=lotes-resumen-unificado-031126" />
     <style>
       .horarios-selector-overlay {
         position: fixed;
@@ -2337,7 +2337,7 @@ body.prov-order-modal-open{overflow:hidden}
           </header>
           <section class="lotes-metrics" aria-label="Resumen de lotes">
             <article
-              class="lote-metric app-kpi-card app-kpi-blue"
+              class="lote-metric app-kpi-card app-kpi-red"
               data-lotes-vencimiento="7"
               role="button"
               tabindex="0"
@@ -2347,11 +2347,11 @@ body.prov-order-modal-open{overflow:hidden}
               ></i>
               <div>
                 <span>Próximos 7 días</span
-                ><strong id="lotesMetrica7Dias">0</strong>
+                ><span class="lotes-metric-count"><strong id="lotesMetrica7Dias">0</strong><small>productos</small></span><span class="lotes-metric-badge" id="lotesMetrica7DiasLotes">0 lotes</span>
               </div>
             </article>
             <article
-              class="lote-metric app-kpi-card app-kpi-red"
+              class="lote-metric app-kpi-card app-kpi-amber"
               data-lotes-vencimiento="15"
               role="button"
               tabindex="0"
@@ -2361,11 +2361,11 @@ body.prov-order-modal-open{overflow:hidden}
               ></i>
               <div>
                 <span>8 a 15 días</span
-                ><strong id="lotesMetrica15Dias">0</strong>
+                ><span class="lotes-metric-count"><strong id="lotesMetrica15Dias">0</strong><small>productos</small></span><span class="lotes-metric-badge" id="lotesMetrica15DiasLotes">0 lotes</span>
               </div>
             </article>
             <article
-              class="lote-metric app-kpi-card app-kpi-amber"
+              class="lote-metric app-kpi-card app-kpi-green"
               data-lotes-vencimiento="16mas"
               role="button"
               tabindex="0"
@@ -2375,11 +2375,11 @@ body.prov-order-modal-open{overflow:hidden}
               ></i>
               <div>
                 <span>16 días en adelante</span
-                ><strong id="lotesMetrica16Mas">0</strong>
+                ><span class="lotes-metric-count"><strong id="lotesMetrica16Mas">0</strong><small>productos</small></span><span class="lotes-metric-badge" id="lotesMetrica16MasLotes">0 lotes</span>
               </div>
             </article>
             <article
-              class="lote-metric app-kpi-card app-kpi-green"
+              class="lote-metric app-kpi-card app-kpi-blue"
               data-lotes-vencimiento="vencidos"
               role="button"
               tabindex="0"
@@ -2389,7 +2389,7 @@ body.prov-order-modal-open{overflow:hidden}
               ></i>
               <div>
                 <span>Vencidos</span
-                ><strong id="lotesMetricaVencidos">0</strong>
+                ><span class="lotes-metric-count"><strong id="lotesMetricaVencidos">0</strong><small>productos</small></span><span class="lotes-metric-badge" id="lotesMetricaVencidosLotes">0 lotes</span>
               </div>
             </article>
           </section>
@@ -10217,7 +10217,7 @@ body.prov-order-modal-open{overflow:hidden}
       type="module"
       src="./app.js?v=ofertas-compartidas-20261023"
     ></script>
-    <script type="module" src="./lotes.js?v=lotes-alertas-180926"></script>
+    <script type="module" src="./lotes.js?v=lotes-resumen-unificado-031126"></script>
     <script
       type="module"
       src="./tareas.js?v=1960-d21-cierre-etapa6-010926"

@@ -1958,8 +1958,16 @@ function manejarClickResumenVencimientos(event) {
   const card = event.target.closest("[data-venc-resumen]");
   if (!card) return;
   const bucket = card.dataset.vencResumen || "todos";
-  if (bucket !== "todos") gruposVencimientosAbiertos.add(bucket);
-  aplicarFiltroVencimientos(bucket);
+  // Los contadores funcionan como un acordeón: conservar visibles los cuatro
+  // encabezados y desplegar únicamente el rango seleccionado.
+  filtroVencimientos = "todos";
+  gruposVencimientosAbiertos.clear();
+  if (["7", "15", "30", "vencidos"].includes(bucket)) {
+    gruposVencimientosAbiertos.add(bucket);
+  }
+  vencTabActual = "proximos";
+  actualizarEtiquetaFiltros();
+  renderListadoVencimientos();
 }
 
 async function cargarProductos() {
@@ -3080,10 +3088,10 @@ function renderResumenVencimientos() {
       </span>
     </button>`;
   el.innerHTML = [
-    fila("venc-resumen-7", "app-kpi-blue", "7", "Próximos 7 días", resumen.siete),
-    fila("venc-resumen-15", "app-kpi-red", "15", "8 a 15 días", resumen.quince),
-    fila("venc-resumen-30", "app-kpi-amber", "30", "16 días en adelante", resumen.treinta),
-    fila("venc-resumen-vencidos", "app-kpi-green", "vencidos", "Vencidos", resumen.vencidos),
+    fila("venc-resumen-7", "app-kpi-red", "7", "Próximos 7 días", resumen.siete),
+    fila("venc-resumen-15", "app-kpi-amber", "15", "8 a 15 días", resumen.quince),
+    fila("venc-resumen-30", "app-kpi-green", "30", "16 días en adelante", resumen.treinta),
+    fila("venc-resumen-vencidos", "app-kpi-blue", "vencidos", "Vencidos", resumen.vencidos),
   ].join("");
 }
 
