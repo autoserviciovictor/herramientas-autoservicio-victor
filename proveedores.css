@@ -422,7 +422,7 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-order-modal .prov-order-fields>label>.prov-order-money input{height:100%!important;min-height:0!important}
 
 /* Resumen de pagos pendientes de la semana (lunes a viernes). */
-.prov-week-summary{margin-top:18px;padding:22px 20px;background:#fff;border:1px solid #e0e7f1;border-radius:16px;box-shadow:0 6px 24px rgba(30,49,85,.035)}
+.prov-week-summary{margin-top:18px;margin-bottom:18px;padding:22px 20px;background:#fff;border:1px solid #e0e7f1;border-radius:16px;box-shadow:0 6px 24px rgba(30,49,85,.035)}
 .prov-week-heading{margin-bottom:16px}.prov-week-heading h2{margin:0 0 5px;font-size:18px;font-weight:800;color:#172744}.prov-week-heading p{margin:0;color:#627391;font-size:12px}
 .prov-week-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
 .prov-week-card{min-width:0;display:flex;flex-direction:column;gap:12px;padding:16px 13px;background:#f8fafc;border:1px solid #e4eaf2;border-radius:12px}
