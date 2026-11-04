@@ -49,7 +49,10 @@ async function request(n,method='GET',body){
   if(!base)throw new Error('No se encontró la dirección del servidor.');
   const r=await fetch(`${base}/proveedores/compartidos/${n}`,{method,cache:'no-store',headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),Authorization:`Bearer ${token}`},...(body?{body:JSON.stringify(body)}:{})});
   const result=await r.json().catch(()=>({}));
-  if(!r.ok||!result.ok)throw Object.assign(new Error(result.mensaje||'Error de sincronización'),{status:r.status});
+  if(!r.ok||!result.ok){
+    const hint=r.status===404?'La API de Render no tiene publicada la ruta de proveedores compartidos. Es necesario desplegar server.js y db-proveedores-compartidos.js en Render.':r.status===401||r.status===403?'La sesión no tiene autorización para sincronizar proveedores.':r.status===413?'El servidor rechazó el tamaño de los datos.':r.status>=500?'La API de Render tuvo un error interno; revisá sus logs.':'';
+    throw Object.assign(new Error([result.mensaje||'Error de sincronización',hint,'HTTP '+r.status].filter(Boolean).join(' — ')),{status:r.status});
+  }
   return result;
 }
 function exportRecovery(){
@@ -120,7 +123,8 @@ async function recover(){
         if(!extra.length){verified=true;revisions[n]=remote.revision;changed(n,records);break}
         if(attempt===0 || lastError.startsWith('Conflicto')){
           // Solo migrar registros ausentes; jamás reemplazar los que ya están en PostgreSQL.
-          backup(n,parse(groups[n]));
+          const currentLocal=parse(groups[n]);
+          if(currentLocal!==null)backup(n,currentLocal);
           try{
             await request(n,'PUT',{revision:remote.revision,registros:[...records,...extra]});
           }catch(e){
@@ -153,7 +157,7 @@ async function recover(){
     }
     if(pendientes.length)throw new Error('Quedan registros pendientes: '+pendientes.join(', '));
     hideNotice();alert('Migración verificada:\n'+results.join('\n')+'\n\nLos respaldos locales se conservaron.');
-  }catch(e){showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\nSe conservaron los respaldos locales.');console.error(e)}
+  }catch(e){showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\n\nNo repitas el proceso hasta resolver el error. Los respaldos locales se conservaron.');console.error('Diagnóstico de migración de proveedores:',e)}
   finally{recovering=false;if(refreshAfterRecovery){refreshAfterRecovery=false;clearTimeout(window.__proveedoresReload);window.__proveedoresReload=setTimeout(()=>location.reload(),1200)}}
 }
 async function save(n,value){
