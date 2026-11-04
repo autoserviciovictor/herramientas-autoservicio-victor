@@ -12,6 +12,9 @@ const listFrom=(n,v)=>n==='colores'?(v&&typeof v==='object'&&!Array.isArray(v)?[
 const fromList=(n,v)=>n==='colores'?(v[0]||{}):v;
 const backup=(n,v)=>{try{localStorage.setItem('respaldo_sync_'+n+'_'+new Date().toISOString(),JSON.stringify(v))}catch(e){console.warn('Respaldo:',e)}};
 const idOf=x=>x&&x.id!=null?String(x.id):'';
+// Los registros antiguos pueden carecer de id: conservarlos por huella de contenido.
+const identity=x=>idOf(x)?'id:'+idOf(x):'contenido:'+JSON.stringify(x);
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function localCandidates(n){
   const items=[{key:groups[n],value:parse(groups[n])}];
   for(let i=0;i<localStorage.length;i++){
@@ -29,15 +32,15 @@ function localMerged(n){
   const map=new Map();
   // Backups primero; el valor local actual prevalece para el mismo ID.
   for(const candidate of [...candidates.filter(x=>x.key!==groups[n]),...candidates.filter(x=>x.key===groups[n])]){
-    for(const record of asList(candidate.value)){const id=idOf(record);if(id)map.set(id,record)}
+    for(const record of asList(candidate.value)){if(record&&typeof record==='object')map.set(identity(record),record)}
   }
   return [...map.values()];
 }
 function missing(n,remote){
   const local=localMerged(n);
   if(n==='colores')return remote.length?[]:local;
-  const ids=new Set(remote.map(idOf));
-  return local.filter(x=>!ids.has(idOf(x)));
+  const ids=new Set(remote.map(identity));
+  return local.filter(x=>!ids.has(identity(x)));
 }
 async function request(n,method='GET',body){
   const token=window.AutoservicioAuth?.getToken?.();
@@ -48,6 +51,14 @@ async function request(n,method='GET',body){
   const result=await r.json().catch(()=>({}));
   if(!r.ok||!result.ok)throw Object.assign(new Error(result.mensaje||'Error de sincronización'),{status:r.status});
   return result;
+}
+function exportRecovery(){
+  const data={origen:location.origin,fecha:new Date().toISOString(),colecciones:{}};
+  for(const n of Object.keys(groups))data.colecciones[n]=localCandidates(n);
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='respaldo-autoservicio-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function changed(n,list){
   const key=groups[n],current=parse(key),incoming=fromList(n,list);
@@ -94,28 +105,50 @@ async function recover(){
     }
     if(!plan.length){hideNotice();alert('No hay registros locales pendientes de migrar.');return}
     const summary=plan.map(x=>`${x.name}: ${x.count}`).join('\n');
-    if(!confirm('Se encontraron estos registros locales que faltan en PostgreSQL:\n\n'+summary+'\n\n¿Querés incorporarlos? No se borrarán los respaldos ni los registros existentes en el servidor.'))return;
+    if(!confirm('Datos locales que faltan en PostgreSQL:\n\n'+summary+'\n\nSe intentará descargar primero una copia de los respaldos de este navegador. ¿Continuar?'))return;
+    exportRecovery();
+    if(!confirm('Se solicitó la descarga del respaldo local. Comprobá que se haya descargado antes de continuar.\n\n¿Iniciar ahora la migración?'))return;
     const results=[];
     for(const item of plan){
       const n=item.name;
-      let verified=false;
-      for(let attempt=0;attempt<4&&!verified;attempt++){
+      let verified=false,lastError='';
+      for(let attempt=0;attempt<6&&!verified;attempt++){
         const remote=await request(n),records=asList(remote.registros),extra=missing(n,records);
-        if(!extra.length){verified=true;break}
+        if(!extra.length){verified=true;revisions[n]=remote.revision;changed(n,records);break}
+        // Conservar el estado previo, sin sustituir datos ya presentes en el servidor.
         backup(n,parse(groups[n]));
         const merged=[...records,...extra];
-        try{await request(n,'PUT',{revision:remote.revision,registros:merged})}
-        catch(e){if(e.status===409)continue;throw e}
-        const check=await request(n),saved=asList(check.registros);
-        const ids=new Set(saved.map(idOf));
-        verified=n==='colores'?saved.length>0:extra.every(x=>ids.has(idOf(x)));
-        if(verified){revisions[n]=check.revision;changed(n,saved)}
+        try{
+          await request(n,'PUT',{revision:remote.revision,registros:merged});
+        }catch(e){
+          lastError=e.message;
+          // Una respuesta fallida puede haber ocurrido DESPUÉS de guardar. Volver a leer.
+          if(e.status!==409)console.warn('Migración '+n+' intento '+(attempt+1),e);
+        }
+        // En Render la lectura inmediatamente posterior puede demorar; verificar sin reescribir.
+        for(let checkAttempt=0;checkAttempt<4;checkAttempt++){
+          await sleep(400*(checkAttempt+1));
+          const check=await request(n),saved=asList(check.registros);
+          const ids=new Set(saved.map(identity));
+          if(extra.every(x=>ids.has(identity(x)))){
+            verified=true;revisions[n]=check.revision;changed(n,saved);break;
+          }
+          lastError='El servidor devolvió '+saved.length+' registros; aún faltan '+extra.filter(x=>!ids.has(identity(x))).length;
+        }
+        if(!verified)await sleep(800*(attempt+1));
       }
-      if(!verified)throw new Error('No se pudo verificar la migración de '+n+'. Conservá los respaldos y volvé a intentar.');
+      if(!verified)throw new Error('No se pudo verificar '+n+'. '+lastError+'. No vuelvas a intentar sin revisar el estado del servidor.');
       results.push(n+': '+item.count+' incorporados/verificados');
     }
+    // Volver a revisar todas las colecciones, incluso si una migración anterior fue parcial.
+    const pendientes=[];
+    for(const n of Object.keys(groups)){
+      const remote=await request(n),extra=missing(n,asList(remote.registros));
+      if(extra.length)pendientes.push(n+': '+extra.length);
+    }
+    if(pendientes.length)throw new Error('Quedan registros pendientes: '+pendientes.join(', '));
     hideNotice();alert('Migración verificada:\n'+results.join('\n')+'\n\nLos respaldos locales se conservaron.');
-  }catch(e){showNotice();alert('No se completó la migración: '+e.message+'\nNo borres los respaldos locales.');console.error(e)}
+  }catch(e){showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\nSe conservaron los respaldos locales.');console.error(e)}
   finally{recovering=false}
 }
 async function save(n,value){
