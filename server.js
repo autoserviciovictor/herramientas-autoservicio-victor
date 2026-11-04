@@ -525,6 +525,7 @@ const MODULOS_PERMITIDOS = [
   "horarios",
   "tareas",
   "catalogo",
+  "proveedores",
 ];
 function normalizarRol(valor) {
   const rol = normalizarTexto(valor).toLowerCase();
@@ -7345,6 +7346,45 @@ function limpiarRegistroReposicion(registro, numeroLista = "1") {
     orden: Number(registro.orden) || 0,
   };
 }
+
+// Faltantes compartidos: independientes de las listas personales 1 y 2.
+const proveedoresCompartidos = require('./db-proveedores-compartidos');
+// Datos comunes de Proveedores. El token se valida antes de cada operación.
+app.get('/proveedores/compartidos/:coleccion', requerirSesion, requerirAlgunModulo('proveedores'), async (req,res) => {
+  try { res.json({ok:true,...await proveedoresCompartidos.obtener(req.params.coleccion)}); }
+  catch(e) { console.error('Proveedores compartidos GET:',e);res.status(500).json({ok:false,mensaje:'No se pudo leer la información compartida'}); }
+});
+app.put('/proveedores/compartidos/:coleccion', requerirSesion, requerirAlgunModulo('proveedores'), async (req,res) => {
+  try {
+    const result = await proveedoresCompartidos.reemplazar(req.params.coleccion, Number(req.body?.revision), req.body?.registros, req.usuario.usuario);
+    if (result.conflicto) return res.status(409).json({ok:false,mensaje:'Otro dispositivo modificó estos datos. Recargá antes de guardar.'});
+    res.json(result);
+  } catch(e) { console.error('Proveedores compartidos PUT:',e);res.status(400).json({ok:false,mensaje:e.message||'No se pudo guardar'}); }
+});
+const faltantesCompartidos = require('./db-faltantes');
+app.get('/reposicion/faltantes', requerirAlgunModulo('anotar'), async (req,res) => {
+  try {res.json({ok:true,registros:await faltantesCompartidos.listar()});}
+  catch(e){console.error('Faltantes GET:',e);res.status(500).json({ok:false,mensaje:'No se pudo consultar la lista compartida'});}
+});
+app.post('/reposicion/faltantes', requerirAlgunModulo('anotar'), async (req,res) => {
+  const nombre=String(req.body?.nombre||'').trim().replace(/\s+/g,' ');
+  const cantidad=Number(req.body?.cantidad);
+  if(!nombre || nombre.length>180 || !Number.isInteger(cantidad) || cantidad<1 || cantidad>99999) return res.status(400).json({ok:false,mensaje:'Ingresá producto y cantidad válidos'});
+  try {res.json({ok:true,registro:await faltantesCompartidos.agregar(nombre,cantidad,String(req.usuario?.usuario||''))});}
+  catch(e){console.error('Faltantes POST:',e);res.status(500).json({ok:false,mensaje:'No se pudo agregar el faltante'});}
+});
+app.patch('/reposicion/faltantes/:id', requerirAlgunModulo('anotar'), async (req,res) => {
+  const id=Number(req.params.id);
+  if(!Number.isSafeInteger(id)||id<1||typeof req.body?.conseguido!=='boolean') return res.status(400).json({ok:false,mensaje:'Datos inválidos'});
+  try {const registro=await faltantesCompartidos.estado(id,req.body.conseguido);if(!registro)return res.status(404).json({ok:false,mensaje:'No encontrado'});res.json({ok:true,registro});}
+  catch(e){console.error('Faltantes PATCH:',e);res.status(500).json({ok:false,mensaje:'No se pudo actualizar el faltante'});}
+});
+app.delete('/reposicion/faltantes/:id', requerirAlgunModulo('anotar'), async (req,res) => {
+  const id=Number(req.params.id);
+  if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({ok:false,mensaje:'Identificador inválido'});
+  try {const registro=await faltantesCompartidos.eliminar(id);if(!registro)return res.status(404).json({ok:false,mensaje:'No encontrado'});res.json({ok:true});}
+  catch(e){console.error('Faltantes DELETE:',e);res.status(500).json({ok:false,mensaje:'No se pudo eliminar el faltante'});}
+});
 
 app.get("/reposicion", requerirAlgunModulo("anotar"), async (req, res) => {
   try {

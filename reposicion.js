@@ -534,6 +534,7 @@ function abrirEscribirModal() {
   $("repoEscribirModal")?.classList.remove("oculto");
   $("repoEscribirModal")?.setAttribute("aria-hidden", "false");
   document.body.classList.add("repo-write-open");
+  actualizarFabRepo();
   requestAnimationFrame(() => $("repoTextoLista")?.focus());
 }
 
@@ -541,6 +542,7 @@ function cerrarEscribirModal() {
   $("repoEscribirModal")?.classList.add("oculto");
   $("repoEscribirModal")?.setAttribute("aria-hidden", "true");
   document.body.classList.remove("repo-write-open");
+  actualizarFabRepo();
 }
 
 export function prepararReposicion() {
@@ -584,8 +586,12 @@ function sincronizarSelectorListas() {
 
 async function seleccionarLista(valor, { refrescar = true } = {}) {
   const nueva = String(valor) === "2" ? "2" : "1";
+  // Cerrar siempre la vista compartida antes de evaluar si la lista ya estaba seleccionada.
+  // De lo contrario, al volver desde Faltantes queda superpuesta la lista compartida.
+  window.RepoFaltantes?.ocultar();
   if (listaActual === nueva && refrescar) {
     sincronizarSelectorListas();
+    render();
     return;
   }
   listaActual = nueva;
@@ -626,7 +632,7 @@ export async function refrescarReposicion({ mostrarCarga = true } = {}) {
 }
 
 function actualizarFabRepo() {
-  const visible = tab === "registro";
+  const visible = tab === "registro" && !document.body.classList.contains("repo-write-open");
   $("repoFab")?.classList.toggle("oculto", !visible);
 }
 

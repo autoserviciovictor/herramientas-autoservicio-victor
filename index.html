@@ -34,7 +34,7 @@
       rel="stylesheet"
       href="design-tokens.css?v=1960-d21-cierre-etapa6-010926"
     />
-    <link rel="stylesheet" href="style.css?v=venc-modal-scroll-fijo-20261104" />
+    <link rel="stylesheet" href="style.css?v=lista-compartida-igual-20261104" />
     <link
       rel="stylesheet"
       href="design-components.css?v=1960-d21-cierre-etapa6-010926"
@@ -45,7 +45,7 @@
     />
     <link
       rel="stylesheet"
-      href="desktop-layout.css?v=1960-d21-cierre-etapa6-010926"
+      href="desktop-layout.css?v=faltantes-compartidos-20261104"
     />
     <link
       rel="stylesheet"
@@ -4421,6 +4421,40 @@ body.prov-order-modal-open{overflow:hidden}
                 >
                   Lista 2
                 </button>
+                <button type="button" id="repoTabFaltantes" aria-pressed="false">Faltantes · Compartida</button>
+              </div>
+              <section id="repoFaltantesPanel" class="repo-faltantes-panel repo-main-card oculto" aria-label="Lista de faltantes compartida">
+                <div class="repo-search-toolbar">
+                  <label class="repo-search-box" for="repoFaltantesBuscar">
+                    <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+                    <input id="repoFaltantesBuscar" type="search" placeholder="Buscar producto..." aria-label="Buscar faltantes" />
+                  </label>
+                  <div class="repo-filter-anchor">
+                    <button id="repoFaltantesFiltroBoton" class="repo-filter-btn" type="button" aria-expanded="false">
+                      <svg class="app-icon" aria-hidden="true"><use href="#icon-filter"></use></svg><span>Filtros</span>
+                    </button>
+                    <div id="repoFaltantesFiltroMenu" class="repo-filter-menu oculto" role="menu">
+                      <button type="button" class="activo" data-faltantes-filtro="todos">Todos</button>
+                      <button type="button" data-faltantes-filtro="pendientes">Pendientes</button>
+                      <button type="button" data-faltantes-filtro="conseguidos">Conseguidos</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="repo-list-headline"><div><strong>Productos en Faltantes</strong>
+                  <button id="repoFaltantesNueva" class="repo-inline-new-list-btn" type="button">Escribir lista</button>
+                </div></div>
+                <div id="repoFaltantesListado" class="repo-products-list" aria-live="polite"></div>
+                <span id="repoFaltantesContador" class="repo-faltantes-contador oculto">0 pendientes</span>
+              </section>
+              <div id="repoFaltantesModal" class="repo-faltantes-modal oculto" role="dialog" aria-modal="true" aria-labelledby="repoFaltantesModalTitulo">
+                <div class="repo-faltantes-dialog">
+                  <div class="repo-faltantes-dialog-head"><div><small>FALTANTES · COMPARTIDA</small><h2 id="repoFaltantesModalTitulo">Escribir lista</h2><p>Escribí productos y cantidades, uno por línea.</p></div><button id="repoFaltantesCerrar" type="button" aria-label="Cerrar">×</button></div>
+                  <form id="repoFaltantesForm" class="repo-faltantes-form">
+                    <textarea id="repoFaltantesTexto" rows="7" placeholder="2 coca 1L&#10;3 paquetes de azúcar&#10;1 leche descremada" aria-label="Productos y cantidades"></textarea>
+                    <div class="repo-faltantes-dialog-foot"><button type="submit">+ Agregar a mi lista</button></div>
+                  </form>
+                  <input id="repoFaltantesNombre" type="hidden" /><input id="repoFaltantesCantidad" type="hidden" value="1" />
+                </div>
               </div>
 
               <section class="repo-main-card">
@@ -10197,8 +10231,9 @@ body.prov-order-modal-open{overflow:hidden}
     ></script>
     <link rel="stylesheet" href="./proveedores.css?v=20261103-172600" />
     <link rel="stylesheet" href="./cronograma-pedidos.css?v=1" />
-    <script src="./cronograma-pedidos.js?v=1" defer></script>
-    <script src="./proveedores.js?v=20261104-pagos-semana" defer></script>
+    <script src="./proveedores-sync.js?v=20261104-1" defer></script>
+    <script src="./cronograma-pedidos.js?v=20261104-sync" defer></script>
+    <script src="./proveedores.js?v=20261104-sync" defer></script>
     <script type="module" src="./admin.js?v=historial-ofertas-20261103"></script>
     <script
       type="module"
@@ -10220,6 +10255,7 @@ body.prov-order-modal-open{overflow:hidden}
       type="module"
       src="./etiquetas.js?v=1960-d21-cierre-etapa6-010926"
     ></script>
+    <script type="module" src="./reposicion-faltantes.js?v=lista-compartida-igual-20261104"></script>
     <script
       type="module"
       src="./app.js?v=prioridad-checkbox-20261103-c"

@@ -745,3 +745,5 @@ body.en-precios #pantallaPrecios .precio-desktop-load-btn:focus-visible {
   }
 }
 
+/* Faltantes comparte la distribución de las otras listas. */
+@media(min-width:951px){body[data-screen="anotar"] #pantallaAnotar .repo-workspace.repo-mostrando-faltantes{grid-template-columns:minmax(0,1fr) clamp(300px,25vw,340px)!important}}
