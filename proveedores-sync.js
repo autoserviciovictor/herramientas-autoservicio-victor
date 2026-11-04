@@ -4,7 +4,7 @@
 (()=>{'use strict';
 const groups={proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pedidos_proveedores_v1',cronograma:'autoservicio_cronograma_semanal_v1',colores:'autoservicio_cronograma_colores_v1'};
 const revisions={},pending=new Set(),busy=new Set(),queued={};
-let initialized=false,recovering=false,notice=null,refreshAfterRecovery=false;
+let initialized=false,recovering=false,notice=null,refreshAfterRecovery=false,progress=null;
 const parseText=s=>{try{return JSON.parse(s)}catch{return null}};
 const parse=k=>parseText(localStorage.getItem(k));
 const asList=v=>Array.isArray(v)?v:[];
@@ -47,7 +47,11 @@ async function request(n,method='GET',body){
   if(!token)throw new Error('Iniciá sesión para sincronizar proveedores.');
   const base=window.API_BASE_URL;
   if(!base)throw new Error('No se encontró la dirección del servidor.');
-  const r=await fetch(`${base}/proveedores/compartidos/${n}`,{method,cache:'no-store',headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),Authorization:`Bearer ${token}`},...(body?{body:JSON.stringify(body)}:{})});
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+  let r;
+  try{r=await fetch(`${base}/proveedores/compartidos/${n}`,{method,cache:'no-store',signal:controller.signal,headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),Authorization:`Bearer ${token}`},...(body?{body:JSON.stringify(body)}:{})});}
+  catch(e){throw new Error(e.name==='AbortError'?'La API no respondió en 20 segundos. Revisá Render y volvé a intentar más tarde.':'No se pudo conectar con Render: '+e.message)}
+  finally{clearTimeout(timeout)}
   const result=await r.json().catch(()=>({}));
   if(!r.ok||!result.ok){
     const hint=r.status===404?'La API de Render no tiene publicada la ruta de proveedores compartidos. Es necesario desplegar server.js y db-proveedores-compartidos.js en Render.':r.status===401||r.status===403?'La sesión no tiene autorización para sincronizar proveedores.':r.status===413?'El servidor rechazó el tamaño de los datos.':r.status>=500?'La API de Render tuvo un error interno; revisá sus logs.':'';
@@ -75,7 +79,9 @@ function changed(n,list){
     window.__proveedoresReload=setTimeout(()=>location.reload(),900);
   }
 }
+function onProveedoresScreen(){return !!document.getElementById('provApp') && !!document.getElementById('provApp').offsetParent}
 function showNotice(){
+  if(!onProveedoresScreen()){hideNotice();return}
   if(notice||!document.body)return;
   notice=document.createElement('div');
   notice.id='recuperacion-proveedores-aviso';
@@ -87,6 +93,11 @@ function showNotice(){
   notice.append(msg,btn);document.body.appendChild(notice);
 }
 function hideNotice(){notice?.remove();notice=null}
+function showProgress(message){
+  if(!progress){progress=document.createElement('div');progress.id='proveedores-migracion-progreso';progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');progress.style.cssText='position:fixed;z-index:2147483647;top:22px;left:50%;transform:translateX(-50%);max-width:min(92vw,540px);background:#17335d;color:#fff;border-radius:12px;padding:17px 22px;box-shadow:0 12px 45px #0005;font:600 15px/1.5 Arial,sans-serif';document.body.appendChild(progress)}
+  progress.textContent=message;
+}
+function hideProgress(){progress?.remove();progress=null}
 async function load(n){
   if(recovering||busy.has(n)||pending.has(n))return;
   busy.add(n);
@@ -101,19 +112,24 @@ async function load(n){
 async function recover(){
   if(recovering)return;
   recovering=true;
+  showProgress('Comprobando los datos locales y PostgreSQL…');
   try{
     const plan=[];
     for(const n of Object.keys(groups)){
+      showProgress('Consultando '+n+' en PostgreSQL…');
       const remote=await request(n),extra=missing(n,asList(remote.registros));
       if(extra.length)plan.push({name:n,count:extra.length});
     }
     if(!plan.length){hideNotice();alert('No hay registros locales pendientes de migrar.');return}
     const summary=plan.map(x=>`${x.name}: ${x.count}`).join('\n');
     if(!confirm('Datos locales que faltan en PostgreSQL:\n\n'+summary+'\n\nSe intentará descargar primero una copia de los respaldos de este navegador. ¿Continuar?'))return;
+    showProgress('Descargando respaldo local…');
     exportRecovery();
+    hideProgress();
     if(!confirm('Se solicitó la descarga del respaldo local. Comprobá que se haya descargado antes de continuar.\n\n¿Iniciar ahora la migración?'))return;
     const results=[];
     for(const item of plan){
+      showProgress('Migrando '+item.name+' ('+(results.length+1)+' de '+plan.length+'). No cierres esta pantalla…');
       const n=item.name;
       let verified=false,lastError='';
       // Una sola escritura por revisión. No repetir PUT si el servidor no confirma:
@@ -126,6 +142,7 @@ async function recover(){
           const currentLocal=parse(groups[n]);
           if(currentLocal!==null)backup(n,currentLocal);
           try{
+            showProgress('Guardando '+n+' en PostgreSQL…');
             await request(n,'PUT',{revision:remote.revision,registros:[...records,...extra]});
           }catch(e){
             lastError=e.status===409?'Conflicto de revisión':`Escritura rechazada (${e.status||'red'}): ${e.message}`;
@@ -137,6 +154,7 @@ async function recover(){
         }
         for(let checkAttempt=0;checkAttempt<5;checkAttempt++){
           await sleep(600*(checkAttempt+1));
+          showProgress('Verificando '+n+' en PostgreSQL (intento '+(checkAttempt+1)+'/5)…');
           const check=await request(n),saved=asList(check.registros);
           const ids=new Set(saved.map(identity));
           if(extra.every(x=>ids.has(identity(x)))){
@@ -156,9 +174,9 @@ async function recover(){
       if(extra.length)pendientes.push(n+': '+extra.length);
     }
     if(pendientes.length)throw new Error('Quedan registros pendientes: '+pendientes.join(', '));
-    hideNotice();alert('Migración verificada:\n'+results.join('\n')+'\n\nLos respaldos locales se conservaron.');
-  }catch(e){showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\n\nNo repitas el proceso hasta resolver el error. Los respaldos locales se conservaron.');console.error('Diagnóstico de migración de proveedores:',e)}
-  finally{recovering=false;if(refreshAfterRecovery){refreshAfterRecovery=false;clearTimeout(window.__proveedoresReload);window.__proveedoresReload=setTimeout(()=>location.reload(),1200)}}
+    hideNotice();hideProgress();alert('Migración verificada:\n'+results.join('\n')+'\n\nLos respaldos locales se conservaron.');
+  }catch(e){hideProgress();showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\n\nNo repitas el proceso hasta resolver el error. Los respaldos locales se conservaron.');console.error('Diagnóstico de migración de proveedores:',e)}
+  finally{hideProgress();recovering=false;if(refreshAfterRecovery){refreshAfterRecovery=false;clearTimeout(window.__proveedoresReload);window.__proveedoresReload=setTimeout(()=>location.reload(),1200)}}
 }
 async function save(n,value){
   if(!initialized||recovering)return;
@@ -183,7 +201,7 @@ async function start(){
   if(initialized||!window.AutoservicioAuth?.getToken?.())return;
   initialized=true;
   for(const n of Object.keys(groups))await load(n);
-  setInterval(()=>{if(!document.hidden)for(const n of Object.keys(groups))load(n)},20000);
+  setInterval(()=>{if(!document.hidden){if(!onProveedoresScreen())hideNotice();for(const n of Object.keys(groups))load(n)}},20000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)for(const n of Object.keys(groups))load(n)});
 }
 window.ProveedoresSync={start,save,refresh:()=>Promise.all(Object.keys(groups).map(load)),recover};
