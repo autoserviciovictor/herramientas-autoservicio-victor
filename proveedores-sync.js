@@ -174,29 +174,83 @@ async function recover(){
   }catch(e){hideProgress();showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\n\nNo repitas el proceso hasta resolver el error. Los respaldos locales se conservaron.');console.error('Diagnóstico de migración de proveedores:',e)}
   finally{hideProgress();recovering=false;}
 }
+// Guarda sin descartar registros pendientes de migración ni sobrescribir una revisión antigua.
+// Los datos remotos no incluidos en la vista local se conservan; los registros editados
+// se aplican por ID. La confirmación requiere lectura posterior de PostgreSQL.
 async function save(n,value){
-  if(!initialized||recovering)return;
+  if(!initialized){
+    // La inicialización puede estar esperando la sesión. Nunca perder la intención de guardar.
+    queued[n]=value;
+    start();
+    return;
+  }
+  if(recovering){queued[n]=value;return}
   if(pending.has(n)){queued[n]=value;return}
   pending.add(n);
   try{
-    // No publicar una lista local incompleta sobre datos remotos o respaldados.
-    const remote=await request(n),records=asList(remote.registros);
-    if(missing(n,records).length){showNotice();throw new Error('Hay datos locales pendientes de migración. Usá «Revisar y migrar datos» antes de guardar.')}
-    if(n!=='colores'){
-      const submitted=asList(value),submittedIds=new Set(submitted.map(idOf));
-      if(records.some(x=>idOf(x)&&!submittedIds.has(idOf(x)))){
-        throw new Error('El servidor tiene registros ausentes en esta pantalla. Actualizá la información antes de guardar.');
+    const submitted=listFrom(n,value);
+    if(n!=='colores' && !Array.isArray(value))throw new Error('Formato de datos inválido.');
+    // Conservar una copia del estado enviado antes de cualquier comunicación.
+    backup(n,value);
+    let verified=false,lastError='';
+    for(let attempt=0;attempt<3&&!verified;attempt++){
+      const remote=await request(n),records=asList(remote.registros);
+      const extra=missing(n,records);
+      let combined;
+      if(n==='colores'){
+        // No reemplazar una configuración remota con un objeto vacío.
+        combined=submitted.length?submitted:records;
+      }else{
+        const map=new Map(records.map(x=>[identity(x),x]));
+        // Incorporar datos históricos todavía no migrados sin perder registros remotos.
+        for(const x of extra)map.set(identity(x),x);
+        // La edición actual tiene prioridad sobre el respaldo anterior del mismo ID.
+        for(const x of submitted)map.set(identity(x),x);
+        combined=[...map.values()];
       }
+      try{
+        await request(n,'PUT',{revision:remote.revision,registros:combined});
+      }catch(e){
+        lastError=e.message;
+        if(e.status===409)continue; // Otro dispositivo guardó primero: releer y combinar.
+        // La petición puede haberse guardado aunque la respuesta haya fallado.
+        // Verificar antes de considerar el guardado fallido.
+      }
+      const check=await request(n),saved=asList(check.registros);
+      const ids=new Set(saved.map(identity));
+      if(combined.every(x=>ids.has(identity(x))) &&
+          submitted.every(x=>{
+            const actual=saved.find(y=>identity(y)===identity(x));
+            return actual&&JSON.stringify(actual)===JSON.stringify(x);
+          })){
+        verified=true;revisions[n]=check.revision;
+        // Actualizar el almacenamiento local solo si no hubo otra edición posterior.
+        if(!Object.prototype.hasOwnProperty.call(queued,n))changed(n,saved);
+      }else lastError='El servidor no confirmó todos los registros guardados.';
     }
-    const result=await request(n,'PUT',{revision:remote.revision,registros:listFrom(n,value)});
-    revisions[n]=result.revision;
-  }catch(e){backup(n,value);console.error('Sincronización '+n,e);alert('No se pudo sincronizar '+n+': '+e.message+' Los datos quedaron respaldados en este navegador.')}
-  finally{pending.delete(n);if(Object.prototype.hasOwnProperty.call(queued,n)){const next=queued[n];delete queued[n];save(n,next)}}
+    if(!verified)throw new Error(lastError||'No se pudo verificar el guardado en PostgreSQL.');
+    // El aviso histórico no debe bloquear los nuevos pedidos.
+    if(onProveedoresScreen()){
+      const remote=await request(n);
+      if(!missing(n,asList(remote.registros)).length)hideNotice();
+    }
+  }catch(e){
+    backup(n,value);
+    console.error('Sincronización '+n,e);
+    alert('No se pudo sincronizar '+n+': '+e.message+' Los datos quedaron respaldados en este navegador.');
+  }finally{
+    pending.delete(n);
+    if(Object.prototype.hasOwnProperty.call(queued,n)){
+      const next=queued[n];delete queued[n];
+      save(n,next);
+    }
+  }
 }
 async function start(){
   if(initialized||!window.AutoservicioAuth?.getToken?.())return;
   initialized=true;
   for(const n of Object.keys(groups))await load(n);
+  for(const n of Object.keys(queued)){const value=queued[n];delete queued[n];save(n,value)}
   setInterval(()=>{if(!document.hidden){if(!onProveedoresScreen())hideNotice();for(const n of Object.keys(groups))load(n)}},20000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)for(const n of Object.keys(groups))load(n)});
 }
