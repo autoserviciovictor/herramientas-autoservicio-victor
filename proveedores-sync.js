@@ -4,7 +4,7 @@
 (()=>{'use strict';
 const groups={proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pedidos_proveedores_v1',cronograma:'autoservicio_cronograma_semanal_v1',colores:'autoservicio_cronograma_colores_v1'};
 const revisions={},pending=new Set(),busy=new Set(),queued={};
-let initialized=false,recovering=false,notice=null;
+let initialized=false,recovering=false,notice=null,refreshAfterRecovery=false;
 const parseText=s=>{try{return JSON.parse(s)}catch{return null}};
 const parse=k=>parseText(localStorage.getItem(k));
 const asList=v=>Array.isArray(v)?v:[];
@@ -67,6 +67,7 @@ function changed(n,list){
   localStorage.setItem(key,JSON.stringify(incoming));
   window.dispatchEvent(new CustomEvent('proveedores:sincronizados',{detail:{coleccion:n}}));
   if(document.getElementById('provApp')&&!document.querySelector('#provOrderForm,#provForm,#cr-schedule-form')){
+    if(recovering){refreshAfterRecovery=true;return;}
     clearTimeout(window.__proveedoresReload);
     window.__proveedoresReload=setTimeout(()=>location.reload(),900);
   }
@@ -112,32 +113,36 @@ async function recover(){
     for(const item of plan){
       const n=item.name;
       let verified=false,lastError='';
-      for(let attempt=0;attempt<6&&!verified;attempt++){
+      // Una sola escritura por revisión. No repetir PUT si el servidor no confirma:
+      // primero consultar su estado para evitar sobreescrituras o duplicados.
+      for(let attempt=0;attempt<5&&!verified;attempt++){
         const remote=await request(n),records=asList(remote.registros),extra=missing(n,records);
         if(!extra.length){verified=true;revisions[n]=remote.revision;changed(n,records);break}
-        // Conservar el estado previo, sin sustituir datos ya presentes en el servidor.
-        backup(n,parse(groups[n]));
-        const merged=[...records,...extra];
-        try{
-          await request(n,'PUT',{revision:remote.revision,registros:merged});
-        }catch(e){
-          lastError=e.message;
-          // Una respuesta fallida puede haber ocurrido DESPUÉS de guardar. Volver a leer.
-          if(e.status!==409)console.warn('Migración '+n+' intento '+(attempt+1),e);
+        if(attempt===0 || lastError.startsWith('Conflicto')){
+          // Solo migrar registros ausentes; jamás reemplazar los que ya están en PostgreSQL.
+          backup(n,parse(groups[n]));
+          try{
+            await request(n,'PUT',{revision:remote.revision,registros:[...records,...extra]});
+          }catch(e){
+            lastError=e.status===409?'Conflicto de revisión':`Escritura rechazada (${e.status||'red'}): ${e.message}`;
+            if(e.status!==409){
+              // Si falló la escritura, no repetir a ciegas: solo verificar lectura.
+              console.error('Migración '+n,lastError);
+            }
+          }
         }
-        // En Render la lectura inmediatamente posterior puede demorar; verificar sin reescribir.
-        for(let checkAttempt=0;checkAttempt<4;checkAttempt++){
-          await sleep(400*(checkAttempt+1));
+        for(let checkAttempt=0;checkAttempt<5;checkAttempt++){
+          await sleep(600*(checkAttempt+1));
           const check=await request(n),saved=asList(check.registros);
           const ids=new Set(saved.map(identity));
           if(extra.every(x=>ids.has(identity(x)))){
             verified=true;revisions[n]=check.revision;changed(n,saved);break;
           }
-          lastError='El servidor devolvió '+saved.length+' registros; aún faltan '+extra.filter(x=>!ids.has(identity(x))).length;
+          lastError=lastError||`Persisten ${extra.filter(x=>!ids.has(identity(x))).length} registros sin verificar (servidor: ${saved.length})`;
         }
-        if(!verified)await sleep(800*(attempt+1));
+        if(!verified && !lastError.startsWith('Conflicto'))break;
       }
-      if(!verified)throw new Error('No se pudo verificar '+n+'. '+lastError+'. No vuelvas a intentar sin revisar el estado del servidor.');
+      if(!verified)throw new Error(`No se pudo completar ${n}: ${lastError}. No se eliminaron los respaldos.`);
       results.push(n+': '+item.count+' incorporados/verificados');
     }
     // Volver a revisar todas las colecciones, incluso si una migración anterior fue parcial.
@@ -149,7 +154,7 @@ async function recover(){
     if(pendientes.length)throw new Error('Quedan registros pendientes: '+pendientes.join(', '));
     hideNotice();alert('Migración verificada:\n'+results.join('\n')+'\n\nLos respaldos locales se conservaron.');
   }catch(e){showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\nSe conservaron los respaldos locales.');console.error(e)}
-  finally{recovering=false}
+  finally{recovering=false;if(refreshAfterRecovery){refreshAfterRecovery=false;clearTimeout(window.__proveedoresReload);window.__proveedoresReload=setTimeout(()=>location.reload(),1200)}}
 }
 async function save(n,value){
   if(!initialized||recovering)return;
