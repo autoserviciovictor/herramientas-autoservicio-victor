@@ -4,7 +4,7 @@
 (()=>{'use strict';
 const groups={proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pedidos_proveedores_v1',cronograma:'autoservicio_cronograma_semanal_v1',colores:'autoservicio_cronograma_colores_v1'};
 const revisions={},pending=new Set(),busy=new Set(),queued={};
-let initialized=false,recovering=false,notice=null,refreshAfterRecovery=false,progress=null;
+let initialized=false,recovering=false,notice=null,progress=null;
 const parseText=s=>{try{return JSON.parse(s)}catch{return null}};
 const parse=k=>parseText(localStorage.getItem(k));
 const asList=v=>Array.isArray(v)?v:[];
@@ -73,11 +73,7 @@ function changed(n,list){
   if(current!==null)backup(n,current);
   localStorage.setItem(key,JSON.stringify(incoming));
   window.dispatchEvent(new CustomEvent('proveedores:sincronizados',{detail:{coleccion:n}}));
-  if(document.getElementById('provApp')&&!document.querySelector('#provOrderForm,#provForm,#cr-schedule-form')){
-    if(recovering){refreshAfterRecovery=true;return;}
-    clearTimeout(window.__proveedoresReload);
-    window.__proveedoresReload=setTimeout(()=>location.reload(),900);
-  }
+  // La vista recibe el evento y se actualiza sin recargar la aplicación.
 }
 function onProveedoresScreen(){return !!document.getElementById('provApp') && !!document.getElementById('provApp').offsetParent}
 function showNotice(){
@@ -176,7 +172,7 @@ async function recover(){
     if(pendientes.length)throw new Error('Quedan registros pendientes: '+pendientes.join(', '));
     hideNotice();hideProgress();alert('Migración verificada:\n'+results.join('\n')+'\n\nLos respaldos locales se conservaron.');
   }catch(e){hideProgress();showNotice();alert('La migración NO quedó completamente verificada: '+e.message+'\n\nNo repitas el proceso hasta resolver el error. Los respaldos locales se conservaron.');console.error('Diagnóstico de migración de proveedores:',e)}
-  finally{hideProgress();recovering=false;if(refreshAfterRecovery){refreshAfterRecovery=false;clearTimeout(window.__proveedoresReload);window.__proveedoresReload=setTimeout(()=>location.reload(),1200)}}
+  finally{hideProgress();recovering=false;}
 }
 async function save(n,value){
   if(!initialized||recovering)return;

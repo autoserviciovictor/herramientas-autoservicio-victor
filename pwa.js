@@ -144,9 +144,9 @@ if ("serviceWorker" in navigator) {
 
   if (!esDesarrolloLocal) {
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (sessionStorage.getItem(SW_RELOAD_KEY) === "1") return;
-      sessionStorage.setItem(SW_RELOAD_KEY, "1");
-      window.location.reload();
+      // Un worker nuevo no debe interrumpir formularios ni recargar la app.
+      // Los recursos nuevos se usarán en la próxima apertura manual.
+      console.info("Actualización de la aplicación disponible para el próximo inicio.");
     });
   }
 
