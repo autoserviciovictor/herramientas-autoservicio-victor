@@ -4542,9 +4542,24 @@ app.get("/tareas/bano/usuarios", async (req, res) => {
   }
 });
 
+// La rotación compartida nunca debe reactivar cuentas eliminadas.
+async function depurarParticipantesBano(cliente, usuarioActual = null) {
+  const actual = await leerBanoServidor(cliente);
+  const usuarios = (await obtenerUsuarios()).filter((u) => u.activo);
+  const validos = new Set(usuarios.flatMap((u) => [u.usuario, u.nombre].map(normalizarIdentidadBano).filter(Boolean)));
+  const anteriores = Array.isArray(actual.participantes) ? actual.participantes : [];
+  const participantes = anteriores.filter((p) => validos.has(normalizarIdentidadBano(p)));
+  if (participantes.length !== anteriores.length) {
+    const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
+    await guardarConfiguracionBanoServidor({ participantes, fechaAncla }, usuarioActual, cliente);
+    return { ...actual, participantes, fechaAncla };
+  }
+  return actual;
+}
+
 app.get("/tareas/bano", async (req, res) => {
   try {
-    const config = await leerBanoServidor();
+    const config = await conTransaccionTareasBano((cliente) => depurarParticipantesBano(cliente, req.usuario));
     config.historial = completarHistorialBano(config);
     res.json({ ok: true, config });
   } catch (e) {
@@ -4562,12 +4577,19 @@ app.put("/tareas/bano", async (req, res) => {
         mensaje: "No tenés permiso para configurar la rotación",
       });
     const config = await conTransaccionTareasBano(async (cliente) => {
-      const actual = await leerBanoServidor(cliente);
+      const actual = await depurarParticipantesBano(cliente, req.usuario);
       actual.historial = completarHistorialBano(actual);
       const solicitados = Array.isArray(req.body?.participantes) ? req.body.participantes : [];
       const actuales = Array.isArray(actual.participantes) ? actual.participantes : [];
       // La lista enviada por Configuración es autoritativa, incluso si está vacía.
       // Nunca repoblar participantes automáticamente desde usuarios, sectores o caché.
+      const activos = (await obtenerUsuarios()).filter((u) => u.activo);
+      const identidadesActivas = new Set(activos.flatMap((u) => [u.usuario, u.nombre].map(normalizarIdentidadBano).filter(Boolean)));
+      if (solicitados.some((p) => !identidadesActivas.has(normalizarIdentidadBano(p)))) {
+        const error = new Error("La lista contiene usuarios eliminados o inactivos");
+        error.statusCode = 400;
+        throw error;
+      }
       const participantes = participantesOrdenFijo(actuales, solicitados);
       const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
       await guardarConfiguracionBanoServidor(
@@ -4607,7 +4629,7 @@ app.post("/tareas/bano/reasignar", async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "Seleccioná un reemplazo válido" });
 
     const config = await conTransaccionTareasBano(async (cliente) => {
-      const actual = await leerBanoServidor(cliente);
+      const actual = await depurarParticipantesBano(cliente, req.usuario);
       const participantes = Array.isArray(actual.participantes)
         ? actual.participantes.map(normalizarTexto).filter(Boolean)
         : [];
@@ -4677,6 +4699,30 @@ app.post("/tareas/bano/reasignar", async (req, res) => {
       mensaje: e.message || "No se pudo cambiar el responsable",
     });
   }
+});
+
+// Rectificación auditada del registro erróneo del 03/11/2026.
+// No se ejecuta automáticamente: requiere una solicitud autenticada de administración.
+app.post("/tareas/bano/rectificar-2026-11-03", requerirAdministrador, async (req, res) => {
+  try {
+    const resultado = await conTransaccionTareasBano(async (cliente) => {
+      const actual = await leerBanoServidor(cliente);
+      const registro = (actual.historial || []).find((x) => x.fecha === "2026-11-03");
+      if (!registro) { const e = new Error("No existe el registro del 03/11"); e.statusCode = 404; throw e; }
+      if (!normalizarIdentidadBano(registro.responsable).includes("yuli") &&
+          !normalizarIdentidadBano(registro.usuario).includes("yuli")) {
+        const e = new Error("El registro ya no corresponde a Yuli; no se modificó"); e.statusCode = 409; throw e;
+      }
+      const usuarios = (await obtenerUsuarios()).filter((u) => u.activo);
+      const bruno = usuarios.find((u) => [u.usuario, u.nombre].some((v) => normalizarIdentidadBano(v) === "bruno"));
+      if (!bruno) { const e = new Error("No se encontró una cuenta activa de Bruno"); e.statusCode = 409; throw e; }
+      const corregido = { ...registro, responsable: bruno.usuario, usuario: bruno.nombre || bruno.usuario };
+      // Se conserva la hora original; no se inventa una nueva verificación.
+      await guardarRegistroBanoServidor(corregido, req.usuario, cliente);
+      return corregido;
+    });
+    res.json({ ok: true, registro: resultado });
+  } catch (e) { res.status(e.statusCode || 500).json({ ok: false, mensaje: e.message }); }
 });
 
 app.post("/tareas/bano/confirmar", async (req, res) => {

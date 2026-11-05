@@ -2067,7 +2067,7 @@ function configBano() {
   // Si el directorio todavía no se cargó, conservar temporalmente la lista
   // guardada para no ocultar participantes ante un error de conexión.
   // Cuando está disponible, excluir de los próximos turnos usuarios eliminados.
-  const directorioDisponible = usuariosBano.length > 0;
+  const directorioDisponible = true;
   const participantes = participantesGuardados
     .map((p) => {
       const clave = claveParticipante(p).trim();
@@ -2100,11 +2100,8 @@ async function cargarBanoRemoto() {
     guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
   } catch {
-    banoMemoria = leerJSONUsuario(BANO_KEY, {
-      participantes: [],
-      fechaAncla: iso(new Date()),
-      historial: leerJSONUsuario(BANO_HISTORY_KEY, []),
-    });
+    // No mostrar una rotación local antigua como si fuera el estado compartido.
+    banoMemoria = { participantes: [], fechaAncla: iso(new Date()), historial: [] };
   }
 }
 function claveParticipante(valor) {
@@ -2248,8 +2245,8 @@ function renderBano() {
   const cfg = configBano(),
     hoy = inicioDia(new Date()),
     corresponde = esDiaLimpieza(hoy, cfg),
-    responsable = responsableBano(hoy, cfg),
-    hist = historialCompletoBano(cfg, hoy);
+    hist = historialCompletoBano(cfg, hoy),
+    responsable = nombreParticipante(hist.find((x) => x.fecha === iso(hoy))?.responsable || responsableBano(hoy, cfg));
   const confirmado = corresponde ? hist.find((h) => h.fecha === iso(hoy) && h.usuario) : null;
   const sinParticipantes = !cfg.participantes.length;
   const fechaLarga = fmt(hoy, { weekday: "long", day: "numeric", month: "long" });
