@@ -1,5 +1,5 @@
 'use strict';
-const { query } = require('./db');
+const { query, obtenerPool } = require('./db');
 const COLECCIONES = new Set(['proveedores', 'pedidos', 'cronograma', 'colores']);
 async function asegurar() {
   await query(`CREATE TABLE IF NOT EXISTS proveedores_estado_compartido (
@@ -38,4 +38,51 @@ async function reemplazar(coleccion, revision, registros, usuario) {
     [coleccion, revision, payload, usuario]);
   return rows.length ? { ok: true, revision: Number(rows[0].revision) } : { ok: false, conflicto: true };
 }
-module.exports = { asegurar, obtener, reemplazar };
+
+// Operaciones atómicas por registro: una transacción y bloqueo de fila impiden
+// que dos usuarios reemplacen accidentalmente la colección completa.
+async function modificarRegistro(coleccion, id, registro, revision, usuario, eliminar = false) {
+  if (!COLECCIONES.has(coleccion) || coleccion === 'colores' ||
+      typeof id !== 'string' || !id.trim() || id.length > 256 ||
+      !Number.isSafeInteger(revision) || revision < 0 ||
+      (!eliminar && (!registro || typeof registro !== 'object' || Array.isArray(registro) || String(registro.id) !== id))) {
+    throw new Error('Datos inválidos');
+  }
+  if (!eliminar && JSON.stringify(registro).length > 100000) throw new Error('Registro demasiado grande');
+  await asegurar();
+  const client = await obtenerPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`INSERT INTO proveedores_estado_compartido (coleccion, revision, registros)
+      VALUES ($1, 0, '[]'::jsonb) ON CONFLICT (coleccion) DO NOTHING`, [coleccion]);
+    const { rows } = await client.query(
+      'SELECT revision, registros FROM proveedores_estado_compartido WHERE coleccion=$1 FOR UPDATE', [coleccion]);
+    const actual = rows[0];
+    if (Number(actual.revision) !== revision) {
+      await client.query('ROLLBACK');
+      return { ok: false, conflicto: true, revision: Number(actual.revision) };
+    }
+    const registros = actual.registros;
+    if (!Array.isArray(registros)) throw new Error('Colección inválida en PostgreSQL');
+    const matches = registros.filter(x => x && String(x.id) === id);
+    if (matches.length > 1) throw new Error('Identificador duplicado en PostgreSQL');
+    if (eliminar && matches.length === 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, noEncontrado: true };
+    }
+    const siguientes = registros.filter(x => !x || String(x.id) !== id);
+    if (!eliminar) siguientes.push(registro);
+    if (siguientes.length > 12000 || JSON.stringify(siguientes).length > 4000000)
+      throw new Error('Colección demasiado grande');
+    const { rows: updated } = await client.query(`UPDATE proveedores_estado_compartido
+      SET registros=$2::jsonb, revision=revision+1, actualizado=NOW(), actualizado_por=$3
+      WHERE coleccion=$1 RETURNING revision`, [coleccion, JSON.stringify(siguientes), usuario]);
+    await client.query('COMMIT');
+    return { ok: true, revision: Number(updated[0].revision), id, eliminado: eliminar };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
+}
+
+module.exports = { asegurar, obtener, reemplazar, modificarRegistro };

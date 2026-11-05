@@ -7361,6 +7361,25 @@ app.put('/proveedores/compartidos/:coleccion', requerirSesion, requerirAlgunModu
     res.json(result);
   } catch(e) { console.error('Proveedores compartidos PUT:',e);res.status(400).json({ok:false,mensaje:e.message||'No se pudo guardar'}); }
 });
+// Etapa 7: altas, ediciones y bajas individuales con control de revisión.
+// Los clientes antiguos siguen usando PUT; estas rutas no migran datos por sí solas.
+app.put('/proveedores/compartidos/:coleccion/registros/:id', requerirSesion, requerirAlgunModulo('proveedores'), async (req,res) => {
+  try {
+    const resultado = await proveedoresCompartidos.modificarRegistro(req.params.coleccion, req.params.id,
+      req.body?.registro, Number(req.body?.revision), req.usuario.usuario);
+    if (resultado.conflicto) return res.status(409).json({ok:false,mensaje:'Los datos cambiaron en otro dispositivo. Actualizá antes de guardar.',revision:resultado.revision});
+    res.json(resultado);
+  } catch(e) { console.error('Proveedores registro PUT:',e);res.status(400).json({ok:false,mensaje:e.message||'No se pudo guardar'}); }
+});
+app.delete('/proveedores/compartidos/:coleccion/registros/:id', requerirSesion, requerirAlgunModulo('proveedores'), async (req,res) => {
+  try {
+    const resultado = await proveedoresCompartidos.modificarRegistro(req.params.coleccion, req.params.id,
+      null, Number(req.body?.revision), req.usuario.usuario, true);
+    if (resultado.conflicto) return res.status(409).json({ok:false,mensaje:'Los datos cambiaron en otro dispositivo. Actualizá antes de eliminar.',revision:resultado.revision});
+    if (resultado.noEncontrado) return res.status(404).json({ok:false,mensaje:'El registro no existe en PostgreSQL'});
+    res.json(resultado);
+  } catch(e) { console.error('Proveedores registro DELETE:',e);res.status(400).json({ok:false,mensaje:e.message||'No se pudo eliminar'}); }
+});
 const faltantesCompartidos = require('./db-faltantes');
 app.get('/reposicion/faltantes', requerirAlgunModulo('anotar'), async (req,res) => {
   try {res.json({ok:true,registros:await faltantesCompartidos.listar()});}

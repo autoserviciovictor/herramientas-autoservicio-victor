@@ -4,6 +4,19 @@
 (()=>{'use strict';
 const groups={proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pedidos_proveedores_v1',cronograma:'autoservicio_cronograma_semanal_v1',colores:'autoservicio_cronograma_colores_v1'};
 const revisions={},pending=new Set(),busy=new Set(),queued={};
+// Última copia confirmada del servidor, para detectar ediciones locales aún pendientes.
+const confirmedSnapshots={};
+const writeStatus={};
+function report(n,state,message=''){
+  writeStatus[n]={state,message,at:new Date().toISOString()};
+  window.dispatchEvent(new CustomEvent('proveedores:estado-guardado',{detail:{coleccion:n,...writeStatus[n]}}));
+  let el=document.getElementById('proveedores-estado-guardado');
+  if(!el){el=document.createElement('div');el.id='proveedores-estado-guardado';el.setAttribute('role','status');el.style.cssText='position:fixed;bottom:12px;left:12px;z-index:2147483646;max-width:360px;padding:9px 13px;border-radius:9px;box-shadow:0 3px 16px #0003;font:13px/1.4 Arial,sans-serif';document.body?.appendChild(el)}
+  const outstanding=Object.entries(writeStatus).filter(([,v])=>v.state!=='confirmed');
+  if(!outstanding.length){el.textContent='Cambios confirmados en PostgreSQL';el.style.background='#e7f5ec';el.style.color='#155b30';return}
+  el.textContent=outstanding.map(([key,v])=>key+': '+(v.state==='saving'?'guardando en PostgreSQL…':'SIN CONFIRMAR en PostgreSQL — '+v.message)).join(' | ');
+  el.style.background=outstanding.some(([,v])=>v.state==='failed')?'#fff0e8':'#fff8db';el.style.color='#653000';
+}
 let initialized=false,recovering=false,notice=null,progress=null;
 const parseText=s=>{try{return JSON.parse(s)}catch{return null}};
 const parse=k=>parseText(localStorage.getItem(k));
@@ -101,13 +114,26 @@ function showProgress(message){
 }
 function hideProgress(){progress?.remove();progress=null}
 async function load(n){
-  if(recovering||busy.has(n)||pending.has(n))return;
+  if(recovering||busy.has(n)||pending.has(n)||individualBusy.has(n))return;
   busy.add(n);
   try{
     const remote=await request(n),records=asList(remote.registros);
     revisions[n]=remote.revision;
-    if(missing(n,records).length){showNotice();return} // No sobrescribir datos no migrados.
+    // No reemplazar cambios actuales que aún no se guardaron.
+    const currentValue=parse(groups[n]);
+    const current=listFrom(n,currentValue);
+    const remoteIds=new Set(records.map(identity));
+    // Si el navegador cambió desde la última lectura confirmada, NO sustituirlo.
+    // La comparación por IDs sola no detectaba ediciones de campos existentes.
+    if(Object.prototype.hasOwnProperty.call(confirmedSnapshots,n) &&
+       !equalRecord(currentValue,confirmedSnapshots[n])){
+      report(n,'failed','Hay cambios locales sin confirmar; se conservan hasta sincronizarlos.');
+      return;
+    }
+    if(current.some(x=>!remoteIds.has(identity(x)))){showNotice();return}
+    // Los respaldos antiguos no bloquean la sincronización cotidiana.
     changed(n,records);
+    confirmedSnapshots[n]=structuredClone(fromList(n,records));
   }catch(e){console.warn('Sincronización '+n+':',e.message)}
   finally{busy.delete(n)}
 }
@@ -133,7 +159,7 @@ async function recover(){
     for(const item of plan){
       showProgress('Migrando '+item.name+' ('+(results.length+1)+' de '+plan.length+'). No cierres esta pantalla…');
       const n=item.name;
-      let verified=false,lastError='';
+      let verified=false,lastError='',verifiedRecords=null;
       // Una sola escritura por revisión. No repetir PUT si el servidor no confirma:
       // primero consultar su estado para evitar sobreescrituras o duplicados.
       for(let attempt=0;attempt<5&&!verified;attempt++){
@@ -160,7 +186,7 @@ async function recover(){
           const check=await request(n),saved=asList(check.registros);
           const ids=new Set(saved.map(identity));
           if(extra.every(x=>ids.has(identity(x)))){
-            verified=true;revisions[n]=check.revision;changed(n,saved);break;
+            verified=true;verifiedRecords=saved;revisions[n]=check.revision;changed(n,saved);break;
           }
           lastError=lastError||`Persisten ${extra.filter(x=>!ids.has(identity(x))).length} registros sin verificar (servidor: ${saved.length})`;
         }
@@ -187,30 +213,35 @@ async function save(n,value){
   if(!initialized){
     // La inicialización puede estar esperando la sesión. Nunca perder la intención de guardar.
     queued[n]=value;
-    start();
-    return;
+    report(n,'saving');
+    void start();
+    return false;
   }
-  if(recovering){queued[n]=value;return}
-  if(pending.has(n)){queued[n]=value;return}
+  if(recovering||individualBusy.has(n)){queued[n]=value;report(n,'saving');return false}
+  if(pending.has(n)){queued[n]=value;report(n,'saving');return false}
   pending.add(n);
+  report(n,'saving');
   try{
     const submitted=listFrom(n,value);
     if(n!=='colores' && !Array.isArray(value))throw new Error('Formato de datos inválido.');
     // Conservar una copia del estado enviado antes de cualquier comunicación.
     backup(n,value);
-    let verified=false,lastError='';
+    let verified=false,lastError='',verifiedRecords=null;
     for(let attempt=0;attempt<3&&!verified;attempt++){
       const remote=await request(n),records=asList(remote.registros);
-      const extra=missing(n,records);
+      // Los respaldos históricos se usan SOLO en la recuperación manual.
+      // Nunca reinsertarlos automáticamente al guardar un registro nuevo.
       let combined;
       if(n==='colores'){
         // No reemplazar una configuración remota con un objeto vacío.
         combined=submitted.length?submitted:records;
       }else{
         const map=new Map(records.map(x=>[identity(x),x]));
-        // Incorporar datos históricos todavía no migrados sin perder registros remotos.
-        for(const x of extra)map.set(identity(x),x);
-        // La edición actual tiene prioridad sobre el respaldo anterior del mismo ID.
+        // Mantener los registros del servidor y aplicar únicamente el estado
+        // actual enviado por el módulo. Los respaldos no son datos activos.
+        // Nota: las bajas requieren una operación explícita en el servidor;
+        // esta combinación conservadora no interpreta ausencias como borrados.
+        // La edición actual tiene prioridad sobre el registro remoto del mismo ID.
         for(const x of submitted)map.set(identity(x),x);
         combined=[...map.values()];
       }
@@ -228,43 +259,91 @@ async function save(n,value){
         // Verificar antes de considerar el guardado fallido.
       }
       const check=await request(n),saved=asList(check.registros);
-      const ids=new Set(saved.map(identity));
-      if(combined.every(x=>ids.has(identity(x))) &&
-          submitted.every(x=>{
+      if(combined.every(x=>{
+        const actual=saved.find(y=>identity(y)===identity(x));
+        return actual&&equalRecord(actual,x);
+      }) && submitted.every(x=>{
             const actual=saved.find(y=>identity(y)===identity(x));
             return actual&&equalRecord(actual,x);
           })){
-        verified=true;revisions[n]=check.revision;
+        verified=true;verifiedRecords=saved;revisions[n]=check.revision;
         // Actualizar el almacenamiento local solo si no hubo otra edición posterior.
         if(!Object.prototype.hasOwnProperty.call(queued,n))changed(n,saved);
       }else lastError='El servidor no confirmó todos los registros guardados.';
     }
     if(!verified)throw new Error(lastError||'No se pudo verificar el guardado en PostgreSQL.');
+    confirmedSnapshots[n]=structuredClone(fromList(n,verifiedRecords));
+    report(n,'confirmed');
     // El aviso histórico no debe bloquear los nuevos pedidos.
     if(onProveedoresScreen()){
-      const remote=await request(n);
-      if(!missing(n,asList(remote.registros)).length)hideNotice();
+      try{const remote=await request(n);if(!missing(n,asList(remote.registros)).length)hideNotice();}
+      catch(e){console.warn('No se pudo revisar aviso histórico:',e.message)}
     }
+    return true;
   }catch(e){
     backup(n,value);
     console.error('Sincronización '+n,e);
-    alert('No se pudo sincronizar '+n+': '+e.message+' Los datos quedaron respaldados en este navegador.');
+    report(n,'failed',e.message+' (se conservó respaldo local)');
+    return false;
   }finally{
     pending.delete(n);
     if(Object.prototype.hasOwnProperty.call(queued,n)){
       const next=queued[n];delete queued[n];
-      save(n,next);
+      void save(n,next);
     }
   }
+}
+// Etapa 8: operación individual, con confirmación de lectura del servidor.
+// No se considera guardado ningún cambio que no se haya verificado en PostgreSQL.
+const individualBusy=new Set();
+async function mutateRecord(n,record,deleteId=null){
+  if(!['proveedores','pedidos','cronograma'].includes(n))throw new Error('Colección no permitida');
+  const id=deleteId===null?String(record?.id??''):String(deleteId);
+  if(!id)throw new Error('El registro necesita un identificador');
+  if(individualBusy.has(n)||pending.has(n)||recovering)throw new Error('Hay otra operación de sincronización en curso. Intentá nuevamente.');
+  if(Object.prototype.hasOwnProperty.call(confirmedSnapshots,n) &&
+     !equalRecord(parse(groups[n]),confirmedSnapshots[n])){
+    throw new Error('Hay cambios locales pendientes de sincronización. No se aplicó otra operación para evitar pérdida de datos.');
+  }
+  individualBusy.add(n);report(n,'saving');
+  try{
+    const remote=await request(n);
+    const existing=asList(remote.registros).find(x=>idOf(x)===id);
+    // Una modificación no puede reemplazar silenciosamente una edición hecha en otra computadora.
+    const base=Object.prototype.hasOwnProperty.call(confirmedSnapshots,n)?listFrom(n,confirmedSnapshots[n]):null;
+    const old=base?.find(x=>idOf(x)===id);
+    if(existing && (!old || !equalRecord(existing,old)))throw new Error('El registro cambió en PostgreSQL o no fue cargado desde el servidor. Actualizá los datos antes de modificarlo.');
+    if(deleteId!==null&&!existing)throw new Error('El registro no existe en PostgreSQL. No se eliminó nada.');
+    const method=deleteId!==null?'DELETE':'PUT';
+    const endpoint=encodeURIComponent(id);
+    const token=window.AutoservicioAuth?.getToken?.();
+    const baseUrl=window.API_BASE_URL;
+    if(!token||!baseUrl)throw new Error('No hay sesión o conexión con la API');
+    const response=await fetch(`${baseUrl}/proveedores/compartidos/${n}/registros/${endpoint}`,{
+      method,cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:`Bearer ${token}`},
+      body:JSON.stringify({revision:remote.revision,...(deleteId===null?{registro:record}:{})})
+    });
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||!result.ok)throw new Error(result.mensaje||`PostgreSQL rechazó la operación (HTTP ${response.status})`);
+    const verified=await request(n);
+    const actual=asList(verified.registros).find(x=>idOf(x)===id);
+    if(deleteId===null?!actual||!equalRecord(actual,record):!!actual)throw new Error('El servidor no confirmó el cambio en la lectura posterior. Revisá antes de reintentar.');
+    revisions[n]=verified.revision;
+    confirmedSnapshots[n]=structuredClone(fromList(n,asList(verified.registros)));
+    changed(n,asList(verified.registros));
+    report(n,'confirmed');
+    return true;
+  }catch(e){report(n,'failed',e.message);console.error('Operación individual '+n,e);throw e}
+  finally{individualBusy.delete(n)}
 }
 async function start(){
   if(initialized||!window.AutoservicioAuth?.getToken?.())return;
   initialized=true;
   for(const n of Object.keys(groups))await load(n);
-  for(const n of Object.keys(queued)){const value=queued[n];delete queued[n];save(n,value)}
+  for(const n of Object.keys(queued)){const value=queued[n];delete queued[n];void save(n,value)}
   setInterval(()=>{if(!document.hidden){if(!onProveedoresScreen())hideNotice();for(const n of Object.keys(groups))load(n)}},20000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)for(const n of Object.keys(groups))load(n)});
 }
-window.ProveedoresSync={start,save,refresh:()=>Promise.all(Object.keys(groups).map(load)),recover};
+window.ProveedoresSync={start,save,mutateRecord,refresh:()=>Promise.all(Object.keys(groups).map(load)),recover,getWriteStatus:()=>structuredClone(writeStatus)};
 window.addEventListener('load',()=>{setTimeout(start,1000);setInterval(start,5000)});
 })();
