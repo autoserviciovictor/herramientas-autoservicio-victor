@@ -467,15 +467,11 @@ async function cargarTareasRemotas() {
       : remotas;
     guardarLocal(visibles);
 
-    if (
-      usuario()?.rol === "administrador" &&
-      !remotas.length &&
-      locales.length &&
-      !pendienteActual
-    ) {
-      guardarLocal(locales);
-      await sincronizarTareas(locales);
-    }
+    // Una respuesta vacía de PostgreSQL es un estado válido (por ejemplo,
+    // después de eliminar todas las tareas). Nunca restaurar automáticamente
+    // una copia histórica del navegador: podría recrear tareas eliminadas.
+    // Los datos locales siguen conservados como respaldo, pero cualquier
+    // migración debe realizarse explícitamente y con verificación previa.
   } catch {
     tareasMemoria = locales;
   }

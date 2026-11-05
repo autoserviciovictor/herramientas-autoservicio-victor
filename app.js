@@ -97,17 +97,15 @@ let pulsacionLargaVencimientos = null;
 let ignorarSiguienteClickVencimiento = false;
 let vistaVencimientos = "grid";
 const gruposVencimientosAbiertos = new Set(["7"]);
-// Selecciones manuales persistentes en este navegador.
-const CLAVE_PRIORIDADES_VENC = "autoservicio_vencimientos_prioridad_v1";
-function leerPrioridadesVencimientos() {
-  try {
-    const ids = JSON.parse(localStorage.getItem(CLAVE_PRIORIDADES_VENC) || "[]");
-    return new Set(Array.isArray(ids) ? ids.map(String) : []);
-  } catch { return new Set(); }
+// La prioridad manual es compartida: PostgreSQL es la única fuente de verdad.
+const prioridadesVencimientosManuales = new Set();
+function actualizarPrioridadesDesdeServidor(registros) {
+  prioridadesVencimientosManuales.clear();
+  for (const item of registros || []) {
+    if (item?.prioridadManual === true) prioridadesVencimientosManuales.add(String(item.id));
+  }
 }
-const prioridadesVencimientosManuales = leerPrioridadesVencimientos();
 function esPrioridadVencimiento(item) {
-  // La fecha prevalece sobre el stock y la selección manual: nunca incluir vencidos.
   const diasRestantes = diasHastaVencimiento(item?.vencimiento);
   if (!Number.isFinite(diasRestantes) || diasRestantes <= 0 || diasRestantes >= 99999) return false;
   return Number(item?.cantidad || 0) > 20 || prioridadesVencimientosManuales.has(String(item?.id || ""));
@@ -115,12 +113,20 @@ function esPrioridadVencimiento(item) {
 function prioridadManualVencimiento(item) {
   return prioridadesVencimientosManuales.has(String(item?.id || ""));
 }
-function cambiarPrioridadManualVencimiento(item, activa) {
+async function cambiarPrioridadManualVencimiento(item, activa) {
   const id = String(item?.id || "");
   if (!id) return;
+  const respuesta = await fetch(`${API_BASE_URL}/vencimientos/${encodeURIComponent(id)}/prioridad`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ activa: Boolean(activa) }),
+  });
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok || datos.ok !== true || datos.prioridadManual !== Boolean(activa)) {
+    throw new Error(datos.mensaje || "No se pudo confirmar la prioridad en PostgreSQL");
+  }
   if (activa) prioridadesVencimientosManuales.add(id);
   else prioridadesVencimientosManuales.delete(id);
-  localStorage.setItem(CLAVE_PRIORIDADES_VENC, JSON.stringify([...prioridadesVencimientosManuales]));
   renderListadoVencimientos();
 }
 
@@ -2961,6 +2967,7 @@ async function cargarListadoVencimientos(opciones = {}) {
       }),
     ]);
     vencimientosCache = Array.isArray(vencimientos) ? vencimientos : [];
+    actualizarPrioridadesDesdeServidor(vencimientosCache);
     // El servidor es la fuente compartida para los datos de ofertas.
     sincronizarCartelesConVencimientos(vencimientosCache);
 
@@ -3524,7 +3531,7 @@ async function alternarOfertaVencimiento(item) {
       return false;
     }
     await actualizarOfertaVencimiento(item.id, false);
-    cambiarPrioridadManualVencimiento(item, Boolean($("vencEditPrioridadInput")?.checked));
+    await cambiarPrioridadManualVencimiento(item, Boolean($("vencEditPrioridadInput")?.checked));
     await cargarListadoVencimientos({
       mantenerVista: true,
       vista,
@@ -4584,7 +4591,7 @@ async function guardarEdicionVencimiento() {
       if (tieneOferta(item)) await actualizarOfertaVencimiento(item.id, false);
       eliminarOfertaCartelGuardada(item.id);
     }
-    cambiarPrioridadManualVencimiento(item, prioridadManualElegida);
+    await cambiarPrioridadManualVencimiento(item, prioridadManualElegida);
     await cargarListadoVencimientos({
       mantenerVista: true,
       vista,

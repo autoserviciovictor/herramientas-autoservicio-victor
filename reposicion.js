@@ -101,15 +101,6 @@ function usuarioCacheRepo() {
 function claveCacheRepo(lista = listaActual) {
   return `autoservicio_repo_${usuarioCacheRepo()}_lista_${String(lista) === "2" ? "2" : "1"}`;
 }
-function leerCacheRepo(lista = listaActual) {
-  try {
-    const raw = localStorage.getItem(claveCacheRepo(lista));
-    const data = raw ? JSON.parse(raw) : null;
-    return Array.isArray(data?.registros) ? data.registros : [];
-  } catch {
-    return [];
-  }
-}
 function guardarCacheRepo(lista = listaActual) {
   try {
     localStorage.setItem(
@@ -123,18 +114,6 @@ function guardarCacheRepo(lista = listaActual) {
     );
   } catch {}
 }
-function aplicarCacheRepo(lista = listaActual) {
-  const cache = leerCacheRepo(lista);
-  if (!cache.length) return false;
-  registros = normalizarOrdenRegistros(
-    cache.map((item) => ({
-      ...item,
-      lista: String(item.lista || lista) === "2" ? "2" : "1",
-    })),
-  );
-  return true;
-}
-
 function apiUrl(ruta) {
   return `${String(API_BASE_URL || "").replace(/\/$/, "")}${ruta}`;
 }
@@ -555,7 +534,7 @@ export function prepararReposicion() {
   seleccionarLista("1", { refrescar: false });
   actualizarFabRepo();
   render();
-  refrescarReposicion({ mostrarCarga: false })
+  refrescarReposicion({ mostrarCarga: true })
     .then(() => render())
     .catch(() => {});
 }
@@ -591,38 +570,46 @@ async function seleccionarLista(valor, { refrescar = true } = {}) {
   window.RepoFaltantes?.ocultar();
   if (listaActual === nueva && refrescar) {
     sincronizarSelectorListas();
-    render();
+    await refrescarReposicion({ mostrarCarga: true });
     return;
   }
   listaActual = nueva;
   productoActual = null;
   limpiar();
   registros = [];
-  const habiaCache = aplicarCacheRepo(nueva);
+  // Los respaldos locales no se muestran como si fueran datos compartidos.
   sincronizarSelectorListas();
   render();
-  if (refrescar) await refrescarReposicion({ mostrarCarga: !habiaCache });
+  if (refrescar) await refrescarReposicion({ mostrarCarga: true });
 }
 
 export async function refrescarReposicion({ mostrarCarga = true } = {}) {
   const listaSolicitada = listaActual;
   const secuencia = ++secuenciaCargaLista;
-  const habiaCache = registros.length > 0 || aplicarCacheRepo(listaSolicitada);
-  cargandoRegistros = mostrarCarga && !habiaCache;
+  // La lista visible siempre debe provenir de PostgreSQL. Al comenzar una
+  // lectura, no reutilizar resultados anteriores ni respaldos del navegador.
+  registros = [];
+  cargandoRegistros = true;
   render();
   try {
     const data = await pedir(`/reposicion?lista=${listaSolicitada}`);
     if (secuencia !== secuenciaCargaLista || listaActual !== listaSolicitada)
       return;
+    if (!Array.isArray(data.registros)) {
+      throw new Error("El servidor devolvió una lista inválida");
+    }
     registros = normalizarOrdenRegistros(
-      (data.registros || []).map((item) => ({
+      data.registros.map((item) => ({
         ...item,
         lista: String(item.lista || listaSolicitada) === "2" ? "2" : "1",
       })),
     );
     guardarCacheRepo(listaSolicitada);
-    } catch (e) {
-    if (secuencia === secuenciaCargaLista) toast(e.message, "error");
+  } catch (e) {
+    if (secuencia === secuenciaCargaLista && listaActual === listaSolicitada) {
+      registros = [];
+      toast(`${e.message}. No se muestran respaldos locales: la lista no está actualizada.`, "error");
+    }
   } finally {
     if (secuencia === secuenciaCargaLista) {
       cargandoRegistros = false;

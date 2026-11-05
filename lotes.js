@@ -896,7 +896,7 @@ async function guardar() {
     vencimiento,
     cantidad,
     // Se sincroniza Vencimientos por sus endpoints normales para que quede historial.
-    cortaFecha: false
+    cortaFecha
   };
 
   try {
@@ -918,15 +918,6 @@ async function guardar() {
       nuevo: { ...loteGuardado, cortaFecha },
       rubro
     });
-
-    // Guardar el estado Corta fecha en el lote. Si el vencimiento ya existe,
-    // el servidor ignora correctamente el duplicado.
-    if (cortaFecha) {
-      await json(`/lotes/${encodeURIComponent(loteGuardado.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify({ ...body, cortaFecha: true })
-      });
-    }
 
     await cargar();
     cerrar();

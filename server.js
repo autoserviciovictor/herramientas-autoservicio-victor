@@ -119,6 +119,7 @@ const {
 const {
   asegurarEsquemaVencimientos,
   listarVencimientosDb,
+  establecerPrioridadManualVencimientoDb,
   crearVencimientoDb,
   actualizarVencimientoDb,
   eliminarVencimientoDb,
@@ -6938,6 +6939,20 @@ app.get("/vencimientos", requerirAlgunModulo("vencimientos"), async (req, res) =
       ok: false,
       mensaje: error.message || "Error al obtener vencimientos",
     });
+  }
+});
+
+app.patch("/vencimientos/:id/prioridad", requerirAlgunModulo("vencimientos"), async (req, res) => {
+  try {
+    if (typeof req.body?.activa !== "boolean")
+      return res.status(400).json({ ok: false, mensaje: "Prioridad inválida" });
+    const resultado = await establecerPrioridadManualVencimientoDb(req.params.id, req.body.activa);
+    if (!resultado) return res.status(404).json({ ok: false, mensaje: "Vencimiento no encontrado" });
+    invalidarCache("vencimientos");
+    res.json({ ok: true, prioridadManual: resultado.manual_priority });
+  } catch (error) {
+    console.error("Error en prioridad de vencimientos:", error);
+    res.status(500).json({ ok: false, mensaje: "No se pudo guardar la prioridad en PostgreSQL" });
   }
 });
 

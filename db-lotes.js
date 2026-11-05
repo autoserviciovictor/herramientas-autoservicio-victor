@@ -38,16 +38,7 @@ async function asegurarEsquemaLotes(){
     )`);
     await query(`CREATE INDEX IF NOT EXISTS lot_alerts_due_idx ON lot_alerts(active,notify_date,sent_at)`);
     await query(`CREATE INDEX IF NOT EXISTS lot_alerts_user_idx ON lot_alerts(user_key,active)`);
-    // Limpieza conservadora de duplicados históricos generados por una doble
-    // petición: solo elimina copias idénticas creadas con hasta 5 segundos de diferencia.
-    await query(`WITH repetidos AS (
-      SELECT lot_pk, LAG(lot_pk) OVER (PARTITION BY code,article,category,expiry_date,quantity,short_date ORDER BY created_at,lot_pk) AS anterior_pk,
-             created_at, LAG(created_at) OVER (PARTITION BY code,article,category,expiry_date,quantity,short_date ORDER BY created_at,lot_pk) AS anterior_fecha
-      FROM lot_records
-    )
-    DELETE FROM lot_records l USING repetidos r
-    WHERE l.lot_pk=r.lot_pk AND r.anterior_pk IS NOT NULL
-      AND r.created_at-r.anterior_fecha <= INTERVAL '5 seconds'`);
+    // Nunca borrar lotes automáticamente al iniciar: dos cargas iguales pueden ser legítimas.
     esquemaAsegurado=true;
   })();
   try{await promesaEsquema;}finally{promesaEsquema=null;}

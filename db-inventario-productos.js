@@ -397,6 +397,24 @@ async function reemplazarCatalogoDb(catalogo, cliente = null) {
         stock: Number.isFinite(Number(producto?.stock)) ? Number(producto.stock) : 0,
       }))
       .filter((producto) => producto.code && producto.article);
+    // Nunca vaciar el catálogo por un archivo vacío o por filas descartadas.
+    // La validación se hace antes del DELETE y dentro de la transacción.
+    if (!Array.isArray(catalogo) || catalogo.length === 0 || filas.length === 0) {
+      throw new Error("Importación cancelada: el archivo no contiene productos válidos. El catálogo existente se conserva.");
+    }
+    if (filas.length !== catalogo.length) {
+      throw new Error("Importación cancelada: hay productos sin código o nombre. Corregí el archivo antes de reemplazar el catálogo.");
+    }
+    const codigos = new Set();
+    for (const fila of filas) {
+      if (codigos.has(fila.code)) {
+        throw new Error(`Importación cancelada: código duplicado (${fila.code}). No se modificó el catálogo.`);
+      }
+      codigos.add(fila.code);
+      if ((fila.price !== null && !Number.isFinite(fila.price)) || !Number.isFinite(fila.stock)) {
+        throw new Error(`Importación cancelada: precio o stock inválido (${fila.code}).`);
+      }
+    }
     // La importación reemplaza la tabla completa (DELETE + INSERT), por lo que
     // el trigger UPDATE no puede detectar los cambios de precio. Comparamos
     // contra el catálogo anterior dentro de la misma transacción.
@@ -407,7 +425,6 @@ async function reemplazarCatalogoDb(catalogo, cliente = null) {
     );
     const preciosAnteriores = new Map(anteriores.rows.map(f => [f.code, f.price]));
     await c.query("DELETE FROM product_catalog");
-    if (!filas.length) return;
     await c.query(
       `INSERT INTO product_catalog(legacy_row,code,article,price,stock)
        SELECT legacy_row,code,article,price,stock

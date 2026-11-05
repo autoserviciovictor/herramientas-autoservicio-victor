@@ -89,8 +89,8 @@ function guardarCacheHorarios(tipo, extra, data) {
 }
 async function fetchHorariosUnico(url, key, { forzar = false } = {}) {
   const cache = leerCacheHorarios("api", key);
-  if (!forzar && cache && Date.now() - cache.ts < HORARIOS_CACHE_TTL)
-    return cache.data;
+  // Los horarios operativos siempre se consultan al servidor; la copia local
+  // se conserva solo como respaldo y no se muestra como dato vigente.
   if (horariosPeticiones.has(key)) return horariosPeticiones.get(key);
   const prom = (async () => {
     const r = await fetch(url, { cache: "default" });
@@ -213,26 +213,18 @@ async function cargarContextoHorarios() {
     renderSelectorSector();
     renderTodo();
   } catch (error) {
-    const respaldo = leerCacheHorarios("api", contextoCacheKey)?.data;
-    if (respaldo?.sectores?.length) {
-      sectoresHorarios = sectoresPermitidosParaUsuario(
-        respaldo.sectores || [],
-      );
-      permisoEdicionServidor = respaldo.puedeEditar === true;
-      const usuario = usuarioHorarios();
-      sectorActual =
-        sectorActual && sectoresHorarios.some((s) => s.id === sectorActual)
-          ? sectorActual
-          : usuario.sector || sectoresHorarios[0]?.id || "";
-      empleados = empleadosDelSector();
-    }
-    contextoHorariosCargado = true;
+    // Sin confirmación del servidor no se reutilizan permisos ni sectores
+    // almacenados en el navegador.
+    permisoEdicionServidor = false;
+    contextoHorariosCargado = false;
+    sectoresHorarios = [];
+    sectorActual = "";
+    empleados = [];
+    datos.clear();
+    detalles.clear();
     renderSelectorSector();
     renderTodo();
-    avisoHorarios(
-      "No se pudo actualizar. Se muestran los últimos datos guardados.",
-      "error",
-    );
+    avisoHorarios("No se pudo consultar PostgreSQL. No se muestran horarios locales.", "error");
   }
 }
 function crearSelectorSector() {
@@ -507,25 +499,10 @@ async function cargarCalendarioActual(forzar = false) {
       ]);
     }
   } catch (error) {
-    const respaldo = leerCacheHorarios("api", cacheKey)?.data;
-    if (respaldo) {
-      limpiarMesDatos();
-      (respaldo.celdas || []).forEach((c) =>
-        datos.set(clave(String(c.empleado), Number(c.dia)), String(c.turno)),
-      );
-      detalles.clear();
-      (respaldo.detalles || []).forEach((x) =>
-        detalles.set(keyCelda(String(x.empleado), Number(x.dia)), {
-          tipo: x.tipo || "",
-          motivo: x.motivo || "",
-          observacion: x.observacion || "",
-        }),
-      );
-    }
-    avisoHorarios(
-      "No se pudo actualizar el calendario. Se muestran los últimos datos guardados.",
-      "error",
-    );
+    // Nunca presentar el último calendario local como si fuera el vigente.
+    limpiarMesDatos();
+    detalles.clear();
+    avisoHorarios("No se pudo consultar PostgreSQL. El calendario no está actualizado.", "error");
   }
 }
 function obtenerTurnoEn(fecha, e, d) {
@@ -806,7 +783,7 @@ async function confirmarGuardado() {
     await salirModoEdicion(true);
     await cargarResumenHoy(true);
     renderTodo();
-    avisoHorarios("Cambios guardados");
+    // Guardado confirmado sin mostrar un aviso de éxito.
   } catch (error) {
     avisoHorarios(
       error.message || "No se pudieron guardar los cambios",

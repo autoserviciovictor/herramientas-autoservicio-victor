@@ -10,12 +10,9 @@ const writeStatus={};
 function report(n,state,message=''){
   writeStatus[n]={state,message,at:new Date().toISOString()};
   window.dispatchEvent(new CustomEvent('proveedores:estado-guardado',{detail:{coleccion:n,...writeStatus[n]}}));
-  let el=document.getElementById('proveedores-estado-guardado');
-  if(!el){el=document.createElement('div');el.id='proveedores-estado-guardado';el.setAttribute('role','status');el.style.cssText='position:fixed;bottom:12px;left:12px;z-index:2147483646;max-width:360px;padding:9px 13px;border-radius:9px;box-shadow:0 3px 16px #0003;font:13px/1.4 Arial,sans-serif';document.body?.appendChild(el)}
-  const outstanding=Object.entries(writeStatus).filter(([,v])=>v.state!=='confirmed');
-  if(!outstanding.length){el.textContent='Cambios confirmados en PostgreSQL';el.style.background='#e7f5ec';el.style.color='#155b30';return}
-  el.textContent=outstanding.map(([key,v])=>key+': '+(v.state==='saving'?'guardando en PostgreSQL…':'SIN CONFIRMAR en PostgreSQL — '+v.message)).join(' | ');
-  el.style.background=outstanding.some(([,v])=>v.state==='failed')?'#fff0e8':'#fff8db';el.style.color='#653000';
+  // Estado interno disponible para los formularios; sin carteles flotantes.
+  // Los errores siguen propagándose a los formularios que ejecutan la operación.
+  document.getElementById('proveedores-estado-guardado')?.remove();
 }
 let initialized=false,recovering=false,notice=null,progress=null;
 const parseText=s=>{try{return JSON.parse(s)}catch{return null}};
