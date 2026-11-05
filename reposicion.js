@@ -13,6 +13,7 @@ import { escapeHTML as escapar } from "./shared/dom-utils.js?v=1960-d21-cierre-e
 const $ = (id) => document.getElementById(id);
 let productoActual = null;
 let registros = [];
+let resumenOtraListaServidor = null;
 let tab = "registro";
 let iniciado = false;
 let operacionEnCurso = false;
@@ -589,6 +590,7 @@ export async function refrescarReposicion({ mostrarCarga = true } = {}) {
   // La lista visible siempre debe provenir de PostgreSQL. Al comenzar una
   // lectura, no reutilizar resultados anteriores ni respaldos del navegador.
   registros = [];
+  resumenOtraListaServidor = null;
   cargandoRegistros = true;
   render();
   try {
@@ -605,6 +607,22 @@ export async function refrescarReposicion({ mostrarCarga = true } = {}) {
       })),
     );
     guardarCacheRepo(listaSolicitada);
+    // El resumen de la otra lista también se consulta al servidor; nunca
+    // mostrar un respaldo local como si fuera información actualizada.
+    const otraLista = listaSolicitada === "1" ? "2" : "1";
+    try {
+      const otraRespuesta = await pedir(`/reposicion?lista=${otraLista}`);
+      if (secuencia !== secuenciaCargaLista || listaActual !== listaSolicitada) return;
+      if (Array.isArray(otraRespuesta.registros)) {
+        resumenOtraListaServidor = {
+          lista: otraLista,
+          registros: otraRespuesta.registros,
+        };
+      }
+    } catch {
+      // El fallo del resumen secundario no impide trabajar con la lista activa.
+      resumenOtraListaServidor = null;
+    }
   } catch (e) {
     if (secuencia === secuenciaCargaLista && listaActual === listaSolicitada) {
       registros = [];
@@ -990,7 +1008,11 @@ function renderRecientesListas() {
   if (!contenedor) return;
 
   const datos = ["1", "2"].map((lista) => {
-    const items = lista === listaActual ? registros : leerCacheRepo(lista);
+    const items = lista === listaActual
+      ? registros
+      : resumenOtraListaServidor?.lista === lista
+        ? resumenOtraListaServidor.registros
+        : [];
     return { lista, ...resumenDeRegistros(items) };
   });
   const conDatos = datos.filter((item) => item.productos > 0);
