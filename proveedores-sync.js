@@ -13,7 +13,13 @@ const fromList=(n,v)=>n==='colores'?(v[0]||{}):v;
 const backup=(n,v)=>{try{localStorage.setItem('respaldo_sync_'+n+'_'+new Date().toISOString(),JSON.stringify(v))}catch(e){console.warn('Respaldo:',e)}};
 const idOf=x=>x&&x.id!=null?String(x.id):'';
 // Los registros antiguos pueden carecer de id: conservarlos por huella de contenido.
-const identity=x=>idOf(x)?'id:'+idOf(x):'contenido:'+JSON.stringify(x);
+const canonical=x=>{
+  if(Array.isArray(x))return x.map(canonical);
+  if(x&&typeof x==='object')return Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])]));
+  return x;
+};
+const equalRecord=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+const identity=x=>idOf(x)?'id:'+idOf(x):'contenido:'+JSON.stringify(canonical(x));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function localCandidates(n){
   const items=[{key:groups[n],value:parse(groups[n])}];
@@ -208,7 +214,12 @@ async function save(n,value){
         for(const x of submitted)map.set(identity(x),x);
         combined=[...map.values()];
       }
-      try{
+      // Si la base ya contiene el estado solicitado, no generar otra revisión.
+      const sameRecords=combined.length===records.length && combined.every(x=>{
+        const actual=records.find(y=>identity(y)===identity(x));
+        return actual&&equalRecord(actual,x);
+      });
+      if(!sameRecords)try{
         await request(n,'PUT',{revision:remote.revision,registros:combined});
       }catch(e){
         lastError=e.message;
@@ -221,7 +232,7 @@ async function save(n,value){
       if(combined.every(x=>ids.has(identity(x))) &&
           submitted.every(x=>{
             const actual=saved.find(y=>identity(y)===identity(x));
-            return actual&&JSON.stringify(actual)===JSON.stringify(x);
+            return actual&&equalRecord(actual,x);
           })){
         verified=true;revisions[n]=check.revision;
         // Actualizar el almacenamiento local solo si no hubo otra edición posterior.
