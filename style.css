@@ -17708,3 +17708,44 @@ body > #repoFaltantesModal { z-index: 2147483000 !important; }
   box-shadow: none !important;
   cursor: not-allowed !important;
 }
+
+/* Faltantes: tarjetas compactas idénticas a las listas personales. */
+#pantallaAnotar .repo-faltantes-panel .repo-products-list:not(.vacio){min-height:0!important;display:flex!important;flex-direction:column!important;gap:8px!important}
+#pantallaAnotar .repo-faltantes-panel .repo-products-list:not(.vacio) .repo-product-row{min-height:64px!important;height:auto!important;margin:0!important;padding:10px 12px!important;align-items:center!important}
+#pantallaAnotar .repo-faltantes-panel .repo-row-more{border:0;background:transparent;color:#64748b}
+body > #repoFaltantesModal .repo-faltantes-dialog-foot button{display:block!important;background:#f51b49!important;color:white!important;border:0!important;border-radius:10px!important;font-weight:800!important;min-height:46px!important;box-shadow:0 8px 20px rgba(245,27,73,.15)!important;cursor:pointer}
+body > #repoFaltantesModal .repo-faltantes-indicaciones{margin-top:18px;font-size:13px;color:#475569}
+body > #repoFaltantesModal .repo-faltantes-indicaciones p{margin:8px 0}
+body > #repoFaltantesModal .repo-faltantes-indicaciones strong{color:#1e293b}
+body > #repoFaltantesConfirmar,body > #repoFaltantesEditar{z-index:2147483001!important}
+body:has(#repoFaltantesConfirmar:not(.oculto)) #repoFab,body:has(#repoFaltantesEditar:not(.oculto)) #repoFab{display:none!important}
+@media(max-width:700px){
+body > #repoFaltantesModal .repo-faltantes-dialog{padding:18px!important}
+#pantallaAnotar .repo-faltantes-panel .repo-products-list:not(.vacio) .repo-product-row{min-height:60px!important}
+}
+
+/* Faltantes compartida: mismo botón Eliminar producto que Lista 2. */
+#repoFaltantesEditar .repo-item-edit-delete-btn {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0 14px;
+  border: 1px solid #f04462;
+  border-radius: 10px;
+  background: #fff;
+  color: #e91d42;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+#repoFaltantesEditar .repo-item-edit-delete-btn:hover { background: #fff5f7; }
+html[data-theme="dark"] #repoFaltantesEditar .repo-item-edit-delete-btn { background: var(--pro-panel); border-color: #ff5571; color: #ff7189; }
+html[data-theme="dark"] #repoFaltantesEditar .repo-item-edit-delete-btn:hover { background: #2a2031; }
+@media (max-width: 900px) {
+  #repoFaltantesEditar .repo-item-edit-delete-btn { min-height: 46px; font-size: 12px; }
+}

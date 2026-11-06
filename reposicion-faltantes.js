@@ -4,6 +4,7 @@ let visible = false;
 let items = [];
 let peticion = 0;
 let reinicioEnCurso = false;
+let productoEnEdicion = null;
 const escapar = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(ruta, options={}) {
   const res = await fetch(`${String(API_BASE_URL || '').replace(/\/$/,'')}/reposicion/faltantes${ruta}`, {
@@ -37,6 +38,8 @@ function dibujar() {
   if ($('repoFaltantesResumenProductos')) $('repoFaltantesResumenProductos').textContent = String(productos);
   if ($('repoFaltantesResumenUnidades')) $('repoFaltantesResumenUnidades').textContent = `${unidades} un.`;
   if ($('repoFaltantesResumenActualizado')) $('repoFaltantesResumenActualizado').textContent = ultimaFecha ? ultimaFecha.toLocaleString('es-AR', {dateStyle:'short',timeStyle:'short'}) : '—';
+  const recientes = $('repoFaltantesRecientesContenido');
+  if (recientes) recientes.innerHTML = ultimaFecha ? `<div class="repo-recent-item"><strong>Faltantes · Compartida</strong><small>${escapar(ultimaFecha.toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}))}</small><span>${productos} prod.</span></div>` : '<p class="repo-faltantes-sin-recientes">Aún no hay listas recientes.</p>';
   const q = ($('repoFaltantesBuscar')?.value || '').toLocaleLowerCase('es').trim();
   const visibles = items.filter(x => x.nombre.toLocaleLowerCase('es').includes(q) && (filtro === 'todos' || (filtro === 'pendientes' ? !x.conseguido : x.conseguido)))
     .sort((a,b) => Number(a.conseguido)-Number(b.conseguido));
@@ -48,8 +51,8 @@ function dibujar() {
     <span class="repo-row-product-icon" aria-hidden="true"><svg class="app-icon"><use href="#icon-box"></use></svg></span>
     <div class="repo-row-copy"><strong>${escapar(x.nombre)}</strong></div>
     <span class="repo-row-qty">${Number(x.cantidad)} un.</span>
-    <button type="button" class="repo-row-more" data-accion="eliminar" aria-label="Eliminar ${escapar(x.nombre)}" title="Eliminar producto">
-      <svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>
+    <button type="button" class="repo-row-more" data-accion="editar" aria-label="Editar ${escapar(x.nombre)}" title="Editar producto">
+      <svg class="app-icon" aria-hidden="true"><use href="#icon-more"></use></svg>
     </button></article>`).join('') : `<div class="repo-empty-state"><span class="repo-empty-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-box"></use></svg></span><strong>${items.length ? 'No encontramos productos.' : 'No hay productos anotados.'}</strong><small>${items.length ? 'Probá con otra búsqueda o filtro.' : 'Los productos que agregues aparecerán acá.'}</small><button type="button" id="repoFaltantesVacioCargar">+ Cargar productos</button></div>`;
   if (errorConexion) {
     destino.insertAdjacentHTML('afterbegin', `<div class="repo-faltantes-aviso" role="status"><span>${escapar(errorConexion)}</span><button type="button" id="repoFaltantesReintentar">Reintentar</button></div>`);
@@ -57,9 +60,57 @@ function dibujar() {
   }
   $('repoFaltantesVacioCargar')?.addEventListener('click', abrirEditor);
 }
+
+function abrirModal(id) {
+  const modal = $(id);
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  modal?.classList.remove('oculto');
+  modal?.setAttribute('aria-hidden','false');
+}
+function cerrarModal(id) {
+  $(id)?.classList.add('oculto');
+  $(id)?.setAttribute('aria-hidden','true');
+}
+function confirmarFaltantes(mensaje, accion) {
+  return new Promise(resolve => {
+    const modal = $('repoFaltantesConfirmar');
+    $('repoFaltantesConfirmarTexto').textContent = mensaje;
+    $('repoFaltantesConfirmarAccion').textContent = accion;
+    abrirModal('repoFaltantesConfirmar');
+    const finalizar = resultado => { cerrarModal('repoFaltantesConfirmar'); aceptar.removeEventListener('click', si); cancelar.removeEventListener('click', no); modal.removeEventListener('click', fondo); resolve(resultado); };
+    const aceptar = $('repoFaltantesConfirmarAccion'), cancelar = $('repoFaltantesConfirmarCancelar');
+    const si = () => finalizar(true), no = () => finalizar(false);
+    const fondo = e => { if (e.target === modal) no(); };
+    aceptar.addEventListener('click',si); cancelar.addEventListener('click',no); modal.addEventListener('click',fondo);
+  });
+}
+function editarProducto(id) {
+  const producto = items.find(x => String(x.id) === String(id));
+  if (!producto) return;
+  productoEnEdicion = String(id);
+  $('repoFaltantesEditarNombre').textContent = producto.nombre;
+  $('repoFaltantesEditarCantidad').value = String(producto.cantidad);
+  abrirModal('repoFaltantesEditar');
+}
+async function guardarProducto() {
+  const cantidad = Number($('repoFaltantesEditarCantidad').value);
+  if (!Number.isSafeInteger(cantidad) || cantidad < 1 || cantidad > 99999) { mostrarError(new Error('Ingresá una cantidad entre 1 y 99999.')); return; }
+  const boton = $('repoFaltantesEditarGuardar'); boton.disabled = true;
+  try { await api(`/${productoEnEdicion}`, {method:'PATCH',body:JSON.stringify({cantidad})}); cerrarModal('repoFaltantesEditar'); await refrescar(); }
+  catch(error) { mostrarError(error); await refrescar(); }
+  finally { boton.disabled = false; }
+}
+async function eliminarProducto() {
+  if (!await confirmarFaltantes('Se eliminará este producto de la lista compartida para todos los usuarios.', 'Eliminar producto')) return;
+  const boton = $('repoFaltantesEditarEliminar'); boton.disabled = true;
+  try { await api(`/${productoEnEdicion}`, {method:'DELETE'}); cerrarModal('repoFaltantesEditar'); await refrescar(); }
+  catch(error) { mostrarError(error); await refrescar(); }
+  finally { boton.disabled = false; }
+}
+
 async function empezarNuevaLista() {
   if (reinicioEnCurso || !items.length || errorConexion) return;
-  if (!window.confirm('¿Empezar una nueva lista de Faltantes? Se eliminarán los productos actuales para todos los usuarios.')) return;
+  if (!await confirmarFaltantes('Se eliminarán todos los productos de Faltantes para todos los usuarios.', 'Empezar nueva lista')) return;
   const ids = items.map(item => Number(item.id));
   reinicioEnCurso = true;
   dibujar();
@@ -74,8 +125,8 @@ async function empezarNuevaLista() {
     dibujar();
   }
 }
-function abrirEditor() { const modal = $('repoFaltantesModal'); if (modal && modal.parentElement !== document.body) document.body.appendChild(modal); modal?.classList.remove('oculto'); $('repoFaltantesTexto')?.focus(); }
-function cerrarEditor() { $('repoFaltantesModal')?.classList.add('oculto'); }
+function abrirEditor() { abrirModal('repoFaltantesModal'); $('repoFaltantesTexto')?.focus(); }
+function cerrarEditor() { cerrarModal('repoFaltantesModal'); }
 function parsearLineas(texto) {
   return texto.split(/\r?\n/).map(linea => linea.trim()).filter(Boolean).map(linea => {
     const m = linea.match(/^(\d+)\s+(.+)$/);
@@ -125,6 +176,12 @@ function iniciar() {
     abrirEditor();
   }, true);
   $('repoFaltantesCerrar')?.addEventListener('click', cerrarEditor);
+  $('repoFaltantesEditarCerrar')?.addEventListener('click', () => cerrarModal('repoFaltantesEditar'));
+  $('repoFaltantesEditarGuardar')?.addEventListener('click', guardarProducto);
+  $('repoFaltantesEditarEliminar')?.addEventListener('click', eliminarProducto);
+  for (const [id, delta] of [['repoFaltantesEditarMenos',-1],['repoFaltantesEditarMas',1]]) {
+    $(id)?.addEventListener('click', () => { const input = $('repoFaltantesEditarCantidad'); input.value = String(Math.max(1, Math.min(99999,(Number(input.value)||1)+delta))); });
+  }
   $('repoFaltantesModal')?.addEventListener('click', e => { if (e.target.id === 'repoFaltantesModal') cerrarEditor(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarEditor(); });
   $('repoFaltantesFiltroBoton')?.addEventListener('click', () => {
@@ -153,10 +210,7 @@ function iniciar() {
     if (boton.dataset.accion === 'estado') {
       try { await api(`/${id}`, {method:'PATCH',body:JSON.stringify({conseguido:boton.getAttribute('aria-pressed') !== 'true'})}); await refrescar(); }
       catch(error) { mostrarError(error); await refrescar(); }
-    } else if (boton.dataset.accion === 'eliminar') {
-      if (!confirm('¿Eliminar este producto de la lista compartida?')) return;
-      try { await api(`/${id}`, {method:'DELETE'}); await refrescar(); } catch(error) { mostrarError(error); }
-    }
+    } else if (boton.dataset.accion === 'editar') { editarProducto(id); }
   });
   document.addEventListener('visibilitychange', () => { if(visible && !document.hidden) refrescar(); });
 }

@@ -7455,8 +7455,11 @@ app.post('/reposicion/faltantes', requerirAlgunModulo('anotar'), async (req,res)
 });
 app.patch('/reposicion/faltantes/:id', requerirAlgunModulo('anotar'), async (req,res) => {
   const id=Number(req.params.id);
-  if(!Number.isSafeInteger(id)||id<1||typeof req.body?.conseguido!=='boolean') return res.status(400).json({ok:false,mensaje:'Datos inválidos'});
-  try {const registro=await faltantesCompartidos.estado(id,req.body.conseguido);if(!registro)return res.status(404).json({ok:false,mensaje:'No encontrado'});res.json({ok:true,registro});}
+  const tieneEstado=typeof req.body?.conseguido==='boolean';
+  const cantidad=Number(req.body?.cantidad);
+  const tieneCantidad=req.body?.cantidad!==undefined && Number.isSafeInteger(cantidad) && cantidad>=1 && cantidad<=99999;
+  if(!Number.isSafeInteger(id)||id<1||(!tieneEstado&&!tieneCantidad)|| (req.body?.cantidad!==undefined&&!tieneCantidad)) return res.status(400).json({ok:false,mensaje:'Datos inválidos'});
+  try {const registro=tieneCantidad ? await faltantesCompartidos.cantidad(id,cantidad) : await faltantesCompartidos.estado(id,req.body.conseguido);if(!registro)return res.status(404).json({ok:false,mensaje:'No encontrado'});res.json({ok:true,registro});}
   catch(e){console.error('Faltantes PATCH:',e);res.status(500).json({ok:false,mensaje:'No se pudo actualizar el faltante'});}
 });
 // Reiniciar únicamente los productos que el usuario vio al confirmar; no borrar

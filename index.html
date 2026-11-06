@@ -4448,9 +4448,10 @@ body.prov-order-modal-open{overflow:hidden}
               </section>
               <div id="repoFaltantesModal" class="repo-faltantes-modal oculto" role="dialog" aria-modal="true" aria-labelledby="repoFaltantesModalTitulo">
                 <div class="repo-faltantes-dialog">
-                  <div class="repo-faltantes-dialog-head"><div><small>FALTANTES · COMPARTIDA</small><h2 id="repoFaltantesModalTitulo">Empezar nueva lista</h2><p>Escribí productos y cantidades, uno por línea.</p></div><button id="repoFaltantesCerrar" type="button" aria-label="Cerrar">×</button></div>
+                  <div class="repo-faltantes-dialog-head"><div><small>FALTANTES · COMPARTIDA</small><h2 id="repoFaltantesModalTitulo">Escribir lista</h2><p>Escribí productos y cantidades, uno por línea.</p></div><button id="repoFaltantesCerrar" type="button" aria-label="Cerrar">×</button></div>
                   <form id="repoFaltantesForm" class="repo-faltantes-form">
                     <textarea id="repoFaltantesTexto" rows="7" placeholder="2 coca 1L&#10;3 paquetes de azúcar&#10;1 leche descremada" aria-label="Productos y cantidades"></textarea>
+                    <div class="repo-faltantes-indicaciones"><strong>Indicaciones</strong><p>✓ Cada línea debe contener producto y cantidad.</p><p>✓ La cantidad debe ser un número.</p><p>✓ Ejemplo válido: Arroz 1kg 2</p></div>
                     <div class="repo-faltantes-dialog-foot"><button type="submit">+ Agregar a mi lista</button></div>
                   </form>
                   <input id="repoFaltantesNombre" type="hidden" /><input id="repoFaltantesCantidad" type="hidden" value="1" />
@@ -4973,6 +4974,26 @@ body.prov-order-modal-open{overflow:hidden}
               Guardar cambios
             </button>
           </div>
+        </section>
+      </div>
+
+
+      <div id="repoFaltantesConfirmar" class="modal-overlay repo-confirm-modal oculto" aria-hidden="true">
+        <section class="modal-card repo-confirm-card" role="dialog" aria-modal="true" aria-labelledby="repoFaltantesConfirmarTitulo">
+          <div class="repo-confirm-icon" aria-hidden="true"><svg class="app-icon"><use href="#icon-list"></use></svg></div>
+          <h2 id="repoFaltantesConfirmarTitulo">Confirmar cambio</h2>
+          <p id="repoFaltantesConfirmarTexto"></p>
+          <div class="repo-confirm-actions"><button id="repoFaltantesConfirmarCancelar" class="cancel-btn" type="button">Cancelar</button><button id="repoFaltantesConfirmarAccion" class="danger-btn" type="button">Confirmar</button></div>
+        </section>
+      </div>
+      <div id="repoFaltantesEditar" class="modal-overlay inventory-edit-overlay oculto" aria-hidden="true">
+        <section class="inventory-edit-modal-card repo-item-edit-modal-card" role="dialog" aria-modal="true" aria-labelledby="repoFaltantesEditarTitulo">
+          <button type="button" id="repoFaltantesEditarCerrar" class="modal-close inventory-edit-modal-close" aria-label="Cerrar">×</button>
+          <header class="inventory-edit-modal-head"><span class="inventory-edit-eyebrow">FALTANTES · COMPARTIDA</span><h2 id="repoFaltantesEditarTitulo">Editar producto</h2><p>Actualizá la cantidad o eliminá el producto de la lista.</p></header>
+          <div class="inventory-edit-product-summary"><span class="inventory-edit-product-icon"><svg class="app-icon"><use href="#icon-box"></use></svg></span><div class="inventory-edit-product-copy"><small>Producto seleccionado</small><h3 id="repoFaltantesEditarNombre"></h3></div></div>
+          <div class="inventory-edit-stock-grid repo-item-edit-quantity-grid"><div class="inventory-edit-stock-field"><div class="inventory-edit-stock-label"><strong>Cantidad</strong><span>Unidades</span></div><div class="quantity-control small"><button id="repoFaltantesEditarMenos" type="button" aria-label="Restar unidad">−</button><input id="repoFaltantesEditarCantidad" type="number" min="1" max="99999" step="1" inputmode="numeric" aria-label="Cantidad"><button id="repoFaltantesEditarMas" type="button" aria-label="Sumar unidad">+</button></div></div></div>
+          <button id="repoFaltantesEditarEliminar" class="repo-item-edit-delete-btn" type="button">× Eliminar producto</button>
+          <div class="inventory-edit-modal-actions"><button id="repoFaltantesEditarGuardar" class="save-btn" type="button">✓ Guardar cambios</button></div>
         </section>
       </div>
 

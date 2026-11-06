@@ -31,6 +31,11 @@ async function estado(id, conseguido) {
   const r = await query('UPDATE replenishment_missing_shared SET conseguido=$2, actualizado=NOW() WHERE id=$1 RETURNING *',[id,conseguido]);
   return r.rows[0];
 }
+async function cantidad(id, nuevaCantidad) {
+  await asegurar();
+  const r = await query('UPDATE replenishment_missing_shared SET cantidad=$2, actualizado=NOW() WHERE id=$1 RETURNING *',[id,nuevaCantidad]);
+  return r.rows[0];
+}
 async function eliminar(id) {
   await asegurar();
   const r = await query('DELETE FROM replenishment_missing_shared WHERE id=$1 RETURNING id',[id]);
@@ -42,4 +47,4 @@ async function empezarNuevaLista(ids) {
   const r = await query('DELETE FROM replenishment_missing_shared WHERE id = ANY($1::bigint[]) RETURNING id', [ids]);
   return r.rowCount;
 }
-module.exports = {listar,agregar,estado,eliminar,empezarNuevaLista};
+module.exports = {listar,agregar,estado,cantidad,eliminar,empezarNuevaLista};
