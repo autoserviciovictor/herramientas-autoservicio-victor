@@ -2055,6 +2055,7 @@ app.get("/admin/catalogo/productos", requerirAdministrador, async (req, res) => 
       estado: req.query.estado,
       estadoImagen: req.query.imagen,
       destacado: req.query.destacado,
+      ordenStock: req.query.ordenStock,
     });
     res.json({ ok: true, ...resultado });
   } catch (error) {

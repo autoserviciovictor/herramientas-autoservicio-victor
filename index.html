@@ -1,4 +1,7 @@
-<!doctype html>
+git status
+git add horarios.js server.js
+git commit -m "Corregir horarios duplicados y conservar asignaciones"
+git push origin main<!doctype html>
 <html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
@@ -6349,6 +6352,14 @@ body.prov-order-modal-open{overflow:hidden}
                         <option value="todos">Todos</option>
                         <option value="destacados">Destacados</option>
                         <option value="no_destacados">No destacados</option>
+                      </select>
+                    </label>
+                    <label class="catalog-filter-field">
+                      <span>Ordenar por stock</span>
+                      <select id="catalogFiltroOrdenStock" aria-label="Ordenar productos por stock">
+                        <option value="todos">Sin ordenar</option>
+                        <option value="mayor">Mayor a menor stock</option>
+                        <option value="menor">Menor a mayor stock</option>
                       </select>
                     </label>
                   </div>

@@ -188,17 +188,19 @@ function parametrosProductos() {
   const est = $("catalogFiltroEstado")?.value || "todos";
   const imagen = $("catalogFiltroImagen")?.value || "todos";
   const destacado = $("catalogFiltroDestacado")?.value || "todos";
+  const ordenStock = $("catalogFiltroOrdenStock")?.value || "todos";
   if (q) p.set("q", q);
   if (rubro !== "todos") p.set("rubro", rubro);
   if (subrubro !== "todos") p.set("subrubro", subrubro);
   if (est !== "todos") p.set("estado", est);
   if (imagen !== "todos") p.set("imagen", imagen);
   if (destacado !== "todos") p.set("destacado", destacado);
+  if (ordenStock !== "todos") p.set("ordenStock", ordenStock);
   return p;
 }
 
 function cantidadFiltrosProductosActivos() {
-  return ["catalogFiltroRubro", "catalogFiltroSubrubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado"]
+  return ["catalogFiltroRubro", "catalogFiltroSubrubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado", "catalogFiltroOrdenStock"]
     .reduce((total, id) => total + (($(id)?.value || "todos") !== "todos" ? 1 : 0), 0);
 }
 
@@ -233,7 +235,7 @@ function alternarFiltrosProductos() {
 }
 
 async function limpiarFiltrosProductos() {
-  ["catalogFiltroRubro", "catalogFiltroSubrubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado"].forEach((id) => {
+  ["catalogFiltroRubro", "catalogFiltroSubrubro", "catalogFiltroEstado", "catalogFiltroImagen", "catalogFiltroDestacado", "catalogFiltroOrdenStock"].forEach((id) => {
     const select = $(id);
     if (!select) return;
     select.value = "todos";
@@ -290,6 +292,7 @@ function prepararSelectoresCatalogo() {
   prepararSelectorCatalogo("catalogFiltroEstado", { ancho: "normal" });
   prepararSelectorCatalogo("catalogFiltroImagen", { ancho: "normal" });
   prepararSelectorCatalogo("catalogFiltroDestacado", { ancho: "normal" });
+  prepararSelectorCatalogo("catalogFiltroOrdenStock", { ancho: "normal" });
   prepararSelectorCatalogo("catalogProductoRubro", { ancho: "wide", buscable: true });
   prepararSelectorCatalogo("catalogProductoSubrubro", { ancho: "wide" });
   prepararSelectorCatalogo("catalogProductoUnidad", { ancho: "compact" });
@@ -343,6 +346,11 @@ async function cargarProductos({ conservarPagina = true } = {}) {
     const terminos = busqueda.split(/\s+/).filter(Boolean);
     if (terminos.length > 1) {
       const encontrados = await buscarProductosPorTerminos(parametros, terminos);
+      const ordenStock = $("catalogFiltroOrdenStock")?.value;
+      if (ordenStock === "mayor" || ordenStock === "menor") {
+        const sentido = ordenStock === "mayor" ? -1 : 1;
+        encontrados.sort((a, b) => sentido * ((Number(a.stock) || 0) - (Number(b.stock) || 0)) || String(a.nombre || "").localeCompare(String(b.nombre || ""), "es"));
+      }
       estado.total = encontrados.length;
       estado.paginas = Math.ceil(estado.total / estado.limite);
       estado.pagina = Math.min(Math.max(1, estado.pagina), Math.max(1, estado.paginas));
@@ -1523,6 +1531,7 @@ function bind() {
   $("catalogFiltroEstado")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
   $("catalogFiltroImagen")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
   $("catalogFiltroDestacado")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
+  $("catalogFiltroOrdenStock")?.addEventListener("change", () => { actualizarUIFiltrosProductos(); cargarProductos({ conservarPagina: false }).catch((e) => mensaje(e.message)); });
   $("catalogBtnFiltros")?.addEventListener("click", alternarFiltrosProductos);
   $("catalogFiltrosLimpiar")?.addEventListener("click", () => limpiarFiltrosProductos().catch((e) => mensaje(e.message)));
   document.addEventListener("click", (e) => {

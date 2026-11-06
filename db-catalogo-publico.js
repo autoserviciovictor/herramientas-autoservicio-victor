@@ -741,6 +741,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
   const estado = textoLimitado(opciones.estado, 30);
   const estadoImagen = textoLimitado(opciones.estadoImagen, 30);
   const destacado = textoLimitado(opciones.destacado, 30);
+  const ordenStock = textoLimitado(opciones.ordenStock, 10);
   const condiciones = ["1=1"];
   const parametros = [];
   if (busqueda) {
@@ -819,7 +820,7 @@ async function listarProductosCatalogoAdminDb(opciones = {}) {
     LEFT JOIN catalog_product_settings s ON s.code=p.code
     LEFT JOIN catalog_categories c ON c.category_id=s.category_id
     WHERE ${where}
-    ORDER BY COALESCE(s.visible,FALSE) DESC, COALESCE(c.name,'zzzzzzzz'), p.article, p.code
+    ORDER BY ${ordenStock === "mayor" ? "COALESCE(p.stock,0) DESC, p.article, p.code" : ordenStock === "menor" ? "COALESCE(p.stock,0) ASC, p.article, p.code" : "COALESCE(s.visible,FALSE) DESC, COALESCE(c.name,'zzzzzzzz'), p.article, p.code"}
     LIMIT $${parametros.length - 1} OFFSET $${parametros.length}
   `, parametros);
   const total = Number(conteo.rows[0]?.total) || 0;
