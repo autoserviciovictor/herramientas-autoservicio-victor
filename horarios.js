@@ -1982,10 +1982,44 @@ function detalleTurnoConfig(t) {
     ? `${t.inicio} - ${t.fin} / ${t.inicio2} - ${t.fin2}`
     : `${t.inicio} - ${t.fin}`;
 }
+async function unificarTurnosDuplicados() {
+  const items = window.AutoservicioHorariosConfig?.cargar?.(sectorActual) || [];
+  const grupos = new Map();
+  for (const t of items) {
+    const clave = [t.tipo,t.inicio,t.fin,t.tipo === "cortado" ? t.inicio2 : "",t.tipo === "cortado" ? t.fin2 : ""].join("|");
+    grupos.set(clave, (grupos.get(clave) || 0) + 1);
+  }
+  const repetidos = [...grupos.values()].reduce((n,c) => n + Math.max(0,c-1),0);
+  if (!repetidos) return mensajeConfig("horariosConfigMensaje", "No hay horarios duplicados en este sector.");
+  if (!confirm(`Se unificarán ${repetidos} horarios duplicados de este sector. Las asignaciones pasarán al horario más utilizado y adoptarán su color. ¿Continuar?`)) return;
+  const boton = $("btnHorariosUnificarDuplicados");
+  if (boton) boton.disabled = true;
+  try {
+    const base = window.API_BASE_URL || window.AutoservicioConfig?.API_BASE_URL;
+    const r = await fetch(`${base}/horarios/turnos/unificar-duplicados`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sector: sectorActual })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) throw new Error(data.mensaje || "No se pudieron unificar los horarios.");
+    await window.AutoservicioHorariosConfig.cargarRemoto(sectorActual);
+    renderListaTurnosConfig();
+    cargarTurnosConfigurados();
+    renderTodo();
+    mensajeConfig("horariosConfigMensaje", `Se unificaron ${data.eliminados} horarios duplicados.`);
+  } catch (e) {
+    mensajeConfig("horariosConfigMensaje", e.message, "error");
+  } finally { if (boton) boton.disabled = false; }
+}
 function renderListaTurnosConfig() {
   const cont = $("horariosConfigLista");
   if (!cont) return;
   const items = window.AutoservicioHorariosConfig?.cargar?.(sectorActual) || [];
+  const unificar = $("btnHorariosUnificarDuplicados");
+  if (unificar) {
+    const claves = items.map(t => [t.tipo,t.inicio,t.fin,t.tipo === "cortado" ? t.inicio2 : "",t.tipo === "cortado" ? t.fin2 : ""].join("|"));
+    unificar.classList.toggle("oculto", new Set(claves).size === claves.length);
+  }
   cont.innerHTML = items.length
     ? items
         .map(
@@ -2679,4 +2713,18 @@ window.addEventListener("autoservicio:sesion", (event) => {
   resumenHoyDatos = new Map();
   resumenHoyClave = "";
   if (event.detail?.usuario && moduloHorariosActivo) void cargarContextoHorarios();
+});
+
+// El botón se instala sin alterar el resto de los controles del módulo.
+window.addEventListener("DOMContentLoaded", () => {
+  const lista = document.getElementById("horariosConfigLista");
+  if (!lista || document.getElementById("btnHorariosUnificarDuplicados")) return;
+  const boton = document.createElement("button");
+  boton.id = "btnHorariosUnificarDuplicados";
+  boton.type = "button";
+  boton.className = "horarios-config-primary oculto";
+  boton.textContent = "Unificar horarios duplicados";
+  boton.style.marginBottom = "12px";
+  boton.addEventListener("click", unificarTurnosDuplicados);
+  lista.before(boton);
 });

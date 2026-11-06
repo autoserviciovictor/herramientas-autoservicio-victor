@@ -2743,6 +2743,10 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
         ok: false,
         mensaje: "Configuración de horarios inválida o con identificadores repetidos",
       });
+    const clavesHorarios = turnos.map(t => [t.tipo,t.inicio,t.fin,
+      t.tipo === "cortado" ? t.inicio2 : "", t.tipo === "cortado" ? t.fin2 : ""].join("|"));
+    if (new Set(clavesHorarios).size !== clavesHorarios.length)
+      return res.status(409).json({ ok:false, mensaje:"Hay horarios con las mismas entradas y salidas. Unificá los duplicados antes de guardar." });
     await asegurarHorariosPostgres();
     const actuales = await obtenerTurnosSector(sector);
     const idsNuevos = new Set(turnos.map((t) => t.id));
@@ -2775,6 +2779,51 @@ app.put("/horarios/turnos", requerirAccesoHorarios, async (req, res) => {
     });
   }
 });
+// Unificación explícita y transaccional de horarios idénticos por sector.
+app.post("/horarios/turnos/unificar-duplicados", requerirAccesoHorarios, async (req, res) => {
+  try {
+    const sector = normalizarTexto(req.body?.sector);
+    if (!(await puedeModificarSectorHorarios(req.usuario, sector)))
+      return res.status(403).json({ ok: false, mensaje: "No tenés permiso para modificar este sector" });
+    await asegurarHorariosPostgres();
+    const resultado = await ejecutarEnCola("horarios-global", async () =>
+      conTransaccionHorarios(async (cliente) => {
+        const r = await cliente.query(
+          `SELECT shift_id AS id, start_time AS inicio, end_time AS fin,
+                  shift_type AS tipo, second_start_time AS inicio2, second_end_time AS fin2
+             FROM schedule_shifts WHERE sector_id=$1 ORDER BY shift_id FOR UPDATE`, [sector]);
+        const usos = await listarUsoTurnosSector(sector, cliente);
+        const grupos = new Map();
+        for (const t of r.rows) {
+          const clave = [t.tipo === "cortado" ? "cortado" : "continuo", t.inicio, t.fin,
+            t.tipo === "cortado" ? t.inicio2 : "", t.tipo === "cortado" ? t.fin2 : ""].join("|");
+          if (!grupos.has(clave)) grupos.set(clave, []);
+          grupos.get(clave).push(t);
+        }
+        const cambios = [];
+        for (const grupo of grupos.values()) {
+          if (grupo.length < 2) continue;
+          grupo.sort((a,b) => (usos.get(b.id)||0)-(usos.get(a.id)||0) || a.id.localeCompare(b.id));
+          const conservar = grupo[0];
+          for (const duplicado of grupo.slice(1)) {
+            // Las casillas de todos los meses mantienen el turno, con el ID conservado.
+            const actualizadas = await cliente.query(
+              `UPDATE schedule_calendar SET shift_value=$3 WHERE sector_id=$1 AND shift_value=$2`,
+              [sector, duplicado.id, conservar.id]);
+            await cliente.query(`DELETE FROM schedule_shifts WHERE sector_id=$1 AND shift_id=$2`,
+              [sector, duplicado.id]);
+            cambios.push({ conservar: conservar.id, eliminado: duplicado.id, asignaciones: actualizadas.rowCount });
+          }
+        }
+        return cambios;
+      }));
+    invalidarCache(`turnosHorarios:${sector}`);
+    res.json({ ok: true, cambios: resultado, eliminados: resultado.length });
+  } catch (e) {
+    res.status(500).json({ ok: false, mensaje: e.message || "No se pudieron unificar los horarios" });
+  }
+});
+
 app.get("/horarios/calendario", requerirAccesoHorarios, async (req, res) => {
   try {
     const sector = normalizarTexto(req.query.sector),
