@@ -1049,7 +1049,15 @@ function opcionesSelectorTurnos() {
   });
 
   const especiales = especialesOrden.map((id) => porId.get(id)).filter(Boolean).map(convertir);
+  // El calendario puede traer turnos históricos de otros sectores para
+  // representar casillas antiguas. El selector de pintura, en cambio, sólo
+  // ofrece los turnos configurados actualmente para el sector elegido.
+  const idsConfigurados = new Set(
+    (window.AutoservicioHorariosConfig?.cargar?.(sectorActual) || [])
+      .map((t) => String(t.id))
+  );
   const horarios = TURNOS.filter((t) =>
+    idsConfigurados.has(String(t.id)) &&
     t.id !== "personalizado" && !especialesOrden.includes(t.id)
   ).map(convertir);
 
@@ -1083,7 +1091,8 @@ async function abrirSelectorTurnos(evento) {
       title: "Seleccionar horario",
       kicker: "Pintar con",
       options: opcionesSelectorTurnos(),
-      value: turnoPincel,
+      value: opcionesSelectorTurnos().some((opcion) => opcion.value === turnoPincel)
+        ? turnoPincel : "__sin_asignar__",
     });
     if (elegido === null || elegido === undefined || elegido === "") return false;
     turnoPincel = elegido;
