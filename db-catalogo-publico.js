@@ -254,17 +254,20 @@ async function listarProductosPublicosDb(opciones = {}) {
   if (busqueda) {
     // Comparación sin tildes y sin distinguir mayúsculas/minúsculas.
     // translate() evita depender de la extensión unaccent en PostgreSQL.
-    const busquedaSinTildes = busqueda.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
-    parametros.push(`%${busquedaSinTildes}%`);
-    const indice = parametros.length;
+    const palabras = [...new Set(busqueda.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).filter(Boolean))].slice(0, 12);
     const sinTildes = (campo) =>
       `translate(lower(COALESCE(${campo}, '')), 'áéíóúüñàèìòùâêîôûäëïöÿ', 'aeiouunaeiouaeiouaeioy')`;
-    condiciones.push(`(
-      ${sinTildes("p.article")} LIKE lower($${indice})
-      OR ${sinTildes("p.code")} LIKE lower($${indice})
-      OR ${sinTildes("s.brand")} LIKE lower($${indice})
-      OR ${sinTildes("s.presentation")} LIKE lower($${indice})
-    )`);
+    // Cada palabra debe coincidir con algún campo, independientemente del orden.
+    for (const palabra of palabras) {
+      parametros.push(`%${palabra.replace(/[\\%_]/g, "\\$&")}%`);
+      const indice = parametros.length;
+      condiciones.push(`(
+        ${sinTildes("p.article")} LIKE $${indice} ESCAPE '\\'
+        OR ${sinTildes("p.code")} LIKE $${indice} ESCAPE '\\'
+        OR ${sinTildes("s.brand")} LIKE $${indice} ESCAPE '\\'
+        OR ${sinTildes("s.presentation")} LIKE $${indice} ESCAPE '\\'
+      )`);
+    }
   }
 
   if (rubro) {

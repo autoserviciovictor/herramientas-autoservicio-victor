@@ -1533,7 +1533,7 @@ function bindEvents() {
             opcion.className = "catalogo-search-suggestions__item";
             opcion.setAttribute("role", "option");
             opcion.textContent = producto.nombre || producto.article || producto.name || producto.codigo || "Producto";
-            opcion.addEventListener("click", () => confirmarBusqueda(producto.codigo || producto.code || opcion.textContent));
+            opcion.addEventListener("click", () => confirmarBusqueda(producto.nombre || producto.article || producto.name || opcion.textContent));
             menu.appendChild(opcion);
           }
           menu.hidden = false;
