@@ -34,7 +34,7 @@
       rel="stylesheet"
       href="design-tokens.css?v=1960-d21-cierre-etapa6-010926"
     />
-    <link rel="stylesheet" href="style.css?v=repo-visual-refresh-20261106" />
+    <link rel="stylesheet" href="style.css?v=faltantes-ancho-igual-20261106" />
     <link
       rel="stylesheet"
       href="design-components.css?v=1960-d21-cierre-etapa6-010926"
@@ -4441,14 +4441,14 @@ body.prov-order-modal-open{overflow:hidden}
                   </div>
                 </div>
                 <div class="repo-list-headline"><div><strong>Productos en Faltantes</strong>
-                  <button id="repoFaltantesNueva" class="repo-inline-new-list-btn" type="button">Escribir lista</button>
+                  <button id="repoFaltantesNueva" class="repo-inline-new-list-btn" type="button" disabled>Empezar nueva lista</button>
                 </div></div>
                 <div id="repoFaltantesListado" class="repo-products-list" aria-live="polite"></div>
                 <span id="repoFaltantesContador" class="repo-faltantes-contador oculto">0 pendientes</span>
               </section>
               <div id="repoFaltantesModal" class="repo-faltantes-modal oculto" role="dialog" aria-modal="true" aria-labelledby="repoFaltantesModalTitulo">
                 <div class="repo-faltantes-dialog">
-                  <div class="repo-faltantes-dialog-head"><div><small>FALTANTES · COMPARTIDA</small><h2 id="repoFaltantesModalTitulo">Escribir lista</h2><p>Escribí productos y cantidades, uno por línea.</p></div><button id="repoFaltantesCerrar" type="button" aria-label="Cerrar">×</button></div>
+                  <div class="repo-faltantes-dialog-head"><div><small>FALTANTES · COMPARTIDA</small><h2 id="repoFaltantesModalTitulo">Empezar nueva lista</h2><p>Escribí productos y cantidades, uno por línea.</p></div><button id="repoFaltantesCerrar" type="button" aria-label="Cerrar">×</button></div>
                   <form id="repoFaltantesForm" class="repo-faltantes-form">
                     <textarea id="repoFaltantesTexto" rows="7" placeholder="2 coca 1L&#10;3 paquetes de azúcar&#10;1 leche descremada" aria-label="Productos y cantidades"></textarea>
                     <div class="repo-faltantes-dialog-foot"><button type="submit">+ Agregar a mi lista</button></div>

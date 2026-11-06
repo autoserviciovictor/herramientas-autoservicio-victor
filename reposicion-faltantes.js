@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 let visible = false;
 let items = [];
 let peticion = 0;
+let reinicioEnCurso = false;
 const escapar = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(ruta, options={}) {
   const res = await fetch(`${String(API_BASE_URL || '').replace(/\/$/,'')}/reposicion/faltantes${ruta}`, {
@@ -25,6 +26,11 @@ function dibujar() {
   const pendientes = items.filter(x => !x.conseguido).length;
   $('repoFaltantesContador').textContent = `${pendientes} pendiente${pendientes === 1 ? '' : 's'}`;
   const productos = items.length;
+  const nuevaLista = $('repoFaltantesNueva');
+  if (nuevaLista) {
+    nuevaLista.disabled = !productos || reinicioEnCurso || Boolean(errorConexion);
+    nuevaLista.setAttribute('aria-disabled', String(nuevaLista.disabled));
+  }
   const unidades = items.reduce((total, item) => total + (Number(item.cantidad) || 0), 0);
   const fechas = items.map(item => Date.parse(item.actualizado || '')).filter(Number.isFinite);
   const ultimaFecha = fechas.length ? new Date(Math.max(...fechas)) : null;
@@ -51,7 +57,24 @@ function dibujar() {
   }
   $('repoFaltantesVacioCargar')?.addEventListener('click', abrirEditor);
 }
-function abrirEditor() { $('repoFaltantesModal')?.classList.remove('oculto'); $('repoFaltantesTexto')?.focus(); }
+async function empezarNuevaLista() {
+  if (reinicioEnCurso || !items.length || errorConexion) return;
+  if (!window.confirm('¿Empezar una nueva lista de Faltantes? Se eliminarán los productos actuales para todos los usuarios.')) return;
+  const ids = items.map(item => Number(item.id));
+  reinicioEnCurso = true;
+  dibujar();
+  try {
+    await api('', {method:'DELETE', body:JSON.stringify({ids})});
+    await refrescar();
+  } catch(error) {
+    mostrarError(error);
+    await refrescar();
+  } finally {
+    reinicioEnCurso = false;
+    dibujar();
+  }
+}
+function abrirEditor() { const modal = $('repoFaltantesModal'); if (modal && modal.parentElement !== document.body) document.body.appendChild(modal); modal?.classList.remove('oculto'); $('repoFaltantesTexto')?.focus(); }
 function cerrarEditor() { $('repoFaltantesModal')?.classList.add('oculto'); }
 function parsearLineas(texto) {
   return texto.split(/\r?\n/).map(linea => linea.trim()).filter(Boolean).map(linea => {
@@ -77,10 +100,7 @@ function ocultar() {
 window.RepoFaltantes = { ocultar };
 function mostrar() {
   visible = true;
-  document.querySelectorAll('#pantallaAnotar [data-repo-lista]').forEach(b => {
-    b.classList.remove('activo');
-    b.setAttribute('aria-pressed', 'false');
-  });
+  document.querySelectorAll('#pantallaAnotar [data-repo-lista]').forEach(b=>b.classList.remove('activo'));
   $('repoTabFaltantes').classList.add('activo');
   $('repoTabFaltantes').setAttribute('aria-pressed','true');
   $('repoFaltantesPanel').classList.remove('oculto');
@@ -94,7 +114,16 @@ function iniciar() {
   dibujar();
   $('repoTabFaltantes')?.addEventListener('click', mostrar);
   $('repoFaltantesBuscar')?.addEventListener('input', dibujar);
-  $('repoFaltantesNueva')?.addEventListener('click', abrirEditor);
+  $('repoFaltantesNueva')?.addEventListener('click', empezarNuevaLista);
+  // El botón flotante es compartido con las listas personales. Cuando está
+  // seleccionada Faltantes debe abrir SU editor, nunca el de Lista 1 o 2.
+  document.addEventListener('click', event => {
+    const fab = event.target?.closest?.('#repoFab');
+    if (!fab || !visible) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    abrirEditor();
+  }, true);
   $('repoFaltantesCerrar')?.addEventListener('click', cerrarEditor);
   $('repoFaltantesModal')?.addEventListener('click', e => { if (e.target.id === 'repoFaltantesModal') cerrarEditor(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarEditor(); });

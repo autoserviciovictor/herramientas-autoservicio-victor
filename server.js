@@ -7459,6 +7459,18 @@ app.patch('/reposicion/faltantes/:id', requerirAlgunModulo('anotar'), async (req
   try {const registro=await faltantesCompartidos.estado(id,req.body.conseguido);if(!registro)return res.status(404).json({ok:false,mensaje:'No encontrado'});res.json({ok:true,registro});}
   catch(e){console.error('Faltantes PATCH:',e);res.status(500).json({ok:false,mensaje:'No se pudo actualizar el faltante'});}
 });
+// Reiniciar únicamente los productos que el usuario vio al confirmar; no borrar
+// productos nuevos agregados simultáneamente desde otro dispositivo.
+app.delete('/reposicion/faltantes', requerirAlgunModulo('anotar'), async (req,res) => {
+  const ids = req.body?.ids;
+  if (!Array.isArray(ids) || ids.length < 1 || ids.length > 5000 ||
+      ids.some(id => !Number.isSafeInteger(id) || id < 1) ||
+      new Set(ids).size !== ids.length) {
+    return res.status(400).json({ok:false,mensaje:'Lista de productos inválida'});
+  }
+  try {res.json({ok:true,eliminados:await faltantesCompartidos.empezarNuevaLista(ids)});}
+  catch(e){console.error('Faltantes reinicio DELETE:',e);res.status(500).json({ok:false,mensaje:'No se pudo empezar una nueva lista compartida'});}
+});
 app.delete('/reposicion/faltantes/:id', requerirAlgunModulo('anotar'), async (req,res) => {
   const id=Number(req.params.id);
   if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({ok:false,mensaje:'Identificador inválido'});

@@ -36,4 +36,10 @@ async function eliminar(id) {
   const r = await query('DELETE FROM replenishment_missing_shared WHERE id=$1 RETURNING id',[id]);
   return r.rows[0];
 }
-module.exports = {listar,agregar,estado,eliminar};
+async function empezarNuevaLista(ids) {
+  await asegurar();
+  if (!Array.isArray(ids) || ids.length === 0) return 0;
+  const r = await query('DELETE FROM replenishment_missing_shared WHERE id = ANY($1::bigint[]) RETURNING id', [ids]);
+  return r.rowCount;
+}
+module.exports = {listar,agregar,estado,eliminar,empezarNuevaLista};
