@@ -17615,3 +17615,134 @@ html[data-theme="dark"] .venc-modal-editar .venc-edit-footer {background:var(--p
 /* En Faltantes se muestra únicamente el listado: sin resumen ni tarjeta informativa. */
 #pantallaAnotar .repo-workspace.repo-mostrando-faltantes { grid-template-columns: minmax(0, 1fr) !important; }
 #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-side-column { display: none !important; }
+
+/* Faltantes: usar el mismo ancho lateral de 310px que Lista 1 y Lista 2. */
+#pantallaAnotar .repo-workspace.repo-mostrando-faltantes {
+  grid-template-columns: minmax(0,1fr) 310px !important;
+}
+#pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-side-column {
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) !important;
+  align-content: start;
+  gap: 12px;
+}
+#pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-side-column > :not(.repo-faltantes-resumen):not(.repo-faltantes-recientes) {
+  display: none !important;
+}
+#pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen:not(.oculto),
+#pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-recientes:not(.oculto) {
+  display: block !important;
+}
+#pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen .repo-summary-row {
+  display: grid !important;
+  grid-template-columns: auto minmax(0,1fr) auto !important;
+  align-items: center !important;
+  text-align: left !important;
+  gap: 8px !important;
+}
+#pantallaAnotar .repo-faltantes-recientes .repo-faltantes-sin-recientes {
+  color: #94a3b8; text-align: center; font-size: 12px; padding: 20px 8px; margin: 0;
+}
+@media (max-width: 950px) {
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes { grid-template-columns: minmax(0,1fr) !important; }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-side-column { display: grid !important; }
+}
+@media (max-width: 700px) {
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen.repo-summary-card {
+    display: grid !important; grid-template-columns: repeat(3,minmax(0,1fr)) !important; gap: 7px !important;
+  }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen.repo-summary-card h2 { grid-column: 1 / -1; }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen .repo-summary-row {
+    display: flex !important; flex-direction: column !important; text-align: center !important; gap: 5px !important;
+  }
+}
+
+/* Faltantes: en celular replicar exactamente los tres indicadores en una fila
+   del resumen de Lista 1 y Lista 2. Mantener estas reglas al final para
+   neutralizar overrides antiguos de Faltantes. */
+@media (max-width: 900px) {
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen.repo-summary-card:not(.oculto) {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    padding: 11px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen.repo-summary-card h2 {
+    grid-column: 1 / -1 !important;
+    margin-bottom: 0 !important;
+  }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen.repo-summary-card .repo-summary-row {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    min-width: 0 !important;
+    min-height: 76px !important;
+    padding: 8px 5px !important;
+    gap: 4px !important;
+    border: 1px solid #edf0f4 !important;
+    border-radius: 9px !important;
+    box-sizing: border-box !important;
+  }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen .repo-summary-row > span:nth-child(2) {
+    font-size: 12px !important;
+    line-height: 1.22 !important;
+    overflow-wrap: anywhere;
+  }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen .repo-summary-row strong {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+  }
+}
+
+
+/* Reposición · refinamiento visual unificado · 2026-11-06
+   Solo presentación: sin cambios de lógica ni persistencia. */
+#pantallaAnotar .repo-pro-shell { --repo-ink:#192338; --repo-border:#e4e9f1; --repo-accent:#ec1747; }
+#pantallaAnotar .repo-pro-header h1 { letter-spacing:-.045em; font-weight:800; }
+#pantallaAnotar .repo-pro-header-copy p { color:#748096; }
+#pantallaAnotar .repo-list-selector { background:#fff; border:1px solid var(--repo-border); border-radius:15px; padding:4px; box-shadow:0 3px 14px rgba(20,34,55,.035); overflow:hidden; }
+#pantallaAnotar .repo-list-selector > button { border-radius:11px; transition:background .18s ease,color .18s ease,box-shadow .18s ease; font-weight:700; }
+#pantallaAnotar .repo-list-selector > button:hover { background:#fff2f5; }
+#pantallaAnotar .repo-list-selector > button.activo,
+#pantallaAnotar .repo-list-selector > button[aria-pressed="true"] { background:#fff1f4; color:#d70d3d; box-shadow:inset 0 -2px 0 #ed1747; }
+#pantallaAnotar .repo-main-card,
+#pantallaAnotar .repo-summary-card,
+#pantallaAnotar .repo-recent-card { border:1px solid var(--repo-border); border-radius:17px; box-shadow:0 10px 28px rgba(25,35,56,.045); }
+#pantallaAnotar .repo-search-box { background:#f8fafd; border:1px solid #e5eaf2; border-radius:12px; transition:border-color .15s ease,box-shadow .15s ease; }
+#pantallaAnotar .repo-search-box:focus-within { border-color:#f35a7d; box-shadow:0 0 0 3px rgba(236,23,71,.09); background:#fff; }
+#pantallaAnotar .repo-filter-btn { border-radius:12px; border-color:#e5eaf2; font-weight:700; }
+#pantallaAnotar .repo-list-headline strong { color:var(--repo-ink); font-weight:800; letter-spacing:-.018em; }
+#pantallaAnotar .repo-summary-card h2,
+#pantallaAnotar .repo-recent-card h2 { color:var(--repo-ink); font-weight:800; letter-spacing:-.02em; }
+#pantallaAnotar .repo-summary-icon { border-radius:11px; }
+#pantallaAnotar .repo-header-load-btn,
+#pantallaAnotar .repo-inline-new-list-btn,
+#pantallaAnotar .repo-fab { box-shadow:0 8px 19px rgba(229,20,68,.16); transition:transform .15s ease,box-shadow .15s ease; }
+#pantallaAnotar .repo-header-load-btn:hover,
+#pantallaAnotar .repo-inline-new-list-btn:hover,
+#pantallaAnotar .repo-fab:hover { transform:translateY(-1px); box-shadow:0 11px 22px rgba(229,20,68,.22); }
+#pantallaAnotar .repo-product-row { border-radius:13px; transition:background .15s ease,border-color .15s ease; }
+#pantallaAnotar .repo-product-row:hover { background:#fff9fa; border-color:#f7d7df; }
+#pantallaAnotar .repo-recent-item { border-radius:11px; }
+@media (max-width:900px) {
+  #pantallaAnotar .repo-list-selector { border-radius:14px; padding:3px; }
+  #pantallaAnotar .repo-list-selector > button { border-radius:10px; }
+  #pantallaAnotar .repo-main-card,
+  #pantallaAnotar .repo-summary-card,
+  #pantallaAnotar .repo-recent-card { border-radius:16px; box-shadow:0 6px 18px rgba(25,35,56,.035); }
+  #pantallaAnotar .repo-summary-card .repo-summary-row { border-radius:11px !important; }
+  #pantallaAnotar .repo-workspace.repo-mostrando-faltantes .repo-faltantes-resumen.repo-summary-card .repo-summary-row { border-radius:11px !important; }
+  #pantallaAnotar .repo-fab { border-radius:20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #pantallaAnotar .repo-list-selector > button,
+  #pantallaAnotar .repo-search-box,
+  #pantallaAnotar .repo-product-row,
+  #pantallaAnotar .repo-fab { transition:none; }
+}

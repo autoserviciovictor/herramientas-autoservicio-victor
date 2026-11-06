@@ -1280,12 +1280,21 @@ async function actualizarResponsableBanoInicio() {
 
     const turno = Math.floor(dias / 2);
     const indice = ((turno % participantes.length) + participantes.length) % participantes.length;
-    const clave = participantes[indice];
+    // Una reasignación confirmada en PostgreSQL tiene prioridad sobre el cálculo
+    // de la rotación. Evita que Inicio contradiga al módulo de Limpieza.
+    const registroHoy = Array.isArray(cfg.historial)
+      ? cfg.historial.find((x) => String(x?.fecha || "") === hoy)
+      : null;
+    const clave = String(registroHoy?.responsable || participantes[indice]).trim();
     const listaUsuarios = Array.isArray(usuarios?.usuarios) ? usuarios.usuarios : [];
-    const usuarioAsignado = listaUsuarios.find(
-      (u) => String(u?.usuario || "").trim().toLowerCase() === clave.toLowerCase(),
+    const usuarioAsignado = listaUsuarios.find((u) =>
+      [u?.usuario, u?.nombre].some((v) => String(v || "").trim().toLowerCase() === clave.toLowerCase()),
     );
-    const nombre = String(usuarioAsignado?.nombre || usuarioAsignado?.usuario || clave).trim();
+    if (!usuarioAsignado) {
+      estado.textContent = "Responsable pendiente de verificar en Limpieza del baño.";
+      return;
+    }
+    const nombre = String(usuarioAsignado.nombre || usuarioAsignado.usuario).trim();
     if (nombre) estado.textContent = `Hoy le toca limpiar a ${nombre}.`;
   } catch (_) {
     // El banner conserva el texto neutro si el resumen de baño no está disponible.

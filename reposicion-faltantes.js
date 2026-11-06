@@ -24,6 +24,13 @@ function dibujar() {
   const destino = $('repoFaltantesListado'); if (!destino) return;
   const pendientes = items.filter(x => !x.conseguido).length;
   $('repoFaltantesContador').textContent = `${pendientes} pendiente${pendientes === 1 ? '' : 's'}`;
+  const productos = items.length;
+  const unidades = items.reduce((total, item) => total + (Number(item.cantidad) || 0), 0);
+  const fechas = items.map(item => Date.parse(item.actualizado || '')).filter(Number.isFinite);
+  const ultimaFecha = fechas.length ? new Date(Math.max(...fechas)) : null;
+  if ($('repoFaltantesResumenProductos')) $('repoFaltantesResumenProductos').textContent = String(productos);
+  if ($('repoFaltantesResumenUnidades')) $('repoFaltantesResumenUnidades').textContent = `${unidades} un.`;
+  if ($('repoFaltantesResumenActualizado')) $('repoFaltantesResumenActualizado').textContent = ultimaFecha ? ultimaFecha.toLocaleString('es-AR', {dateStyle:'short',timeStyle:'short'}) : '—';
   const q = ($('repoFaltantesBuscar')?.value || '').toLocaleLowerCase('es').trim();
   const visibles = items.filter(x => x.nombre.toLocaleLowerCase('es').includes(q) && (filtro === 'todos' || (filtro === 'pendientes' ? !x.conseguido : x.conseguido)))
     .sort((a,b) => Number(a.conseguido)-Number(b.conseguido));
@@ -64,6 +71,8 @@ function ocultar() {
   $('repoTabFaltantes')?.setAttribute('aria-pressed','false');
   document.querySelector('#pantallaAnotar .repo-main-column')?.classList.remove('repo-mostrando-faltantes');
   document.querySelector('#pantallaAnotar .repo-workspace')?.classList.remove('repo-mostrando-faltantes');
+  $('repoFaltantesResumen')?.classList.add('oculto');
+  $('repoFaltantesRecientes')?.classList.add('oculto');
 }
 window.RepoFaltantes = { ocultar };
 function mostrar() {
@@ -74,6 +83,8 @@ function mostrar() {
   $('repoFaltantesPanel').classList.remove('oculto');
   document.querySelector('#pantallaAnotar .repo-main-column')?.classList.add('repo-mostrando-faltantes');
   document.querySelector('#pantallaAnotar .repo-workspace')?.classList.add('repo-mostrando-faltantes');
+  $('repoFaltantesResumen')?.classList.remove('oculto');
+  $('repoFaltantesRecientes')?.classList.remove('oculto');
   refrescar();
 }
 function iniciar() {
