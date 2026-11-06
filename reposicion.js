@@ -327,7 +327,21 @@ export function inicializarReposicion() {
   sincronizarSelectorListas();
 }
 
+// La pestaña Faltantes tiene un formulario y un endpoint independientes.
+// Nunca dirigir sus botones globales a Lista 1/2 (listaActual conserva la última personal).
+function faltantesSeleccionada() {
+  return document.getElementById("repoTabFaltantes")?.getAttribute("aria-pressed") === "true";
+}
+function abrirCargaFaltantesSiCorresponde() {
+  if (!faltantesSeleccionada()) return false;
+  cerrarMenuCarga();
+  cerrarSelectorCargaMovil();
+  document.getElementById("repoFaltantesNueva")?.click();
+  return true;
+}
+
 function abrirSelectorCarga() {
+  if (abrirCargaFaltantesSiCorresponde()) return;
   if (esVistaMovilReposicion()) {
     abrirSelectorCargaMovil();
     return;
@@ -336,6 +350,7 @@ function abrirSelectorCarga() {
 }
 
 function abrirSelectorCargaMovil() {
+  if (abrirCargaFaltantesSiCorresponde()) return;
   const sheet = $("repoMobileLoadMenu");
   if (!sheet) {
     abrirCargaModal();
@@ -364,6 +379,7 @@ function cerrarSelectorCargaMovil({ devolverFoco = false } = {}) {
 }
 
 function alternarMenuCarga() {
+  if (abrirCargaFaltantesSiCorresponde()) return;
   const menu = $("repoCargaMenu");
   if (!menu) return;
   cargaMenuAbierto = menu.classList.contains("oculto");
@@ -508,6 +524,7 @@ async function eliminarDesdeEditorProductoLista() {
 }
 
 function abrirEscribirModal() {
+  if (abrirCargaFaltantesSiCorresponde()) return;
   sincronizarSelectorListas();
   const numeroLista = $("repoEscribirListaNumero");
   if (numeroLista) numeroLista.textContent = listaActual;
@@ -675,6 +692,7 @@ function resetearCargaModal() {
 }
 
 function abrirCargaModal() {
+  if (abrirCargaFaltantesSiCorresponde()) return;
   resetearCargaModal();
   sincronizarSelectorListas();
   $("repoCargaModal")?.classList.remove("oculto");

@@ -77,7 +77,10 @@ function ocultar() {
 window.RepoFaltantes = { ocultar };
 function mostrar() {
   visible = true;
-  document.querySelectorAll('#pantallaAnotar [data-repo-lista]').forEach(b=>b.classList.remove('activo'));
+  document.querySelectorAll('#pantallaAnotar [data-repo-lista]').forEach(b => {
+    b.classList.remove('activo');
+    b.setAttribute('aria-pressed', 'false');
+  });
   $('repoTabFaltantes').classList.add('activo');
   $('repoTabFaltantes').setAttribute('aria-pressed','true');
   $('repoFaltantesPanel').classList.remove('oculto');
