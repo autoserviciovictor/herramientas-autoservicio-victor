@@ -17749,3 +17749,16 @@ html[data-theme="dark"] #repoFaltantesEditar .repo-item-edit-delete-btn:hover { 
 @media (max-width: 900px) {
   #repoFaltantesEditar .repo-item-edit-delete-btn { min-height: 46px; font-size: 12px; }
 }
+
+/* Acceso directo al historial del producto desde el editor de vencimientos. */
+.venc-modal-editar .venc-edit-footer #btnVencHistorialProducto {
+  min-height:42px; padding:0 18px; border:1px solid var(--pro-border,#d8e0eb);
+  border-radius:10px; background:var(--pro-panel,#fff); color:var(--pro-text,#344054);
+  font-size:13px; font-weight:800; cursor:pointer;
+}
+.venc-modal-editar .venc-edit-footer #btnVencHistorialProducto:hover {border-color:#fa2850;color:#f51b49;}
+@media(max-width:600px) {
+  .venc-modal-editar .venc-edit-footer > div {display:grid !important;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+  .venc-modal-editar .venc-edit-footer #btnVencHistorialProducto,
+  .venc-modal-editar .venc-edit-footer #btnVencGuardarEdicion {width:100% !important;padding:0 8px !important;}
+}

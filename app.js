@@ -217,6 +217,7 @@ const elementos = {
   btnVencModalCerrar: $("btnVencModalCerrar"),
   btnVencEliminarAbrir: $("btnVencEliminarAbrir"),
   btnVencGuardarEdicion: $("btnVencGuardarEdicion"),
+  btnVencHistorialProducto: $("btnVencHistorialProducto"),
   btnVencConfirmarEliminar: $("btnVencConfirmarEliminar"),
   btnVencCancelarEliminar: $("btnVencCancelarEliminar"),
   vencEditFechaInput: $("vencEditFechaInput"),
@@ -1903,6 +1904,17 @@ function configurarEventos() {
     "click",
     guardarEdicionVencimiento,
   );
+  elementos.btnVencHistorialProducto?.addEventListener("click", () => {
+    if (!vencimientoSeleccionado) return;
+    const codigo = vencimientoSeleccionado.codigo || "";
+    const nombre = vencimientoSeleccionado.articulo || "";
+    resolverSalidaVencimiento(() => {
+      cerrarModalVencimiento();
+      if (!window.AutoservicioAbrirHistorialProductoVencimiento?.(codigo, nombre)) {
+        mostrarMensaje("No tenés permiso para consultar el historial de vencimientos.", "error");
+      }
+    });
+  });
   $("cartelesSeleccionarTodos")?.addEventListener("click", seleccionarCartelesDisponibles);
   $("cartelesOfertasLista")?.addEventListener("change", cambiarSeleccionCartel);
   $("cartelesOfertaModal")?.addEventListener("click", (event) => { if (event.target.closest("[data-cerrar-cartel]")) cerrarModalOfertaCartel(); });

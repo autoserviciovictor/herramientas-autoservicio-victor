@@ -286,6 +286,7 @@ let sectores = [];
 let historialVencimientos = [];
 let historialAdministracion = [];
 let historialPeriodo = "hoy";
+let historialCodigoProducto = "";
 let historialLimite = 20;
 let historialBusquedaTimer = null;
 let importacionPendiente = null;
@@ -1418,10 +1419,12 @@ function obtenerHistorialFiltrado() {
   const usuario = $("adminHistorialUsuario")?.value || "";
   const accion = $("adminHistorialAccion")?.value || "";
   const busqueda = normalizarTexto($("adminHistorialBuscar")?.value || "");
+  const codigoProducto = String(historialCodigoProducto || "").replace(/\D/g, "");
   const ahora = new Date();
   const hoy = inicioDelDia(ahora);
 
   return historialVencimientos.filter((item) => {
+    if (codigoProducto && String(item.codigo || "").replace(/\D/g, "") !== codigoProducto) return false;
     const fecha = fechaHistorialAFecha(item.fecha, item.hora);
     if (historialPeriodo !== "todo") {
       if (!fecha) return false;
@@ -1707,8 +1710,12 @@ function limpiarBusquedaHistorialVencimientos() {
   historialBusquedaTimer = null;
   const buscador = $("adminHistorialBuscar");
   if (buscador) buscador.value = "";
+  historialCodigoProducto = "";
   historialPagina = 1;
 }
+
+// Conserva la posición exacta del listado al consultar el historial.
+let posicionRetornoVencimientos = null;
 
 function abrirHistorialVencimientosUI() {
   if (!window.AutoservicioAuth?.esAdmin?.()) return;
@@ -1724,6 +1731,23 @@ function abrirHistorialVencimientosUI() {
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
+// Entrada directa desde el editor de un vencimiento: el código identifica al producto
+// y el período completo permite ver también movimientos antiguos.
+window.AutoservicioAbrirHistorialProductoVencimiento = function (codigo, nombre) {
+  if (!window.AutoservicioAuth?.esAdmin?.()) return false;
+  posicionRetornoVencimientos = { x: window.scrollX, y: window.scrollY };
+  abrirHistorialVencimientosUI();
+  historialCodigoProducto = String(codigo || "").replace(/\D/g, "");
+  historialPeriodo = "todo";
+  document.querySelectorAll(".admin-period-btn").forEach((btn) =>
+    btn.classList.toggle("activo", btn.dataset.periodo === "todo"));
+  const buscador = $("adminHistorialBuscar");
+  if (buscador) buscador.value = historialCodigoProducto ? "" : String(nombre || "");
+  historialPagina = 1;
+  renderHistorialVencimientos();
+  return true;
+};
+
 function cerrarHistorialVencimientosUI() {
   limpiarBusquedaHistorialVencimientos();
   const shell = document.querySelector("#pantallaVencimientos > .venc-pro-shell");
@@ -1733,7 +1757,17 @@ function cerrarHistorialVencimientosUI() {
   shell?.classList.remove("oculto");
   document.body.classList.remove("venc-historial-open");
   actualizarAccionBotonVolverGlobal();
-  window.scrollTo({ top: 0, behavior: "auto" });
+  const retorno = posicionRetornoVencimientos;
+  posicionRetornoVencimientos = null;
+  if (retorno) {
+    // Restaurar después de volver a mostrar el listado (sin animación).
+    requestAnimationFrame(() => {
+      window.scrollTo({ left: retorno.x, top: retorno.y, behavior: "instant" });
+      requestAnimationFrame(() => window.scrollTo({ left: retorno.x, top: retorno.y, behavior: "instant" }));
+    });
+  } else {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
 }
 
 function abrirAdmin() {
@@ -2491,6 +2525,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("adminHistorialPorPagina")?.addEventListener("change", () => { historialPagina = 1; renderHistorialVencimientos(); });
   $("adminHistorialBuscar")?.addEventListener("input", () => {
+    historialCodigoProducto = "";
     clearTimeout(historialBusquedaTimer);
     historialBusquedaTimer = setTimeout(reiniciarPaginacionHistorial, 180);
   });
