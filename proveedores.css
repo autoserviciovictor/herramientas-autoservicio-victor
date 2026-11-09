@@ -565,3 +565,32 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-dashboard-home .prov-dashboard-table td:first-child strong {
   vertical-align: middle;
 }
+
+/* Separación visual entre pedidos vigentes e historial de vencimientos */
+.prov-dashboard-vistas{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:4px;background:#f5f7fb;border:1px solid #e3e9f1;border-radius:12px;width:max-content;max-width:100%}.prov-dashboard-vistas button{border:0;background:transparent;color:#52627b;font:inherit;font-weight:700;cursor:pointer;padding:10px 16px;border-radius:9px}.prov-dashboard-vistas button.active{background:#fff;color:#f3264b;box-shadow:0 1px 5px #152c4d1a}.prov-dashboard-vistas button:focus-visible{outline:2px solid #f3264b;outline-offset:2px}
+
+/* Campos de fechas independientes en Pedidos vigentes e Historial de vencidos. */
+.prov-dashboard-home .prov-dashboard-dates {
+  display:flex; align-items:stretch; gap:12px; height:auto; padding:0;
+  border:0; border-radius:0; overflow:visible; background:transparent;
+  flex:0 1 340px; min-width:300px; box-sizing:border-box;
+}
+.prov-dashboard-home .prov-dashboard-date-field {
+  display:flex; flex-direction:column; flex:1 1 0; min-width:0; gap:5px;
+  font-size:11px; font-weight:700; color:#516582;
+}
+.prov-dashboard-home .prov-dashboard-date-field input[type=date] {
+  display:block; width:100%; min-width:0; flex:none; height:43px;
+  padding:0 10px!important; border:1px solid #dce4ef!important;
+  border-radius:10px!important; background:#fff!important;
+  box-shadow:none!important; outline:none!important;
+  appearance:auto; -webkit-appearance:auto; color:#3e506c;
+  font-size:12px; box-sizing:border-box;
+}
+.prov-dashboard-home .prov-dashboard-date-field input[type=date]:focus {
+  border-color:#9db5d4!important; box-shadow:0 0 0 2px rgba(70,125,200,.1)!important;
+}
+.prov-dashboard-home .prov-dashboard-dates:focus-within {border:0}
+@media(max-width:650px) {
+  .prov-dashboard-home .prov-dashboard-dates {flex:1 1 100%; min-width:0; gap:10px}
+}
