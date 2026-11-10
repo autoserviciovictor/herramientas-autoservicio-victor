@@ -92,18 +92,9 @@ function changed(n,list){
   // La vista recibe el evento y se actualiza sin recargar la aplicación.
 }
 function onProveedoresScreen(){return !!document.getElementById('provApp') && !!document.getElementById('provApp').offsetParent}
-function showNotice(){
-  if(!onProveedoresScreen()){hideNotice();return}
-  if(notice||!document.body)return;
-  notice=document.createElement('div');
-  notice.id='recuperacion-proveedores-aviso';
-  notice.style.cssText='position:fixed;z-index:2147483647;bottom:16px;right:16px;max-width:390px;padding:15px 17px;background:#fff;color:#17212b;border:2px solid #d48a1b;border-radius:12px;box-shadow:0 8px 35px #0005;font:14px/1.45 Arial,sans-serif';
-  const msg=document.createElement('div');msg.textContent='Hay datos locales o respaldos que todavía no están en PostgreSQL. No se reemplazarán automáticamente.';
-  const btn=document.createElement('button');btn.type='button';btn.textContent='Revisar y migrar datos';
-  btn.style.cssText='display:block;margin-top:10px;padding:9px 14px;border:0;border-radius:7px;background:#1859a8;color:white;cursor:pointer;font-weight:bold';
-  btn.addEventListener('click',recover);
-  notice.append(msg,btn);document.body.appendChild(notice);
-}
+// El aviso automático de migración se deshabilita visualmente.
+// Se conservan la detección de diferencias, los respaldos y la recuperación manual.
+function showNotice(){ hideNotice(); }
 function hideNotice(){notice?.remove();notice=null}
 function showProgress(message){
   if(!progress){progress=document.createElement('div');progress.id='proveedores-migracion-progreso';progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');progress.style.cssText='position:fixed;z-index:2147483647;top:22px;left:50%;transform:translateX(-50%);max-width:min(92vw,540px);background:#17335d;color:#fff;border-radius:12px;padding:17px 22px;box-shadow:0 12px 45px #0005;font:600 15px/1.5 Arial,sans-serif';document.body.appendChild(progress)}
