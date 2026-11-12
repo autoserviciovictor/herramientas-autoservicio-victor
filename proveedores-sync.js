@@ -6,6 +6,8 @@ const groups={proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pe
 const revisions={},pending=new Set(),busy=new Set(),queued={};
 // Última copia confirmada del servidor, para detectar ediciones locales aún pendientes.
 const confirmedSnapshots={};
+// Copia de lectura en memoria: el almacenamiento del navegador es opcional.
+const liveRecords={};
 const writeStatus={};
 function report(n,state,message=''){
   writeStatus[n]={state,message,at:new Date().toISOString()};
@@ -84,12 +86,25 @@ function exportRecovery(){
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function changed(n,list){
-  const key=groups[n],current=parse(key),incoming=fromList(n,list);
-  if(JSON.stringify(current)===JSON.stringify(incoming))return;
-  if(current!==null)backup(n,current);
-  localStorage.setItem(key,JSON.stringify(incoming));
+  const key=groups[n],incoming=fromList(n,list);
+  liveRecords[n]=structuredClone(incoming);
+  // La copia local es solo caché. Un navegador sin espacio no puede convertir
+  // una operación confirmada en PostgreSQL en un error de guardado.
+  try{
+    const current=parse(key);
+    if(JSON.stringify(current)!==JSON.stringify(incoming)){
+      // Los respaldos históricos existentes se conservan; no generar uno nuevo
+      // por cada lectura/sincronización automática.
+      localStorage.setItem(key,JSON.stringify(incoming));
+    }
+  }catch(e){console.warn('Caché local no disponible ('+n+'); PostgreSQL sigue siendo la fuente de datos:',e)}
   window.dispatchEvent(new CustomEvent('proveedores:sincronizados',{detail:{coleccion:n}}));
   // La vista recibe el evento y se actualiza sin recargar la aplicación.
+}
+function getRecords(n){
+  if(Object.prototype.hasOwnProperty.call(liveRecords,n))return structuredClone(liveRecords[n]);
+  if(Object.prototype.hasOwnProperty.call(confirmedSnapshots,n))return structuredClone(confirmedSnapshots[n]);
+  try{return structuredClone(parse(groups[n])??(n==='colores'?{}:[]))}catch{return n==='colores'?{}:[]}
 }
 function onProveedoresScreen(){return !!document.getElementById('provApp') && !!document.getElementById('provApp').offsetParent}
 // El aviso automático de migración se deshabilita visualmente.
@@ -107,6 +122,7 @@ async function load(n){
   try{
     const remote=await request(n),records=asList(remote.registros);
     revisions[n]=remote.revision;
+    liveRecords[n]=structuredClone(fromList(n,records));
     // No reemplazar cambios actuales que aún no se guardaron.
     const currentValue=parse(groups[n]);
     const current=listFrom(n,currentValue);
@@ -114,7 +130,7 @@ async function load(n){
     // Si el navegador cambió desde la última lectura confirmada, NO sustituirlo.
     // La comparación por IDs sola no detectaba ediciones de campos existentes.
     if(Object.prototype.hasOwnProperty.call(confirmedSnapshots,n) &&
-       !equalRecord(currentValue,confirmedSnapshots[n])){
+       !equalRecord(getRecords(n),confirmedSnapshots[n])){
       report(n,'failed','Hay cambios locales sin confirmar; se conservan hasta sincronizarlos.');
       return;
     }
@@ -290,7 +306,7 @@ async function mutateRecord(n,record,deleteId=null){
   if(!id)throw new Error('El registro necesita un identificador');
   if(individualBusy.has(n)||pending.has(n)||recovering)throw new Error('Hay otra operación de sincronización en curso. Intentá nuevamente.');
   if(Object.prototype.hasOwnProperty.call(confirmedSnapshots,n) &&
-     !equalRecord(parse(groups[n]),confirmedSnapshots[n])){
+     !equalRecord(getRecords(n),confirmedSnapshots[n])){
     throw new Error('Hay cambios locales pendientes de sincronización. No se aplicó otra operación para evitar pérdida de datos.');
   }
   individualBusy.add(n);report(n,'saving');
@@ -332,6 +348,6 @@ async function start(){
   setInterval(()=>{if(!document.hidden){if(!onProveedoresScreen())hideNotice();for(const n of Object.keys(groups))load(n)}},20000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)for(const n of Object.keys(groups))load(n)});
 }
-window.ProveedoresSync={start,save,mutateRecord,refresh:()=>Promise.all(Object.keys(groups).map(load)),recover,getWriteStatus:()=>structuredClone(writeStatus)};
+window.ProveedoresSync={start,save,mutateRecord,getRecords,hasLiveRecords:n=>Object.prototype.hasOwnProperty.call(liveRecords,n),refresh:()=>Promise.all(Object.keys(groups).map(load)),recover,getWriteStatus:()=>structuredClone(writeStatus)};
 window.addEventListener('load',()=>{setTimeout(start,1000);setInterval(start,5000)});
 })();
