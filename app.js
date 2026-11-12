@@ -3813,7 +3813,17 @@ function abrirModalOfertaCartel() { const modal = $("cartelesOfertaModal"); if (
 function cerrarModalOfertaCartel() { const modal = $("cartelesOfertaModal"); modal?.classList.add("oculto"); modal?.setAttribute("aria-hidden", "true"); cartelOfertaItemActual = null; }
 function claveOfertasCarteles() { return `autoservicio_ofertas_carteles_v2:${claveBandejaCartelesOferta()}`; }
 function leerOfertasCarteles() { try { const data = JSON.parse(localStorage.getItem(claveOfertasCarteles()) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; } }
-function guardarOfertasCarteles(ofertas) { localStorage.setItem(claveOfertasCarteles(), JSON.stringify(ofertas)); }
+function guardarOfertasCarteles(ofertas) {
+  const clave = claveOfertasCarteles();
+  const contenido = JSON.stringify(ofertas);
+  try {
+    if (localStorage.getItem(clave) !== contenido) localStorage.setItem(clave, contenido);
+  } catch (error) {
+    // Las ofertas provienen del servidor: un caché local lleno no debe impedir
+    // mostrar los vencimientos ni bloquear el resto de la aplicación.
+    console.warn("No se pudo actualizar el caché local de ofertas; se mantienen los datos del servidor.", error);
+  }
+}
 function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCarteles().filter(x => String(x.id) !== String(id))); guardarBandejaCartelesOferta(leerBandejaCartelesOferta().filter(x => String(x.id) !== String(id))); }
 // Se reutiliza el registro persistente anterior para identificar carteles ya agregados.
 let cartelesImpresosCompartidos = new Set();
