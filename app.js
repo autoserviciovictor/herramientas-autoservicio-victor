@@ -3884,7 +3884,9 @@ function sincronizarCartelesConVencimientos(registros) {
 
 function renderListadoCartelesOfertas() {
   const host = $("cartelesOfertasLista"); if (!host) return;
-  const ofertas = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso());
+  // El servidor ya define qué ofertas están activas. La fecha de vigencia
+  // se muestra en el cartel, pero no debe ocultar una oferta activa.
+  const ofertas = leerOfertasCarteles();
   const bandejaLlena = leerBandejaCartelesOferta().length >= CARTEL_OFERTA_MAX;
   const filtro = $("cartelesBuscarOferta")?.value?.trim().toLocaleLowerCase("es-AR") || "";
   const filtradas = ofertas

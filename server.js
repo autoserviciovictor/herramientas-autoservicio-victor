@@ -4593,18 +4593,10 @@ app.get("/tareas/bano/usuarios", async (req, res) => {
 });
 
 // La rotación compartida nunca debe reactivar cuentas eliminadas.
-async function depurarParticipantesBano(cliente, usuarioActual = null) {
-  const actual = await leerBanoServidor(cliente);
-  const usuarios = (await obtenerUsuarios()).filter((u) => u.activo);
-  const validos = new Set(usuarios.flatMap((u) => [u.usuario, u.nombre].map(normalizarIdentidadBano).filter(Boolean)));
-  const anteriores = Array.isArray(actual.participantes) ? actual.participantes : [];
-  const participantes = anteriores.filter((p) => validos.has(normalizarIdentidadBano(p)));
-  if (participantes.length !== anteriores.length) {
-    const fechaAncla = fechaAnclaParaConservarTurno(actual, participantes);
-    await guardarConfiguracionBanoServidor({ participantes, fechaAncla }, usuarioActual, cliente);
-    return { ...actual, participantes, fechaAncla };
-  }
-  return actual;
+// La lectura nunca debe eliminar participantes: un directorio incompleto o
+// temporalmente vacío no representa una orden de modificar PostgreSQL.
+async function depurarParticipantesBano(cliente) {
+  return leerBanoServidor(cliente);
 }
 
 app.get("/tareas/bano", async (req, res) => {
@@ -4629,7 +4621,17 @@ app.put("/tareas/bano", async (req, res) => {
     const config = await conTransaccionTareasBano(async (cliente) => {
       const actual = await depurarParticipantesBano(cliente, req.usuario);
       actual.historial = completarHistorialBano(actual);
-      const solicitados = Array.isArray(req.body?.participantes) ? req.body.participantes : [];
+      if (!Array.isArray(req.body?.participantes)) {
+         const error = new Error("Falta la lista de participantes; no se modificó la rotación");
+         error.statusCode = 400;
+         throw error;
+       }
+       const solicitados = req.body.participantes;
+       if (actual.participantes?.length && solicitados.length === 0) {
+         const error = new Error("No se permite vaciar toda la rotación desde una sincronización. Conservamos los participantes existentes.");
+         error.statusCode = 409;
+         throw error;
+       }
       const actuales = Array.isArray(actual.participantes) ? actual.participantes : [];
       // La lista enviada por Configuración es autoritativa, incluso si está vacía.
       // Nunca repoblar participantes automáticamente desde usuarios, sectores o caché.
@@ -4656,7 +4658,7 @@ app.put("/tareas/bano", async (req, res) => {
     });
     res.json({ ok: true, config });
   } catch (e) {
-    res.status(500).json({
+    res.status(e.statusCode || 500).json({
       ok: false,
       mensaje: e.message || "No se pudo guardar la rotación",
     });

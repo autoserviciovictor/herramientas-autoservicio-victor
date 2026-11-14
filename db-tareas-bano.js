@@ -415,20 +415,9 @@ async function leerBanoDb(cliente = null) {
       .map((x) => String(x.responsible_key || "").trim())
       .filter((clave) => clave && !vistos.has(clave) && vistos.add(clave));
 
-    if (participantes.length) {
-      const fechaAncla = config.anchor_date || new Date().toISOString().slice(0, 10);
-      await ejecutarConsulta(
-        cliente,
-        `INSERT INTO bathroom_rotation_config(config_id,participants,anchor_date,updated_text,updated_by,updated_at)
-         VALUES(1,$1::jsonb,$2,'Recuperación automática desde historial','sistema',NOW())
-         ON CONFLICT(config_id) DO UPDATE SET
-           participants=EXCLUDED.participants,
-           updated_text=EXCLUDED.updated_text,
-           updated_by=EXCLUDED.updated_by,
-           updated_at=NOW()`,
-        [JSON.stringify(participantes), fechaAncla],
-      );
-    }
+    // Solo recuperación de lectura. Nunca sobrescribir la configuración
+    // ni el orden original con una reconstrucción aproximada.
+
   }
 
   return {
@@ -449,6 +438,20 @@ async function guardarConfiguracionBanoDb(config, actualizadoTexto = "", actuali
   const ejecutar = async (c) => {
     const participantes = [...new Set((config?.participantes || []).map((x) => String(x || "").trim()).filter(Boolean))];
     const fechaAncla = String(config?.fechaAncla || "").trim() || new Date().toISOString().slice(0,10);
+    // Guardar versión anterior antes de cualquier modificación de la rotación.
+    // La tabla de auditoría es independiente del historial de confirmaciones.
+    await c.query(`CREATE TABLE IF NOT EXISTS bathroom_rotation_config_backups (
+      backup_id BIGSERIAL PRIMARY KEY,
+      saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      participants JSONB NOT NULL,
+      anchor_date TEXT,
+      updated_text TEXT,
+      updated_by TEXT
+    )`);
+    await c.query(`INSERT INTO bathroom_rotation_config_backups
+      (participants,anchor_date,updated_text,updated_by)
+      SELECT participants,anchor_date,updated_text,updated_by
+      FROM bathroom_rotation_config WHERE config_id=1`);
     await c.query(
       `INSERT INTO bathroom_rotation_config(config_id,participants,anchor_date,updated_text,updated_by,updated_at)
        VALUES(1,$1::jsonb,$2,$3,$4,NOW())
