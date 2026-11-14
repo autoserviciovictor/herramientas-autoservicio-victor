@@ -3871,31 +3871,9 @@ async function cargarOfertasCompartidasCarteles() {
   }
 }
 
-// La vigencia del cartel corresponde a la oferta, no al vencimiento del producto.
-// Se compara por fecha local para conservar las ofertas durante todo su último día.
-function ofertaCartelVigente(oferta) {
-  if (!oferta) return false;
-  const valor = oferta.vencimiento || oferta.validoHasta || oferta.fechaFinOferta;
-  if (!valor) return true; // Ofertas sin fecha de cierre explícita.
-  const texto = String(valor).trim();
-  let fecha;
-  if (/^\\d{4}-\\d{2}-\\d{2}/.test(texto)) {
-    fecha = texto.slice(0, 10);
-  } else if (/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(texto)) {
-    const [dia, mes, anio] = texto.split("/");
-    fecha = `${anio}-${mes}-${dia}`;
-  } else {
-    return true; // No descartar ofertas por un formato desconocido.
-  }
-  const hoy = new Date();
-  const hoyLocal = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-  return fecha >= hoyLocal;
-}
-
 function sincronizarCartelesConVencimientos(registros) {
-  if (!Array.isArray(registros)) throw new Error("Respuesta de vencimientos inválida");
-  const ofertas = registros
-    .filter((v) => tieneOferta(v) && v.detalleOferta && ofertaCartelVigente(v.detalleOferta))
+  const ofertas = (registros || [])
+    .filter((v) => tieneOferta(v) && v.detalleOferta)
     .map((v) => ({ ...v.detalleOferta, id: String(v.id), articulo: v.articulo, codigo: v.codigo }));
   guardarOfertasCarteles(ofertas);
   const porId = new Map(ofertas.map((o) => [String(o.id), o]));
@@ -3908,7 +3886,7 @@ function renderListadoCartelesOfertas() {
   const host = $("cartelesOfertasLista"); if (!host) return;
   // El servidor ya define qué ofertas están activas. La fecha de vigencia
   // se muestra en el cartel, pero no debe ocultar una oferta activa.
-  const ofertas = leerOfertasCarteles().filter(ofertaCartelVigente);
+  const ofertas = leerOfertasCarteles();
   const bandejaLlena = leerBandejaCartelesOferta().length >= CARTEL_OFERTA_MAX;
   const filtro = $("cartelesBuscarOferta")?.value?.trim().toLocaleLowerCase("es-AR") || "";
   const filtradas = ofertas
@@ -4019,7 +3997,7 @@ async function guardarCartelOfertaActual() {
 
 function renderBandejaCartelesOferta() {
   const box = $("cartelOfertaBandeja");
-  const items = leerBandejaCartelesOferta().filter(ofertaCartelVigente);
+  const items = leerBandejaCartelesOferta();
   if ($("cartelOfertaContador")) $("cartelOfertaContador").textContent = `${items.length} de ${CARTEL_OFERTA_MAX} carteles`;
   const imprimir = $("btnCartelImprimirHoja");
   if (imprimir) imprimir.disabled = items.length < 1;
