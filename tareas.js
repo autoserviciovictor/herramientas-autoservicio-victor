@@ -2067,7 +2067,7 @@ function configBano() {
   // Si el directorio todavía no se cargó, conservar temporalmente la lista
   // guardada para no ocultar participantes ante un error de conexión.
   // Cuando está disponible, excluir de los próximos turnos usuarios eliminados.
-  const directorioDisponible = true;
+  const directorioDisponible = usuariosBano.length > 0;
   const participantes = participantesGuardados
     .map((p) => {
       const clave = claveParticipante(p).trim();
@@ -2089,19 +2089,30 @@ function configBano() {
 }
 async function cargarBanoRemoto() {
   try {
-    const r = await fetch(`${API_BASE_URL}/tareas/bano`),
-      data = await r.json();
-    if (!r.ok || !data.ok)
-      throw new Error(data.mensaje || "No se pudo cargar la rotación");
-    // PostgreSQL es la única fuente de verdad de la rotación. Una lista vacía
-    // es una configuración válida y jamás se reconstruye desde caché/localStorage.
-    banoMemoria = data.config || {};
+    const r = await fetch(`${API_BASE_URL}/tareas/bano`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`Error HTTP ${r.status} al consultar la rotación`);
+    const data = await r.json();
+    if (!data || data.ok !== true || !data.config ||
+        !Array.isArray(data.config.participantes) ||
+        !Array.isArray(data.config.historial)) {
+      throw new Error(data?.mensaje || "Respuesta incompleta de la rotación del baño");
+    }
+    // Solo una respuesta válida puede reemplazar la memoria y la caché.
+    banoMemoria = data.config;
     guardarJSONUsuario(BANO_KEY, banoMemoria);
-    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial || []);
+    guardarJSONUsuario(BANO_HISTORY_KEY, banoMemoria.historial);
     window.dispatchEvent(new CustomEvent("autoservicio:bano-actualizado"));
-  } catch {
-    // No mostrar una rotación local antigua como si fuera el estado compartido.
-    banoMemoria = { participantes: [], fechaAncla: iso(new Date()), historial: [] };
+  } catch (error) {
+    // Un fallo de red NO equivale a una rotación vacía. Conservar la última
+    // copia conocida y avisar: nunca persistir [] como consecuencia del error.
+    console.error("No se pudo sincronizar la limpieza del baño:", error);
+    if (!banoMemoria) {
+      const anterior = leerJSONUsuario(BANO_KEY, null);
+      if (anterior && Array.isArray(anterior.participantes)) banoMemoria = anterior;
+    }
+    window.dispatchEvent(new CustomEvent("autoservicio:bano-error-sincronizacion", {
+      detail: { mensaje: String(error?.message || error) }
+    }));
   }
 }
 function claveParticipante(valor) {
