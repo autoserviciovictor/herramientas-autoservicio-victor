@@ -832,6 +832,8 @@ function abrirAvisoProductosVencidos(items) {
   modal.querySelector(".expiry-opening-alert__action")?.focus();
 }
 
+const avisosVencidosProcesadosEnSesion = new Set();
+
 async function mostrarAvisoProductosVencidosAlAbrir() {
   if (avisoVencidosEnCurso || !window.AutoservicioAuth?.getUsuario?.()) return;
   const puedeVencimientos = window.AutoservicioAuth?.puedeVerModulo?.("vencimientos") === true;
@@ -839,7 +841,7 @@ async function mostrarAvisoProductosVencidosAlAbrir() {
   if (!puedeVencimientos && !puedeLotes) return;
 
   const clave = claveAvisoVencidosHoy();
-  if (localStorage.getItem(clave) === "1") return;
+  if (avisosVencidosProcesadosEnSesion.has(clave) || localStorage.getItem(clave) === "1") return;
   avisoVencidosEnCurso = true;
   try {
     const hoy = fechaHoyLocalIso();
@@ -859,7 +861,11 @@ async function mostrarAvisoProductosVencidosAlAbrir() {
     // Si una fuente habilitada falla, no marcamos el aviso como procesado: se reintentará
     // en la próxima apertura para no ocultar vencimientos por un error de red.
     if (resultados.every((r) => r.status === "fulfilled")) {
-      localStorage.setItem(clave, "1");
+      avisosVencidosProcesadosEnSesion.add(clave);
+      try { localStorage.setItem(clave, "1"); } catch (error) {
+        // Marcador opcional: el aviso se mantiene funcional aunque localStorage esté lleno.
+        console.info("Recordatorio gestionado en memoria; almacenamiento local sin espacio.");
+      }
       if (items.length) abrirAvisoProductosVencidos(items);
     }
   } catch (error) {

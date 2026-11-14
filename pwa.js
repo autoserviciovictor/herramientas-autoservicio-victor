@@ -6,7 +6,7 @@ const textoInstalacion = document.getElementById("estadoInstalacionApp");
 const iosModal = document.getElementById("iosInstallModal");
 const iosWarning = document.getElementById("iosInstallBrowserWarning");
 const installCard = document.getElementById("pwaInstallCard");
-const SW_RUNTIME_REVISION = "1996-carteles-a4-sin-hoja-vacia-061026";
+const SW_RUNTIME_REVISION = "1997-cuota-cache-segura-141126";
 const SW_RELOAD_KEY = `autoservicio-sw-reload-${SW_RUNTIME_REVISION}`;
 
 function estaInstalada() {

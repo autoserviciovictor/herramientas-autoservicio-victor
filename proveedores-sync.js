@@ -8,6 +8,8 @@ const revisions={},pending=new Set(),busy=new Set(),queued={};
 const confirmedSnapshots={};
 // Copia de lectura en memoria: el almacenamiento del navegador es opcional.
 const liveRecords={};
+// Evita repetir escrituras de caché que ya fallaron por cuota durante esta sesión.
+const cacheSinEspacio=new Set();
 const writeStatus={};
 function report(n,state,message=''){
   writeStatus[n]={state,message,at:new Date().toISOString()};
@@ -92,12 +94,17 @@ function changed(n,list){
   // una operación confirmada en PostgreSQL en un error de guardado.
   try{
     const current=parse(key);
-    if(JSON.stringify(current)!==JSON.stringify(incoming)){
+    if(!cacheSinEspacio.has(n)&&JSON.stringify(current)!==JSON.stringify(incoming)){
       // Los respaldos históricos existentes se conservan; no generar uno nuevo
       // por cada lectura/sincronización automática.
       localStorage.setItem(key,JSON.stringify(incoming));
     }
-  }catch(e){console.warn('Caché local no disponible ('+n+'); PostgreSQL sigue siendo la fuente de datos:',e)}
+  }catch(e){
+    if(e?.name==='QuotaExceededError'){
+      cacheSinEspacio.add(n);
+      console.warn('Caché local sin espacio ('+n+'). No se repetirán escrituras fallidas durante esta sesión; los datos confirmados siguen en memoria y PostgreSQL.');
+    }else console.warn('Caché local no disponible ('+n+'); PostgreSQL sigue siendo la fuente de datos:',e);
+  }
   window.dispatchEvent(new CustomEvent('proveedores:sincronizados',{detail:{coleccion:n}}));
   // La vista recibe el evento y se actualiza sin recargar la aplicación.
 }

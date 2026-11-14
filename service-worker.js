@@ -5,7 +5,7 @@
 // NOTIFICACIONES_PERMISO_INGRESO_010926: fuerza reinstalación del SW para refrescar notifications.js.
 // NOTIFICACIONES_ROBUSTEZ_010926: fuerza actualización del SW y refresco de assets del app shell.
 const CACHE_PREFIX = "autoservicio-v";
-const CACHE_VERSION = "autoservicio-v1996-carteles-a4-sin-hoja-vacia-061026";
+const CACHE_VERSION = "autoservicio-v1997-cuota-cache-segura-141126";
 const OFFLINE_DOCUMENT = "./index.html";
 const APP_SHELL = [
   "./",

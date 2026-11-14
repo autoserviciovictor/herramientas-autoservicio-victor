@@ -23,6 +23,7 @@ let ultimoSnapshotServidor = "";
 let sincronizacionRemotaEnCurso = null;
 
 const STORAGE_ETIQUETAS_PREFIX = "autoservicio:etiquetas:v1:";
+const etiquetasSinEspacioLocal = new Set();
 
 function identidadUsuario(usuario = window.AutoservicioAuth?.getUsuario?.()) {
   const valor = usuario?.usuario ?? usuario?.id ?? usuario?.email ?? "";
@@ -43,11 +44,19 @@ function normalizarItemsGuardados(valor) {
 }
 
 function guardarListaLocal() {
-  if (!claveUsuarioActiva) return;
+  if (!claveUsuarioActiva || etiquetasSinEspacioLocal.has(claveUsuarioActiva)) return;
   try {
-    localStorage.setItem(claveUsuarioActiva, JSON.stringify(items));
+    const nuevoValor = JSON.stringify(items);
+    if (localStorage.getItem(claveUsuarioActiva) !== nuevoValor) {
+      localStorage.setItem(claveUsuarioActiva, nuevoValor);
+    }
   } catch (error) {
-    console.warn("No se pudo guardar la lista local de etiquetas del usuario.", error);
+    if (error?.name === "QuotaExceededError") {
+      etiquetasSinEspacioLocal.add(claveUsuarioActiva);
+      console.warn("Copia local de etiquetas sin espacio. Se conserva la lista en memoria y se sigue intentando guardar en el servidor.");
+    } else {
+      console.warn("No se pudo guardar la lista local de etiquetas del usuario.", error);
+    }
   }
 }
 
