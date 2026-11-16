@@ -3579,7 +3579,9 @@ function claveBandejaCartelesOferta() {
   return `${CARTEL_OFERTA_STORAGE_BASE}:${encodeURIComponent(String(usuario).trim().toLowerCase())}`;
 }
 
+let bandejaCartelesMemoria = null;
 function leerBandejaCartelesOferta() {
+  if (bandejaCartelesMemoria !== null) return bandejaCartelesMemoria.slice(0, CARTEL_OFERTA_MAX);
   const clave = claveBandejaCartelesOferta();
   for (const almacenamiento of [localStorage, sessionStorage]) {
     try {
@@ -3592,6 +3594,7 @@ function leerBandejaCartelesOferta() {
 
 function guardarBandejaCartelesOferta(items) {
   const seguros = Array.isArray(items) ? items.slice(0, CARTEL_OFERTA_MAX) : [];
+  bandejaCartelesMemoria = seguros;
   const clave = claveBandejaCartelesOferta();
   const contenido = JSON.stringify(seguros);
 
@@ -3609,7 +3612,8 @@ function guardarBandejaCartelesOferta(items) {
       }
     } catch (_) {}
   }
-  if (!almacenamientoUsado) throw new Error("No se pudo guardar la bandeja de carteles.");
+  // La bandeja sigue operativa en memoria aunque ambos almacenamientos estén llenos.
+  if (!almacenamientoUsado) console.warn("Bandeja de carteles temporal en memoria: almacenamiento lleno.");
 
   // Evita que una copia vieja en la sesión prevalezca cuando localStorage volvió
   // a estar disponible.
@@ -3818,8 +3822,14 @@ function prepararPantallaCartelOferta() {
 function abrirModalOfertaCartel() { const modal = $("cartelesOfertaModal"); if (!modal) return; modal.classList.remove("oculto"); modal.setAttribute("aria-hidden", "false"); $("cartelDescuento")?.focus(); }
 function cerrarModalOfertaCartel() { const modal = $("cartelesOfertaModal"); modal?.classList.add("oculto"); modal?.setAttribute("aria-hidden", "true"); cartelOfertaItemActual = null; }
 function claveOfertasCarteles() { return `autoservicio_ofertas_carteles_v2:${claveBandejaCartelesOferta()}`; }
-function leerOfertasCarteles() { try { const data = JSON.parse(localStorage.getItem(claveOfertasCarteles()) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; } }
+let ofertasCartelesMemoria = null;
+function leerOfertasCarteles() {
+  if (ofertasCartelesMemoria !== null) return ofertasCartelesMemoria;
+  try { const data = JSON.parse(localStorage.getItem(claveOfertasCarteles()) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; }
+}
 function guardarOfertasCarteles(ofertas) {
+  // La respuesta del servidor es la fuente de verdad, no el caché del navegador.
+  ofertasCartelesMemoria = Array.isArray(ofertas) ? ofertas : [];
   const clave = claveOfertasCarteles();
   const contenido = JSON.stringify(ofertas);
   try {
@@ -3879,13 +3889,14 @@ async function cargarOfertasCompartidasCarteles() {
 
 function sincronizarCartelesConVencimientos(registros) {
   const ofertas = (registros || [])
-    .filter((v) => tieneOferta(v) && v.detalleOferta)
+    .filter((v) => tieneOferta(v) && v.detalleOferta && (!v.vencimiento || String(v.vencimiento).slice(0, 10) >= fechaHoyLocalIso()))
     .map((v) => ({ ...v.detalleOferta, id: String(v.id), articulo: v.articulo, codigo: v.codigo }));
   guardarOfertasCarteles(ofertas);
   const porId = new Map(ofertas.map((o) => [String(o.id), o]));
   guardarBandejaCartelesOferta(leerBandejaCartelesOferta()
     .filter((o) => porId.has(String(o.id)))
     .map((o) => porId.get(String(o.id))));
+  renderListadoCartelesOfertas();
 }
 
 function renderListadoCartelesOfertas() {
