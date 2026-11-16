@@ -97,6 +97,7 @@ let pulsacionLargaVencimientos = null;
 let ignorarSiguienteClickVencimiento = false;
 let vistaVencimientos = "grid";
 const gruposVencimientosAbiertos = new Set(["7"]);
+let vencidosHoyDesplegadosAutomaticamente = false;
 // La prioridad manual es compartida: PostgreSQL es la única fuente de verdad.
 const prioridadesVencimientosManuales = new Set();
 function actualizarPrioridadesDesdeServidor(registros) {
@@ -2994,6 +2995,14 @@ async function cargarListadoVencimientos(opciones = {}) {
       }),
     ]);
     vencimientosCache = Array.isArray(vencimientos) ? vencimientos : [];
+    // Los que vencen hoy ya están vencidos. Mostrar su sección al primer ingreso,
+    // sin reabrirla cada vez si el usuario decide cerrarla.
+    if (!vencidosHoyDesplegadosAutomaticamente && vencimientosCache.some(
+      (item) => diasHastaVencimiento(item?.vencimiento) === 0
+    )) {
+      gruposVencimientosAbiertos.add("vencidos");
+      vencidosHoyDesplegadosAutomaticamente = true;
+    }
     actualizarPrioridadesDesdeServidor(vencimientosCache);
     // El servidor es la fuente compartida para los datos de ofertas.
     sincronizarCartelesConVencimientos(vencimientosCache);
@@ -3212,7 +3221,7 @@ function ordenarListaVencimientos(lista) {
     const diasB = diasHastaVencimiento(b.vencimiento);
     // Dentro de Vencidos, mostrar primero los vencimientos más recientes.
     // Conservar el orden habitual para los productos que aún no vencieron.
-    if (ordenVencimientos === "proximo" && diasA < 0 && diasB < 0) {
+    if (ordenVencimientos === "proximo" && diasA <= 0 && diasB <= 0) {
       return compararFechaVencimiento(a, b, -1);
     }
     return compararFechaVencimiento(a, b, ordenVencimientos === "lejano" ? -1 : 1);
@@ -3363,7 +3372,7 @@ function renderListadoVencimientos() {
     {
       bucket: "7",
       titulo: "Próximos 7 días",
-      detalle: "Vencen entre hoy y 7 días",
+      detalle: "Vencen entre mañana y 7 días",
     },
     {
       bucket: "15",
@@ -3378,7 +3387,7 @@ function renderListadoVencimientos() {
     {
       bucket: "vencidos",
       titulo: "Vencidos",
-      detalle: "Productos con fecha de vencimiento pasada",
+      detalle: "Productos que vencen hoy o cuya fecha ya pasó",
     },
   ];
 
@@ -3843,6 +3852,7 @@ function guardarOfertasCarteles(ofertas) {
 function eliminarOfertaCartelGuardada(id) { guardarOfertasCarteles(leerOfertasCarteles().filter(x => String(x.id) !== String(id))); guardarBandejaCartelesOferta(leerBandejaCartelesOferta().filter(x => String(x.id) !== String(id))); }
 // Se reutiliza el registro persistente anterior para identificar carteles ya agregados.
 let cartelesImpresosCompartidos = new Set();
+let vistaCartelesOfertas = "pendientes";
 
 async function solicitarCartelesImpresos(ruta, opciones = {}) {
   const token = window.AutoservicioAuth?.getToken?.();
@@ -3887,10 +3897,17 @@ async function cargarOfertasCompartidasCarteles() {
   }
 }
 
+// La fecha del lote/producto prevalece sobre la vigencia comercial de la oferta.
+// Un producto que vence hoy ya no se puede ofrecer ni imprimir.
+function cartelProductoNoVencido(item) {
+  const fecha = String(item?.vencimientoProducto || item?.vencimiento || "").slice(0, 10);
+  return Boolean(fecha) && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha > fechaHoyLocalIso();
+}
+
 function sincronizarCartelesConVencimientos(registros) {
   const ofertas = (registros || [])
-    .filter((v) => tieneOferta(v) && v.detalleOferta && (!v.vencimiento || String(v.vencimiento).slice(0, 10) >= fechaHoyLocalIso()))
-    .map((v) => ({ ...v.detalleOferta, id: String(v.id), articulo: v.articulo, codigo: v.codigo }));
+    .filter((v) => tieneOferta(v) && v.detalleOferta && cartelProductoNoVencido(v))
+    .map((v) => ({ ...v.detalleOferta, id: String(v.id), articulo: v.articulo, codigo: v.codigo, vencimientoProducto: v.vencimiento }));
   guardarOfertasCarteles(ofertas);
   const porId = new Map(ofertas.map((o) => [String(o.id), o]));
   guardarBandejaCartelesOferta(leerBandejaCartelesOferta()
@@ -3903,10 +3920,30 @@ function renderListadoCartelesOfertas() {
   const host = $("cartelesOfertasLista"); if (!host) return;
   // El servidor ya define qué ofertas están activas. La fecha de vigencia
   // se muestra en el cartel, pero no debe ocultar una oferta activa.
-  const ofertas = leerOfertasCarteles();
+  const ofertas = leerOfertasCarteles().filter(cartelProductoNoVencido);
   const bandejaLlena = leerBandejaCartelesOferta().length >= CARTEL_OFERTA_MAX;
+  // Las dos vistas comparten la misma fuente del servidor y el mismo buscador.
+  let controles = document.getElementById("cartelesEstadoImpresionTabs");
+  if (!controles) {
+    controles = document.createElement("div");
+    controles.id = "cartelesEstadoImpresionTabs";
+    controles.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px";
+    host.parentElement.insertBefore(controles, host);
+    controles.addEventListener("click", (evento) => {
+      const boton = evento.target.closest("[data-vista-carteles]");
+      if (!boton) return;
+      vistaCartelesOfertas = boton.dataset.vistaCarteles;
+      renderListadoCartelesOfertas();
+    });
+  }
+  const pendientes = ofertas.filter(o => !cartelesImpresosCompartidos.has(String(o.id))).length;
+  const impresos = ofertas.length - pendientes;
+  controles.innerHTML = [
+    ["pendientes", "Para imprimir", pendientes], ["impresos", "Ya impresos", impresos]
+  ].map(([clave, titulo, total]) => `<button type="button" data-vista-carteles="${clave}" aria-pressed="${vistaCartelesOfertas === clave}" style="padding:10px 16px;border-radius:10px;border:1px solid ${vistaCartelesOfertas === clave ? '#ed2448' : '#dbe2ea'};background:${vistaCartelesOfertas === clave ? '#fff0f3' : '#fff'};color:${vistaCartelesOfertas === clave ? '#d91d42' : '#334155'};font-weight:700;cursor:pointer">${titulo} (${total})</button>`).join("");
   const filtro = $("cartelesBuscarOferta")?.value?.trim().toLocaleLowerCase("es-AR") || "";
   const filtradas = ofertas
+    .filter(o => cartelesImpresosCompartidos.has(String(o.id)) === (vistaCartelesOfertas === "impresos"))
     .filter(o => !filtro || `${o.articulo || ""} ${o.codigo || ""}`.toLocaleLowerCase("es-AR").includes(filtro))
     .sort((a, b) => Number(cartelesImpresosCompartidos.has(String(a.id))) - Number(cartelesImpresosCompartidos.has(String(b.id))));
   host.innerHTML = filtradas.length ? filtradas.map(o => {
@@ -3915,8 +3952,8 @@ function renderListadoCartelesOfertas() {
     const descuento = Number(o.descuento) || 0;
     const porcentaje = Number.isInteger(descuento) ? String(descuento) : descuento.toLocaleString("es-AR", { maximumFractionDigits: 1 });
     const impreso = cartelesImpresosCompartidos.has(String(o.id));
-    return `<div class="carteles-oferta-item${impreso ? " cartel-ya-impreso" : ""}" style="${impreso ? "background:#fff3f4;border:2px solid #ef2449;" : ""}"><div class="carteles-disponible-info"><b>${escapeHTML(o.articulo || "Producto")}</b><small>Código: ${escapeHTML(String(o.codigo || "—"))}</small>${impreso ? '<small style="color:#d51b3c;font-weight:700;">✓ Ya agregado · disponible para volver a agregar</small>' : ""}</div><span class="carteles-disponible-descuento">${escapeHTML(porcentaje)}% de descuento</span><div class="carteles-disponible-precio"><div class="carteles-precio-antes"><span>Antes:</span><s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></div><div class="carteles-precio-ahora"><span>Ahora:</span><strong>${escapeHTML(formatearDineroCartel(precioFinal))}</strong></div></div><button type="button" class="carteles-agregar-btn" data-cartel-agregar-id="${escapeHTML(String(o.id))}" ${bandejaLlena ? "disabled" : ""}>+ Agregar</button></div>`;
-  }).join("") : `<p class="carteles-empty">${ofertas.length ? "No se encontraron productos con ese nombre o código." : "Todavía no hay ofertas guardadas. Activá una oferta desde Vencimientos para verla acá."}</p>`;
+    return `<div class="carteles-oferta-item${impreso ? " cartel-ya-impreso" : ""}" style="${impreso ? "background:#fff3f4;border:2px solid #ef2449;" : ""}"><div class="carteles-disponible-info"><b>${escapeHTML(o.articulo || "Producto")}</b><small style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;white-space:nowrap;margin-top:13px;padding-bottom:1px;"><span style="white-space:nowrap;">Código: ${escapeHTML(String(o.codigo || "—"))}</span><span style="color:#e51b43;font-weight:700;white-space:nowrap;flex-shrink:0;">Vence: ${escapeHTML(formatearFecha(o.vencimientoProducto || o.vencimiento))}</span></small>${impreso ? '<small style="color:#d51b3c;font-weight:700;">✓ Impreso · disponible para reimprimir</small>' : ""}</div><span class="carteles-disponible-descuento">${escapeHTML(porcentaje)}% de descuento</span><div class="carteles-disponible-precio"><div class="carteles-precio-antes"><span>Antes:</span><s>${escapeHTML(formatearDineroCartel(precioOriginal))}</s></div><div class="carteles-precio-ahora"><span>Ahora:</span><strong>${escapeHTML(formatearDineroCartel(precioFinal))}</strong></div></div><button type="button" class="carteles-agregar-btn" data-cartel-agregar-id="${escapeHTML(String(o.id))}" ${bandejaLlena ? "disabled" : ""}>+ Agregar</button></div>`;
+  }).join("") : `<p class="carteles-empty">${filtro ? "No se encontraron productos con ese nombre o código." : vistaCartelesOfertas === "impresos" ? "Todavía no hay carteles impresos." : "No hay carteles pendientes de impresión."}</p>`;
   renderBandejaCartelesOferta();
 }
 document.addEventListener("click", event => { if (event.target.closest("#cartelesOfertasLista [data-cartel-agregar-id]")) agregarCartelDesdeLista(event); });
@@ -3924,7 +3961,7 @@ document.addEventListener("input", event => { if (event.target.id === "cartelesB
 async function agregarCartelDesdeLista(event) {
   const boton = event.target.closest("[data-cartel-agregar-id]");
   if (!boton || boton.disabled) return;
-  const oferta = leerOfertasCarteles().find(o => String(o.id) === boton.dataset.cartelAgregarId);
+  const oferta = leerOfertasCarteles().filter(cartelProductoNoVencido).find(o => String(o.id) === boton.dataset.cartelAgregarId);
   if (!oferta) return;
   const items = leerBandejaCartelesOferta();
   if (items.length >= CARTEL_OFERTA_MAX) {
@@ -3934,15 +3971,7 @@ async function agregarCartelDesdeLista(event) {
   // Agregar inmediatamente a la bandeja, sin esperar la respuesta del servidor.
   items.push({ ...oferta });
   guardarBandejaCartelesOferta(items);
-  cartelesImpresosCompartidos.add(String(oferta.id));
   renderListadoCartelesOfertas();
-  // Guardar la marca compartida en PostgreSQL y avisar si falla.
-  try {
-    await registrarCartelAgregado(oferta.id);
-  } catch (error) {
-    console.error("No se pudo guardar la marca compartida del cartel:", error);
-    mostrarMensaje("Se agregó el cartel para imprimir, pero la marca roja no se guardó en el servidor: " + error.message, "error");
-  }
 }
 function renderVistaPreviaCarteles(items) {
   const preview = $("cartelOfertaPreview"); if (!preview) return;
@@ -3957,7 +3986,7 @@ function cambiarSeleccionCartel(event) {
   else seleccion = seleccion.filter(x => String(x.id) !== id);
   guardarBandejaCartelesOferta(seleccion); renderListadoCartelesOfertas();
 }
-function seleccionarCartelesDisponibles() { const seleccion = leerOfertasCarteles().filter(x => !x.vencimiento || x.vencimiento >= fechaHoyLocalIso()).slice(0, CARTEL_OFERTA_MAX); guardarBandejaCartelesOferta(seleccion); renderListadoCartelesOfertas(); }
+function seleccionarCartelesDisponibles() { const seleccion = leerOfertasCarteles().filter(cartelProductoNoVencido).slice(0, CARTEL_OFERTA_MAX); guardarBandejaCartelesOferta(seleccion); renderListadoCartelesOfertas(); }
 function abrirConfiguradorCartelOferta() {
   if (!vencimientoSeleccionado) return;
   if (hayCambiosVencimiento()) { mostrarErrorEdicionVencimiento("Guardá los cambios antes de configurar la oferta."); return; }
@@ -4014,7 +4043,8 @@ async function guardarCartelOfertaActual() {
 
 function renderBandejaCartelesOferta() {
   const box = $("cartelOfertaBandeja");
-  const items = leerBandejaCartelesOferta();
+  const items = leerBandejaCartelesOferta().filter(cartelProductoNoVencido);
+  if (items.length !== leerBandejaCartelesOferta().length) guardarBandejaCartelesOferta(items);
   if ($("cartelOfertaContador")) $("cartelOfertaContador").textContent = `${items.length} de ${CARTEL_OFERTA_MAX} carteles`;
   const imprimir = $("btnCartelImprimirHoja");
   if (imprimir) imprimir.disabled = items.length < 1;
@@ -4417,6 +4447,19 @@ async function imprimirHojaCartelesOferta() {
     win.addEventListener("afterprint", limpiar, { once: true });
     win.focus();
     win.print();
+    // Se registra al presionar Imprimir, sin esperar confirmación de la impresora.
+    // El servidor es la fuente de verdad para todos los dispositivos.
+    try {
+      await solicitarCartelesImpresos("/vencimientos/carteles-impresos", {
+        method: "POST", body: JSON.stringify({ ids: [...new Set(items.map(item => String(item.id)))] }),
+      });
+      items.forEach(item => cartelesImpresosCompartidos.add(String(item.id)));
+      guardarBandejaCartelesOferta([]);
+      renderListadoCartelesOfertas();
+    } catch (error) {
+      console.error("No se pudo registrar la impresión:", error);
+      mostrarMensaje("Se abrió la impresión, pero no se pudo guardar el estado en el servidor. Reintentá cuando haya conexión.", "error");
+    }
 
     // Respaldo: algunos navegadores no emiten afterprint al cancelar.
     setTimeout(limpiar, 30000);

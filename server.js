@@ -7278,6 +7278,14 @@ app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async
       }
     }
     const actualizadoDb = await actualizarVencimientoDb(id, { oferta, detalleOferta: oferta === "Sí" ? detalleOferta : null });
+    // Una oferta modificada necesita un cartel nuevo, aunque ya se haya impreso.
+    const firmaOferta = (detalle) => JSON.stringify([
+      Number(detalle?.precioActual || 0), Number(detalle?.precioOferta ?? detalle?.precioDescuento ?? 0),
+      Number(detalle?.descuento || 0), String(detalle?.vencimiento || "")
+    ]);
+    if (oferta !== "Sí" || firmaOferta(registro.detalleOferta) !== firmaOferta(detalleOferta)) {
+      await query("DELETE FROM expiration_poster_prints WHERE record_id=$1", [id]);
+    }
     if (!actualizadoDb)
       return res
         .status(404)
