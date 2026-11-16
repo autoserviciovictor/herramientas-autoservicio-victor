@@ -6,7 +6,7 @@ const fs = require("fs");
 const webpush = require("web-push");
 const path = require("path");
 require("dotenv").config();
-const { verificarConexionPostgres, cerrarPostgres } = require("./db");
+const { query, verificarConexionPostgres, cerrarPostgres } = require("./db");
 const { leerNovedadesInicio, guardarNovedadesInicio } = require("./db-novedades");
 const {
   asegurarEsquemaUsuariosSectores,
@@ -7283,13 +7283,13 @@ app.patch("/vencimientos/:id/oferta", requerirAlgunModulo("vencimientos"), async
       Number(detalle?.precioActual || 0), Number(detalle?.precioOferta ?? detalle?.precioDescuento ?? 0),
       Number(detalle?.descuento || 0), String(detalle?.vencimiento || "")
     ]);
-    if (oferta !== "Sí" || firmaOferta(registro.detalleOferta) !== firmaOferta(detalleOferta)) {
-      await query("DELETE FROM expiration_poster_prints WHERE record_id=$1", [id]);
-    }
     if (!actualizadoDb)
       return res
         .status(404)
         .json({ ok: false, mensaje: "Registro no encontrado" });
+    if (oferta !== "Sí" || firmaOferta(registro.detalleOferta) !== firmaOferta(detalleOferta)) {
+      await query("DELETE FROM expiration_poster_prints WHERE record_id=$1", [id]);
+    }
     const actualizado = {
       ...actualizadoDb,
       estado: calcularEstadoVencimiento(actualizadoDb.vencimiento),
