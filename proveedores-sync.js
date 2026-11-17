@@ -141,7 +141,13 @@ async function load(n){
       report(n,'failed','Hay cambios locales sin confirmar; se conservan hasta sincronizarlos.');
       return;
     }
-    if(current.some(x=>!remoteIds.has(identity(x)))){showNotice();return}
+    if(current.some(x=>!remoteIds.has(identity(x)))){
+      // Conservar los registros locales no migrados, pero notificar al cronograma
+      // que ya hay una lectura compartida del servidor disponible.
+      showNotice();
+      if(n==='cronograma')window.dispatchEvent(new CustomEvent('proveedores:sincronizados',{detail:{coleccion:n}}));
+      return;
+    }
     // Los respaldos antiguos no bloquean la sincronización cotidiana.
     changed(n,records);
     confirmedSnapshots[n]=structuredClone(fromList(n,records));

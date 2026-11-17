@@ -19,7 +19,8 @@ const days=()=>{let d=start();if(mode==='Día'){d=today();d.setDate(d.getDate()+
 const months=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const SCHEDULE_KEY='autoservicio_cronograma_semanal_v1';
 const WEEKDAYS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Otros pedidos'];
-const scheduleRead=()=>{try{const a=JSON.parse(localStorage.getItem(SCHEDULE_KEY));return Array.isArray(a)?a:[]}catch{return []}};
+// PostgreSQL es la fuente de lectura compartida; localStorage queda como respaldo mientras carga la sincronización.
+const scheduleRead=()=>{const remote=window.ProveedoresSync?.hasLiveRecords?.('cronograma')?window.ProveedoresSync.getRecords('cronograma'):null;if(Array.isArray(remote))return remote;try{const a=JSON.parse(localStorage.getItem(SCHEDULE_KEY));return Array.isArray(a)?a:[]}catch{return []}};
 // Las asignaciones se escriben individualmente en PostgreSQL. No se altera
 // localStorage antes de la confirmación y la lectura posterior del servidor.
 const scheduleMutate=async (record,deleteId=null)=>{
