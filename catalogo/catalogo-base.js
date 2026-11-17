@@ -681,10 +681,62 @@ function rubroMenuMovil(rubro) {
   </div>`;
 }
 
+// Portada móvil: se construye con los rubros reales de la API, no con seis accesos fijos.
+// Cada rubro se vincula solo a una fotografía pertinente. Nunca reutilizar Almacén por defecto.
+function imagenCircularRubro(nombre = "") {
+  const n = String(nombre).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const slug = n.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // Fotografías exclusivas por rubro. No asignar imágenes de bebidas a cervezas, etc.
+  const fotos = new Set([
+    "aderezos",
+    "aguas-y-jugos",
+    "almacen",
+    "carniceria",
+    "cervezas",
+    "cocina",
+    "condimentos",
+    "congelados",
+    "conservas-y-frascos",
+    "cotillon",
+    "elaboracion",
+    "electro",
+    "electrodomesticos",
+    "embutidos",
+    "fiambreria",
+    "galletas",
+    "gaseosas",
+    "golosinas-y-chocolates",
+    "green",
+    "higiene",
+    "hogar",
+    "juguetes",
+    "lacteos",
+    "limpieza",
+    "mascotas",
+    "medicamento",
+    "navidad",
+    "panaderia",
+    "perfumeria",
+    "pescados",
+    "postres",
+    "snacks",
+    "varios",
+    "verduleria",
+    "vinoteca-y-aperitivos"
+  ]);
+  return fotos.has(slug) ? `./assets/categoria-rubro-centrado-${slug}.webp?v=7` : "";
+}
+function renderRubrosPortadaMovil() {
+  const nav = document.getElementById("catalogoAllRubrosMobile");
+  if (!nav) return;
+  nav.innerHTML = state.rubros.map(rubro => `<button class="catalogo-rubro-card" type="button" data-rubro="${escapeHtml(rubro.slug || "")}" title="${escapeHtml(rubro.nombre || "")}">${imagenCircularRubro(rubro.nombre) ? `<img src="${imagenCircularRubro(rubro.nombre)}" alt="" loading="lazy" decoding="async">` : `<span class="catalogo-rubro-sin-foto" aria-hidden="true">${escapeHtml(String(rubro.nombre || "?").trim().slice(0, 1).toUpperCase())}</span>`}<span><strong>${escapeHtml(rubro.nombre || "Rubro")}</strong></span></button>`).join("");
+}
+
 function renderCategories() {
   // Los accesos principales son independientes del filtro de rubros.
   const mobileEntry = (action, title, active = false) => `<button class="category-button category-button--shortcut${active ? ' is-active' : ''}" type="button" data-menu-view="${action}"${active ? ' aria-current="page"' : ''}><span class="category-button__icon category-logo tone-red" aria-hidden="true">${mobileMenuIcon(action)}</span><span>${title}</span><svg class="category-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`;
   els.nav.innerHTML = state.rubros.map(rubroMenuEscritorio).join("");
+  renderRubrosPortadaMovil();
   const isHome = !state.modoCatalogo && !state.rubro && !state.busqueda && !document.body.classList.contains('catalogo-mobile-offers-active') && !document.body.classList.contains('catalogo-mobile-bestsellers-active');
   els.mobileNav.innerHTML = [
     mobileEntry('inicio', 'Inicio', isHome),

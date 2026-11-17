@@ -1258,3 +1258,259 @@ html.catalogo-scroll-locked { overflow: hidden !important; overscroll-behavior: 
   background: #f1f4f9 !important;
   color: #1b263c !important;
 }
+
+/* Catálogo móvil: un solo marco visual para encabezado y buscador. */
+@media (max-width: 700px) {
+  .catalogo-header {
+    box-sizing: border-box;
+    width: calc(100% - 24px);
+    margin: 10px 12px 0;
+    padding: 0;
+    background: #fff;
+    border-radius: 19px 19px 0 0;
+    box-shadow: 0 3px 18px rgba(19,34,55,.07);
+  }
+  .catalogo-header__inner {
+    width: 100%;
+    height: 74px;
+    min-height: 74px;
+    margin: 0;
+    border-radius: 19px 19px 0 0;
+    box-shadow: none;
+  }
+  .catalogo-search-section {
+    box-sizing: border-box;
+    width: calc(100% - 24px);
+    max-width: none;
+    margin: 0 12px;
+    padding: 0 12px 12px;
+    background: #fff;
+    border-radius: 0 0 19px 19px;
+    box-shadow: 0 7px 18px rgba(19,34,55,.07);
+  }
+  .catalogo-search-section__inner {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+  .catalogo-search-section .catalogo-header-search {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+/* Buscador movil: retirar solo el boton rojo de envio y aprovechar su espacio. */
+@media (max-width: 700px) {
+  .catalogo-search-section .catalogo-header-search {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .catalogo-search-section .catalogo-header-search > button[type="submit"] {
+    display: none;
+  }
+}
+
+/* Fondo uniforme en el marco superior móvil: sin franja gris bajo el logo. */
+@media (max-width: 700px) {
+  .catalogo-header,
+  .catalogo-header__inner,
+  .catalogo-search-section,
+  .catalogo-search-section__inner {
+    background: #fff !important;
+    background-image: none !important;
+  }
+  .catalogo-header {
+    box-shadow: none;
+  }
+  .catalogo-search-section {
+    border-top: 0;
+    box-shadow: 0 7px 18px rgba(19,34,55,.07);
+  }
+}
+
+/* Escritorio: ocultar el botón rojo del buscador sin alterar el envío con Enter. */
+@media (min-width: 761px) {
+  .catalogo-header-search--desktop {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+  .catalogo-header-search--desktop > button[type="submit"] {
+    display: none;
+  }
+}
+
+
+/* Navegación móvil flotante: una única superficie translúcida separada de los bordes. */
+@media (max-width: 700px) {
+  .catalogo-bottom-nav {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    min-height: 65px;
+    padding: 5px 9px;
+    border: 1px solid rgba(255,255,255,.65);
+    border-radius: 20px;
+    background: rgba(255,255,255,.78);
+    -webkit-backdrop-filter: blur(14px) saturate(135%);
+    backdrop-filter: blur(14px) saturate(135%);
+    box-shadow: 0 8px 28px rgba(16,24,40,.16);
+    overflow: hidden;
+  }
+  .catalogo-bottom-nav button {
+    min-height: 53px;
+  }
+}
+
+
+/* Ajuste del menú flotante: los paneles llegan al fondo, sin dejar una franja
+   reservada con otro color. El contenido desplazable conserva espacio para
+   los controles inferiores, que siguen por encima del panel. */
+@media (max-width: 700px) {
+  .catalogo-account[data-mobile-screen],
+  .catalogo-cart,
+  .catalogo-cart.is-open,
+  .catalogo-checkout.is-open {
+    bottom: 0 !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box;
+  }
+  .catalogo-account[data-mobile-screen] .account-body,
+  .catalogo-checkout.is-open .checkout-body {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .catalogo-cart,
+  .catalogo-cart.is-open {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Distancia visible entre el resumen negro y la navegación flotante. */
+  .catalogo-mobile-cartbar:not([hidden]) {
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Categorías circulares: solo portada móvil. Los botones conservan sus data-rubro-name. */
+.catalogo-mobile-categories-title{display:none}
+@media(max-width:700px){
+  .catalogo-mobile-categories-title{display:block;margin:0 0 13px;font-size:21px;line-height:1.2;font-weight:850;color:#17191e}
+  .catalogo-featured-rubros{display:flex;grid-template-columns:none;gap:13px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none;padding:0 0 8px;margin:0 0 8px;-webkit-overflow-scrolling:touch}
+  .catalogo-featured-rubros::-webkit-scrollbar{display:none}
+  .catalogo-rubro-card{flex:0 0 88px;min-width:88px;width:88px;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:7px;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible;scroll-snap-align:start}
+  .catalogo-rubro-card:hover{box-shadow:none}
+  .catalogo-rubro-card>img{width:82px;height:82px;flex:0 0 82px;object-fit:cover;object-position:center;border-radius:50%;background:#fce2e6;transform:none}
+  .catalogo-rubro-card::after{display:none}
+  .catalogo-rubro-card>span{position:static;display:block;min-height:0;width:100%;padding:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;text-align:center}
+  .catalogo-rubro-card strong{display:block;font-size:12px;line-height:1.22;font-weight:750;letter-spacing:0;text-align:center;white-space:normal;color:#17191e}
+  .catalogo-rubro-card i{display:none}
+  .catalogo-rubro-card:focus-visible{outline:2px solid var(--red);outline-offset:4px;border-radius:12px}
+}
+
+/* Todos los rubros de la API en la portada móvil; la portada de PC sigue intacta. */
+.catalogo-all-rubros-mobile{display:none}
+@media(max-width:700px){
+  .catalogo-featured-rubros{display:none!important}
+  .catalogo-all-rubros-mobile{display:flex;gap:13px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none;padding:0 0 12px;margin:0 0 8px;-webkit-overflow-scrolling:touch}
+  .catalogo-all-rubros-mobile::-webkit-scrollbar{display:none}
+  .catalogo-all-rubros-mobile .catalogo-rubro-card{flex:0 0 88px;min-width:88px;width:88px;height:auto;display:flex;flex-direction:column;align-items:center;gap:7px;padding:0;background:transparent;border:0;box-shadow:none;overflow:visible;scroll-snap-align:start}
+  .catalogo-all-rubros-mobile .catalogo-rubro-card>img{width:82px;height:82px;flex:0 0 82px;object-fit:cover;border-radius:50%;background:#fce2e6}
+  .catalogo-all-rubros-mobile .catalogo-rubro-card>span{position:static;display:block;width:100%;min-height:0;padding:0;background:transparent;border:0;box-shadow:none;text-align:center}
+  .catalogo-all-rubros-mobile .catalogo-rubro-card strong{display:block;font-size:12px;line-height:1.22;font-weight:750;white-space:normal;text-align:center;color:#17191e}
+  .catalogo-all-rubros-mobile .catalogo-rubro-card i{display:none!important}
+}
+
+/* Categorías móviles: fotografías centradas y completas, sin recortes. */
+@media(max-width:700px){
+  .catalogo-all-rubros-mobile .catalogo-rubro-card>img{
+    width:82px;height:82px;object-fit:contain;object-position:50% 50%;
+    background:#fce2e6;border-radius:50%;overflow:hidden;
+  }
+  .catalogo-all-rubros-mobile .catalogo-rubro-sin-foto{
+    width:82px;height:82px;flex:0 0 82px;display:grid;place-items:center;
+    border-radius:50%;background:#fce2e6;color:#b44b5b;
+    font-size:30px;font-weight:800;line-height:1;
+  }
+}
+
+/* Íconos fotográficos móviles: el círculo se aplica una sola vez, sin recortes adicionales. */
+@media(max-width:700px){
+  .catalogo-all-rubros-mobile .catalogo-rubro-card>img{
+    width:82px;height:82px;object-fit:contain;object-position:center;
+    border-radius:50%;background:#fce2e6;display:block;
+  }
+  .catalogo-all-rubros-mobile .catalogo-rubro-card{gap:7px}
+}
+
+/* Fotografías de rubros: círculo íntegro, sin recortes ni descentrado. */
+@media(max-width:767px){.catalogo-all-rubros-mobile .catalogo-rubro-card>img{object-fit:contain!important;object-position:center!important;transform:none!important;aspect-ratio:1/1;border-radius:50%;}}
+
+/* Corrección definitiva de presentación: fotografías completas dentro de círculos.
+   Se aplica al final para neutralizar reglas antiguas que recortaban con cover. */
+@media (max-width: 767px) {
+  .catalogo-all-rubros-mobile .catalogo-rubro-card {
+    flex: 0 0 88px !important; width: 88px !important; min-width: 88px !important;
+    display: flex !important; flex-direction: column !important; align-items: center !important;
+    gap: 7px !important; overflow: visible !important;
+  }
+  .catalogo-all-rubros-mobile .catalogo-rubro-card > img {
+    display: block !important; box-sizing: border-box !important;
+    width: 82px !important; height: 82px !important; min-width: 82px !important;
+    max-width: 82px !important; min-height: 82px !important; max-height: 82px !important;
+    flex: 0 0 82px !important; padding: 0 !important; margin: 0 auto !important;
+    object-fit: contain !important; object-position: center center !important;
+    aspect-ratio: 1 / 1 !important; border-radius: 50% !important;
+    background: #fce2e6 !important; transform: none !important;
+    filter: none !important; clip-path: none !important;
+  }
+  .catalogo-all-rubros-mobile .catalogo-rubro-card > span {
+    width: 100% !important; margin: 0 !important; text-align: center !important;
+    position: static !important; overflow: visible !important;
+  }
+  .catalogo-all-rubros-mobile .catalogo-rubro-card strong {
+    display: block !important; text-align: center !important;
+    overflow-wrap: anywhere; line-height: 1.22 !important;
+  }
+}
+
+/* Rubros fotográficos: archivos circulares con transparencia, sin marcos cuadrados. */
+@media (max-width: 767px) {
+  .catalogo-all-rubros-mobile .catalogo-rubro-card > img {
+    object-fit: cover !important; object-position: center !important;
+    background: #e2e2e2 !important; border-radius: 50% !important;
+    clip-path: circle(50% at 50% 50%) !important;
+  }
+}
+
+/* Ajuste puntual de ALMACEN en las categorías circulares móviles.
+   Mantiene el diámetro de 82px de todas las categorías y reduce solo la foto interior. */
+@media (max-width: 767px) {
+  .catalogo-all-rubros-mobile .catalogo-rubro-card[data-rubro-name="ALMACEN"] > img,
+  .catalogo-featured-rubros .catalogo-rubro-card[data-rubro-name="ALMACEN"] > img {
+    object-fit: contain !important;
+    padding: 6px !important;
+    box-sizing: border-box !important;
+    background: #e2e2e2 !important;
+    border-radius: 50% !important;
+    clip-path: circle(50% at 50% 50%) !important;
+  }
+}
+
+/* Rubros destacados en escritorio: foto completa y etiqueta sin superposición.
+   No afecta las categorías circulares ni la presentación móvil. */
+@media (min-width: 768px) {
+  .catalogo-featured-rubros .catalogo-rubro-card {
+    background: #e2e2e2;
+  }
+  .catalogo-featured-rubros .catalogo-rubro-card > img {
+    width: 100%;
+    height: calc(100% - 46px);
+    object-fit: contain;
+    object-position: center center;
+    background: #e2e2e2;
+  }
+  .catalogo-featured-rubros .catalogo-rubro-card::after {
+    display: none;
+  }
+  .catalogo-featured-rubros .catalogo-rubro-card > span {
+    bottom: 5px;
+  }
+}
