@@ -57,7 +57,33 @@ function mountCronogramaOverlay(){
  if(activeFeedback)document.body.appendChild(activeFeedback);
  document.body.classList.toggle('cr-modal-open',!!document.querySelector('body > .cr-overlay'));
 }
-function refresh(){const root=document.getElementById('provApp');if(root?.querySelector('.cr-app')){root.innerHTML=render()+feedbackModal();mountCronogramaOverlay()}}
+function refresh(){
+ const root=document.getElementById('provApp');
+ if(!root?.querySelector('.cr-app'))return;
+ // Conservar la selección del formulario cuando se vuelve a dibujar el cronograma.
+ const modal=document.querySelector('body > .cr-overlay #cr-schedule-form')||root.querySelector('#cr-schedule-form');
+ const draft=modal&&scheduleType?{
+  providerId:modal.querySelector('[name="providerId"]')?.value||'',
+  providerName:modal.querySelector('[data-cr-provider-search]')?.value||'',
+  weekday:modal.querySelector('[name="weekday"]')?.value,
+  color:modal.querySelector('[name="color"]')?.value
+ }:null;
+ root.innerHTML=render()+feedbackModal();mountCronogramaOverlay();
+ if(draft){
+  const form=document.querySelector('body > .cr-overlay #cr-schedule-form');
+  if(form){
+   form.querySelector('[name="providerId"]').value=draft.providerId;
+   form.querySelector('[data-cr-provider-search]').value=draft.providerName;
+   for(const name of ['weekday','color']){
+    const wrapper=form.querySelector(`[name="${name}"]`)?.closest('[data-cr-custom-select]');
+    if(!wrapper||draft[name]==null)continue;
+    wrapper.querySelector('input[type="hidden"]').value=draft[name];
+    const option=[...wrapper.querySelectorAll('[data-cr-select-value]')].find(el=>el.dataset.crSelectValue===draft[name]);
+    if(option){wrapper.querySelector('[data-cr-selected-label]').innerHTML=option.innerHTML;wrapper.querySelectorAll('[data-cr-select-value]').forEach(el=>el.classList.toggle('is-selected',el===option));}
+   }
+  }
+ }
+}
 // El módulo se renderiza desde proveedores.js: trasladar el modal al body también al abrirlo inicialmente.
 const crOverlayObserver=new MutationObserver(()=>{const root=document.getElementById('provApp');if(root?.querySelector('.cr-overlay'))mountCronogramaOverlay()});
 crOverlayObserver.observe(document.body,{childList:true,subtree:true});
