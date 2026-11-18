@@ -594,3 +594,130 @@ body.prov-supplier-modal-open{overflow:hidden}
 @media(max-width:650px) {
   .prov-dashboard-home .prov-dashboard-dates {flex:1 1 100%; min-width:0; gap:10px}
 }
+
+/* Estadísticas de compras: sección final del tablero de proveedores */
+.prov-stats{background:#fff;border:1px solid #dfe5ee;border-radius:16px;padding:18px;margin:18px 0 24px;color:#15213a}
+.prov-stats-head,.prov-stats-controls{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.prov-stats-head h2{font-size:21px;font-weight:800;margin:0}.prov-stats-head p{font-size:12px;color:#687995;margin:4px 0 0}
+.prov-stats-controls label{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700}.prov-stats-controls input{border:1px solid #dbe3ef;border-radius:9px;padding:10px;background:#fff;color:#17253e;font:inherit}
+.prov-stats-change{background:#e9f9f0;color:#14874c;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700}
+.prov-stats-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:17px 0}
+.prov-stats-kpis>div{border:1px solid #e2e8f1;border-radius:12px;padding:16px 14px;min-width:0;background:#f9fbfe}
+.prov-stats-kpis>div:first-child{background:#fff5f7}.prov-stats-kpis>div:nth-child(3){background:#fffaf0}.prov-stats-kpis>div:nth-child(4){background:#f1fbf7}
+.prov-stats-kpis span{display:block;font-size:12px;color:#52627d;margin-bottom:9px}.prov-stats-kpis strong{display:block;font-size:clamp(16px,1.5vw,22px);font-weight:800;overflow-wrap:anywhere}
+.prov-stats-notice{background:#fff9e9;color:#845d11;border-radius:9px;padding:9px 12px;font-size:12px}
+.prov-stats-charts{display:grid;grid-template-columns:1.25fr 1fr 1.1fr;gap:12px}
+.prov-stats-charts article{border:1px solid #e2e8f1;border-radius:12px;padding:15px;min-width:0}
+.prov-stats-charts h3{font-size:14px;font-weight:800;margin:0 0 17px}
+.prov-stats-rank{display:grid;grid-template-columns:minmax(80px,1fr) 1.3fr auto;gap:8px;align-items:center;font-size:11px;margin:13px 0}.prov-stats-rank>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prov-stats-rank strong{font-size:11px;white-space:nowrap}.prov-stats-track{height:13px;border-radius:6px;background:#edf0f5;overflow:hidden}.prov-stats-track i{display:block;height:100%;background:linear-gradient(90deg,#ff7591,#f43f66);border-radius:6px}
+.prov-stats-share{display:flex;align-items:center;gap:12px}.prov-stats-donut{width:145px;aspect-ratio:1;flex-shrink:0;border-radius:50%;display:grid;place-items:center}.prov-stats-donut>div{width:68%;height:68%;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:5px}.prov-stats-donut strong{font-size:11px;overflow-wrap:anywhere}.prov-stats-donut small{font-size:12px;color:#738199}
+.prov-stats-legend{flex:1;min-width:0}.prov-stats-legend>div{display:flex;align-items:center;gap:5px;font-size:10px;margin:9px 0}.prov-stats-legend i{height:9px;width:9px;border-radius:50%;flex-shrink:0}.prov-stats-legend span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prov-stats-legend strong{font-size:13px}
+.prov-stats-line{width:100%;height:135px;overflow:visible}.prov-stats-weeks{display:flex;justify-content:space-around;gap:3px;text-align:center}.prov-stats-weeks span{font-size:10px}.prov-stats-weeks small{display:block;color:#70819a;font-size:9px;margin-top:4px}
+.prov-stats-highlights{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.prov-stats-highlights>div{background:#fff1f5;border:1px solid #ffe0e8;border-radius:11px;padding:14px 18px;font-size:12px}.prov-stats-highlights>div+div{background:#fff8e9;border-color:#ffe9bf}.prov-stats-highlights strong{display:block;font-size:15px;margin-top:4px}.prov-stats-empty{font-size:12px;color:#738199}
+@media(max-width:1100px){.prov-stats-charts{grid-template-columns:1fr 1fr}.prov-stats-charts article:last-child{grid-column:1/-1}}
+@media(max-width:700px){.prov-stats{padding:13px}.prov-stats-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.prov-stats-charts{grid-template-columns:1fr}.prov-stats-charts article:last-child{grid-column:auto}.prov-stats-highlights{grid-template-columns:1fr}.prov-stats-share{justify-content:center}.prov-stats-head h2{font-size:18px}}
+
+/* Panel de estadísticas — presentación alineada con el diseño aprobado.
+   Solo modifica .prov-stats; no altera pedidos, pagos ni otros módulos. */
+.prov-stats{padding:18px 18px 16px;border-radius:16px;border-color:#dce4f0;box-shadow:0 4px 16px rgba(29,48,80,.025)}
+.prov-stats-head{gap:14px;margin-bottom:16px}
+.prov-stats-title{display:flex;align-items:center;gap:14px;min-width:0}
+.prov-stats-title-icon{display:grid;place-items:center;width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,#ff8da3,#f12c59);border-radius:13px;color:#fff;box-shadow:0 5px 12px rgba(246,48,90,.13)}
+.prov-stats-title-icon svg{width:27px;height:27px}
+.prov-stats-head h2{font-size:25px;line-height:1.15;letter-spacing:-.5px;color:#0c1730}
+.prov-stats-head p{font-size:14px;margin-top:5px;color:#52637f}
+.prov-stats-controls{gap:10px}
+.prov-stats-controls label{gap:8px;font-size:13px;color:#273650}
+.prov-stats-controls input{min-height:40px;border-radius:10px;font-size:13px;font-weight:700;padding:9px 12px}
+.prov-stats-change{border:1px solid #d9f2e3;background:#ecfbf2;color:#168c4b;white-space:nowrap;font-size:13px;}
+.prov-stats-change.is-neutral{background:#f2f5fa;border-color:#e3e8f1;color:#5b6a83}
+.prov-stats-change.is-down{background:#fff2f2;border-color:#ffdddd;color:#c83d4b}
+.prov-stats-kpis{gap:12px;margin:0 0 16px}
+.prov-stats-kpis>div{display:flex;align-items:center;gap:13px;min-height:95px;padding:15px 14px;background:#fff;border-color:#e0e7f0}
+.prov-stats-kpis>div:first-child{background:#fff5f7}
+.prov-stats-kpis>div:nth-child(2){background:#f9fbff}
+.prov-stats-kpis>div:nth-child(3){background:#fffaf0}
+.prov-stats-kpis>div:nth-child(4){background:#f2fcf7}
+.prov-stats-kpis>div>div{min-width:0;flex:1}
+.prov-stats-kpi-icon{display:grid!important;place-items:center;flex:0 0 43px;width:43px;height:43px;margin:0!important;border-radius:11px;background:#ffe6ed;color:#fa315d}
+.prov-stats-kpi-orders .prov-stats-kpi-icon{background:#e2faed;color:#0eb77a}
+.prov-stats-kpi-pending .prov-stats-kpi-icon{background:#fff2d9;color:#f29a00}
+.prov-stats-kpi-paid .prov-stats-kpi-icon{background:#e1f9ec;color:#0aa968}
+.prov-stats-kpi-icon svg{width:25px;height:25px}
+.prov-stats-kpis span:not(.prov-stats-kpi-icon){font-size:12px;color:#33425d;margin:0 0 5px}
+.prov-stats-kpis strong{font-size:clamp(15px,1.32vw,21px);line-height:1.25;letter-spacing:-.25px;color:#111d38}
+.prov-stats-kpis small{display:block;font-size:11px;color:#52657f;margin-top:4px}
+.prov-stats-kpis .prov-stats-kpi-change{display:table;margin-left:auto;background:#dcf9e8;color:#13934e;border-radius:20px;padding:3px 7px;font-weight:800}
+.prov-stats-charts{grid-template-columns:1.18fr 1fr 1.08fr;gap:13px}
+.prov-stats-charts article{padding:15px 14px;min-height:215px;border-radius:12px}
+.prov-stats-charts h3{display:flex;align-items:center;gap:7px;font-size:17px;color:#101d36;line-height:1.3;margin-bottom:16px}
+.prov-stats-charts h3 small{font-size:14px;font-weight:500}
+.prov-stats-chart-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 20px;color:#f43f66}
+.prov-stats-chart-icon.orange{color:#f7a000}.prov-stats-chart-icon.red{color:#f52d50}
+.prov-stats-chart-icon svg{width:20px;height:20px}
+.prov-stats-rank{grid-template-columns:minmax(0,1.1fr) minmax(35px,.75fr) auto;gap:7px;margin:12px 0;font-size:13px}
+.prov-stats-rank strong{font-size:13px;color:#17213a}
+.prov-stats-track{height:14px;border-radius:7px}
+.prov-stats-share{gap:10px}
+.prov-stats-donut{width:clamp(115px,10vw,158px)}
+.prov-stats-donut>div{width:68%;height:68%}
+.prov-stats-donut strong{font-size:13px;line-height:1.25}
+.prov-stats-legend>div{margin:8px 0;font-size:13px}
+.prov-stats-line{height:auto;max-height:185px;display:block;width:100%;margin-top:2px}
+.prov-stats-highlights{gap:13px;margin-top:14px}
+.prov-stats-highlights>div{display:flex;align-items:center;gap:15px;min-height:67px;padding:13px 22px;font-size:15px;}
+.prov-stats-highlight-icon{display:grid;place-items:center;flex:0 0 43px;width:43px;height:43px;color:#f43f66}
+.prov-stats-highlight-icon svg{width:32px;height:32px}
+.prov-stats-highlights>div+div .prov-stats-highlight-icon{color:#f4a000}
+.prov-stats-highlights>div>span:last-child{min-width:0}
+.prov-stats-highlights strong{font-size:18px;margin-top:3px;overflow-wrap:anywhere}
+@media(max-width:1200px){.prov-stats-kpis>div{gap:8px;padding:12px 10px}.prov-stats-kpi-icon{flex-basis:35px;width:35px;height:35px}.prov-stats-kpi-icon svg{width:21px;height:21px}.prov-stats-rank{grid-template-columns:minmax(80px,1fr) minmax(55px,1fr) auto}.prov-stats-charts{grid-template-columns:1fr 1fr}.prov-stats-charts article:last-child{grid-column:1/-1}}
+@media(max-width:800px){.prov-stats-head{align-items:flex-start}.prov-stats-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.prov-stats-charts{grid-template-columns:1fr}.prov-stats-charts article:last-child{grid-column:auto}.prov-stats-highlights{grid-template-columns:1fr}}
+@media(max-width:520px){.prov-stats{padding:12px}.prov-stats-title-icon{width:42px;height:42px}.prov-stats-head h2{font-size:18px}.prov-stats-controls{width:100%;justify-content:flex-start}.prov-stats-kpis>div{min-height:85px;align-items:flex-start;flex-direction:column}.prov-stats-kpis strong{font-size:16px}.prov-stats-rank{grid-template-columns:minmax(70px,1fr) minmax(55px,1fr) auto;gap:5px}.prov-stats-rank strong{font-size:10px}.prov-stats-highlights>div{padding:12px}}
+
+/* Ajuste final de las cuatro tarjetas KPI de Estadísticas de compras (PC).
+   No afecta a otras pantallas ni al cálculo de importes. */
+@media (min-width: 801px) {
+  .prov-stats-kpis { gap: 14px; }
+  .prov-stats-kpis > div {
+    min-height: 100px;
+    padding: 16px 15px;
+    gap: 14px;
+    border-radius: 12px;
+    align-items: center;
+  }
+  .prov-stats-kpis > div:first-child { background: linear-gradient(110deg,#fff0f4,#fff6f8); border-color:#f7dfe7; }
+  .prov-stats-kpis > div:nth-child(2) { background: linear-gradient(110deg,#effcf5,#f5fdf9); border-color:#d8f1e4; }
+  .prov-stats-kpis > div:nth-child(3) { background: linear-gradient(110deg,#fff7e8,#fffaf0); border-color:#f8e9ce; }
+  .prov-stats-kpis > div:nth-child(4) { background: linear-gradient(110deg,#edfcf4,#f3fdf8); border-color:#d8f0e3; }
+  .prov-stats-kpi-icon {
+    flex: 0 0 53px;
+    width: 53px;
+    height: 53px;
+    border-radius: 13px;
+    background: #ffe5ec;
+    color: #fa2457;
+  }
+  .prov-stats-kpi-orders .prov-stats-kpi-icon { background:#dcf9e9; color:#06bb74; }
+  .prov-stats-kpi-pending .prov-stats-kpi-icon { background:#fff0d4; color:#f3a000; }
+  .prov-stats-kpi-paid .prov-stats-kpi-icon { background:#d9f8e7; color:#0ab667; }
+  .prov-stats-kpi-icon svg { width: 30px; height: 30px; }
+  .prov-stats-kpis span:not(.prov-stats-kpi-icon) { display:block; font-size:15px; font-weight: 600; line-height: 1.3; margin-bottom: 6px; color:#25334d; }
+  .prov-stats-kpis strong { display:block; font-size:clamp(18px,1.6vw,26px); font-weight:800; letter-spacing:-.45px; line-height:1.2; white-space:normal; font-variant-numeric:tabular-nums;overflow-wrap:normal;}
+  .prov-stats-kpis small { font-size:13px; font-weight:600; margin-top:6px; }
+}
+@media (min-width:801px) and (max-width:1260px) {
+  .prov-stats-kpis > div { gap:9px; padding:12px 9px; }
+  .prov-stats-kpi-icon { flex-basis:40px; width:40px; height:40px; }
+  .prov-stats-kpi-icon svg { width:24px; height:24px; }
+  .prov-stats-kpis strong { font-size:clamp(13px,1.3vw,18px); }
+  .prov-stats-kpis span:not(.prov-stats-kpi-icon) { font-size:11px; }
+}
+
+/* Legibilidad de los ejes del gráfico mensual. */
+.prov-stats-line text{font-size:13px}
+
+/* Legibilidad del detalle de compras, sin modificar su lógica. */
+.prov-stats details{font-size:14px;line-height:1.5}
+.prov-stats details summary{font-weight:600;cursor:pointer}
+.prov-stats details th,.prov-stats details td{font-size:13px;padding:6px 8px}

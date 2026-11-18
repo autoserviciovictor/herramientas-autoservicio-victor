@@ -130,6 +130,16 @@ async function load(n){
     const remote=await request(n),records=asList(remote.registros);
     revisions[n]=remote.revision;
     liveRecords[n]=structuredClone(fromList(n,records));
+    if(n==='pedidos'){
+      confirmedSnapshots[n]=structuredClone(fromList(n,records));
+      // No sobrescribir el caché si contiene registros locales no migrados.
+      const ids=new Set(records.map(identity));
+      let local=[];try{local=listFrom(n,parse(groups[n]))}catch(e){}
+      if(local.some(x=>!ids.has(identity(x)))){
+        window.dispatchEvent(new CustomEvent('proveedores:sincronizados',{detail:{coleccion:n}}));
+      }else changed(n,records);
+      return;
+    }
     // No reemplazar cambios actuales que aún no se guardaron.
     const currentValue=parse(groups[n]);
     const current=listFrom(n,currentValue);
