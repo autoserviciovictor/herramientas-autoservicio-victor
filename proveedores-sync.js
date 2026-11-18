@@ -128,6 +128,7 @@ async function load(n){
   busy.add(n);
   try{
     const remote=await request(n),records=asList(remote.registros);
+    if(individualBusy.has(n)||pending.has(n)||recovering)return;
     revisions[n]=remote.revision;
     liveRecords[n]=structuredClone(fromList(n,records));
     if(n==='pedidos'){
