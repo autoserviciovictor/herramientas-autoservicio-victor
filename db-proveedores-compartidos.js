@@ -7,6 +7,15 @@ async function asegurar() {
     registros JSONB NOT NULL DEFAULT '[]'::jsonb,
     actualizado TIMESTAMPTZ NOT NULL DEFAULT NOW(), actualizado_por TEXT NOT NULL DEFAULT ''
   )`);
+  // Cada registro antiguo recibe el nuevo valor una sola vez. La revisión protege
+  // frente a escrituras concurrentes; las excepciones manuales no se reemplazan.
+  await query(`UPDATE proveedores_estado_compartido AS p
+    SET registros=(SELECT jsonb_agg(CASE WHEN item ? 'inicioPlazoPagoFactura' THEN item
+      ELSE item || '{"inicioPlazoPagoFactura":"facturacion"}'::jsonb END ORDER BY ord)
+      FROM jsonb_array_elements(p.registros) WITH ORDINALITY AS r(item,ord)),
+      revision=revision+1, actualizado=NOW()
+    WHERE coleccion='proveedores' AND EXISTS (SELECT 1 FROM jsonb_array_elements(p.registros) AS r(item)
+      WHERE NOT (item ? 'inicioPlazoPagoFactura'))`);
 }
 async function obtener(coleccion) {
   if (!COLECCIONES.has(coleccion)) throw new Error('Colección inválida');
