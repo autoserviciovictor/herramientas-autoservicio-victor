@@ -1,6 +1,6 @@
 'use strict';
 const { query, obtenerPool } = require('./db');
-const COLECCIONES = new Set(['proveedores', 'pedidos', 'cronograma', 'colores']);
+const COLECCIONES = new Set(['proveedores', 'pedidos', 'cronograma', 'colores', 'cuentas']);
 async function asegurar() {
   await query(`CREATE TABLE IF NOT EXISTS proveedores_estado_compartido (
     coleccion TEXT PRIMARY KEY, revision BIGINT NOT NULL DEFAULT 0,

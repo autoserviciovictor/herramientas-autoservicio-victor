@@ -274,9 +274,9 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-dashboard-tabs{display:flex;gap:7px;white-space:nowrap}
 .prov-dashboard-tabs button{display:inline-flex;align-items:center;gap:8px;border:1px solid #e3e9f2;border-radius:12px;background:#fff;color:#253551;padding:13px 14px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(27,42,70,.03)}
 .prov-dashboard-tabs button.active{background:#344c6d;color:#fff;border-color:#344c6d}
-.prov-dashboard-tabs button[data-dashboard-filter="hoy"]:before,.prov-dashboard-tabs button[data-dashboard-filter="pendientes"]:before,.prov-dashboard-tabs button[data-dashboard-filter="pagados"]:before{content:"";width:10px;height:10px;flex:0 0 10px;border-radius:50%;background:#fa174c}
-.prov-dashboard-tabs button[data-dashboard-filter="pendientes"]:before{background:#f59e0b}
-.prov-dashboard-tabs button[data-dashboard-filter="pagados"]:before{background:#08a96c}
+.prov-dashboard-tabs button[data-dashboard-filter="hoy"]:before{content:"";width:10px;height:10px;flex:0 0 10px;border-radius:50%;background:#fa174c}
+
+
 .prov-dashboard-dates{display:flex;align-items:center;gap:5px;border:1px solid #e0e6ef;border-radius:11px;padding:0 10px;height:46px;min-width:0}
 .prov-dashboard-dates input{width:117px;min-width:0;border:0!important;background:transparent!important;font:inherit;font-size:12px;color:#3e506c;outline:none!important}
 .prov-dashboard-scroll{overflow-x:auto}
@@ -775,3 +775,24 @@ body.prov-supplier-modal-open{overflow:hidden}
 .prov-record-table .prov-comprobante-tipo,.prov-record-table .prov-comprobante-numero{display:block;line-height:1.35}.prov-record-table .prov-comprobante-tipo{font-weight:650;font-size:14px}.prov-record-table .prov-comprobante-numero{margin-top:2px;font-variant-numeric:tabular-nums}
 .prov-record-table td:last-child span{font-weight:600}.prov-record-empty{color:#64748b;text-align:center;padding:15px}
 @media(max-width:600px){.prov-record-totals{grid-template-columns:1fr}.prov-supplier-record .prov-record-body{padding:0 14px 14px}.prov-supplier-record .prov-modal-head,.prov-supplier-record .prov-modal-actions{padding:12px 14px}}
+
+/* Historial de vencidos: búsqueda y fechas sin filtros redundantes. */
+.prov-dashboard-home .prov-dashboard-filters-history{grid-template-columns:minmax(230px,1.5fr) minmax(245px,.95fr)}
+
+/* Ventana independiente de estadísticas de compras. */
+.prov-week-navigation .prov-week-stats-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;color:#e91948;min-height:42px;font-family:system-ui,"Segoe UI",sans-serif;font-size:14px;font-weight:600;line-height:20px;letter-spacing:normal;padding:9px 14px;text-rendering:auto}
+.prov-week-stats-button svg{width:18px;height:18px;flex:none}
+.prov-purchase-stats-dialog{position:fixed;inset:0;margin:auto;width:min(1380px,calc(100% - 36px));max-width:none;max-height:calc(100% - 36px);padding:0;border:1px solid #dce4f0;border-radius:16px;background:#fff;color:#15213a;box-shadow:0 20px 70px #14203340;box-sizing:border-box;overflow:hidden}
+.prov-purchase-stats-dialog[open]{display:flex;flex-direction:column}
+.prov-purchase-stats-dialog::backdrop{background:rgba(20,30,51,.57);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+body:has(.prov-purchase-stats-dialog[open]){overflow:hidden}
+.prov-purchase-stats-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid #dce4f0;flex:none}
+.prov-purchase-stats-header h2{font-size:20px;margin:0;font-weight:800}
+.prov-purchase-stats-header button{width:36px;height:36px;border:0;border-radius:10px;background:#f1f5fa;color:#15213a;font-size:24px;cursor:pointer}
+.prov-purchase-stats-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px}
+.prov-purchase-stats-body .prov-stats{margin:0;padding:0;border:0;box-shadow:none}
+.prov-purchase-stats-body .prov-stats-head h2{display:none}
+@media(max-width:520px){.prov-purchase-stats-dialog{width:calc(100% - 16px);max-height:calc(100% - 16px)}.prov-purchase-stats-header,.prov-purchase-stats-body{padding:12px}}
+
+/* Cuentas corrientes */
+.cc-surface{padding:20px}.cc-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.cc-toolbar h3{margin-right:auto}.cc-toolbar input,.prov-payment-form>label input,.prov-payment-form>label select{border:1px solid #dbe3ef;border-radius:8px;padding:10px;font:inherit;max-width:100%}.prov-payment-form>label{display:grid;gap:5px;margin:10px 0}.prov-supplier-fields label[hidden],tr[hidden]{display:none!important}.cc-surface .prov-record-table{width:100%}.cc-surface .prov-record-table th,.cc-surface .prov-record-table td{padding:12px;text-align:center}

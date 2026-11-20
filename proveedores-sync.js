@@ -2,7 +2,7 @@
  * Recuperación manual desde localStorage y respaldos respaldo_sync_*.
  */
 (()=>{'use strict';
-const groups={proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pedidos_proveedores_v1',cronograma:'autoservicio_cronograma_semanal_v1',colores:'autoservicio_cronograma_colores_v1'};
+const groups={cuentas:'autoservicio_cuentas_corrientes_v1',proveedores:'autoservicio_proveedores_v1',pedidos:'autoservicio_pedidos_proveedores_v1',cronograma:'autoservicio_cronograma_semanal_v1',colores:'autoservicio_cronograma_colores_v1'};
 const revisions={},pending=new Set(),busy=new Set(),queued={};
 // Última copia confirmada del servidor, para detectar ediciones locales aún pendientes.
 const confirmedSnapshots={};
@@ -325,7 +325,7 @@ async function save(n,value){
 // No se considera guardado ningún cambio que no se haya verificado en PostgreSQL.
 const individualBusy=new Set();
 async function mutateRecord(n,record,deleteId=null){
-  if(!['proveedores','pedidos','cronograma'].includes(n))throw new Error('Colección no permitida');
+  if(!['proveedores','pedidos','cronograma','cuentas'].includes(n))throw new Error('Colección no permitida');
   const id=deleteId===null?String(record?.id??''):String(deleteId);
   if(!id)throw new Error('El registro necesita un identificador');
   if(individualBusy.has(n)||pending.has(n)||recovering)throw new Error('Hay otra operación de sincronización en curso. Intentá nuevamente.');
