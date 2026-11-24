@@ -794,5 +794,76 @@ body:has(.prov-purchase-stats-dialog[open]){overflow:hidden}
 .prov-purchase-stats-body .prov-stats-head h2{display:none}
 @media(max-width:520px){.prov-purchase-stats-dialog{width:calc(100% - 16px);max-height:calc(100% - 16px)}.prov-purchase-stats-header,.prov-purchase-stats-body{padding:12px}}
 
-/* Cuentas corrientes */
-.cc-surface{padding:20px}.cc-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.cc-toolbar h3{margin-right:auto}.cc-toolbar input,.prov-payment-form>label input,.prov-payment-form>label select{border:1px solid #dbe3ef;border-radius:8px;padding:10px;font:inherit;max-width:100%}.prov-payment-form>label{display:grid;gap:5px;margin:10px 0}.prov-supplier-fields label[hidden],tr[hidden]{display:none!important}.cc-surface .prov-record-table{width:100%}.cc-surface .prov-record-table th,.cc-surface .prov-record-table td{padding:12px;text-align:center}
+/* Cuentas corrientes: estilos propios de pantalla y editor. */
+.prov-supplier-fields label[hidden],tr[hidden]{display:none!important}
+.cc-surface{padding:20px;font-size:15px}
+.cc-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.cc-toolbar h3{margin:0 auto 0 0;font-size:19px}
+.cc-supplier-title{display:flex;align-items:center;gap:12px}
+.cc-toolbar label{display:grid;gap:5px;font-size:13px;font-weight:600}
+.cc-toolbar input,#ccPayDialog input,#ccPayDialog select,#ccPayDialog textarea{box-sizing:border-box;border:1px solid #dbe3ef;border-radius:9px;padding:11px;font:inherit;max-width:100%;background:#fff;color:#16243c}
+.cc-search{display:flex;align-items:center;gap:10px;border:1px solid #dbe3ef;border-radius:10px;padding:0 12px;width:min(460px,100%);box-sizing:border-box;color:#526987;background:#fff}
+.cc-search input:is(#ccSearch,#ccInvoiceSearch){border:0!important;border-radius:0;box-shadow:none!important;background:transparent!important;flex:1;min-width:0;margin:0;padding-left:0;outline:none!important}
+.cc-ledger-filters{justify-content:flex-start;align-items:flex-end}.cc-ledger-filters .cc-search{flex:1 1 240px;max-width:460px;min-height:44px}.cc-ledger-filters input[type=date]{height:44px;min-width:150px}.cc-search:focus-within{outline:2px solid #8bb8ed}
+.cc-search svg,.cc-surface [data-cc-open] svg{width:18px;height:18px;flex:none}
+.cc-cards{margin-bottom:20px;gap:14px}
+.cc-cards>div{--cc-accent:#2084db;--cc-bg:#edf6ff;--cc-border:#bfddfa;display:flex;align-items:center;gap:14px;padding:18px 14px;background:var(--cc-bg);border:1px solid var(--cc-border);border-top:4px solid var(--cc-accent);border-radius:13px;color:var(--cc-accent)}
+.cc-cards>div.cc-credit{--cc-accent:#087c55;--cc-bg:#eaf9f3;--cc-border:#b8e6d4}
+.cc-cards>div.cc-debt{--cc-accent:#d51c49;--cc-bg:#fff0f3;--cc-border:#ffc4d1}
+.cc-card-icon{display:grid;place-items:center;width:46px;height:46px;flex:none;border-radius:12px;background:#dcecff;color:#1874c9}
+.cc-card-icon svg{width:25px;height:25px}
+.cc-credit .cc-card-icon{background:#d2f2e5;color:#087c55}.cc-debt .cc-card-icon{background:#ffdae4;color:#c51b43}
+.cc-card-text{min-width:0}.cc-cards small{font-size:14px;font-weight:650}.cc-cards strong{font-size:clamp(17px,1.65vw,25px);color:#14243c;margin-top:7px}
+.cc-debt,.cc-debt strong{color:#b91c35!important}.cc-credit,.cc-credit strong{color:#117746!important}
+.cc-surface .prov-record-table{width:100%;font-size:14px}
+.cc-surface .prov-record-table th,.cc-surface .prov-record-table td{padding:12px;text-align:center}
+.cc-surface .prov-record-table th{background:#344a65;color:#fff;font-weight:650}
+.cc-surface .prov-record-table th button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:5px}
+.cc-surface .prov-record-table th button:focus-visible{outline:2px solid #b9ddff}
+.cc-surface .prov-record-table td:first-child,.cc-surface .prov-record-table th:first-child{text-align:left}
+.cc-surface .prov-record-table td:first-child{font-weight:600}
+.cc-surface .prov-record-table td{font-variant-numeric:tabular-nums}
+.cc-surface .prov-record-table tr:nth-child(even) td{background:rgba(100,130,165,.045)}
+.cc-surface .prov-record-table td.cc-debt,.cc-surface .prov-record-table td.cc-credit{font-weight:650}
+.cc-surface [data-cc-open]{display:inline-flex;align-items:center;gap:7px;color:#1766ae;background:#edf6ff;border-color:#c8e0fa}
+.cc-actions{display:flex;justify-content:center;gap:8px}.cc-actions button{border:1px solid #dbe3ef;border-radius:8px;background:#fff;padding:7px;color:#334155;cursor:pointer}.cc-actions button:is([data-cc-delete],[data-cc-invoice-delete]){color:#b91c35}.cc-actions svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;display:block}
+#ccPayDialog{width:min(890px,calc(100% - 32px));font-size:16px;padding:0;overflow:hidden}
+#ccPayDialog .prov-payment-form{display:flex;flex-direction:column;gap:0;max-height:calc(100dvh - 32px);min-height:0}
+.cc-pay-header{display:flex;align-items:center;gap:20px;padding:22px 34px;background:#faf7fa;flex:none}
+.cc-pay-header h2{font-size:30px;font-weight:800}.cc-pay-header p{font-size:16px;margin-top:5px}
+.cc-pay-header .cc-card-icon{background:#ffdae4;color:#e00039;width:72px;height:72px;flex:none}
+.cc-pay-header .cc-card-icon svg{width:38px;height:38px}
+.cc-pay-close{margin-left:auto;align-self:flex-start;border:1px solid #dbe3ef;background:transparent;border-radius:50%;width:44px;height:44px;display:grid;place-items:center;color:inherit;cursor:pointer;flex:none}
+.cc-pay-close svg,.cc-field-title svg,.cc-method-options svg,#ccPayDialog button[type=submit] svg{width:22px;height:22px;flex:none}
+.cc-pay-body{padding:18px 34px 0;display:grid;gap:22px;overflow:auto;min-height:0;overscroll-behavior:contain}
+.cc-pay-summary,.cc-pay-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cc-pay-summary{grid-template-columns:1.45fr 1fr}
+.cc-pay-summary>div{display:flex;align-items:center;gap:16px;padding:14px;border:1px solid #c8e0fa;background:#edf6ff;border-radius:14px;min-width:0;overflow-wrap:anywhere}
+.cc-pay-summary>div>div{display:grid;gap:5px;min-width:0}.cc-pay-summary small{font-weight:600;font-size:16px}.cc-pay-summary strong{font-size:20px}
+.cc-pay-summary>div:last-child{background:#e5f7ef;border-color:#c6ebdd}.cc-pay-summary>div:last-child strong{font-size:26px}.cc-pay-summary>div:last-child .cc-card-icon{background:#c8efdf;color:#00965e}
+.cc-pay-summary .cc-card-icon{width:56px;height:56px;flex:none}
+#ccPayDialog label{display:grid;gap:8px;font-weight:600;font-size:16px;min-width:0}
+.cc-field-title{display:flex;align-items:center;gap:10px;font-weight:650}.cc-field-title svg{color:#526782}
+#ccPayDialog input:not([type=radio]),#ccPayDialog textarea{box-sizing:border-box;width:100%;font:inherit;font-weight:400;border:1px solid #cbd5e1;border-radius:12px;padding:12px 18px;min-height:48px}
+#ccPayDialog textarea{resize:vertical;min-height:82px}
+.cc-method-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+#ccPayDialog .cc-method-options label{position:relative;display:block;padding:0;border:0;cursor:pointer}
+.cc-method-options input{position:absolute;opacity:0;width:1px;height:1px}
+.cc-method-options label>span{display:flex;align-items:center;justify-content:center;gap:9px;padding:14px 6px;border:1px solid #dbe3ef;border-radius:13px;background:#f5f7fa;white-space:nowrap;font-size:15px;color:#16243c}
+.cc-method-options input:checked+span{background:#fff0f3;color:#e00039;border-color:#ff174d}.cc-method-options input:focus-visible+span{outline:2px solid #526782;outline-offset:2px}.cc-method-options input:disabled+span{opacity:.55;cursor:not-allowed}
+.cc-preview{background:#fff0f3;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.cc-preview strong{font-size:28px}.cc-preview-label{display:flex;align-items:center;gap:14px;font-size:22px;font-weight:750}.cc-preview .cc-card-icon{background:#ffdae4;color:#e00039;width:54px;height:54px}
+#ccPayDialog .prov-delete-confirm-actions{padding:22px 30px 24px;margin:0;flex:none;gap:14px}
+#ccPayDialog .prov-delete-confirm-actions button{min-height:52px;padding:12px 30px;font-size:17px;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:12px}
+#ccPayDialog button[type=submit]{background:#ff174d;color:white;border-color:#ff174d}
+@media(max-width:760px){.cc-method-options{grid-template-columns:repeat(3,minmax(0,1fr))}.cc-pay-summary{grid-template-columns:1fr 1fr}.cc-pay-header h2{font-size:24px}.cc-pay-summary>div:last-child strong{font-size:20px}}
+@media(max-width:900px){.cc-cards>div{gap:8px;padding:12px 10px}.cc-cards .cc-card-icon{width:36px;height:36px}.cc-cards .cc-card-icon svg{width:20px;height:20px}}
+@media(max-width:600px){.cc-surface{padding:12px}.cc-pay-summary,.cc-pay-fields{grid-template-columns:1fr}.cc-pay-header,.cc-pay-body,#ccPayDialog .prov-delete-confirm-actions{padding:14px}.cc-toolbar h3{width:100%}.cc-method-options{grid-template-columns:repeat(2,minmax(0,1fr))}.cc-pay-header .cc-card-icon{width:48px;height:48px}.cc-pay-header h2{font-size:20px}.cc-pay-header p{font-size:13px}.cc-preview strong{font-size:22px}.cc-preview-label{font-size:17px}#ccPayDialog .prov-delete-confirm-actions button{padding:10px 15px;font-size:14px}}
+
+/* Cuentas corrientes: neutralizar el resaltado rojo de foco en los campos del adelanto. */
+#ccPayDialog input:not([type=radio]):focus,
+#ccPayDialog textarea:focus,
+#ccPayDialog select:focus {
+  border-color:#cbd5e1!important;
+  outline:none!important;
+  box-shadow:none!important;
+}
