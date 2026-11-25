@@ -23,11 +23,6 @@
 
   function manejarTeclado(evento) {
     if (!estaAbierto()) return;
-    if (evento.key === "Escape") {
-      evento.preventDefault();
-      cerrar(false);
-      return;
-    }
     if (evento.key !== "Tab") return;
     const focos = elementosFoco();
     if (!focos.length) return;
@@ -144,9 +139,6 @@
     });
     $("appDialogCancelar")?.addEventListener("click", () => cerrar(false));
     $("appDialogCerrar")?.addEventListener("click", () => cerrar(false));
-    $("appDialogOverlay")?.addEventListener("click", (e) => {
-      if (e.target === e.currentTarget) cerrar(false);
-    });
     $("appDialogInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();

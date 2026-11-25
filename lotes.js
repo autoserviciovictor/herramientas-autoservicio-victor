@@ -125,7 +125,6 @@ function abrirProgramadorAlerta(lote) {
       }
       terminar({ dias: diasSeleccionados });
     });
-    modal.querySelector('.lotes-notify-backdrop').addEventListener('click', () => terminar(null));
     modal.querySelector('.lotes-notify-close').addEventListener('click', () => terminar(null));
     modal.querySelector('.lotes-notify-modal-cancel').addEventListener('click', () => terminar(null));
     document.body.appendChild(modal);
@@ -175,7 +174,6 @@ function confirmarAltaProductoNuevo(codigo) {
         </div>
       </section>`;
     const terminar=(valor)=>{modal.remove();resolve(valor);};
-    modal.querySelector('.lotes-confirm-delete-backdrop').onclick=()=>terminar(false);
     modal.querySelector('.lotes-confirm-cancel').onclick=()=>terminar(false);
     modal.querySelector('.lotes-confirm-accept').onclick=()=>terminar(true);
     document.body.appendChild(modal);
@@ -222,7 +220,6 @@ function pedirCodigoProductoNuevo() {
       terminar(codigo);
     };
 
-    modal.querySelector('.lotes-confirm-delete-backdrop').onclick = () => terminar('');
     modal.querySelector('.lotes-confirm-delete-close').onclick = () => terminar('');
     modal.querySelector('.lotes-confirm-cancel').onclick = () => terminar('');
     modal.querySelector('.lotes-confirm-accept').onclick = aceptar;
@@ -300,20 +297,16 @@ function confirmarEliminarLotes({ titulo = 'Eliminar', producto = '', detalle = 
         </div>
       </section>`;
     const terminar = (valor) => {
-      document.removeEventListener('keydown', teclado);
       modal.remove();
       resolve(valor);
     };
-    const teclado = (e) => { if (e.key === 'Escape') terminar(false); };
     const confirmBackdrop = modal.querySelector('.lotes-confirm-delete-backdrop');
     const confirmDialog = modal.querySelector('.lotes-confirm-delete-dialog');
     confirmBackdrop?.style.setProperty('z-index', '0', 'important');
     confirmDialog?.style.setProperty('z-index', '1', 'important');
-    confirmBackdrop.onclick = () => terminar(false);
     modal.querySelector('.lotes-confirm-delete-close').onclick = () => terminar(false);
     modal.querySelector('.lotes-confirm-cancel').onclick = () => terminar(false);
     modal.querySelector('.lotes-confirm-accept').onclick = () => terminar(true);
-    document.addEventListener('keydown', teclado);
     document.body.appendChild(modal);
     requestAnimationFrame(() => modal.querySelector('.lotes-confirm-cancel')?.focus());
   });
@@ -1222,7 +1215,6 @@ function mostrarAvisoLotes(mensaje, titulo = '', alCerrar = null) {
     modal.remove();
     if (typeof alCerrar === 'function') alCerrar();
   };
-  modal.querySelector('.lotes-notice-backdrop').onclick = cerrarAviso;
   modal.querySelector('button').onclick = cerrarAviso;
   document.body.appendChild(modal);
   requestAnimationFrame(() => modal.querySelector('button')?.focus());
@@ -1300,7 +1292,6 @@ $('lotesFab')?.classList.add('oculto');
 $('lotesFab')?.addEventListener('click', abrir);
 $('btnLotesCargaHeader')?.addEventListener('click', abrir);
 $('btnLotesCerrar')?.addEventListener('click', cerrar);
-$('lotesBackdrop')?.addEventListener('click', cerrar);
 $('btnLotesCamara')?.addEventListener('click', escanear);
 $('btnLotesManual')?.addEventListener('click', () => modo('manual'));
 $('btnLotesNuevoProducto')?.addEventListener('click', iniciarAltaProvisionalDirecta);

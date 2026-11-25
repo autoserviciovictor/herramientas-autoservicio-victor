@@ -510,9 +510,6 @@ function init() {
   });
 
   $("btnPrecioCerrarModal")?.addEventListener("click", cerrarModalConsulta);
-  $("precioConsultaModal")
-    ?.querySelector("[data-precio-modal-close]")
-    ?.addEventListener("click", cerrarModalConsulta);
 
   $("btnPrecioAbrirScanner")?.addEventListener("click", iniciarScanner);
   $("btnPrecioManualDesdeScanner")?.addEventListener("click", abrirManualDesdeScanner);
@@ -549,14 +546,6 @@ function init() {
     if (panel && !search) ocultarSugerenciasPrincipal();
   });
 
-  document.addEventListener("keydown", (event) => {
-    if (
-      event.key === "Escape" &&
-      !$("precioConsultaModal")?.classList.contains("oculto")
-    ) {
-      cerrarModalConsulta();
-    }
-  });
 
   window.addEventListener("autoservicio:sesion", () => {
     historialExpandido = false;

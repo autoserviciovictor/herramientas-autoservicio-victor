@@ -130,8 +130,8 @@ async function load(n){
     const remote=await request(n),records=asList(remote.registros);
     if(individualBusy.has(n)||pending.has(n)||recovering)return;
     revisions[n]=remote.revision;
-    liveRecords[n]=structuredClone(fromList(n,records));
     if(n==='pedidos'){
+      liveRecords[n]=structuredClone(fromList(n,records));
       confirmedSnapshots[n]=structuredClone(fromList(n,records));
       // No sobrescribir el caché si contiene registros locales no migrados.
       const ids=new Set(records.map(identity));
@@ -152,6 +152,10 @@ async function load(n){
       report(n,'failed','Hay cambios locales sin confirmar; se conservan hasta sincronizarlos.');
       return;
     }
+    // Aceptar la lectura remota solo después de comprobar el estado anterior.
+    // Mantener la referencia confirmada alineada con la copia de lectura.
+    confirmedSnapshots[n]=structuredClone(fromList(n,records));
+    liveRecords[n]=structuredClone(fromList(n,records));
     if(current.some(x=>!remoteIds.has(identity(x)))){
       // Conservar los registros locales no migrados, pero notificar al cronograma
       // que ya hay una lectura compartida del servidor disponible.
@@ -161,7 +165,6 @@ async function load(n){
     }
     // Los respaldos antiguos no bloquean la sincronización cotidiana.
     changed(n,records);
-    confirmedSnapshots[n]=structuredClone(fromList(n,records));
   }catch(e){console.warn('Sincronización '+n+':',e.message)}
   finally{busy.delete(n)}
 }

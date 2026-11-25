@@ -1733,9 +1733,6 @@ function configurarEventos() {
     "click",
     abrirCargaInventario,
   );
-  elementos.inventarioCargaModal
-    ?.querySelector("[data-inventory-scan-close]")
-    ?.addEventListener("click", () => cerrarCargaInventario());
   elementos.btnAbrirScanner.addEventListener("click", abrirScannerManual);
   elementos.btnManualDesdeScanner?.addEventListener(
     "click",
@@ -1823,9 +1820,6 @@ function configurarEventos() {
   elementos.btnVencCerrarModal?.addEventListener("click", () =>
     cerrarCargaVencimientosModal(),
   );
-  elementos.vencCargaModal
-    ?.querySelector("[data-venc-scan-close]")
-    ?.addEventListener("click", () => cerrarCargaVencimientosModal());
   elementos.btnVencManualDesdeScanner?.addEventListener(
     "click",
     abrirIngresoManualVencimientosDesdeScanner,
@@ -1895,10 +1889,6 @@ function configurarEventos() {
   elementos.btnVencModalCerrar?.addEventListener("click", () =>
     resolverSalidaVencimiento(cerrarModalVencimiento),
   );
-  elementos.vencModal?.addEventListener("click", (e) => {
-    if (e.target === elementos.vencModal)
-      resolverSalidaVencimiento(cerrarModalVencimiento);
-  });
   elementos.btnVencEliminarAbrir?.addEventListener(
     "click",
     mostrarConfirmacionEliminarVencimiento,

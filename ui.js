@@ -388,12 +388,6 @@ export function desactivarModoCantidad() {
   let overlay = null;
   let resolver = null;
   let focoAnterior = null;
-  const cerrarConEscape = (e) => {
-    if (e.key === "Escape" && overlay && !overlay.classList.contains("oculto")) {
-      e.preventDefault();
-      overlay._cerrar?.();
-    }
-  };
   function asegurar() {
     if (overlay) return overlay;
     overlay = document.createElement("div");
@@ -413,7 +407,6 @@ export function desactivarModoCantidad() {
       overlay.classList.add("oculto");
       overlay.setAttribute("aria-hidden", "true");
       document.body.classList.remove("modal-abierto");
-      document.removeEventListener("keydown", cerrarConEscape);
       const r = resolver;
       resolver = null;
       const foco = focoAnterior;
@@ -422,9 +415,6 @@ export function desactivarModoCantidad() {
       requestAnimationFrame(() => foco?.isConnected && foco.focus?.({ preventScroll: true }));
     };
     overlay.querySelector(".app-choice-close").onclick = () => cerrar();
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) cerrar();
-    });
     overlay._cerrar = cerrar;
     return overlay;
   }
@@ -462,8 +452,6 @@ export function desactivarModoCantidad() {
         root.classList.remove("oculto");
         root.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-abierto");
-        document.removeEventListener("keydown", cerrarConEscape);
-        document.addEventListener("keydown", cerrarConEscape);
         requestAnimationFrame(() => root.querySelector(".app-choice-close")?.focus({ preventScroll: true }));
         setTimeout(
           () =>

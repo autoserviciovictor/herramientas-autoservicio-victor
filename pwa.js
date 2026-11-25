@@ -47,9 +47,6 @@ function cerrarGuiaIOS() {
 document
   .getElementById("btnCerrarIosInstall")
   ?.addEventListener("click", cerrarGuiaIOS);
-iosModal?.addEventListener("click", (event) => {
-  if (event.target === iosModal) cerrarGuiaIOS();
-});
 
 function actualizarEstadoInstalacion() {
   const instalada = estaInstalada();

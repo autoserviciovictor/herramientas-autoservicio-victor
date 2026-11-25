@@ -1598,7 +1598,6 @@ function bind() {
   $("catalogRubroEliminar")?.addEventListener("click", eliminarRubro);
   $("catalogRubroCerrar")?.addEventListener("click", () => cerrarModal("catalogRubroModal"));
   $("catalogRubroCancelar")?.addEventListener("click", () => cerrarModal("catalogRubroModal"));
-  ["catalogProductoModal", "catalogRubroModal", "catalogPedidoModal", "catalogImportarImagenesModal"].forEach((id) => $(id)?.addEventListener("click", (e) => { if (e.target.id === id) id === "catalogImportarImagenesModal" ? cerrarImportacionImagenes() : cerrarModal(id); }));
 }
 
 async function activar() {

@@ -71,11 +71,6 @@ function elementosFocoModal(modal) {
 
 function manejarTecladoModal(event, modal, cerrar) {
   if (!modal || modal.classList.contains("oculto")) return;
-  if (event.key === "Escape") {
-    event.preventDefault();
-    cerrar?.();
-    return;
-  }
   if (event.key !== "Tab") return;
   const foco = elementosFocoModal(modal);
   if (!foco.length) return;
@@ -216,9 +211,6 @@ export function inicializarReposicion() {
   });
 
   $("btnRepoMobileCerrarCarga")?.addEventListener("click", () => cerrarSelectorCargaMovil({ devolverFoco: true }));
-  $("repoMobileLoadMenu")
-    ?.querySelector("[data-repo-mobile-load-close]")
-    ?.addEventListener("click", () => cerrarSelectorCargaMovil({ devolverFoco: true }));
   $("btnRepoMobileEscanear")?.addEventListener("click", () => {
     cerrarSelectorCargaMovil();
     abrirCargaModal();
@@ -232,9 +224,6 @@ export function inicializarReposicion() {
   );
 
   $("btnRepoCerrarModal")?.addEventListener("click", cerrarCargaModal);
-  $("repoCargaModal")
-    ?.querySelector("[data-repo-scan-close]")
-    ?.addEventListener("click", cerrarCargaModal);
   $("btnRepoManualDesdeScanner")?.addEventListener(
     "click",
     abrirIngresoManualDesdeScanner,
@@ -256,9 +245,6 @@ export function inicializarReposicion() {
   $("btnRepoGuardar")?.addEventListener("click", guardar);
 
   $("btnRepoCerrarEscribir")?.addEventListener("click", cerrarEscribirModal);
-  $("repoEscribirModal")
-    ?.querySelector("[data-repo-write-close]")
-    ?.addEventListener("click", cerrarEscribirModal);
   $("btnRepoAgregarTexto")?.addEventListener("click", agregarListaEscritaDirecta);
 
   document
@@ -275,7 +261,6 @@ export function inicializarReposicion() {
   $("btnRepoGuardarProductoEdicion")?.addEventListener("click", guardarEditorProductoLista);
   $("btnRepoEliminarProductoEdicion")?.addEventListener("click", eliminarDesdeEditorProductoLista);
   $("repoEditarCantidadInput")?.addEventListener("keydown", (event) => { if (event.key === "Enter") guardarEditorProductoLista(); });
-  $("repoEditarProductoModal")?.addEventListener("click", (event) => { if (event.target === $("repoEditarProductoModal")) cerrarEditorProductoLista(); });
   $("repoEditarProductoModal")?.addEventListener("keydown", (event) => manejarTecladoModal(event, $("repoEditarProductoModal"), cerrarEditorProductoLista));
   $("btnRepoNuevaListaDesktop")?.addEventListener("click", abrirModalNuevaLista);
   $("btnRepoNuevaListaInline")?.addEventListener("click", abrirModalNuevaLista);
@@ -297,9 +282,6 @@ export function inicializarReposicion() {
 
   $("btnRepoCancelarNuevaLista")?.addEventListener("click", cerrarModalNuevaLista);
   $("btnRepoConfirmarNuevaLista")?.addEventListener("click", confirmarNuevaLista);
-  $("repoNuevaListaModal")?.addEventListener("click", (event) => {
-    if (event.target === $("repoNuevaListaModal")) cerrarModalNuevaLista();
-  });
   $("repoNuevaListaModal")?.addEventListener("keydown", (event) => manejarTecladoModal(event, $("repoNuevaListaModal"), cerrarModalNuevaLista));
 
   document.addEventListener("click", (event) => {
@@ -309,14 +291,8 @@ export function inicializarReposicion() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    if (!$("repoMobileLoadMenu")?.classList.contains("oculto"))
-      return cerrarSelectorCargaMovil();
     if (!$("repoCargaMenu")?.classList.contains("oculto")) return cerrarMenuCarga();
     if (!$("repoFiltroMenu")?.classList.contains("oculto")) return cerrarFiltroMenu();
-    if (!$("repoEscribirModal")?.classList.contains("oculto")) return cerrarEscribirModal();
-    if (!$("repoCargaModal")?.classList.contains("oculto")) return cerrarCargaModal();
-    if (!$("repoEditarProductoModal")?.classList.contains("oculto")) return cerrarEditorProductoLista();
-    if (!$("repoNuevaListaModal")?.classList.contains("oculto")) cerrarModalNuevaLista();
   });
 
   window.addEventListener("online", sincronizarReposicionAlVolver);

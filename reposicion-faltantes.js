@@ -77,11 +77,10 @@ function confirmarFaltantes(mensaje, accion) {
     $('repoFaltantesConfirmarTexto').textContent = mensaje;
     $('repoFaltantesConfirmarAccion').textContent = accion;
     abrirModal('repoFaltantesConfirmar');
-    const finalizar = resultado => { cerrarModal('repoFaltantesConfirmar'); aceptar.removeEventListener('click', si); cancelar.removeEventListener('click', no); modal.removeEventListener('click', fondo); resolve(resultado); };
+    const finalizar = resultado => { cerrarModal('repoFaltantesConfirmar'); aceptar.removeEventListener('click', si); cancelar.removeEventListener('click', no); resolve(resultado); };
     const aceptar = $('repoFaltantesConfirmarAccion'), cancelar = $('repoFaltantesConfirmarCancelar');
     const si = () => finalizar(true), no = () => finalizar(false);
-    const fondo = e => { if (e.target === modal) no(); };
-    aceptar.addEventListener('click',si); cancelar.addEventListener('click',no); modal.addEventListener('click',fondo);
+    aceptar.addEventListener('click',si); cancelar.addEventListener('click',no);
   });
 }
 function editarProducto(id) {
@@ -182,8 +181,6 @@ function iniciar() {
   for (const [id, delta] of [['repoFaltantesEditarMenos',-1],['repoFaltantesEditarMas',1]]) {
     $(id)?.addEventListener('click', () => { const input = $('repoFaltantesEditarCantidad'); input.value = String(Math.max(1, Math.min(99999,(Number(input.value)||1)+delta))); });
   }
-  $('repoFaltantesModal')?.addEventListener('click', e => { if (e.target.id === 'repoFaltantesModal') cerrarEditor(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarEditor(); });
   $('repoFaltantesFiltroBoton')?.addEventListener('click', () => {
     const menu = $('repoFaltantesFiltroMenu'); const abrir = menu.classList.toggle('oculto') === false;
     $('repoFaltantesFiltroBoton').setAttribute('aria-expanded', String(abrir));

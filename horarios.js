@@ -913,16 +913,12 @@ function dialogoHorarios({
       btnAlternativo.onclick = null;
       btnCancelar.onclick = null;
       btnCerrar.onclick = null;
-      modal.onclick = null;
       resolve(valor);
     };
     btnConfirmar.onclick = () => cerrar(true);
     btnAlternativo.onclick = () => cerrar("alternativo");
     btnCancelar.onclick = () => cerrar(false);
     btnCerrar.onclick = () => cerrar(false);
-    modal.onclick = (e) => {
-      if (e.target === modal && !cerrarConX) cerrar(false);
-    };
   });
 }
 function actualizarSelectorTurnos() {
@@ -2557,9 +2553,6 @@ function configurarEventos() {
   $("btnHorariosAgregarPersonal")?.addEventListener("click", agregarPersonalSectorHorario);
   $("horariosOrdenLista")?.addEventListener("click", e => { const btn = e.target.closest(".horarios-quitar-adicional"); if (btn) quitarPersonalAdicionalHorario(btn.dataset.empleado); });
   $("horariosSelectorPersonalCerrar")?.addEventListener("click", cerrarSelectorPersonalHorario);
-  $("horariosSelectorPersonalModal")?.addEventListener("click", e => {
-    if (e.target.id === "horariosSelectorPersonalModal") cerrarSelectorPersonalHorario();
-  });
   crearBotonVolverHorarios();
   crearControlConfiguracionCalendario();
   crearControlesEdicionCalendario();
@@ -2583,9 +2576,6 @@ function configurarEventos() {
   $("btnHorariosEliminarTurno")?.addEventListener("click", eliminarTurnoConfig);
   $("btnHorariosCancelarTurno")?.addEventListener("click", cerrarTurnoConfig);
   $("btnHorariosGuardarOrden")?.addEventListener("click", guardarOrdenConfig);
-  $("horariosTurnoModal")?.addEventListener("click", (e) => {
-    if (e.target.id === "horariosTurnoModal") cerrarTurnoConfig();
-  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && modoEdicion) salirModoEdicion();
   });

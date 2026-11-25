@@ -1120,7 +1120,7 @@ function asegurarModalPlanificacion() {
 
   document.body.appendChild(modal);
   modal
-    .querySelectorAll("[data-plan-close]")
+    .querySelectorAll("button[data-plan-close]")
     .forEach((btn) => btn.addEventListener("click", cerrarModalPlanificacion));
   modal
     .querySelectorAll("[data-plan-turno]")
@@ -1131,9 +1131,6 @@ function asegurarModalPlanificacion() {
     );
   $("btnPlanGuardar").addEventListener("click", guardarDesdeModalPlanificacion);
   $("btnPlanEliminar").addEventListener("click", eliminarDesdeModalPlanificacion);
-  modal.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") cerrarModalPlanificacion();
-  });
   return modal;
 }
 
@@ -2986,9 +2983,6 @@ function bind() {
         actualizarEstadoGuardarTarea();
       };
     });
-  $("tareaModal").onclick = (e) => {
-    if (e.target.id === "tareaModal") cerrar();
-  };
   $("btnCerrarAsignarModal").onclick = cerrarAsignar;
   $("btnGuardarAsignar").onclick = guardarAsignacion;
   $("btnEliminarAsignar")?.addEventListener("click", eliminarTareasUsuario);
@@ -3030,9 +3024,6 @@ function bind() {
       actualizarTituloAsignacionUsuario();
       renderTareasAsignables();
     } else cargarTareasUsuarioAsignacion();
-  };
-  $("asignarModal").onclick = (e) => {
-    if (e.target.id === "asignarModal") cerrarAsignar();
   };
   $("tareasLista").onclick = async (e) => {
     const edit = e.target.closest('button[data-accion="editar-usuario"]');
@@ -3086,7 +3077,6 @@ function bind() {
     renderParticipantesConfig(participantesConfigActuales()),
   );
   $("btnCerrarBanoParticipantSheet")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
-  $("banoMobileParticipantBackdrop")?.addEventListener("click", () => cerrarSelectorParticipantesBano());
   $("btnGuardarBanoParticipantSheet")?.addEventListener("click", () => guardarConfigBano());
   $("configTareasLista").onclick = (e) => {
     if (e.target.closest("[data-task-drag]")) return;
@@ -3174,7 +3164,6 @@ function bind() {
   $("btnBanoAbrirConfig").onclick = () => cambiarVistaBano("config");
   $("btnBanoPlanilla")?.addEventListener("click", abrirPlanillaBano);
   $("btnCerrarBanoPlanilla")?.addEventListener("click", cerrarPlanillaBano);
-  $("banoPlanillaModal")?.addEventListener("click", (e) => { if (e.target.id === "banoPlanillaModal") cerrarPlanillaBano(); });
   $("banoParticipantesSeleccionados").onclick = (e) => {
     const quitar = e.target.closest("[data-remove-participant]");
     if (!quitar) return;

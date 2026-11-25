@@ -208,11 +208,6 @@ function elementosFocoPanel() {
 
 function manejarTeclado(evento) {
   if (!panelAbierto()) return;
-  if (evento.key === "Escape") {
-    evento.preventDefault();
-    cerrar();
-    return;
-  }
   if (evento.key !== "Tab") return;
   const focos = elementosFocoPanel();
   if (!focos.length) return;
@@ -260,9 +255,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (recuperarCacheLocal()) render();
   $("btnMenuNotificaciones")?.addEventListener("click", abrir);
   $("btnCerrarNotificationCenter")?.addEventListener("click", cerrar);
-  $("notificationCenterOverlay")?.addEventListener("click", (e) => {
-    if (e.target === $("notificationCenterOverlay")) cerrar();
-  });
   $("btnMarcarTodasLeidas")?.addEventListener("click", async () => {
     const anteriores = notificaciones.map((n) => n.leida);
     notificaciones.forEach((n) => (n.leida = true));

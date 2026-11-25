@@ -2461,9 +2461,6 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnAdminNuevoSector")?.addEventListener("click", () => abrirSectorModal());
   $("btnAdminCerrarSector")?.addEventListener("click", cerrarSectorModal);
   $("btnAdminGuardarSector")?.addEventListener("click", guardarSector);
-  $("adminSectorModal")?.addEventListener("click", (e) => {
-    if (e.target.id === "adminSectorModal") cerrarSectorModal();
-  });
   $("adminSectorModal")?.addEventListener("input", actualizarEstadoGuardarSector);
   $("adminSectorModal")?.addEventListener("change", actualizarEstadoGuardarSector);
   $("btnAdminCerrarUsuario")?.addEventListener("click", cerrarUsuarioModal);
@@ -2475,9 +2472,6 @@ document.addEventListener("DOMContentLoaded", () => {
     await eliminarUsuario(usuario);
     if (!usuarios.some((u) => u.usuario === usuario))
       cerrarUsuarioModalDirecto();
-  });
-  $("adminUsuarioModal")?.addEventListener("click", (e) => {
-    if (e.target.id === "adminUsuarioModal") cerrarUsuarioModal();
   });
   $("adminUsuarioModal")?.addEventListener("input", () => {
     limpiarMensajeUsuarioModal();
