@@ -1696,9 +1696,12 @@ app.delete("/admin/compras/facturas/:id", requerirAdministrador, async (req,res)
   try{await eliminarFacturaCompraDb(req.params.id);res.json({ok:true});}
   catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo eliminar la factura"});}
 });
-app.put("/admin/compras/proveedores/:id", requerirAdministrador, express.json({limit:"1mb"}), async (req,res)=>{
-  try{const proveedor={...(req.body||{}),id:req.params.id};await guardarProveedorCompraDb(proveedor);res.json({ok:true,proveedor});}
-  catch(error){res.status(500).json({ok:false,mensaje:error.message||"No se pudo guardar el proveedor"});}
+app.get("/admin/compras/proveedores", requerirAdministrador, async (req,res)=>{
+  try{res.json({ok:true,proveedores:await listarProveedoresComprasDb()});}
+  catch(error){res.status(500).json({ok:false,mensaje:"No se pudo consultar el registro oficial de proveedores"});}
+});
+app.put("/admin/compras/proveedores/:id", requerirAdministrador, (req,res)=>{
+  res.status(409).json({ok:false,mensaje:"Las altas y ediciones se realizan en el módulo Proveedores."});
 });
 
 // Compras y Facturas — lectura automática de comprobantes.

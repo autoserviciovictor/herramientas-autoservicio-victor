@@ -257,11 +257,11 @@ function buscarFichaProveedor(datos={}) {
     .map(nombreProveedor).filter(Boolean);
   const fichas = proveedoresGuardados();
   if (cuit) {
-    const porCuit = fichas.find(p => cuitProveedor(p.cuit) === cuit);
-    if (porCuit) return porCuit;
+    const coincidencias = fichas.filter(p => cuitProveedor(p.cuit) === cuit);
+    return coincidencias.length === 1 ? coincidencias[0] : null;
   }
-  return fichas.find(p => [p.razonSocial, p.nombreComercial].map(nombreProveedor).filter(Boolean)
-    .some(n => nombres.includes(n))) || null;
+  const coincidencias = fichas.filter(p => [p.razonSocial,p.nombreComercial].map(nombreProveedor).filter(Boolean).some(n=>nombres.includes(n)));
+  return coincidencias.length === 1 ? coincidencias[0] : null;
 }
 function autocompletarDesdeProveedor(datos={}) {
   const ficha = buscarFichaProveedor(datos);
@@ -704,10 +704,17 @@ async function avisarFacturaDuplicada() {
   // Tras aceptar, descartar los datos del comprobante duplicado y su archivo.
   resetForm();
 }
+async function refrescarPadronCompras(){
+  const data=await apiCompras("/admin/compras/proveedores");
+  proveedoresMemoria=data.proveedores;
+}
 async function guardar(){
+  try{await refrescarPadronCompras();}catch(error){await avisarCompras("Proveedores",error.message);return;}
   const listaActual=facturas();
   const original=facturaEditandoId?listaActual.find(f=>String(f.id)===String(facturaEditandoId)):null;
   const r=construirRegistro(original||{});
+  const ficha=buscarFichaProveedor(r);
+  r.proveedorId=ficha?.id||null;
   if(!r.proveedor){
     if(window.AppDialog?.alert) await window.AppDialog.alert({title:"Falta el proveedor",message:"Completá el proveedor antes de guardar.",confirmText:"Aceptar"});
     else await avisarCompras("Falta el proveedor", "Completá el proveedor antes de guardar.");
@@ -759,10 +766,6 @@ async function guardar(){
       catch(error){console.warn("Factura guardada; no se pudo quitar el pendiente",error);}
       void actualizarBandejaFacturas();
     }
-    // El comprobante ya fue persistido en PostgreSQL: crear/actualizar la ficha únicamente si corresponde.
-    // Una falla de almacenamiento de proveedores no debe anunciar que falló la factura.
-    try { await registrarProveedorDeFactura(r); }
-    catch (error) { console.warn("Factura guardada; no se pudo crear la ficha del proveedor", error); }
     actualizarResumen();
     renderHistorial();
     resetForm();
@@ -848,50 +851,9 @@ function renderHistorial(){
 function escaparHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);}
 const PROVEEDORES_KEY="autoservicio_proveedores_fichas_v1";
 const proveedoresGuardados=()=>proveedoresMemoria;
-async function guardarProveedores(a, proveedorActualizado=null){
-  // El servidor confirma primero. La memoria local nunca se modifica antes de
-  // saber que PostgreSQL aceptó el cambio; así un error no deja "proveedores fantasma".
-  if(proveedorActualizado)await apiCompras(`/admin/compras/proveedores/${encodeURIComponent(proveedorActualizado.id)}`,{method:"PUT",body:JSON.stringify(proveedorActualizado)});
-  proveedoresMemoria=Array.isArray(a)?a.map(p=>({...p})):[];
-  await guardarSnapshotCompras().catch(()=>{});
-}
 // Comparación consistente con los registros históricos y las fichas manuales.
 const cuitProveedor = valor => String(valor ?? "").replace(/\D/g, "");
 const nombreProveedor = valor => String(valor ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("es");
-async function registrarProveedorDeFactura(factura) {
- const cuit = cuitProveedor(factura.cuit);
- const razonSocial = String(factura.razonSocial || factura.proveedor || "").trim();
- const nombreComercial = String(factura.proveedor || "").trim();
- if (!cuit && !razonSocial) return;
- const fichas = proveedoresGuardados();
- // Si el CUIT está disponible es el identificador prioritario. Una ficha sin
- // CUIT puede completarse cuando coinciden los nombres, sin perder datos.
- let ficha = fichas.find(p => cuit && cuitProveedor(p.cuit) === cuit);
- if (!ficha) ficha = fichas.find(p =>
-   (!cuitProveedor(p.cuit) || !cuit) &&
-   [p.razonSocial, p.nombreComercial].some(n => nombreProveedor(n) &&
-     [razonSocial, nombreComercial].some(f => nombreProveedor(f) === nombreProveedor(n)))
- );
- if (ficha) {
-   // Completar exclusivamente datos vacíos; nunca sobrescribir la edición manual.
-   let cambio = false;
-   for (const [campo, dato] of Object.entries({cuit, razonSocial, nombreComercial, condicionFiscal: factura.condicionFiscal || "", condicionPago: factura.condicionPago || "", rubro: factura.rubro || ""})) {
-     if (!ficha[campo] && dato) { ficha[campo] = dato; cambio = true; }
-   }
-   // Rubro y condición de pago son preferencias operativas: la última selección de la factura queda como predeterminada.
-   for (const [campo, dato] of Object.entries({condicionPago: factura.condicionPago || "", rubro: factura.rubro || ""})) {
-     if (dato && ficha[campo] !== dato) { ficha[campo] = dato; cambio = true; }
-   }
-   if (cambio) await guardarProveedores(fichas, ficha);
-   return;
- }
- const codigo = String(Math.max(0, ...fichas.map(p => Number(p.codigo) || 0)) + 1).padStart(3, "0");
- fichas.push({id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-   codigo, razonSocial, nombreComercial, cuit,
-   condicionFiscal: factura.condicionFiscal || "", condicionPago: factura.condicionPago || "", rubro: factura.rubro || "", cuentas: [],
-   creadoEn: new Date().toISOString(), origen: "factura"});
- await guardarProveedores(fichas, fichas[fichas.length-1]);
-}
 async function avisarCompras(titulo, mensaje) {
   if (window.AppDialog?.alert) {
     await window.AppDialog.alert({title: titulo, message: mensaje, confirmText: "Aceptar"});
@@ -910,81 +872,19 @@ async function avisarCompras(titulo, mensaje) {
   await new Promise(resolve => { boton.addEventListener("click", resolve, {once:true}); boton.focus(); });
   capa.remove();
 }
-let proveedorEditando=null;
-function abrirFichaProveedor(id=null){
- const p=proveedoresGuardados().find(x=>x.id===id);proveedorEditando=p?.id||null;
- const form=$("comprasFichaProveedorForm");form.reset();
- for(const [k,v] of Object.entries(p||{})){const el=form.elements.namedItem(k);if(el&&k!=="cuentas")el.value=v??"";}
- $("comprasFichaProveedorTitulo").textContent=p?"Editar proveedor":"Nuevo proveedor";
- $("comprasCuentasBancarias").innerHTML="";(p?.cuentas?.length?p.cuentas:[{}]).forEach(agregarCuentaBancaria);
- $("comprasFichaProveedorModal").classList.remove("oculto");
-}
-function agregarCuentaBancaria(cuenta={}){
- const cont=$("comprasCuentasBancarias"),div=document.createElement("div");div.className="compras-cuenta";
- const campos=[["banco","Banco"],["titular","Titular"],["cuitTitular","CUIT / CUIL del titular"],["tipo","Tipo de cuenta"],["numero","Número de cuenta"],["cbu","CBU / CVU"],["alias","Alias"],["moneda","Moneda"]];
- div.innerHTML='<div class="compras-cuenta-grid">'+campos.map(([k,t])=>`<label>${t}<input data-banco="${k}" value="${escaparHtml(cuenta[k]||"")}" ${k==="cbu"?'inputmode="numeric"':''}></label>`).join("")+'</div><label class="compras-cuenta-principal"><input type="radio" name="cuentaPrincipal" '+(cuenta.principal?'checked':'')+'> Cuenta principal</label><button type="button" class="compras-quitar-cuenta">Quitar cuenta</button>';
- div.querySelector(".compras-quitar-cuenta").addEventListener("click",()=>div.remove());cont.append(div);
- if(cont.children.length===1&&!cont.querySelector('input[type="radio"]:checked'))div.querySelector('input[type="radio"]').checked=true;
-}
-async function guardarFichaProveedor(e){e.preventDefault();const form=e.currentTarget;const data=Object.fromEntries(new FormData(form).entries());
- data.razonSocial=(data.razonSocial||"").trim();data.cuit=(data.cuit||"").replace(/\D/g,"");
- if(!data.razonSocial){form.elements.razonSocial.focus();return;}
- const todos=proveedoresGuardados();if(data.cuit&&todos.some(p=>p.id!==proveedorEditando&&cuitProveedor(p.cuit)===data.cuit)){
-   const campo=form.elements.namedItem("cuit");
-   campo?.setAttribute("aria-invalid","true");
-   await avisarCompras("Proveedor duplicado","Ya existe un proveedor registrado con ese CUIT/DNI.");
-   campo?.focus();
-   return;
- }
- data.cuentas=[...$("comprasCuentasBancarias").children].map(div=>{const cuenta={};div.querySelectorAll("[data-banco]").forEach(el=>cuenta[el.dataset.banco]=el.value.trim());cuenta.principal=div.querySelector('input[type="radio"]').checked;return cuenta}).filter(c=>Object.entries(c).some(([k,v])=>k!=="principal"&&v));
- if(data.cuentas.length&&!data.cuentas.some(c=>c.principal))data.cuentas[0].principal=true;
- data.id=proveedorEditando||crypto.randomUUID();data.codigo=proveedorEditando?(todos.find(p=>p.id===proveedorEditando)?.codigo||""):String(Math.max(0,...todos.map(p=>Number(p.codigo)||0))+1).padStart(3,"0");
- const siguiente=todos.map(p=>({...p}));
- const i=siguiente.findIndex(p=>p.id===data.id);if(i<0)siguiente.push(data);else siguiente[i]=data;
- try{
-   await guardarProveedores(siguiente,data);
- }catch(error){
-   // Si el PUT falló no incorporamos el registro a memoria. Intentamos además
-   // resincronizar para cubrir el caso excepcional de una respuesta perdida
-   // después de que el servidor sí haya confirmado la escritura.
-   try{
-     const remoto=await apiCompras("/admin/compras/datos");
-     facturasMemoria=Array.isArray(remoto.facturas)?remoto.facturas.map(limpiarDatoPersistente):facturasMemoria;
-     proveedoresMemoria=Array.isArray(remoto.proveedores)?remoto.proveedores:proveedoresMemoria;
-     await guardarSnapshotCompras().catch(()=>{});
-     const confirmado=proveedoresMemoria.some(p=>String(p.id)===String(data.id));
-     if(confirmado){
-       $("comprasFichaProveedorModal").classList.add("oculto");renderProveedores();actualizarResumen();return;
-     }
-   }catch{}
-   console.error("No se pudo guardar el proveedor",error);
-   await avisarCompras("No se pudo guardar el proveedor",`No se pudieron guardar los datos del proveedor.${error?.message?`\n\n${error.message}`:""}`);
-   return;
- }
- $("comprasFichaProveedorModal").classList.add("oculto");renderProveedores();actualizarResumen();
+function abrirFichaProveedor(){
+  return avisarCompras("Registro unificado", "Las altas y modificaciones de proveedores se realizan en el módulo Proveedores.");
 }
 function agruparProveedores(){
  const grupos=[];
- const coincideProveedor=(grupo,datos={})=>{
-   const cuit=cuitProveedor(datos.cuit);
-   if(cuit&&cuitProveedor(grupo.cuit)===cuit)return true;
-   const nombresDatos=[datos.proveedor,datos.razonSocial,datos.razon_social,datos.nombreComercial].map(nombreProveedor).filter(Boolean);
-   if(!nombresDatos.length)return false;
-   return [grupo.nombre,grupo.razonSocial,grupo.nombreComercial].map(nombreProveedor).filter(Boolean).some(n=>nombresDatos.includes(n));
- };
  proveedoresGuardados().forEach(p=>{
-   const existente=grupos.find(g=>coincideProveedor(g,p));
-   if(existente){
-     // Una ficha enriquecida (por ejemplo al agregar CUIT) sigue siendo el mismo proveedor.
-     Object.assign(existente,{...p,nombre:p.nombreComercial||p.razonSocial||existente.nombre,fiscal:p.condicionFiscal||existente.fiscal||"—"});
-     return;
-   }
    grupos.push({...p,nombre:p.nombreComercial||p.razonSocial||"—",fiscal:p.condicionFiscal||"—",facturas:[],total:0,ultima:""});
  });
  facturas().forEach(f=>{
    const cuit=cuitProveedor(f.cuit),nombre=String(f.proveedor||f.razonSocial||"").trim();
    if(!cuit&&!nombre)return;
-   let p=grupos.find(g=>coincideProveedor(g,f));
+   const ficha=buscarFichaProveedor(f);
+   let p=ficha?grupos.find(g=>g.id===ficha.id):grupos.find(g=>!g.id && (cuit?cuitProveedor(g.cuit)===cuit:!cuitProveedor(g.cuit)&&nombreProveedor(g.nombre)===nombreProveedor(nombre)));
    if(!p){
      p={nombre:nombre||"—",razonSocial:f.razonSocial||nombre,cuit:cuit||"—",fiscal:f.condicionFiscal||"—",facturas:[],total:0,ultima:""};
      grupos.push(p);
@@ -1013,7 +913,7 @@ function mostrarVistaCompras(vista="editor"){
   pantalla.classList.toggle("compras-mostrando-historial",vista!=="editor");
   for(const [id,activa] of [["comprasEditor",vista==="editor"],["comprasHistorial",vista==="historial"],["comprasProveedoresVista",vista==="proveedores"]])$(id)?.classList.toggle("oculto",!activa);
   if(vista==="historial")renderHistorial();
-  if(vista==="proveedores"){ $("comprasProvDetalle")?.classList.add("oculto");renderProveedores(); }
+  if(vista==="proveedores"){ $("comprasProvDetalle")?.classList.add("oculto");renderProveedores(); void refrescarPadronCompras().then(()=>renderProveedores()).catch(error=>avisarCompras("Proveedores",error.message)); }
   pantalla.scrollIntoView({block:"start",behavior:"instant"});
 }
 async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompras(); $("comprasLoteArchivos")?.addEventListener("change",e=>{const fs=[...e.target.files];e.target.value="";void subirLoteFacturas(fs);});$("comprasLoteLista")?.addEventListener("click",e=>{void accionPendiente(e).catch(error=>avisarCompras("Pendientes",error.message));});void actualizarBandejaFacturas();setInterval(()=>{if(document.visibilityState==="visible"&&!cargaLoteEnCurso)void actualizarBandejaFacturas();},6000); $("comprasFecha").value ||= hoy(); items=[itemVacio()]; renderItems(); inicializarSelectores($("adminTab-compras")); actualizarResumen(); document.addEventListener("click",()=>cerrarSelectores());
@@ -1031,8 +931,6 @@ async function init(){ if(!$("adminTab-compras"))return; await cargarDatosCompra
   $("comprasProvNuevo")?.addEventListener("click",()=>abrirFichaProveedor());
   $("comprasFichaProveedorCerrar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
   $("comprasFichaProveedorCancelar")?.addEventListener("click",()=>$("comprasFichaProveedorModal").classList.add("oculto"));
-  $("comprasFichaProveedorForm")?.addEventListener("submit",guardarFichaProveedor);
-  $("comprasAgregarCuenta")?.addEventListener("click",()=>agregarCuentaBancaria());
   const archivoInput = $("comprasArchivo");
   const dz = $("comprasDropzone");
   archivoInput?.addEventListener("change", (e) => {

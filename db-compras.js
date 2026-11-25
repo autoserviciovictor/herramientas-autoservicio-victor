@@ -39,16 +39,14 @@ async function eliminarFacturaCompraDb(id){
   await asegurarEsquemaCompras();
   const r=await query(`DELETE FROM purchase_invoices WHERE invoice_id=$1`,[texto(id)]); return r.rowCount>0;
 }
+// El padrón oficial pertenece al módulo Proveedores. El padrón antiguo se conserva como respaldo.
 async function listarProveedoresComprasDb(){
-  await asegurarEsquemaCompras();
-  const r=await query(`SELECT payload FROM purchase_suppliers ORDER BY COALESCE(payload->>'codigo',''), updated_at`);
-  return r.rows.map(x=>x.payload||{});
+  const { registros } = await require('./db-proveedores-compartidos').obtener('proveedores');
+  return registros.map(p=>({...p,nombreComercial:p.nombre,razonSocial:p.razon,condicionFiscal:p.condicionIva,
+    condicionPago:p.cuentaCorriente?'Cuenta corriente':String(p.plazo)==='0'&&!p.pagoEnSemana?'Contado':''}));
 }
-async function guardarProveedorCompraDb(proveedor){
-  await asegurarEsquemaCompras();
-  const id=texto(proveedor?.id); if(!id) throw new Error('El proveedor no tiene identificador');
-  await query(`INSERT INTO purchase_suppliers(supplier_id,payload) VALUES($1,$2::jsonb)
-    ON CONFLICT(supplier_id) DO UPDATE SET payload=EXCLUDED.payload,updated_at=NOW()`,[id,JSON.stringify(proveedor)]);
+async function guardarProveedorCompraDb(){
+  throw new Error('Las altas y ediciones se realizan en el módulo Proveedores.');
 }
 async function migrarComprasDb({facturas=[],proveedores=[]}={}){
   await asegurarEsquemaCompras();
